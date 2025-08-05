@@ -39,17 +39,18 @@ function Sidebar() {
     >
       <div className="flex h-16 items-center justify-center border-b px-4">
         <div className="flex items-center">
-          <div className={cn('bg-red-500 text-white p-2 rounded-md mr-2', !open && 'p-1')}>
+          <div className={cn('bg-red-500 text-white p-2 rounded-md mr-2 flex-shrink-0', !open && 'p-1 mr-0')}>
             <Heart className={cn('h-5 w-5', !open && 'h-4 w-4')} />
           </div>
           {open && (
-            <div>
-              <h1 className="font-bold text-lg text-red-600">Sanjivani</h1>
-              <p className="text-xs text-gray-500">Blood Bank System</p>
+            <div className="min-w-0">
+              <h1 className="font-bold text-lg text-red-600 truncate">Sanjivani</h1>
+              <p className="text-xs text-gray-500 truncate">Blood Bank System</p>
             </div>
           )}
         </div>
       </div>
+      
       <nav className="flex-1 overflow-y-auto p-2">
         <ul className="space-y-1">
           {navItems.map((item) => (
@@ -58,31 +59,31 @@ function Sidebar() {
                 to={item.path}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                    'flex items-center rounded-md py-2 text-sm font-medium transition-colors group',
                     'hover:bg-accent hover:text-accent-foreground',
                     isActive
                       ? 'bg-accent text-accent-foreground'
                       : 'text-muted-foreground',
-                    !open && 'justify-center px-0',
-                    open ? 'tooltip-none' : 'tooltip-auto'
+                    open ? 'px-3' : 'px-0 justify-center'
                   )
                 }
                 title={!open ? item.label : undefined}
               >
-                <item.icon className={cn('h-5 w-5', open && 'mr-2')} />
-                {open && <span>{item.label}</span>}
+                <item.icon className={cn('h-5 w-5 flex-shrink-0', open && 'mr-3')} />
+                {open && <span className="truncate">{item.label}</span>}
               </NavLink>
             </li>
           ))}
         </ul>
       </nav>
+      
       <div className="border-t p-2">
         <Button 
           variant="ghost" 
           size="sm" 
           onClick={toggleSidebar} 
           className="w-full flex items-center justify-center py-2"
-          title={open ? "Hide Sidebar" : "Expand Sidebar"}
+          title={open ? "Collapse Sidebar" : "Expand Sidebar"}
         >
           {open ? (
             <ChevronLeft className="h-4 w-4" />

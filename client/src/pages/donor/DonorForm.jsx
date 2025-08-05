@@ -22,6 +22,7 @@ function DonorForm() {
   const navigate = useNavigate()
   const { id } = useParams()
   const isEditMode = !!id
+  const [loading, setLoading] = useState(false)
   
   const form = useForm({
     defaultValues: {
@@ -38,33 +39,61 @@ function DonorForm() {
   
   useEffect(() => {
     if (isEditMode) {
-      // In a real app, you would fetch the donor data from an API
-      const donor = mockDonors.find(d => d.id === parseInt(id))
-      if (donor) {
-        form.reset(donor)
-      }
+      setLoading(true)
+      // Simulate API call
+      setTimeout(() => {
+        const donor = mockDonors.find(d => d.id === parseInt(id))
+        if (donor) {
+          form.reset({
+            ...donor,
+            age: donor.age.toString()
+          })
+        }
+        setLoading(false)
+      }, 100)
     }
   }, [id, isEditMode, form])
   
   const onSubmit = (data) => {
+    setLoading(true)
     console.log('Form submitted:', data)
-    // In a real app, you would save the data to an API
-    navigate('/donor')
+    
+    // Simulate API call
+    setTimeout(() => {
+      setLoading(false)
+      navigate('/donor')
+    }, 1000)
+  }
+  
+  if (loading && isEditMode) {
+    return (
+      <div className="w-full flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading donor information...</p>
+        </div>
+      </div>
+    )
   }
   
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-center">
         <Button variant="ghost" onClick={() => navigate('/donor')} className="mr-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
-        <h2 className="text-3xl font-bold tracking-tight">
-          {isEditMode ? 'Edit Donor' : 'Add New Donor'}
-        </h2>
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            {isEditMode ? 'Edit Donor' : 'Add New Donor'}
+          </h2>
+          <p className="text-muted-foreground mt-1">
+            {isEditMode ? 'Update donor information' : 'Register a new blood donor'}
+          </p>
+        </div>
       </div>
       
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>Donor Information</CardTitle>
         </CardHeader>
@@ -101,6 +130,9 @@ function DonorForm() {
                       <FormControl>
                         <Input type="number" placeholder="Enter age" {...field} />
                       </FormControl>
+                      <FormDescription>
+                        Age must be between 18 and 65 years
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -115,7 +147,7 @@ function DonorForm() {
                       <FormLabel>Blood Type</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -146,6 +178,9 @@ function DonorForm() {
                       <FormControl>
                         <Input placeholder="Enter phone number" {...field} />
                       </FormControl>
+                      <FormDescription>
+                        Enter 10-digit mobile number
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -162,7 +197,7 @@ function DonorForm() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter email address" {...field} />
+                        <Input type="email" placeholder="Enter email address" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -205,7 +240,7 @@ function DonorForm() {
                       <FormLabel>Status</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -223,13 +258,27 @@ function DonorForm() {
                 />
               </div>
               
-              <div className="flex justify-end space-x-4">
-                <Button variant="outline" type="button" onClick={() => navigate('/donor')}>
+              <div className="flex flex-col sm:flex-row justify-end gap-4">
+                <Button 
+                  variant="outline" 
+                  type="button" 
+                  onClick={() => navigate('/donor')}
+                  className="w-full sm:w-auto"
+                  disabled={loading}
+                >
                   Cancel
                 </Button>
-                <Button type="submit">
-                  <Save className="mr-2 h-4 w-4" />
-                  {isEditMode ? 'Update Donor' : 'Save Donor'}
+                <Button 
+                  type="submit" 
+                  className="w-full sm:w-auto"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
+                  {loading ? 'Saving...' : (isEditMode ? 'Update Donor' : 'Save Donor')}
                 </Button>
               </div>
             </form>

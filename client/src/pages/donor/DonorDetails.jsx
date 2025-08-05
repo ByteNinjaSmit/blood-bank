@@ -27,41 +27,80 @@ function DonorDetails() {
   const { id } = useParams()
   const [donor, setDonor] = useState(null)
   const [donationHistory, setDonationHistory] = useState([])
+  const [loading, setLoading] = useState(true)
   
   useEffect(() => {
-    // In a real app, you would fetch the donor data from an API
-    const donorData = mockDonors.find(d => d.id === parseInt(id))
-    if (donorData) {
-      setDonor(donorData)
-      // Get donation history for this donor
-      const history = mockDonationHistory.filter(d => d.donorId === parseInt(id))
-      setDonationHistory(history)
-    }
+    // Simulate API call
+    setTimeout(() => {
+      const donorData = mockDonors.find(d => d.id === parseInt(id))
+      if (donorData) {
+        setDonor(donorData)
+        const history = mockDonationHistory.filter(d => d.donorId === parseInt(id))
+        setDonationHistory(history)
+      }
+      setLoading(false)
+    }, 100)
   }, [id])
   
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to delete this donor? This action cannot be undone.')) {
+      // In a real app, you would delete the donor via API
+      navigate('/donor')
+    }
+  }
+  
+  if (loading) {
+    return (
+      <div className="w-full flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading donor details...</p>
+        </div>
+      </div>
+    )
+  }
+  
   if (!donor) {
-    return <div>Loading...</div>
+    return (
+      <div className="w-full flex items-center justify-center py-12">
+        <div className="text-center">
+          <p className="text-lg font-semibold text-muted-foreground mb-4">Donor not found</p>
+          <Button onClick={() => navigate('/donor')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Donor List
+          </Button>
+        </div>
+      </div>
+    )
   }
   
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="w-full space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div className="flex items-center">
           <Button variant="ghost" onClick={() => navigate('/donor')} className="mr-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
-          <h2 className="text-3xl font-bold tracking-tight">Donor Details</h2>
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Donor Details</h2>
+            <p className="text-muted-foreground mt-1">View and manage donor information</p>
+          </div>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={() => navigate(`/donor/edit/${id}`)}>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate(`/donor/edit/${id}`)}
+            className="flex-1 sm:flex-none"
+          >
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </Button>
-          <Button variant="destructive" onClick={() => {
-            // In a real app, you would delete the donor via API
-            navigate('/donor')
-          }}>
+          <Button 
+            variant="destructive" 
+            onClick={handleDelete}
+            className="flex-1 sm:flex-none"
+          >
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </Button>
@@ -69,7 +108,7 @@ function DonorDetails() {
       </div>
       
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        <Card className="w-full">
           <CardHeader>
             <CardTitle>Personal Information</CardTitle>
           </CardHeader>
@@ -77,12 +116,12 @@ function DonorDetails() {
             <Table>
               <TableBody>
                 <TableRow>
-                  <TableCell className="font-medium">Name</TableCell>
+                  <TableCell className="font-medium w-1/3">Name</TableCell>
                   <TableCell>{donor.name}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Age</TableCell>
-                  <TableCell>{donor.age}</TableCell>
+                  <TableCell>{donor.age} years</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Blood Type</TableCell>
@@ -95,17 +134,25 @@ function DonorDetails() {
                 <TableRow>
                   <TableCell className="font-medium">Status</TableCell>
                   <TableCell>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${donor.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      donor.status === 'Active' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
                       {donor.status}
                     </span>
                   </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Last Donation</TableCell>
+                  <TableCell>{donor.lastDonation}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="w-full">
           <CardHeader>
             <CardTitle>Contact Information</CardTitle>
           </CardHeader>
@@ -113,12 +160,20 @@ function DonorDetails() {
             <Table>
               <TableBody>
                 <TableRow>
-                  <TableCell className="font-medium">Phone</TableCell>
-                  <TableCell>{donor.phone}</TableCell>
+                  <TableCell className="font-medium w-1/3">Phone</TableCell>
+                  <TableCell>
+                    <a href={`tel:${donor.phone}`} className="text-blue-600 hover:underline">
+                      {donor.phone}
+                    </a>
+                  </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Email</TableCell>
-                  <TableCell>{donor.email}</TableCell>
+                  <TableCell>
+                    <a href={`mailto:${donor.email}`} className="text-blue-600 hover:underline">
+                      {donor.email}
+                    </a>
+                  </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Address</TableCell>
@@ -134,7 +189,7 @@ function DonorDetails() {
         </Card>
       </div>
       
-      <Card>
+      <Card className="w-full">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Donation History</CardTitle>
           <Button variant="outline" size="sm">
@@ -142,34 +197,38 @@ function DonorDetails() {
             Schedule Donation
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {donationHistory.length > 0 ? (
-            <Table>
-              <TableBody>
-                {donationHistory.map((donation) => (
-                  <TableRow key={donation.id}>
-                    <TableCell className="font-medium">{donation.date}</TableCell>
-                    <TableCell>Hemoglobin: {donation.hemoglobin}</TableCell>
-                    <TableCell>BP: {donation.bloodPressure}</TableCell>
-                    <TableCell>Weight: {donation.weight}</TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                        {donation.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm">
-                        <Activity className="mr-2 h-4 w-4" />
-                        View Report
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableBody>
+                  {donationHistory.map((donation) => (
+                    <TableRow key={donation.id}>
+                      <TableCell className="font-medium min-w-[100px]">{donation.date}</TableCell>
+                      <TableCell className="min-w-[120px]">Hemoglobin: {donation.hemoglobin}</TableCell>
+                      <TableCell className="min-w-[100px]">BP: {donation.bloodPressure}</TableCell>
+                      <TableCell className="min-w-[100px]">Weight: {donation.weight}</TableCell>
+                      <TableCell className="min-w-[80px]">
+                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                          {donation.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="min-w-[120px]">
+                        <Button variant="ghost" size="sm">
+                          <Activity className="mr-2 h-4 w-4" />
+                          View Report
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
-            <div className="py-6 text-center text-muted-foreground">
-              No donation history available
+            <div className="py-12 text-center text-muted-foreground">
+              <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p className="text-lg font-medium mb-2">No donation history available</p>
+              <p className="text-sm">This donor hasn't made any donations yet.</p>
             </div>
           )}
         </CardContent>

@@ -6,22 +6,6 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
-import { Badge } from "../../components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs"
-import {
-  Users,
-  UserPlus,
-  Filter,
-  Download,
-  Heart,
-  Calendar,
-  Clock,
-  User,
-  Phone,
-  Mail,
-  MapPin,
-  Droplets
-} from 'lucide-react'
 
 import DonorForm from './DonorForm'
 import DonorDetails from './DonorDetails'
@@ -47,16 +31,17 @@ function DonorList() {
   )
   
   const handleDelete = (id) => {
-    // In a real app, you would delete the donor via API
-    setDonors(donors.filter(donor => donor.id !== id))
+    if (window.confirm('Are you sure you want to delete this donor?')) {
+      setDonors(donors.filter(donor => donor.id !== id))
+    }
   }
   
   return (
-    <div className="space-y-6 animate-fade-in w-full flex-1">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+    <div className="space-y-6 animate-fade-in flex-1 w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Donor Management</h1>
-          <p className="text-muted-foreground">Manage blood donors and donation records</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Donor Management</h1>
+          <p className="text-muted-foreground mt-1">Manage blood donors and donation records</p>
         </div>
         <Button onClick={() => navigate('/donor/add')} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
@@ -64,13 +49,11 @@ function DonorList() {
         </Button>
       </div>
       
-      <Card>
+      <Card className="w-full">
         <CardHeader>
-          <CardTitle>Donor List</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4">
-            <div className="relative">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <CardTitle>Donor List</CardTitle>
+            <div className="relative w-full sm:w-80">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
@@ -81,18 +64,19 @@ function DonorList() {
               />
             </div>
           </div>
-          
-          <div className="rounded-md border">
-            <Table>
+        </CardHeader>
+        <CardContent className="p-0">
+        <div className="overflow-x-auto w-full">
+        <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Age</TableHead>
-                  <TableHead>Blood Type</TableHead>
-                  <TableHead>City</TableHead>
-                  <TableHead>Last Donation</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="min-w-[150px]">Name</TableHead>
+                  <TableHead className="min-w-[60px]">Age</TableHead>
+                  <TableHead className="min-w-[80px]">Blood Type</TableHead>
+                  <TableHead className="min-w-[100px]">City</TableHead>
+                  <TableHead className="min-w-[120px]">Last Donation</TableHead>
+                  <TableHead className="min-w-[80px]">Status</TableHead>
+                  <TableHead className="min-w-[120px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -109,19 +93,39 @@ function DonorList() {
                       <TableCell>{donor.city}</TableCell>
                       <TableCell>{donor.lastDonation}</TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${donor.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          donor.status === 'Active' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
                           {donor.status}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2">
-                          <Button variant="ghost" size="icon" onClick={() => navigate(`/donor/${donor.id}`)}>
+                      <TableCell>
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => navigate(`/donor/${donor.id}`)}
+                            title="View Details"
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => navigate(`/donor/edit/${donor.id}`)}>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => navigate(`/donor/edit/${donor.id}`)}
+                            title="Edit Donor"
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(donor.id)}>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleDelete(donor.id)}
+                            title="Delete Donor"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -130,7 +134,7 @@ function DonorList() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                       No donors found.
                     </TableCell>
                   </TableRow>
@@ -146,12 +150,14 @@ function DonorList() {
 
 function DonorManagement() {
   return (
-    <Routes>
-      <Route index element={<DonorList />} />
-      <Route path="add" element={<DonorForm />} />
-      <Route path="edit/:id" element={<DonorForm />} />
-      <Route path=":id" element={<DonorDetails />} />
-    </Routes>
+    <div className="w-full">
+      <Routes>
+        <Route index element={<DonorList />} />
+        <Route path="add" element={<DonorForm />} />
+        <Route path="edit/:id" element={<DonorForm />} />
+        <Route path=":id" element={<DonorDetails />} />
+      </Routes>
+    </div>
   )
 }
 
