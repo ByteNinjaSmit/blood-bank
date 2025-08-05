@@ -52,10 +52,13 @@ function DonorList() {
   }
   
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Donor Management</h2>
-        <Button onClick={() => navigate('/donor/add')}>
+    <div className="space-y-6 animate-fade-in w-full flex-1">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Donor Management</h1>
+          <p className="text-muted-foreground">Manage blood donors and donation records</p>
+        </div>
+        <Button onClick={() => navigate('/donor/add')} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Add Donor
         </Button>

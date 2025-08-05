@@ -8,6 +8,7 @@ import { cn } from '../../lib/utils'
 function TopBar() {
   const { toggleSidebar, open } = useSidebar()
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showMobileSearch, setShowMobileSearch] = useState(false)
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center border-b bg-background px-4 shadow-sm">
@@ -16,7 +17,7 @@ function TopBar() {
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
-          className="mr-4 md:hidden"
+          className="mr-2 md:hidden"
           title="Show Sidebar"
         >
           <Menu className="h-5 w-5" />
@@ -33,6 +34,32 @@ function TopBar() {
           placeholder="Search donors, requests, inventory..." 
         />
       </div>
+      
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setShowMobileSearch(!showMobileSearch)}
+        className="md:hidden"
+        title="Search"
+      >
+        <Search className="h-5 w-5" />
+      </Button>
+      
+      {showMobileSearch && (
+        <div className="absolute top-16 left-0 right-0 bg-background p-4 border-b shadow-md z-50 md:hidden">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <Search className="h-4 w-4 text-gray-400" />
+            </div>
+            <input 
+              type="search" 
+              className="block w-full p-2 pl-10 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-primary focus:border-primary" 
+              placeholder="Search donors, requests, inventory..." 
+              autoFocus
+            />
+          </div>
+        </div>
+      )}
       
       <div className="ml-auto flex items-center space-x-3">
         <div className="hidden md:flex items-center space-x-3">
@@ -64,13 +91,14 @@ function TopBar() {
             size="icon"
             onClick={() => setShowMobileMenu(!showMobileMenu)}
             className="md:hidden"
+            title="Menu"
           >
             <ChevronDown className={cn("h-5 w-5 transition-transform", showMobileMenu && "rotate-180")} />
           </Button>
           
           {/* Mobile dropdown menu */}
           {showMobileMenu && (
-            <div className="absolute right-0 top-full mt-1 w-48 rounded-md bg-background shadow-lg ring-1 ring-black ring-opacity-5 md:hidden">
+            <div className="absolute right-0 top-full mt-1 w-56 rounded-md bg-background shadow-lg ring-1 ring-black ring-opacity-5 md:hidden z-50">
               <div className="py-1">
                 <Link 
                   to="/donor/register"
@@ -90,6 +118,17 @@ function TopBar() {
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-red-500" />
                     <span className="text-red-500 font-medium">Emergency Request</span>
+                  </div>
+                </Link>
+                <div className="border-t border-gray-100 my-1"></div>
+                <Link 
+                  to="/settings"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    <span>My Profile</span>
                   </div>
                 </Link>
               </div>

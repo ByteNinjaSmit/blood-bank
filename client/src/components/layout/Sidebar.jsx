@@ -85,10 +85,7 @@ function Sidebar() {
           title={open ? "Hide Sidebar" : "Expand Sidebar"}
         >
           {open ? (
-            <>
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              <span>Hide Sidebar</span>
-            </>
+            <ChevronLeft className="h-4 w-4" />
           ) : (
             <ChevronRight className="h-4 w-4" />
           )}
