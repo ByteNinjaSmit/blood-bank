@@ -6,6 +6,22 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
+import { Badge } from "../../components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs"
+import {
+  Users,
+  UserPlus,
+  Filter,
+  Download,
+  Heart,
+  Calendar,
+  Clock,
+  User,
+  Phone,
+  Mail,
+  MapPin,
+  Droplets
+} from 'lucide-react'
 
 import DonorForm from './DonorForm'
 import DonorDetails from './DonorDetails'
