@@ -29,7 +29,8 @@ const logger = require('./utils/logger'); // Import the logger
 const errorMiddleware = require("./middlewares/error-middleware");
 
 
-
+// Import Routes
+const authRoutes = require("./routers/auth-routes");
 
 
 // Server Setup
@@ -173,7 +174,7 @@ app.get("/", (req, res) => {
 });
 
 // Remaining Routes
-
+app.use("/api/auth",authRoutes);
 
 
 
