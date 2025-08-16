@@ -11,9 +11,11 @@ const router = express.Router();
 const authController = require('../controllers/auth-controller');
 const { authMiddleware } = require('../middlewares/auth-middleware'); // JWT validation
 
-router.post('/login', authController.login);
-router.post('/refresh', authController.refresh);
-router.post('/logout', authController.logout);
-router.post('/change-password', authMiddleware, authController.changePassword);
+
+router.route('/register').post(authController.registerUser);
+router.route('/login').post(authController.loginUser);
+// router.post('/refresh', authController.refresh);
+// router.post('/logout', authController.logout);
+// router.post('/change-password', authMiddleware, authController.changePassword);
 
 module.exports = router;

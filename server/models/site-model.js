@@ -1,0 +1,61 @@
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+// Define the Site Schema
+const siteSchema = new Schema({
+  siteId: {
+    type: String,
+    required: true,
+  },
+  name: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String
+  },
+  address: {
+    type: String,
+    required: true
+  },
+  contactInfo: {
+    phone: {
+      type: String,
+      required: true
+    },
+    email: {
+      type: String,
+      required: true
+    }
+  },
+
+  // Reference to the User who created the site
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  // Reference to the User who last updated the site
+  lastUpdatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+  },
+  // Array of staff assigned to this site (User references)
+  staff: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  ],
+
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  timestamps: true // Adds createdAt and updatedAt automatically
+});
+
+// Create and export the model
+const Site = mongoose.model('Site', siteSchema);
+module.exports = Site;
