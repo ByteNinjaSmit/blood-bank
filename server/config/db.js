@@ -17,7 +17,7 @@ const connectToDatabase = async () => {
 
     if (!cached.promise) {
         cached.promise = mongoose.connect(URI, {
-            dbName: 'Restuarant',
+            dbName: 'BloodBank',
             bufferCommands: false,
             // useNewUrlParser: true,
             // useUnifiedTopology: true,
