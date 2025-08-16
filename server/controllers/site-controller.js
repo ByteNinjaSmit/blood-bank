@@ -46,6 +46,7 @@ const createSite = async (req, res, next) => {
         email: email,
       },
       createdBy: req.user._id, // The user who is creating the site
+      lastUpdatedBy:req.user._id,
       staff, // This can be an array of user IDs that are staff members (optional)
     });
 

@@ -1,139 +1,156 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const { Schema, Types } = mongoose;
 
 const DonorSchema = new Schema({
   donorId: {
     type: String,
     required: true,
-    unique: true // Example: DNR-2025-0001
+    // unique: true // Example: DNR-2025-0001
   },
-  firstName: {
+  name: {
+    firstName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    middleName: {
+      type: String,
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      trim: true,
+    },
+  },
+  uid: {
     type: String,
     required: true,
-    trim: true
-  },
-  middleName: {
-    type: String,
-    trim: true
-  },
-  lastName: {
-    type: String,
-    trim: true
+    trim: true,
+    validate: {
+      validator: function (v) {
+        return /\d{12}/.test(v); // Example: Basic 12 aadhar card number valid This is Unique Understand
+      },
+      message: (props) => `${props.value} is not a valid phone number!`,
+    },
   },
   dob: {
     type: Date,
-    required: true
+    required: true,
   },
   sex: {
     type: String,
-    enum: ['M', 'F', 'O'],
-    required: true
+    enum: ["M", "F", "O"],
+    required: true,
   },
   phone: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    validate: {
+      validator: function (v) {
+        return /\d{10}/.test(v); // Example: Basic 10-digit phone number validation
+      },
+      message: (props) => `${props.value} is not a valid phone number!`,
+    },
   },
   email: {
     type: String,
     trim: true,
-    lowercase: true
+    lowercase: true,
   },
   address: {
     line1: {
       type: String,
-      required: true
+      // required: true
     },
     line2: {
-      type: String
+      type: String,
     },
     city: {
       type: String,
-      required: true
+      required: true,
     },
     district: {
       type: String,
-      required: true
+      required: true,
     },
     state: {
       type: String,
-      required: true
+      required: true,
     },
     pincode: {
       type: String,
-      required: true
-    }
+      required: true,
+    },
   },
   occupation: {
-    type: String
+    type: String,
   },
   weightKg: {
-    type: Number
+    type: Number,
+    required: true,
   },
   bloodGroup: {
     type: String,
-    enum: ['A', 'B', 'AB', 'O']
+    enum: ["A", "B", "AB", "O"],
+    required: true,
   },
   rh: {
     type: String,
-    enum: ['Positive', 'Negative']
+    enum: ["Positive", "Negative"],
+    required: true,
   },
   donationHistory: [
     {
       donationId: {
         type: Types.ObjectId,
-        ref: 'Donation',
-        required: true
+        ref: "Donation",
+        // required: true
       },
       date: {
         type: Date,
-        required: true
+        // required: true
       },
       bagNo: {
         type: String,
-        required: true
-      }
-    }
+        // required: true
+      },
+    },
   ],
   eligibilityStatus: {
     type: String,
-    enum: ['eligible', 'deferred', 'temp-deferred'],
-    required: true
+    enum: ["eligible", "deferred", "temp-deferred"],
+    required: true,
   },
   lastDonationDate: {
-    type: Date
-  },
-  siteId: {
-    type: Types.ObjectId,
-    ref: 'Site',
-    required: true
+    type: Date,
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   createdBy: {
     type: Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: "User",
+    required: true,
   },
   updatedAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   updatedBy: {
     type: Types.ObjectId,
-    ref: 'User',
-    required: true
-  }
+    ref: "User",
+    required: true,
+  },
 });
 
 // Auto-update updatedAt before save
-DonorSchema.pre('save', function (next) {
+DonorSchema.pre("save", function (next) {
   this.updatedAt = new Date();
   next();
 });
 
-const Donor = mongoose.model('Donor', DonorSchema);
+const Donor = mongoose.model("Donor", DonorSchema);
 
 module.exports = Donor;

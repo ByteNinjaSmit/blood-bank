@@ -183,12 +183,13 @@ app.get("/", (req, res) => {
 // Remaining Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/site", siteRoutes);
-app.use("/api/donors", donorRoutes);
+// app.use("/api/donors", donorRoutes);
 app.use("/api/hospitals", hospitalRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/components", componentRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/donor",donorRoutes);
 
 
 
