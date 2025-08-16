@@ -32,6 +32,7 @@ const errorMiddleware = require("./middlewares/error-middleware");
 // Import Routes
 const authRoutes = require("./routers/auth-routes");
 const siteRoutes = require("./routers/site-routes");    // Camp
+const donorRoutes = require("./routers/donor-routes");
 
 
 // Server Setup
@@ -177,6 +178,7 @@ app.get("/", (req, res) => {
 // Remaining Routes
 app.use("/api/auth",authRoutes);
 app.use("/api/site", siteRoutes);
+app.use("/api/donor",donorRoutes);
 
 
 
