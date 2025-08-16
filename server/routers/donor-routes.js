@@ -13,6 +13,7 @@ const donorController = require('../controllers/donor-controller');
 
 router.route('/new').post(donorController.registerDonor);
 router.route('/update/:id').put(donorController.updateDonor);
-
+router.route('/:id').get(donorController.getDonorDetails);
+router.route('/list').get(donorController.listDonors);
 
 module.exports = router;
