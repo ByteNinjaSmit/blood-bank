@@ -5,7 +5,7 @@ const BloodBagSchema = new Schema({
   bagNo: {
     type: String,
     required: true,
-    unique: true,
+    // unique: true,
     trim: true
   },
   segmentNo: {
@@ -76,7 +76,7 @@ const BloodBagSchema = new Schema({
     {
       test: {
         type: String,
-        enum: ['HIV', 'HBsAg', 'HCV', 'VDRL', 'MP'],
+        enum: ['HIV', 'HBsAg', 'HCV', 'VDRL', 'MP','NA'],
         required: true
       },
       result: {
