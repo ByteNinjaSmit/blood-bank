@@ -31,7 +31,13 @@ const errorMiddleware = require("./middlewares/error-middleware");
 
 // Import Routes
 const authRoutes = require("./routers/auth-routes");
-const siteRoutes = require("./routers/site-routes");    // Camp
+const siteRoutes = require("./routers/site-routes");
+const donorRoutes = require("./routers/donor-routes");
+const hospitalRoutes = require("./routers/hospital-routes");
+const inventoryRoutes = require("./routers/inventory-routes");
+const requestRoutes = require("./routers/request-routes");
+const componentRoutes = require("./routers/component-routes");
+const userRoutes = require("./routers/user-routes");
 
 
 // Server Setup
@@ -175,8 +181,14 @@ app.get("/", (req, res) => {
 });
 
 // Remaining Routes
-app.use("/api/auth",authRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/site", siteRoutes);
+app.use("/api/donors", donorRoutes);
+app.use("/api/hospitals", hospitalRoutes);
+app.use("/api/inventory", inventoryRoutes);
+app.use("/api/requests", requestRoutes);
+app.use("/api/components", componentRoutes);
+app.use("/api/users", userRoutes);
 
 
 
