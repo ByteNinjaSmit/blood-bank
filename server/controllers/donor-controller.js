@@ -207,7 +207,104 @@ const updateDonor = async (req, res, next) => {
     }
 };
 
+
+
+const getDonorDetails = async (req, res, next) => {
+  try {
+    const { id } = req.params; // Donor ID from the URL
+
+    // Check if the provided ID is a valid MongoDB ObjectId
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid donor ID format." });
+    }
+
+    // Fetch the donor from the database
+    const donor = await Donor.findById(id)
+      .populate('createdBy', 'name email')  // Populate the creator's details
+      .populate('updatedBy', 'name email')  // Populate the last updater's details
+      .populate('donationHistory.donationId')  // Populate donation history with related donation details (if any)
+      .exec();
+
+    // If no donor found, return 404
+    if (!donor) {
+      return res.status(404).json({ message: "Donor not found." });
+    }
+
+    // Return the donor details
+    return res.status(200).json({
+      donor,
+    });
+  } catch (error) {
+    next(error);  // Pass any errors to the error handling middleware
+  }
+};
+
+const listDonors = async (req, res, next) => {
+  try {
+    // Destructuring query parameters
+    const {
+      bloodGroup,
+      eligibilityStatus,
+      startDate,
+      endDate,
+      page = 1, // Default to page 1 if not provided
+      limit = 10, // Default to 10 results per page
+      sortBy = 'createdAt', // Default sorting by creation date
+      sortOrder = 'desc', // Default to descending order
+    } = req.query;
+
+    // Construct the filter query
+    let filter = {};
+
+    if (bloodGroup) {
+      filter.bloodGroup = bloodGroup;
+    }
+
+    if (eligibilityStatus) {
+      filter.eligibilityStatus = eligibilityStatus;
+    }
+
+    if (startDate && endDate) {
+      filter.lastDonationDate = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    }
+
+    // Pagination: skip (for previous pages) and limit (for page size)
+    const skip = (page - 1) * limit;
+    const limitResults = parseInt(limit);
+
+    // Sorting
+    const sort = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1; // -1 for descending, 1 for ascending
+
+    // Fetch the donors with the constructed filter, pagination, and sorting
+    const donors = await Donor.find(filter)
+      .skip(skip)
+      .limit(limitResults)
+      .sort(sort)
+      .populate('createdBy', 'name email') // Optionally populate creator's details
+      .populate('updatedBy', 'name email') // Optionally populate last updater's details
+      .exec();
+
+    // Count the total number of donors matching the filter
+    const totalCount = await Donor.countDocuments(filter);
+
+    // Return paginated result and total count
+    return res.status(200).json({
+      totalCount,
+      page,
+      limit: limitResults,
+      donors,
+    });
+  } catch (error) {
+    next(error);  // Pass any errors to the error handling middleware
+  }
+};
+
+
+
 module.exports = {
     registerDonor,
-    updateDonor
+    updateDonor,
+    getDonorDetails,
+    listDonors,
 };
