@@ -66,7 +66,7 @@ const modules = [
             {
                 name: "Camp List",
                 icon: <List className="w-5 h-5" />,
-                href: "/camp-list",
+                href: "/camp-listing",
                 permissions: ["read"],
                 description: "View all registered blood donation camps",
             },
