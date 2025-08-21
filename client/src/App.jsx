@@ -5,6 +5,8 @@ import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import NotFound from './page/Error-Page';
 import RegisterPage from './page/auth-pages/Registeration-Page';
+import MasterLayout from './page/dashboard/layout/Master-Layout';
+import Home from './page/dashboard/Home';
 
 const App = () => {
   const pathname = useLocation().pathname;
@@ -21,9 +23,12 @@ const App = () => {
         {/* Auth Routes */}
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<MasterLayout />}>
+          <Route path="" element={<Home />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
 
         {/* Error Routes - 404 NOT FOUND */}
-        <Route path="*" element={<NotFound />} />
       </Routes>
 
       {/* Conditional Rendering For Footer */}

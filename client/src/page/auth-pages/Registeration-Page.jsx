@@ -147,16 +147,31 @@ export default function RegisterPage() {
 
                     {/* Branding */}
                     <div className="text-center mb-6 sm:mb-8 lg:mb-12">
-                        <div className="flex items-center justify-center mb-3 sm:mb-4">
-                            <div className="bg-white text-red-800 text-xl sm:text-2xl lg:text-4xl font-bold py-2 sm:py-2 lg:py-3 px-2 sm:px-3 lg:px-4 rounded-xl shadow-lg">
-                                B
+                        {/* Title Section */}
+                        <div className="flex flex-col lg:flex-row items-center justify-center mb-4 gap-2 sm:gap-3 lg:gap-4">
+
+                            {/* Logo + First Word */}
+                            <div className="flex items-center gap-2">
+                                <div className="bg-white text-red-800 text-2xl sm:text-3xl lg:text-5xl font-bold py-2 px-3 lg:py-3 lg:px-4 rounded-xl shadow-lg">
+                                    S
+                                </div>
+                                <div className="text-white text-2xl sm:text-3xl lg:text-5xl font-bold">
+                                    ANJIAVNI
+                                </div>
                             </div>
-                            <div className="text-white text-xl sm:text-2xl lg:text-4xl font-bold ml-2 sm:ml-3">LOOD BANK</div>
+
+                            {/* Second Word */}
+                            <div className="text-white text-2xl sm:text-3xl lg:text-5xl font-bold">
+                                BLOOD BANK
+                            </div>
                         </div>
-                        <p className="text-white/90 text-sm sm:text-base lg:text-lg max-w-sm px-4 sm:px-0">
+
+                        {/* Tagline */}
+                        <p className="text-white/90 text-sm sm:text-base lg:text-lg max-w-md px-4 sm:px-0 mx-auto">
                             Join our secure medical blood bank management system
                         </p>
                     </div>
+
 
                     {/* Blood Bank Features Grid */}
                     {!isMobile && (
@@ -422,23 +437,23 @@ export default function RegisterPage() {
                                             <div className="flex-1 bg-gray-200 rounded-full h-2">
                                                 <div
                                                     className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.score === 0
-                                                            ? "w-1/4 bg-red-500"
-                                                            : passwordStrength.score === 1
-                                                                ? "w-2/4 bg-orange-500"
-                                                                : passwordStrength.score === 2
-                                                                    ? "w-3/4 bg-yellow-500"
-                                                                    : "w-full bg-green-500"
+                                                        ? "w-1/4 bg-red-500"
+                                                        : passwordStrength.score === 1
+                                                            ? "w-2/4 bg-orange-500"
+                                                            : passwordStrength.score === 2
+                                                                ? "w-3/4 bg-yellow-500"
+                                                                : "w-full bg-green-500"
                                                         }`}
                                                 />
                                             </div>
                                             <span
                                                 className={`text-xs font-medium ${passwordStrength.score === 0
-                                                        ? "text-red-600"
-                                                        : passwordStrength.score === 1
-                                                            ? "text-orange-600"
-                                                            : passwordStrength.score === 2
-                                                                ? "text-yellow-600"
-                                                                : "text-green-600"
+                                                    ? "text-red-600"
+                                                    : passwordStrength.score === 1
+                                                        ? "text-orange-600"
+                                                        : passwordStrength.score === 2
+                                                            ? "text-yellow-600"
+                                                            : "text-green-600"
                                                     }`}
                                             >
                                                 {passwordStrength.label}

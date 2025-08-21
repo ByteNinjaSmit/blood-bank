@@ -21,7 +21,7 @@ export default function NotFound() {
   return (
     <div className="min-h-screen flex flex-col justify-center lg:flex-row">
       <div
-        className={`w-full flex items-center justify-center p-4 sm:p-4 lg:p-12 xl:p-16 transition-all duration-1000 relative min-h-[50vh] lg:min-h-screen ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+        className={`w-full flex items-center justify-center p-4 sm:p-4 lg:p-8 xl:p-10 transition-all duration-1000 relative min-h-[50vh] lg:min-h-screen ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
           }`}
       >
         <div className="w-full flex flex-col items-center max-w-5xl">
