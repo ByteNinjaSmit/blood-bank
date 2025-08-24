@@ -10,6 +10,7 @@ import Home from './page/Home';
 import CampRegisteration from './page/dashboard/Camp-Registeration';
 import CampListing from './page/dashboard/Camp-Listing';
 import CampDonations from './page/dashboard/Camp-Donations';
+import ViewDiscarded from './components/camp/View-Discarded';
 
 const App = () => {
   const pathname = useLocation().pathname;
@@ -34,6 +35,8 @@ const App = () => {
           <Route path="/camp-registration" element={<CampRegisteration />} />
           <Route path="/camp-donations" element={<CampDonations />} />
           <Route path="/camp-listing" element={<CampListing />} />
+
+          <Route path="/discard" element={<ViewDiscarded />} />
 
           {/*For Dashboard - Error Routes - 404 NOT FOUND */}
           <Route path="*" element={<NotFound />} />

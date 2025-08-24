@@ -131,8 +131,22 @@ export default function BloodBankWelcome() {
 
           <div className="mb-8">
             <div className="flex items-center justify-center mb-4">
-              <div className="bg-orange-800 text-white text-4xl font-bold py-4 px-6 rounded-2xl shadow-2xl">B</div>
-              <div className="text-orange-800 text-4xl font-bold ml-4">LOOD BANK</div>
+              {/*changes*/}
+              <div className="border-4 border-orange-800 text-white text-3xl font-bold rounded-2xl  flex flex-row shadow-2xl">
+                
+                <div className="bg-orange-800 text-white text-3xl font-bold py-1 px-2 rounded-l-md  shadow-2xl">BLOOD</div> 
+
+                <div className=" text-orange-800 text-3xl font-bold py-1 px-2 rounded-md  shadow-2xl">BANK</div> 
+
+
+              </div> 
+
+              
+              
+              {/* <div className="bg-orange-800 text-white text-3xl font-bold py-1 px-2 rounded-2xl shadow-2xl">BLOOD</div> 
+              <div className="bg-orange-800 text-white text-3xl font-bold py-1 px-2 rounded-2xl shadow-2xl">BLOOD</div> 
+                 */}
+              {/* <div className="text-orange-800 text-4xl font-bold ml-4">BANK</div> */}
             </div>
             <h1 className="text-6xl font-bold text-gray-800 mb-4">SANJIVANI , KOPARGAON</h1>
             <p className="text-gray-600 text-xl max-w-3xl mx-auto leading-relaxed">
