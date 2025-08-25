@@ -20,7 +20,7 @@ const CampRegisteration = ({ onBack }) => {
   })
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [staffList, setStaffList] = useState([])
+  const [staffList, setStaffList] = useState([])  // _id name
 
   const validateForm = () => {
     const newErrors = {}
@@ -54,6 +54,7 @@ const CampRegisteration = ({ onBack }) => {
       });
       if (response.status === 200) {
         setStaffList(response.data.data || []);
+        console.log(response.data.data);
       }
     } catch (error) {
       console.log(error.response?.data?.message);
@@ -220,7 +221,42 @@ const CampRegisteration = ({ onBack }) => {
                 />
                 {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
               </div>
+              {/* Staff Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Assign Staff
+                </label>
+                <select
+                  multiple
+                  value={formData.staff}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      staff: Array.from(e.target.selectedOptions, (option) => option.value),
+                    })
+                  }
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[100px]"
+                >
+                  {staffList && staffList.length > 0 ? (
+                    staffList?.map((staff, index) => {
+                      if (!staff || !staff._id || !staff.name) return null; // skip bad data
+                      return (
+                        <option key={staff._id || index} value={staff._id}>
+                          {String(staff?.name?.first)} {String(staff?.name?.last)}
+                        </option>
+                      );
+                    })
+                  ) : (
+                    <option disabled>No staff available</option>
+                  )}
+                </select>
+
+                <p className="text-xs text-gray-500 mt-1">
+                  Hold <kbd>Ctrl</kbd> (or <kbd>Cmd</kbd> on Mac) to select multiple staff.
+                </p>
+              </div>
             </div>
+
 
             <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6">
               <button
