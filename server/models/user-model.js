@@ -42,7 +42,7 @@ const UserSchema = new Schema({
 
   role: {
     type: String,
-    enum: ["admin", "lab-tech", "inventory", "hospital", "viewer"],
+    enum: ["admin", "lab-tech", "inventory", "hospital", "viewer","staff"],
     required: true,
   },
   password: {

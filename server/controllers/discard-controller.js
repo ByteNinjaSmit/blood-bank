@@ -1,4 +1,5 @@
 const DiscardLog = require("../models/discard-model");
+const mongoose = require('mongoose');
 
 const getList = async (req, res, next) => {
     try {
@@ -57,6 +58,80 @@ const getList = async (req, res, next) => {
     }
 };
 
+const getSingleDetails = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid discard log ID format'
+            });
+        }
+
+        const log = await DiscardLog.findById(id)
+            .populate({
+                path: "bagNo",
+                populate: {
+                    path: "donor", // nested population
+                    model: "Donor",
+                },
+            })
+            .populate("siteId");
+
+        if (!log) {
+            return res.status(404).json({
+                success: false,
+                message: "Discard log not found",
+            });
+        }
+
+        // Optionally format the result
+        const formatted = {
+            id: log._id.toString(),
+            itemType: log.itemType,
+            reason: log.reason,
+            discardedAt: log.discardedAt,
+            site: log.siteId
+                ? {
+                    id: log.siteId._id,
+                    name: log.siteId.name || "", // adjust based on actual schema
+                    code: log.siteId.code || "",
+                }
+                : null,
+            bag: log.bagNo
+                ? {
+                    id: log.bagNo._id,
+                    bagNo: log.bagNo.bagNo,
+                    typeOfBag: log.bagNo.typeOfBag,
+                    bloodGroup: log.bagNo.bloodGroup,
+                    rh: log.bagNo.rh,
+                    expiryDate: log.bagNo.expiryDate,
+                    donor: log.bagNo.donor
+                        ? {
+                            id: log.bagNo.donor._id,
+                            donorId: log.bagNo.donor.donorId,
+                            name: `${log.bagNo.donor.name.firstName} ${log.bagNo.donor.name.lastName}`,
+                            bloodGroup: log.bagNo.donor.bloodGroup,
+                            rh: log.bagNo.donor.rh,
+                            phone: log.bagNo.donor.phone,
+                        }
+                        : null,
+                }
+                : null,
+            createdAt: log.createdAt,
+        };
+
+        return res.status(200).json({
+            success: true,
+            data: formatted,
+        });
+    } catch (error) {
+        console.error("Error fetching discard log:", error);
+        next(error);
+    }
+};
+
 module.exports = {
     getList,
+    getSingleDetails,
 };

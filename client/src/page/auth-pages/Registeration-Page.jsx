@@ -26,7 +26,7 @@ import { useAuth } from "@/store/auth"
 
 export default function RegisterPage() {
     const navigate = useNavigate();
-    const {API} = useAuth();
+    const { API } = useAuth();
     const [currentStep, setCurrentStep] = useState(1)
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -116,17 +116,17 @@ export default function RegisterPage() {
         // Add your registration logic here
 
         try {
-            const response = await axios.post(`${API}/api/auth/register`,{
-                publicId:formData.publicId,
-                firstName:formData.firstName,
-                lastName:formData.lastName,
-                email:formData.email,
-                phone:formData.phone,
-                role:formData.role,
-                password:formData.confirmPassword
+            const response = await axios.post(`${API}/api/auth/register`, {
+                publicId: formData.publicId,
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                email: formData.email,
+                phone: formData.phone,
+                role: formData.role,
+                password: formData.confirmPassword
             });
 
-            if(response.status===201){
+            if (response.status === 201) {
                 toast.success(response.data.message);
                 navigate("/login");
                 console.log(response.data);
@@ -410,6 +410,10 @@ export default function RegisterPage() {
                                         onChange={handleChange}
                                         className="block w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-4 border-2 border-gray-200 rounded-xl sm:rounded-2xl bg-white text-gray-900 focus:outline-none focus:border-red-800 text-sm sm:text-base appearance-none"
                                     >
+                                        <option value="" disabled hidden>
+                                            Select Role
+                                        </option>
+
                                         {roles.map((role) => (
                                             <option
                                                 key={role.value}
@@ -419,8 +423,8 @@ export default function RegisterPage() {
                                                 {role.label}
                                             </option>
                                         ))}
-
                                     </select>
+
                                 </div>
                             </div>
 

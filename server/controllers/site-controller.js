@@ -6,7 +6,10 @@ Get Details Of Site (View)
 */
 
 const Site = require("../models/site-model");
+const User = require("../models/user-model");
 const mongoose = require("mongoose");
+
+
 const createSite = async (req, res, next) => {
   try {
     // Extracting data from the request body
@@ -46,7 +49,7 @@ const createSite = async (req, res, next) => {
         email: email,
       },
       createdBy: req.user._id, // The user who is creating the site
-      lastUpdatedBy:req.user._id,
+      lastUpdatedBy: req.user._id,
       staff, // This can be an array of user IDs that are staff members (optional)
     });
 
@@ -221,10 +224,27 @@ const getAllSites = async (req, res, next) => {
 };
 
 
+// ---------------
+// GET Staff List
+// -----------------
+
+const getStaffList = async (req, res, next) => {
+  try {
+    const staffList = await User.find({}, { name: 1 })
+      .select('_id name');  
+    return res.status(200).json({ success: true, data: staffList });
+  } catch (error) {
+    console.error("Error fetching staff list:", error);
+    next(error);
+  }
+};
+
+
 module.exports = {
   createSite,
   updateSite,
   deleteSite,
   getSiteDetails,
-  getAllSites
+  getAllSites,
+  getStaffList
 };
