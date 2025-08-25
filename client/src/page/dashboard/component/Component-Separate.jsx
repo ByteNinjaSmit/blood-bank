@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowLeft, TestTube, AlertCircle, Check, Loader2, Volume2, Clock, RefreshCw } from "lucide-react";
+import { ArrowLeft, TestTube, AlertCircle, Check, Loader2, Clock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 const ComponentSeparate = ({ onBack }) => {
@@ -455,7 +455,6 @@ const ComponentSeparate = ({ onBack }) => {
                         <td className="px-4 py-3">
                           {isSelected && (
                             <div className="flex items-center gap-2">
-                              <Volume2 className="w-4 h-4 text-gray-500" />
                               <input
                                 type="number"
                                 value={formData.componentVolumes[component.id] || ""}
@@ -464,9 +463,9 @@ const ComponentSeparate = ({ onBack }) => {
                                 placeholder="Volume"
                               />
                               <span className="text-xs text-gray-500">mL</span>
-                              {errors[`volume_${component.id}`] && (
+                              {/* {errors[`volume_${component.id}`] && (
                                 <span className="text-xs text-red-500">{errors[`volume_${component.id}`]}</span>
-                              )}
+                              )} */}
                             </div>
                           )}
                         </td>
