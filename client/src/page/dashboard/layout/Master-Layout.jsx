@@ -5,7 +5,8 @@ import {
     useSearchParams,
     useLocation,
     Outlet,
-    Link
+    Link,
+    href
 } from "react-router-dom"
 import { FaHome } from "react-icons/fa";
 import {
@@ -33,6 +34,7 @@ import {
     Plus,
 } from "lucide-react"
 import { toast } from "sonner"
+import { sub } from "date-fns";
 
 const modules = [
     {
@@ -146,14 +148,31 @@ const modules = [
                 permissions: ["write"],
                 description: "Issue blood units",
             },
-            {
-                name: "Discard",
-                href: "/inventory/discard",
-                permissions: ["admin"],
-                description: "Discard expired units",
-            },
+            // {
+            //     name: "Discard",
+            //     href: "/inventory/discard",
+            //     permissions: ["admin"],
+            //     description: "Discard expired units",
+            // },
         ],
         description: "Blood stock management",
+    },
+    {
+        id: "discard",
+        name: "Discard",
+        icon: <Edit className="w-5 h-5" />,
+        //href: "/discard",
+        permissions: ["read", "write"],   //make it admin in production
+        subModules: [
+            {
+                name: "Discard List",
+                href: "/discard",
+                permissions: ["read", "write"],
+                description: "View discarded blood units",
+            }
+        ],
+        description: "Manage discarded blood units",
+       
     },
     {
         id: "queue",

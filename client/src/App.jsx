@@ -12,6 +12,7 @@ import CampListing from './page/dashboard/Camp-Listing';
 import CampDonations from './page/dashboard/Camp-Donations';
 import ComponentSeparate from './page/dashboard/component/Component-Separate';
 import NearExpiry from './page/dashboard/component/Near-Expiry';
+import ViewDiscarded from './components/camp/View-Discarded';
 
 const App = () => {
   const pathname = useLocation().pathname;
@@ -41,6 +42,7 @@ const App = () => {
           {/*  Dashboard - Component Routes */}
           <Route path="/component/separate" element={<ComponentSeparate onBack={() => navigate(-1)} />} />
           <Route path="/component/near-expiry" element={<NearExpiry onBack={() => navigate(-1)} />} />
+          <Route path="/discard" element={<ViewDiscarded />} />
 
           {/*For Dashboard - Error Routes - 404 NOT FOUND */}
           <Route path="*" element={<NotFound />} />
