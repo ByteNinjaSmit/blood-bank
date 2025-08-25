@@ -9,7 +9,7 @@ POST   /components/:id/print-label → Print component label
 const express = require('express');
 const router = express.Router();
 const componentController = require('../controllers/component-controller');
-const { authMiddleware } = require('../middlewares/auth-middleware');
+const  authMiddleware  = require('../middlewares/auth-middleware');
 const { roleMiddleware } = require('../middlewares/role-middleware');
 
 // Separate components from donation

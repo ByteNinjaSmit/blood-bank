@@ -11,32 +11,6 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/user-model"); // Mongoose User model
 
-// // Token expiry settings
-// const ACCESS_TOKEN_EXPIRY = "15m";
-// const REFRESH_TOKEN_EXPIRY = "7d";
-
-// // In-memory refresh token store (replace with Redis/DB in production)
-// let refreshTokens = [];
-
-// // Helper: Generate tokens
-// function generateTokens(user) {
-//   const payload = {
-//     id: user._id,
-//     role: user.role,
-//     email: user.email,
-//   };
-
-//   const accessToken = jwt.sign(payload, process.env.JWT_SECRET, {
-//     expiresIn: ACCESS_TOKEN_EXPIRY,
-//   });
-//   const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
-//     expiresIn: REFRESH_TOKEN_EXPIRY,
-//   });
-
-//   refreshTokens.push(refreshToken);
-//   return { accessToken, refreshToken };
-// }
-
 const registerUser = async (req, res, next) => {
   try {
     // Destructure fields from the request body
@@ -52,16 +26,20 @@ const registerUser = async (req, res, next) => {
       updatedBy,
     } = req.body;
 
+    if(!publicId || !firstName || !lastName || !role || !email || !password){
+      return res.status(400).json({message:"All Fields Are Required"})
+    }
+
     // Check if email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ error: "Email already exists" });
+      return res.status(400).json({ message: "Email already exists" });
     }
 
     // Check if phone already exists
     const existingPhone = await User.findOne({ phone });
     if (existingPhone) {
-      return res.status(400).json({ error: "Phone number already in use" });
+      return res.status(400).json({ message: "Phone number already in use" });
     }
 
     // Create new user
@@ -113,7 +91,7 @@ const loginUser = async (req, res, next) => {
 
     // Step 2: Check if user exists
     if (!user) {
-      return res.status(400).json({ error: "Invalid credentials" });
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
     // Step 3: Check if the account is active (optional)
@@ -126,7 +104,7 @@ const loginUser = async (req, res, next) => {
     // Step 4: Compare the password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(400).json({ error: "Invalid credentials" });
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
     // Step 5: Generate a JWT token
@@ -139,7 +117,7 @@ const loginUser = async (req, res, next) => {
     // Step 7: Send the response with user data (excluding password) and the token
     return res.status(200).json({
       user: {
-        userId:user._id,
+        userId: user._id,
         publicId: user.publicId,
         name: user.name,
         email: user.email,
@@ -153,7 +131,43 @@ const loginUser = async (req, res, next) => {
   }
 };
 
+// ---------------------------
+// GET Current Logged User detail
+// ---------------------------
+
+const getCurrentUser = async (req, res, next) => {
+  try {
+    const token = req.cookies?.authToken;
+
+    if (!token) {
+      return res
+        .status(401)
+        .json({ message: "Unauthorized: No token provided" });
+    }
+
+    // Verify and decode token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    const { userID } = decoded;
+
+    // Fetch user
+    const userData = await User.findById(userID).select("-password");
+
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+
+    return res.status(200).json({
+      user: userData,
+    });
+  } catch (error) {
+    console.error("Error fetching current user:", error);
+    next(error);
+  }
+};
+
 module.exports = {
   loginUser,
   registerUser,
+  getCurrentUser,
 };

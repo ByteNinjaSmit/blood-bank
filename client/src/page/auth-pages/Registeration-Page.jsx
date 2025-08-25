@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import {
     ArrowRight,
     ArrowLeft,
@@ -21,8 +21,12 @@ import {
 } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { toast } from "sonner"
+import axios from "axios"
+import { useAuth } from "@/store/auth"
 
 export default function RegisterPage() {
+    const navigate = useNavigate();
+    const {API} = useAuth();
     const [currentStep, setCurrentStep] = useState(1)
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -110,6 +114,28 @@ export default function RegisterPage() {
         }
         console.log("Blood bank doctor registration:", formData)
         // Add your registration logic here
+
+        try {
+            const response = await axios.post(`${API}/api/auth/register`,{
+                publicId:formData.publicId,
+                firstName:formData.firstName,
+                lastName:formData.lastName,
+                email:formData.email,
+                phone:formData.phone,
+                role:formData.role,
+                password:formData.confirmPassword
+            });
+
+            if(response.status===201){
+                toast.success(response.data.message);
+                navigate("/login");
+                console.log(response.data);
+                console.log("Registration successful");
+            }
+        } catch (error) {
+            toast.error(error.response.data.message);
+        }
+
     }
 
     const bloodBankFeatures = [

@@ -12,7 +12,7 @@ const inventoryController = require('../controllers/inventory-controller');
 const authMiddleware = require('../middlewares/auth-middleware');
 
 // Apply auth middleware to all inventory routes
-router.use(authMiddleware.authMiddleware);
+router.use(authMiddleware);
 
 // List inventory items with filters
 router.get('/', inventoryController.listInventory);

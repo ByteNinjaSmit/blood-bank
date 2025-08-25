@@ -32,9 +32,11 @@ import {
     HomeIcon,
     List,
     Plus,
+    User,
 } from "lucide-react"
 import { toast } from "sonner"
 import { sub } from "date-fns";
+import { useAuth } from "@/store/auth";
 
 const modules = [
     {
@@ -172,7 +174,7 @@ const modules = [
             }
         ],
         description: "Manage discarded blood units",
-       
+
     },
     {
         id: "queue",
@@ -233,6 +235,7 @@ const hasPermission = (userPermissions, requiredPermissions) => {
 }
 
 function MasterLayout() {
+    const { user, API,LogoutUser } = useAuth();
     const router = useNavigate()
     const pathname = useLocation().pathname
     const [searchParams] = useSearchParams()
@@ -242,10 +245,8 @@ function MasterLayout() {
     const [selectedSubModule, setSelectedSubModule] = useState(null)
     const [expandedModules, setExpandedModules] = useState(new Set())
     const [isMobile, setIsMobile] = useState(false)
-    const [userRole] = useState("doctor")
     const [showMobileOverlay, setShowMobileOverlay] = useState(false)
-
-    const userPermissions = getUserPermissions(userRole)
+    const userPermissions = getUserPermissions(user?.role)
 
     useEffect(() => {
         const checkMobile = () => {
@@ -354,11 +355,24 @@ function MasterLayout() {
                                     <h1 className="text-lg font-bold">Blood Bank</h1>
                                     <p className="text-red-100 text-sm">Management System</p>
                                     <div className="flex items-center gap-1 mt-1">
-                                        <Shield className="w-3 h-3" />
-                                        <span className="text-xs capitalize">{userRole}</span>
+                                        <User className="w-3 h-3" />
+                                        <span className="text-xs">{user?.email}</span>
                                     </div>
+                                    <div className="flex items-center gap-1 mt-1">
+                                        <Shield className="w-3 h-3" />
+                                        <span className="text-xs capitalize">{user?.role}</span>
+                                    </div>
+
+                                    {/* Logout Button */}
+                                    <button
+                                        onClick={LogoutUser}
+                                        className="mt-3 text-xs px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition"
+                                    >
+                                        Logout
+                                    </button>
                                 </div>
                             </div>
+
                         )}
                         <button onClick={toggleSidebar} className="text-white hover:bg-white/20 p-2 rounded-md transition-colors">
                             {isMobile ? (
@@ -499,10 +513,10 @@ function MasterLayout() {
                             <div>
                                 {selectedModule ? (
                                     <div className="flex items-center gap-2 flex-wrap">
-                                        <h1 className="text-md md:text-lg font-semibold text-slate-800 flex items-center gap-2"> <Link to={'/'} className="cursor-pointer"><FaHome/></Link> <ChevronRight className="text-slate-500 w-4 h-4"/> {selectedModule.name}</h1>
+                                        <h1 className="text-md md:text-lg font-semibold text-slate-800 flex items-center gap-2"> <Link to={'/'} className="cursor-pointer"><FaHome /></Link> <ChevronRight className="text-slate-500 w-4 h-4" /> {selectedModule.name}</h1>
                                         {selectedSubModule && (
                                             <>
-                                                <div className="font-bold"><ChevronRight className="text-slate-500 w-4 h-4"/></div>
+                                                <div className="font-bold"><ChevronRight className="text-slate-500 w-4 h-4" /></div>
                                                 <span className="text-sm md:text-md font-semibold text-red-600">{selectedSubModule.name}</span>
                                             </>
                                         )}

@@ -2,7 +2,7 @@
 app.log
 server/logs/app.log
 node_modules
-/server/.env
+# /server/.env
 *.log
 *.jpeg
 *.csv
