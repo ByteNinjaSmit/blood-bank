@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
 
     const storeTokenInCookies = (serverToken) => {
         setToken(serverToken);
-        document.cookie = `authToken=${serverToken}; path=/; max-age=3600; secure; samesite=strict`;
+        document.cookie = `authToken=${serverToken}; path=/; max-age=1800; secure; samesite=strict`;
     };
 
     const API = import.meta.env.VITE_APP_URI_API;

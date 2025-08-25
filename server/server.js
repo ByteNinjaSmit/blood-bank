@@ -38,7 +38,7 @@ const inventoryRoutes = require("./routers/inventory-routes");
 const requestRoutes = require("./routers/request-routes");
 const componentRoutes = require("./routers/component-routes");
 const userRoutes = require("./routers/user-routes");
-
+const discardRoutes = require("./routers/discard-routes");
 
 // Server Setup
 // Server
@@ -189,7 +189,7 @@ app.use("/api/inventory", inventoryRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/components", componentRoutes);
 app.use("/api/users", userRoutes);
-
+app.use("/api/discard",discardRoutes);
 
 
 
