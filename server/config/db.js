@@ -1,8 +1,6 @@
-const dotenv = require('dotenv');
-dotenv.config();
 const mongoose = require('mongoose');
 // Get MongoDB URI from environment variables
-const URI = process.env.MONGODB_URI; // connection string to MongoDB server
+const URI = process.env.MONGODB_URI?.trim(); // connection string to MongoDB server
 
 if (!URI) {
     throw new Error("Please define the MONGODB_URI environment variable inside .env.local");

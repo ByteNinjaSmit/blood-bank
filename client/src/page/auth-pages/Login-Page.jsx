@@ -13,11 +13,15 @@ import {
   TestTube,
   UserCheck,
 } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useIsMobile } from "@/hooks/use-mobile"
-// import { loginUser } from "@/store/auth";
+import { useAuth } from "@/store/auth"
+import axios from "axios"
+import { toast } from "sonner"
 
 export default function BloodBankDoctorLoginPage() {
+  const navigate = useNavigate();
+  const {API,storeTokenInCookies } = useAuth();
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     username: "",
@@ -38,7 +42,20 @@ export default function BloodBankDoctorLoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     console.log("Blood bank doctor login:", formData)
-    //  loginUser(formData.username, formData.password)
+    try {
+      const response =  await axios.post(`${API}/api/auth/login`,{
+        email: formData.username,
+        password: formData.password,
+      });
+      if(response.status === 200){
+        const data = response.data;
+        toast.success(data.message || "Login successful");
+        storeTokenInCookies(data.token);
+        navigate("/");
+      }
+    } catch (error) {
+      toast.error(error.response.data.message || "Login failed. Please try again.");
+    }
   };
 
 
@@ -116,7 +133,7 @@ export default function BloodBankDoctorLoginPage() {
             {/* Username field */}
             <div className="space-y-2">
               <label htmlFor="username" className="text-sm font-medium text-gray-700 block">
-                User ID
+                Email ID
               </label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
@@ -130,7 +147,7 @@ export default function BloodBankDoctorLoginPage() {
                   value={formData.username}
                   onChange={handleChange}
                   className="block w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-4 border-2 border-gray-200 rounded-xl sm:rounded-2xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-800 text-sm sm:text-base"
-                  placeholder="Enter your medical ID"
+                  placeholder="Enter your Email ID"
                 />
               </div>
             </div>

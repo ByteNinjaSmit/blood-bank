@@ -1,5 +1,5 @@
 import React from 'react'
-import { Route, Routes, useLocation, useNavigation } from "react-router-dom"
+import { Route, Routes, useLocation, useNavigate } from "react-router-dom"
 import LoginPage from './page/auth-pages/Login-Page'
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
@@ -10,11 +10,14 @@ import Home from './page/Home';
 import CampRegisteration from './page/dashboard/Camp-Registeration';
 import CampListing from './page/dashboard/Camp-Listing';
 import CampDonations from './page/dashboard/Camp-Donations';
+import ComponentSeparate from './page/dashboard/component/Component-Separate';
+import NearExpiry from './page/dashboard/component/Near-Expiry';
 import ViewDiscarded from './components/camp/View-Discarded';
 import ViewStock from './components/Inventory/Stock-View';
 
 const App = () => {
   const pathname = useLocation().pathname;
+  const navigate = useNavigate();
   // const navigation = useNavigation();
   const NoNavbarRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
   const NoFooterRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
@@ -37,6 +40,9 @@ const App = () => {
           <Route path="/camp-donations" element={<CampDonations />} />
           <Route path="/camp-listing" element={<CampListing />} />
 
+          {/*  Dashboard - Component Routes */}
+          <Route path="/component/separate" element={<ComponentSeparate onBack={() => navigate(-1)} />} />
+          <Route path="/component/near-expiry" element={<NearExpiry onBack={() => navigate(-1)} />} />
           <Route path="/discard" element={<ViewDiscarded />} />
           
           <Route path="/inventory/stock" element={<ViewStock/>} />

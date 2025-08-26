@@ -7,14 +7,10 @@ const DiscardLogSchema = new Schema({
     enum: ['Donation', 'Component'],
     required: true
   },
-  itemId: {
-    type: Types.ObjectId,
-    required: true
-  },
   bagNo: {
-    type: String,
-    required: true,
-    trim: true
+    type: Types.ObjectId,
+    ref: 'BloodBag',
+    required: true
   },
   reason: {
     type: String,
@@ -28,7 +24,7 @@ const DiscardLogSchema = new Schema({
   siteId: {
     type: Types.ObjectId,
     ref: 'Site',
-    required: true
+    // required: true
   },
   createdAt: {
     type: Date,

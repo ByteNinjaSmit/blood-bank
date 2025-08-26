@@ -1,9 +1,12 @@
-import React from "react"
+import React, { useEffect } from "react"
 import { useState } from "react"
 import { ArrowLeft, Droplets } from "lucide-react"
 import { toast } from "sonner"
+import { useAuth } from "@/store/auth"
+import axios from "axios"
 
 const CampRegisteration = ({ onBack }) => {
+  const { API, authorizationToken } = useAuth();
   const [formData, setFormData] = useState({
     siteId: "",
     name: "",
@@ -17,6 +20,7 @@ const CampRegisteration = ({ onBack }) => {
   })
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [staffList, setStaffList] = useState([])  // _id name
 
   const validateForm = () => {
     const newErrors = {}
@@ -31,45 +35,80 @@ const CampRegisteration = ({ onBack }) => {
       newErrors.email = "Email format is invalid"
     }
 
-    const phoneRegex = /^\d{3}-\d{3}-\d{4}$/
+    const phoneRegex = /^\d{10}$/
     if (formData.contactInfo.phone && !phoneRegex.test(formData.contactInfo.phone)) {
-      newErrors.phone = "Phone format should be XXX-XXX-XXXX"
+      newErrors.phone = "Phone format should be XXXXXXXXXX"
     }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
+
+  const getStaffNames = async () => {
+    try {
+      const response = await axios.get(`${API}/api/site/staff-list`, {
+        headers: {
+          'Authorization': authorizationToken,
+        }, withCredentials: true
+      });
+      if (response.status === 200) {
+        setStaffList(response.data.data || []);
+        console.log(response.data.data);
+      }
+    } catch (error) {
+      console.log(error.response?.data?.message);
+    }
+  }
+
+  useEffect(() => {
+    getStaffNames();
+  }, [API])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
 
     if (!validateForm()) return
 
-    setIsSubmitting(true)
-
+    setIsSubmitting(true);
     try {
-      const submitData = {
-        ...formData,
-        createdBy: "currentUserId",
+      const response = await axios.post(`${API}/api/site/new`, {
+        siteId: formData.siteId,
+        name: formData.name,
+        description: formData.description,
+        address: formData.address,
+        phone: formData.contactInfo.phone,
+        email: formData.contactInfo.email,
+        staff: formData.staff
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': authorizationToken,
+        },
+        withCredentials: true,
+      });
+      if (response.status === 201) {
+        toast.success(response.data.message || "Camp created successfully");
+        setFormData({
+          siteId: "",
+          name: "",
+          description: "",
+          address: "",
+          contactInfo: {
+            phone: "",
+            email: "",
+          },
+          staff: [],
+        });
+        // onBack(); // Navigate back to the previous page
+
       }
-
-      console.log("Submitting camp data:", submitData)
-
-      setFormData({
-        siteId: "",
-        name: "",
-        description: "",
-        address: "",
-        contactInfo: { phone: "", email: "" },
-        staff: [],
-      })
-
-      toast.success("Camp created successfully!")
     } catch (error) {
-      console.error("Error creating camp:", error)
-      toast.error("Error creating camp. Please try again.")
+      toast.error(error.response?.data?.message);
+      console.log(error);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
 
@@ -182,7 +221,42 @@ const CampRegisteration = ({ onBack }) => {
                 />
                 {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
               </div>
+              {/* Staff Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Assign Staff
+                </label>
+                <select
+                  multiple
+                  value={formData.staff}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      staff: Array.from(e.target.selectedOptions, (option) => option.value),
+                    })
+                  }
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[100px]"
+                >
+                  {staffList && staffList.length > 0 ? (
+                    staffList?.map((staff, index) => {
+                      if (!staff || !staff._id || !staff.name) return null; // skip bad data
+                      return (
+                        <option key={staff._id || index} value={staff._id}>
+                          {String(staff?.name?.first)} {String(staff?.name?.last)}
+                        </option>
+                      );
+                    })
+                  ) : (
+                    <option disabled>No staff available</option>
+                  )}
+                </select>
+
+                <p className="text-xs text-gray-500 mt-1">
+                  Hold <kbd>Ctrl</kbd> (or <kbd>Cmd</kbd> on Mac) to select multiple staff.
+                </p>
+              </div>
             </div>
+
 
             <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6">
               <button
@@ -195,6 +269,7 @@ const CampRegisteration = ({ onBack }) => {
               <button
                 type="submit"
                 disabled={isSubmitting}
+                onClick={handleSubmit}
                 className="px-8 py-3 bg-orange-800 hover:bg-orange-900 text-white rounded-md font-medium shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:pointer-events-none order-1 sm:order-2"
               >
                 {isSubmitting ? "Creating..." : "Create Camp"}

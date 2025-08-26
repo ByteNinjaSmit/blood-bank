@@ -13,7 +13,7 @@ const requestController = require('../controllers/request-controller');
 const authMiddleware = require('../middlewares/auth-middleware');
 
 // Apply auth middleware to all routes
-router.use(authMiddleware.authMiddleware);
+router.use(authMiddleware);
 
 // Create hospital request
 router.post('/', requestController.createRequest);

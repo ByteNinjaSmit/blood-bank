@@ -4,9 +4,11 @@ import App from './App.jsx'
 import './index.css'
 import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from 'sonner'
-
+import { AuthProvider } from './store/auth';
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
+        <AuthProvider>
+
     <BrowserRouter>
       <Toaster
         position="top-right" // top-right | top-center | bottom-left etc
@@ -60,8 +62,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             },
           },
         }}
-      />
+        />
       <App />
     </BrowserRouter>
+        </AuthProvider>
   </React.StrictMode>,
 )

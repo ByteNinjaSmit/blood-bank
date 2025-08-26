@@ -41,10 +41,12 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault()
-    console.log("Donation form submitted:", formData)
+    console.log("FormData of Submission:", formData)
     // Handle form submission
+
+
   }
 
   return (

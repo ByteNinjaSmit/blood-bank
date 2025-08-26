@@ -7,7 +7,7 @@ const UserSchema = new Schema({
   publicId: {
     type: String,
     required: true,
-    unique: true, // assuming each publicId is unique like USR-2025-0001
+    // unique: true, // assuming each publicId is unique like USR-2025-0001
   },
   name: {
     first: {
@@ -24,7 +24,7 @@ const UserSchema = new Schema({
   email: {
     type: String,
     required: true,
-    unique: true,
+    // unique: true,
     lowercase: true,
     trim: true,
   },
@@ -42,7 +42,7 @@ const UserSchema = new Schema({
 
   role: {
     type: String,
-    enum: ["admin", "lab-tech", "inventory", "hospital", "viewer"],
+    enum: ["admin", "lab-tech", "inventory", "hospital", "viewer","staff"],
     required: true,
   },
   password: {
@@ -132,7 +132,7 @@ UserSchema.methods.generateToken = async function () {
       },
       process.env.JWT_SECRET_KEY,
       {
-        expiresIn: "6h",
+        expiresIn: "1h",
       }
     );
   } catch (error) {
@@ -142,6 +142,6 @@ UserSchema.methods.generateToken = async function () {
 };
 
 
-const User = new mongoose.model("User", UserSchema);
+const User = mongoose.model("User", UserSchema);
 
 module.exports = User;
