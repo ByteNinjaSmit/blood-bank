@@ -26,6 +26,8 @@ const Button = ({ children, onClick, variant = "default", size = "default", clas
 const ViewDiscarded = ({ onBack }) => {
     const [selectedItem, setSelectedItem] = useState(null)
     const [showBagDetails, setShowBagDetails] = useState(false)
+    const [deleteConfirm, setDeleteConfirm] = useState({ show: false, item: null })
+
     const [discardedItems] = useState([
         {
             id: "1",
@@ -72,8 +74,19 @@ const ViewDiscarded = ({ onBack }) => {
     }
 
     const handleDelete = (item) => {
-        console.log("Delete item:", item)
-        // Add delete functionality here
+        setDeleteConfirm({ show: true, item })
+    }
+
+    const confirmDelete = () => {
+        if (deleteConfirm.item) {
+            console.log("Delete item:", deleteConfirm.item)
+            // Implement actual delete functionality here
+            setDeleteConfirm({ show: false, item: null })
+        }
+    }
+
+    const cancelDelete = () => {
+        setDeleteConfirm({ show: false, item: null })
     }
 
     const closeModal = () => {
@@ -180,9 +193,34 @@ const ViewDiscarded = ({ onBack }) => {
                                                 >
                                                     <Edit className="w-4 h-4" />
                                                 </Button>
-                                                <Button onClick={() => handleDelete(item)} variant="destructive" size="sm">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
+                                                <div className="relative">
+                                                    <button
+                                                        onClick={() => handleDelete(item)}
+                                                        className="text-red-600 hover:text-red-900 p-1 rounded"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                    {deleteConfirm.show && deleteConfirm.item?.id === item.id && (
+                                                        <div className="absolute top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-3 z-10 min-w-48">
+                                                            <p className="text-sm text-gray-700 mb-3">Do you want to Delete it?</p>
+                                                            <div className="flex space-x-2">
+                                                                <button
+                                                                    onClick={confirmDelete}
+                                                                    className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                                                                >
+                                                                    Yes
+                                                                </button>
+                                                                <button
+                                                                    onClick={cancelDelete}
+                                                                    className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
+                                                                >
+                                                                    No
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -231,10 +269,34 @@ const ViewDiscarded = ({ onBack }) => {
                                         <Edit className="w-4 h-4 mr-1" />
                                         Edit
                                     </Button>
-                                    <Button onClick={() => handleDelete(item)} variant="destructive" size="sm" className="flex-1">
-                                        <Trash2 className="w-4 h-4 mr-1" />
-                                        Delete
-                                    </Button>
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => handleDelete(item)}
+                                            className="text-red-600 hover:text-red-900 p-1 rounded"
+                                            title="Delete"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                        {deleteConfirm.show && deleteConfirm.item?.id === item.id && (
+                                            <div className="absolute top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-3 z-10 min-w-48">
+                                                <p className="text-sm text-gray-700 mb-3">Do you want to Delete it?</p>
+                                                <div className="flex space-x-2">
+                                                    <button
+                                                        onClick={confirmDelete}
+                                                        className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                                                    >
+                                                        Yes
+                                                    </button>
+                                                    <button
+                                                        onClick={cancelDelete}
+                                                        className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
+                                                    >
+                                                        No
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         ))}
