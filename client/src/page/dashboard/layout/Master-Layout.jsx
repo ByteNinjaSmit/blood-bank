@@ -150,17 +150,17 @@ const modules = [
                 permissions: ["write"],
                 description: "Issue blood units",
             },
-            // {
-            //     name: "Discard",
-            //     href: "/inventory/discard",
-            //     permissions: ["admin"],
-            //     description: "Discard expired units",
-            // },
+            {
+                name: "Stock",
+                href: "/inventory/stock",
+                permissions: ["read", "write"],
+                description: "Display current stock",
+            },
         ],
         description: "Blood stock management",
     },
     {
-        id: "discard",
+        id: "discard",  //code file in camp folder 
         name: "Discard",
         icon: <Edit className="w-5 h-5" />,
         //href: "/discard",
@@ -168,7 +168,7 @@ const modules = [
         subModules: [
             {
                 name: "Discard List",
-                href: "/discard",
+                href: "/discard",  
                 permissions: ["read", "write"],
                 description: "View discarded blood units",
             }

@@ -1,10 +1,10 @@
-import React from "react"
-import { useState } from "react"
+import React, { useState } from "react"
 import { ArrowLeft, Filter, Eye, Edit, Trash2, X, Droplets } from "lucide-react"
 
 const ViewDonations = ({ onBack }) => {
   const [showFilters, setShowFilters] = useState(false)
   const [selectedDonation, setSelectedDonation] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, item: null })
   const [filters, setFilters] = useState({
     typeOfBag: "",
     bloodGroup: "",
@@ -54,9 +54,20 @@ const ViewDonations = ({ onBack }) => {
     // Handle update logic
   }
 
-  const handleDelete = (donationId) => {
-    console.log("Delete donation:", donationId)
-    // Handle delete logic
+  const handleDelete = (donation) => {
+    setDeleteConfirm({ show: true, item: donation })
+  }
+
+  const confirmDelete = () => {
+    if (deleteConfirm.item) {
+      console.log("Delete donation:", deleteConfirm.item)
+      // Implement actual delete functionality here
+      setDeleteConfirm({ show: false, item: null })
+    }
+  }
+
+  const cancelDelete = () => {
+    setDeleteConfirm({ show: false, item: null })
   }
 
   return (
@@ -185,7 +196,7 @@ const ViewDonations = ({ onBack }) => {
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-800">{donation.collectionDate}</td>
                     <td className="px-6 py-4">
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 relative">
                         <button
                           onClick={() => handleViewDetails(donation)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -201,12 +212,33 @@ const ViewDonations = ({ onBack }) => {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(donation.id)}
+                          onClick={() => handleDelete(donation)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
+
+                        {/* Delete Confirmation */}
+                        {deleteConfirm.show && deleteConfirm.item?.id === donation.id && (
+                          <div className="absolute top-10 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-3 z-10 min-w-48">
+                            <p className="text-sm text-gray-700 mb-3">Do you want to delete it?</p>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={confirmDelete}
+                                className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={cancelDelete}
+                                className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
+                              >
+                                No
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>

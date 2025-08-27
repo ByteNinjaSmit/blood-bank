@@ -13,6 +13,7 @@ import CampDonations from './page/dashboard/Camp-Donations';
 import ComponentSeparate from './page/dashboard/component/Component-Separate';
 import NearExpiry from './page/dashboard/component/Near-Expiry';
 import ViewDiscarded from './components/camp/View-Discarded';
+import ViewStock from './components/Inventory/Stock-View';
 
 const App = () => {
   const pathname = useLocation().pathname;
@@ -43,6 +44,8 @@ const App = () => {
           <Route path="/component/separate" element={<ComponentSeparate onBack={() => navigate(-1)} />} />
           <Route path="/component/near-expiry" element={<NearExpiry onBack={() => navigate(-1)} />} />
           <Route path="/discard" element={<ViewDiscarded />} />
+          
+          <Route path="/inventory/stock" element={<ViewStock/>} />
 
           {/*For Dashboard - Error Routes - 404 NOT FOUND */}
           <Route path="*" element={<NotFound />} />
