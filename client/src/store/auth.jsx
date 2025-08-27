@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
             if (response.status == 200) {
                 const data = response.data;
                 setUser(data.user);
-                console.log("Authenticated User:", data.user);
+                // console.log("Authenticated User:", data.user);
 
             } else {
                 console.error("Error fetching user data");
