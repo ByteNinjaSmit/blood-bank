@@ -18,6 +18,11 @@ router.route('/delete/:id').delete(authMiddleware,siteController.deleteSite);
 router.route('/details/:id').get(authMiddleware,siteController.getSiteDetails);
 router.route('/details').get(authMiddleware,siteController.getAllSites);
 router.route('/staff-list').get(authMiddleware,siteController.getStaffList);
+router.route('/list').get(authMiddleware,siteController.getCampList);
+router.route('/camp-donations/:siteId').get(authMiddleware,siteController.campDonationList);
+router.route('/camp-donors/:siteId').get(authMiddleware,siteController.campDonorList);
+
+
 
 
 

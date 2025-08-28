@@ -198,6 +198,29 @@ const getSiteDetails = async (req, res, next) => {
   }
 };
 
+// ------------
+// GET CAMP LIST
+// --------------
+const getCampList = async (req, res, next) => {
+  try {
+    const sites = await Site.find()
+      .populate("createdBy", "name")
+      .populate("lastUpdatedBy", "name")
+      .populate("staff", "name");
+    //.populate("donorData") 
+    //.populate("bagsData"); 
+
+    return res.status(200).json({
+      message: "Site list retrieved successfully",
+      data: sites,
+    });
+  } catch (error) {
+    console.error(`Error from getCampList:`, error);
+    next(error);
+  }
+};
+
+
 
 const getAllSites = async (req, res, next) => {
   try {
@@ -231,10 +254,92 @@ const getAllSites = async (req, res, next) => {
 const getStaffList = async (req, res, next) => {
   try {
     const staffList = await User.find({}, { name: 1 })
-      .select('_id name');  
+      .select('_id name');
     return res.status(200).json({ success: true, data: staffList });
   } catch (error) {
     console.error("Error fetching staff list:", error);
+    next(error);
+  }
+};
+
+
+// -----------
+// Get List Of Camp Donation 
+// ------------
+
+const campDonationList = async (req, res, next) => {
+  try {
+    const { siteId } = req.params;
+
+    if (!mongoose.isValidObjectId(siteId)) {
+      return res.status(404).json({ message: 'Invalid Site Id' });
+    }
+
+    // Step 1: Find the site by its siteId field
+    const site = await Site.findOne({ siteId })
+      .select('name siteId bagsData')
+      .populate({
+        path: 'bagsData',
+        select: 'bagNo segmentNo typeOfBag bloodGroup rh status collectionDate donor',
+        populate: {
+          path: 'donor',
+          select: 'name donorId' // Adjust based on actual donor model fields
+        }
+      });
+
+    // Handle if site is not found
+    if (!site) {
+      return res.status(404).json({ message: 'Site not found' });
+    }
+
+    return res.status(200).json({
+      message: 'Camp donation data fetched successfully.',
+      data: {
+        siteName: site.name,
+        siteId: site.siteId,
+        donations: site.bagsData
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in campDonationList:', error);
+    next(error);
+  }
+};
+
+// ------------------------
+// Get List Of Particular Camp Donor 
+// ----------------------
+
+const campDonorList = async (req, res, next) => {
+  try {
+    const { siteId } = req.params;
+    if (!mongoose.isValidObjectId(siteId)) {
+      return res.status(404).json({ message: 'Invalid Site Id' });
+    }
+    // Step 1: Find the site by custom siteId
+    const site = await Site.findOne({ siteId })
+      .select('name siteId donorData')
+      .populate({
+        path: 'donorData',
+        select: 'donorId name.firstName name.lastName uid phone email sex bloodGroup rh'
+      });
+
+    if (!site) {
+      return res.status(404).json({ message: 'Site not found' });
+    }
+
+    return res.status(200).json({
+      message: 'Camp donor list fetched successfully.',
+      data: {
+        siteName: site.name,
+        siteId: site.siteId,
+        donors: site.donorData
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in campDonorList:', error);
     next(error);
   }
 };
@@ -246,5 +351,8 @@ module.exports = {
   deleteSite,
   getSiteDetails,
   getAllSites,
-  getStaffList
+  getStaffList,
+  getCampList,
+  campDonationList,
+  campDonorList
 };
