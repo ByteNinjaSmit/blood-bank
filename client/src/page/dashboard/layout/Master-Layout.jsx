@@ -57,15 +57,8 @@ const modules = [
                 name: "Camp Registration",
                 icon: <Plus className="w-5 h-5" />,
                 href: "/camp-registration",
-                permissions: ["write"],
+                permissions: ["write", "read"],
                 description: "Register new blood donation camps",
-            },
-            {
-                name: "Camp Donations",
-                icon: <Heart className="w-5 h-5" />,
-                href: "/camp-donations",
-                permissions: ["read", "write"],
-                description: "Track donations from camps",
             },
             {
                 name: "Camp List",
@@ -81,8 +74,125 @@ const modules = [
                 permissions: ["read"],
                 description: "Generate reports for blood donation camps",
             },
+            {
+                name: "View Camp Details",
+                icon: <Heart className="w-5 h-5" />,
+                href: "/camp-donations",
+                permissions: ["read", "write"],
+                description: "Track donations from camps",
+            },
         ],
         description: "Blood donation camp management",
+    },
+    {
+        id: "donor",
+        name: "Donor",
+        icon: <User className="w-5 h-5" />,
+        href: "/donor",
+        permissions: ["read", "write"],
+        subModules: [
+            {
+                name:"Create Donor",
+                href: "/donor/create-donor",
+                permissions: ["read", "write"],
+                description: "Create Donor",
+            },
+            {
+                name:"View Donor",
+                href: "/donor/view-donor",
+                permissions: ["read", "write"],
+                description: "View Donor",
+            },
+        ],
+        description: "Manage donor records",  
+    },
+    {
+        id: "donations",
+        name: "Donations",
+        icon: <Heart className="w-5 h-5" />,
+        href: "/donations",
+        permissions: ["read", "write"],
+        subModules: [
+            {
+                name:"Create Donation",
+                href: "/donations/create-donation",
+                permissions: ["read", "write"],
+                description: "Create Donation",
+            },
+            {
+                name:"View Donation",
+                href: "/donations/view-donation",
+                permissions: ["read", "write"],
+                description: "View Donation",
+            },
+            
+        ],
+        description: "Track donation records",
+    },
+    {
+        id: "inventory",
+        name: "Inventory",
+        icon: <Package className="w-5 h-5" />,
+        permissions: ["read", "write"],
+        subModules: [
+            {
+                name: "Reserve",
+                href: "/inventory/reserve",
+                permissions: ["write"],
+                description: "Reserve blood units",
+            },
+            {
+                name: "Issue",
+                href: "/inventory/issue",
+                permissions: ["write"],
+                description: "Issue blood units",
+            },
+            {
+                name: "Stock",
+                href: "/inventory/stock",
+                permissions: ["read", "write"],
+                description: "Display current stock",
+            },
+        ],
+        description: "Blood stock management",
+    },
+    {
+        id: "discard",  //code file in camp folder 
+        name: "Discard",
+        icon: <Edit className="w-5 h-5" />,
+        //href: "/discard",
+        permissions: ["read", "write"],   //make it admin in production
+        subModules: [
+            {
+                name: "Discard List",
+                href: "/discard",  
+                permissions: ["read", "write"],
+                description: "View discarded blood units",
+            }
+        ],
+        description: "Manage discarded blood units",
+        
+    },
+    {
+        id: "queue",
+        name: "Queue",
+        icon: <Users className="w-5 h-5" />,
+        permissions: ["read", "write"],
+        subModules: [
+            {
+                name: "Book",
+                href: "/queue/book",
+                permissions: ["write"],
+                description: "Book donor appointments",
+            },
+            {
+                name: "Queue List",
+                href: "/queue/list",
+                permissions: ["read"],
+                description: "View donor queue",
+            },
+        ],
+        description: "Donor queue management",
     },
     {
         id: "component",
@@ -131,79 +241,6 @@ const modules = [
             },
         ],
         description: "Analytics and reporting",
-    },
-    {
-        id: "inventory",
-        name: "Inventory",
-        icon: <Package className="w-5 h-5" />,
-        permissions: ["read", "write"],
-        subModules: [
-            {
-                name: "Reserve",
-                href: "/inventory/reserve",
-                permissions: ["write"],
-                description: "Reserve blood units",
-            },
-            {
-                name: "Issue",
-                href: "/inventory/issue",
-                permissions: ["write"],
-                description: "Issue blood units",
-            },
-            {
-                name: "Stock",
-                href: "/inventory/stock",
-                permissions: ["read", "write"],
-                description: "Display current stock",
-            },
-        ],
-        description: "Blood stock management",
-    },
-    {
-        id: "discard",  //code file in camp folder 
-        name: "Discard",
-        icon: <Edit className="w-5 h-5" />,
-        //href: "/discard",
-        permissions: ["read", "write"],   //make it admin in production
-        subModules: [
-            {
-                name: "Discard List",
-                href: "/discard",  
-                permissions: ["read", "write"],
-                description: "View discarded blood units",
-            }
-        ],
-        description: "Manage discarded blood units",
-
-    },
-    {
-        id: "queue",
-        name: "Queue",
-        icon: <Users className="w-5 h-5" />,
-        permissions: ["read", "write"],
-        subModules: [
-            {
-                name: "Book",
-                href: "/queue/book",
-                permissions: ["write"],
-                description: "Book donor appointments",
-            },
-            {
-                name: "Queue List",
-                href: "/queue/list",
-                permissions: ["read"],
-                description: "View donor queue",
-            },
-        ],
-        description: "Donor queue management",
-    },
-    {
-        id: "donations",
-        name: "Donations",
-        icon: <Heart className="w-5 h-5" />,
-        href: "/donations",
-        permissions: ["read", "write"],
-        description: "Track donation records",
     },
     {
         id: "labs",

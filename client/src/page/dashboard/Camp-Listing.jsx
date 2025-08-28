@@ -1,14 +1,40 @@
-import React, { useState } from "react"
-import { ArrowLeft, Plus, Eye, Edit, Trash2, X, Droplets } from "lucide-react"
 
-const CampListing = ({ onBack }) => {
+import React, { useState, useEffect } from "react"
+import { ArrowLeft, Plus, Eye, Edit, Trash2 } from "lucide-react"
+import { se } from "date-fns/locale"
+import { useNavigate , Link } from 'react-router-dom';
+import ca from "zod/v4/locales/ca.cjs"
+import CampDonations from "./Camp-Donations";
+import { set } from "date-fns";
+
+const Button = ({ children, onClick, variant = "default", size = "default", className = "", ...props }) => {
+  const baseClasses =
+    "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background"
+  const variants = {
+    default: "bg-primary text-primary-foreground hover:bg-primary/90",
+    outline: "border border-input hover:bg-accent hover:text-accent-foreground",
+  }
+  const sizes = {
+    default: "h-10 py-2 px-4",
+    lg: "h-11 px-8",
+  }
+
+  return (
+    <button className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`} onClick={onClick} {...props}>
+      {children}
+    </button>
+  )
+}
+
+const CampList = ({ onBack, onViewCamp }) => {
   const [camps, setCamps] = useState([])
   const [loading, setLoading] = useState(true)
+  const [currentView, setCurrentView] = useState("CampList")
   const [selectedCamp, setSelectedCamp] = useState(null)
-  const [showModal, setShowModal] = useState(false)
+  const navigate = useNavigate();
 
-  // Mock data for demonstration
-  React.useEffect(() => {
+  // Mock data
+  useEffect(() => {
     setTimeout(() => {
       setCamps([
         {
@@ -68,10 +94,9 @@ const CampListing = ({ onBack }) => {
   }, [])
 
   const handleView = (camp) => {
-    setSelectedCamp(camp)
-    setShowModal(true)
-  }
 
+   
+  }
   const handleEdit = (camp) => {
     console.log("Edit camp:", camp)
   }
@@ -79,7 +104,6 @@ const CampListing = ({ onBack }) => {
   const handleDelete = (camp) => {
     if (window.confirm(`Are you sure you want to delete "${camp.name}"?`)) {
       setCamps(camps.filter((c) => c._id !== camp._id))
-      console.log("Delete camp:", camp)
     }
   }
 
@@ -99,29 +123,24 @@ const CampListing = ({ onBack }) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
-        <div className="bg-white border-b border-orange-200 text-gray-900 relative">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <button
+        <div className="bg-gradient-to-br from-red-800 via-red-700 to-red-900 text-white relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-red-900/20 to-transparent"></div>
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <Button
               onClick={onBack}
-              className="flex items-center gap-3 text-orange-800 border border-orange-300 hover:bg-orange-50 bg-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl px-6 py-3 mb-6"
+              variant="outline"
+              size="lg"
+              className="flex items-center gap-3 text-white border-white/30 hover:bg-white/10 bg-transparent"
             >
               <ArrowLeft className="w-5 h-5" />
               Back to Camp
-            </button>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-gradient-to-br from-orange-800 to-orange-900 rounded-xl">
-                <Droplets className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Camp Listing & Details</h1>
-                <p className="text-gray-600 mt-1">Comprehensive Camp detials lsiting section</p>
-              </div>
-            </div>
+            </Button>
+            <h1 className="text-3xl font-bold text-white">Camp List</h1>
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-white rounded-2xl p-8 shadow-lg border border-orange-100 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+          <div className="bg-white rounded-2xl p-8 shadow-lg border border-red-100 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
             <p className="text-slate-600">Loading camps...</p>
           </div>
         </div>
@@ -131,70 +150,66 @@ const CampListing = ({ onBack }) => {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="bg-white border-b border-orange-200 text-gray-900 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <button
+      <div className="bg-gradient-to-br from-red-800 via-red-700 to-red-900 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-red-900/20 to-transparent"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Button
             onClick={onBack}
-            className="flex items-center gap-3 text-orange-800 border border-orange-300 hover:bg-orange-50 bg-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl px-6 py-3 mb-6"
+            variant="outline"
+            size="lg"
+            className="flex items-center gap-3 text-white border-white/30 hover:bg-white/10 bg-transparent"
           >
             <ArrowLeft className="w-5 h-5" />
             Back to Camp
-          </button>
+          </Button>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-gradient-to-br from-orange-800 to-orange-900 rounded-xl">
-                <Droplets className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Camp Listing & Details</h1>
-                <p className="text-gray-600 mt-1">Comprehensive Camp detials lsiting section</p>
-              </div>
-            </div>
-            <button className="bg-orange-800 hover:bg-orange-900 text-white flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+            <h1 className="text-3xl font-bold text-white">Camp List</h1>
+            <Button className="bg-white/20 hover:bg-white/30 text-white flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Create New Camp
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-2xl shadow-lg border border-orange-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-lg border border-red-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-700">Site ID</th>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-700">Name</th>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-700">Progress</th>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-700">Actions</th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-slate-700">Site ID</th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-slate-700">Name</th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-slate-700">Progress</th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-slate-700">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {camps.map((camp) => (
                   <tr key={camp._id} className="hover:bg-slate-50">
-                    <td className="px-4 md:px-6 py-4 text-sm text-slate-900 font-medium">{camp.siteId}</td>
-                    <td className="px-4 md:px-6 py-4 text-sm font-medium text-slate-900">{camp.name}</td>
-                    <td className="px-4 md:px-6 py-4 text-sm">{getProgressBadge(camp.progress)}</td>
-                    <td className="px-4 md:px-6 py-4 text-sm">
+                    <td className="px-4 py-4 text-sm text-slate-900 font-medium">{camp.siteId}</td>
+                    <td className="px-4 py-4 text-sm font-medium text-slate-900">{camp.name}</td>
+                    <td className="px-4 py-4 text-sm">{getProgressBadge(camp.progress)}</td>
+                    <td className="px-4 py-4 text-sm">
                       <div className="flex items-center gap-2">
+                        <Link to={`/camp-donations?id=${camp._id}`}>
                         <button
-                          onClick={() => handleView(camp)}
-                          className="p-2 text-blue-600 cursor-pointer hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
+                        </Link>
                         <button
                           onClick={() => handleEdit(camp)}
-                          className="p-2 text-green-600 cursor-pointer hover:bg-green-50 rounded-lg transition-colors"
+                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
                           title="Edit"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(camp)}
-                          className="p-2 text-red-600 cursor-pointer hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                           title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -213,27 +228,18 @@ const CampListing = ({ onBack }) => {
               <p className="text-slate-600">Create your first camp to get started.</p>
             </div>
           )}
+
+          {/* {currentView === "CampDonations" && (
+            <CampDonations
+              camp={selectedCamp}
+              onBack={() => setCurrentView("CampList")}
+              onViewCamp={onViewCamp}
+              />
+          )} */}
         </div>
       </div>
-
-      {showModal && selectedCamp && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold text-slate-800">Camp Details</h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                title="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
-export default CampListing
+export default CampList

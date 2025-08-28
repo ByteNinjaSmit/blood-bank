@@ -9,11 +9,16 @@ import MasterLayout from './page/dashboard/layout/Master-Layout';
 import Home from './page/Home';
 import CampRegisteration from './page/dashboard/Camp-Registeration';
 import CampListing from './page/dashboard/Camp-Listing';
-import CampDonations from './page/dashboard/Camp-Donations';
+import ViewCampDetails from './page/dashboard/Camp-Donations';
 import ComponentSeparate from './page/dashboard/component/Component-Separate';
 import NearExpiry from './page/dashboard/component/Near-Expiry';
 import ViewDiscarded from './components/camp/View-Discarded';
 import ViewStock from './components/Inventory/Stock-View';
+import CreateDonation from './components/camp/Create-Donation';
+import ViewDonations from './components/camp/View-Donations';
+import CreateDonor from './components/camp/Create-Donor';
+import ViewDonor from './components/camp/View-Donor';
+import CampDonations from './page/dashboard/Camp-Donations';
 
 const App = () => {
   const pathname = useLocation().pathname;
@@ -46,6 +51,11 @@ const App = () => {
           <Route path="/discard" element={<ViewDiscarded />} />
           
           <Route path="/inventory/stock" element={<ViewStock/>} />
+
+          <Route path="/donations/create-donation" element={<CreateDonation/>} />
+          <Route path="/donations/view-donation" element={<ViewDonations/>} />
+          <Route path="/donor/create-donor" element={<CreateDonor/>} />
+          <Route path="/donor/view-donor" element={<ViewDonor/>} />
 
           {/*For Dashboard - Error Routes - 404 NOT FOUND */}
           <Route path="*" element={<NotFound />} />

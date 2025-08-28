@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react"
-import { Link } from "react-router-dom"
-import { Home, ArrowLeft, Heart, Droplets, Shield, AlertTriangle, Search } from "lucide-react"
+import { Link, useNavigate } from "react-router-dom"
+import { Home, ArrowLeft, Heart, Shield, Search } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 export default function NotFound() {
   const [mounted, setMounted] = useState(false)
   const isMobile = useIsMobile()
+  const navigate = useNavigate()
 
   useEffect(() => {
     setMounted(true)
@@ -13,7 +14,7 @@ export default function NotFound() {
 
   const quickLinks = [
     { icon: Home, label: "Home", href: "/", description: "Return to main page" },
-    { icon: Heart, label: "Register", href: "/", description: "Create new account" },
+    { icon: Heart, label: "Register", href: "/register", description: "Create new account" },
     { icon: Shield, label: "Login", href: "/login", description: "Access your account" },
     { icon: Search, label: "Help", href: "/help", description: "Get assistance" },
   ]
@@ -21,16 +22,20 @@ export default function NotFound() {
   return (
     <div className="min-h-screen flex flex-col justify-center lg:flex-row">
       <div
-        className={`w-full flex items-center justify-center p-4 sm:p-4 lg:p-8 xl:p-10 transition-all duration-1000 relative min-h-[50vh] lg:min-h-screen ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-          }`}
+        className={`w-full flex items-center justify-center p-4 sm:p-4 lg:p-8 xl:p-10 transition-all duration-1000 relative min-h-[50vh] lg:min-h-screen ${
+          mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+        }`}
       >
         <div className="w-full flex flex-col items-center max-w-5xl">
           {/* Error Header */}
           <div className="w-full flex flex-col lg:flex-row  items-center">
-
             <div className="text-center mb-6 sm:mb-8">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-2">Page Not Found</h1>
-              <div className="text-6xl sm:text-7xl font-bold text-red-800/20 mb-4">404</div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-2">
+                Page Not Found
+              </h1>
+              <div className="text-6xl sm:text-7xl font-bold text-red-800/20 mb-4">
+                404
+              </div>
               <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
                 The page you're looking for doesn't exist or has been moved. This could be due to a mistyped URL or an
                 outdated link.
@@ -42,9 +47,9 @@ export default function NotFound() {
               <h3 className="text-lg font-semibold text-gray-900 text-center mb-4">Quick Actions</h3>
 
               {quickLinks.map((link, index) => (
-                <Link
+                <button
                   key={index}
-                  href={link.href}
+                  onClick={() => navigate(link.href)}
                   className="w-full flex items-center p-3 sm:p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-red-800 hover:bg-red-50 transition-all duration-200 group"
                 >
                   <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3 group-hover:bg-red-200 transition-colors">
@@ -55,7 +60,7 @@ export default function NotFound() {
                     <p className="text-gray-600 text-xs sm:text-sm">{link.description}</p>
                   </div>
                   <ArrowLeft className="w-4 h-4 text-gray-400 rotate-180 group-hover:text-red-800 transition-colors" />
-                </Link>
+                </button>
               ))}
             </div>
           </div>
@@ -63,7 +68,7 @@ export default function NotFound() {
           {/* Primary Actions */}
           <div className="w-1/2 space-y-3">
             <Link
-              href="/"
+              to="/"
               className="w-full flex items-center justify-center px-4 sm:px-6 py-3 sm:py-4 border border-transparent rounded-xl sm:rounded-2xl text-sm sm:text-base font-medium text-white bg-gradient-to-r from-red-800 to-red-900 hover:from-red-900 hover:to-red-950 transition-all duration-200"
             >
               <Home className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
