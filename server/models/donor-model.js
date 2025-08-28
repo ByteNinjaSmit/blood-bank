@@ -104,7 +104,7 @@ const DonorSchema = new Schema({
     {
       donationId: {
         type: Types.ObjectId,
-        ref: "Donation",
+        ref: "BloodBag",
         // required: true
       },
       date: {

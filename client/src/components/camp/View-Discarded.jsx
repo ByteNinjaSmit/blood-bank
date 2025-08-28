@@ -1,6 +1,8 @@
-import React from "react"
+import React, { useEffect } from "react"
 import { useState } from "react"
 import { ArrowLeft, Eye, Edit, Trash2, X, Calendar, AlertTriangle, User } from "lucide-react"
+import axios from "axios"
+import { useAuth } from "@/store/auth"
 
 const Button = ({ children, onClick, variant = "default", size = "default", className = "", ...props }) => {
     const baseClasses =
@@ -24,6 +26,7 @@ const Button = ({ children, onClick, variant = "default", size = "default", clas
 }
 
 const ViewDiscarded = ({ onBack }) => {
+    const { API, authorizationToken } = useAuth();
     const [selectedItem, setSelectedItem] = useState(null)
     const [showBagDetails, setShowBagDetails] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, item: null })
@@ -60,6 +63,26 @@ const ViewDiscarded = ({ onBack }) => {
             createdAt: "2024-01-13T09:15:00Z",
         },
     ])
+
+    const getItems = async () => {
+        try {
+            const response = await axios.get(`${API}/api/discard/get-list`, {
+                headers: {
+                    Authorization: authorizationToken,
+                }, withCredentials: true,
+            });
+
+            if (response.status == 200) {
+                console.log("Discarded items fetched:", response.data)
+            }
+        } catch (error) {
+            console.error("Error fetching discarded items:", error)
+        }
+    }
+
+    useEffect(() => {
+        getItems();
+    }, [API])
 
     const handleViewDetails = (item) => {
         setSelectedItem(item)

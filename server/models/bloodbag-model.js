@@ -5,13 +5,11 @@ const BloodBagSchema = new Schema({
   bagNo: {
     type: String,
     required: true,
-    // unique: true,
     trim: true
   },
   segmentNo: {
     type: String,
     required: true,
-    unique: true,
     trim: true
   },
   batchNo: {
@@ -77,21 +75,21 @@ const BloodBagSchema = new Schema({
       test: {
         type: String,
         enum: ['HIV', 'HBsAg', 'HCV', 'VDRL', 'MP','NA'],
-        required: true
+        // required: true
       },
       result: {
         type: String,
         enum: ['Positive', 'Negative', 'Indeterminate'],
-        required: true
+        // required: true
       },
       testedAt: {
         type: Date,
-        required: true
+        // required: true
       },
       technicianId: {
         type: Types.ObjectId,
         ref: 'User',
-        required: true
+        // required: true
       }
     }
   ],

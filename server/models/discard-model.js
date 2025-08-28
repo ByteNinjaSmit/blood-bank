@@ -26,6 +26,11 @@ const DiscardLogSchema = new Schema({
     ref: 'Site',
     // required: true
   },
+  updatedBy: {
+    type: Types.ObjectId,
+    ref: 'User',
+    required:true,
+  },
   createdAt: {
     type: Date,
     default: Date.now
