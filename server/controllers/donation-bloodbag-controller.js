@@ -29,7 +29,8 @@ const newDonation = async (req, res, next) => {
             rh,
             atypicalAntibody,
             // quarantineReason,
-            siteId
+            siteId,
+            donorId,
         } = req.body;
 
         const userId = req.user?._id;
@@ -117,6 +118,7 @@ const newDonation = async (req, res, next) => {
             {
                 $push: {
                     donationHistory: {
+                        donorId: donorId, // <---- donorId string
                         donationId: savedBag._id,
                         bagNo: savedBag.bagNo,
                         date: collectionDate

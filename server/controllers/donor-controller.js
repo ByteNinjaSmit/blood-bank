@@ -222,8 +222,8 @@ const getDonorDetails = async (req, res, next) => {
 
     // Fetch the donor from the database
     const donor = await Donor.findById(id)
-      .populate("createdBy", "name email") // Populate the creator's details
-      .populate("updatedBy", "name email") // Populate the last updater's details
+      .populate("createdBy", "name phone") // Populate the creator's details
+      .populate("updatedBy", "name phone") // Populate the last updater's details
       .populate("donationHistory.donationId") // Populate donation history with related donation details (if any)
       .exec();
 
@@ -286,8 +286,8 @@ const listDonors = async (req, res, next) => {
       .skip(skip)
       .limit(limitResults)
       .sort(sort)
-      .populate("createdBy", "name email") // Optionally populate creator's details
-      .populate("updatedBy", "name email") // Optionally populate last updater's details
+      .populate("createdBy", "name phone") // Optionally populate creator's details
+      .populate("updatedBy", "name phone") // Optionally populate last updater's details
       .exec();
 
     // Count the total number of donors matching the filter
@@ -305,9 +305,107 @@ const listDonors = async (req, res, next) => {
   }
 };
 
+
+
+
+// ---------------------
+// SEARCH Donor by Name + DOB and get Latest Donation
+// ---------------------
+const searchDonorLatestDonation = async (req, res, next) => {
+  try {
+    const { firstName, middleName, lastName, dob } = req.query;
+
+    if (!firstName || !middleName || !lastName || !dob) {
+      return res.status(400).json({ message: "firstName, middleName, lastName, and dob are required for search." });
+    }
+
+    const dobDate = new Date(dob);
+    if (isNaN(dobDate)) {
+      return res.status(400).json({ message: "Invalid dob format." });
+    }
+
+    // Build dynamic search query
+    const searchQuery = {
+      "name.firstName": firstName.trim(),
+      "name.lastName": lastName.trim(),
+      dob: dobDate
+    };
+
+    if (middleName) {
+      searchQuery["name.middleName"] = middleName.trim();
+    }
+
+    const donor = await Donor.findOne(searchQuery)
+      .populate({
+        path: "donationHistory.donationId",
+        options: { sort: { collectionDate: -1 }, limit: 1 }, // only latest donation
+        select: "bagNo segmentNo typeOfBag bloodGroup rh collectionDate expiryDate status",
+        model: "BloodBag"
+      })
+      .populate({
+        path: "createdBy updatedBy",
+        select: "name.first name.last phone",
+        model: "User"
+      })
+      .select("-__v");
+
+    if (!donor) {
+      return res.status(404).json({ message: "Donor not found." });
+    }
+
+    // Get latest donation
+    const latestDonation = donor.donationHistory.length > 0
+      ? donor.donationHistory[donor.donationHistory.length - 1]
+      : null;
+
+    return res.status(200).json({
+      message: "Donor details with latest donation fetched successfully.",
+      donor: {
+        _id: donor._id,
+        donorId: donor.donorId,
+        name: donor.name,
+        uid: donor.uid,
+        dob: donor.dob,
+        sex: donor.sex,
+        phone: donor.phone,
+        email: donor.email,
+        address: donor.address,
+        occupation: donor.occupation,
+        weightKg: donor.weightKg,
+        bloodGroup: donor.bloodGroup,
+        rh: donor.rh,
+        eligibilityStatus: donor.eligibilityStatus,
+        lastDonationDate: donor.lastDonationDate,
+        createdAt: donor.createdAt,
+        createdBy: donor.createdBy,
+        updatedAt: donor.updatedAt,
+        updatedBy: donor.updatedBy,
+        latestDonation: latestDonation
+          ? {
+              donorId: latestDonation.donorId,
+              bagNo: latestDonation.bagNo,
+              date: latestDonation.date,
+              donationId: latestDonation.donationId
+            }
+          : null
+      }
+    });
+
+  } catch (error) {
+    console.error("Error in searchDonorLatestDonation:", error);
+    next(error);
+  }
+};
+
+
+
+
+
 module.exports = {
   registerDonor,
   updateDonor,
   getDonorDetails,
   listDonors,
+  searchDonorLatestDonation,
+
 };

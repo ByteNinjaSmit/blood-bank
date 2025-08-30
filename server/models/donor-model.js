@@ -5,7 +5,6 @@ const DonorSchema = new Schema({
   donorId: {
     type: String,
     required: true,
-    // unique: true // Example: DNR-2025-0001
   },
   name: {
     firstName: {
@@ -102,6 +101,10 @@ const DonorSchema = new Schema({
   },
   donationHistory: [
     {
+      donorId: {
+        type: String,
+        required: true,
+      },
       donationId: {
         type: Types.ObjectId,
         ref: "BloodBag",
