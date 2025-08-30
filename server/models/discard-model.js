@@ -4,7 +4,7 @@ const { Schema, Types } = mongoose;
 const DiscardLogSchema = new Schema({
   itemType: {
     type: String,
-    enum: ['Donation', 'Component'],
+    enum: ['Bag', 'Component'],
     required: true
   },
   bagNo: {
@@ -14,7 +14,7 @@ const DiscardLogSchema = new Schema({
   },
   reason: {
     type: String,
-    required: true,
+    // required: true,
     trim: true
   },
   discardedAt: {

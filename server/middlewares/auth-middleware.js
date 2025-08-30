@@ -8,12 +8,12 @@ const authMiddleware = async (req, res, next) => {
   if (!token) {
     return res
       .status(401)
-      .json({ message: "Unauthorized. Token not provided" });
+      .json({ message: " token Unauthorized. Token not provided" });
   }
   if (!coockieToken) {
     return res
       .status(401)
-      .json({ message: "Unauthorized. Token not provided" });
+      .json({ message: " coockieToken Unauthorized. Token not provided" });
   }
 
   

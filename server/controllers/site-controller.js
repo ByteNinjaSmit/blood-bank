@@ -322,7 +322,7 @@ const campDonorList = async (req, res, next) => {
       .select('name siteId donorData')
       .populate({
         path: 'donorData',
-        select: 'donorId name.firstName name.lastName uid phone email sex bloodGroup rh'
+        select: 'donorId name.firstName name.middleName name.lastName dob uid phone email sex bloodGroup rh'
       });
 
     if (!site) {

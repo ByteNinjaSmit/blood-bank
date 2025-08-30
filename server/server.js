@@ -24,6 +24,9 @@ const redisClient = new Redis(process.env.REDIS_URL);
 const connectToDatabase = require("./config/db");
 const logger = require('./utils/logger'); // Import the logger
 
+// Import and initialize queues
+// require('./queues/expiry-queue'); // This will start the expiry queue scheduler
+
 
 // Middleware
 const errorMiddleware = require("./middlewares/error-middleware");
@@ -40,6 +43,8 @@ const requestRoutes = require("./routers/request-routes");
 const componentRoutes = require("./routers/component-routes");
 const userRoutes = require("./routers/user-routes");
 const discardRoutes = require("./routers/discard-routes");
+const testRoutes = require('./routers/test-routes');
+
 
 // Server Setup
 // Server
@@ -135,7 +140,6 @@ const sensitiveEndpointsLimiter = rateLimit({
     }),
 });
 
-
 // Make UploadFolder Static
 // Serve static files from the uploads folder
 app.use(
@@ -175,10 +179,29 @@ app.use((req, res, next) => {
 });
 
 
+// ==============================
+// 📊 Health Check
+// ==============================
+app.get("/health", (req, res) => {
+  res.json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || "development",
+    version: process.env.npm_package_version || "1.0.0",
+    services: {
+      database: true, // TODO: check DB status
+      redis: !!process.env.REDIS_URL,
+      email: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS),
+      pdf: true,
+    },
+  });
+});
+
 
 // Routes Defining
 app.get("/", (req, res) => {
-    res.send("Welcome to the API");
+    res.send("Welcome to the Blood Bank Management System API");
 });
 
 // Remaining Routes
@@ -189,9 +212,10 @@ app.use('/api/donation',donationRoute);
 app.use("/api/hospitals", hospitalRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/requests", requestRoutes);
-app.use("/api/components", componentRoutes);
+app.use("/api/component", componentRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/discard",discardRoutes);
+app.use("/api/test",testRoutes);
 
 
 
@@ -205,24 +229,34 @@ app.set("io", io);
 // Error Catch
 app.use(errorMiddleware);
 
-// Server Starting with Connecting Database
+// ==============================
+// 📡 Start Server
+// ==============================
 connectToDatabase()
-.then(async () => {
-    console.log("Connected to MongoDB successfully");
+  .then(() => {
+    console.log("✅ MongoDB connected");
+    logger.info("✅ MongoDB connected");
+
     server.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-            logger.info(`Server running on port ${PORT}`);
-            
-        });
-    })
-    .catch((error) => {
-        console.error("Error connecting to MongoDB:", error);
-        process.exit(1);
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`Redis Running on ${process.env.REDIS_URL}`);
+      console.log(`📊 Health check: http://localhost:${PORT}/health`);
     });
+  })
+  .catch((err) => {
+    console.error("❌ MongoDB connection failed:", err.message);
+    logger.error("❌ MongoDB connection failed:", err.message);
+
+    server.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT} (DB connection failed)`);
+    });
+  });
+
+// Graceful Shutdown
 process.on("SIGINT", () => {
-    console.log("Shutting down server...");
-    server.close(() => {
-        console.log("Server shut down gracefully.");
-        process.exit(0);
-    });
+  console.log("⏳ Shutting down server...");
+  server.close(() => {
+    console.log("✅ Server shut down gracefully");
+    process.exit(0);
+  });
 });
