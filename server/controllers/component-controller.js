@@ -346,13 +346,104 @@ const getComponentDetails = async (req, res, next) => {
 };
 
 
+// -------------------------
+// GET NEAR EXPIRY COMPONENTS (type-aware thresholds + riskLevel + dynamic filters)
+// ----------------------------
+
+const getNearExpiryComponents = async (req, res, next) => {
+  try {
+    const today = new Date();
+
+    // Type-specific thresholds (days left)
+    const thresholds = {
+      Platelet: 1,   // Platelets expire fast → critical if ≤ 1 day left
+      RBC: 7,        // RBCs near expiry if ≤ 7 days
+      FFP: 30,       // Frozen Plasma → 30 days threshold
+      Cryo: 30       // Cryoprecipitate → 30 days threshold
+    };
+
+    // Dynamic filters from request (optional)
+    const { type, status = "in-stock", site } = req.query;
+    const filter = {};
+    if (type) filter.componentType = type;
+    if (status) filter.status = status;
+    if (site) filter.siteId = site;
+
+    // Fetch components
+    const components = await Component.find(filter)
+      .populate({
+        path: "donationId",
+        select: "bagNo bloodGroup rh collectionDate",
+        model: "BloodBag"
+      })
+      .populate({
+        path: "siteId",
+        select: "name",
+        model: "Site"
+      })
+      .select("componentId componentType volumeMl expiryDate status")
+      .sort({ expiryDate: 1 }); // soonest expiry first
+
+    if (!components || components.length === 0) {
+      return res.status(200).json({
+        message: "No components found.",
+        components: []
+      });
+    }
+
+    // Filter dynamically and add riskLevel
+    const nearExpiryComponents = components
+      .map(c => {
+        const daysLeft = Math.ceil((c.expiryDate - today) / (1000 * 60 * 60 * 24));
+        const threshold = thresholds[c.componentType] || 7;
+
+        // Skip if not near expiry
+        if (daysLeft > threshold) return null;
+
+        // Assign risk levels
+        let riskLevel = "warning";
+        if (c.componentType === "Platelet" && daysLeft <= 1) {
+          riskLevel = "critical";
+        } else if (daysLeft <= 2) {
+          riskLevel = "high";
+        }
+
+        return {
+          componentId: c.componentId,
+          type: c.componentType,
+          volumeMl: c.volumeMl,
+          status: c.status,
+          expiryDate: c.expiryDate,
+          daysLeft,
+          riskLevel,
+          bagNo: c.donationId ? c.donationId.bagNo : null,
+          bloodGroup: c.donationId ? `${c.donationId.bloodGroup} ${c.donationId.rh}` : null,
+          collectionDate: c.donationId ? c.donationId.collectionDate : null,
+          site: c.siteId ? c.siteId.name : null,
+        };
+      })
+      .filter(Boolean); // remove nulls
+
+    return res.status(200).json({
+      message: "Near-expiry components fetched successfully.",
+      components: nearExpiryComponents
+    });
+  } catch (error) {
+    console.log(`Error in getNearExpiryComponents:`, error);
+    next(error);
+  }
+};
+
+
+
 
 module.exports = {
   separateComponents,
   getBagsToSeparateComponent,
   separationCompleted,
   getComponentsList,
-  getComponentDetails
-
+  getComponentDetails,
+  getNearExpiryComponents,
+  
 };
 

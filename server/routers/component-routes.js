@@ -18,5 +18,6 @@ router.route('/bags-to-separate').get(authMiddleware,componentController.getBags
 router.route('/separation-completed').post(authMiddleware,componentController.separateComponents);
 router.route('/list').get(authMiddleware,componentController.getComponentsList);
 router.route('/:id').get(authMiddleware,componentController.getComponentDetails);
+router.route('/near-expiry').get(authMiddleware,componentController.getNearExpiryComponents);
 
 module.exports = router;
