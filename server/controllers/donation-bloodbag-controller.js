@@ -11,6 +11,8 @@ const BloodBag = require("../models/bloodbag-model");
 const Donor = require("../models/donor-model");
 const User = require("../models/user-model");
 const Site = require("../models/site-model");
+const Component = require('../models/component-model')
+
 const mongoose = require("mongoose");
 
 const newDonation = async (req, res, next) => {
@@ -21,7 +23,7 @@ const newDonation = async (req, res, next) => {
             batchNo,
             typeOfBag,
             donor,
-            expiryDate,
+            // expiryDate,
             initialVitals: { hb, weightKg, pulse, tempC, bp },
             bloodGroup,
             rh,
@@ -89,7 +91,7 @@ const newDonation = async (req, res, next) => {
             typeOfBag,
             donor,
             collectionDate: Date.now(),
-            expiryDate,
+            // expiryDate,
             initialVitals: {
                 hb,
                 weightKg,
@@ -146,6 +148,70 @@ const newDonation = async (req, res, next) => {
 };
 
 
+// ------------
+// GET Donation List
+// ------------
+
+const getAllDonations = async (req, res, next) => {
+    try {
+        const {
+            status,
+            bloodGroup,
+            fromDate,
+            toDate,
+            page = 1,
+            limit = 10,
+        } = req.query;
+
+        const filters = {};
+
+        if (status) filters.status = status;
+        if (bloodGroup) filters.bloodGroup = bloodGroup;
+
+        if (fromDate && toDate) {
+            filters.collectionDate = {
+                $gte: new Date(fromDate),
+                $lte: new Date(toDate),
+            };
+        } else if (fromDate) {
+            filters.collectionDate = { $gte: new Date(fromDate) };
+        } else if (toDate) {
+            filters.collectionDate = { $lte: new Date(toDate) };
+        }
+
+        const skip = (page - 1) * limit;
+
+        const bloodBags = await BloodBag.find(filters)
+            .skip(skip)
+            .limit(Number(limit))
+            .select("bagNo segmentNo bloodGroup rh status collectionDate donor siteId components")
+            .populate("donor", "name.firstName name.lastName bloodGroup rh")
+            .populate("siteId", "name address")
+            .populate("components", "componentId componentType volumeMl") // Populate component details
+            .sort({ collectionDate: -1 });
+
+        const totalBags = await BloodBag.countDocuments(filters);
+
+        return res.status(200).json({
+            message: "Blood bags fetched successfully.",
+            data: bloodBags,
+            pagination: {
+                totalBags,
+                totalPages: Math.ceil(totalBags / limit),
+                currentPage: Number(page),
+                pageSize: Number(limit),
+            },
+        });
+    } catch (error) {
+        console.error("Error in getAllDonations:", error);
+        next(error);
+    }
+};
+
+
+
+
 module.exports = {
     newDonation,
+    getAllDonations
 };

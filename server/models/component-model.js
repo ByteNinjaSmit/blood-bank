@@ -5,12 +5,11 @@ const ComponentSchema = new Schema({
   componentId: {
     type: String,
     required: true,
-    unique: true, // e.g., BAGNO-RBC-001
     trim: true
   },
   donationId: {
     type: Types.ObjectId,
-    ref: 'BloodBag', // Assuming this is the same as "donation"
+    ref: 'BloodBag', 
     required: true
   },
   componentType: {
@@ -32,7 +31,7 @@ const ComponentSchema = new Schema({
   },
   storageLocation: {
     type: String,
-    required: true,
+    // required: true,
     trim: true
   },
   expiryDate: {
@@ -47,7 +46,7 @@ const ComponentSchema = new Schema({
   siteId: {
     type: Types.ObjectId,
     ref: 'Site',
-    required: true
+    // required: true
   },
   createdAt: {
     type: Date,
@@ -67,6 +66,8 @@ const ComponentSchema = new Schema({
     ref: 'User',
     required: true
   }
+},{
+  timestamps:true,
 });
 
 // Auto-update updatedAt before save

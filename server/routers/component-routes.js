@@ -12,41 +12,11 @@ const componentController = require('../controllers/component-controller');
 const  authMiddleware  = require('../middlewares/auth-middleware');
 const { roleMiddleware } = require('../middlewares/role-middleware');
 
-// Separate components from donation
-router.post(
-  '/separate',
-  authMiddleware,
-  roleMiddleware(['admin', 'technician', 'supervisor']),
-  componentController.separateComponents
-);
 
-// List components with filters
-router.get(
-  '/',
-  authMiddleware,
-  componentController.listComponents
-);
-
-// Get component details by ID
-router.get(
-  '/:id',
-  authMiddleware,
-  componentController.getComponentById
-);
-
-// Update component status
-router.patch(
-  '/:id/status',
-  authMiddleware,
-  roleMiddleware(['admin', 'technician', 'supervisor']),
-  componentController.updateComponentStatus
-);
-
-// Generate and print component label
-router.post(
-  '/:id/print-label',
-  authMiddleware,
-  componentController.printComponentLabel
-);
+router.route('/separate').post(authMiddleware,componentController.separateComponents);
+router.route('/bags-to-separate').get(authMiddleware,componentController.getBagsToSeparateComponent);
+router.route('/separation-completed').post(authMiddleware,componentController.separateComponents);
+router.route('/list').get(authMiddleware,componentController.getComponentsList);
+router.route('/:id').get(authMiddleware,componentController.getComponentDetails);
 
 module.exports = router;

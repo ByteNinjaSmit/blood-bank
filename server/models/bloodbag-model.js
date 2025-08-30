@@ -1,85 +1,85 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const { Schema, Types } = mongoose;
 
 const BloodBagSchema = new Schema({
   bagNo: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
   segmentNo: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
   batchNo: {
     type: String,
-    trim: true
+    trim: true,
   },
   typeOfBag: {
     type: String,
-    enum: ['DB', 'TB', 'QB'],
-    required: true
+    enum: ["DB", "TB", "QB"],
+    required: true,
   },
   donor: {
     type: Types.ObjectId,
-    ref: 'Donor',
-    required: true
+    ref: "Donor",
+    required: true,
   },
   collectionDate: {
     type: Date,
-    required: true
+    required: true,
   },
   expiryDate: {
     type: Date,
-    required: true
+    // required: true
   },
   initialVitals: {
     hb: {
       type: Number,
-      required: true
+      required: true,
     },
     weightKg: {
       type: Number,
-      required: true
+      required: true,
     },
     pulse: {
       type: Number,
-      required: true
+      required: true,
     },
     tempC: {
       type: Number,
-      required: true
+      required: true,
     },
     bp: {
       type: String,
-      required: true
-    }
+      required: true,
+    },
   },
   bloodGroup: {
     type: String,
-    enum: ['A', 'B', 'AB', 'O', 'Unknown'],
-    required: true
+    enum: ["A", "B", "AB", "O", "Unknown"],
+    required: true,
   },
   rh: {
     type: String,
-    enum: ['Positive', 'Negative', 'Unknown'],
-    required: true
+    enum: ["Positive", "Negative", "Unknown"],
+    required: true,
   },
   atypicalAntibody: {
     type: String,
-    trim: true
+    trim: true,
   },
   testResults: [
     {
       test: {
         type: String,
-        enum: ['HIV', 'HBsAg', 'HCV', 'VDRL', 'MP','NA'],
+        enum: ["HIV", "HBsAg", "HCV", "VDRL", "MP", "NA"],
         // required: true
       },
       result: {
         type: String,
-        enum: ['Positive', 'Negative', 'Indeterminate'],
+        enum: ["Positive", "Negative", "Indeterminate"],
         // required: true
       },
       testedAt: {
@@ -88,66 +88,70 @@ const BloodBagSchema = new Schema({
       },
       technicianId: {
         type: Types.ObjectId,
-        ref: 'User',
+        ref: "User",
         // required: true
-      }
-    }
+      },
+    },
   ],
   status: {
     type: String,
     enum: [
-      'collected',
-      'testing',
-      'passed',
-      'failed',
-      'quarantined',
-      'component-separated',
-      'issued',
-      'discarded'
+      "collected",
+      "component-separated",
+      "testing",
+      "passed",
+      "failed",
+      "quarantined",
+      "issued",
+      "discarded",
     ],
-    required: true
+    required: true,
   },
   quarantineReason: {
     type: String,
-    trim: true
+    trim: true,
   },
   components: [
     {
       type: Types.ObjectId,
-      ref: 'Component'
-    }
+      ref: "Component",
+    },
   ],
+  componentSeparationComplete: {
+    type: Boolean,
+    default: false,
+  },
   siteId: {
     type: Types.ObjectId,
-    ref: 'Site',
-    required: true
+    ref: "Site",
+    // required: true
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   createdBy: {
     type: Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: "User",
+    required: true,
   },
   updatedAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   updatedBy: {
     type: Types.ObjectId,
-    ref: 'User',
-    required: true
-  }
+    ref: "User",
+    required: true,
+  },
 });
 
 // Auto-update updatedAt before save
-BloodBagSchema.pre('save', function (next) {
+BloodBagSchema.pre("save", function (next) {
   this.updatedAt = new Date();
   next();
 });
 
-const BloodBag = mongoose.model('BloodBag', BloodBagSchema);
+const BloodBag = mongoose.model("BloodBag", BloodBagSchema);
 
 module.exports = BloodBag;

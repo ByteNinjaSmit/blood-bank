@@ -24,7 +24,7 @@ const DonorSchema = new Schema({
   },
   uid: {
     type: String,
-    required: true,
+    // required: true,
     trim: true,
     validate: {
       validator: function (v) {
@@ -68,7 +68,7 @@ const DonorSchema = new Schema({
     },
     city: {
       type: String,
-      required: true,
+      // required: true,
     },
     district: {
       type: String,
@@ -120,7 +120,7 @@ const DonorSchema = new Schema({
   eligibilityStatus: {
     type: String,
     enum: ["eligible", "deferred", "temp-deferred"],
-    required: true,
+    // required: true,
   },
   lastDonationDate: {
     type: Date,
