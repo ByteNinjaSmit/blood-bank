@@ -251,7 +251,8 @@ const getCampList = async (req, res, next) => {
         "siteId name description address contactInfo dateFrom dateTo createdAt createdBy staff"
       ) // pick fields
       .populate("createdBy", "name") // only name of creator
-      .populate("staff", "name"); // only staff names
+      .populate("staff", "name") // only staff names
+      .sort({createdAt:-1})
 
     return res.status(200).json({
       message: "Site list retrieved successfully",
