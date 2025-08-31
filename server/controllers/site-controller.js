@@ -314,12 +314,12 @@ const campDonationList = async (req, res, next) => {
     }
 
     // Step 1: Find the site by its siteId field
-    const site = await Site.findOne({ siteId })
+    const site = await Site.findById(siteId)
       .select("name siteId bagsData")
       .populate({
         path: "bagsData",
         select:
-          "bagNo segmentNo typeOfBag bloodGroup rh status collectionDate donor",
+          "bagNo segmentNo typeOfBag bloodGroup rh status collectionDate donor initialVitals",
         populate: {
           path: "donor",
           select: "name donorId", // Adjust based on actual donor model fields
@@ -356,12 +356,12 @@ const campDonorList = async (req, res, next) => {
       return res.status(404).json({ message: "Invalid Site Id" });
     }
     // Step 1: Find the site by custom siteId
-    const site = await Site.findOne({ siteId })
+    const site = await Site.findById(siteId)
       .select("name siteId donorData")
       .populate({
         path: "donorData",
         select:
-          "donorId name.firstName name.middleName name.lastName dob uid phone email sex bloodGroup rh",
+          "donorId name.firstName name.middleName name.lastName dob uid phone email sex eligibilityStatus lastDonationDate address bloodGroup occupation rh weightKg",
       });
 
     if (!site) {

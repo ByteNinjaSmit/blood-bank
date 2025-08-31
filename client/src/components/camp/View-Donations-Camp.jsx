@@ -1,138 +1,82 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { ArrowLeft, Filter, Eye, Edit, Trash2, X, Droplets } from "lucide-react"
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/store/auth";
+import Loader from "../Loader";
+import axios from "axios";
 
-const ViewDonationsCamp = ({ onBack }) => {
+const ViewDonationsCamp = () => {
+  const navigate = useNavigate();
+  const { API, authorizationToken } = useAuth();
   const [showFilters, setShowFilters] = useState(false)
   const [selectedDonation, setSelectedDonation] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, item: null })
+  const [loading, setLoading] = useState(true)
+  const [donations, setDonations] = useState([])
+
   const [filters, setFilters] = useState({
     typeOfBag: "",
     bloodGroup: "",
     status: "",
   })
 
-  // Mock data - in real app, this would come from API
-  const donations = [
-    {
-      "id": "1",
-      "bagNo": "BG001",
-      "segmentNo": "SG001",
-      "donorName": "John Doe",
-      "donorId": "D001",
-      "typeOfBag": "DB",
-      "bloodGroup": "A",
-      "rh": "Positive",
-      "collectionDate": "2024-01-15",
-      "expiryDate": "2024-02-15",
-      "status": "collected",
-      "hb": 13.5,
-      "weightKg": 70,
-      "pulse": 72,
-      "tempC": 36.5,
-      "bp": "120/80",
-      "testResults": [
-        { "test": "HIV", "result": "Negative", "testedAt": "2024-01-15" },
-        { "test": "HBsAg", "result": "Negative", "testedAt": "2024-01-15" }
-      ]
-    },
-    {
-      "id": "2",
-      "bagNo": "BG002",
-      "segmentNo": "SG002",
-      "donorName": "Jane Smith",
-      "donorId": "D002",
-      "typeOfBag": "TB",
-      "bloodGroup": "B",
-      "rh": "Negative",
-      "collectionDate": "2024-02-05",
-      "expiryDate": "2024-03-05",
-      "status": "testing",
-      "hb": 12.8,
-      "weightKg": 65,
-      "pulse": 75,
-      "tempC": 37.0,
-      "bp": "118/76",
-      "testResults": [
-        { "test": "HIV", "result": "Negative", "testedAt": "2024-02-06" },
-        { "test": "HBsAg", "result": "Pending", "testedAt": "2024-02-06" }
-      ]
-    },
-    {
-      "id": "3",
-      "bagNo": "BG003",
-      "segmentNo": "SG003",
-      "donorName": "Michael Lee",
-      "donorId": "D003",
-      "typeOfBag": "QB",
-      "bloodGroup": "O",
-      "rh": "Positive",
-      "collectionDate": "2024-02-20",
-      "expiryDate": "2024-03-20",
-      "status": "passed",
-      "hb": 14.2,
-      "weightKg": 80,
-      "pulse": 68,
-      "tempC": 36.7,
-      "bp": "122/78",
-      "testResults": [
-        { "test": "HIV", "result": "Negative", "testedAt": "2024-02-21" },
-        { "test": "HBsAg", "result": "Negative", "testedAt": "2024-02-21" }
-      ]
-    },
-    {
-      "id": "4",
-      "bagNo": "BG004",
-      "segmentNo": "SG004",
-      "donorName": "Priya Patel",
-      "donorId": "D004",
-      "typeOfBag": "DB",
-      "bloodGroup": "AB",
-      "rh": "Positive",
-      "collectionDate": "2024-03-01",
-      "expiryDate": "2024-04-01",
-      "status": "failed",
-      "hb": 11.9,
-      "weightKg": 60,
-      "pulse": 82,
-      "tempC": 37.5,
-      "bp": "115/75",
-      "testResults": [
-        { "test": "HIV", "result": "Positive", "testedAt": "2024-03-02" },
-        { "test": "HBsAg", "result": "Negative", "testedAt": "2024-03-02" }
-      ]
-    },
-    {
-      "id": "5",
-      "bagNo": "BG005",
-      "segmentNo": "SG005",
-      "donorName": "Arjun Reddy",
-      "donorId": "D005",
-      "typeOfBag": "TB",
-      "bloodGroup": "A",
-      "rh": "Negative",
-      "collectionDate": "2024-03-10",
-      "expiryDate": "2024-04-10",
-      "status": "issued",
-      "hb": 13.7,
-      "weightKg": 74,
-      "pulse": 70,
-      "tempC": 36.8,
-      "bp": "119/79",
-      "testResults": [
-        { "test": "HIV", "result": "Negative", "testedAt": "2024-03-11" },
-        { "test": "HBsAg", "result": "Negative", "testedAt": "2024-03-11" }
-      ]
-    }
-  ]
+  const onBack = () => {
+    navigate(-1);
+  }
 
+  useEffect(() => {
+    setLoading(true);
+    const searchParams = new URLSearchParams(location.search);
+    const campId = searchParams.get("id");
+    console.log("Camp ID from URL:", campId);
+    if (!campId) {
+      navigate("/camp-listing");
+      return;
+    }
+    getCampDonations(campId);
+  }, [location.search]);
+
+  const getCampDonations = async (campId) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API}/api/site/camp-donations/${campId}`, {
+        headers: { Authorization: authorizationToken }, withCredentials: true,
+      });
+      if (response.status === 200) {
+        console.log("Camp Donations:", response.data.data.donations);
+        setDonations(response.data.data.donations);
+      }
+    } catch (error) {
+      console.log("Error fetching camp donors:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const filteredDonations = donations.filter((donation) => {
+    const typeOfBagFilter = filters.typeOfBag?.trim().toLowerCase();
+    const bloodGroupFilter = filters.bloodGroup?.trim().toUpperCase();
+    const statusFilter = filters.status?.trim().toLowerCase();
+    const searchQueryLower = filters.searchQuery?.trim().toLowerCase();
+
+    const donationType = donation.typeOfBag?.toLowerCase();
+    const donationBlood = donation.bloodGroup?.toUpperCase();
+    const donationStatus = donation.status?.toLowerCase();
+
+    const donorName = donation.donor
+      ? `${donation.donor.name.firstName} ${donation.donor.name.middleName || ''} ${donation.donor.name.lastName}`.toLowerCase()
+      : '';
+    const donorId = donation.donor?.donorId?.toLowerCase() || '';
+
     return (
-      (!filters.typeOfBag || donation.typeOfBag === filters.typeOfBag) &&
-      (!filters.bloodGroup || donation.bloodGroup === filters.bloodGroup) &&
-      (!filters.status || donation.status === filters.status)
-    )
-  })
+      (!typeOfBagFilter || donationType === typeOfBagFilter) &&
+      (!bloodGroupFilter || donationBlood === bloodGroupFilter) &&
+      (!statusFilter || donationStatus === statusFilter) &&
+      (!searchQueryLower || donorName.includes(searchQueryLower) || donorId.includes(searchQueryLower))
+    );
+  });
+
+
 
   const handleViewDetails = (donation) => {
     setSelectedDonation(donation)
@@ -157,6 +101,34 @@ const ViewDonationsCamp = ({ onBack }) => {
 
   const cancelDelete = () => {
     setDeleteConfirm({ show: false, item: null })
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  const getDonorFullName = (donation) => {
+    if (!donation.donor || !donation.donor.name) return "N/A";
+    const { firstName, middleName, lastName } = donation.donor.name;
+    return `${firstName} ${middleName || ""} ${lastName}`.trim();
+  };
+
+
+  useEffect(() => {
+    if (!donations && !loading) {
+      // Redirect to camp listing page
+      onBack();
+    }
+  }, [donations, loading, navigate]);
+
+  if (loading) {
+    return <Loader message="Loading camp details..." />
   }
 
   return (
@@ -194,10 +166,23 @@ const ViewDonationsCamp = ({ onBack }) => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Filters */}
+        {/* Filters */}
         {showFilters && (
           <div className="bg-white rounded-xl shadow-lg border border-red-100 p-6 mb-8">
             <h3 className="text-lg font-semibold text-slate-800 mb-4">Filter Donations</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Search */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Search by Name or Donor ID</label>
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={filters.searchQuery || ""}
+                  onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                />
+              </div>
+              {/* Type of Bag */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Type of Bag</label>
                 <select
@@ -211,6 +196,8 @@ const ViewDonationsCamp = ({ onBack }) => {
                   <option value="QB">Quadruple Bag (QB)</option>
                 </select>
               </div>
+
+              {/* Blood Group */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Blood Group</label>
                 <select
@@ -225,6 +212,8 @@ const ViewDonationsCamp = ({ onBack }) => {
                   <option value="O">O</option>
                 </select>
               </div>
+
+              {/* Status */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
                 <select
@@ -240,9 +229,11 @@ const ViewDonationsCamp = ({ onBack }) => {
                   <option value="issued">Issued</option>
                 </select>
               </div>
+
             </div>
           </div>
         )}
+
 
         {/* Donations Table */}
         <div className="bg-white rounded-xl shadow-lg border border-red-100 overflow-hidden">
@@ -267,78 +258,92 @@ const ViewDonationsCamp = ({ onBack }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {filteredDonations.map((donation) => (
-                  <tr key={donation.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 text-sm text-slate-800">{donation.bagNo}</td>
-                    <td className="px-6 py-4 text-sm text-slate-800">{donation.segmentNo}</td>
-                    <td className="px-6 py-4 text-sm text-slate-800">{donation.donorName}</td>
-                    <td className="px-6 py-4 text-sm text-slate-800">{donation.donorId}</td>
-                    <td className="px-6 py-4 text-sm text-slate-800">{donation.typeOfBag}</td>
-                    <td className="px-6 py-4 text-sm text-slate-800">{donation.bloodGroup}{donation.rh === "Positive" ? "+" : "-"}</td>
-                    
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${donation.status === "collected"
-                          ? "bg-blue-100 text-blue-800"
-                          : donation.status === "testing"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : donation.status === "passed"
-                              ? "bg-green-100 text-green-800"
-                              : donation.status === "failed"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-slate-100 text-slate-800"
-                          }`}
-                      >
-                        {donation.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-800">{donation.collectionDate}</td>                                        <td className="px-6 py-4 text-sm text-slate-800">{donation.hb}</td>
-                    <td className="px-6 py-4 text-sm text-slate-800">{donation.weightKg}</td>
-                    <td className="px-6 py-4 text-sm text-slate-800">{donation.pulse}</td>
-                    <td className="px-6 py-4 text-sm text-slate-800">{donation.tempC}</td>
-                    <td className="px-6 py-4 text-sm text-slate-800">{donation.bp}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2 relative">
-                        <button
-                          onClick={() => handleUpdate(donation.id)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          title="Update"
+                {filteredDonations?.length > 0 ? (
+                  filteredDonations.map((donation) => (
+                    <tr key={donation._id} className="hover:bg-slate-50">
+                      <td className="px-6 py-4 text-sm text-slate-800">{donation.bagNo}</td>
+                      <td className="px-6 py-4 text-sm text-slate-800">{donation.segmentNo}</td>
+                      <td className="px-6 py-4 text-sm text-slate-800">{getDonorFullName(donation)}</td>
+                      <td className="px-6 py-4 text-sm text-slate-800">{donation.donor.donorId}</td>
+                      <td className="px-6 py-4 text-sm text-slate-800">{donation.typeOfBag}</td>
+                      <td className="px-6 py-4 text-sm text-slate-800">
+                        {donation.bloodGroup}{donation.rh === "Positive" ? "+" : "-"}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${donation.status === "collected"
+                            ? "bg-blue-100 text-blue-800"
+                            : donation.status === "testing"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : donation.status === "passed"
+                                ? "bg-green-100 text-green-800"
+                                : donation.status === "failed"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-slate-100 text-slate-800"
+                            }`}
                         >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(donation)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                          {donation.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-800">{formatDate(donation.collectionDate)}</td>
+                      <td className="px-6 py-4 text-sm text-slate-800">{donation.initialVitals?.hb || "N/A"}</td>
+                      <td className="px-6 py-4 text-sm text-slate-800">{donation.initialVitals?.weightKg || "N/A"}</td>
+                      <td className="px-6 py-4 text-sm text-slate-800">{donation.initialVitals?.pulse || "N/A"}</td>
+                      <td className="px-6 py-4 text-sm text-slate-800">{donation.initialVitals?.tempC || "N/A"}</td>
+                      <td className="px-6 py-4 text-sm text-slate-800">{donation.initialVitals?.bp || "N/A"}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2 relative">
+                          {/* Update Button */}
+                          <button
+                            onClick={() => handleUpdate(donation._id)}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Update"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
 
-                        {/* Delete Confirmation */}
-                        {deleteConfirm.show && deleteConfirm.item?.id === donation.id && (
-                          <div className="absolute top-10 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-3 z-10 min-w-48">
-                            <p className="text-sm text-gray-700 mb-3">Do you want to delete it?</p>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={confirmDelete}
-                                className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
-                              >
-                                Yes
-                              </button>
-                              <button
-                                onClick={cancelDelete}
-                                className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
-                              >
-                                No
-                              </button>
+                          {/* Delete Button */}
+                          <button
+                            onClick={() => handleDelete(donation)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+
+                          {/* Delete Confirmation */}
+                          {deleteConfirm.show && deleteConfirm.item?._id === donation._id && (
+                            <div className="absolute top-10 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-3 z-10 min-w-48">
+                              <p className="text-sm text-gray-700 mb-3">Do you want to delete <strong>{getDonorFullName(donation)}</strong>?</p>
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={confirmDelete}
+                                  className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                                >
+                                  Yes
+                                </button>
+                                <button
+                                  onClick={cancelDelete}
+                                  className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
+                                >
+                                  No
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={14} className="text-center py-8 text-gray-500">
+                      No donations available.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
+
             </table>
           </div>
         </div>
@@ -374,7 +379,7 @@ const ViewDonationsCamp = ({ onBack }) => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-600">Donor Name</label>
-                    <p className="text-slate-800">{selectedDonation.donorName}</p>
+                    <p className="text-slate-800">{getDonorFullName(selectedDonation)}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-600">Type of Bag</label>

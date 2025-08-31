@@ -8,8 +8,14 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react"
+import axios from "axios"
+import { useAuth } from "@/store/auth"
+import { useNavigate } from "react-router-dom"
+import Loader from "@/components/Loader"
 
-const ViewDonorCamp = ({ onBack }) => {
+const ViewDonorCamp = () => {
+  const navigate = useNavigate();
+  const { API, authorizationToken } = useAuth();
   const [donors, setDonors] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
@@ -17,66 +23,55 @@ const ViewDonorCamp = ({ onBack }) => {
   const [eligibilityFilter, setEligibilityFilter] = useState("")
   const [deleteConfirmFor, setDeleteConfirmFor] = useState(null)
 
-  // Mock data
+  const onBack = () => {
+    // Back by Browser
+    navigate(-1);
+  }
+
+
   useEffect(() => {
-    const mockDonors = [
-      {
-        id: "1",
-        donorId: "DNR-2025-0001",
-        fullName: "John Michael Doe",
-        lastDonationDate: "2024-12-15",
-        uid: "123456789012",
-        dob: "1990-05-15",
-        sex: "M",
-        phone: "9876543210",
-        email: "john.doe@email.com",
-        city: "Mumbai",
-        district: "Mumbai",
-        state: "Maharashtra",
-        bloodGroup: "O",
-        rh: "Positive",
-        weightKg: 70,
-        eligibilityStatus: "eligible",
-        occupation: "Engineer",
-      },
-      {
-        id: "2",
-        donorId: "DNR-2025-0002",
-        fullName: "Sarah Jane Smith",
-        lastDonationDate: "2024-11-20",
-        uid: "987654321098",
-        dob: "1985-08-22",
-        sex: "F",
-        phone: "8765432109",
-        email: "sarah.smith@email.com",
-        city: "Delhi",
-        district: "New Delhi",
-        state: "Delhi",
-        bloodGroup: "A",
-        rh: "Negative",
-        weightKg: 55,
-        eligibilityStatus: "temp-deferred",
-        occupation: "Doctor",
-      },
-    ]
+    setLoading(true);
+    const searchParams = new URLSearchParams(location.search);
+    const campId = searchParams.get("id");
+    console.log("Camp ID from URL:", campId);
+    if (!campId) {
+      navigate("/camp-listing");
+      return;
+    }
+    getCampDonors(campId);
+  }, [location.search]);
 
-    setTimeout(() => {
-      setDonors(mockDonors)
-      setLoading(false)
-    }, 1000)
-  }, [])
+  const getCampDonors = async (campId) => {
+    try {
+      const response = await axios.get(`${API}/api/site/camp-donors/${campId}`, {
+        headers: { Authorization: authorizationToken }, withCredentials: true,
+      });
+      if (response.status === 200) {
+        console.log("Camp Donors:", response.data.data.donors);
+        setDonors(response.data.data.donors);
+      }
+    } catch (error) {
+      console.log("Error fetching camp donors:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+  const filteredDonors = donors?.filter((donor) => {
+    const fullName = `${donor.name.firstName} ${donor.name.middleName || ""} ${donor.name.lastName}`.trim();
 
-  const filteredDonors = donors.filter((donor) => {
-    const matchesSearch =
-      donor.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      donor.donorId.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesBloodGroup =
-      !bloodGroupFilter || donor.bloodGroup === bloodGroupFilter
-    const matchesEligibility =
-      !eligibilityFilter || donor.eligibilityStatus === eligibilityFilter
+    // Search filter: name or donorId
+    const matchesSearch = fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      donor.donorId.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesSearch && matchesBloodGroup && matchesEligibility
-  })
+    // Blood group filter
+    const matchesBloodGroup = !bloodGroupFilter || donor.bloodGroup === bloodGroupFilter;
+
+    // Eligibility filter
+    const matchesEligibility = !eligibilityFilter || donor.eligibilityStatus === eligibilityFilter;
+
+    return matchesSearch && matchesBloodGroup && matchesEligibility;
+  });
+
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -105,9 +100,48 @@ const ViewDonorCamp = ({ onBack }) => {
   }
 
   const handleDelete = (donorId) => {
-    setDonors((prev) => prev.filter((donor) => donor.id !== donorId))
-    setDeleteConfirmFor(null)
+    setDonors((prev) => prev.filter((donor) => donor._id !== donorId));
+    setDeleteConfirmFor(null);
   }
+
+
+  const getFullName = (donor) =>
+    `${donor.name.firstName} ${donor.name.middleName || ""} ${donor.name.lastName}`.trim();
+
+const formatAddress = (address) => {
+  if (!address) return "N/A";
+  const parts = [
+    address.line1,
+    address.line2,
+    address.city,
+    address.district,
+    address.state,
+    address.pincode,
+  ].filter(Boolean); // removes empty strings or undefined
+  return parts.join(", ");
+};
+const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
+
+  useEffect(() => {
+    if (!donors && !loading) {
+      // Redirect to camp listing page
+      onBack();
+    }
+  }, [donors, loading, navigate]);
+
+  if (loading) {
+    return <Loader message="Loading camp details..." />
+  }
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -203,9 +237,7 @@ const ViewDonorCamp = ({ onBack }) => {
                       "Sex",
                       "Phone",
                       "Email",
-                      "City",
-                      "District",
-                      "State",
+                      "Address",
                       "Blood Group",
                       "Eligibility",
                       "Weight",
@@ -225,19 +257,18 @@ const ViewDonorCamp = ({ onBack }) => {
                 <tbody className="divide-y divide-gray-100">
                   {filteredDonors.map((donor, idx) => (
                     <tr
-                      key={donor.id}
+                      key={donor._id}
                       className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
                     >
                       <td className="px-6 py-4">{donor.donorId}</td>
-                      <td className="px-6 py-4">{donor.fullName}</td>
+                      <td className="px-6 py-4">{getFullName(donor)}</td>
                       <td className="px-6 py-4">{donor.uid}</td>
-                      <td className="px-6 py-4">{donor.dob}</td>
+                      <td className="px-6 py-4">{formatDate(donor.dob)}</td>
                       <td className="px-6 py-4">{donor.sex}</td>
                       <td className="px-6 py-4">{donor.phone}</td>
                       <td className="px-6 py-4">{donor.email}</td>
-                      <td className="px-6 py-4">{donor.city}</td>
-                      <td className="px-6 py-4">{donor.district}</td>
-                      <td className="px-6 py-4">{donor.state}</td>
+                      <td className="px-6 py-4">{formatAddress(donor.address)}</td>
+
                       <td className="px-6 py-4">
                         {donor.bloodGroup} {donor.rh === "Positive" ? "+" : "-"}
                       </td>
@@ -252,17 +283,17 @@ const ViewDonorCamp = ({ onBack }) => {
                       </td>
                       <td className="px-6 py-4">{donor.weightKg} kg</td>
                       <td className="px-6 py-4">{donor.occupation}</td>
-                      <td className="px-6 py-4">{donor.lastDonationDate}</td>
+                      <td className="px-6 py-4">{formatDate(donor.lastDonationDate)}</td>
                       <td className="px-6 py-4 relative">
                         <div className="flex gap-2">
                           <button className="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200">
-                            <Pencil className="w-4 h-4 inline" /> 
+                            <Pencil className="w-4 h-4 inline" />
                           </button>
                           <button
                             onClick={() => setDeleteConfirmFor(donor.id)}
                             className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200"
                           >
-                            <Trash2 className="w-4 h-4 inline" /> 
+                            <Trash2 className="w-4 h-4 inline" />
                           </button>
                         </div>
 
@@ -275,7 +306,7 @@ const ViewDonorCamp = ({ onBack }) => {
                             </p>
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => handleDelete(donor.id)}
+                                onClick={() => setDeleteConfirmFor(donor._id)}
                                 className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
                               >
                                 Yes

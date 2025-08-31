@@ -99,7 +99,7 @@ export const AuthProvider = ({ children }) => {
             } else if (timeLeft <= 2 * 60 * 1000) { // 2 minutes warning
                 toast.warning("Your session will expire in 2 minutes!");
             }
-        }, 5000); // check every 5 seconds
+        }, 2000); // check every 50
 
         return () => clearInterval(interval);
     }, [tokenExpiry]);

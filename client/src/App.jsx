@@ -9,7 +9,7 @@ import MasterLayout from './page/dashboard/layout/Master-Layout';
 import Home from './page/Home';
 import CampRegisteration from './page/dashboard/Camp-Registeration';
 import CampListing from './page/dashboard/Camp-Listing';
-import ViewCampDetails from './page/dashboard/Camp-Donations';
+import ViewCampDetails from './page/dashboard/Camp-Details';
 import ComponentSeparate from './page/dashboard/component/Component-Separate';
 import NearExpiry from './page/dashboard/component/Near-Expiry';
 import ViewDiscarded from './components/camp/View-Discarded';
@@ -18,8 +18,10 @@ import CreateDonation from './components/camp/Create-Donation';
 import ViewDonations from './components/camp/View-Donations';
 import CreateDonor from './components/camp/Create-Donor';
 import ViewDonor from './components/camp/View-Donor';
-import CampDonations from './page/dashboard/Camp-Donations';
+import CampDonations from './page/dashboard/Camp-Details';
 import { AuthenticatedRoute } from './components/auth/Authentic-Routes';
+import ViewDonorCamp from './components/camp/View-Donor-Camp';
+import ViewDonationsCamp from './components/camp/View-Donations-Camp';
 
 
 const App = () => {
@@ -50,8 +52,10 @@ const App = () => {
 
           {/*  Dashboard - Camp Routes */}
           <Route path="/camp-registration" element={<CampRegisteration />} />
-          <Route path="/camp-donations" element={<CampDonations />} />
+          <Route path="/camp-details" element={<CampDonations />} />
           <Route path="/camp-listing" element={<CampListing />} />
+          <Route path="/camp-donors" element={<ViewDonorCamp />} />
+          <Route path="/camp-donation" element={<ViewDonationsCamp />} />
 
           {/*  Dashboard - Component Routes */}
           <Route path="/component/separate" element={<ComponentSeparate onBack={() => navigate(-1)} />} />

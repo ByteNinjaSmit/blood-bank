@@ -4,7 +4,7 @@ import { ArrowLeft, Plus, Eye, Edit, Trash2 } from "lucide-react"
 import { se } from "date-fns/locale"
 import { useNavigate, Link } from 'react-router-dom';
 import ca from "zod/v4/locales/ca.cjs"
-import CampDonations from "./Camp-Donations";
+import CampDonations from "./Camp-Details";
 import { set } from "date-fns";
 import axios from "axios";
 import { useAuth } from "@/store/auth";
@@ -181,7 +181,7 @@ const CampList = () => {
                     <td className="px-4 py-4 text-sm text-slate-700">{camp.createdBy.name.first} {camp.createdBy.name.last}</td>
                     <td className="px-4 py-4 text-sm">
                       <div className="flex items-center gap-2">
-                        <Link to={`/camp-donations?id=${camp._id}`}>
+                        <Link to={`/camp-details?id=${camp._id}`}>
                           <button
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                             title="View Details"
