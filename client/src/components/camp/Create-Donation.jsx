@@ -1,18 +1,39 @@
-import React from "react"
-import { useState } from "react"
-import { ArrowLeft, Search, Plus, Droplets } from "lucide-react"
+import React, { useState } from "react"
+import { ArrowLeft, Search, Plus, Droplets, X } from "lucide-react"
 
+const sampleDonors = [
+  {
+    id: "D001",
+    firstName: "John",
+    middleName: "A",
+    lastName: "Doe",
+    dob: "1990-05-15",
+  },
+  {
+    id: "D002",
+    firstName: "Jane",
+    middleName: "B",
+    lastName: "Smith",
+    dob: "1988-10-20",
+  },
+]
 
 const CreateDonation = ({ onBack, onCreateDonor }) => {
-  const [donorUID, setDonorUID] = useState("")
+  const [donorInfo, setDonorInfo] = useState({
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    dob: "",
+  })
   const [donorExists, setDonorExists] = useState(false)
+  const [showPopup, setShowPopup] = useState(false)
+
   const [formData, setFormData] = useState({
     bagNo: "",
     segmentNo: "",
     batchNo: "",
     typeOfBag: "",
     collectionDate: "",
-    expiryDate: "",
     hb: "",
     weightKg: "",
     pulse: "",
@@ -35,18 +56,26 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
   })
 
   const handleDonorSearch = () => {
-    // Simulate donor search - in real app, this would be an API call
-    if (donorUID.trim()) {
-      setDonorExists(true) // For demo purposes
+    const found = sampleDonors.find(
+      (d) =>
+        d.firstName.toLowerCase() === donorInfo.firstName.toLowerCase() &&
+        d.middleName.toLowerCase() === donorInfo.middleName.toLowerCase() &&
+        d.lastName.toLowerCase() === donorInfo.lastName.toLowerCase() &&
+        d.dob === donorInfo.dob
+    )
+
+    if (found) {
+      setDonorExists(true)
+      setShowPopup(false)
+    } else {
+      setDonorExists(false)
+      setShowPopup(true)
     }
   }
 
-  const handleSubmit = async(e) => {
+  const handleSubmit = (e) => {
     e.preventDefault()
     console.log("FormData of Submission:", formData)
-    // Handle form submission
-
-
   }
 
   return (
@@ -69,7 +98,6 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
               <p className="text-gray-600 mt-1">Register a new blood donation</p>
             </div>
           </div>
-
         </div>
       </div>
 
@@ -77,19 +105,51 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
         {/* Donor Search Section */}
         <div className="bg-white rounded-xl shadow-lg border border-red-100 p-6 mb-8">
           <h2 className="text-xl font-semibold text-slate-800 mb-4">Donor Information</h2>
-          <div className="flex gap-4 items-end">
-            <div className="flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Donor UID <span className="text-red-500">*</span>
+                First Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                value={donorUID}
-                onChange={(e) => setDonorUID(e.target.value)}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                placeholder="Enter donor UID"
+                value={donorInfo.firstName}
+                onChange={(e) => setDonorInfo({ ...donorInfo, firstName: e.target.value })}
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Middle Name</label>
+              <input
+                type="text"
+                value={donorInfo.middleName}
+                onChange={(e) => setDonorInfo({ ...donorInfo, middleName: e.target.value })}
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Last Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={donorInfo.lastName}
+                onChange={(e) => setDonorInfo({ ...donorInfo, lastName: e.target.value })}
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Date of Birth <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={donorInfo.dob}
+                onChange={(e) => setDonorInfo({ ...donorInfo, dob: e.target.value })}
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg"
+              />
+            </div>
+          </div>
+          <div className="flex gap-4">
             <button
               onClick={handleDonorSearch}
               className="px-6 py-3 bg-orange-800 text-white rounded-lg hover:bg-orange-900 transition-colors flex items-center gap-2"
@@ -97,15 +157,31 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
               <Search className="w-4 h-4" />
               Search
             </button>
-            <button
-              onClick={onCreateDonor}
-              className="px-6 py-3 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Create Donor
-            </button>
           </div>
         </div>
+
+        {/* Popup if donor not found */}
+        {showPopup && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+            <div className="bg-white rounded-xl shadow-lg p-6 w-96 relative">
+              <button
+                className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+                onClick={() => setShowPopup(false)}
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <h2 className="text-lg font-semibold mb-4">Donor Not Found</h2>
+              <p className="text-gray-600 mb-6">Would you like to create a new donor?</p>
+              <button
+                onClick={onCreateDonor}
+                className="px-6 py-3 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Create Donor
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Donation Form - Only visible if donor exists */}
         {donorExists && (
@@ -122,7 +198,7 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
                     type="text"
                     value={formData.bagNo}
                     onChange={(e) => setFormData({ ...formData, bagNo: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
                     required
                   />
                 </div>
@@ -134,7 +210,7 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
                     type="text"
                     value={formData.segmentNo}
                     onChange={(e) => setFormData({ ...formData, segmentNo: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
                     required
                   />
                 </div>
@@ -144,7 +220,7 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
                     type="text"
                     value={formData.batchNo}
                     onChange={(e) => setFormData({ ...formData, batchNo: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
                   />
                 </div>
                 <div>
@@ -154,7 +230,7 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
                   <select
                     value={formData.typeOfBag}
                     onChange={(e) => setFormData({ ...formData, typeOfBag: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
                     required
                   >
                     <option value="">Select type</option>
@@ -171,19 +247,7 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
                     type="date"
                     value={formData.collectionDate}
                     onChange={(e) => setFormData({ ...formData, collectionDate: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Expiry Date <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.expiryDate}
-                    onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
                     required
                   />
                 </div>
@@ -203,7 +267,7 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
                     step="0.1"
                     value={formData.hb}
                     onChange={(e) => setFormData({ ...formData, hb: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
                     required
                   />
                 </div>
@@ -216,7 +280,7 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
                     step="0.1"
                     value={formData.weightKg}
                     onChange={(e) => setFormData({ ...formData, weightKg: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
                     required
                   />
                 </div>
@@ -228,7 +292,7 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
                     type="number"
                     value={formData.pulse}
                     onChange={(e) => setFormData({ ...formData, pulse: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
                     required
                   />
                 </div>
@@ -241,7 +305,7 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
                     step="0.1"
                     value={formData.tempC}
                     onChange={(e) => setFormData({ ...formData, tempC: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
                     required
                   />
                 </div>
@@ -253,7 +317,7 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
                     type="text"
                     value={formData.bp}
                     onChange={(e) => setFormData({ ...formData, bp: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
                     placeholder="120/80"
                     required
                   />
@@ -272,7 +336,7 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
                   <select
                     value={formData.bloodGroup}
                     onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
                     required
                   >
                     <option value="">Select blood group</option>
@@ -290,7 +354,7 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
                   <select
                     value={formData.rh}
                     onChange={(e) => setFormData({ ...formData, rh: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
                     required
                   >
                     <option value="">Select Rh</option>
@@ -305,7 +369,7 @@ const CreateDonation = ({ onBack, onCreateDonor }) => {
                     type="text"
                     value={formData.atypicalAntibody}
                     onChange={(e) => setFormData({ ...formData, atypicalAntibody: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
                   />
                 </div>
               </div>
