@@ -51,51 +51,6 @@ const CampDonations = () => {
   const [searchParam] = useSearchParams();
   const [camp, setcamp] = useState(null);
 
-  const data = [{
-    id: "1",
-    bagNo: "BG001",
-    segmentNo: "SG001",
-    donorName: "John Doe",
-    donorUID: "D001",
-    typeOfBag: "DB",
-    bloodGroup: "A",
-    rh: "Positive",
-    collectionDate: "2024-01-15",
-    expiryDate: "2024-02-15",
-    status: "collected",
-    hb: 13.5,
-    weightKg: 70,
-    pulse: 72,
-    tempC: 36.5,
-    bp: "120/80",
-    testResults: [
-      { test: "HIV", result: "Negative", testedAt: "2024-01-15" },
-      { test: "HBsAg", result: "Negative", testedAt: "2024-01-15" },
-    ],
-  },
-  {
-    id: "2",
-    bagNo: "BG002",
-    segmentNo: "SG002",
-    donorName: "Jane Smith",
-    donorUID: "D002",
-    typeOfBag: "TB",
-    bloodGroup: "O",
-    rh: "Negative",
-    collectionDate: "2024-01-16",
-    expiryDate: "2024-02-16",
-    status: "testing",
-    hb: 12.8,
-    weightKg: 65,
-    pulse: 68,
-    tempC: 36.2,
-    bp: "115/75",
-    testResults: [
-      { test: "HIV", result: "Pending", testedAt: "2024-01-16" },
-      { test: "HBsAg", result: "Pending", testedAt: "2024-01-16" },
-    ],
-  }
-  ]
   useEffect(() => {
     setLoading(true);
     const searchParams = new URLSearchParams(location.search);
