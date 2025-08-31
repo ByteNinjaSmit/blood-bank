@@ -161,7 +161,7 @@ useEffect(() => {
       description: "Browse, search, and manage existing donor records and history",
       icon: Users,
       color: "bg-orange-800",
-      stats: "156 Active This Month",
+      // stats: "156 Active This Month",
     },
     {
       id: "create-donation",
@@ -169,7 +169,7 @@ useEffect(() => {
       description: "Record new blood donations with vitals, tests, and bag information",
       icon: Plus,
       color: "bg-orange-800",
-      stats: "1,234 Total Donations",
+      // stats: "1,234 Total Donations",
     },
     {
       id: "view-donations",
@@ -177,7 +177,7 @@ useEffect(() => {
       description: "Manage donation records, track status, and view test results",
       icon: Activity,
       color: "bg-orange-800",
-      stats: "89 This Week",
+      // stats: "89 This Week",
     },
   ]
 

@@ -1,7 +1,5 @@
-import React from "react"
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { ArrowLeft, Eye, X, Users, Search, Plus, Droplets } from "lucide-react"
-
 
 const ViewDonor = ({ onBack }) => {
   const [donors, setDonors] = useState([])
@@ -113,7 +111,7 @@ const ViewDonor = ({ onBack }) => {
 
   return (
     <div className="min-h-screen bg-white">
-       <div className="bg-white border-b border-orange-200 text-gray-900 relative">
+      <div className="bg-white border-b border-orange-200 text-gray-900 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <button
             onClick={onBack}
@@ -128,15 +126,13 @@ const ViewDonor = ({ onBack }) => {
                 <Droplets className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">View Camp Donars</h1>
-                <p className="text-gray-600 mt-1">Manage Donar records</p>
+                <h1 className="text-3xl font-bold text-gray-900">View Camp Donors</h1>
+                <p className="text-gray-600 mt-1">Manage Donor records</p>
               </div>
             </div>
-            <button
-              className="flex items-center gap-2 px-4 py-2 bg-red-800 text-white cursor-pointer hover:bg-red-900 rounded-lg transition-colors"
-            >
+            <button className="flex items-center gap-2 px-4 py-2 bg-red-800 text-white cursor-pointer hover:bg-red-900 rounded-lg transition-colors">
               <Plus className="w-4 h-4" />
-              Add New Donar
+              Add New Donor
             </button>
           </div>
         </div>
@@ -196,18 +192,14 @@ const ViewDonor = ({ onBack }) => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Donor ID
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Full Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Progress
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Donor ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DOB</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SEX</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood Group</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Donation</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -215,13 +207,12 @@ const ViewDonor = ({ onBack }) => {
                     <tr key={donor.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{donor.donorId}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.fullName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(donor.eligibilityStatus)}`}
-                        >
-                          {getStatusText(donor.eligibilityStatus)}
-                        </span>
-                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.dob}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.sex}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.phone}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.bloodGroup} {donor.rh === "Positive" ? "+" : "-"}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.lastDonationDate || "N/A"}</td>
+                      
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <button
                           onClick={() => setSelectedDonor(donor)}
@@ -266,24 +257,9 @@ const ViewDonor = ({ onBack }) => {
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-3">Basic Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Donor ID:</span> {selectedDonor.donorId}
-                  </div>
-                  <div>
-                    <span className="font-medium">Full Name:</span> {selectedDonor.fullName}
-                  </div>
-                  <div>
-                    <span className="font-medium">UID:</span> {selectedDonor.uid}
-                  </div>
-                  <div>
-                    <span className="font-medium">Date of Birth:</span> {selectedDonor.dob}
-                  </div>
-                  <div>
-                    <span className="font-medium">Sex:</span> {selectedDonor.sex}
-                  </div>
-                  <div>
-                    <span className="font-medium">Weight:</span> {selectedDonor.weightKg} kg
-                  </div>
+                  <div><span className="font-medium">UID:</span> {selectedDonor.uid}</div>
+              
+                  <div><span className="font-medium">Weight:</span> {selectedDonor.weightKg} kg</div>
                 </div>
               </div>
 
@@ -291,52 +267,13 @@ const ViewDonor = ({ onBack }) => {
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-3">Contact Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Phone:</span> {selectedDonor.phone}
-                  </div>
-                  <div>
-                    <span className="font-medium">Email:</span> {selectedDonor.email}
-                  </div>
-                  <div>
-                    <span className="font-medium">Address:</span> {selectedDonor.address.line1}{" "}
-                    {selectedDonor.address.line2}
-                  </div>
-                  <div>
-                    <span className="font-medium">City:</span> {selectedDonor.city}
-                  </div>
-                  <div>
-                    <span className="font-medium">District:</span> {selectedDonor.district}
-                  </div>
-                  <div>
-                    <span className="font-medium">State:</span> {selectedDonor.state}
-                  </div>
-                  <div>
-                    <span className="font-medium">Pincode:</span> {selectedDonor.address.pincode}
-                  </div>
-                  <div>
-                    <span className="font-medium">Occupation:</span> {selectedDonor.occupation}
-                  </div>
-                </div>
-              </div>
-
-              {/* Medical Information */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Medical Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Blood Group:</span> {selectedDonor.bloodGroup} {selectedDonor.rh}
-                  </div>
-                  <div>
-                    <span className="font-medium">Eligibility Status:</span>
-                    <span
-                      className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedDonor.eligibilityStatus)}`}
-                    >
-                      {getStatusText(selectedDonor.eligibilityStatus)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Last Donation:</span> {selectedDonor.lastDonationDate}
-                  </div>
+                  <div><span className="font-medium">Email:</span> {selectedDonor.email}</div>
+                  <div><span className="font-medium">Address:</span> {selectedDonor.address.line1} {selectedDonor.address.line2}</div>
+                  <div><span className="font-medium">City:</span> {selectedDonor.city}</div>
+                  <div><span className="font-medium">District:</span> {selectedDonor.district}</div>
+                  <div><span className="font-medium">State:</span> {selectedDonor.state}</div>
+                  <div><span className="font-medium">Pincode:</span> {selectedDonor.address.pincode}</div>
+                  <div><span className="font-medium">Occupation:</span> {selectedDonor.occupation}</div>
                 </div>
               </div>
 
@@ -350,9 +287,7 @@ const ViewDonor = ({ onBack }) => {
                         <tr>
                           <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                           <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Bag No</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                            Donation ID
-                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Donation ID</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
