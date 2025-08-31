@@ -15,7 +15,11 @@ import {
   Plus,
   Activity,
 } from "lucide-react"
-import { data, useSearchParams } from "react-router-dom"
+import { data, useNavigate, useParams, useSearchParams } from "react-router-dom"
+import axios from "axios"
+import { useAuth } from "@/store/auth"
+import Loader from "@/components/Loader"
+
 
 const Button = ({ children, onClick, variant = "default", size = "default", className = "", ...props }) => {
   const baseClasses =
@@ -36,13 +40,17 @@ const Button = ({ children, onClick, variant = "default", size = "default", clas
   )
 }
 
-const CampDonations = ({ onBack }) => {
+const CampDonations = () => {
+  const navigate = useNavigate();
+  const params = useParams();
+  const { API, authorizationToken } = useAuth();
   const [selectedDonation, setSelectedDonation] = useState(null)
   const [loading, setLoading] = useState(true)
   const [donations, setDonations] = useState([])
-  const [camp, setcamp] = useState([])
   const [activeView, setActiveView] = useState("hub")
   const [searchParam] = useSearchParams();
+  const [camp, setcamp] = useState(null);
+
   const data = [{
     id: "1",
     bagNo: "BG001",
@@ -87,22 +95,40 @@ const CampDonations = ({ onBack }) => {
       { test: "HBsAg", result: "Pending", testedAt: "2024-01-16" },
     ],
   }
-]
-useEffect(() => {
-  const campId = searchParam.get("id");
-  console.log("Camp ID from URL:", campId);
+  ]
+  useEffect(() => {
+    setLoading(true);
+    const searchParams = new URLSearchParams(location.search);
+    const campId = searchParams.get("id");
+    console.log("Camp ID from URL:", campId);
+    if(!campId) {
+      navigate("/camp-listing");
+      return;
+    }
+    fetchCampDetails(campId);
+  }, [location.search]);
 
-  setTimeout(() => {
-    // If you want all donations:
-    // setDonations(data);
+  const fetchCampDetails = async (campId) => {
+    try {
+      const response = await axios.get(`${API}/api/site/details/${campId}`, {
+        headers: {
+          Authorization: authorizationToken,
+        }, withCredentials: true,
+      });
+      if (response.status === 200) {
+        console.log("Camp details:", response.data.site);
+        setcamp(response.data.site);
+      }
+    } catch (error) {
+      console.error("Error fetching camp details:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-    // If you want donations specific to camp:
-    setcamp(data.filter(d => d.id === campId));
-
-    setLoading(false);
-  }, 1000);
-}, [searchParam]);
-
+  const onBack = () => {
+    navigate('/camp-listing');
+  }
   const handleViewDonation = (donation) => {
     setSelectedDonation(donation)
   }
@@ -126,18 +152,6 @@ useEffect(() => {
     setActiveView("hub")
   }
 
-  const getProgressBadge = (progress) => {
-    const colors = {
-      upcoming: "bg-blue-100 text-blue-800",
-      ongoing: "bg-green-100 text-green-800",
-      completed: "bg-gray-100 text-gray-800",
-    }
-    return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${colors[progress]}`}>
-        {progress?.charAt(0).toUpperCase() + progress?.slice(1)}
-      </span>
-    )
-  }
 
   const getStatusBadge = (status) => {
     const colors = {
@@ -161,7 +175,7 @@ useEffect(() => {
       description: "Browse, search, and manage existing donor records and history",
       icon: Users,
       color: "bg-orange-800",
-      stats: "156 Active This Month",
+      stats: `${camp?.donorCount || 0} Active This Month`,
     },
     {
       id: "create-donation",
@@ -169,7 +183,7 @@ useEffect(() => {
       description: "Record new blood donations with vitals, tests, and bag information",
       icon: Plus,
       color: "bg-orange-800",
-      stats: "1,234 Total Donations",
+      stats: `${camp?.bagsCount || 0} Total Donations`,
     },
     {
       id: "view-donations",
@@ -177,9 +191,48 @@ useEffect(() => {
       description: "Manage donation records, track status, and view test results",
       icon: Activity,
       color: "bg-orange-800",
-      stats: "89 This Week",
+      stats: `${camp?.bagsCount || 0} This Camp`,
     },
   ]
+
+  const getProgressStatus = (camp) => {
+    if (!camp.dateFrom || !camp.dateTo) return "N/A";
+
+    const now = new Date();
+    const start = new Date(camp.dateFrom);
+    const end = new Date(camp.dateTo);
+
+    if (now < start) return "Upcoming";
+    if (now >= start && now <= end) return "Ongoing";
+    return "Completed";
+  }
+
+  const getProgressBadge = (status) => {
+    const colors = {
+      Upcoming: "bg-blue-100 text-blue-800",
+      Ongoing: "bg-green-100 text-green-800",
+      Completed: "bg-gray-100 text-gray-800",
+    }
+
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || "bg-gray-100 text-gray-800"}`}>
+        {status}
+      </span>
+    )
+  }
+
+  useEffect(() => {
+  if (!camp && !loading) {
+    // Redirect to camp listing page
+   onBack();
+  }
+}, [camp, loading, navigate]);
+
+  if (loading){
+    return <Loader message="Loading camp details..." />
+  }
+
+
 
   if (activeView === "view-donations") {
     return (
@@ -199,7 +252,7 @@ useEffect(() => {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Donations at this Camp</h1>
-                <p className="text-gray-600 mt-1">All donations collected at {camp.name}</p>
+                <p className="text-gray-600 mt-1">All donations collected at {camp?.name}</p>
               </div>
             </div>
           </div>
@@ -364,10 +417,10 @@ useEffect(() => {
                         <span className="font-medium text-slate-700">{test.test}</span>
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-medium ${test.result === "Negative"
-                              ? "bg-green-100 text-green-800"
-                              : test.result === "Positive"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-yellow-100 text-yellow-800"
+                            ? "bg-green-100 text-green-800"
+                            : test.result === "Positive"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-yellow-100 text-yellow-800"
                             }`}
                         >
                           {test.result}
@@ -458,7 +511,7 @@ useEffect(() => {
         <div className="bg-white rounded-2xl shadow-lg border border-orange-100 p-6 mb-8">
           <div className="flex items-center gap-4 mb-6">
             <h2 className="text-2xl font-bold text-slate-800">{camp.name}</h2>
-            {getProgressBadge(camp.progress)}
+            {getProgressBadge(getProgressStatus(camp))}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -492,6 +545,15 @@ useEffect(() => {
                   <p className="text-slate-600 text-sm">{camp.contactInfo?.email}</p>
                 </div>
               </div>
+
+              <div className="flex items-center gap-3">
+                <Users className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-slate-700 mb-1">Created By</p>
+                  <p className="text-slate-600 text-sm">{camp.createdBy.name.first} {camp.createdBy.name.last}</p>
+
+                </div>
+              </div>
             </div>
 
             {/* Right Column */}
@@ -500,14 +562,54 @@ useEffect(() => {
                 <p className="text-sm font-medium text-slate-700 mb-1">Site ID</p>
                 <p className="text-slate-600 font-mono text-sm">{camp.siteId}</p>
               </div>
+              <div className="flex flex-col gap-3">
+                {/* Staff Count */}
+                <div className="flex items-center gap-3">
+                  <Users className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">Staff Count</p>
+                    <p className="text-slate-600 text-sm">{camp.staff?.length} members</p>
+                  </div>
+                </div>
 
-              <div className="flex items-center gap-3">
-                <Users className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-slate-700">Staff Count</p>
-                  <p className="text-slate-600 text-sm">{camp.staff?.length} members</p>
+                {/* Staff List */}
+                <div className="mt-2">
+                  <p className="text-sm font-medium text-slate-700 mb-2">Staff Members</p>
+
+                  <div className="grid gap-2">
+                    {camp.staff && camp.staff.length > 0 ? (
+                      camp.staff.map((member) => (
+                        <div
+                          key={member._id}
+                          className="flex items-center justify-between p-3 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 transition"
+                        >
+                          {/* Left side: name + role */}
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800">
+                              {member.name.first} {member.name.last}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {member.role ? member.role.charAt(0).toUpperCase() + member.role.slice(1) : "Staff"}
+                            </p>
+                          </div>
+
+                          {/* Right side: contact */}
+                          <div className="text-right">
+                            <p className="text-xs text-slate-600">{member.email}</p>
+                            <p className="text-xs text-slate-600">{member.phone}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-3 rounded-md border border-slate-200 bg-slate-50 text-sm text-slate-500">
+                        No staff assigned
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
+
+
 
               <div className="flex items-center gap-3">
                 <Calendar className="w-4 h-4 text-orange-600 flex-shrink-0" />
@@ -517,9 +619,13 @@ useEffect(() => {
                 </div>
               </div>
 
-              <div>
-                <p className="text-sm font-medium text-slate-700 mb-1">Created By</p>
-                <p className="text-slate-600 text-sm">{camp.createdBy}</p>
+              <div className="flex items-center gap-3">
+                <Users className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-slate-700 mb-1">Updated By</p>
+                  <p className="text-slate-600 text-sm">{camp.lastUpdatedBy.name.first} {camp.lastUpdatedBy.name.last}</p>
+
+                </div>
               </div>
             </div>
           </div>

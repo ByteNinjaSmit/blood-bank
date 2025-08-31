@@ -29,6 +29,15 @@ const siteSchema = new Schema(
         required: true,
       },
     },
+    // Camp Duration
+    dateFrom: {
+      type: Date,
+      required: true, // mark as required if every camp must have a start
+    },
+    dateTo: {
+      type: Date,
+      required: true, // mark as required if every camp must have an end
+    },
 
     // Reference to the User who created the site
     createdBy: {

@@ -4,9 +4,11 @@ import { ArrowLeft, Droplets } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/store/auth"
 import axios from "axios"
+import { useNavigate } from "react-router-dom"
 
-const CampRegisteration = ({ onBack }) => {
+const CampRegisteration = () => {
   const { API, authorizationToken } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     siteId: "",
     name: "",
@@ -17,7 +19,10 @@ const CampRegisteration = ({ onBack }) => {
       email: "",
     },
     staff: [],
+    dateFrom: "",
+    dateTo: "",
   })
+
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [staffList, setStaffList] = useState([])  // _id name
@@ -39,11 +44,16 @@ const CampRegisteration = ({ onBack }) => {
     if (formData.contactInfo.phone && !phoneRegex.test(formData.contactInfo.phone)) {
       newErrors.phone = "Phone format should be XXXXXXXXXX"
     }
+    if (!formData.dateFrom) newErrors.dateFrom = "Start date is required"
+    if (!formData.dateTo) newErrors.dateTo = "End date is required"
+    if (formData.dateFrom && formData.dateTo && new Date(formData.dateTo) < new Date(formData.dateFrom)) {
+      newErrors.dateTo = "End date cannot be earlier than start date"
+    }
+
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
-
 
   const getStaffNames = async () => {
     try {
@@ -65,6 +75,10 @@ const CampRegisteration = ({ onBack }) => {
     getStaffNames();
   }, [API])
 
+  const onBack = () => {
+    navigate('/camp-listing');
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
 
@@ -79,7 +93,9 @@ const CampRegisteration = ({ onBack }) => {
         address: formData.address,
         phone: formData.contactInfo.phone,
         email: formData.contactInfo.email,
-        staff: formData.staff
+        staff: formData.staff,
+        dateFrom: formData.dateFrom,
+        dateTo: formData.dateTo,
       }, {
         headers: {
           'Content-Type': 'application/json',
@@ -88,6 +104,7 @@ const CampRegisteration = ({ onBack }) => {
         },
         withCredentials: true,
       });
+
       if (response.status === 201) {
         toast.success(response.data.message || "Camp created successfully");
         setFormData({
@@ -100,8 +117,11 @@ const CampRegisteration = ({ onBack }) => {
             email: "",
           },
           staff: [],
+          dateFrom: "",
+          dateTo: "",
         });
-        // onBack(); // Navigate back to the previous page
+
+        onBack(); // Navigate back to the previous page
 
       }
     } catch (error) {
@@ -221,6 +241,34 @@ const CampRegisteration = ({ onBack }) => {
                 />
                 {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
               </div>
+
+              {/* From && To Date */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Start Date *</label>
+                  <input
+                    type="date"
+                    value={formData.dateFrom}
+                    onChange={(e) => setFormData({ ...formData, dateFrom: e.target.value })}
+                    className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${errors.dateFrom ? "border-red-500" : ""
+                      }`}
+                  />
+                  {errors.dateFrom && <p className="text-red-500 text-sm mt-1">{errors.dateFrom}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">End Date *</label>
+                  <input
+                    type="date"
+                    value={formData.dateTo}
+                    onChange={(e) => setFormData({ ...formData, dateTo: e.target.value })}
+                    className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${errors.dateTo ? "border-red-500" : ""
+                      }`}
+                  />
+                  {errors.dateTo && <p className="text-red-500 text-sm mt-1">{errors.dateTo}</p>}
+                </div>
+              </div>
+
               {/* Staff Selection */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">

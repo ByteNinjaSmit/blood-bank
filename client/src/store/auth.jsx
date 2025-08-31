@@ -19,12 +19,15 @@ export const AuthProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
     const [isDeveloper, setIsDeveloper] = useState(false);
+    const [tokenExpiry, setTokenExpiry] = useState(null); // New: track token expiry timestamp
 
     const authorizationToken = `Bearer ${token}`;
 
     const storeTokenInCookies = (serverToken) => {
         setToken(serverToken);
         document.cookie = `authToken=${serverToken}; path=/; max-age=1800; secure; samesite=strict`;
+        // Set expiry timestamp for countdown (current time + 1800 seconds)
+        setTokenExpiry(Date.now() + 1800 * 1000);
     };
 
     const API = import.meta.env.VITE_APP_URI_API;
@@ -83,6 +86,23 @@ export const AuthProvider = ({ children }) => {
             setIsLoading(false);
         }
     }, [token]);
+    // Auto logout & countdown warning
+    useEffect(() => {
+        if (!tokenExpiry) return;
+
+        const interval = setInterval(() => {
+            const timeLeft = tokenExpiry - Date.now();
+
+            if (timeLeft <= 0) {
+                LogoutUser();
+                clearInterval(interval);
+            } else if (timeLeft <= 2 * 60 * 1000) { // 2 minutes warning
+                toast.warning("Your session will expire in 2 minutes!");
+            }
+        }, 5000); // check every 5 seconds
+
+        return () => clearInterval(interval);
+    }, [tokenExpiry]);
 
     useEffect(() => {
         setIsAdmin(false);

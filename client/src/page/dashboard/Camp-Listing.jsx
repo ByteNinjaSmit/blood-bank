@@ -2,10 +2,12 @@
 import React, { useState, useEffect } from "react"
 import { ArrowLeft, Plus, Eye, Edit, Trash2 } from "lucide-react"
 import { se } from "date-fns/locale"
-import { useNavigate , Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import ca from "zod/v4/locales/ca.cjs"
 import CampDonations from "./Camp-Donations";
 import { set } from "date-fns";
+import axios from "axios";
+import { useAuth } from "@/store/auth";
 
 const Button = ({ children, onClick, variant = "default", size = "default", className = "", ...props }) => {
   const baseClasses =
@@ -26,77 +28,36 @@ const Button = ({ children, onClick, variant = "default", size = "default", clas
   )
 }
 
-const CampList = ({ onBack, onViewCamp }) => {
+const CampList = () => {
+  const { API, authorizationToken } = useAuth();
   const [camps, setCamps] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentView, setCurrentView] = useState("CampList")
   const [selectedCamp, setSelectedCamp] = useState(null)
   const navigate = useNavigate();
 
-  // Mock data
-  useEffect(() => {
-    setTimeout(() => {
-      setCamps([
-        {
-          _id: "1",
-          siteId: "SITE001",
-          name: "Red Cross Blood Donation Camp",
-          description: "Annual donation drive",
-          address: "123 Main Street, City",
-          contactInfo: {
-            phone: "123-456-7890",
-            email: "contact@redcross.org",
-          },
-          createdBy: "John Doe",
-          lastUpdatedBy: "Jane Smith",
-          staff: ["staff1", "staff2", "staff3"],
-          createdAt: "2024-01-15",
-          updatedAt: "2024-01-20",
-          progress: "ongoing",
-        },
-        {
-          _id: "2",
-          siteId: "SITE002",
-          name: "Community Health Center Camp",
-          description: "Monthly blood collection",
-          address: "456 Oak Avenue, Town",
-          contactInfo: {
-            phone: "987-654-3210",
-            email: "health@community.org",
-          },
-          createdBy: "Mike Johnson",
-          lastUpdatedBy: "Sarah Wilson",
-          staff: ["staff4", "staff5"],
-          createdAt: "2024-01-10",
-          updatedAt: "2024-01-18",
-          progress: "upcoming",
-        },
-        {
-          _id: "3",
-          siteId: "SITE003",
-          name: "University Blood Drive",
-          description: "Student volunteer drive",
-          address: "789 College Road, Campus",
-          contactInfo: {
-            phone: "555-123-4567",
-            email: "blooddrive@university.edu",
-          },
-          createdBy: "Dr. Smith",
-          lastUpdatedBy: "Admin User",
-          staff: ["staff6", "staff7", "staff8", "staff9"],
-          createdAt: "2024-01-05",
-          updatedAt: "2024-01-15",
-          progress: "completed",
-        },
-      ])
-      setLoading(false)
-    }, 1000)
-  }, [])
-
-  const handleView = (camp) => {
-
-   
+  const getCamps = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API}/api/site/list`, {
+        headers: {
+          Authorization: authorizationToken,
+        }, withCredentials: true,
+      })
+      if (response.status === 200) {
+        // console.log("Camps fetched:", response.data.data)
+        setCamps(response.data.data)
+      }
+    } catch (error) {
+      console.error("Error fetching camps:", error)
+    } finally {
+      setLoading(false);
+    }
   }
+  useEffect(() => {
+    getCamps();
+  }, [API]);
+
   const handleEdit = (camp) => {
     console.log("Edit camp:", camp)
   }
@@ -106,19 +67,32 @@ const CampList = ({ onBack, onViewCamp }) => {
       setCamps(camps.filter((c) => c._id !== camp._id))
     }
   }
+  const getProgressStatus = (camp) => {
+    if (!camp.dateFrom || !camp.dateTo) return "N/A";
 
-  const getProgressBadge = (progress) => {
+    const now = new Date();
+    const start = new Date(camp.dateFrom);
+    const end = new Date(camp.dateTo);
+
+    if (now < start) return "Upcoming";
+    if (now >= start && now <= end) return "Ongoing";
+    return "Completed";
+  }
+
+  const getProgressBadge = (status) => {
     const colors = {
-      upcoming: "bg-blue-100 text-blue-800",
-      ongoing: "bg-green-100 text-green-800",
-      completed: "bg-gray-100 text-gray-800",
+      Upcoming: "bg-blue-100 text-blue-800",
+      Ongoing: "bg-green-100 text-green-800",
+      Completed: "bg-gray-100 text-gray-800",
     }
+
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[progress]}`}>
-        {progress.charAt(0).toUpperCase() + progress.slice(1)}
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || "bg-gray-100 text-gray-800"}`}>
+        {status}
       </span>
     )
   }
+
 
   if (loading) {
     return (
@@ -126,15 +100,6 @@ const CampList = ({ onBack, onViewCamp }) => {
         <div className="bg-gradient-to-br from-red-800 via-red-700 to-red-900 text-white relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-red-900/20 to-transparent"></div>
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <Button
-              onClick={onBack}
-              variant="outline"
-              size="lg"
-              className="flex items-center gap-3 text-white border-white/30 hover:bg-white/10 bg-transparent"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Back to Camp
-            </Button>
             <h1 className="text-3xl font-bold text-white">Camp List</h1>
           </div>
         </div>
@@ -153,15 +118,6 @@ const CampList = ({ onBack, onViewCamp }) => {
       <div className="bg-gradient-to-br from-red-800 via-red-700 to-red-900 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-red-900/20 to-transparent"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Button
-            onClick={onBack}
-            variant="outline"
-            size="lg"
-            className="flex items-center gap-3 text-white border-white/30 hover:bg-white/10 bg-transparent"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back to Camp
-          </Button>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h1 className="text-3xl font-bold text-white">Camp List</h1>
             <Button className="bg-white/20 hover:bg-white/30 text-white flex items-center gap-2">
@@ -180,7 +136,12 @@ const CampList = ({ onBack, onViewCamp }) => {
                 <tr>
                   <th className="px-4 py-4 text-left text-sm font-medium text-slate-700">Site ID</th>
                   <th className="px-4 py-4 text-left text-sm font-medium text-slate-700">Name</th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-slate-700">Description</th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-slate-700">Contact Info</th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-slate-700">Staff</th>
                   <th className="px-4 py-4 text-left text-sm font-medium text-slate-700">Progress</th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-slate-700">Duration</th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-slate-700">CreatedBy</th>
                   <th className="px-4 py-4 text-left text-sm font-medium text-slate-700">Actions</th>
                 </tr>
               </thead>
@@ -189,16 +150,44 @@ const CampList = ({ onBack, onViewCamp }) => {
                   <tr key={camp._id} className="hover:bg-slate-50">
                     <td className="px-4 py-4 text-sm text-slate-900 font-medium">{camp.siteId}</td>
                     <td className="px-4 py-4 text-sm font-medium text-slate-900">{camp.name}</td>
-                    <td className="px-4 py-4 text-sm">{getProgressBadge(camp.progress)}</td>
+                    <td className="px-4 py-4 text-sm text-slate-700">{camp.description}</td>
+                    <td className="px-4 py-4 text-sm text-slate-700">
+                      <div>{camp.contactInfo?.phone}</div>
+                      <div>{camp.contactInfo?.email}</div>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-slate-700">
+                      {camp.staff && camp.staff.length > 0 ? (
+                        camp.staff.map((member, index) => (
+                          <span key={member._id || index}>
+                            {member.name.first} {member.name.last}
+                            {index < camp.staff.length - 1 && ", "}
+                          </span>
+                        ))
+                      ) : (
+                        <span>No staff assigned</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-sm">
+                      {getProgressBadge(getProgressStatus(camp))}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-slate-700">
+                      {camp.dateFrom && camp.dateTo ? (
+                        `${new Date(camp.dateFrom).toLocaleDateString()} → ${new Date(camp.dateTo).toLocaleDateString()}`
+                      ) : (
+                        "N/A"
+                      )}
+                    </td>
+
+                    <td className="px-4 py-4 text-sm text-slate-700">{camp.createdBy.name.first} {camp.createdBy.name.last}</td>
                     <td className="px-4 py-4 text-sm">
                       <div className="flex items-center gap-2">
                         <Link to={`/camp-donations?id=${camp._id}`}>
-                        <button
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                          <button
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
                         </Link>
                         <button
                           onClick={() => handleEdit(camp)}

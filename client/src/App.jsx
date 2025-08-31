@@ -19,6 +19,8 @@ import ViewDonations from './components/camp/View-Donations';
 import CreateDonor from './components/camp/Create-Donor';
 import ViewDonor from './components/camp/View-Donor';
 import CampDonations from './page/dashboard/Camp-Donations';
+import { AuthenticatedRoute } from './components/auth/Authentic-Routes';
+
 
 const App = () => {
   const pathname = useLocation().pathname;
@@ -36,7 +38,13 @@ const App = () => {
         {/* Auth Routes */}
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/" element={<MasterLayout />}>
+
+
+        <Route path="/" element={
+          <AuthenticatedRoute>
+            <MasterLayout />
+          </AuthenticatedRoute>
+        }>
           {/*  Dashboard - Home Route */}
           <Route path="" element={<Home />} />
 
@@ -49,13 +57,13 @@ const App = () => {
           <Route path="/component/separate" element={<ComponentSeparate onBack={() => navigate(-1)} />} />
           <Route path="/component/near-expiry" element={<NearExpiry onBack={() => navigate(-1)} />} />
           <Route path="/discard" element={<ViewDiscarded />} />
-          
-          <Route path="/inventory/stock" element={<ViewStock/>} />
 
-          <Route path="/donations/create-donation" element={<CreateDonation/>} />
-          <Route path="/donations/view-donation" element={<ViewDonations/>} />
-          <Route path="/donor/create-donor" element={<CreateDonor/>} />
-          <Route path="/donor/view-donor" element={<ViewDonor/>} />
+          <Route path="/inventory/stock" element={<ViewStock />} />
+
+          <Route path="/donations/create-donation" element={<CreateDonation />} />
+          <Route path="/donations/view-donation" element={<ViewDonations />} />
+          <Route path="/donor/create-donor" element={<CreateDonor />} />
+          <Route path="/donor/view-donor" element={<ViewDonor />} />
 
           {/*For Dashboard - Error Routes - 404 NOT FOUND */}
           <Route path="*" element={<NotFound />} />
@@ -67,7 +75,6 @@ const App = () => {
 
       {/* Conditional Rendering For Footer */}
       {!NoFooterRoutes.includes(pathname) && <Footer />}
-
     </div>
   )
 }

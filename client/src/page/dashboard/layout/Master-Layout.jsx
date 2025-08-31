@@ -74,13 +74,13 @@ const modules = [
                 permissions: ["read"],
                 description: "Generate reports for blood donation camps",
             },
-            {
-                name: "View Camp Details",
-                icon: <Heart className="w-5 h-5" />,
-                href: "/camp-donations",
-                permissions: ["read", "write"],
-                description: "Track donations from camps",
-            },
+            // {
+            //     name: "View Camp Details",
+            //     icon: <Heart className="w-5 h-5" />,
+            //     href: "/camp-donations",
+            //     permissions: ["read", "write"],
+            //     description: "Track donations from camps",
+            // },
         ],
         description: "Blood donation camp management",
     },
@@ -128,6 +128,35 @@ const modules = [
             
         ],
         description: "Track donation records",
+    },
+    {
+        id: "component",
+        name: "Component",
+        icon: <TestTube className="w-5 h-5" />,
+        permissions: ["read", "write"],
+        subModules: [
+            {
+                name: "Separate",
+                href: "/component/separate",
+                permissions: ["write"],
+                description: "Separate blood components",
+            },
+            {
+                name: "Near-Expiry",
+                href: "/component/near-expiry",
+                permissions: ["read"],
+                description: "View near-expiry components",
+            },
+        ],
+        description: "Blood component processing",
+    },
+    {
+        id: "labs",
+        name: "Labs",
+        icon: <Microscope className="w-5 h-5" />,
+        href: "/labs",
+        permissions: ["read", "admin"],
+        description: "Laboratory testing",
     },
     {
         id: "inventory",
@@ -195,27 +224,6 @@ const modules = [
         description: "Donor queue management",
     },
     {
-        id: "component",
-        name: "Component",
-        icon: <TestTube className="w-5 h-5" />,
-        permissions: ["read", "write"],
-        subModules: [
-            {
-                name: "Separate",
-                href: "/component/separate",
-                permissions: ["write"],
-                description: "Separate blood components",
-            },
-            {
-                name: "Near-Expiry",
-                href: "/component/near-expiry",
-                permissions: ["read"],
-                description: "View near-expiry components",
-            },
-        ],
-        description: "Blood component processing",
-    },
-    {
         id: "report",
         name: "Report",
         icon: <BarChart3 className="w-5 h-5" />,
@@ -241,14 +249,6 @@ const modules = [
             },
         ],
         description: "Analytics and reporting",
-    },
-    {
-        id: "labs",
-        name: "Labs",
-        icon: <Microscope className="w-5 h-5" />,
-        href: "/labs",
-        permissions: ["read", "admin"],
-        description: "Laboratory testing",
     },
 ]
 
