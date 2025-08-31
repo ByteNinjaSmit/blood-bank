@@ -5,10 +5,14 @@ const {
     sendTestEmail,
     triggerNow,
     sendReport,
+    sendSMS,
+    sendSMSTwillo
 } = require("../controllers/test-controller");
 
 router.post("/send-email", sendTestEmail);
 router.post("/expiry/report/trigger", triggerNow);
 router.post("/send-expiry-report", sendReport);
+router.post('/send-sms',sendSMS);
+router.post('/send-sms-twillo',sendSMSTwillo);
 
 module.exports = router;

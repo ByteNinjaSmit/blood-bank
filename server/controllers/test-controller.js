@@ -6,6 +6,27 @@ const nodemailer = require("nodemailer");
 const PDFDocument = require("pdfkit");
 const { Readable } = require("stream");
 
+// SNS SMS SETUP
+// Import required AWS SDK modules for SNS (Simple Notification Service)
+const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
+
+// Create reusable SNS client
+const sns = new SNSClient({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+//  SMS SETUP BY TWILLO
+const twilio = require('twilio');
+
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
+
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
 const SEND_TO = process.env.ADMIN_EMAIL;
@@ -147,5 +168,69 @@ exports.sendReport = async (req, res) => {
       success: false,
       error: error.message,
     });
+  }
+};
+
+// Controller function
+exports.sendSMS = async (req, res) => {
+  try {
+    const { phone, message } = req.body;
+
+    if (!phone || !message) {
+      return res.status(400).json({ error: "Phone and message are required" });
+    }
+
+    const params = {
+      Message: message,
+      PhoneNumber: phone.startsWith("+") ? phone : `+91${phone}`, // Auto add India code if missing
+      MessageAttributes: {
+        "AWS.SNS.SMS.SenderID": {
+          DataType: "String",
+          StringValue: "TESTSMS", // Replace with your DLT-registered Sender ID
+        },
+        "AWS.SNS.SMS.SMSType": {
+          DataType: "String",
+          StringValue: "Transactional", // Can be "Promotional" or "Transactional"
+        },
+      },
+    };
+
+    const command = new PublishCommand(params);
+    const response = await sns.send(command);
+
+    return res.status(200).json({
+      success: true,
+      messageId: response.MessageId,
+    });
+  } catch (err) {
+    console.error("SNS SMS Error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+
+
+exports.sendSMSTwillo = async (req, res) => {
+  try {
+    const { phone, message } = req.body;
+
+    if (!phone || !message) {
+      return res.status(400).json({ error: "Phone and message are required" });
+    }
+
+    const response = await client.messages.create({
+      body: message,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: phone.startsWith("+") ? phone : `+91${phone}`, // auto add India code if missing
+    });
+
+    return res.status(200).json({
+      success: true,
+      sid: response.sid,
+      status: response.status,
+    });
+  } catch (err) {
+    console.error("Twilio SMS Error:", err);
+    return res.status(500).json({ error: err.message });
   }
 };
