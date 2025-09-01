@@ -207,12 +207,37 @@ const ViewDonor = ({ onBack }) => {
                     <tr key={donor.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{donor.donorId}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.fullName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.dob}</td>
+
+                      {/* DOB + Age Badge */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex items-center gap-2">
+                        <span>{donor.dob}</span>
+                        {(() => {
+                          const today = new Date();
+                          const dob = new Date(donor.dob);
+                          let age = today.getFullYear() - dob.getFullYear();
+                          const monthDiff = today.getMonth() - dob.getMonth();
+                          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                            age--;
+                          }
+
+                          return (
+                            <span
+                              className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold 
+                        ${age < 18 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}
+                            >
+                              {age}
+                            </span>
+                          );
+                        })()}
+                      </td>
+
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.sex}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.phone}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.bloodGroup} {donor.rh === "Positive" ? "+" : "-"}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {donor.bloodGroup} {donor.rh === "Positive" ? "+" : "-"}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{donor.lastDonationDate || "N/A"}</td>
-                      
+
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <button
                           onClick={() => setSelectedDonor(donor)}
@@ -236,6 +261,7 @@ const ViewDonor = ({ onBack }) => {
             </div>
           )}
         </div>
+
       </div>
 
       {/* View Details Modal */}
@@ -258,7 +284,7 @@ const ViewDonor = ({ onBack }) => {
                 <h3 className="text-lg font-medium text-gray-900 mb-3">Basic Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div><span className="font-medium">UID:</span> {selectedDonor.uid}</div>
-              
+
                   <div><span className="font-medium">Weight:</span> {selectedDonor.weightKg} kg</div>
                 </div>
               </div>

@@ -108,27 +108,27 @@ const ViewDonorCamp = () => {
   const getFullName = (donor) =>
     `${donor.name.firstName} ${donor.name.middleName || ""} ${donor.name.lastName}`.trim();
 
-const formatAddress = (address) => {
-  if (!address) return "N/A";
-  const parts = [
-    address.line1,
-    address.line2,
-    address.city,
-    address.district,
-    address.state,
-    address.pincode,
-  ].filter(Boolean); // removes empty strings or undefined
-  return parts.join(", ");
-};
-const formatDate = (dateString) => {
-  if (!dateString) return "N/A";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-};
+  const formatAddress = (address) => {
+    if (!address) return "N/A";
+    const parts = [
+      address.line1,
+      address.line2,
+      address.city,
+      address.district,
+      address.state,
+      address.pincode,
+    ].filter(Boolean); // removes empty strings or undefined
+    return parts.join(", ");
+  };
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
 
 
   useEffect(() => {
@@ -263,7 +263,34 @@ const formatDate = (dateString) => {
                       <td className="px-6 py-4">{donor.donorId}</td>
                       <td className="px-6 py-4">{getFullName(donor)}</td>
                       <td className="px-6 py-4">{donor.uid}</td>
-                      <td className="px-6 py-4">{formatDate(donor.dob)}</td>
+
+                      {/* DOB + Age Badge */}
+                      <td className="px-6 py-20 flex items-center-safe gap-2">
+                        <span>{formatDate(donor.dob)}</span>
+                        {(() => {
+                          const today = new Date();
+                          const dob = new Date(donor.dob);
+                          let age = today.getFullYear() - dob.getFullYear();
+                          const monthDiff = today.getMonth() - dob.getMonth();
+                          if (
+                            monthDiff < 0 ||
+                            (monthDiff === 0 && today.getDate() < dob.getDate())
+                          ) {
+                            age--;
+                          }
+
+                          return (
+                            <span
+                              title={`Age: ${age} years`}
+                              className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold 
+                        ${age < 18 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}
+                            >
+                              {age}
+                            </span>
+                          );
+                        })()}
+                      </td>
+
                       <td className="px-6 py-4">{donor.sex}</td>
                       <td className="px-6 py-4">{donor.phone}</td>
                       <td className="px-6 py-4">{donor.email}</td>
@@ -337,6 +364,7 @@ const formatDate = (dateString) => {
             </div>
           )}
         </div>
+
       </div>
     </div>
   )
