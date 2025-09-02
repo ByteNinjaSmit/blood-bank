@@ -385,7 +385,7 @@ function MasterLayout() {
                     <div className="flex items-center justify-between">
                         {(sidebarOpen || showMobileOverlay) && (
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm overf">
                                     <Heart className="w-6 h-6 text-white" />
                                 </div>
                                 <div>
@@ -446,7 +446,7 @@ function MasterLayout() {
                 {/* Modules List */}
                 <div className="flex-1 overflow-y-auto">
                     {sidebarOpen || showMobileOverlay ? (
-                        <div className="p-2">
+                        <div className="p-2 max-h-[80vh] overflow-y-auto">
                             {filteredModules.map((module) => (
                                 <div key={module.id}>
                                     <div

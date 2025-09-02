@@ -144,7 +144,7 @@ export default function BloodBankWelcome() {
                  */}
               {/* <div className="text-orange-800 text-4xl font-bold ml-4">BANK</div> */}
             </div>
-            <h1 className="text-6xl font-bold text-gray-800 mb-4">SANJIVANI , KOPARGAON</h1>
+            <h1 className="text-6xl font-bold text-gray-800 mb-4">SANJIVANI, KOPARGAON</h1>
             <p className="text-gray-600 text-xl max-w-3xl mx-auto leading-relaxed">
               Your comprehensive blood bank management system. Manage donors, track inventory, maintain medical records,
               and oversee all blood bank operations from this powerful administrative platform.
