@@ -21,7 +21,7 @@ import { toast } from "sonner"
 
 export default function BloodBankDoctorLoginPage() {
   const navigate = useNavigate();
-  const {API,storeTokenInCookies } = useAuth();
+  const { API, storeTokenInCookies } = useAuth();
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     username: "",
@@ -43,11 +43,11 @@ export default function BloodBankDoctorLoginPage() {
     e.preventDefault()
     console.log("Blood bank doctor login:", formData)
     try {
-      const response =  await axios.post(`${API}/api/auth/login`,{
+      const response = await axios.post(`${API}/api/auth/login`, {
         email: formData.username,
         password: formData.password,
       });
-      if(response.status === 200){
+      if (response.status === 200) {
         const data = response.data;
         toast.success(data.message || "Login successful");
         storeTokenInCookies(data.token);
@@ -86,11 +86,15 @@ export default function BloodBankDoctorLoginPage() {
 
           {/* Branding */}
           <div className="text-center mb-6 sm:mb-8 lg:mb-12">
-            <div className="flex items-center justify-center mb-3 sm:mb-4">
+            {/* <div className="flex items-center justify-center mb-3 sm:mb-4">
               <div className="bg-white text-red-800 text-xl sm:text-3xl lg:text-5xl font-bold py-2 sm:py-2 lg:py-3 px-2 sm:px-3 lg:px-4 rounded-xl shadow-lg">
                 B
               </div>
               <div className="text-white text-xl sm:text-3xl lg:text-5xl font-bold ml-2 sm:ml-3">LOOD BANK</div>
+            </div> */}
+            <div className="border-4 border-red-300 text-white text-3xl font-bold rounded-2xl  flex flex-row shadow-2xl">
+              <div className="bg-red-800 text-white text-3xl font-bold py-1 px-2 rounded-l-md shadow-2xl">SANJIVANI</div>
+              <div className=" text-red-200 text-3xl font-bold py-1 px-2 rounded-md  shadow-2xl">BLOOD BANK</div>
             </div>
             <p className="text-white/90 text-sm sm:text-base lg:text-lg max-w-sm px-4 sm:px-0">
               Secure medical access to blood bank management system

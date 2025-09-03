@@ -177,19 +177,12 @@ export default function RegisterPage() {
                         <div className="flex flex-col lg:flex-row items-center justify-center mb-4 gap-2 sm:gap-3 lg:gap-4">
 
                             {/* Logo + First Word */}
-                            <div className="flex items-center gap-2">
-                                <div className="bg-white text-red-800 text-2xl sm:text-3xl lg:text-5xl font-bold py-2 px-3 lg:py-3 lg:px-4 rounded-xl shadow-lg">
-                                    S
-                                </div>
-                                <div className="text-white text-2xl sm:text-3xl lg:text-5xl font-bold">
-                                    ANJIAVNI
-                                </div>
+                            <div className="border-4 border-red-300 text-white text-3xl font-bold rounded-2xl  flex flex-row shadow-2xl">
+                                <div className="bg-red-800 text-white text-3xl font-bold py-1 px-2 rounded-l-md shadow-2xl">SANJIVANI</div>
+                                <div className=" text-red-200 text-3xl font-bold py-1 px-2 rounded-md  shadow-2xl">BLOOD BANK</div>
                             </div>
 
-                            {/* Second Word */}
-                            <div className="text-white text-2xl sm:text-3xl lg:text-5xl font-bold">
-                                BLOOD BANK
-                            </div>
+
                         </div>
 
                         {/* Tagline */}
