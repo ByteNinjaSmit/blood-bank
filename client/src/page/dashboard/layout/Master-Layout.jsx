@@ -403,7 +403,7 @@ function MasterLayout() {
                                     {/* Logout Button */}
                                     <button
                                         onClick={LogoutUser}
-                                        className="mt-3 text-xs px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition"
+                                        className="mt-3 text-xs px-3 py-1 bg-red-700 text-white rounded hover:bg-red-700 transition"
                                     >
                                         Logout
                                     </button>
