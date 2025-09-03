@@ -22,6 +22,7 @@ import CampDonations from './page/dashboard/Camp-Details';
 import { AuthenticatedRoute } from './components/auth/Authentic-Routes';
 import ViewDonorCamp from './components/camp/View-Donor-Camp';
 import ViewDonationsCamp from './components/camp/View-Donations-Camp';
+import ScrollToTop from './page/dashboard/layout/ScrollToTop';
 
 
 const App = () => {
@@ -35,7 +36,7 @@ const App = () => {
     <div>
       {/* Conditional Rendering For Navbar */}
       {!NoNavbarRoutes.includes(pathname) && <Navbar />}
-
+      <ScrollToTop />
       <Routes>
         {/* Auth Routes */}
         <Route path="/register" element={<RegisterPage />} />
