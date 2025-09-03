@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import {Link} from "react-router-dom"
+import { Link } from "react-router-dom"
 import {
   Users,
   Heart,
@@ -114,9 +114,8 @@ export default function BloodBankWelcome() {
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-12">
         {/* Header Section */}
         <div
-          className={`text-center mb-16 transition-all duration-1000 ${
-            mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-          }`}
+          className={`text-center mb-16 transition-all duration-1000 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            }`}
         >
           <div className="flex items-center justify-center mb-8">
             <div className="relative">
@@ -132,19 +131,13 @@ export default function BloodBankWelcome() {
           <div className="mb-8">
             <div className="flex items-center justify-center mb-4">
               {/*changes*/}
-              <div className="border-4 border-orange-800 text-white text-3xl font-bold rounded-2xl  flex flex-row shadow-2xl">
-                <div className="bg-orange-800 text-white text-3xl font-bold py-1 px-2 rounded-l-md  shadow-2xl">BLOOD</div> 
-                <div className=" text-orange-800 text-3xl font-bold py-1 px-2 rounded-md  shadow-2xl">BANK</div> 
-              </div> 
+              <div className="border-4 border-red-900 text-white text-3xl font-bold rounded-2xl  flex flex-row shadow-2xl">
+                <div className="bg-red-800 text-white text-3xl font-bold py-1 px-2 rounded-l-md shadow-2xl">SANJIVANI</div>
+                <div className=" text-red-800 text-3xl font-bold py-1 px-2 rounded-md  shadow-2xl">BLOOD BANK</div>
+              </div>
 
-              
-              
-              {/* <div className="bg-orange-800 text-white text-3xl font-bold py-1 px-2 rounded-2xl shadow-2xl">BLOOD</div> 
-              <div className="bg-orange-800 text-white text-3xl font-bold py-1 px-2 rounded-2xl shadow-2xl">BLOOD</div> 
-                 */}
-              {/* <div className="text-orange-800 text-4xl font-bold ml-4">BANK</div> */}
             </div>
-            <h1 className="text-6xl font-bold text-gray-800 mb-4">SANJIVANI, KOPARGAON</h1>
+            <h1 className="text-4xl font-bold text-red-800 mb-4">KOPARGAON</h1>
             <p className="text-gray-600 text-xl max-w-3xl mx-auto leading-relaxed">
               Your comprehensive blood bank management system. Manage donors, track inventory, maintain medical records,
               and oversee all blood bank operations from this powerful administrative platform.
@@ -157,9 +150,8 @@ export default function BloodBankWelcome() {
           {bloodBankCapabilities.map((capability, index) => (
             <div
               key={index}
-              className={`transition-all duration-1000 delay-${(index + 1) * 200} ${
-                mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"
-              }`}
+              className={`transition-all duration-1000 delay-${(index + 1) * 200} ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"
+                }`}
             >
               {/* Category Header */}
               <div className="text-center mb-8">
@@ -197,9 +189,8 @@ export default function BloodBankWelcome() {
 
         {/* Technology & Security Section */}
         <div
-          className={`mt-16 transition-all duration-1000 delay-1000 ${
-            mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"
-          }`}
+          className={`mt-16 transition-all duration-1000 delay-1000 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"
+            }`}
         >
           <div className="bg-orange-50 border-2 border-orange-100 rounded-3xl p-8 shadow-2xl">
             <div className="text-center mb-8">
@@ -295,9 +286,8 @@ export default function BloodBankWelcome() {
 
         {/* Footer */}
         <div
-          className={`text-center mt-16 transition-all duration-1000 delay-1200 ${
-            mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-          }`}
+          className={`text-center mt-16 transition-all duration-1000 delay-1200 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            }`}
         >
           <div className="bg-orange-50 border-2 border-orange-100 rounded-2xl p-6 shadow-xl">
             <div className="flex items-center justify-center mb-4">
