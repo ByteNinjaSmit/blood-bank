@@ -136,6 +136,12 @@ const modules = [
         permissions: ["read", "write"],
         subModules: [
             {
+                name: "Components List",
+                href: "/component/list",
+                permissions: ["read"],
+                description: "View all blood components",
+            },
+            {
                 name: "Separate",
                 href: "/component/separate",
                 permissions: ["write"],

@@ -95,7 +95,7 @@ const separateComponents = async (req, res, next) => {
 
     // Step 6: Add the new component to the blood bag's components array
     bloodBag.components.push(newComponent._id);
-    bloodBag.componentSeparationComplete = true; // Can modify this logic based on the requirement
+    // bloodBag.componentSeparationComplete = true; // Can modify this logic based on the requirement
     bloodBag.updatedBy = userId;
     await bloodBag.save();
 
@@ -139,7 +139,7 @@ const getBagsToSeparateComponent = async (req, res, next) => {
     }
 
     // Step 3: Send the list of collected bags with their component details
-    return res.status(200).json({
+      return res.status(200).json({
       message: "Blood bags ready for component separation.",
       bags: bags.map(bag => ({
         bagNo: bag.bagNo,
@@ -148,7 +148,7 @@ const getBagsToSeparateComponent = async (req, res, next) => {
         bloodGroup: bag.bloodGroup,
         rh: bag.rh,
         siteName: bag.siteId ? bag.siteId.name : null,
-        componentSeparationComplete: componentSeparationComplete,
+        componentSeparationComplete: bag.componentSeparationComplete,
         components: bag.components.map(component => ({
           componentType: component.componentType,
           volumeMl: component.volumeMl
@@ -198,7 +198,7 @@ const separationCompleted = async (req, res, next) => {
 
 const getComponentsList = async (req, res, next) => {
   try {
-    const { type, status, expiryBefore, page = 1, limit = 10 } = req.query; // pagination + filters
+    const { type, status, expiryBefore, search, page = 1, limit = 10 } = req.query; // pagination + filters
 
     // Build filter object
     const filter = {};
@@ -208,41 +208,142 @@ const getComponentsList = async (req, res, next) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Count total documents for pagination
-    const total = await Component.countDocuments(filter);
+    // Build aggregation pipeline for search functionality
+    let pipeline = [
+      {
+        $lookup: {
+          from: "bloodbags",
+          localField: "donationId",
+          foreignField: "_id",
+          as: "donationData"
+        }
+      },
+      {
+        $lookup: {
+          from: "sites",
+          localField: "siteId",
+          foreignField: "_id",
+          as: "siteData"
+        }
+      },
+      {
+        $unwind: {
+          path: "$donationData",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $unwind: {
+          path: "$siteData",
+          preserveNullAndEmptyArrays: true
+        }
+      }
+    ];
 
-    // Fetch components with related data
-    const components = await Component.find(filter)
-      .populate({
-        path: "donationId",
-        select: "bagNo bloodGroup rh collectionDate",
-        model: "BloodBag"
-      })
-      .populate({
-        path: "siteId",
-        select: "name",
-        model: "Site"
-      })
-      .select("componentId componentType volumeMl expiryDate status createdAt")
-      .sort({ createdAt: -1 }) // latest first
-      .skip(skip)
-      .limit(parseInt(limit));
+    // Add search filter if provided
+    if (search) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { componentId: { $regex: search, $options: "i" } },
+            { "donationData.bagNo": { $regex: search, $options: "i" } }
+          ]
+        }
+      });
+    }
+
+    // Add other filters
+    if (Object.keys(filter).length > 0) {
+      pipeline.push({ $match: filter });
+    }
+
+    // Add sorting, pagination, and projection
+    pipeline.push(
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+      {
+        $project: {
+          componentId: 1,
+          componentType: 1,
+          volumeMl: 1,
+          expiryDate: 1,
+          status: 1,
+          createdAt: 1,
+          bagNo: "$donationData.bagNo",
+          bloodGroup: { $concat: ["$donationData.bloodGroup", " ", "$donationData.rh"] },
+          collectionDate: "$donationData.collectionDate",
+          site: "$siteData.name"
+        }
+      }
+    );
+
+    // Execute aggregation
+    const components = await Component.aggregate(pipeline);
+
+    // Count total for pagination (separate query for search)
+    let countPipeline = [
+      {
+        $lookup: {
+          from: "bloodbags",
+          localField: "donationId",
+          foreignField: "_id",
+          as: "donationData"
+        }
+      },
+      {
+        $unwind: {
+          path: "$donationData",
+          preserveNullAndEmptyArrays: true
+        }
+      }
+    ];
+
+    if (search) {
+      countPipeline.push({
+        $match: {
+          $or: [
+            { componentId: { $regex: search, $options: "i" } },
+            { "donationData.bagNo": { $regex: search, $options: "i" } }
+          ]
+        }
+      });
+    }
+
+    if (Object.keys(filter).length > 0) {
+      countPipeline.push({ $match: filter });
+    }
+
+    countPipeline.push({ $count: "total" });
+
+    const countResult = await Component.aggregate(countPipeline);
+    const total = countResult.length > 0 ? countResult[0].total : 0;
 
     if (!components || components.length === 0) {
-      return res.status(404).json({ message: "No components found." });
+      return res.status(200).json({
+        message: "No components found.",
+        pagination: {
+          total: 0,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: 0,
+        },
+        components: []
+      });
     }
 
     // Format response for table
     const tableData = components.map(c => ({
+      id:c._id,
       componentId: c.componentId,
       type: c.componentType,
       volumeMl: c.volumeMl,
       status: c.status,
       expiryDate: c.expiryDate,
-      bagNo: c.donationId ? c.donationId.bagNo : null,
-      bloodGroup: c.donationId ? `${c.donationId.bloodGroup} ${c.donationId.rh}` : null,
-      collectionDate: c.donationId ? c.donationId.collectionDate : null,
-      site: c.siteId ? c.siteId.name : null,
+      bagNo: c.bagNo || null,
+      bloodGroup: c.bloodGroup || null,
+      collectionDate: c.collectionDate || null,
+      site: c.site || null,
       createdAt: c.createdAt,
     }));
 
@@ -364,52 +465,121 @@ const getNearExpiryComponents = async (req, res, next) => {
     };
 
     // Dynamic filters from request (optional)
-    const { type, status = "in-stock", site } = req.query;
+    const { type, status = "in-stock", site, page = 1, limit = 10, search, days = 7 } = req.query;
     const filter = {};
     if (type) filter.componentType = type;
     if (status) filter.status = status;
     if (site) filter.siteId = site;
 
-    // Fetch components
-    const components = await Component.find(filter)
-      .populate({
-        path: "donationId",
-        select: "bagNo bloodGroup rh collectionDate",
-        model: "BloodBag"
-      })
-      .populate({
-        path: "siteId",
-        select: "name",
-        model: "Site"
-      })
-      .select("componentId componentType volumeMl expiryDate status")
-      .sort({ expiryDate: 1 }); // soonest expiry first
+    // Calculate expiry threshold based on days parameter
+    const daysThreshold = parseInt(days);
+    const expiryThreshold = new Date();
+    expiryThreshold.setDate(expiryThreshold.getDate() + daysThreshold);
 
-    if (!components || components.length === 0) {
-      return res.status(200).json({
-        message: "No components found.",
-        components: []
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Build aggregation pipeline for search functionality
+    let pipeline = [
+      {
+        $lookup: {
+          from: "bloodbags",
+          localField: "donationId",
+          foreignField: "_id",
+          as: "donationData"
+        }
+      },
+      {
+        $lookup: {
+          from: "sites",
+          localField: "siteId",
+          foreignField: "_id",
+          as: "siteData"
+        }
+      },
+      {
+        $unwind: {
+          path: "$donationData",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $unwind: {
+          path: "$siteData",
+          preserveNullAndEmptyArrays: true
+        }
+      }
+    ];
+
+    // Add search filter if provided
+    if (search) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { componentId: { $regex: search, $options: "i" } },
+            { "donationData.bagNo": { $regex: search, $options: "i" } }
+          ]
+        }
       });
     }
 
+    // Add other filters
+    if (Object.keys(filter).length > 0) {
+      pipeline.push({ $match: filter });
+    }
+
+    // Add expiry date filter at database level for better performance
+    pipeline.push({
+      $match: {
+        expiryDate: {
+          $gte: today, // Not expired
+          $lte: expiryThreshold // Within the specified days threshold
+        }
+      }
+    });
+
+    // Add sorting and projection
+    pipeline.push(
+      { $sort: { expiryDate: 1 } },
+      {
+        $project: {
+          _id: 1,
+          componentId: 1,
+          componentType: 1,
+          volumeMl: 1,
+          expiryDate: 1,
+          status: 1,
+          bagNo: "$donationData.bagNo",
+          bloodGroup: { $concat: ["$donationData.bloodGroup", " ", "$donationData.rh"] },
+          collectionDate: "$donationData.collectionDate",
+          site: "$siteData.name"
+        }
+      }
+    );
+
+    // Execute aggregation
+    const allComponents = await Component.aggregate(pipeline);
+
     // Filter dynamically and add riskLevel
-    const nearExpiryComponents = components
+    const nearExpiryComponents = allComponents
       .map(c => {
         const daysLeft = Math.ceil((c.expiryDate - today) / (1000 * 60 * 60 * 24));
-        const threshold = thresholds[c.componentType] || 7;
+        
+        // Use the dynamic days threshold from the request
+        const threshold = daysThreshold;
 
-        // Skip if not near expiry
-        if (daysLeft > threshold) return null;
+        // Skip if not near expiry (expired or beyond threshold)
+        if (daysLeft > threshold || daysLeft < 0) return null;
 
-        // Assign risk levels
+        // Assign risk levels based on days left
         let riskLevel = "warning";
-        if (c.componentType === "Platelet" && daysLeft <= 1) {
+        if (daysLeft <= 1) {
           riskLevel = "critical";
-        } else if (daysLeft <= 2) {
+        } else if (daysLeft <= 3) {
           riskLevel = "high";
         }
 
         return {
+          id: c._id, // Add MongoDB _id for frontend modal
           componentId: c.componentId,
           type: c.componentType,
           volumeMl: c.volumeMl,
@@ -417,17 +587,40 @@ const getNearExpiryComponents = async (req, res, next) => {
           expiryDate: c.expiryDate,
           daysLeft,
           riskLevel,
-          bagNo: c.donationId ? c.donationId.bagNo : null,
-          bloodGroup: c.donationId ? `${c.donationId.bloodGroup} ${c.donationId.rh}` : null,
-          collectionDate: c.donationId ? c.donationId.collectionDate : null,
-          site: c.siteId ? c.siteId.name : null,
+          bagNo: c.bagNo || null,
+          bloodGroup: c.bloodGroup || null,
+          collectionDate: c.collectionDate || null,
+          site: c.site || null,
         };
       })
       .filter(Boolean); // remove nulls
 
+    // Apply pagination
+    const total = nearExpiryComponents.length;
+    const paginatedComponents = nearExpiryComponents.slice(skip, skip + parseInt(limit));
+
+    if (!paginatedComponents || paginatedComponents.length === 0) {
+      return res.status(200).json({
+        message: "No near-expiry components found.",
+        pagination: {
+          total: 0,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: 0,
+        },
+        components: []
+      });
+    }
+
     return res.status(200).json({
       message: "Near-expiry components fetched successfully.",
-      components: nearExpiryComponents
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit),
+      },
+      components: paginatedComponents
     });
   } catch (error) {
     console.log(`Error in getNearExpiryComponents:`, error);

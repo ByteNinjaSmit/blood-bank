@@ -10,8 +10,7 @@ import Home from './page/Home';
 import CampRegisteration from './page/dashboard/Camp-Registeration';
 import CampListing from './page/dashboard/Camp-Listing';
 import ViewCampDetails from './page/dashboard/Camp-Details';
-import ComponentSeparate from './page/dashboard/component/Component-Separate';
-import NearExpiry from './page/dashboard/component/Near-Expiry';
+import { ComponentsList, ComponentSeparate, NearExpiry } from './page/component-separate';
 import ViewDiscarded from './components/camp/View-Discarded';
 import ViewStock from './components/Inventory/Stock-View';
 import CreateDonation from './components/camp/Create-Donation';
@@ -59,14 +58,18 @@ const App = () => {
           <Route path="/camp-donation" element={<ViewDonationsCamp />} />
 
           {/*  Dashboard - Component Routes */}
-          <Route path="/component/separate" element={<ComponentSeparate onBack={() => navigate(-1)} />} />
-          <Route path="/component/near-expiry" element={<NearExpiry onBack={() => navigate(-1)} />} />
+          <Route path="/component/list" element={<ComponentsList />} />
+          <Route path="/component/separate" element={<ComponentSeparate />} />
+          <Route path="/component/near-expiry" element={<NearExpiry />} />
           <Route path="/discard" element={<ViewDiscarded />} />
 
           <Route path="/inventory/stock" element={<ViewStock />} />
 
+          {/* Donation Module  */}
           <Route path="/donations/create-donation" element={<CreateDonation />} />
           <Route path="/donations/view-donation" element={<ViewDonations />} />
+
+          {/* Donor Module */}
           <Route path="/donor/create-donor" element={<CreateDonor />} />
           <Route path="/donor/view-donor" element={<ViewDonor />} />
 

@@ -15,9 +15,9 @@ const { roleMiddleware } = require('../middlewares/role-middleware');
 
 router.route('/separate').post(authMiddleware,componentController.separateComponents);
 router.route('/bags-to-separate').get(authMiddleware,componentController.getBagsToSeparateComponent);
-router.route('/separation-completed').post(authMiddleware,componentController.separateComponents);
+router.route('/separation-completed').post(authMiddleware,componentController.separationCompleted);
 router.route('/list').get(authMiddleware,componentController.getComponentsList);
-router.route('/:id').get(authMiddleware,componentController.getComponentDetails);
 router.route('/near-expiry').get(authMiddleware,componentController.getNearExpiryComponents);
+router.route('/:id').get(authMiddleware,componentController.getComponentDetails);
 
 module.exports = router;
