@@ -1,5 +1,6 @@
 import React, { useState } from "react"
-import { ArrowLeft, Filter, Eye, Edit, Trash2, X, Droplets } from "lucide-react"
+import { ArrowLeft, Filter, Eye, Edit, Trash2, X, Droplets, Download } from "lucide-react"
+// import * as XLSX from "xlsx"
 
 const ViewDonations = ({ onBack }) => {
   const [showFilters, setShowFilters] = useState(false)
@@ -70,6 +71,25 @@ const ViewDonations = ({ onBack }) => {
     setDeleteConfirm({ show: false, item: null })
   }
 
+  //excel sheet export part check and do changes`
+  const handleExport = () => {
+    const rows = filteredDonations.map((d) => ({
+      "Bag No": d.bagNo,
+      "Segment No": d.segmentNo,
+      "Donor Name": d.donorName,
+      "Donor UID": d.donorUID,
+      "Type of Bag": d.typeOfBag,
+      "Blood Group": `${d.bloodGroup}${d.rh === "Positive" ? "+" : "-"}`,
+      Status: d.status,
+      "Collection Date": d.collectionDate,
+      "Expiry Date": d.expiryDate,
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Donations")
+    XLSX.writeFile(wb, "donations.xlsx")
+  }
+
   return (
     <div className="min-h-screen bg-white">
 
@@ -92,13 +112,28 @@ const ViewDonations = ({ onBack }) => {
                 <p className="text-gray-600 mt-1">Manage donation records</p>
               </div>
             </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 bg-red-800 text-white cursor-pointer hover:bg-red-900 rounded-lg transition-colors"
-            >
-              <Filter className="w-4 h-4" />
-              Filters
-            </button>
+
+            {/* Right side buttons */}
+            <div className="flex gap-2">
+              {/* Filters button */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-800 text-white cursor-pointer hover:bg-red-900 rounded-lg transition-colors"
+              >
+                <Filter className="w-4 h-4" />
+                Filters
+              </button>
+
+              {/* Export button */}
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-800 hover:bg-gray-200 rounded-lg transition-colors"
+                title="Export to Excel"
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </button>
+            </div>
           </div>
         </div>
       </div>

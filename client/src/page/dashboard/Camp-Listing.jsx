@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react"
-import { ArrowLeft, Plus, Eye, Edit, Trash2 } from "lucide-react"
+import { ArrowLeft, Plus, Eye, Edit, Trash2,Download } from "lucide-react"
 import { se } from "date-fns/locale"
 import { useNavigate, Link } from 'react-router-dom';
 import ca from "zod/v4/locales/ca.cjs"
@@ -8,6 +8,8 @@ import CampDonations from "./Camp-Details";
 import { set } from "date-fns";
 import axios from "axios";
 import { useAuth } from "@/store/auth";
+// import * as XLSX from "xlsx"
+
 
 const Button = ({ children, onClick, variant = "default", size = "default", className = "", ...props }) => {
   const baseClasses =
@@ -85,6 +87,26 @@ const CampList = () => {
       Ongoing: "bg-green-100 text-green-800",
       Completed: "bg-gray-100 text-gray-800",
     }
+
+  //   const handleExport = () => {
+  //   const rows = camps.map((c) => ({
+  //     "Site ID": c.siteId,
+  //     Name: c.name,
+  //     Progress: c.progress,
+  //     Address: c.address,
+  //     Phone: c.contactInfo.phone,
+  //     Email: c.contactInfo.email,
+  //     "Created By": c.createdBy,
+  //     "Updated By": c.lastUpdatedBy || "",
+  //     "Created At": c.createdAt,
+  //     "Updated At": c.updatedAt,
+  //     Staff: c.staff.join(", "),
+  //   }))
+  //   const ws = XLSX.utils.json_to_sheet(rows)
+  //   const wb = XLSX.utils.book_new()
+  //   XLSX.utils.book_append_sheet(wb, ws, "Camps")
+  //   XLSX.writeFile(wb, "camps.xlsx")
+  // }
 
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || "bg-gray-100 text-gray-800"}`}>
