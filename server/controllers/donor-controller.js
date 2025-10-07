@@ -41,7 +41,6 @@ const registerDonor = async (req, res, next) => {
     if (
       !donorId ||
       !firstName ||
-      !middleName ||
       !lastName ||
       !dob ||
       !sex ||
@@ -59,9 +58,9 @@ const registerDonor = async (req, res, next) => {
     // Check for duplicate donor by name and DOB
     const existingDonor = await Donor.findOne({
       "name.firstName": firstName,
-      "name.middleName": middleName,
       "name.lastName": lastName,
       dob: dob,
+      ...(middleName ? { "name.middleName": middleName } : {}),
     });
 
     if (existingDonor) {
@@ -70,7 +69,7 @@ const registerDonor = async (req, res, next) => {
 
     // Validate UID (e.g., 12-digit Aadhaar number)
     if (uid) {
-      const uidValid = /\d{12}/.test(uid);
+      const uidValid = /^\d{12}$/.test(uid);
       if (!uidValid) {
         return res
           .status(400)
@@ -313,32 +312,46 @@ const listDonors = async (req, res, next) => {
 // ---------------------
 const searchDonorLatestDonation = async (req, res, next) => {
   try {
-    const { firstName, middleName, lastName, dob } = req.query;
+    const { firstName, middleName, lastName, dob, uid, phone, donorId } = req.query;
 
+    // Enforce required fields for search
     if (!firstName || !middleName || !lastName || !dob) {
-      return res.status(400).json({ message: "firstName, middleName, lastName, and dob are required for search." });
+      return res.status(400).json({ message: "firstName, middleName, lastName and dob are required." });
     }
 
-    const dobDate = new Date(dob);
-    if (isNaN(dobDate)) {
-      return res.status(400).json({ message: "Invalid dob format." });
+    // Build dynamic search query using any provided fields
+    const searchQuery = {};
+    if (firstName) {
+      searchQuery["name.firstName"] = { $regex: `^${firstName.trim()}`, $options: "i" };
     }
-
-    // Build dynamic search query
-    const searchQuery = {
-      "name.firstName": firstName.trim(),
-      "name.lastName": lastName.trim(),
-      dob: dobDate
-    };
-
     if (middleName) {
-      searchQuery["name.middleName"] = middleName.trim();
+      searchQuery["name.middleName"] = { $regex: `^${middleName.trim()}`, $options: "i" };
     }
+    if (lastName) {
+      searchQuery["name.lastName"] = { $regex: `^${lastName.trim()}`, $options: "i" };
+    }
+    if (dob) {
+      const dobDate = new Date(dob);
+      if (isNaN(dobDate)) {
+        return res.status(400).json({ message: "Invalid dob format." });
+      }
+      searchQuery.dob = dobDate;
+    }
+    if (uid) {
+      searchQuery.uid = uid;
+    }
+    if (phone) {
+      searchQuery.phone = phone;
+    }
+    if (donorId) {
+      searchQuery.donorId = donorId;
+    }
+
+    // We already enforce the 4 required fields above
 
     const donor = await Donor.findOne(searchQuery)
       .populate({
         path: "donationHistory.donationId",
-        options: { sort: { collectionDate: -1 }, limit: 1 }, // only latest donation
         select: "bagNo segmentNo typeOfBag bloodGroup rh collectionDate expiryDate status",
         model: "BloodBag"
       })
@@ -353,10 +366,15 @@ const searchDonorLatestDonation = async (req, res, next) => {
       return res.status(404).json({ message: "Donor not found." });
     }
 
-    // Get latest donation
-    const latestDonation = donor.donationHistory.length > 0
-      ? donor.donationHistory[donor.donationHistory.length - 1]
-      : null;
+    // Get latest donation by comparing date or populated collectionDate
+    let latestDonation = null;
+    if (Array.isArray(donor.donationHistory) && donor.donationHistory.length > 0) {
+      latestDonation = donor.donationHistory.reduce((latest, current) => {
+        const latestTime = new Date(latest?.date || latest?.donationId?.collectionDate || 0).getTime();
+        const currentTime = new Date(current?.date || current?.donationId?.collectionDate || 0).getTime();
+        return currentTime >= latestTime ? current : latest;
+      }, null);
+    }
 
     return res.status(200).json({
       message: "Donor details with latest donation fetched successfully.",

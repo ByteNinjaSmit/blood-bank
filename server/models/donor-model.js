@@ -19,6 +19,7 @@ const DonorSchema = new Schema({
     lastName: {
       type: String,
       trim: true,
+      required: true,
     },
   },
   uid: {
@@ -27,7 +28,8 @@ const DonorSchema = new Schema({
     trim: true,
     validate: {
       validator: function (v) {
-        return /\d{12}/.test(v); // Example: Basic 12 aadhar card number valid This is Unique Understand
+        if (v === undefined || v === null || v === "") return true; // optional
+        return /^\d{12}$/.test(v); // 12 digit UID when provided
       },
       message: (props) => `${props.value} is not a valid phone number!`,
     },

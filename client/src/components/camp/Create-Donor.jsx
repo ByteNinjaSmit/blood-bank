@@ -1,8 +1,11 @@
 import React from "react"
 import { useState } from "react"
 import { ArrowLeft, User, Save, Loader2 } from "lucide-react"
+import axios from "axios"
+import { useAuth } from "@/store/auth"
 
-const CreateDonor = ({ onBack }) => {
+const CreateDonor = ({ onBack, onCreated }) => {
+  const { API, authorizationToken } = useAuth()
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
@@ -68,8 +71,8 @@ const CreateDonor = ({ onBack }) => {
   }
 
   const validateForm = () => {
-    if (!/^\d{12}$/.test(formData.uid)) {
-      setError("UID must be exactly 12 digits")
+    if (formData.uid && !/^\d{12}$/.test(formData.uid)) {
+      setError("UID must be exactly 12 digits when provided")
       return false
     }
     if (!/^\d{10}$/.test(formData.phone)) {
@@ -91,17 +94,12 @@ const CreateDonor = ({ onBack }) => {
 
     setLoading(true)
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
       const donorData = {
         donorId: formData.donorId,
-        name: {
-          firstName: formData.firstName,
-          middleName: formData.middleName || undefined,
-          lastName: formData.lastName,
-        },
-        uid: formData.uid,
+        firstName: formData.firstName,
+        middleName: formData.middleName || undefined,
+        lastName: formData.lastName,
+        uid: formData.uid || undefined,
         dob: formData.dob,
         sex: formData.sex,
         phone: formData.phone,
@@ -121,37 +119,26 @@ const CreateDonor = ({ onBack }) => {
         eligibilityStatus: formData.eligibilityStatus,
         lastDonationDate: formData.lastDonationDate || undefined,
       }
-
-      console.log("Donor data to be sent:", donorData)
-      setSuccess(true)
-      setTimeout(() => {
-        setSuccess(false)
-        setFormData({
-          donorId: "",
-          firstName: "",
-          middleName: "",
-          lastName: "",
-          uid: "",
-          dob: "",
-          sex: "",
-          phone: "",
-          email: "",
-          addressLine1: "",
-          addressLine2: "",
-          city: "",
-          district: "",
-          state: "",
-          pincode: "",
-          occupation: "",
-          weightKg: "",
-          bloodGroup: "",
-          rh: "",
-          eligibilityStatus: "",
-          lastDonationDate: "",
-        })
-      }, 3000)
+      const response = await axios.post(
+        `${API}/api/donor/new`,
+        donorData,
+        {
+          headers: { Authorization: authorizationToken },
+          withCredentials: true,
+        }
+      )
+      if (response.status === 201) {
+        setSuccess(true)
+        if (onCreated) {
+          onCreated(response.data.donor)
+        }
+        setTimeout(() => {
+          setSuccess(false)
+          onBack && onBack()
+        }, 1000)
+      }
     } catch (err) {
-      setError("Failed to create donor. Please try again.")
+      setError(err?.response?.data?.message || "Failed to create donor. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -211,7 +198,7 @@ const CreateDonor = ({ onBack }) => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">UID (12 digits) *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">UID (12 digits)</label>
                 <input
                   type="text"
                   name="uid"
@@ -220,7 +207,6 @@ const CreateDonor = ({ onBack }) => {
                   placeholder="123456789012"
                   maxLength={12}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                  required
                 />
               </div>
             </div>

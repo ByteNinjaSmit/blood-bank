@@ -15,8 +15,8 @@ const authMiddleware = require('../middlewares/auth-middleware');
 
 router.route('/new').post(authMiddleware,donorController.registerDonor);
 router.route('/update/:id').put(authMiddleware,donorController.updateDonor);
-router.route('/:id').get(authMiddleware,donorController.getDonorDetails);
 router.route('/list').get(authMiddleware,donorController.listDonors);
 router.route('/search').get(authMiddleware,donorController.searchDonorLatestDonation);
+router.route('/:id').get(authMiddleware,donorController.getDonorDetails);
 
 module.exports = router;

@@ -4,6 +4,7 @@ import { ArrowLeft, Search, Plus, Droplets, X } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "@/store/auth";
 import { toast } from "sonner";
+import CreateDonor from "./Create-Donor";
 
 const CreateDonation = ({ onCreateDonor }) => {
   const navigate = useNavigate();
@@ -14,6 +15,8 @@ const CreateDonation = ({ onCreateDonor }) => {
   const [error, setError] = useState("");
   const [donor, setDonor] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
+  const [showCreateDonor, setShowCreateDonor] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Donor Search Fields
   const [donorInfo, setDonorInfo] = useState({
@@ -21,7 +24,13 @@ const CreateDonation = ({ onCreateDonor }) => {
     middleName: "",
     lastName: "",
     dob: "",
+    uid: "",
+    phone: "",
+    donorId: "",
   });
+
+  const searchRequiredFilled =
+    donorInfo.firstName.trim() && donorInfo.middleName.trim() && donorInfo.lastName.trim() && donorInfo.dob;
 
   // Donation Form Data
   const [formData, setFormData] = useState({
@@ -47,10 +56,10 @@ const CreateDonation = ({ onCreateDonor }) => {
     try {
       const res = await axios.get(`${API}/api/donor/search`, {
         params: donorInfo,
-      },{
         headers: {
-          Authorization: authorizationToken, 
-        },withCredentials: true,
+          Authorization: authorizationToken,
+        },
+        withCredentials: true,
       });
       if(res.status === 200){
         setDonor(res.data.donor);
@@ -164,14 +173,37 @@ const CreateDonation = ({ onCreateDonor }) => {
               />
             </div>
           </div>
+          <div className="mt-3">
+            <button type="button" onClick={() => setShowAdvanced((v)=>!v)} className="text-sm text-orange-800 hover:underline">
+              {showAdvanced ? "Hide advanced" : "Show advanced (UID, Phone, Donor ID)"}
+            </button>
+          </div>
+          {showAdvanced && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+              {Object.entries({ uid: "UID (12 digits)", phone: "Phone (10 digits)", donorId: "Donor ID" }).map(([key,label]) => (
+                <div key={key}>
+                  <label className="block text-sm text-gray-700 mb-1">{label}</label>
+                  <input
+                    type="text"
+                    value={donorInfo[key]}
+                    onChange={(e) => setDonorInfo({ ...donorInfo, [key]: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
           <div className="mt-4 flex gap-4">
             <button
               onClick={handleDonorSearch}
-              disabled={loading}
-              className="px-5 py-2 bg-orange-800 text-white rounded-lg hover:bg-orange-900"
+              disabled={loading || !searchRequiredFilled}
+              className={`px-5 py-2 rounded-lg ${loading || !searchRequiredFilled ? "bg-orange-300 cursor-not-allowed" : "bg-orange-800 hover:bg-orange-900 text-white"}`}
             >
               <Search className="w-4 h-4 mr-2 inline" /> Search
             </button>
+            {!searchRequiredFilled && (
+              <span className="text-sm text-gray-500 self-center">Enter First, Middle, Last name and DOB to search</span>
+            )}
             {error && <p className="text-red-600 text-sm">{error}</p>}
           </div>
         </div>
@@ -187,13 +219,27 @@ const CreateDonation = ({ onCreateDonor }) => {
                 <X className="w-5 h-5" />
               </button>
               <h2 className="text-lg font-bold mb-4">Donor Not Found</h2>
-              <p className="text-gray-600 mb-6">Would you like to create a new donor?</p>
+              <p className="text-gray-600 mb-6">No donor matched your search. Create one now and continue.</p>
               <button
-                onClick={onCreateDonor}
-                className="px-5 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800"
+                onClick={() => { setShowPopup(false); setShowCreateDonor(true); }}
+                className="px-5 py-2 bg-orange-800 text-white rounded-lg hover:bg-orange-900"
               >
                 <Plus className="w-4 h-4 mr-2 inline" /> Create Donor
               </button>
+            </div>
+          </div>
+        )}
+
+        {showCreateDonor && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+              <CreateDonor
+                onBack={() => setShowCreateDonor(false)}
+                onCreated={(created) => {
+                  setDonor(created);
+                  setShowCreateDonor(false);
+                }}
+              />
             </div>
           </div>
         )}
