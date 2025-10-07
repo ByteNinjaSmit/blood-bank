@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react"
-import { ArrowLeft, Eye, X, Users, Search, Plus, Droplets } from "lucide-react"
+import { ArrowLeft, Eye, X, Users, Search, Plus, Droplets, Download } from "lucide-react"
+// import * as XLSX from "xlsx"
+
 
 const ViewDonor = ({ onBack }) => {
   const [donors, setDonors] = useState([])
@@ -109,6 +111,31 @@ const ViewDonor = ({ onBack }) => {
     }
   }
 
+  //excel sheet export part check and do changes
+  const handleExport = () => {
+    const rows = filteredDonors.map((d) => ({
+      "Donor ID": d.donorId,
+      "Full Name": d.fullName,
+      UID: d.uid,
+      DOB: d.dob,
+      Sex: d.sex,
+      Phone: d.phone,
+      Email: d.email,
+      City: d.city,
+      District: d.district,
+      State: d.state,
+      "Blood Group": d.bloodGroup,
+      RH: d.rh,
+      "Weight (kg)": d.weightKg,
+      "Eligibility Status": d.eligibilityStatus,
+      "Last Donation": d.lastDonationDate,
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Donors")
+    XLSX.writeFile(wb, "donors.xlsx")
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <div className="bg-white border-b border-orange-200 text-gray-900 relative">
@@ -130,10 +157,24 @@ const ViewDonor = ({ onBack }) => {
                 <p className="text-gray-600 mt-1">Manage Donor records</p>
               </div>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-red-800 text-white cursor-pointer hover:bg-red-900 rounded-lg transition-colors">
-              <Plus className="w-4 h-4" />
-              Add New Donor
-            </button>
+            <div className="flex gap-2">
+              {/* Add New Donor */}
+              <button className="flex items-center gap-2 px-4 py-2 bg-red-800 text-white cursor-pointer hover:bg-red-900 rounded-lg transition-colors">
+                <Plus className="w-4 h-4" />
+                Add New Donor
+              </button>
+
+              {/* Export */}
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-800 hover:bg-gray-400 rounded-lg transition-colors"
+                title="Export to Excel"
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </button>
+            </div>
+
           </div>
         </div>
       </div>

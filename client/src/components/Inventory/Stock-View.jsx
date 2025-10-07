@@ -1,7 +1,7 @@
-"use client"
 
 import { useState } from "react"
-import { ArrowLeft, Eye, Edit, Trash2, X } from "lucide-react"
+import { ArrowLeft, Eye, Edit, Trash2, X, Download, Droplets } from "lucide-react"
+// import * as XLSX from "xlsx"
 
 const ViewStock = ({ onBack }) => {
   const [selectedItem, setSelectedItem] = useState(null)
@@ -108,19 +108,63 @@ const ViewStock = ({ onBack }) => {
     return "N/A"
   }
 
+  const handleExport = () => {
+    const rows = filteredItems.map((i) => ({
+      "Bag No": i.bagNo,
+      "Blood Group": i.bloodGroup,
+      RH: i.rh,
+      "Component Type": i.componentType,
+      "Volume (ml)": i.volumeMl,
+      "Expiry Date": i.expiryDate,
+      Status: i.status,
+      "Reserved For": i.reservedFor || "",
+      "Hospital Name": i.hospitalName || "",
+      "Site ID": i.siteId,
+      "Created At": i.createdAt,
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Stock")
+    XLSX.writeFile(wb, "stock.xlsx")
+  }
+
   return (
     <div className="min-h-screen bg-white">
-      <div className="bg-gradient-to-br from-red-800 via-red-700 to-red-900 text-white py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="bg-white border-b border-orange-200 text-gray-900 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-white hover:text-red-200 transition-colors mb-6"
+            className="flex items-center cursor-pointer gap-3 text-orange-800 border border-orange-300 hover:bg-orange-50 bg-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl px-6 py-3 mb-6"
           >
             <ArrowLeft className="w-5 h-5" />
             Back to Inventory
           </button>
-          <h1 className="text-3xl font-bold">Stock Management</h1>
-          <p className="text-red-100 mt-2">View and manage blood inventory stock</p>
+
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            {/* Left section with icon + heading */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-gradient-to-br from-orange-800 to-orange-900 rounded-xl">
+                <Droplets className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Stock Management</h1>
+                <p className="text-gray-600 mt-1">View and manage blood inventory stock</p>
+              </div>
+            </div>
+
+            {/* Right side buttons */}
+            <div className="flex gap-2">
+              {/* Export button */}
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-800 hover:bg-gray-200 rounded-lg transition-colors"
+                title="Export to Excel"
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
