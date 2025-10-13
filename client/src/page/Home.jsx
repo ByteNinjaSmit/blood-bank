@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
+import TestAPI from "@/components/TestAPI"
+import SidebarDemo from "@/components/SidebarDemo"
 import {
   Users,
   Heart,
@@ -112,6 +114,7 @@ export default function BloodBankWelcome() {
       <div className="absolute bottom-1/4 right-8 w-12 h-12 bg-orange-300 rounded-full opacity-60"></div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-12">
+        
         {/* Header Section */}
         <div
           className={`text-center mb-16 transition-all duration-1000 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
