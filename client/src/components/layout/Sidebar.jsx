@@ -360,6 +360,7 @@ const Sidebar = ({
           } 
           bg-gradient-to-br from-red-900 via-red-800 to-red-900 
           text-white flex flex-col shadow-2xl border-r border-red-700/30
+          overflow-hidden
         `}
       >
         {/* Sidebar Header */}
@@ -391,16 +392,28 @@ const Sidebar = ({
                 </div>
               </div>
             )}
+            {!isOpen && !isMobile && (
+              <div className="flex justify-center w-full">
+                <div className="relative">
+                  <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm shadow-lg">
+                    <Heart className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+            )}
             <button 
               onClick={onToggle} 
-              className="text-white hover:bg-white/20 p-2 rounded-lg transition-all duration-200 hover:scale-105"
+              className="text-white hover:bg-white/30 p-2 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-md hover:border hover:border-white/20"
             >
               {isMobile ? (
                 showMobileOverlay ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />
               ) : isOpen ? (
                 <ChevronLeft className="w-5 h-5" />
               ) : (
-                <Menu className="w-5 h-5" />
+                <ChevronRight className="w-5 h-5" />
               )}
             </button>
           </div>
@@ -422,46 +435,55 @@ const Sidebar = ({
           </div>
         )}
 
-        {/* Navigation */}
-        <div className="flex-1 overflow-hidden">
-          <div className="h-full overflow-y-auto custom-scrollbar">
-            <div className="p-4 space-y-2">
+        {/* Sidebar Content */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="h-full overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/30 hover:scrollbar-thumb-white/50 scrollbar-thumb-rounded scrollbar-track-rounded">
+            <div className={`p-4 space-y-2 ${!isOpen && !isMobile ? "flex flex-col items-center" : ""}`}>
               {filteredModules.map((module) => (
-                <div key={module.id} className="group">
+                <div key={module.id} className={`${isOpen ? "group w-full" : "w-full flex justify-center"}`}>
                   {/* Main Module */}
                   <div
                     onClick={() => handleModuleClick(module)}
                     className={`
-                      flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 mb-2
+                      ${isOpen 
+                        ? "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 mb-2 w-full"
+                        : "flex items-center justify-center p-3 rounded-xl cursor-pointer transition-all duration-200 mb-2 w-12 h-12"
+                      }
                       ${isActive(module.href) || module.subModules?.some((sub) => isActive(sub.href))
                         ? "bg-white/25 text-white shadow-lg backdrop-blur-sm border border-white/20"
-                        : "hover:bg-white/15 text-red-100 hover:text-white hover:shadow-md"
+                        : "hover:bg-white/20 text-red-100 hover:text-white hover:shadow-md"
                       }
-                      group-hover:scale-[1.02] transform
+                      ${isOpen ? "group-hover:scale-[1.02]" : "hover:scale-105"} transform hover:border hover:border-white/20
                     `}
+                    title={!isOpen ? module.name : ""}
                   >
-                    <div className="flex-shrink-0 p-1">
+                    <div className={`flex-shrink-0 ${isOpen ? "p-1" : ""}`}>
                       {module.icon}
                     </div>
                     {isOpen && (
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm">{module.name}</span>
-                          {!hasPermission(userPermissions, module.permissions) && (
-                            <Lock className="w-3 h-3 text-red-300" />
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm">{module.name}</span>
+                            {!hasPermission(userPermissions, module.permissions) && (
+                              <Lock className="w-3 h-3 text-red-300" />
+                            )}
+                          </div>
+                          {module.subModules && module.subModules.length > 0 && (
+                            <div className="transition-transform duration-200">
+                              {expandedModules.has(module.id) ? (
+                                <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                              )}
+                            </div>
                           )}
                         </div>
                         <div className="text-xs opacity-80 truncate">{module.description}</div>
                       </div>
                     )}
-                    {module.subModules && module.subModules.length > 0 && isOpen && (
-                      <div className="transition-transform duration-200">
-                        {expandedModules.has(module.id) ? (
-                          <ChevronDown className="w-4 h-4 flex-shrink-0" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 flex-shrink-0" />
-                        )}
-                      </div>
+                    {!isOpen && !hasPermission(userPermissions, module.permissions) && (
+                      <Lock className="w-2 h-2 absolute top-1 right-1 text-red-300" />
                     )}
                   </div>
 
@@ -488,9 +510,9 @@ const Sidebar = ({
                               flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all duration-200
                               ${isActive(subModule.href)
                                 ? "bg-white/30 text-white shadow-md backdrop-blur-sm border border-white/30"
-                                : "hover:bg-white/20 text-red-100 hover:text-white"
+                                : "hover:bg-white/25 text-red-100 hover:text-white hover:shadow-md"
                               }
-                              hover:scale-[1.01] transform
+                              hover:scale-[1.01] transform hover:border hover:border-white/20
                             `}
                           >
                             <div className="flex-shrink-0 p-1">
@@ -514,48 +536,25 @@ const Sidebar = ({
               ))}
             </div>
           </div>
+
+          {/* Sidebar Footer */}
+          <div className={`${isOpen ? "p-4" : "p-2"} mt-auto border-t border-red-700/30 bg-red-800/20 backdrop-blur-sm`}>
+            <button
+              onClick={LogoutUser}
+              className={`
+                ${isOpen 
+                  ? "w-full flex items-center gap-3 p-3 text-red-100 hover:text-white hover:bg-red-700/30 rounded-lg" 
+                  : "w-full flex items-center justify-center p-3 text-red-100 hover:text-white hover:bg-red-700/30 rounded-lg"
+                }
+                transition-all duration-200 group hover:shadow-md hover:border hover:border-white/20
+              `}
+              title={!isOpen ? "Logout" : ""}
+            >
+              <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform" />
+              {isOpen && <span className="text-sm font-medium">Logout</span>}
+            </button>
+          </div>
         </div>
-
-        {/* Sidebar Footer */}
-        {isOpen && (
-          <div className="p-4 border-t border-red-700/30 bg-red-800/20 backdrop-blur-sm">
-            <div className="space-y-2">
-              <button
-                onClick={LogoutUser}
-                className="w-full flex items-center gap-3 p-3 text-red-100 hover:text-white hover:bg-red-700/30 rounded-lg transition-all duration-200 group"
-              >
-                <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-medium">Logout</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Collapsed State Icons */}
-        {!isOpen && (
-          <div className="p-2 space-y-2">
-            {filteredModules.map((module) => (
-              <div
-                key={module.id}
-                onClick={() => handleModuleClick(module)}
-                className={`
-                  group flex items-center justify-center p-3 rounded-lg cursor-pointer transition-all duration-200 relative
-                  ${isActive(module.href) || module.subModules?.some((sub) => isActive(sub.href))
-                    ? "bg-white/25 text-white shadow-lg"
-                    : "hover:bg-white/15 text-red-100 hover:text-white"
-                  }
-                  hover:scale-105 transform
-                `}
-                title={module.name}
-              >
-                {module.icon}
-                {!hasPermission(userPermissions, module.permissions) && (
-                  <Lock className="w-2 h-2 absolute top-1 right-1 text-red-300" />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </>
   );

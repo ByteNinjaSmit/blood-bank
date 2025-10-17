@@ -14,7 +14,6 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/store/auth";
 import Sidebar from "@/components/layout/Sidebar";
-import "@/components/layout/Sidebar.css";
 
 // Modules and permission logic moved to Sidebar component
 

@@ -23,16 +23,18 @@ export const useCamp = () => {
     setLoading(true);
     setError(null);
     
-    const { data, error: apiError } = await campService.listCamps(filters);
-    
-    if (apiError) {
-      setError(apiError);
-      toast.error(apiError);
-    } else {
-      setCamps(data.data || []);
+    try {
+      const { data, error: apiError } = await campService.listCamps(filters);
+      
+      if (apiError) {
+        setError(apiError);
+        toast.error(apiError);
+      } else {
+        setCamps(data.data || []);
+      }
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   // Get camp by ID
@@ -40,17 +42,19 @@ export const useCamp = () => {
     setLoading(true);
     setError(null);
     
-    const { data, error: apiError } = await campService.getCampById(id);
-    
-    if (apiError) {
-      setError(apiError);
-      toast.error(apiError);
-      return { success: false, data: null };
-    } else {
-      return { success: true, data: data.site };
+    try {
+      const { data, error: apiError } = await campService.getCampById(id);
+      
+      if (apiError) {
+        setError(apiError);
+        toast.error(apiError);
+        return { success: false, data: null };
+      } else {
+        return { success: true, data: data.site };
+      }
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   // Create new camp
@@ -58,19 +62,21 @@ export const useCamp = () => {
     setLoading(true);
     setError(null);
     
-    const { data, error: apiError } = await campService.createCamp(campData);
-    
-    if (apiError) {
-      setError(apiError);
-      toast.error(apiError);
-      return { success: false, data: null };
-    } else {
-      setCamps(prev => [data.site, ...prev]);
-      toast.success('Camp created successfully');
-      return { success: true, data: data.site };
+    try {
+      const { data, error: apiError } = await campService.createCamp(campData);
+      
+      if (apiError) {
+        setError(apiError);
+        toast.error(apiError);
+        return { success: false, data: null };
+      } else {
+        setCamps(prev => [data.site, ...prev]);
+        toast.success('Camp created successfully');
+        return { success: true, data: data.site };
+      }
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   // Update camp
@@ -78,21 +84,23 @@ export const useCamp = () => {
     setLoading(true);
     setError(null);
     
-    const { data, error: apiError } = await campService.updateCamp(id, updateData);
-    
-    if (apiError) {
-      setError(apiError);
-      toast.error(apiError);
-      return { success: false };
-    } else {
-      setCamps(prev => prev.map(camp => 
-        camp._id === id ? data.site : camp
-      ));
-      toast.success('Camp updated successfully');
-      return { success: true, data: data.site };
+    try {
+      const { data, error: apiError } = await campService.updateCamp(id, updateData);
+      
+      if (apiError) {
+        setError(apiError);
+        toast.error(apiError);
+        return { success: false };
+      } else {
+        setCamps(prev => prev.map(camp => 
+          camp._id === id ? data.site : camp
+        ));
+        toast.success('Camp updated successfully');
+        return { success: true, data: data.site };
+      }
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   // Delete camp
@@ -100,19 +108,21 @@ export const useCamp = () => {
     setLoading(true);
     setError(null);
     
-    const { error: apiError } = await campService.deleteCamp(id);
-    
-    if (apiError) {
-      setError(apiError);
-      toast.error(apiError);
-      return { success: false };
-    } else {
-      setCamps(prev => prev.filter(camp => camp._id !== id));
-      toast.success('Camp deleted successfully');
-      return { success: true };
+    try {
+      const { error: apiError } = await campService.deleteCamp(id);
+      
+      if (apiError) {
+        setError(apiError);
+        toast.error(apiError);
+        return { success: false };
+      } else {
+        setCamps(prev => prev.filter(camp => camp._id !== id));
+        toast.success('Camp deleted successfully');
+        return { success: true };
+      }
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return {
