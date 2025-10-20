@@ -141,7 +141,7 @@ const discardItem = async (req, res, next) => {
     session.startTransaction();
 
     try {
-        const { itemType, bagNo, reason, updatedBy } = req.body;
+        const { itemType, bagNo, reason, updatedBy, siteId } = req.body;
 
         if (!itemType || !bagNo || !updatedBy) {
             return res.status(400).json({
@@ -180,6 +180,7 @@ const discardItem = async (req, res, next) => {
                 bagNo: component.bagId,
                 reason: reason || "Manually discarded component",
                 discardedAt: new Date(),
+                siteId,
                 updatedBy,
             });
             await discardLog.save({ session });
@@ -264,6 +265,7 @@ const discardItem = async (req, res, next) => {
                         bagNo: bag._id,
                         reason: reason || "Positive test result — bag discarded",
                         discardedAt: new Date(),
+                        siteId,
                         updatedBy,
                     },
                     ...componentIds.map((id) => ({
@@ -271,6 +273,7 @@ const discardItem = async (req, res, next) => {
                         bagNo: bag._id,
                         reason: "Component tested positive — discarded with bag",
                         discardedAt: new Date(),
+                        siteId,
                         updatedBy,
                     })),
                 ],
@@ -310,5 +313,5 @@ const discardItem = async (req, res, next) => {
 module.exports = {
     getList,
     getSingleDetails,
-    discardItem,
+    discardItem
 };
