@@ -70,29 +70,6 @@ const BloodBagSchema = new Schema({
     type: String,
     trim: true,
   },
-  testResults: [
-    {
-      test: {
-        type: String,
-        enum: ["HIV", "HBsAg", "HCV", "VDRL", "MP", "NA"],
-        // required: true
-      },
-      result: {
-        type: String,
-        enum: ["Positive", "Negative", "Indeterminate"],
-        // required: true
-      },
-      testedAt: {
-        type: Date,
-        // required: true
-      },
-      technicianId: {
-        type: Types.ObjectId,
-        ref: "User",
-        // required: true
-      },
-    },
-  ],
   status: {
     type: String,
     enum: [
@@ -124,7 +101,6 @@ const BloodBagSchema = new Schema({
   siteId: {
     type: Types.ObjectId,
     ref: "Site",
-    // required: true
   },
   createdAt: {
     type: Date,

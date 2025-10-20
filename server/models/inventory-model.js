@@ -8,31 +8,8 @@ const InventorySchema = new Schema({
     required: true
   },
   bagNo: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  bloodGroup: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  rh: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  componentType: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  volumeMl: {
-    type: Number,
-    required: true
-  },
-  expiryDate: {
-    type: Date,
+    type: Types.ObjectId,
+    ref: 'BloodBag', 
     required: true
   },
   status: {
@@ -43,11 +20,6 @@ const InventorySchema = new Schema({
   reservedFor: {
     type: Types.ObjectId,
     ref: 'HospitalRequest'
-  },
-  siteId: {
-    type: Types.ObjectId,
-    ref: 'Site',
-    required: true
   },
   createdAt: {
     type: Date,

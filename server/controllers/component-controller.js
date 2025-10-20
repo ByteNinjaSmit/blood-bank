@@ -628,67 +628,6 @@ const getNearExpiryComponents = async (req, res, next) => {
   }
 };
 
-// // Get near expiry components for dashboard
-// exports.getNearExpiryComponents = async (req, res) => {
-//   try {
-//     const { findNearExpiryComponents } = require('../services/blood-expiry-service');
-    
-//     const components = await findNearExpiryComponents();
-    
-//     // Transform data for frontend
-//     const transformedData = components.map(component => ({
-//       componentId: component.componentId,
-//       componentType: component.componentType,
-//       bloodGroup: component.donationId?.bloodGroup || 'Unknown',
-//       rh: component.donationId?.rh || 'Unknown',
-//       volumeMl: component.volumeMl,
-//       expiryDate: component.expiryDate,
-//       status: component.status,
-//       storageLocation: component.storageLocation || 'Not specified',
-//       siteName: component.siteId?.name || 'Unknown',
-//       collectionDate: component.donationId?.collectionDate,
-//       bagNo: component.donationId?.bagNo || 'Unknown',
-//       daysUntilExpiry: Math.ceil((new Date(component.expiryDate) - new Date()) / (1000 * 60 * 60 * 24))
-//     }));
-
-//     // Group by component type for summary
-//     const summary = transformedData.reduce((acc, component) => {
-//       const key = `${component.componentType}||${component.bloodGroup}`;
-//       if (!acc[key]) {
-//         acc[key] = {
-//           componentType: component.componentType,
-//           bloodGroup: component.bloodGroup,
-//           count: 0,
-//           critical: 0 // Components expiring within 1 day
-//         };
-//       }
-//       acc[key].count++;
-//       if (component.daysUntilExpiry <= 1) {
-//         acc[key].critical++;
-//       }
-//       return acc;
-//     }, {});
-
-//     const summaryArray = Object.values(summary);
-
-//     res.status(200).json({
-//       success: true,
-//       data: {
-//         components: transformedData,
-//         summary: summaryArray,
-//         total: transformedData.length,
-//         critical: transformedData.filter(c => c.daysUntilExpiry <= 1).length
-//       }
-//     });
-//   } catch (error) {
-//     logger.error({ error: error.message }, '[Component] Failed to get near expiry components');
-//     res.status(500).json({
-//       success: false,
-//       message: 'Failed to fetch near expiry components',
-//       error: error.message
-//     });
-//   }
-// };
 
 
 module.exports = {
