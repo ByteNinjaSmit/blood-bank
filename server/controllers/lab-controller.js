@@ -218,11 +218,7 @@ const updateSerologyResults = async (req, res, next) => {
             stack: error.stack,
         });
 
-        return res.status(500).json({
-            success: false,
-            message: "Failed to update serology results",
-            error: error.message,
-        });
+        next(error);
     }
 };
 
