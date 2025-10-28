@@ -16,7 +16,7 @@ function createQueue(name, redisUrl) {
       removeOnComplete: true,
       removeOnFail: false
     },
-    settings: {
+    settings: { 
       lockDuration: 300_000,
       stalledInterval: 60_000,
       maxStalledCount: 2
