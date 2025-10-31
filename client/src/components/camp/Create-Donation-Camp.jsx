@@ -159,26 +159,13 @@ const CreateDonationCamp = ({ onBack }) => {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="bg-white border-b border-orange-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-3 text-orange-800 hover:text-orange-700 transition-colors mb-6 bg-orange-50 hover:bg-orange-100 px-4 py-2 rounded-lg"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back to Donations
-          </button>
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br bg-orange-800 rounded-xl">
-              <User className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Create Donor</h1>
-              <p className="text-gray-600 mt-1">Register a new blood donor with complete information</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        onBack={onBack}
+        icon={User}
+        title="Create Donor at this camp"
+        description="Create Donar and Initailize it Details with ease!"
+        iconBgColor="bg-red-800"
+      />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {success && (

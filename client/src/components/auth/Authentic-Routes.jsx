@@ -1,13 +1,17 @@
 import { useAuth } from "@/store/auth";
 import { Navigate, useLocation } from "react-router-dom";
-import Loader from "../Loader";
+import Loader from "../utils/Spinner";
+import MasterLoader from "../Loader";
 
 export const AuthenticatedRoute = ({ children }) => {
   const { user, isLoading, isLoggedIn } = useAuth();
   const location = useLocation();
 
-  if (isLoading) {
+  if (isLoading && !isLoggedIn) {
     return <Loader />;
+  }
+  if (isLoading) {
+    return <MasterLoader />;
   }
 
   if (!isLoggedIn) {

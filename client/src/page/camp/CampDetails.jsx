@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { useCamp } from '@/hooks/useCamp';
+import EnhancedLoader from '@/components/utils/Spinner';
 
 const CampDetails = () => {
   const navigate = useNavigate();
@@ -71,7 +72,7 @@ const CampDetails = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner message="Loading camp details..." />;
+    return <EnhancedLoader message="Loading camp details..." />;
   }
 
   if (error) {

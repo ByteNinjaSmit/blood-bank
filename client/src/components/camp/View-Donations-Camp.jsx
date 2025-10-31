@@ -2,8 +2,9 @@ import React, { useEffect, useState } from "react"
 import { ArrowLeft, Filter, Eye, Edit, Trash2, X, Droplets } from "lucide-react"
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/store/auth";
-import Loader from "../Loader";
+import Loader from "../utils/Spinner";
 import axios from "axios";
+import EnhancedLoader from "../utils/Spinner";
 
 const ViewDonationsCamp = () => {
   const navigate = useNavigate();
@@ -128,7 +129,7 @@ const ViewDonationsCamp = () => {
   }, [donations, loading, navigate]);
 
   if (loading) {
-    return <Loader message="Loading camp details..." />
+    return <EnhancedLoader message="Loading camp details..." />
   }
 
   return (

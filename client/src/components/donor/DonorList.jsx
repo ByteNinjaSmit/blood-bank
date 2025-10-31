@@ -4,6 +4,7 @@ import Table from '@/components/shared/Table';
 import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { useDonor } from '@/hooks/useDonor';
+import EnhancedLoader from '../utils/Spinner';
 
 const DonorList = ({ 
   onAddDonor, 
@@ -85,7 +86,7 @@ const DonorList = ({
   };
 
   if (loading) {
-    return <LoadingSpinner message="Loading donors..." />;
+    return <EnhancedLoader message="Loading donors..." />;
   }
 
   if (error) {

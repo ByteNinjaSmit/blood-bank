@@ -1,22 +1,25 @@
-import React, { useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Plus, Droplets, X } from "lucide-react";
-import axios from "axios";
-import { useAuth } from "@/store/auth";
-import { toast } from "sonner";
-import CreateDonor from "./Create-Donor";
+"use client"
+
+import { useState } from "react"
+import { useSearchParams, useNavigate } from "react-router-dom"
+import { ArrowLeft, Search, Plus, Droplets, X } from "lucide-react"
+import axios from "axios"
+import { useAuth } from "@/store/auth"
+import { toast } from "sonner"
+import CreateDonor from "./Create-Donor"
+import Stepper, { Step } from "@/components/Stepper"
 
 const CreateDonation = ({ onCreateDonor }) => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const campId = searchParams.get("campId");
-  const {API, authorizationToken} = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [donor, setDonor] = useState(null);
-  const [showPopup, setShowPopup] = useState(false);
-  const [showCreateDonor, setShowCreateDonor] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const campId = searchParams.get("campId")
+  const { API, authorizationToken } = useAuth()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [donor, setDonor] = useState(null)
+  const [showPopup, setShowPopup] = useState(false)
+  const [showCreateDonor, setShowCreateDonor] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   // Donor Search Fields
   const [donorInfo, setDonorInfo] = useState({
@@ -27,10 +30,10 @@ const CreateDonation = ({ onCreateDonor }) => {
     uid: "",
     phone: "",
     donorId: "",
-  });
+  })
 
   const searchRequiredFilled =
-    donorInfo.firstName.trim() && donorInfo.middleName.trim() && donorInfo.lastName.trim() && donorInfo.dob;
+    donorInfo.firstName.trim() && donorInfo.middleName.trim() && donorInfo.lastName.trim() && donorInfo.dob
 
   // Donation Form Data
   const [formData, setFormData] = useState({
@@ -47,12 +50,11 @@ const CreateDonation = ({ onCreateDonor }) => {
     bloodGroup: "",
     rh: "",
     atypicalAntibody: "",
-  });
+  })
 
-  // Handle Donor Search
   const handleDonorSearch = async () => {
-    setLoading(true);
-    setError("");
+    setLoading(true)
+    setError("")
     try {
       const res = await axios.get(`${API}/api/donor/search`, {
         params: donorInfo,
@@ -60,28 +62,26 @@ const CreateDonation = ({ onCreateDonor }) => {
           Authorization: authorizationToken,
         },
         withCredentials: true,
-      });
-      if(res.status === 200){
-        setDonor(res.data.donor);
-        setShowPopup(false);
+      })
+      if (res.status === 200) {
+        setDonor(res.data.donor)
+        setShowPopup(false)
       }
     } catch (error) {
       if (error.response?.status === 404) {
-        setShowPopup(true);
+        setShowPopup(true)
       } else {
-        toast.error("Something went wrong while searching donor.");
+        toast.error("Something went wrong while searching donor.")
       }
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  // Handle Create Donation
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!donor) {
-      toast.error("Please search and select a donor before submitting.");
-      return;
+      toast.error("Please search and select a donor before submitting.")
+      return
     }
 
     const payload = {
@@ -91,10 +91,10 @@ const CreateDonation = ({ onCreateDonor }) => {
       typeOfBag: formData.typeOfBag,
       donor: donor._id,
       initialVitals: {
-        hb: parseFloat(formData.hb),
-        weightKg: parseFloat(formData.weightKg),
-        pulse: parseInt(formData.pulse),
-        tempC: parseFloat(formData.tempC),
+        hb: Number.parseFloat(formData.hb),
+        weightKg: Number.parseFloat(formData.weightKg),
+        pulse: Number.parseInt(formData.pulse),
+        tempC: Number.parseFloat(formData.tempC),
         bp: formData.bp,
       },
       bloodGroup: formData.bloodGroup,
@@ -102,24 +102,25 @@ const CreateDonation = ({ onCreateDonor }) => {
       atypicalAntibody: formData.atypicalAntibody,
       siteId: campId || null,
       donorId: donor.donorId,
-    };
+    }
 
     try {
-      setLoading(true);
-      const response = await axios.post(`${API}/api/donation/new`,payload,{
+      setLoading(true)
+      const response = await axios.post(`${API}/api/donation/new`, payload, {
         headers: {
           Authorization: authorizationToken,
-        },withCredentials: true,
-      });
+        },
+        withCredentials: true,
+      })
       if (response.status === 201) {
-        navigate(campId ? `/camp-details/?id=${campId}` : "/donations");
+        navigate(campId ? `/camp-details/?id=${campId}` : "/donations")
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Error creating donation");
+      toast.error(error.response?.data?.message || "Error creating donation")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -145,112 +146,149 @@ const CreateDonation = ({ onCreateDonor }) => {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
-        {/* Donor Search */}
-        <div className="bg-white p-6 rounded-xl shadow border border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Donor Information</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries({ firstName: "First Name", middleName: "Middle Name", lastName: "Last Name" }).map(
-              ([key, label]) => (
-                <div key={key}>
-                  <label className="block text-sm text-gray-700 mb-1">{label}</label>
+      <div className=" mx-auto px-4 py-8">
+        <Stepper
+          onFinalStepCompleted={handleSubmit}
+          stepCircleContainerClassName="bg-white"
+          contentClassName="bg-white rounded-xl shadow border border-gray-100"
+          footerClassName="bg-white rounded-b-xl"
+        >
+          {/* Step 1: Donor Search */}
+          <Step>
+            <div className="p-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">Donor Information</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries({
+                  firstName: "First Name",
+                  middleName: "Middle Name",
+                  lastName: "Last Name",
+                }).map(([key, label]) => (
+                  <div key={key}>
+                    <label className="block text-sm text-gray-700 mb-1">{label}</label>
+                    <input
+                      type="text"
+                      value={donorInfo[key]}
+                      onChange={(e) => setDonorInfo({ ...donorInfo, [key]: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                  </div>
+                ))}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Date of Birth</label>
                   <input
-                    type="text"
-                    value={donorInfo[key]}
-                    onChange={(e) => setDonorInfo({ ...donorInfo, [key]: e.target.value })}
+                    type="date"
+                    value={donorInfo.dob}
+                    onChange={(e) => setDonorInfo({ ...donorInfo, dob: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg"
                   />
                 </div>
-              )
-            )}
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">Date of Birth</label>
-              <input
-                type="date"
-                value={donorInfo.dob}
-                onChange={(e) => setDonorInfo({ ...donorInfo, dob: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-            </div>
-          </div>
-          <div className="mt-3">
-            <button type="button" onClick={() => setShowAdvanced((v)=>!v)} className="text-sm text-orange-800 hover:underline">
-              {showAdvanced ? "Hide advanced" : "Show advanced (UID, Phone, Donor ID)"}
-            </button>
-          </div>
-          {showAdvanced && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-              {Object.entries({ uid: "UID (12 digits)", phone: "Phone (10 digits)", donorId: "Donor ID" }).map(([key,label]) => (
-                <div key={key}>
-                  <label className="block text-sm text-gray-700 mb-1">{label}</label>
-                  <input
-                    type="text"
-                    value={donorInfo[key]}
-                    onChange={(e) => setDonorInfo({ ...donorInfo, [key]: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg"
-                  />
+              </div>
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                  className="text-sm text-orange-800 hover:underline"
+                >
+                  {showAdvanced ? "Hide advanced" : "Show advanced (UID, Phone, Donor ID)"}
+                </button>
+              </div>
+              {showAdvanced && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                  {Object.entries({
+                    uid: "UID (12 digits)",
+                    phone: "Phone (10 digits)",
+                    donorId: "Donor ID",
+                  }).map(([key, label]) => (
+                    <div key={key}>
+                      <label className="block text-sm text-gray-700 mb-1">{label}</label>
+                      <input
+                        type="text"
+                        value={donorInfo[key]}
+                        onChange={(e) => setDonorInfo({ ...donorInfo, [key]: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg"
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-          <div className="mt-4 flex gap-4">
-            <button
-              onClick={handleDonorSearch}
-              disabled={loading || !searchRequiredFilled}
-              className={`px-5 py-2 rounded-lg ${loading || !searchRequiredFilled ? "bg-orange-300 cursor-not-allowed" : "bg-orange-800 hover:bg-orange-900 text-white"}`}
-            >
-              <Search className="w-4 h-4 mr-2 inline" /> Search
-            </button>
-            {!searchRequiredFilled && (
-              <span className="text-sm text-gray-500 self-center">Enter First, Middle, Last name and DOB to search</span>
-            )}
-            {error && <p className="text-red-600 text-sm">{error}</p>}
-          </div>
-        </div>
+              )}
+              <div className="mt-4 flex gap-4">
+                <button
+                  type="button"
+                  onClick={handleDonorSearch}
+                  disabled={loading || !searchRequiredFilled}
+                  className={`px-5 py-2 rounded-lg flex items-center gap-2 ${
+                    loading || !searchRequiredFilled
+                      ? "bg-orange-300 cursor-not-allowed"
+                      : "bg-orange-800 hover:bg-orange-900 text-white"
+                  }`}
+                >
+                  <Search className="w-4 h-4" /> Search
+                </button>
+                {!searchRequiredFilled && (
+                  <span className="text-sm text-gray-500 self-center">
+                    Enter First, Middle, Last name and DOB to search
+                  </span>
+                )}
+              </div>
+              {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
 
-        {/* Donor Not Found Popup */}
-        {showPopup && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-            <div className="bg-white p-6 rounded-xl shadow-xl w-96 relative">
-              <button
-                onClick={() => setShowPopup(false)}
-                className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              <h2 className="text-lg font-bold mb-4">Donor Not Found</h2>
-              <p className="text-gray-600 mb-6">No donor matched your search. Create one now and continue.</p>
-              <button
-                onClick={() => { setShowPopup(false); setShowCreateDonor(true); }}
-                className="px-5 py-2 bg-orange-800 text-white rounded-lg hover:bg-orange-900"
-              >
-                <Plus className="w-4 h-4 mr-2 inline" /> Create Donor
-              </button>
-            </div>
-          </div>
-        )}
+              {/* Donor Not Found Popup */}
+              {showPopup && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+                  <div className="bg-white p-6 rounded-xl shadow-xl w-96 relative">
+                    <button
+                      onClick={() => setShowPopup(false)}
+                      className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                    <h2 className="text-lg font-bold mb-4">Donor Not Found</h2>
+                    <p className="text-gray-600 mb-6">No donor matched your search. Create one now and continue.</p>
+                    <button
+                      onClick={() => {
+                        setShowPopup(false)
+                        setShowCreateDonor(true)
+                      }}
+                      className="px-5 py-2 bg-orange-800 text-white rounded-lg hover:bg-orange-900 flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" /> Create Donor
+                    </button>
+                  </div>
+                </div>
+              )}
 
-        {showCreateDonor && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-              <CreateDonor
-                onBack={() => setShowCreateDonor(false)}
-                onCreated={(created) => {
-                  setDonor(created);
-                  setShowCreateDonor(false);
-                }}
-              />
-            </div>
-          </div>
-        )}
+              {showCreateDonor && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                  <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                    <CreateDonor
+                      onBack={() => setShowCreateDonor(false)}
+                      onCreated={(created) => {
+                        setDonor(created)
+                        setShowCreateDonor(false)
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
 
-        {/* Donation Form */}
-        {donor && (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Bag Info */}
-            <div className="bg-white p-6 rounded-xl shadow border">
+              {donor && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-800">
+                    ✓ Donor selected:{" "}
+                    <strong>
+                      {donor.firstName} {donor.lastName}
+                    </strong>
+                  </p>
+                </div>
+              )}
+            </div>
+          </Step>
+
+          {/* Step 2: Bag Information */}
+          <Step>
+            <div className="p-6">
               <h3 className="font-semibold text-gray-800 mb-4">Bag Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
                   { key: "bagNo", label: "Bag No" },
                   { key: "segmentNo", label: "Segment No" },
@@ -283,11 +321,13 @@ const CreateDonation = ({ onCreateDonor }) => {
                 </div>
               </div>
             </div>
+          </Step>
 
-            {/* Initial Vitals */}
-            <div className="bg-white p-6 rounded-xl shadow border">
+          {/* Step 3: Initial Vitals */}
+          <Step>
+            <div className="p-6">
               <h3 className="font-semibold text-gray-800 mb-4">Initial Vitals</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
                   { key: "hb", label: "Hemoglobin (g/dL)", type: "number" },
                   { key: "weightKg", label: "Weight (kg)", type: "number" },
@@ -308,11 +348,13 @@ const CreateDonation = ({ onCreateDonor }) => {
                 ))}
               </div>
             </div>
+          </Step>
 
-            {/* Blood Group Info */}
-            <div className="bg-white p-6 rounded-xl shadow border">
+          {/* Step 4: Blood Group Information */}
+          <Step>
+            <div className="p-6">
               <h3 className="font-semibold text-gray-800 mb-4">Blood Group Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm mb-1">Blood Group</label>
                   <select
@@ -341,32 +383,96 @@ const CreateDonation = ({ onCreateDonor }) => {
                     <option value="Negative">Negative</option>
                   </select>
                 </div>
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-sm mb-1">Atypical Antibody</label>
                   <input
                     type="text"
                     value={formData.atypicalAntibody}
-                    onChange={(e) => setFormData({ ...formData, atypicalAntibody: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        atypicalAntibody: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2 border rounded-lg"
                   />
                 </div>
               </div>
             </div>
+          </Step>
 
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-6 py-3 bg-orange-800 text-white rounded-lg hover:bg-orange-900"
-              >
-                {loading ? "Saving..." : "Create Donation"}
-              </button>
+          {/* Step 5: Review & Submit */}
+          <Step>
+            <div className="p-6">
+              <h3 className="font-semibold text-gray-800 mb-4">Review Donation Details</h3>
+              <div className="space-y-4">
+                {/* Donor Info */}
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h4 className="font-semibold text-blue-900 mb-2">Donor Information</h4>
+                  <p className="text-sm text-blue-800">
+                    <strong>Name:</strong> {donor?.firstName} {donor?.middleName} {donor?.lastName}
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    <strong>Donor ID:</strong> {donor?.donorId}
+                  </p>
+                </div>
+
+                {/* Bag Info */}
+                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <h4 className="font-semibold text-purple-900 mb-2">Bag Information</h4>
+                  <p className="text-sm text-purple-800">
+                    <strong>Bag No:</strong> {formData.bagNo}
+                  </p>
+                  <p className="text-sm text-purple-800">
+                    <strong>Segment No:</strong> {formData.segmentNo}
+                  </p>
+                  <p className="text-sm text-purple-800">
+                    <strong>Batch No:</strong> {formData.batchNo}
+                  </p>
+                  <p className="text-sm text-purple-800">
+                    <strong>Type:</strong> {formData.typeOfBag}
+                  </p>
+                </div>
+
+                {/* Vitals */}
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h4 className="font-semibold text-green-900 mb-2">Initial Vitals</h4>
+                  <p className="text-sm text-green-800">
+                    <strong>Hemoglobin:</strong> {formData.hb} g/dL
+                  </p>
+                  <p className="text-sm text-green-800">
+                    <strong>Weight:</strong> {formData.weightKg} kg
+                  </p>
+                  <p className="text-sm text-green-800">
+                    <strong>Pulse:</strong> {formData.pulse} bpm
+                  </p>
+                  <p className="text-sm text-green-800">
+                    <strong>Temperature:</strong> {formData.tempC}°C
+                  </p>
+                  <p className="text-sm text-green-800">
+                    <strong>Blood Pressure:</strong> {formData.bp}
+                  </p>
+                </div>
+
+                {/* Blood Group */}
+                <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                  <h4 className="font-semibold text-orange-900 mb-2">Blood Group</h4>
+                  <p className="text-sm text-orange-800">
+                    <strong>Group:</strong> {formData.bloodGroup} {formData.rh}
+                  </p>
+                  {formData.atypicalAntibody && (
+                    <p className="text-sm text-orange-800">
+                      <strong>Atypical Antibody:</strong> {formData.atypicalAntibody}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
-          </form>
-        )}
+          </Step>
+        </Stepper>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default CreateDonation;
+export default CreateDonation

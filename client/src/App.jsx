@@ -19,17 +19,23 @@ import { AuthenticatedRoute } from './components/auth/Authentic-Routes';
 import CampDonorManagement from './page/camp/CampDonorManagement';
 import CampDonationManagement from './page/camp/CampDonationManagement';
 import ScrollToTop from './page/dashboard/layout/ScrollToTop';
+import Loader from './components/utils/Spinner';
+import { useAuth } from './store/auth';
+import CreateDonation from './components/camp/Create-Donation';
 
 
 const App = () => {
   const pathname = useLocation().pathname;
   const navigate = useNavigate();
+  const { isLoading } = useAuth()
+  // const isLoading = true;
   // const navigation = useNavigation();
   const NoNavbarRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
   const NoFooterRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
 
   return (
     <div>
+
       {/* Conditional Rendering For Navbar */}
       {!NoNavbarRoutes.includes(pathname) && <Navbar />}
       <ScrollToTop />
@@ -63,12 +69,16 @@ const App = () => {
           <Route path="/inventory/stock" element={<ViewStock />} />
 
           {/* Donation Module  */}
-          <Route path="/donations/create-donation" element={<DonationManagement />} />
+          <Route path="/donations/create-donation" element={<CreateDonation />} />
           <Route path="/donations/view-donation" element={<DonationManagement />} />
 
           {/* Donor Module */}
           <Route path="/donor/create-donor" element={<DonorManagement />} />
           <Route path="/donor/view-donor" element={<DonorManagement />} />
+
+
+          {/*For Dashboard - Loading*/}
+
 
           {/*For Dashboard - Error Routes - 404 NOT FOUND */}
           <Route path="*" element={<NotFound />} />

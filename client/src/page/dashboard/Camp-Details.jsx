@@ -18,7 +18,8 @@ import {
 import { data, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import axios from "axios"
 import { useAuth } from "@/store/auth"
-import Loader from "@/components/Loader"
+import Loader from "@/components/utils/Spinner"
+import EnhancedLoader from "@/components/utils/Spinner"
 
 
 const Button = ({ children, onClick, variant = "default", size = "default", className = "", ...props }) => {
@@ -190,7 +191,7 @@ const CampDonations = () => {
 }, [camp, loading, navigate]);
 
   if (loading){
-    return <Loader message="Loading camp details..." />
+    return <EnhancedLoader message="Loading camp details..." />
   }
 
   if (!camp) {

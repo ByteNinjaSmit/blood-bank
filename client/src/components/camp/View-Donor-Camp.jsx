@@ -11,7 +11,8 @@ import {
 import axios from "axios"
 import { useAuth } from "@/store/auth"
 import { useNavigate } from "react-router-dom"
-import Loader from "@/components/Loader"
+import Loader from "@/components/utils/Spinner"
+import EnhancedLoader from "@/components/utils/Spinner"
 
 const ViewDonorCamp = () => {
   const navigate = useNavigate();
@@ -139,7 +140,7 @@ const ViewDonorCamp = () => {
   }, [donors, loading, navigate]);
 
   if (loading) {
-    return <Loader message="Loading camp details..." />
+    return <EnhancedLoader message="Loading camp details..." />
   }
 
 
@@ -220,10 +221,7 @@ const ViewDonorCamp = () => {
         {/* Table */}
         <div className="bg-white rounded-lg border border-gray-200 shadow overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600">Loading donors...</p>
-            </div>
+            <EnhancedLoader/>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 text-sm">

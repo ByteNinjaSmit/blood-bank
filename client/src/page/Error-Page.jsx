@@ -50,7 +50,7 @@ export default function NotFound() {
                 <button
                   key={index}
                   onClick={() => navigate(link.href)}
-                  className="w-full flex items-center p-3 sm:p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-red-800 hover:bg-red-50 transition-all duration-200 group"
+                  className="w-full cursor-pointer flex items-center p-3 sm:p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-red-800 hover:bg-red-50 transition-all duration-200 group"
                 >
                   <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3 group-hover:bg-red-200 transition-colors">
                     <link.icon className="w-5 h-5 text-red-800" />

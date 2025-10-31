@@ -30,6 +30,7 @@ import {
   Calendar,
   AlertTriangle,
 } from "lucide-react"
+import { GiDrop } from "react-icons/gi";
 
 export default function BloodBankWelcome() {
   const [mounted, setMounted] = useState(false)
@@ -123,10 +124,7 @@ export default function BloodBankWelcome() {
           <div className="flex items-center justify-center mb-8">
             <div className="relative">
               <div className="w-24 h-24 bg-orange-800 rounded-full flex items-center justify-center border-4 border-orange-200 shadow-2xl">
-                <Heart className="w-12 h-12 text-white" />
-              </div>
-              <div className="absolute -top-2 -right-2 w-8 h-8 bg-red-600 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
-                <Droplets className="w-4 h-4 text-white" />
+                <GiDrop  className="w-16 h-16 text-white" />
               </div>
             </div>
           </div>

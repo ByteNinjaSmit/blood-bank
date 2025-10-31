@@ -1,5 +1,5 @@
 import React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
     useNavigate,
     useSearchParams,
@@ -11,11 +11,10 @@ import { FaHome } from "react-icons/fa";
 import {
     ChevronRight,
     Menu,
+    PanelLeftDashed,
 } from "lucide-react"
 import { useAuth } from "@/store/auth";
 import Sidebar from "@/components/layout/Sidebar";
-
-// Modules and permission logic moved to Sidebar component
 
 function MasterLayout() {
     const { user } = useAuth();
@@ -24,34 +23,40 @@ function MasterLayout() {
     const [isMobile, setIsMobile] = useState(false)
     const [showMobileOverlay, setShowMobileOverlay] = useState(false)
 
+    const checkMobile = useCallback(() => {
+        const mobile = window.innerWidth < 768;
+        setIsMobile(mobile);
+        if (mobile) {
+            setSidebarOpen(false);
+        }
+    }, []);
+
     useEffect(() => {
-        const checkMobile = () => {
-            setIsMobile(window.innerWidth < 768)
-            if (window.innerWidth < 768) {
-                setSidebarOpen(false)
-            }
-        }
+        checkMobile();
+        window.addEventListener("resize", checkMobile);
+        return () => window.removeEventListener("resize", checkMobile);
+    }, [checkMobile]);
 
-        checkMobile()
-        window.addEventListener("resize", checkMobile)
-        return () => window.removeEventListener("resize", checkMobile)
-    }, [])
-
-    const toggleSidebar = () => {
+    const toggleSidebar = useCallback(() => {
         if (isMobile) {
-            setShowMobileOverlay(!showMobileOverlay)
+            setShowMobileOverlay(prev => !prev);
         } else {
-            setSidebarOpen(!sidebarOpen)
+            setSidebarOpen(prev => !prev);
         }
-    }
+    }, [isMobile]);
 
-    const closeMobileOverlay = () => {
-        setShowMobileOverlay(false)
-    }
+    const closeMobileOverlay = useCallback(() => {
+        setShowMobileOverlay(false);
+    }, []);
+
+    useEffect(() => {
+        if (isMobile && showMobileOverlay) {
+            closeMobileOverlay();
+        }
+    }, [pathname, isMobile, showMobileOverlay, closeMobileOverlay]);
 
     return (
-        <div className="min-h-screen bg-slate-50 flex relative">
-            {/* New Sidebar Component */}
+        <div className="h-screen bg-slate-50 flex overflow-hidden">
             <Sidebar
                 isOpen={sidebarOpen}
                 onToggle={toggleSidebar}
@@ -60,9 +65,9 @@ function MasterLayout() {
                 onCloseMobile={closeMobileOverlay}
             />
 
-            <div className="flex-1 flex flex-col">
-                {/* Header */}
-                <div className="bg-white border-b border-slate-200 p-4 shadow-sm">
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                <header className="flex-shrink-0 bg-white border-b border-slate-200 p-4 shadow-sm sticky top-0 z-30">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             {isMobile && (
@@ -70,26 +75,38 @@ function MasterLayout() {
                                     onClick={toggleSidebar}
                                     className="text-red-800 hover:bg-red-50 p-2 rounded-md transition-colors md:hidden"
                                 >
-                                    <Menu className="w-5 h-5" />
+                                    <PanelLeftDashed className="w-5 h-5 cursor-pointer" />
                                 </button>
                             )}
-                            <div>
-                                <h1 className="text-lg md:text-xl font-semibold text-slate-800 flex items-center gap-2">
-                                    <Link to={'/'} className="cursor-pointer text-red-600 hover:text-red-700 transition-colors">
-                                        <FaHome className="w-5 h-5" />
-                                    </Link>
-                                    <ChevronRight className="text-slate-400 w-4 h-4" />
-                                    <span>Blood Bank Management System</span>
+                            {!isMobile && (
+                                <button
+                                    onClick={toggleSidebar}
+                                    className="text-red-800 hover:bg-red-50 p-2 rounded-md transition-colors hidden md:block"
+                                >
+                                    <PanelLeftDashed className="w-5 h-5 cursor-pointer" />
+                                </button>
+                            )}
+                            <div className="flex items-center gap-2">
+                                <Link 
+                                    to={'/'} 
+                                    className="cursor-pointer text-red-800 hover:text-red-800 transition-colors flex items-center gap-2"
+                                >
+                                    <FaHome className="w-5 h-5" />
+                                </Link>
+                                <ChevronRight className="text-slate-400 w-4 h-4" />
+                                <h1 className="text-lg md:text-xl font-semibold text-slate-800">
+                                    Blood Bank - Sanjivani, Kopargaon
                                 </h1>
                             </div>
                         </div>
                     </div>
-                </div>
+                </header>
 
-                {/* Content */}
-                <div className="flex-1">
-                    <Outlet />
-                </div>
+                <main className="flex-1 overflow-y-auto">
+                    <div className="h-full">
+                        <Outlet />
+                    </div>
+                </main>
             </div>
         </div>
     )

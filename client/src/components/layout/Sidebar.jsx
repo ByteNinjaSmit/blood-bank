@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Search,
@@ -26,15 +26,26 @@ import {
   LogOut,
   Settings,
   Bell,
+  FlaskConical,
+  Delete,
+  Trash,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/store/auth';
+import { FiUserPlus } from "react-icons/fi";
+import { FaBoxOpen, FaChartPie, FaEye, FaHeart, FaListUl, FaMicroscope, FaTrash, FaUser } from "react-icons/fa";
+import { SiPytest } from "react-icons/si";
+import { GiCardDiscard, GiDrop , GiChemicalDrop , GiCampingTent } from "react-icons/gi";
+import { IoIosSend } from "react-icons/io";
+import { PiTestTubeFill } from "react-icons/pi";
+import { MdDelete } from "react-icons/md";
+import { FaUsersCog } from "react-icons/fa";
 
-const modules = [
+const MODULES = [
   {
     id: "requisition",
     name: "Requisition",
-    icon: <Activity className="w-5 h-5" />,
+    icon: <IoIosSend className="w-5 h-5" />,
     href: "/requisition",
     permissions: ["read", "write"],
     description: "Manage blood requests and orders",
@@ -42,7 +53,7 @@ const modules = [
   {
     id: "camp",
     name: "Camp",
-    icon: <Calendar className="w-5 h-5" />,
+    icon: <GiCampingTent className="w-6 h-6" />,
     permissions: ["read", "write"],
     subModules: [
       {
@@ -72,18 +83,20 @@ const modules = [
   {
     id: "donor",
     name: "Donor",
-    icon: <User className="w-5 h-5" />,
+    icon: <FaUser className="w-5 h-5" />,
     href: "/donor",
     permissions: ["read", "write"],
     subModules: [
       {
         name: "Create Donor",
+        icon: <FiUserPlus className="w-5 h-5" />,
         href: "/donor/create-donor",
         permissions: ["read", "write"],
         description: "Create Donor",
       },
       {
         name: "View Donor",
+        icon: <FaEye className="w-5 h-5" />,
         href: "/donor/view-donor",
         permissions: ["read", "write"],
         description: "View Donor",
@@ -94,18 +107,20 @@ const modules = [
   {
     id: "donations",
     name: "Donations",
-    icon: <Heart className="w-5 h-5" />,
+    icon: <FaHeart className="w-5 h-5" />,
     href: "/donations",
     permissions: ["read", "write"],
     subModules: [
       {
         name: "Create Donation",
         href: "/donations/create-donation",
+        icon: <Plus className="w-5 h-5" />,
         permissions: ["read", "write"],
         description: "Create Donation",
       },
       {
         name: "View Donation",
+        icon: <FaEye className="w-5 h-5" />,
         href: "/donations/view-donation",
         permissions: ["read", "write"],
         description: "View Donation",
@@ -116,24 +131,27 @@ const modules = [
   {
     id: "component",
     name: "Component",
-    icon: <TestTube className="w-5 h-5" />,
+    icon: <SiPytest className="w-5 h-5" />,
     permissions: ["read", "write"],
     subModules: [
       {
         name: "Components List",
         href: "/component/list",
+        icon: <FaListUl className="w-5 h-5" />,
         permissions: ["read"],
         description: "View all blood components",
       },
       {
         name: "Separate",
         href: "/component/separate",
+        icon: <PiTestTubeFill className="w-5 h-5" />,
         permissions: ["write"],
         description: "Separate blood components",
       },
       {
         name: "Near-Expiry",
         href: "/component/near-expiry",
+        icon: <MdDelete className="w-5 h-5" />,
         permissions: ["read"],
         description: "View near-expiry components",
       },
@@ -143,7 +161,7 @@ const modules = [
   {
     id: "labs",
     name: "Labs",
-    icon: <Microscope className="w-5 h-5" />,
+    icon: <FaMicroscope className="w-5 h-5" />,
     href: "/labs",
     permissions: ["read", "admin"],
     description: "Laboratory testing",
@@ -151,7 +169,7 @@ const modules = [
   {
     id: "inventory",
     name: "Inventory",
-    icon: <Package className="w-5 h-5" />,
+    icon: <FaBoxOpen className="w-5 h-5" />,
     permissions: ["read", "write"],
     subModules: [
       {
@@ -178,7 +196,7 @@ const modules = [
   {
     id: "discard",
     name: "Discard",
-    icon: <Edit className="w-5 h-5" />,
+    icon: <FaTrash className="w-5 h-5" />,
     permissions: ["read", "write"],
     subModules: [
       {
@@ -193,7 +211,7 @@ const modules = [
   {
     id: "queue",
     name: "Queue",
-    icon: <Users className="w-5 h-5" />,
+    icon: <FaUsersCog className="w-6 h-6"  />,
     permissions: ["read", "write"],
     subModules: [
       {
@@ -214,7 +232,7 @@ const modules = [
   {
     id: "report",
     name: "Report",
-    icon: <BarChart3 className="w-5 h-5" />,
+    icon: <FaChartPie className="w-5 h-5" />,
     permissions: ["read", "admin"],
     subModules: [
       {
@@ -259,25 +277,43 @@ const hasPermission = (userPermissions, requiredPermissions) => {
   return requiredPermissions.some((permission) => userPermissions.includes(permission));
 };
 
-const Sidebar = ({ 
-  isOpen, 
-  onToggle, 
-  isMobile, 
-  showMobileOverlay, 
-  onCloseMobile 
+const Sidebar = ({
+  isOpen,
+  onToggle,
+  isMobile,
+  showMobileOverlay,
+  onCloseMobile
 }) => {
   const { user, LogoutUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // State declarations with proper initialization
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedModules, setExpandedModules] = useState(new Set());
+  const [expandedModules, setExpandedModules] = useState(() => new Set());
   const [selectedModule, setSelectedModule] = useState(null);
   const [selectedSubModule, setSelectedSubModule] = useState(null);
+  const [tempOpenForSubmodule, setTempOpenForSubmodule] = useState(false);
 
-  const userPermissions = getUserPermissions(user?.role);
+  // Memoize user permissions to prevent unnecessary recalculations
+  const userPermissions = useMemo(() =>
+    getUserPermissions(user?.role),
+    [user?.role]
+  );
 
+  // Memoize filtered modules to prevent unnecessary re-renders
+  const filteredModules = useMemo(() =>
+    MODULES.filter(
+      (module) =>
+        module.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        hasPermission(userPermissions, module.permissions)
+    ),
+    [searchQuery, userPermissions]
+  );
+
+  // Set current module and submodule based on location
   useEffect(() => {
-    const currentModule = modules.find((module) => {
+    const currentModule = MODULES.find((module) => {
       if (module.href === location.pathname) return true;
       return module.subModules?.some((sub) => sub.href === location.pathname);
     });
@@ -288,18 +324,17 @@ const Sidebar = ({
       setSelectedSubModule(currentSubModule || null);
 
       if (currentSubModule) {
-        setExpandedModules((prev) => new Set([...prev, currentModule.id]));
+        setExpandedModules((prev) => {
+          const newSet = new Set(prev);
+          newSet.add(currentModule.id);
+          return newSet;
+        });
       }
     }
   }, [location.pathname]);
 
-  const filteredModules = modules.filter(
-    (module) =>
-      module.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      hasPermission(userPermissions, module.permissions)
-  );
-
-  const handleModuleClick = (module) => {
+  // Handle module click with sidebar auto-open for submodules
+  const handleModuleClick = useCallback((module) => {
     if (!hasPermission(userPermissions, module.permissions)) {
       toast.error("ACCESS DENIED!!", {
         description: "You don't have permission to access this section"
@@ -307,23 +342,40 @@ const Sidebar = ({
       return;
     }
 
-    if (module.subModules && module.subModules.length > 0) {
-      const newExpanded = new Set(expandedModules);
-      if (newExpanded.has(module.id)) {
-        newExpanded.delete(module.id);
-      } else {
+    // If sidebar is closed and module has submodules, open sidebar temporarily
+    if (!isOpen && module.subModules && module.subModules.length > 0) {
+      setTempOpenForSubmodule(true);
+      // Expand the module to show submodules
+      setExpandedModules((prev) => {
+        const newExpanded = new Set(prev);
         newExpanded.add(module.id);
-      }
-      setExpandedModules(newExpanded);
+        return newExpanded;
+      });
+      return;
+    }
+
+    // Normal behavior when sidebar is open
+    if (module.subModules && module.subModules.length > 0) {
+      setExpandedModules((prev) => {
+        const newExpanded = new Set(prev);
+        if (newExpanded.has(module.id)) {
+          newExpanded.delete(module.id);
+        } else {
+          newExpanded.add(module.id);
+        }
+        return newExpanded;
+      });
     } else if (module.href) {
       navigate(module.href);
       if (isMobile) {
         onCloseMobile();
       }
+      // Close temporary sidebar if it was opened for submodules
+      setTempOpenForSubmodule(false);
     }
-  };
+  }, [userPermissions, navigate, isMobile, onCloseMobile, isOpen]);
 
-  const handleSubModuleClick = (module, subModule) => {
+  const handleSubModuleClick = useCallback((module, subModule) => {
     if (!hasPermission(userPermissions, subModule.permissions)) {
       toast.error("ACCESS DENIED!!", {
         description: "You don't have permission to access this section"
@@ -335,16 +387,38 @@ const Sidebar = ({
     if (isMobile) {
       onCloseMobile();
     }
-  };
+    // Close temporary sidebar after submodule selection
+    setTempOpenForSubmodule(false);
+  }, [userPermissions, navigate, isMobile, onCloseMobile]);
 
-  const isActive = (href) => location.pathname === href;
+  // Close temporary sidebar when clicking outside or when main sidebar is toggled open
+  useEffect(() => {
+    if (isOpen && tempOpenForSubmodule) {
+      setTempOpenForSubmodule(false);
+    }
+  }, [isOpen, tempOpenForSubmodule]);
+
+  const isActive = useCallback((href) => location.pathname === href, [location.pathname]);
+
+  // Memoized logout handler
+  const handleLogout = useCallback(() => {
+    LogoutUser();
+  }, [LogoutUser]);
+
+  // Memoized search handler
+  const handleSearchChange = useCallback((e) => {
+    setSearchQuery(e.target.value);
+  }, []);
+
+  // Determine if sidebar should be displayed as open
+  const shouldDisplayOpen = isOpen || tempOpenForSubmodule;
 
   return (
     <>
       {/* Mobile Overlay */}
       {isMobile && showMobileOverlay && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" 
+        <div
+          className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
           onClick={onCloseMobile}
         />
       )}
@@ -353,205 +427,194 @@ const Sidebar = ({
       <div
         className={`
           ${isMobile
-            ? `fixed left-0 top-0 h-full w-80 z-50 transform transition-all duration-300 ease-in-out ${
-                showMobileOverlay ? "translate-x-0" : "-translate-x-full"
-              }`
-            : `${isOpen ? "w-80" : "w-16"} transition-all duration-300 ease-in-out`
+            ? `fixed left-0 top-0 h-full w-80 z-50 transform transition-all duration-300 ease-in-out ${showMobileOverlay ? "translate-x-0" : "-translate-x-full"
+            }`
+            : `${shouldDisplayOpen ? "w-80" : "w-16"} h-full transition-all duration-300 ease-in-out`
           } 
           bg-gradient-to-br from-red-900 via-red-800 to-red-900 
           text-white flex flex-col shadow-2xl border-r border-red-700/30
-          overflow-hidden
         `}
       >
-        {/* Sidebar Header */}
-        <div className="p-6 border-b border-red-700/30 bg-red-800/20 backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            {isOpen && (
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm shadow-lg">
-                    <Heart className="w-7 h-7 text-white" />
-                  </div>
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-xl font-bold text-white">Blood Bank</h1>
-                  <p className="text-red-100 text-sm font-medium">Management System</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="flex items-center gap-1">
-                      <User className="w-3 h-3 text-red-200" />
-                      <span className="text-xs text-red-100 truncate">{user?.email}</span>
+        {/* Fixed Header Section */}
+        <div className="flex-shrink-0">
+          {/* Sidebar Header */}
+          <div className="p-6 border-b border-red-700/30 bg-red-800/20 backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              {shouldDisplayOpen && (
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm shadow-lg">
+                      <GiDrop className="w-7 h-7 text-white" />
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Shield className="w-3 h-3 text-red-200" />
-                    <span className="text-xs text-red-100 capitalize">{user?.role}</span>
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-xl font-bold text-white">Blood Bank</h1>
+                    <p className="text-red-100 text-sm font-medium">Sanjivani, Kopargoan</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className="flex items-center gap-1">
+                        <User className="w-3 h-3 text-red-200" />
+                        <span className="text-xs text-red-100 truncate">{user?.email}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Shield className="w-3 h-3 text-red-200" />
+                      <span className="text-xs text-red-100 capitalize">{user?.role}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-            {!isOpen && !isMobile && (
-              <div className="flex justify-center w-full">
-                <div className="relative">
-                  <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm shadow-lg">
-                    <Heart className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center">
-                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
-                  </div>
-                </div>
-              </div>
-            )}
-            <button 
-              onClick={onToggle} 
-              className="text-white hover:bg-white/30 p-2 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-md hover:border hover:border-white/20"
-            >
-              {isMobile ? (
-                showMobileOverlay ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />
-              ) : isOpen ? (
-                <ChevronLeft className="w-5 h-5" />
-              ) : (
-                <ChevronRight className="w-5 h-5" />
               )}
-            </button>
+              {!shouldDisplayOpen && !isMobile && (
+                <div className="flex justify-center w-full">
+                  <div className="relative">
+                    <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm shadow-lg">
+                      <GiDrop className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Search */}
+          {shouldDisplayOpen && (
+            <div className="p-4 border-b border-red-700/30">
+              <div className="relative group">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-4 h-4 group-focus-within:text-white transition-colors" />
+                <input
+                  type="text"
+                  placeholder="Search modules..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  className="w-full pl-10 pr-4 py-3 bg-white/10 border border-red-600/30 rounded-xl text-white placeholder:text-red-300 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/50 transition-all duration-200 backdrop-blur-sm"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Scrollable Navigation Area */}
+        <div className="flex-1 scrollbar-none overflow-y-auto">
+          <div className={`p-4 space-y-2 ${!shouldDisplayOpen && !isMobile ? "flex flex-col items-center" : ""}`}>
+            {filteredModules.map((module) => (
+              <div key={module.id} className={`${shouldDisplayOpen ? "group w-full" : "w-full flex justify-center"}`}>
+                {/* Main Module */}
+                <div
+                  onClick={() => handleModuleClick(module)}
+                  className={`
+                    ${shouldDisplayOpen
+                      ? "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 mb-2 w-full"
+                      : "flex items-center justify-center p-3 rounded-xl cursor-pointer transition-all duration-200 mb-2 w-12 h-12"
+                    }
+                    ${isActive(module.href) || module.subModules?.some((sub) => isActive(sub.href))
+                      ? "bg-white/25 text-white shadow-lg backdrop-blur-sm border border-white/20"
+                      : "hover:bg-white/20 text-red-100 hover:text-white hover:shadow-md"
+                    }
+                    ${shouldDisplayOpen ? "group-hover:scale-[1.02]" : "hover:scale-105"} transform hover:border hover:border-white/20
+                  `}
+                  title={!shouldDisplayOpen ? module.name : ""}
+                >
+                  <div className={`flex-shrink-0 ${shouldDisplayOpen ? "p-1" : ""}`}>
+                    {module.icon}
+                  </div>
+                  {shouldDisplayOpen && (
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm">{module.name}</span>
+                          {!hasPermission(userPermissions, module.permissions) && (
+                            <Lock className="w-3 h-3 text-red-300" />
+                          )}
+                        </div>
+                        {module.subModules && module.subModules.length > 0 && (
+                          <div className="transition-transform duration-200">
+                            {expandedModules.has(module.id) ? (
+                              <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-xs opacity-80 truncate">{module.description}</div>
+                    </div>
+                  )}
+                  {!shouldDisplayOpen && !hasPermission(userPermissions, module.permissions) && (
+                    <Lock className="w-2 h-2 absolute top-1 right-1 text-red-300" />
+                  )}
+                </div>
+
+                {/* Sub Modules */}
+                {module.subModules && module.subModules.length > 0 && shouldDisplayOpen && (
+                  <div
+                    className={`
+                      overflow-hidden transition-all duration-300 ease-in-out
+                      ${expandedModules.has(module.id)
+                        ? "max-h-96 opacity-100"
+                        : "max-h-0 opacity-0"
+                      }
+                    `}
+                  >
+                    <div className="ml-6 mr-2 space-y-1">
+                      {module.subModules.map((subModule, index) => (
+                        <div
+                          key={`${module.id}-${index}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSubModuleClick(module, subModule);
+                          }}
+                          className={`
+                            flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all duration-200
+                            ${isActive(subModule.href)
+                              ? "bg-white/30 text-white shadow-md backdrop-blur-sm border border-white/30"
+                              : "hover:bg-white/25 text-red-100 hover:text-white hover:shadow-md"
+                            }
+                            hover:scale-[1.01] transform hover:border hover:border-white/20
+                          `}
+                        >
+                          <div className="flex-shrink-0 p-1">
+                            {subModule.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">{subModule.name}</span>
+                              {!hasPermission(userPermissions, subModule.permissions) && (
+                                <Lock className="w-3 h-3 text-red-300" />
+                              )}
+                            </div>
+                            <div className="text-xs opacity-75 truncate">{subModule.description}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Search */}
-        {isOpen && (
-          <div className="p-4 border-b border-red-700/30">
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-300 w-4 h-4 group-focus-within:text-white transition-colors" />
-              <input
-                type="text"
-                placeholder="Search modules..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-red-600/30 rounded-xl text-white placeholder:text-red-300 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/50 transition-all duration-200 backdrop-blur-sm"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Sidebar Content */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="h-full overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/30 hover:scrollbar-thumb-white/50 scrollbar-thumb-rounded scrollbar-track-rounded">
-            <div className={`p-4 space-y-2 ${!isOpen && !isMobile ? "flex flex-col items-center" : ""}`}>
-              {filteredModules.map((module) => (
-                <div key={module.id} className={`${isOpen ? "group w-full" : "w-full flex justify-center"}`}>
-                  {/* Main Module */}
-                  <div
-                    onClick={() => handleModuleClick(module)}
-                    className={`
-                      ${isOpen 
-                        ? "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 mb-2 w-full"
-                        : "flex items-center justify-center p-3 rounded-xl cursor-pointer transition-all duration-200 mb-2 w-12 h-12"
-                      }
-                      ${isActive(module.href) || module.subModules?.some((sub) => isActive(sub.href))
-                        ? "bg-white/25 text-white shadow-lg backdrop-blur-sm border border-white/20"
-                        : "hover:bg-white/20 text-red-100 hover:text-white hover:shadow-md"
-                      }
-                      ${isOpen ? "group-hover:scale-[1.02]" : "hover:scale-105"} transform hover:border hover:border-white/20
-                    `}
-                    title={!isOpen ? module.name : ""}
-                  >
-                    <div className={`flex-shrink-0 ${isOpen ? "p-1" : ""}`}>
-                      {module.icon}
-                    </div>
-                    {isOpen && (
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm">{module.name}</span>
-                            {!hasPermission(userPermissions, module.permissions) && (
-                              <Lock className="w-3 h-3 text-red-300" />
-                            )}
-                          </div>
-                          {module.subModules && module.subModules.length > 0 && (
-                            <div className="transition-transform duration-200">
-                              {expandedModules.has(module.id) ? (
-                                <ChevronDown className="w-4 h-4 flex-shrink-0" />
-                              ) : (
-                                <ChevronRight className="w-4 h-4 flex-shrink-0" />
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-xs opacity-80 truncate">{module.description}</div>
-                      </div>
-                    )}
-                    {!isOpen && !hasPermission(userPermissions, module.permissions) && (
-                      <Lock className="w-2 h-2 absolute top-1 right-1 text-red-300" />
-                    )}
-                  </div>
-
-                  {/* Sub Modules */}
-                  {module.subModules && module.subModules.length > 0 && isOpen && (
-                    <div
-                      className={`
-                        overflow-hidden transition-all duration-300 ease-in-out
-                        ${expandedModules.has(module.id) 
-                          ? "max-h-96 opacity-100" 
-                          : "max-h-0 opacity-0"
-                        }
-                      `}
-                    >
-                      <div className="ml-6 mr-2 space-y-1">
-                        {module.subModules.map((subModule, index) => (
-                          <div
-                            key={index}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSubModuleClick(module, subModule);
-                            }}
-                            className={`
-                              flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all duration-200
-                              ${isActive(subModule.href)
-                                ? "bg-white/30 text-white shadow-md backdrop-blur-sm border border-white/30"
-                                : "hover:bg-white/25 text-red-100 hover:text-white hover:shadow-md"
-                              }
-                              hover:scale-[1.01] transform hover:border hover:border-white/20
-                            `}
-                          >
-                            <div className="flex-shrink-0 p-1">
-                              {subModule.icon}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-sm">{subModule.name}</span>
-                                {!hasPermission(userPermissions, subModule.permissions) && (
-                                  <Lock className="w-3 h-3 text-red-300" />
-                                )}
-                              </div>
-                              <div className="text-xs opacity-75 truncate">{subModule.description}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Sidebar Footer */}
-          <div className={`${isOpen ? "p-4" : "p-2"} mt-auto border-t border-red-700/30 bg-red-800/20 backdrop-blur-sm`}>
+        {/* Fixed Footer Section */}
+        <div className="flex-shrink-0 border-t border-red-700/30 bg-red-800/20 backdrop-blur-sm">
+          <div className={`${shouldDisplayOpen ? "p-4" : "p-2"}`}>
             <button
-              onClick={LogoutUser}
+              onClick={handleLogout}
               className={`
-                ${isOpen 
-                  ? "w-full flex items-center gap-3 p-3 text-red-100 hover:text-white hover:bg-red-700/30 rounded-lg" 
+                ${shouldDisplayOpen
+                  ? "w-full flex items-center gap-3 p-3 text-red-100 hover:text-white hover:bg-red-700/30 rounded-lg"
                   : "w-full flex items-center justify-center p-3 text-red-100 hover:text-white hover:bg-red-700/30 rounded-lg"
                 }
-                transition-all duration-200 group hover:shadow-md hover:border hover:border-white/20
+                transition-all cursor-pointer duration-200 group hover:shadow-md hover:border hover:border-white/20
               `}
-              title={!isOpen ? "Logout" : ""}
+              title={!shouldDisplayOpen ? "Logout" : ""}
             >
               <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform" />
-              {isOpen && <span className="text-sm font-medium">Logout</span>}
+              {shouldDisplayOpen && <span className="text-sm font-medium">Logout</span>}
             </button>
           </div>
         </div>
@@ -560,4 +623,4 @@ const Sidebar = ({
   );
 };
 
-export default Sidebar;
+export default React.memo(Sidebar);

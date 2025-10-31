@@ -175,13 +175,23 @@
   }
 }
 
+body {
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.font-sg {
+   font-family: "Space Grotesk", sans-serif;
+}
+
 .animate-spin {
   animation: spin 1s linear infinite;
 }
 
 /* Ensure smooth transitions */
 * {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-property: color, background-color, border-color,
+    text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter,
+    backdrop-filter;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
@@ -191,4 +201,24 @@
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 300ms;
+}
+
+@layer utilities {
+  .scrollbar-none {
+    -ms-overflow-style: none; /* IE and old Edge */
+    scrollbar-width: none; /* Firefox */
+    -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, new Edge, Opera */
+    width: 0;
+    height: 0;
+  }
+}
+.sand-clock-gif {
+  filter: 
+    hue-rotate(160deg) 
+    saturate(180%) 
+    brightness(60%) 
+    contrast(170%);
 }
