@@ -25,7 +25,8 @@ const connectToDatabase = require("./config/db");
 const logger = require('./utils/logger'); // Import the logger
 
 // Import and initialize queues
-// require('./queues/expiry-queue'); // This will start the expiry queue scheduler
+require('./queues/expiry-queue'); // This will start the expiry queue scheduler
+require('./queues/discard-queue'); // ensures auto initialization
 
 
 // Middleware
@@ -43,6 +44,7 @@ const requestRoutes = require("./routers/request-routes");
 const componentRoutes = require("./routers/component-routes");
 const userRoutes = require("./routers/user-routes");
 const discardRoutes = require("./routers/discard-routes");
+const labRoutes = require('./routers/lab-routes');
 const testRoutes = require('./routers/test-routes');
 
 
@@ -215,6 +217,7 @@ app.use("/api/requests", requestRoutes);
 app.use("/api/component", componentRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/discard",discardRoutes);
+app.use('/api/sernology',labRoutes);
 app.use("/api/test",testRoutes);
 
 

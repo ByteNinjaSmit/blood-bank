@@ -64,7 +64,7 @@ const ComponentSchema = new Schema(
     ],
     status: {
       type: String,
-      enum: ["in-stock", "reserved", "issued", "discarded"],
+      enum: ["lab-testing","in-stock", "reserved", "issued", "discarded"],
       required: true,
     },
     siteId: {

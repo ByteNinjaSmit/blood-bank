@@ -86,7 +86,7 @@ const separateComponents = async (req, res, next) => {
       componentType,
       volumeMl,
       expiryDate,
-      status: 'in-stock',
+      status: 'lab-testing',
       batchNo: bloodBag.batchNo || null,
       siteId: siteId,
       createdBy: userId,
