@@ -21,7 +21,7 @@ import { toast } from "sonner"
 
 export default function BloodBankDoctorLoginPage() {
   const navigate = useNavigate();
-  const { API, storeTokenInCookies,isLoggedIn } = useAuth();
+  const { API, storeTokenInCookies, isLoggedIn, isLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     username: "",
@@ -29,6 +29,7 @@ export default function BloodBankDoctorLoginPage() {
   })
   const [mounted, setMounted] = useState(false)
   const isMobile = useIsMobile();
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
 
   useEffect(() => {
     setMounted(true)
@@ -40,6 +41,7 @@ export default function BloodBankDoctorLoginPage() {
   }
 
   const handleSubmit = async (e) => {
+    setIsLoginLoading(true);
     e.preventDefault()
     console.log("Blood bank doctor login:", formData)
     try {
@@ -49,20 +51,22 @@ export default function BloodBankDoctorLoginPage() {
       });
       if (response.status === 200) {
         const data = response.data;
-        toast.success(data.message || "Login successful");
         storeTokenInCookies(data.token);
         navigate("/");
+        toast.success(data.message || "Login successful");
       }
     } catch (error) {
       toast.error(error.response.data.message || "Login failed. Please try again.");
+    } finally {
+      setIsLoginLoading(false);
     }
   };
 
-  useEffect(()=>{
-    if(!!isLoggedIn){
-      navigate(-1);
-    }
-  },[isLoggedIn])
+
+      if (isLoggedIn) {
+        navigate('/');
+      }
+
 
 
   const bloodBankFeatures = [
@@ -201,10 +205,29 @@ export default function BloodBankDoctorLoginPage() {
             </div>
             <button
               type="submit"
-              className="w-full flex cursor-pointer items-center justify-center px-4 sm:px-6 py-3 sm:py-4 border border-transparent rounded-xl sm:rounded-2xl text-sm sm:text-base font-medium text-white bg-gradient-to-r from-red-800 to-red-900 hover:from-red-900 hover:to-red-950 transition-all duration-200"
+              className={`w-full flex cursor-pointer items-center justify-center px-4 sm:px-6 py-3 sm:py-4 border border-transparent rounded-xl sm:rounded-2xl text-sm sm:text-base font-medium text-white bg-gradient-to-r from-red-800 to-red-900 hover:from-red-900 hover:to-red-950 transition-all duration-200 ${isLoginLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={isLoginLoading}  // Disable button while loading
             >
-              Login
+              {isLoginLoading ? (
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path
+                    fill="currentColor"
+                    d="M4 12a8 8 0 1 1 16 0a8 8 0 0 1-16 0zm0 0a8 8 0 0 1 16 0a8 8 0 0 1-16 0z"
+                    className="opacity-50"
+                  />
+                </svg>
+              ) : (
+                "Login"
+              )}
             </button>
+
           </form>
 
           {/* Security Badge */}
