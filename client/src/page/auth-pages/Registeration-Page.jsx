@@ -26,7 +26,7 @@ import { useAuth } from "@/store/auth"
 
 export default function RegisterPage() {
     const navigate = useNavigate();
-    const { API } = useAuth();
+    const { API , isLoggedIn} = useAuth();
     const [currentStep, setCurrentStep] = useState(1)
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -152,6 +152,12 @@ export default function RegisterPage() {
         { value: "hospital", label: "Hospital Staff" },
         { value: "viewer", label: "Viewer" },
     ]
+
+    useEffect(() => {
+        if (!!isLoggedIn) {
+            navigate(-1);
+        }
+    }, [isLoggedIn])
 
     return (
         <div className="min-h-screen flex flex-col lg:flex-row">

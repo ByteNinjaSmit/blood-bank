@@ -21,7 +21,7 @@ import { toast } from "sonner"
 
 export default function BloodBankDoctorLoginPage() {
   const navigate = useNavigate();
-  const { API, storeTokenInCookies } = useAuth();
+  const { API, storeTokenInCookies,isLoggedIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     username: "",
@@ -57,6 +57,12 @@ export default function BloodBankDoctorLoginPage() {
       toast.error(error.response.data.message || "Login failed. Please try again.");
     }
   };
+
+  useEffect(()=>{
+    if(!!isLoggedIn){
+      navigate(-1);
+    }
+  },[isLoggedIn])
 
 
   const bloodBankFeatures = [
