@@ -3,6 +3,7 @@ import { useState } from "react"
 import { ArrowLeft, Eye, Edit, Trash2, X, Calendar, AlertTriangle, User } from "lucide-react"
 import axios from "axios"
 import { useAuth } from "@/store/auth"
+import MasterLoader from "../Loader"
 
 const Button = ({ children, onClick, variant = "default", size = "default", className = "", ...props }) => {
     const baseClasses =
@@ -25,64 +26,89 @@ const Button = ({ children, onClick, variant = "default", size = "default", clas
     )
 }
 
-const ViewDiscarded = ({ onBack }) => {
+const ViewDiscarded = () => {
     const { API, authorizationToken } = useAuth();
     const [selectedItem, setSelectedItem] = useState(null)
     const [showBagDetails, setShowBagDetails] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, item: null })
+    const [discardedItems, setDiscardedItems] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [pagignationData, setPagignationData] = useState();
 
-    const [discardedItems] = useState([
-        {
-            id: "1",
-            itemType: "Donation",
-            itemId: "DON001",
-            bagNo: "BG001",
-            reason: "Expired blood bag",
-            discardedAt: "2024-01-15",
-            siteId: "SITE001",
-            createdAt: "2024-01-15T10:30:00Z",
-        },
-        {
-            id: "2",
-            itemType: "Component",
-            itemId: "COMP002",
-            bagNo: "BG002",
-            reason: "Contamination detected",
-            discardedAt: "2024-01-14",
-            siteId: "SITE002",
-            createdAt: "2024-01-14T14:20:00Z",
-        },
-        {
-            id: "3",
-            itemType: "Donation",
-            itemId: "DON003",
-            bagNo: "BG003",
-            reason: "Storage temperature breach",
-            discardedAt: "2024-01-13",
-            siteId: "SITE001",
-            createdAt: "2024-01-13T09:15:00Z",
-        },
-    ])
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
+
+
+    // Get items for current page
+    const indexOfLastItem = currentPage * rowsPerPage;
+    const indexOfFirstItem = indexOfLastItem - rowsPerPage;
+    const currentItems = discardedItems.slice(indexOfFirstItem, indexOfLastItem);
+
+    const handlePageChange = (page) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
+
+    const handleRowsPerPageChange = (e) => {
+        setRowsPerPage(Number(e.target.value));
+        setCurrentPage(1);
+    };
+
+    // ------------
+    // Filter
+    // Filters
+    const [itemType, setItemType] = useState("");
+    const [siteId, setSiteId] = useState("");
+    const [sortBy, setSortBy] = useState("discardedAt");
+    const [order, setOrder] = useState("desc");
+    // const [sites, setSites] = useState([]);
+
 
     const getItems = async () => {
+        setIsLoading(true);
         try {
+            const params = {
+                page: currentPage,
+                limit: rowsPerPage,
+                itemType: itemType || undefined,
+                // siteId: siteId || undefined,
+                sortBy,
+                order,
+            };
+
+
             const response = await axios.get(`${API}/api/discard/get-list`, {
                 headers: {
                     Authorization: authorizationToken,
-                }, withCredentials: true,
+                },
+                params,
+                withCredentials: true,
             });
 
-            if (response.status == 200) {
-                console.log("Discarded items fetched:", response.data)
+            if (response.status === 200) {
+                console.log("Discarded items fetched:", response.data);
+                setDiscardedItems(response.data.data);
+                setPagignationData(response.data.pagination);
+
+                // Update pagination info from backend
+                setTotalPages(response.data.pagination.totalPages);
             }
         } catch (error) {
-            console.error("Error fetching discarded items:", error)
+            console.error("Error fetching discarded items:", error);
+        } finally {
+            setIsLoading(false);
         }
-    }
+    };
+
 
     useEffect(() => {
         getItems();
-    }, [API])
+    }, [API, currentPage, rowsPerPage, itemType, sortBy, order]);
+
+
 
     const handleViewDetails = (item) => {
         setSelectedItem(item)
@@ -116,42 +142,12 @@ const ViewDiscarded = ({ onBack }) => {
         setSelectedItem(null)
         setShowBagDetails(false)
     }
-    // Mock donor data for demonstration [remove it later]
-    const mockDonorData = {
-        segmentId: "SEG123456",
-        collectionDate: "2024-01-10",
-        expiryDate: "2024-02-10",
-        initialVitals: { hb: 13.5, weightKg: 70, pulse: 72, tempC: 36.6, bp: "120/80" },
-        status: "Discarded",
-        donorId: "D001",
-        firstName: "John",
-        middleName: "Michael",
-        lastName: "Doe",
-        uid: "UID123456789",
-        dob: "1990-05-15",
-        sex: "Male",
-        phone: "+1-555-0123",
-        email: "john.doe@email.com",
-        bloodGroup: "O",
-        rh: "Positive",
-        testResults: "All tests passed - HIV: Negative, HBV: Negative, HCV: Negative, Syphilis: Negative",
-    }
 
     return (
         <div className="min-h-screen bg-white">
             {/* Header */}
             <div className="bg-gradient-to-br from-red-800 via-red-700 to-red-900 text-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <div className="flex items-center gap-4 mb-6">
-                        <Button
-                            onClick={onBack}
-                            variant="outline"
-                            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                        >
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Back
-                        </Button>
-                    </div>
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-white/15 rounded-xl backdrop-blur-md">
                             <AlertTriangle className="w-8 h-8" />
@@ -167,10 +163,76 @@ const ViewDiscarded = ({ onBack }) => {
             {/* Content */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="bg-white rounded-xl shadow-lg border border-red-100 overflow-hidden">
-                    <div className="p-6 border-b border-red-100">
+                    <div className="p-6 border-b border-red-100 flex gap-3">
                         <h2 className="text-xl font-semibold text-slate-800">Discarded Items</h2>
-                        <p className="text-slate-600 mt-1">Total: {discardedItems.length} items</p>
+                        <p className="text-slate-600 mt-1">Total: {pagignationData?.total} items</p>
+                        <p className="text-slate-600 mt-1">Filtered: {pagignationData?.totalFiltered} items</p>
+                        
                     </div>
+                    {/* Filters Section */}
+                    <div className="flex flex-col sm:flex-row gap-4 p-6 border-b border-red-100 bg-red-50/30">
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Item Type</label>
+                            <select
+                                value={itemType}
+                                onChange={(e) => {
+                                    setItemType(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-500"
+                            >
+                                <option value="">All</option>
+                                <option value="Donation">Donation</option>
+                                <option value="Component">Component</option>
+                            </select>
+                        </div>
+
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Site</label>
+                            <select
+                                value={siteId}
+                                onChange={(e) => {
+                                    setSiteId(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-500"
+                            >
+                                <option value="">All</option>
+                            </select>
+                        </div>
+
+
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Sort By</label>
+                            <select
+                                value={order}
+                                onChange={(e) => {
+                                    setOrder(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-500"
+                            >
+                                <option value="desc">Newest First</option>
+                                <option value="asc">Oldest First</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-end">
+                            <button
+                                onClick={() => {
+                                    setItemType("");
+                                    setSiteId("");
+                                    setOrder("desc");
+                                    setSortBy("discardedAt");
+                                    setCurrentPage(1);
+                                }}
+                                className="bg-gray-100 border border-gray-300 text-slate-700 rounded-md px-4 py-2 hover:bg-gray-200"
+                            >
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+
 
                     {/* Desktop Table */}
                     <div className="hidden md:block overflow-x-auto">
@@ -178,16 +240,21 @@ const ViewDiscarded = ({ onBack }) => {
                             <thead className="bg-red-50">
                                 <tr>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-slate-800">Bag No</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-800">Component No</th>
+                                    <th className="px-6 py-4 text-left text-sm text-wrap font-semibold text-slate-800">Component Type</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-slate-800">Item Type</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-slate-800">Reason</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-slate-800">Discarded Date</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-800">Actions</th>
+                                    <th className="px-6 py-4 text-middle text-sm font-semibold text-slate-800">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-red-100">
-                                {discardedItems.map((item) => (
+                                {discardedItems?.map((item) => (
                                     <tr key={item.id} className="hover:bg-red-50/50 transition-colors">
                                         <td className="px-6 py-4 text-sm font-medium text-slate-800">{item.bagNo}</td>
+                                        <td className="px-6 py-4 text-sm font-medium text-slate-800">{item?.componentId}</td>
+                                        <td className="px-6 py-4 text-sm font-medium text-slate-800">{item?.componentType}</td>
+
                                         <td className="px-6 py-4 text-sm text-slate-600">
                                             <span
                                                 className={`px-2 py-1 rounded-full text-xs font-medium ${item.itemType === "Donation" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
@@ -217,13 +284,13 @@ const ViewDiscarded = ({ onBack }) => {
                                                     <Edit className="w-4 h-4" />
                                                 </Button>
                                                 <div className="relative">
-                                                    <button
+                                                    {/* <button
                                                         onClick={() => handleDelete(item)}
                                                         className="text-red-600 hover:text-red-900 p-1 rounded"
                                                         title="Delete"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                                    </button> */}
                                                     {deleteConfirm.show && deleteConfirm.item?.id === item.id && (
                                                         <div className="absolute top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-3 z-10 min-w-48">
                                                             <p className="text-sm text-gray-700 mb-3">Do you want to Delete it?</p>
@@ -250,6 +317,52 @@ const ViewDiscarded = ({ onBack }) => {
                                 ))}
                             </tbody>
                         </table>
+                        {/* Pagination Controls */}
+                        <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-red-100 text-sm">
+                            <div className="flex items-center gap-2">
+                                <span>Rows per page:</span>
+                                <select
+                                    value={rowsPerPage}
+                                    onChange={handleRowsPerPageChange}
+                                    className="border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-red-500"
+                                >
+                                    {[5, 10, 20, 50].map((size) => (
+                                        <option key={size} value={size}>
+                                            {size}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex items-center gap-3 mt-3 sm:mt-0">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className={`px-3 py-1 rounded-md ${currentPage === 1
+                                        ? "text-gray-400 cursor-not-allowed"
+                                        : "text-red-600 hover:bg-red-50"
+                                        }`}
+                                >
+                                    Previous
+                                </button>
+
+                                <span className="text-slate-700">
+                                    Page {currentPage} of {totalPages || 1}
+                                </span>
+
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                    className={`px-3 py-1 rounded-md ${currentPage === totalPages || totalPages === 0
+                                        ? "text-gray-400 cursor-not-allowed"
+                                        : "text-red-600 hover:bg-red-50"
+                                        }`}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+
                     </div>
 
                     {/* Mobile Cards */}
@@ -404,93 +517,116 @@ const ViewDiscarded = ({ onBack }) => {
                                     {showBagDetails ? "Hide Bag Details" : "View Bag Details"}
                                 </Button>
                                 {showBagDetails && (
-                                    //                             segmentId: "SEG123456",
-                                    // collectionDate: "2024-01-10",
-                                    // expiryDate: "2024-02-10",
-                                    // initialVitals: { hb: 13.5, weightKg: 70, pulse: 72, tempC: 36.6, bp: "120/80" },
-                                    // status: "Discarded",
                                     <div className="mt-4 max-h-64 overflow-y-auto bg-slate-50 rounded-lg border border-slate-200">
                                         <div className="p-4 space-y-4">
-                                            <h4 className="font-semibold text-slate-800 border-b border-slate-300 pb-2">Bag Information</h4>
+                                            {/* Bag Information */}
+                                            <h4 className="font-semibold text-slate-800 border-b border-slate-300 pb-2">
+                                                Bag Information
+                                            </h4>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                                                 <div>
+                                                    <span className="font-medium text-slate-600">Bag Number:</span>
+                                                    <div className="text-slate-800">{selectedItem.bagNo}</div>
+                                                </div>
+                                                <div>
                                                     <span className="font-medium text-slate-600">Segment ID:</span>
-                                                    <div className="text-slate-800">{mockDonorData.segmentId}</div>
+                                                    <div className="text-slate-800">{selectedItem.segmentId}</div>
                                                 </div>
                                                 <div>
                                                     <span className="font-medium text-slate-600">Collection Date:</span>
-                                                    <div className="text-slate-800">{mockDonorData.collectionDate}</div>
+                                                    <div className="text-slate-800">{selectedItem.collectionDate}</div>
                                                 </div>
                                                 <div>
                                                     <span className="font-medium text-slate-600">Expiry Date:</span>
-                                                    <div className="text-slate-800">{mockDonorData.expiryDate}</div>
+                                                    <div className="text-slate-800">{selectedItem.expiryDate}</div>
                                                 </div>
                                                 <div>
                                                     <span className="font-medium text-slate-600">Status:</span>
-                                                    <div className="text-slate-800">{mockDonorData.status}</div>
+                                                    <div className="text-slate-800">{selectedItem.status}</div>
                                                 </div>
                                                 <div>
                                                     <span className="font-medium text-slate-600">Initial Vitals:</span>
-                                                    <div className="text-slate-800">BP: {mockDonorData.initialVitals.bp}, HB: {mockDonorData.initialVitals.hb}, Weight: {mockDonorData.initialVitals.weightKg}kg, Pulse:{mockDonorData.initialVitals.pulse}BPM, Temp: {mockDonorData.initialVitals.tempC}°C</div>
+                                                    <div className="text-slate-800">
+                                                        BP: {selectedItem.initialVitals?.bp}, HB: {selectedItem.initialVitals?.hb},
+                                                        Weight: {selectedItem.initialVitals?.weightKg}kg, Pulse: {selectedItem.initialVitals?.pulse}BPM,
+                                                        Temp: {selectedItem.initialVitals?.tempC}°C
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <h4 className="font-semibold text-slate-800 border-b border-slate-300 pb-2">Donor Information</h4>
+                                            {/* Donor Information */}
+                                            <h4 className="font-semibold text-slate-800 border-b border-slate-300 pb-2 mt-4">
+                                                Donor Information
+                                            </h4>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                                                 <div>
                                                     <span className="font-medium text-slate-600">Donor ID:</span>
-                                                    <div className="text-slate-800">{mockDonorData.donorId}</div>
-                                                </div>
-                                                <div>
-                                                    <span className="font-medium text-slate-600">UID:</span>
-                                                    <div className="text-slate-800">{mockDonorData.uid}</div>
+                                                    <div className="text-slate-800">{selectedItem.donorId}</div>
                                                 </div>
                                                 <div>
                                                     <span className="font-medium text-slate-600">First Name:</span>
-                                                    <div className="text-slate-800">{mockDonorData.firstName}</div>
+                                                    <div className="text-slate-800">{selectedItem.firstName}</div>
                                                 </div>
-                                                <div>
-                                                    <span className="font-medium text-slate-600">Middle Name:</span>
-                                                    <div className="text-slate-800">{mockDonorData.middleName}</div>
-                                                </div>
+                                                {selectedItem.middleName && (
+                                                    <div>
+                                                        <span className="font-medium text-slate-600">Middle Name:</span>
+                                                        <div className="text-slate-800">{selectedItem.middleName}</div>
+                                                    </div>
+                                                )}
                                                 <div>
                                                     <span className="font-medium text-slate-600">Last Name:</span>
-                                                    <div className="text-slate-800">{mockDonorData.lastName}</div>
+                                                    <div className="text-slate-800">{selectedItem.lastName}</div>
                                                 </div>
                                                 <div>
-                                                    <span className="font-medium text-slate-600">Date of Birth:</span>
-                                                    <div className="text-slate-800">{mockDonorData.dob}</div>
+                                                    <span className="font-medium text-slate-600">DOB:</span>
+                                                    <div className="text-slate-800">{selectedItem.dob}</div>
                                                 </div>
                                                 <div>
                                                     <span className="font-medium text-slate-600">Sex:</span>
-                                                    <div className="text-slate-800">{mockDonorData.sex}</div>
+                                                    <div className="text-slate-800">{selectedItem.sex}</div>
                                                 </div>
                                                 <div>
                                                     <span className="font-medium text-slate-600">Phone:</span>
-                                                    <div className="text-slate-800">{mockDonorData.phone}</div>
+                                                    <div className="text-slate-800">{selectedItem.phone}</div>
                                                 </div>
                                                 <div>
                                                     <span className="font-medium text-slate-600">Email:</span>
-                                                    <div className="text-slate-800">{mockDonorData.email}</div>
+                                                    <div className="text-slate-800">{selectedItem.email}</div>
                                                 </div>
                                                 <div>
                                                     <span className="font-medium text-slate-600">Blood Group:</span>
-                                                    <div className="text-slate-800">{mockDonorData.bloodGroup}</div>
+                                                    <div className="text-slate-800">{selectedItem.bloodGroup}</div>
                                                 </div>
                                                 <div>
                                                     <span className="font-medium text-slate-600">RH Factor:</span>
-                                                    <div className="text-slate-800">{mockDonorData.rh}</div>
+                                                    <div className="text-slate-800">{selectedItem.rh}</div>
                                                 </div>
                                             </div>
-                                            <div className="pt-2 border-t border-slate-300">
-                                                <span className="font-medium text-slate-600">Test Results:</span>
-                                                <div className="text-slate-800 mt-1 p-2 bg-green-50 rounded border border-green-200">
-                                                    {mockDonorData.testResults}
-                                                </div>
-                                            </div>
+
+                                            {/* Component Information */}
+                                            {selectedItem.componentType && (
+                                                <>
+                                                    <h4 className="font-semibold text-slate-800 border-b border-slate-300 pb-2 mt-4">
+                                                        Component Information
+                                                    </h4>
+                                                    <div className="text-sm text-slate-800">
+                                                        <div>
+                                                            <span className="font-medium text-slate-600">Component Type:</span>{" "}
+                                                            {selectedItem.componentType}
+                                                        </div>
+                                                        <div className="mt-1">
+                                                            <span className="font-medium text-slate-600">Test Results:</span>
+                                                            <div className="mt-1 p-2 bg-green-50 rounded border border-green-200">
+                                                                {selectedItem.testResults}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 )}
+
                             </div>
                         </div>
                     </div>

@@ -122,13 +122,14 @@ async function generateDiscardPDF({ reportDir, title, subtitle, summaryRows = []
   doc.moveDown(0.8);
 
   const detailCols = [
-    { label: 'S.No', width: 50 },
-    { label: 'Bag No', width: 100 },
-    { label: 'Component Type', width: 120 },
-    { label: 'Blood Group', width: 80 },
+    { label: 'S.No', width: 40 },
+    { label: 'Bag No', width: 90 },
+    { label: 'Component ID', width: 110 },
+    { label: 'Component Type', width: 110 },
+    { label: 'Blood Group', width: 70 },
     { label: 'Rh', width: 40 },
-    { label: 'Expiry Date', width: 100 },
-    { label: 'Site', width: 120 },
+    { label: 'Expiry Date', width: 90 },
+    { label: 'Site', width: 110 },
     { label: 'Reason', width: 120 },
   ];
 
@@ -158,6 +159,7 @@ async function generateDiscardPDF({ reportDir, title, subtitle, summaryRows = []
       const vals = [
         idx + 1,
         d.bagNo || '-',
+        d.componentId || '-',  
         d.componentType || '-',
         d.bloodGroup || '-',
         d.rh || '-',

@@ -126,10 +126,12 @@ const updateSerologyResults = async (req, res, next) => {
                     {
                         itemType: "Component",
                         bagNo: bagId,
+                        componentId: component._id, 
                         reason: "Serology positive",
                         discardedAt: now,
                         siteId,
                         updatedBy,
+                        isAutoDiscarded: false, 
                     },
                 ],
                 { session }

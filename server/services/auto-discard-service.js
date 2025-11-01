@@ -101,10 +101,14 @@ async function autoDiscardAndReport() {
     const discardRecords = expiredComponents.map(c => ({
       itemType: 'Component',
       bagNo: c.donationId?._id || null,
+      componentId: c._id, // ✅ new field
       reason: 'Auto Expired',
       discardedAt: now,
       siteId: c.siteId?._id || null,
-      updatedBy: SYSTEM_USER_ID ? new mongoose.Types.ObjectId(SYSTEM_USER_ID) : '68acce6acb0096e64764d7d6', // if schema requires updatedBy, ensure env set
+      updatedBy: SYSTEM_USER_ID
+        ? new mongoose.Types.ObjectId(SYSTEM_USER_ID)
+        : new mongoose.Types.ObjectId('68acce6acb0096e64764d7d6'),
+      isAutoDiscarded: true, // ✅ new field
       createdAt: now
     }));
 
@@ -117,6 +121,7 @@ async function autoDiscardAndReport() {
     // insertMany ordered:false so single invalid doc doesn't stop all (but here we filtered invalids)
     if (validDiscardRecords.length) {
       await DiscardLog.insertMany(validDiscardRecords, { session, ordered: false });
+      logger.info(`[Discard] Logged ${validDiscardRecords.length} auto-discard entries.`);
     }
 
     // 4) Update bag statuses if all components are discarded
@@ -140,6 +145,7 @@ async function autoDiscardAndReport() {
       const summary = buildSummary(expiredComponents);
       const detailRows = expiredComponents.map(e => ({
         bagNo: e.donationId?.bagNo || 'Unknown',
+        componentId: e.componentId || '-', // ✅ Added component ID
         componentType: e.componentType,
         bloodGroup: e.donationId?.bloodGroup || 'Unknown',
         rh: e.donationId?.rh || 'Unknown',

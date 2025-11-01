@@ -11,7 +11,7 @@ import CampRegisteration from './page/dashboard/Camp-Registeration';
 import CampListing from './page/dashboard/Camp-Listing';
 import CampDetails from './page/camp/CampDetails';
 import { ComponentsList, ComponentSeparate, NearExpiry } from './page/component-separate';
-import ViewDiscarded from './components/camp/View-Discarded';
+import ViewDiscarded from './components/discard/View-Discarded';
 import ViewStock from './components/Inventory/Stock-View';
 import DonationManagement from './page/donation/DonationManagement';
 import DonorManagement from './page/donor/DonorManagement';
