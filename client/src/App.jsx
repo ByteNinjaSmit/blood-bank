@@ -27,6 +27,7 @@ import ScrollToTop from './page/dashboard/layout/ScrollToTop';
 import Loader from './components/utils/Spinner';
 import { useAuth } from './store/auth';
 import CreateDonation from './components/camp/Create-Donation';
+import UserManage from './page/user-manage/UserManage';
 
 
 const App = () => {
@@ -87,6 +88,9 @@ const App = () => {
           {/* Donor Module */}
           <Route path="/donor/create-donor" element={<DonorManagement />} />
           <Route path="/donor/view-donor" element={<DonorManagement />} />
+
+          {/* Admin Module */}
+          <Route path="/admin/user-manage" element={<UserManage />} />
 
 
           {/*For Dashboard - Loading*/}

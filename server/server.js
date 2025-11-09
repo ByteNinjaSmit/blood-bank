@@ -46,6 +46,7 @@ const userRoutes = require("./routers/user-routes");
 const discardRoutes = require("./routers/discard-routes");
 const labRoutes = require('./routers/lab-routes');
 const testRoutes = require('./routers/test-routes');
+const adminRoutes = require('./routers/admin-routes');
 
 
 // Server Setup
@@ -219,6 +220,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/discard",discardRoutes);
 app.use('/api/sernology',labRoutes);
 app.use("/api/test",testRoutes);
+app.use('/api/admin', adminRoutes);
 
 
 

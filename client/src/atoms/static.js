@@ -10,6 +10,7 @@ export const ModuleArray = [
   "Discard",
   "Queue",
   "Report",
+  "Admin",
   "Site"
 ];
 

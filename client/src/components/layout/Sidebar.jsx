@@ -43,6 +43,22 @@ import { MdDelete } from "react-icons/md";
 import { FaUsersCog } from "react-icons/fa";
 
 const MODULES = [
+    {
+    id: "admin",
+    name: "Admin",
+    icon: <Shield className="w-5 h-5" />,
+    permissions: ["admin"],
+    subModules: [
+      {
+        name: "User Manage",
+        href: "/admin/user-manage",
+        permissions: ["admin"],
+        description: "Manage users, roles, and permissions",
+        icon: <Users className="w-5 h-5" />,
+      }
+    ],
+    description: "Administration",
+  },
   {
     id: "requisition",
     name: "Requisition",
@@ -273,6 +289,7 @@ const MODULES = [
     ],
     description: "Analytics and reporting",
   },
+
 ];
 
 // Access helper wrappers around user.permissions
