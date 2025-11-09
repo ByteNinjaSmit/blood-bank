@@ -54,10 +54,15 @@ const UserSchema = new Schema({
     enum: ["active", "inactive"],
     default: "active",
   },
-  permissions: {
-    type: [String],
-    default: [],
-  },
+  permissions: [
+    {
+      moduleName: { type: String, required: true },
+      view: { type: Boolean, default: false },
+      create: { type: Boolean, default: false },
+      update: { type: Boolean, default: false },
+      delete: { type: Boolean, default: false },
+    },
+  ],
   siteId: {
     type: Types.ObjectId,
     ref: "Site",

@@ -126,6 +126,7 @@ const loginUser = async (req, res, next) => {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        permissions: user.permissions || [],
       },
       accessToken,
       expiresIn: authService.ACCESS_TTL,
