@@ -15,18 +15,19 @@ const authMiddleware = require('../middlewares/auth-middleware');
 router.use(authMiddleware);
 
 // List inventory items with filters
-router.get('/', inventoryController.listInventory);
+router.route('/').get(authMiddleware,inventoryController.listInventory)
 
 // Get near-expiry inventory items
-router.get('/near-expiry', inventoryController.getNearExpiryInventory);
+router.route('/near-expiry').get(authMiddleware,inventoryController.getNearExpiryInventory)
 
 // Reserve inventory items for a hospital request
-router.post('/reserve', inventoryController.reserveInventory);
+router.route('/reserve').post(authMiddleware,inventoryController.reserveInventory);
+
 
 // Issue reserved inventory
-router.post('/issue', inventoryController.issueInventory);
+router.route('/issue').post(authMiddleware,inventoryController.issueInventory)
 
 // Discard inventory items
-router.post('/discard', inventoryController.discardInventory);
+router.post('/discard',authMiddleware,inventoryController.discardInventory);
 
 module.exports = router;

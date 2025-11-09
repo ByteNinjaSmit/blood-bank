@@ -76,7 +76,7 @@ const BloodBagSchema = new Schema({
       "collected",
       "component-separated",
       "testing",
-      "passed",
+      "passed", // After the all test successfully passed means  in stock
       "failed",
       "quarantined",
       "issued",
@@ -120,6 +120,29 @@ const BloodBagSchema = new Schema({
     ref: "User",
     required: true,
   },
+  testResults: [
+    {
+      test: {
+        type: String,
+        enum: ["HIV", "HBsAg", "HCV", "VDRL", "MP", "NA"],
+        // required: true
+      },
+      result: {
+        type: String,
+        enum: ["Positive", "Negative", "Indeterminate"],
+        // required: true
+      },
+      testedAt: {
+        type: Date,
+        // required: true
+      },
+      technicianId: {
+        type: Types.ObjectId,
+        ref: "User",
+        // required: true
+      },
+    },
+  ],
 });
 
 // Auto-update updatedAt before save

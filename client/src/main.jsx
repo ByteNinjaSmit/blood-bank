@@ -6,7 +6,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { AuthProvider } from './store/auth';
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+  // <React.StrictMode>
         <AuthProvider>
 
     <BrowserRouter>
@@ -66,5 +66,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <App />
     </BrowserRouter>
         </AuthProvider>
-  </React.StrictMode>,
+  // </React.StrictMode>,
 )

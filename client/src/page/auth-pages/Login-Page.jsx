@@ -21,7 +21,7 @@ import { toast } from "sonner"
 
 export default function BloodBankDoctorLoginPage() {
   const navigate = useNavigate();
-  const { API, storeTokenInCookies, isLoggedIn, isLoading } = useAuth();
+  const { API, isLoggedIn, login } = useAuth();
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     username: "",
@@ -45,27 +45,21 @@ export default function BloodBankDoctorLoginPage() {
     e.preventDefault()
     console.log("Blood bank doctor login:", formData)
     try {
-      const response = await axios.post(`${API}/api/auth/login`, {
-        email: formData.username,
-        password: formData.password,
-      });
-      if (response.status === 200) {
-        const data = response.data;
-        storeTokenInCookies(data.token);
-        navigate("/");
-        toast.success(data.message || "Login successful");
-      }
+      const data = await login(formData.username, formData.password);
+      navigate("/");
+      toast.success("Login successful");
     } catch (error) {
-      toast.error(error.response.data.message || "Login failed. Please try again.");
+      const message = error?.response?.data?.message || "Login failed. Please try again.";
+      toast.error(message);
     } finally {
       setIsLoginLoading(false);
     }
   };
-
-
-      if (isLoggedIn) {
-        navigate('/');
-      }
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate('/');
+    }
+  }, [isLoggedIn, navigate]);
 
 
 

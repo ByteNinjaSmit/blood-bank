@@ -17,6 +17,10 @@ const InventorySchema = new Schema({
     enum: ['in-stock', 'reserved', 'issued', 'discarded'],
     required: true
   },
+   inStockDate: {
+        type: Date,
+        required:true,
+   },
   reservedFor: {
     type: Types.ObjectId,
     ref: 'HospitalRequest'
@@ -24,7 +28,14 @@ const InventorySchema = new Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+    createdBy: {
+    type: Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+},{
+  timestamps:true,
 });
 
 const Inventory = mongoose.model('Inventory', InventorySchema);

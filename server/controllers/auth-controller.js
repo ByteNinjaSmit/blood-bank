@@ -10,6 +10,8 @@ GET /CURRENT-USER  For Verifying and Getting Data
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/user-model"); // Mongoose User model
+const RefreshToken = require("../models/refresh-token-model");
+const authService = require("../services/auth-service");
 
 const registerUser = async (req, res, next) => {
   try {
@@ -107,14 +109,15 @@ const loginUser = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Step 5: Generate a JWT token
-    const token = await user.generateToken();
+    // Step 5: Generate tokens
+    const { accessToken, refreshToken } = await authService.generateTokenPair(user, req.ip);
 
     // Step 6: Update the last login time
     user.lastLoginAt = new Date();
     await user.save();
 
-    // Step 7: Send the response with user data (excluding password) and the token
+    // Step 7: Set refresh cookie and return access token
+    authService.setRefreshCookie(res, refreshToken);
     return res.status(200).json({
       user: {
         userId: user._id,
@@ -124,7 +127,8 @@ const loginUser = async (req, res, next) => {
         phone: user.phone,
         role: user.role,
       },
-      token,
+      accessToken,
+      expiresIn: authService.ACCESS_TTL,
     });
   } catch (error) {
     next(error);
@@ -137,16 +141,10 @@ const loginUser = async (req, res, next) => {
 
 const getCurrentUser = async (req, res, next) => {
   try {
-    const token = req.cookies?.authToken;
-
-    if (!token) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized: No token provided" });
-    }
-
-    // Verify and decode token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    const auth = req.header("Authorization");
+    if (!auth) return res.status(401).json({ message: "Unauthorized" });
+    const jwtToken = auth.replace("Bearer", "").trim();
+    const decoded = jwt.verify(jwtToken, process.env.JWT_SECRET_KEY);
     const { userID } = decoded;
 
     // Fetch user
@@ -166,8 +164,45 @@ const getCurrentUser = async (req, res, next) => {
   }
 };
 
+const refreshToken = async (req, res, next) => {
+  try {
+    const tokenCookie = req.cookies?.refreshToken;
+    if (!tokenCookie) return res.status(401).json({ message: "Unauthorized" });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(tokenCookie, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET_KEY);
+    } catch (e) {
+      return res.status(401).json({ message: "Invalid refresh token" });
+    }
+
+    const user = await User.findById(decoded.userID);
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+    const newRefresh = await authService.rotateRefreshToken(tokenCookie, user._id, req.ip);
+    const accessToken = authService.signAccessToken({ userID: user._id.toString(), email: user.email, role: user.role });
+    authService.setRefreshCookie(res, newRefresh);
+    return res.status(200).json({ accessToken, expiresIn: authService.ACCESS_TTL });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const logout = async (req, res, next) => {
+  try {
+    const tokenCookie = req.cookies?.refreshToken;
+    if (tokenCookie) await authService.revokeRefreshToken(tokenCookie, req.ip);
+    authService.clearRefreshCookie(res);
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   loginUser,
   registerUser,
   getCurrentUser,
+  refreshToken,
+  logout,
 };

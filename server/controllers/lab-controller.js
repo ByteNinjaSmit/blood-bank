@@ -7,48 +7,51 @@ PUT /lab/:donationId/approve – Mark donation as passed
 
 const Component = require("../models/component-model");
 const BloodBag = require("../models/bloodbag-model");
+const Inventory = require("../models/inventory-model")
 const mongoose = require("mongoose");
 const logger = require("../utils/logger");
 
-const getSerologyComponents = async (req, res, next) => {
+// GET finalized/recorded serology results
+const getSerologyResults = async (req, res, next) => {
     try {
-        // Pagination setup
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        logger.info(`Fetching serology components — Page: ${page}, Limit: ${limit}`);
+        const { status, siteId, search, sortBy = "updatedAt", order = "desc" } = req.query;
 
-        // Define valid bag statuses for serology phase
-        const validBagStatuses = ["component-separated", "testing", "failed"];
+        // Exclude statuses: collected, component-separated, testing
+        const baseFilter = {
+            status: { $nin: ["collected", "component-separated", "testing"] }
+        };
 
-        // Step 1: Count total components under serology testing
-        const total = await Component.countDocuments({ status: "lab-testing" });
+        if (status) {
+            baseFilter.status = status; // override to exact match if provided
+        }
+        if (siteId) {
+            baseFilter.siteId = siteId;
+        }
+        if (search) {
+            baseFilter.bagNo = { $regex: search, $options: "i" };
+        }
 
-        logger.debug(`Total components under lab-testing: ${total}`);
+        const sort = { [sortBy]: order === "asc" ? 1 : -1 };
 
-        // Step 2: Fetch paginated components with valid bag references
-        const components = await Component.find({ status: "lab-testing" })
-            .populate({
-                path: "donationId", // ✅ Correct path (not bagId)
-                match: { status: { $in: validBagStatuses } },
-                select: "bagNo bloodGroup rh status",
-            })
+        const total = await BloodBag.countDocuments(baseFilter);
+        const bags = await BloodBag.find(baseFilter)
+            .select(
+                "bagNo segmentNo collectionDate expiryDate initialVitals bloodGroup rh status testResults siteId updatedAt"
+            )
+            .populate("siteId", "name")
+            .sort(sort)
             .skip(skip)
             .limit(limit)
             .lean();
 
-        // Step 3: Filter components whose bags matched
-        const validComponents = components.filter((c) => c.donationId);
-
-        logger.info(`Fetched ${validComponents.length} valid components for serology testing`);
-
-        // Step 4: Send structured response
         return res.status(200).json({
             success: true,
-            message: "Serology components fetched successfully",
-            count: validComponents.length,
-            components: validComponents,
+            message: "Serology results fetched successfully",
+            data: bags,
             pagination: {
                 total,
                 page,
@@ -57,141 +60,228 @@ const getSerologyComponents = async (req, res, next) => {
             },
         });
     } catch (error) {
-        logger.error("Error fetching serology components", { error: error.message, stack: error.stack });
+        logger.error("Error fetching serology results", {
+            error: error.message,
+            stack: error.stack,
+        });
+        next(error);
+    }
+};
+
+const getSerologyComponents = async (req, res, next) => {
+    try {
+        // Pagination
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const { search, siteId, sortBy = "collectionDate", order = "desc" } = req.query;
+
+        logger.info(`Fetching serology bags — Page: ${page}, Limit: ${limit}`);
+
+        // Bags eligible for serology
+        const validBagStatuses = ["component-separated", "testing", "failed"];
+
+        const filter = { status: { $in: validBagStatuses } };
+        if (siteId) filter.siteId = siteId;
+        if (search) filter.bagNo = { $regex: search, $options: "i" };
+
+        const sort = { [sortBy]: order === "asc" ? 1 : -1 };
+
+        // Count total bags
+        const total = await BloodBag.countDocuments(filter);
+
+        // Fetch bags
+        const bags = await BloodBag.find(filter)
+            .select(
+                "bagNo segmentNo collectionDate expiryDate initialVitals bloodGroup rh status testResults siteId"
+            )
+            .populate("siteId", "name")
+            .sort(sort)
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        logger.info(`Fetched ${bags.length} bags for serology testing`);
+
+        return res.status(200).json({
+            success: true,
+            message: "Serology bags fetched successfully",
+            data: bags,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            },
+        });
+
+    } catch (error) {
+        logger.error("Error fetching serology bags", {
+            error: error.message,
+            stack: error.stack
+        });
         next(error);
     }
 };
 
 /**
- * Update serology test results for a single component.
- * Automatically adjusts inventory and recalculates parent bag status.
+ * Update serology test results for a BloodBag.
+ * Component test results are removed from model.
+ * Bag decides all components' future.
  */
 const updateSerologyResults = async (req, res, next) => {
-    const session = await Component.startSession();
+    const session = await BloodBag.startSession();
     session.startTransaction();
 
     try {
-        const { componentId } = req.params;
+        const { bagId } = req.params;
         const { testResults, technicianId, siteId, updatedBy } = req.body;
 
-        // --- Validation ---
-        if (!componentId) throw new Error("Component ID is required.");
+        // VALIDATION
+        if (!bagId) throw new Error("Bag ID is required.");
         if (!Array.isArray(testResults) || testResults.length === 0)
             throw new Error("At least one test result is required.");
         if (!technicianId) throw new Error("Technician ID is required.");
 
-        logger.info(`🔬 Starting serology update for component ${componentId}`);
+        logger.info(`🔬 Starting serology update for bag ${bagId}`);
 
-        // --- Fetch component and its bag ---
-        const component = await Component.findById(componentId).session(session);
-        if (!component) throw new Error("Component not found.");
-
-        const bagId = component.donationId;
-        if (!bagId) throw new Error("Component is missing parent BloodBag reference.");
-
+        // FETCH BAG
         const bag = await BloodBag.findById(bagId).session(session);
-        if (!bag) throw new Error("Associated BloodBag not found.");
+        if (!bag) throw new Error("BloodBag not found.");
 
-        // --- Prevent reprocessing if already finalized ---
-        if (["in-stock", "discarded", "issued"].includes(component.status)) {
-            logger.warn(`Component ${componentId} already finalized; skipping update.`);
+        // FETCH ALL components of bag
+        const components = await Component.find({ donationId: bagId }).session(session);
+
+        if (components.length === 0)
+            throw new Error("Bag has no separated components.");
+
+        // Prevent reprocessing
+        if (["passed", "discarded"].includes(bag.status)) {
             return res.status(400).json({
                 success: false,
-                message: "Component already finalized; cannot modify serology results.",
+                message: "Bag already finalized; cannot modify serology results.",
             });
         }
 
-        // --- Attach test metadata ---
         const now = new Date();
-        component.testResults = testResults.map((t) => ({
+
+        // SAVE test results into BAG
+        bag.testResults = testResults.map(t => ({
             test: t.test,
             result: t.result,
             testedAt: now,
-            technicianId,
+            technicianId
         }));
-        component.updatedAt = now;
-        component.updatedBy = updatedBy;
+        bag.updatedAt = now;
+        bag.updatedBy = updatedBy;
 
-        // --- Determine component-level status ---
-        const anyPositive = testResults.some((t) => t.result === "Positive");
-        const allNegative = testResults.every((t) => t.result === "Negative");
+        const anyPositive = testResults.some(t => t.result === "Positive");
+        const allNegative = testResults.every(t => t.result === "Negative");
+
+        let newBagStatus = "testing";
 
         if (anyPositive) {
-            // ❌ Positive result → Discard
-            component.status = "discarded";
-            await component.save({ session });
-
-            await DiscardLog.create(
-                [
-                    {
-                        itemType: "Component",
-                        bagNo: bagId,
-                        componentId: component._id, 
-                        reason: "Serology positive",
-                        discardedAt: now,
-                        siteId,
-                        updatedBy,
-                        isAutoDiscarded: false, 
-                    },
-                ],
-                { session }
-            );
-
-            // Remove from inventory if present
-            await Inventory.deleteOne({ componentId: component._id }).session(session);
-            logger.warn(`Component ${componentId} discarded due to positive test.`);
-        } else if (allNegative) {
-            // ✅ All Negative → In Stock
-            component.status = "in-stock";
-            await component.save({ session });
-
-            const existing = await Inventory.findOne({ componentId: component._id }).session(session);
-            if (!existing) {
-                await Inventory.create(
-                    [
-                        {
-                            componentId: component._id,
-                            bagNo: bagId,
-                            status: "in-stock",
-                            createdAt: now,
-                        },
-                    ],
-                    { session }
-                );
-                logger.info(`Component ${componentId} added to inventory.`);
-            } else {
-                logger.debug(`Inventory already exists for component ${componentId}, skipping creation.`);
-            }
-        } else {
-            // ⚠️ Indeterminate → keep under lab-testing
-            component.status = "lab-testing";
-            await component.save({ session });
-            logger.info(`Component ${componentId} remains in lab-testing.`);
-        }
-
-        // --- Recalculate parent BloodBag status ---
-        const siblingComponents = await Component.find({ donationId: bagId }).session(session);
-        const siblingStatuses = siblingComponents.map((c) => c.status);
-
-        let newBagStatus = "component-separated"; // Default fallback
-
-        if (siblingStatuses.includes("lab-testing")) {
-            newBagStatus = "testing";
-        } else if (siblingStatuses.every((s) => s === "discarded")) {
+            // =====================================================
+            // ❌ CASE 1 — BAG POSITIVE → DISCARD BAG + ALL COMPONENTS
+            // =====================================================
             newBagStatus = "discarded";
-        } else if (siblingStatuses.includes("discarded")) {
-            newBagStatus = "failed";
-        } else if (siblingStatuses.every((s) => ["in-stock", "issued", "reserved"].includes(s))) {
-            newBagStatus = "passed";
-        }
 
-        if (bag.status !== newBagStatus) {
-            await BloodBag.findByIdAndUpdate(
-                bagId,
-                { status: newBagStatus, updatedAt: now, updatedBy },
+            // Update bag
+            bag.status = "discarded";
+            await bag.save({ session });
+
+            // Discard all components
+            await Component.updateMany(
+                { donationId: bagId },
+                {
+                    $set: {
+                        status: "discarded",
+                        updatedAt: now,
+                        updatedBy
+                    }
+                },
                 { session }
             );
-            logger.info(`🩸 BloodBag ${bagId} status updated → ${newBagStatus}`);
+
+            // Remove from inventory
+            await Inventory.deleteMany({ bagNo: bagId }).session(session);
+
+            // Log discard event — BAG
+            await DiscardLog.create([{
+                itemType: "Bag",
+                bagNo: bagId,
+                componentId: null,
+                reason: "Serology positive",
+                discardedAt: now,
+                siteId,
+                updatedBy,
+                isAutoDiscarded: false
+            }], { session });
+
+            // Log discard each component
+            const childLogs = components.map(c => ({
+                itemType: "Component",
+                bagNo: bagId,
+                componentId: c._id,
+                reason: "Parent bag serology positive",
+                discardedAt: now,
+                siteId,
+                updatedBy,
+                isAutoDiscarded: false
+            }));
+
+            await DiscardLog.insertMany(childLogs, { session });
+
+            logger.warn(`🩸 Bag ${bagId} discarded due to positive serology.`);
+        }
+
+        else if (allNegative) {
+            // =====================================================
+            // ✅ CASE 2 — ALL NEGATIVE → BAG PASSED → COMPONENTS IN-STOCK
+            // =====================================================
+            newBagStatus = "passed";
+
+            bag.status = "passed";
+            await bag.save({ session });
+
+            // Update components to in-stock
+            await Component.updateMany(
+                { donationId: bagId },
+                {
+                    $set: {
+                        status: "in-stock",
+                        updatedBy,
+                        updatedAt: now
+                    }
+                },
+                { session }
+            );
+
+            // Add to inventory
+            const inventoryPayload = components.map(c => ({
+                componentId: c._id,
+                bagNo: bagId,
+                status: "in-stock",
+                inStockDate: now,
+                createdAt: now,
+                createdBy: updatedBy
+            }));
+
+            await Inventory.insertMany(inventoryPayload, { session });
+
+            logger.info(`🩸 Bag ${bagId} PASSED serology — components moved to inventory.`);
+        }
+
+        else {
+            // =====================================================
+            // ⚠️ CASE 3 — INDETERMINATE → Keep bag under testing
+            // =====================================================
+            newBagStatus = "testing";
+            bag.status = "testing";
+            await bag.save({ session });
+
+            logger.info(`⚠️ Bag ${bagId} remains in testing due to indeterminate results.`);
         }
 
         await session.commitTransaction();
@@ -201,16 +291,11 @@ const updateSerologyResults = async (req, res, next) => {
             success: true,
             message: "Serology results processed successfully.",
             data: {
-                component: {
-                    id: component._id,
-                    status: component.status,
-                },
-                bag: {
-                    id: bag._id,
-                    status: newBagStatus,
-                },
-            },
+                bagId,
+                newStatus: newBagStatus
+            }
         });
+
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
@@ -224,7 +309,9 @@ const updateSerologyResults = async (req, res, next) => {
     }
 };
 
+
 module.exports = {
     getSerologyComponents,
     updateSerologyResults,
+    getSerologyResults,
 };

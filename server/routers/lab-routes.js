@@ -10,7 +10,8 @@ const authMiddleware = require("../middlewares/auth-middleware");
 
 const labController = require('../controllers/lab-controller');
 
-router.route('/components').get(authMiddleware,labController.getSerologyComponents);
-router.route('/results/:componentId').post(authMiddleware,labController.updateSerologyResults);
+router.route('/bags').get(authMiddleware,labController.getSerologyComponents);
+router.route('/results').get(authMiddleware, labController.getSerologyResults);
+router.route('/results/:bagId').post(authMiddleware,labController.updateSerologyResults);
 
 module.exports = router;

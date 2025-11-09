@@ -11,8 +11,13 @@ import CampRegisteration from './page/dashboard/Camp-Registeration';
 import CampListing from './page/dashboard/Camp-Listing';
 import CampDetails from './page/camp/CampDetails';
 import { ComponentsList, ComponentSeparate, NearExpiry } from './page/component-separate';
+import Serology from './page/Serology/Serology';
+import SerologyResults from './page/Serology/SerologyResults';
 import ViewDiscarded from './components/discard/View-Discarded';
-import ViewStock from './components/Inventory/Stock-View';
+import Stock from './page/Inventory/Stock';
+import Reserve from './page/Inventory/Reserve';
+import Issue from './page/Inventory/Issue';
+import InventoryNearExpiry from './page/Inventory/NearExpiry';
 import DonationManagement from './page/donation/DonationManagement';
 import DonorManagement from './page/donor/DonorManagement';
 import { AuthenticatedRoute } from './components/auth/Authentic-Routes';
@@ -36,9 +41,9 @@ const App = () => {
   return (
     <div>
 
+      <ScrollToTop />
       {/* Conditional Rendering For Navbar */}
       {!NoNavbarRoutes.includes(pathname) && <Navbar />}
-      <ScrollToTop />
       <Routes>
         {/* Auth Routes */}
         <Route path="/register" element={<RegisterPage />} />
@@ -66,7 +71,14 @@ const App = () => {
           <Route path="/component/near-expiry" element={<NearExpiry />} />
           <Route path="/discard" element={<ViewDiscarded />} />
 
-          <Route path="/inventory/stock" element={<ViewStock />} />
+          <Route path="/inventory/stock" element={<Stock />} />
+          <Route path="/inventory/reserve" element={<Reserve />} />
+          <Route path="/inventory/issue" element={<Issue />} />
+          <Route path="/inventory/near-expiry" element={<InventoryNearExpiry />} />
+
+          {/*  Dashboard - Labs Routes */}
+          <Route path="/labs/serology" element={<Serology />} />
+          <Route path="/labs/serology-results" element={<SerologyResults />} />
 
           {/* Donation Module  */}
           <Route path="/donations/create-donation" element={<CreateDonation />} />

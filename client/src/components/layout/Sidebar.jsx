@@ -164,6 +164,22 @@ const MODULES = [
     icon: <FaMicroscope className="w-5 h-5" />,
     href: "/labs",
     permissions: ["read", "admin"],
+    subModules: [
+      {
+        name: "Serology Results",
+        href: "/labs/serology-results",
+        permissions: ["read"],
+        description: "View serology testing results",
+        icon: <FaEye className="w-5 h-5" />,
+      },
+      {
+        name: "Serology",
+        href: "/labs/serology",
+        permissions: ["write", "read"],
+        description: "Enter serology results",
+        icon: <FaMicroscope className="w-5 h-5" />,
+      },
+    ],
     description: "Laboratory testing",
   },
   {
@@ -172,6 +188,12 @@ const MODULES = [
     icon: <FaBoxOpen className="w-5 h-5" />,
     permissions: ["read", "write"],
     subModules: [
+      {
+        name: "Stock",
+        href: "/inventory/stock",
+        permissions: ["read", "write"],
+        description: "Display current stock",
+      },
       {
         name: "Reserve",
         href: "/inventory/reserve",
@@ -183,12 +205,6 @@ const MODULES = [
         href: "/inventory/issue",
         permissions: ["write"],
         description: "Issue blood units",
-      },
-      {
-        name: "Stock",
-        href: "/inventory/stock",
-        permissions: ["read", "write"],
-        description: "Display current stock",
       },
     ],
     description: "Blood stock management",
