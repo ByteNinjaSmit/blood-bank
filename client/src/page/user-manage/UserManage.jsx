@@ -1,31 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Header from "./components/Header";
 import Filters from "./components/Filters";
-import ActionMenu from "./components/ActionMenu";
+import UsersTable from "./components/UsersTable";
+import CreateUserForm from "./components/CreateUserForm";
+import ViewUserModal from "./components/ViewUserModal";
+import Pagination from "./components/Pagination";
+import CustomModal from "@/components/CustomModal";
 import { checkAccess } from "./utils/access";
 import { statusChipClass } from "./utils/ui";
 import axios from "axios";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
 import { ModuleArray, RoleArray } from "@/atoms/static";
-import { 
-  Search as SearchIcon,
-  Plus,
-  Eye,
-  Edit as EditIcon,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  Users as UsersIcon,
-  RefreshCcw,
-  Filter as FilterIcon,
-  Check,
-  XCircle,
-  Ban,
-  PauseCircle,
-  MoreHorizontal,
-  ChevronDown
-} from "lucide-react";
 
 const emptyPerm = () => (
   ModuleArray.map((m) => ({ moduleName: m, view: false, create: false, update: false, delete: false }))
@@ -52,6 +38,8 @@ export default function UserManage() {
   const [editingId, setEditingId] = useState(null);
   const [viewUser, setViewUser] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [confirmModal, setConfirmModal] = useState({ open: false });
 
   // Filters & Pagination
   const [search, setSearch] = useState("");
@@ -68,6 +56,7 @@ export default function UserManage() {
         withCredentials: true,
       });
       setUsers(res.data.data || []);
+      setSelectedIds(new Set());
     } catch (e) {
       toast.error("Failed to load users");
     } finally {
@@ -75,8 +64,7 @@ export default function UserManage() {
     }
   };
 
-  const setStatus = async (id, action, confirmText) => {
-    if (!confirm(confirmText)) return;
+  const setStatus = async (id, action) => {
     try {
       await axios.post(`${API}/api/admin/users/${id}/${action}` , {}, {
         headers: { Authorization: authorizationToken },
@@ -89,16 +77,7 @@ export default function UserManage() {
     }
   };
 
-  const statusChipClass = (status) => {
-    switch (status) {
-      case 'active': return 'bg-green-600';
-      case 'pending': return 'bg-amber-500';
-      case 'blocked': return 'bg-red-600';
-      case 'rejected': return 'bg-rose-600';
-      case 'inactive': return 'bg-slate-500';
-      default: return 'bg-slate-500';
-    }
-  };
+  // using imported statusChipClass from utils/ui
 
   useEffect(() => { loadUsers(); }, [API, authorizationToken]);
 
@@ -127,6 +106,7 @@ export default function UserManage() {
   useEffect(() => {
     // reset to first page when filters change
     setPage(1);
+    setSelectedIds(new Set());
   }, [search, roleFilter, statusFilter, rowsPerPage]);
 
   const { isAdmin, canView, canCreate, canUpdate, canDelete } = checkAccess(user);
@@ -229,7 +209,6 @@ export default function UserManage() {
   };
 
   const onDelete = async (id) => {
-    if (!confirm("Delete this user?")) return;
     try {
       await axios.delete(`${API}/api/admin/users/${id}`, {
         headers: { Authorization: authorizationToken },
@@ -241,6 +220,32 @@ export default function UserManage() {
       toast.error("Delete failed");
     }
   };
+
+  const bulkSetStatus = async (action) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) { toast.error('No users selected'); return; }
+    let ok = 0, fail = 0;
+    for (const id of ids) {
+      try {
+        await axios.post(`${API}/api/admin/users/${id}/${action}`, {}, {
+          headers: { Authorization: authorizationToken },
+          withCredentials: true,
+        });
+        ok++;
+      } catch (_) {
+        fail++;
+      }
+    }
+    if (ok) toast.success(`${action} successful for ${ok}`);
+    if (fail) toast.error(`${action} failed for ${fail}`);
+    loadUsers();
+  };
+
+  const openConfirm = ({ title, description, confirmText = 'Confirm', cancelText = 'Cancel', variant = 'primary', confirmVariant, onConfirm }) => {
+    const v = confirmVariant || variant || 'primary';
+    setConfirmModal({ open: true, title, description, confirmText, cancelText, variant: v, onConfirm });
+  };
+  const closeConfirm = () => setConfirmModal({ open: false });
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -262,236 +267,108 @@ export default function UserManage() {
         RoleArray={RoleArray}
       />
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-        <div className="overflow-x-auto overflow-y-visible relative">
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10">
-              <tr>
-                <th className="px-3 py-2 text-left">Public ID</th>
-                <th className="px-3 py-2 text-left">Name</th>
-                <th className="px-3 py-2 text-left">Email</th>
-                <th className="px-3 py-2 text-left">Phone</th>
-                <th className="px-3 py-2 text-left">Role</th>
-                <th className="px-3 py-2 text-left">Status</th>
-                <th className="px-3 py-2 text-right w-40">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {paginatedUsers.map((u) => (
-                <tr key={u._id} className="hover:bg-slate-50/60">
-                  <td className="px-3 py-2">{u.publicId}</td>
-                  <td className="px-3 py-2">{u?.name?.first} {u?.name?.last}</td>
-                  <td className="px-3 py-2">{u.email}</td>
-                  <td className="px-3 py-2">{u.phone}</td>
-                  <td className="px-3 py-2">
-                    <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 capitalize">
-                      {u.role}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-white capitalize ${statusChipClass(u.status)}`}>
-                      {u.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <ActionMenu
-                      row={u}
-                      openMenuId={openMenuId}
-                      setOpenMenuId={setOpenMenuId}
-                      canView={canView}
-                      canUpdate={canUpdate}
-                      canDelete={canDelete}
-                      onView={(row)=>setViewUser(row)}
-                      onEdit={(row)=>openEdit(row)}
-                      onApprove={(row)=>setStatus(row._id,'approve','Approve this user?')}
-                      onReject={(row)=>setStatus(row._id,'reject','Reject this user?')}
-                      onBlock={(row)=>setStatus(row._id,'block','Block this user? They will be unable to login.')}
-                      onDeactivate={(row)=>setStatus(row._id,'deactivate','Deactivate this user?')}
-                      onDelete={(row)=>onDelete(row._id)}
-                    />
-                  </td>
-                </tr>
-              ))}
-              {paginatedUsers.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-3 py-6 text-center text-slate-500">{loading ? 'Loading...' : 'No users found'}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* Bulk actions */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          className="px-2.5 py-1.5 rounded-md border disabled:opacity-50"
+          disabled={selectedIds.size===0}
+          onClick={()=>openConfirm({
+            title: 'Approve Users',
+            description: `Approve ${selectedIds.size} selected user(s)?`,
+            confirmText: 'Approve',
+            onConfirm: () => { closeConfirm(); bulkSetStatus('approve'); }
+          })}
+        >Approve</button>
+        <button
+          className="px-2.5 py-1.5 rounded-md border disabled:opacity-50"
+          disabled={selectedIds.size===0}
+          onClick={()=>openConfirm({
+            title: 'Reject Users',
+            description: `Reject ${selectedIds.size} selected user(s)?`,
+            confirmText: 'Reject',
+            variant: 'danger',
+            onConfirm: () => { closeConfirm(); bulkSetStatus('reject'); }
+          })}
+        >Reject</button>
+        <button
+          className="px-2.5 py-1.5 rounded-md border disabled:opacity-50"
+          disabled={selectedIds.size===0}
+          onClick={()=>openConfirm({
+            title: 'Block Users',
+            description: `Block ${selectedIds.size} selected user(s)? They will be unable to login.`,
+            confirmText: 'Block',
+            variant: 'danger',
+            onConfirm: () => { closeConfirm(); bulkSetStatus('block'); }
+          })}
+        >Block</button>
+        <button
+          className="px-2.5 py-1.5 rounded-md border disabled:opacity-50"
+          disabled={selectedIds.size===0}
+          onClick={()=>openConfirm({
+            title: 'Deactivate Users',
+            description: `Deactivate ${selectedIds.size} selected user(s)?`,
+            confirmText: 'Deactivate',
+            onConfirm: () => { closeConfirm(); bulkSetStatus('deactivate'); }
+          })}
+        >Deactivate</button>
+        {selectedIds.size > 0 && <span className="text-sm text-slate-500">Selected: {selectedIds.size}</span>}
       </div>
 
-      {/* Pagination Controls */}
-      <div className="mt-3 flex flex-col md:flex-row items-center justify-between gap-3">
-        <div className="text-sm text-slate-600">Page {currentPage} of {totalPages}</div>
-        <div className="flex items-center gap-2">
-          <button
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border disabled:opacity-50"
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={currentPage <= 1}
-          >
-            <ChevronLeft className="w-4 h-4" /> Prev
-          </button>
-          <button
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border disabled:opacity-50"
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage >= totalPages}
-          >
-            Next <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+      <UsersTable
+        users={paginatedUsers}
+        canView={canView}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
+        onView={(row)=>setViewUser(row)}
+        onEdit={(row)=>openEdit(row)}
+        onApprove={(row)=>openConfirm({ title:'Approve User', description:'Approve this user?', confirmText:'Approve', onConfirm:()=>{ closeConfirm(); setStatus(row._id,'approve'); }})}
+        onReject={(row)=>openConfirm({ title:'Reject User', description:'Reject this user?', confirmText:'Reject', confirmVariant:'danger', onConfirm:()=>{ closeConfirm(); setStatus(row._id,'reject'); }})}
+        onBlock={(row)=>openConfirm({ title:'Block User', description:'Block this user? They will be unable to login.', confirmText:'Block', confirmVariant:'danger', onConfirm:()=>{ closeConfirm(); setStatus(row._id,'block'); }})}
+        onDeactivate={(row)=>openConfirm({ title:'Deactivate User', description:'Deactivate this user?', confirmText:'Deactivate', onConfirm:()=>{ closeConfirm(); setStatus(row._id,'deactivate'); }})}
+        onDelete={(row)=>openConfirm({ title:'Delete User', description:'Delete this user?', confirmText:'Delete', confirmVariant:'danger', onConfirm:()=>{ closeConfirm(); onDelete(row._id); }})}
+        openMenuId={openMenuId}
+        setOpenMenuId={setOpenMenuId}
+        selectedIds={selectedIds}
+        setSelectedIds={setSelectedIds}
+        statusChipClass={statusChipClass}
+      />
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPrev={() => setPage(p => Math.max(1, p - 1))}
+        onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+      />
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="p-4 border-b flex justify-between items-center bg-slate-50/60">
-              <div className="font-semibold text-slate-800">{editingId ? 'Edit User' : 'Create User'}</div>
-              <button onClick={() => setShowModal(false)} className="px-2 py-1 rounded-md border hover:bg-slate-50">Close</button>
-            </div>
-            <form onSubmit={onSubmit} className="p-4 md:p-5 space-y-4 max-h-[80vh] overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-xs text-slate-600">Public ID</label>
-                  <input className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={form.publicId} onChange={(e)=>setForm(v=>({...v, publicId:e.target.value}))} />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-600">First Name</label>
-                  <input required className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={form.firstName} onChange={(e)=>setForm(v=>({...v, firstName:e.target.value}))} />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-600">Last Name</label>
-                  <input required className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={form.lastName} onChange={(e)=>setForm(v=>({...v, lastName:e.target.value}))} />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-600">Email</label>
-                  <input type="email" required className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={form.email} onChange={(e)=>setForm(v=>({...v, email:e.target.value}))} />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-600">Phone</label>
-                  <input className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={form.phone} onChange={(e)=>setForm(v=>({...v, phone:e.target.value}))} />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-600">Role</label>
-                  <select className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={form.role} onChange={(e)=>setForm(v=>({...v, role:e.target.value}))}>
-                    {RoleArray.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-slate-600">Status</label>
-                  <select className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300 capitalize" value={form.status} onChange={(e)=>setForm(v=>({...v, status:e.target.value}))}>
-                    <option value="pending">pending</option>
-                    <option value="active">active</option>
-                    <option value="inactive">inactive</option>
-                    <option value="blocked">blocked</option>
-                    <option value="rejected">rejected</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-slate-600">Password {editingId ? '(leave blank to keep unchanged)' : ''}</label>
-                  <input type="password" className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={form.password} onChange={(e)=>setForm(v=>({...v, password:e.target.value}))} />
-                </div>
-              </div>
-
-              <div className="mt-2">
-                <div className="font-medium mb-2 text-slate-800">Permissions</div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm border rounded-lg overflow-hidden">
-                    <thead className="bg-slate-50/80">
-                      <tr>
-                        <th className="px-3 py-2 text-left">Module</th>
-                        <th className="px-3 py-2 text-center">All</th>
-                        <th className="px-3 py-2 text-center">View</th>
-                        <th className="px-3 py-2 text-center">Create</th>
-                        <th className="px-3 py-2 text-center">Update</th>
-                        <th className="px-3 py-2 text-center">Delete</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {form.permissions.map((p) => (
-                        <tr key={p.moduleName} className="hover:bg-slate-50/60">
-                          <td className="px-3 py-2">{p.moduleName}</td>
-                          <td className="px-3 py-2 text-center">
-                            <input type="checkbox" checked={p.view && p.create && p.update && p.delete} onChange={(e)=>setAllForModule(p.moduleName, e.target.checked)} />
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <input type="checkbox" checked={p.view} onChange={(e)=>setPerm(p.moduleName, 'view', e.target.checked)} />
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <input type="checkbox" checked={p.create} onChange={(e)=>setPerm(p.moduleName, 'create', e.target.checked)} />
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <input type="checkbox" checked={p.update} onChange={(e)=>setPerm(p.moduleName, 'update', e.target.checked)} />
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <input type="checkbox" checked={p.delete} onChange={(e)=>setPerm(p.moduleName, 'delete', e.target.checked)} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <button type="button" onClick={()=>setShowModal(false)} className="px-3 py-2 rounded-md border hover:bg-slate-50">Cancel</button>
-                <button disabled={loading} type="submit" className="px-3 py-2 rounded-md bg-red-700 text-white hover:bg-red-800 disabled:opacity-50 shadow-sm">{editingId ? 'Update' : 'Create'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <CreateUserForm
+          form={form}
+          setForm={setForm}
+          editingId={editingId}
+          RoleArray={RoleArray}
+          loading={loading}
+          onSubmit={onSubmit}
+          onCancel={() => setShowModal(false)}
+          setPerm={setPerm}
+          setAllForModule={setAllForModule}
+        />
       )}
 
       {/* View Modal */}
       {viewUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="p-4 border-b flex justify-between items-center bg-slate-50/60">
-              <div className="font-semibold text-slate-800">User Details</div>
-              <button onClick={() => setViewUser(null)} className="px-2 py-1 rounded-md border hover:bg-slate-50">Close</button>
-            </div>
-            <div className="p-4 md:p-5 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div><span className="text-slate-500">Public ID:</span> <span className="font-medium">{viewUser.publicId}</span></div>
-                <div><span className="text-slate-500">Name:</span> <span className="font-medium">{viewUser?.name?.first} {viewUser?.name?.last}</span></div>
-                <div><span className="text-slate-500">Email:</span> <span className="font-medium">{viewUser.email}</span></div>
-                <div><span className="text-slate-500">Phone:</span> <span className="font-medium">{viewUser.phone}</span></div>
-                <div className="capitalize"><span className="text-slate-500">Role:</span> <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 ml-1">{viewUser.role}</span></div>
-                <div className="capitalize"><span className="text-slate-500">Status:</span> <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-white ml-1 ${viewUser.status === 'active' ? 'bg-green-600' : 'bg-slate-500'}`}>{viewUser.status}</span></div>
-                <div><span className="text-slate-500">Last Login:</span> <span className="font-medium">{viewUser.lastLoginAt ? new Date(viewUser.lastLoginAt).toLocaleString() : '-'}</span></div>
-              </div>
-              <div>
-                <div className="font-medium mb-2 text-slate-800">Permissions</div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-xs border rounded-lg overflow-hidden">
-                    <thead className="bg-slate-50/80">
-                      <tr>
-                        <th className="px-2 py-1 text-left">Module</th>
-                        <th className="px-2 py-1 text-center">View</th>
-                        <th className="px-2 py-1 text-center">Create</th>
-                        <th className="px-2 py-1 text-center">Update</th>
-                        <th className="px-2 py-1 text-center">Delete</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {(viewUser.permissions || []).map(p => (
-                        <tr key={p.moduleName} className="hover:bg-slate-50/60">
-                          <td className="px-2 py-1">{p.moduleName}</td>
-                          <td className="px-2 py-1 text-center">{p.view ? '✔' : '—'}</td>
-                          <td className="px-2 py-1 text-center">{p.create ? '✔' : '—'}</td>
-                          <td className="px-2 py-1 text-center">{p.update ? '✔' : '—'}</td>
-                          <td className="px-2 py-1 text-center">{p.delete ? '✔' : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ViewUserModal user={viewUser} onClose={() => setViewUser(null)} />
       )}
+
+      <CustomModal
+        open={!!confirmModal.open}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        confirmVariant={confirmModal.variant}
+        onCancel={closeConfirm}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }

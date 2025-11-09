@@ -110,6 +110,14 @@ UserSchema.pre("save", async function (next) {
     return next();
   }
 
+  // If password already appears to be a bcrypt hash, skip re-hashing
+  // This handles flows where a hashed password is assigned before save (e.g., OTP registration payload)
+  const looksHashed =
+    typeof user.password === "string" && /^(\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53})$/.test(user.password);
+  if (looksHashed) {
+    return next();
+  }
+
   try {
     const saltRound = await bcrypt.genSalt(10);
     const hash_password = await bcrypt.hash(user.password, saltRound);
