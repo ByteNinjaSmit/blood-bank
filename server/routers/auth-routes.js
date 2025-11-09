@@ -11,6 +11,10 @@ const authController = require("../controllers/auth-controller");
 const authMiddleware = require("../middlewares/auth-middleware"); 
 
 router.post("/register", authController.registerUser);
+// Registration OTP endpoints
+router.post("/register/start-otp", authController.startRegisterOtp);
+router.post("/register/verify-otp", authController.verifyRegisterOtp);
+router.post("/register/resend-otp", authController.resendRegisterOtp);
 router.post("/login", authController.loginUser);
 // OTP login endpoints
 router.post("/login/start-otp", authController.startOtpLogin);

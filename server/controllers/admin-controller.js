@@ -5,6 +5,8 @@ const User = require("../models/user-model");
 // Helpers
 // -----------------------------
 const isValidObjectId = (id) => mongoose.isValidObjectId(id);
+const normalizeEmail = (e) => String(e || "").trim().toLowerCase();
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // -----------------------------
 // List Users
@@ -30,8 +32,13 @@ const createUser = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    // Email duplicate
-    if (await User.findOne({ email })) {
+    // Email format + duplicate (case-insensitive)
+    const normEmail = normalizeEmail(email);
+    if (!EMAIL_REGEX.test(normEmail)) {
+      return res.status(400).json({ success: false, message: "Invalid email format" });
+    }
+    const emailExists = await User.findOne({ email: { $regex: `^${normEmail}$`, $options: 'i' } });
+    if (emailExists) {
       return res.status(400).json({ success: false, message: "Email already exists" });
     }
 
@@ -43,7 +50,7 @@ const createUser = async (req, res, next) => {
     const user = new User({
       publicId,
       name: { first: firstName, last: lastName },
-      email,
+      email: normEmail,
       phone,
       role,
       password,
@@ -81,12 +88,19 @@ const updateUser = async (req, res, next) => {
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    // Email already taken by another user
-    if (email && email !== user.email) {
-      if (await User.findOne({ email })) {
-        return res.status(400).json({ success: false, message: "Email already in use" });
+    // Email already taken by another user (case-insensitive)
+    if (typeof email === 'string' && email.trim()) {
+      const normEmail = normalizeEmail(email);
+      if (!EMAIL_REGEX.test(normEmail)) {
+        return res.status(400).json({ success: false, message: "Invalid email format" });
       }
-      user.email = email;
+      if (normEmail !== user.email) {
+        const other = await User.findOne({ email: { $regex: `^${normEmail}$`, $options: 'i' } });
+        if (other && String(other._id) !== String(user._id)) {
+          return res.status(400).json({ success: false, message: "Email already in use" });
+        }
+        user.email = normEmail;
+      }
     }
 
     // Phone check (optional)
@@ -147,3 +161,36 @@ module.exports = {
   updateUser,
   deleteUser,
 };
+
+// -----------------------------
+// Status transitions: approve/reject/block/activate
+// -----------------------------
+const setStatus = async (req, res, next, status) => {
+  try {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid user ID format" });
+    }
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    user.status = status;
+    user.updatedBy = req.user?._id || user.updatedBy;
+    await user.save();
+    const dto = user.toObject();
+    delete dto.password;
+    return res.status(200).json({ success: true, data: dto });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const approveUser = (req, res, next) => setStatus(req, res, next, 'active');
+const rejectUser = (req, res, next) => setStatus(req, res, next, 'rejected');
+const blockUser = (req, res, next) => setStatus(req, res, next, 'blocked');
+const deactivateUser = (req, res, next) => setStatus(req, res, next, 'inactive');
+
+module.exports.approveUser = approveUser;
+module.exports.rejectUser = rejectUser;
+module.exports.blockUser = blockUser;
+module.exports.deactivateUser = deactivateUser;

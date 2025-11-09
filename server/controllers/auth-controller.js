@@ -16,6 +16,7 @@ const LoginOtp = require("../models/login-otp-model");
 const emailOtpQueue = require("../queues/email-otp-queue");
 const logger = require('../utils/logger');
 const authService = require("../services/auth-service");
+const RegistrationOtp = require("../models/registration-otp-model");
 
 const registerUser = async (req, res, next) => {
   try {
@@ -100,11 +101,9 @@ const loginUser = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Step 3: Check if the account is active (optional)
-    if (user.status === "inactive") {
-      return res
-        .status(400)
-        .json({ error: "Account is inactive. Please contact support." });
+    // Step 3: Enforce approval - only active users can login
+    if (user.status !== "active") {
+      return res.status(403).json({ message: "Your account is pending admin approval. Please try again after approval." });
     }
 
     // Step 4: Compare the password
@@ -250,8 +249,8 @@ async function startOtpLogin(req, res, next) {
 
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
-    if (user.status === "inactive") {
-      return res.status(400).json({ error: "Account is inactive. Please contact support." });
+    if (user.status !== "active") {
+      return res.status(403).json({ message: "Your account is pending admin approval. Please try again after approval." });
     }
 
     const ok = await bcrypt.compare(password, user.password);
@@ -374,3 +373,131 @@ async function verifyOtpLogin(req, res, next) {
 module.exports.startOtpLogin = startOtpLogin;
 module.exports.verifyOtpLogin = verifyOtpLogin;
 module.exports.resendOtpLogin = resendOtpLogin;
+
+// ---------------------------
+// Registration via Email OTP
+// ---------------------------
+const REG_OTP_TTL_SECONDS = 300;
+const REG_RESEND_COOLDOWN_SECONDS = 30;
+
+async function startRegisterOtp(req, res, next) {
+  try {
+    const { publicId, firstName, lastName, email, phone, role, password, siteId } = req.body;
+    if (!publicId || !firstName || !lastName || !email || !role || !password) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+    // duplicates
+    if (await User.findOne({ email })) return res.status(400).json({ message: "Email already exists" });
+    if (phone && await User.findOne({ phone })) return res.status(400).json({ message: "Phone number already in use" });
+
+    // create OTP
+    const code = ("000000" + crypto.randomInt(0, 1_000_000)).slice(-6);
+    const codeHash = await bcrypt.hash(code, 10);
+    const txnId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex");
+
+    // hash password for payload storage
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await RegistrationOtp.deleteMany({ email });
+    await RegistrationOtp.create({
+      email,
+      codeHash,
+      expiresAt: new Date(Date.now() + REG_OTP_TTL_SECONDS * 1000),
+      attempts: 0,
+      maxAttempts: 5,
+      lastSentAt: new Date(),
+      txnId,
+      payload: {
+        publicId,
+        firstName,
+        lastName,
+        phone: phone || null,
+        role,
+        passwordHash,
+        createdBy: null,
+        updatedBy: null,
+        siteId: siteId || null,
+        status: 'pending',
+      }
+    });
+
+    await emailOtpQueue.add('send-email-otp', { email, code, txnId, expiresInSeconds: REG_OTP_TTL_SECONDS }, { removeOnComplete: true, attempts: 3, backoff: { type: 'exponential', delay: 10000 } });
+    logger.info({ email, txnId }, '[Auth] Enqueued Registration OTP email');
+
+    return res.status(200).json({ success: true, txnId, email, expiresInSeconds: REG_OTP_TTL_SECONDS, resendCooldownSeconds: REG_RESEND_COOLDOWN_SECONDS });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function resendRegisterOtp(req, res, next) {
+  try {
+    const { email, txnId } = req.body;
+    if (!email || !txnId) return res.status(400).json({ message: "email and txnId are required" });
+    const doc = await RegistrationOtp.findOne({ email, txnId });
+    if (!doc) return res.status(404).json({ message: "OTP session not found" });
+    if (doc.expiresAt < new Date()) return res.status(400).json({ message: "OTP expired. Start again." });
+    const since = (Date.now() - new Date(doc.lastSentAt).getTime()) / 1000;
+    if (since < REG_RESEND_COOLDOWN_SECONDS) {
+      return res.status(429).json({ message: `Please wait ${Math.ceil(REG_RESEND_COOLDOWN_SECONDS - since)}s before resending` });
+    }
+
+    const code = ("000000" + crypto.randomInt(0, 1_000_000)).slice(-6);
+    const codeHash = await bcrypt.hash(code, 10);
+    doc.codeHash = codeHash;
+    doc.lastSentAt = new Date();
+    await doc.save();
+
+    await emailOtpQueue.add('send-email-otp', { email, code, txnId, expiresInSeconds: Math.max(0, Math.floor((doc.expiresAt.getTime() - Date.now()) / 1000)) }, { removeOnComplete: true, attempts: 3, backoff: { type: 'exponential', delay: 10000 } });
+    logger.info({ email, txnId }, '[Auth] Enqueued Registration OTP email (resend)');
+
+    return res.status(200).json({ success: true, txnId, email, expiresInSeconds: Math.max(0, Math.floor((doc.expiresAt.getTime() - Date.now()) / 1000)), resendCooldownSeconds: REG_RESEND_COOLDOWN_SECONDS });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function verifyRegisterOtp(req, res, next) {
+  try {
+    const { email, txnId, code } = req.body;
+    if (!email || !txnId || !code) return res.status(400).json({ message: "email, txnId and code are required" });
+    const doc = await RegistrationOtp.findOne({ email, txnId });
+    if (!doc) return res.status(404).json({ message: "OTP session not found" });
+    if (doc.expiresAt < new Date()) { await doc.deleteOne().catch(()=>{}); return res.status(400).json({ message: "OTP expired. Start again." }); }
+    if (doc.attempts >= doc.maxAttempts) { await doc.deleteOne().catch(()=>{}); return res.status(429).json({ message: "Too many attempts. Start again." }); }
+
+    const ok = await bcrypt.compare(code, doc.codeHash);
+    if (!ok) { doc.attempts += 1; await doc.save(); return res.status(400).json({ message: "Invalid OTP" }); }
+
+    // consume session and create user
+    const payload = doc.payload || {};
+    await doc.deleteOne().catch(()=>{});
+
+    // Double-check duplicates before creation
+    if (await User.findOne({ email })) return res.status(400).json({ message: "Email already exists" });
+    if (payload.phone && await User.findOne({ phone: payload.phone })) return res.status(400).json({ message: "Phone number already in use" });
+
+    const user = new User({
+      publicId: payload.publicId,
+      name: { first: payload.firstName, last: payload.lastName },
+      email,
+      phone: payload.phone || null,
+      role: payload.role,
+      password: payload.passwordHash, // already hashed
+      permissions: [],
+      siteId: payload.siteId || null,
+      status: 'pending',
+      createdBy: null,
+      updatedBy: null,
+    });
+    const saved = await user.save();
+
+    return res.status(201).json({ success: true, user: { userId: saved._id, publicId: saved.publicId, name: saved.name, email: saved.email, phone: saved.phone, role: saved.role } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports.startRegisterOtp = startRegisterOtp;
+module.exports.verifyRegisterOtp = verifyRegisterOtp;
+module.exports.resendRegisterOtp = resendRegisterOtp;

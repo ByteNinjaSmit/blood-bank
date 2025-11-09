@@ -115,6 +115,22 @@ export const AuthProvider = ({ children }) => {
         return res.data; // { success, ... }
     };
 
+    // Registration OTP flow: start -> verify -> resend
+    const registerStartOtp = async (payload) => {
+        const res = await axios.post(`${API}/api/auth/register/start-otp`, payload, { withCredentials: true });
+        return res.data; // { success, txnId, email, expiresInSeconds, resendCooldownSeconds }
+    };
+
+    const verifyRegisterOtp = async (email, txnId, code) => {
+        const res = await axios.post(`${API}/api/auth/register/verify-otp`, { email, txnId, code }, { withCredentials: true });
+        return res.data; // { success, user }
+    };
+
+    const resendRegisterOtp = async (email, txnId) => {
+        const res = await axios.post(`${API}/api/auth/register/resend-otp`, { email, txnId }, { withCredentials: true });
+        return res.data;
+    };
+
     const refreshAccessToken = async () => {
         try {
             const res = await axios.post(`${API}/api/auth/refresh`, {}, { withCredentials: true });
@@ -244,6 +260,9 @@ export const AuthProvider = ({ children }) => {
                 loginStartOtp,
                 verifyOtpLogin,
                 resendOtpLogin,
+                registerStartOtp,
+                verifyRegisterOtp,
+                resendRegisterOtp,
                 refreshAccessToken,
                 LogoutUser,
                 user,

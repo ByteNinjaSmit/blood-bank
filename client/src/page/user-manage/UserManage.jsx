@@ -1,4 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
+import Header from "./components/Header";
+import Filters from "./components/Filters";
+import ActionMenu from "./components/ActionMenu";
+import { checkAccess } from "./utils/access";
+import { statusChipClass } from "./utils/ui";
 import axios from "axios";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
@@ -13,7 +18,13 @@ import {
   ChevronRight,
   Users as UsersIcon,
   RefreshCcw,
-  Filter as FilterIcon
+  Filter as FilterIcon,
+  Check,
+  XCircle,
+  Ban,
+  PauseCircle,
+  MoreHorizontal,
+  ChevronDown
 } from "lucide-react";
 
 const emptyPerm = () => (
@@ -33,13 +44,14 @@ const initialForm = {
 };
 
 export default function UserManage() {
-  const { API, authorizationToken } = useAuth();
+  const { API, authorizationToken, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
   const [viewUser, setViewUser] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
 
   // Filters & Pagination
   const [search, setSearch] = useState("");
@@ -60,6 +72,31 @@ export default function UserManage() {
       toast.error("Failed to load users");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const setStatus = async (id, action, confirmText) => {
+    if (!confirm(confirmText)) return;
+    try {
+      await axios.post(`${API}/api/admin/users/${id}/${action}` , {}, {
+        headers: { Authorization: authorizationToken },
+        withCredentials: true,
+      });
+      toast.success(`User ${action}d`);
+      loadUsers();
+    } catch (e) {
+      toast.error(e?.response?.data?.message || `Failed to ${action}`);
+    }
+  };
+
+  const statusChipClass = (status) => {
+    switch (status) {
+      case 'active': return 'bg-green-600';
+      case 'pending': return 'bg-amber-500';
+      case 'blocked': return 'bg-red-600';
+      case 'rejected': return 'bg-rose-600';
+      case 'inactive': return 'bg-slate-500';
+      default: return 'bg-slate-500';
     }
   };
 
@@ -92,7 +129,10 @@ export default function UserManage() {
     setPage(1);
   }, [search, roleFilter, statusFilter, rowsPerPage]);
 
+  const { isAdmin, canView, canCreate, canUpdate, canDelete } = checkAccess(user);
+
   const openCreate = () => {
+    if (!canCreate) { toast.error('You do not have permission to create users'); return; }
     setEditingId(null);
     setForm({ ...initialForm, publicId: generatePublicId() });
     setShowModal(true);
@@ -205,73 +245,25 @@ export default function UserManage() {
   return (
     <div className="p-4 md:p-6 space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl md:text-2xl font-semibold text-slate-900 tracking-tight flex items-center gap-2">
-            <UsersIcon className="w-6 h-6 text-red-700" /> User Management
-          </h2>
-          <p className="text-slate-500 text-sm">Create, edit, delete users and manage their roles and permissions.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={loadUsers} className="inline-flex items-center gap-2 px-3 py-2 rounded-md border bg-white hover:bg-slate-50">
-            <RefreshCcw className="w-4 h-4" /> Refresh
-          </button>
-          <button onClick={openCreate} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-red-700 text-white hover:bg-red-800 shadow-sm">
-            <Plus className="w-4 h-4" /> New User
-          </button>
-        </div>
-      </div>
+      <Header onRefresh={loadUsers} onNew={openCreate} canCreate={canCreate} />
 
-      {/* Filters Header */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5 shadow-sm space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div className="md:col-span-2">
-            <label className="text-xs text-slate-600">Search</label>
-            <div className="relative">
-              <SearchIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                className="w-full border rounded-lg pl-9 pr-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300"
-                placeholder="Search by name, email, phone, or ID"
-                value={search}
-                onChange={(e)=>setSearch(e.target.value)}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-slate-600">Role</label>
-            <div className="relative">
-              <FilterIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <select className="w-full border rounded-lg pl-9 pr-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={roleFilter} onChange={(e)=>setRoleFilter(e.target.value)}>
-                <option value="">All</option>
-                {RoleArray.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-slate-600">Status</label>
-            <div className="relative">
-              <FilterIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <select className="w-full border rounded-lg pl-9 pr-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)}>
-                <option value="">All</option>
-                <option value="active">active</option>
-                <option value="inactive">inactive</option>
-              </select>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center justify-between gap-3 pt-1">
-          <div className="text-sm text-slate-600">Showing {total ? startIndex + 1 : 0}-{endIndex} of {total}</div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-slate-600">Rows per page</label>
-            <select className="border rounded-lg px-2 py-1" value={rowsPerPage} onChange={(e)=>setRowsPerPage(Number(e.target.value))}>
-              {[10,25,50,100].map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
+      <Filters
+        search={search}
+        onSearch={setSearch}
+        roleFilter={roleFilter}
+        onRoleFilter={setRoleFilter}
+        statusFilter={statusFilter}
+        onStatusFilter={setStatusFilter}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPage={setRowsPerPage}
+        total={total}
+        startIndex={startIndex}
+        endIndex={endIndex}
+        RoleArray={RoleArray}
+      />
 
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-visible relative">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10">
               <tr>
@@ -281,7 +273,7 @@ export default function UserManage() {
                 <th className="px-3 py-2 text-left">Phone</th>
                 <th className="px-3 py-2 text-left">Role</th>
                 <th className="px-3 py-2 text-left">Status</th>
-                <th className="px-3 py-2 text-right">Actions</th>
+                <th className="px-3 py-2 text-right w-40">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -297,20 +289,26 @@ export default function UserManage() {
                     </span>
                   </td>
                   <td className="px-3 py-2">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-white capitalize ${u.status === 'active' ? 'bg-green-600' : 'bg-slate-500'}`}>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-white capitalize ${statusChipClass(u.status)}`}>
                       {u.status}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-right space-x-2">
-                    <button title="View" onClick={() => setViewUser(u)} className="inline-flex items-center gap-1 px-2 py-1 rounded-md border hover:bg-slate-50">
-                      <Eye className="w-4 h-4" /> <span className="hidden md:inline">View</span>
-                    </button>
-                    <button title="Edit" onClick={() => openEdit(u)} className="inline-flex items-center gap-1 px-2 py-1 rounded-md border hover:bg-slate-50">
-                      <EditIcon className="w-4 h-4" /> <span className="hidden md:inline">Edit</span>
-                    </button>
-                    <button title="Delete" onClick={() => onDelete(u._id)} className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-red-300 text-red-700 hover:bg-red-50">
-                      <Trash2 className="w-4 h-4" /> <span className="hidden md:inline">Delete</span>
-                    </button>
+                  <td className="px-3 py-2 text-right">
+                    <ActionMenu
+                      row={u}
+                      openMenuId={openMenuId}
+                      setOpenMenuId={setOpenMenuId}
+                      canView={canView}
+                      canUpdate={canUpdate}
+                      canDelete={canDelete}
+                      onView={(row)=>setViewUser(row)}
+                      onEdit={(row)=>openEdit(row)}
+                      onApprove={(row)=>setStatus(row._id,'approve','Approve this user?')}
+                      onReject={(row)=>setStatus(row._id,'reject','Reject this user?')}
+                      onBlock={(row)=>setStatus(row._id,'block','Block this user? They will be unable to login.')}
+                      onDeactivate={(row)=>setStatus(row._id,'deactivate','Deactivate this user?')}
+                      onDelete={(row)=>onDelete(row._id)}
+                    />
                   </td>
                 </tr>
               ))}
@@ -382,9 +380,12 @@ export default function UserManage() {
                 </div>
                 <div>
                   <label className="text-xs text-slate-600">Status</label>
-                  <select className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={form.status} onChange={(e)=>setForm(v=>({...v, status:e.target.value}))}>
+                  <select className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300 capitalize" value={form.status} onChange={(e)=>setForm(v=>({...v, status:e.target.value}))}>
+                    <option value="pending">pending</option>
                     <option value="active">active</option>
                     <option value="inactive">inactive</option>
+                    <option value="blocked">blocked</option>
+                    <option value="rejected">rejected</option>
                   </select>
                 </div>
                 <div>
