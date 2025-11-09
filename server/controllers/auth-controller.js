@@ -167,24 +167,39 @@ const getCurrentUser = async (req, res, next) => {
 const refreshToken = async (req, res, next) => {
   try {
     const tokenCookie = req.cookies?.refreshToken;
-    if (!tokenCookie) return res.status(401).json({ message: "Unauthorized" });
+    if (!tokenCookie) {
+      authService.clearRefreshCookie(res);
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
     let decoded;
     try {
       decoded = jwt.verify(tokenCookie, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET_KEY);
     } catch (e) {
+      authService.clearRefreshCookie(res);
       return res.status(401).json({ message: "Invalid refresh token" });
     }
 
     const user = await User.findById(decoded.userID);
-    if (!user) return res.status(401).json({ message: "Unauthorized" });
+    if (!user) {
+      authService.clearRefreshCookie(res);
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-    const newRefresh = await authService.rotateRefreshToken(tokenCookie, user._id, req.ip);
-    const accessToken = authService.signAccessToken({ userID: user._id.toString(), email: user.email, role: user.role });
-    authService.setRefreshCookie(res, newRefresh);
-    return res.status(200).json({ accessToken, expiresIn: authService.ACCESS_TTL });
+    try {
+      const newRefresh = await authService.rotateRefreshToken(tokenCookie, user._id, req.ip);
+      const accessToken = authService.signAccessToken({ userID: user._id.toString(), email: user.email, role: user.role });
+      authService.setRefreshCookie(res, newRefresh);
+      return res.status(200).json({ accessToken, expiresIn: authService.ACCESS_TTL });
+    } catch (err) {
+      // Handle missing/deleted/expired/revoked DB token gracefully
+      await authService.revokeRefreshToken(tokenCookie, req.ip).catch(()=>{});
+      authService.clearRefreshCookie(res);
+      return res.status(401).json({ message: "Refresh token invalid or expired" });
+    }
   } catch (error) {
-    next(error);
+    authService.clearRefreshCookie(res);
+    return res.status(401).json({ message: "Unauthorized" });
   }
 };
 

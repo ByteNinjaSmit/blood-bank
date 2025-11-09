@@ -16,4 +16,7 @@ RefreshTokenSchema.methods.isExpired = function() {
   return Date.now() >= new Date(this.expiresAt).getTime();
 };
 
+// TTL index: automatically remove documents once expiresAt is past
+RefreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
 module.exports = mongoose.model('RefreshToken', RefreshTokenSchema);
