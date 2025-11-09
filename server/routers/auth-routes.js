@@ -12,6 +12,10 @@ const authMiddleware = require("../middlewares/auth-middleware");
 
 router.post("/register", authController.registerUser);
 router.post("/login", authController.loginUser);
+// OTP login endpoints
+router.post("/login/start-otp", authController.startOtpLogin);
+router.post("/login/verify-otp", authController.verifyOtpLogin);
+router.post("/login/resend-otp", authController.resendOtpLogin);
 router.post("/refresh", authController.refreshToken);
 router.post("/logout", authController.logout);
 router.get("/current", authMiddleware, authController.getCurrentUser);

@@ -92,9 +92,27 @@ export const AuthProvider = ({ children }) => {
         const res = await axios.post(`${API}/api/auth/login`, { email, password }, { withCredentials: true });
         setToken(res.data.accessToken);
         setUser(res.data.user);
-        // Ensure we have freshest user from server
         try { userAuthentication(); } catch (_) { }
         return res.data;
+    };
+
+    // OTP Login (2-step): start -> verify -> (optional) resend
+    const loginStartOtp = async (email, password) => {
+        const res = await axios.post(`${API}/api/auth/login/start-otp`, { email, password }, { withCredentials: true });
+        return res.data; // { success, txnId, email, expiresInSeconds, resendCooldownSeconds }
+    };
+
+    const verifyOtpLogin = async (email, txnId, code) => {
+        const res = await axios.post(`${API}/api/auth/login/verify-otp`, { email, txnId, code }, { withCredentials: true });
+        setToken(res.data.accessToken);
+        setUser(res.data.user);
+        try { userAuthentication(); } catch (_) { }
+        return res.data;
+    };
+
+    const resendOtpLogin = async (email, txnId) => {
+        const res = await axios.post(`${API}/api/auth/login/resend-otp`, { email, txnId }, { withCredentials: true });
+        return res.data; // { success, ... }
     };
 
     const refreshAccessToken = async () => {
@@ -223,6 +241,9 @@ export const AuthProvider = ({ children }) => {
                 isLoggedIn,
                 storeTokenInCookies,
                 login,
+                loginStartOtp,
+                verifyOtpLogin,
+                resendOtpLogin,
                 refreshAccessToken,
                 LogoutUser,
                 user,
