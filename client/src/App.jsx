@@ -28,6 +28,7 @@ import Loader from './components/utils/Spinner';
 import { useAuth } from './store/auth';
 import CreateDonation from './components/camp/Create-Donation';
 import UserManage from './page/user-manage/UserManage';
+import Dashboard from './page/dashboard/Dashboard';
 
 
 const App = () => {
@@ -58,6 +59,7 @@ const App = () => {
         }>
           {/*  Dashboard - Home Route */}
           <Route path="" element={<Home />} />
+          <Route path="/dashboard" element={<Dashboard />} />
 
           {/*  Dashboard - Camp Routes */}
           <Route path="/camp-registration" element={<CampRegisteration />} />

@@ -43,6 +43,15 @@ import { MdDelete } from "react-icons/md";
 import { FaUsersCog } from "react-icons/fa";
 
 const MODULES = [
+  {
+    id: "dashboard",
+    name: "Dashboard",
+    icon: <BarChart3 className="w-5 h-5" />,
+    href: "/dashboard",
+    permissions: ["read"],
+    description: "Operational analytics overview",
+    always: true,
+  },
     {
     id: "admin",
     name: "Admin",
@@ -321,7 +330,7 @@ const Sidebar = ({
     MODULES.filter(
       (module) =>
         module.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        canViewModule(user, module.name)
+        (module.always || canViewModule(user, module.name))
     ),
     [searchQuery, user]
   );
@@ -350,7 +359,7 @@ const Sidebar = ({
 
   // Handle module click with sidebar auto-open for submodules
   const handleModuleClick = useCallback((module) => {
-    if (!canViewModule(user, module.name)) {
+    if (!module.always && !canViewModule(user, module.name)) {
       toast.error("ACCESS DENIED!!", {
         description: "You don't have permission to access this section"
       });
@@ -391,8 +400,8 @@ const Sidebar = ({
   }, [user, navigate, isMobile, onCloseMobile, isOpen]);
 
   const handleSubModuleClick = useCallback((module, subModule) => {
-    // Default to requiring view access for submodules
-    if (!canViewModule(user, module.name)) {
+    // Default to requiring view access for submodules unless always allowed
+    if (!module.always && !canViewModule(user, module.name)) {
       toast.error("ACCESS DENIED!!", {
         description: "You don't have permission to access this section"
       });

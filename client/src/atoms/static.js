@@ -1,4 +1,5 @@
 export const ModuleArray = [
+  "Dashboard",
   "Requisition",
   "Camp",
   "Donor",
