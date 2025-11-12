@@ -25,6 +25,9 @@ const InventorySchema = new Schema({
     type: Types.ObjectId,
     ref: 'HospitalRequest'
   },
+  reservedAt: {
+    type: Date,
+  },
   createdAt: {
     type: Date,
     default: Date.now

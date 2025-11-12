@@ -4,6 +4,8 @@ GET    /requests                 → List requests (filters)
 GET    /requests/:id             → Get request details
 POST   /requests/:id/match       → Match request with inventory
 PATCH  /requests/:id/approve     → Approve matched request
+PATCH  /requests/:id/issue       → Issue reserved units for request
+PATCH  /requests/:id/complete    → Complete request after confirmation
 PATCH  /requests/:id/reject      → Reject request
  */
 
@@ -29,6 +31,12 @@ router.post('/:id/match', requestController.matchRequest);
 
 // Approve matched request
 router.patch('/:id/approve', requestController.approveRequest);
+
+// Issue reserved units for request
+router.patch('/:id/issue', requestController.issueRequest);
+
+// Complete request after confirmation
+router.patch('/:id/complete', requestController.completeRequest);
 
 // Reject request
 router.patch('/:id/reject', requestController.rejectRequest);

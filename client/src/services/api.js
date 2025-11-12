@@ -59,6 +59,18 @@ class ApiService {
     }
   }
 
+  async patch(url, data = {}) {
+    if (!this.client) {
+      return { data: null, error: 'API client not initialized' };
+    }
+    try {
+      const response = await this.client.patch(url, data);
+      return { data: response.data, error: null };
+    } catch (error) {
+      return { data: null, error: error.response?.data?.message || error.message };
+    }
+  }
+
   async delete(url) {
     if (!this.client) {
       return { data: null, error: 'API client not initialized' };

@@ -31,6 +31,7 @@ import UserManage from './page/user-manage/UserManage';
 import Dashboard from './page/dashboard/Dashboard';
 import CreateDonorPage from './page/donor/CreateDonor';
 import { AddHospital, ListHospital } from './page/hospital';
+import RequisitionManagement from './page/requisition/RequisitionManagement';
 
 
 const App = () => {
@@ -99,6 +100,9 @@ const App = () => {
           {/* Hospital Module */}
           <Route path="/hospital/add" element={<AddHospital />} />
           <Route path="/hospital/list" element={<ListHospital />} />
+
+          {/* Requisition Module */}
+          <Route path="/requisition" element={<RequisitionManagement />} />
 
           {/*For Dashboard - Loading*/}
 
