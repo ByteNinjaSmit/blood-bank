@@ -9,7 +9,7 @@ const InventorySchema = new Schema({
   },
   bagNo: {
     type: Types.ObjectId,
-    ref: 'BloodBag', 
+    ref: 'BloodBag',
     required: true
   },
   status: {
@@ -17,10 +17,10 @@ const InventorySchema = new Schema({
     enum: ['in-stock', 'reserved', 'issued', 'discarded'],
     required: true
   },
-   inStockDate: {
-        type: Date,
-        required:true,
-   },
+  inStockDate: {
+    type: Date,
+    required: true,
+  },
   reservedFor: {
     type: Types.ObjectId,
     ref: 'HospitalRequest'
@@ -29,13 +29,20 @@ const InventorySchema = new Schema({
     type: Date,
     default: Date.now
   },
-    createdBy: {
+  issuedAt: {
+    type: Date,
+  },
+  issuedBy: {
+    type: Types.ObjectId, 
+    ref: "User" 
+  },
+  createdBy: {
     type: Types.ObjectId,
     ref: "User",
     required: true,
   },
-},{
-  timestamps:true,
+}, {
+  timestamps: true,
 });
 
 const Inventory = mongoose.model('Inventory', InventorySchema);

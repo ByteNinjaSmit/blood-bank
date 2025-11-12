@@ -28,20 +28,6 @@ const HospitalSchema = new Schema({
     required: true,
     trim: true
   },
-  email: {
-    type: String,
-    trim: true,
-    lowercase: true
-  },
-  licenseNo: {
-    type: String,
-    trim: true
-  },
-  siteId: {
-    type: Types.ObjectId,
-    ref: 'Site',
-    required: true
-  },
   createdAt: {
     type: Date,
     default: Date.now

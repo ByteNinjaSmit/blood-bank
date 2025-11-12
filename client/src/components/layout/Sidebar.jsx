@@ -34,7 +34,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/store/auth';
 import { checkAccess } from '@/atoms/static';
 import { FiUserPlus } from "react-icons/fi";
-import { FaBoxOpen, FaChartPie, FaEye, FaHeart, FaListUl, FaMicroscope, FaTrash, FaUser } from "react-icons/fa";
+import { FaBoxOpen, FaChartPie, FaEye, FaHeart, FaListUl, FaMicroscope, FaTrash, FaUser, FaHospital } from "react-icons/fa";
 import { SiPytest } from "react-icons/si";
 import { GiCardDiscard, GiDrop , GiChemicalDrop , GiCampingTent } from "react-icons/gi";
 import { IoIosSend } from "react-icons/io";
@@ -75,6 +75,29 @@ const MODULES = [
     href: "/requisition",
     permissions: ["read", "write"],
     description: "Manage blood requests and orders",
+  },
+  {
+    id: "hospital",
+    name: "Hospital",
+    icon: <FaHospital className="w-5 h-5" />,
+    permissions: ["read", "write"],
+    subModules: [
+      {
+        name: "Add Hospital",
+        icon: <Plus className="w-5 h-5" />,
+        href: "/hospital/add",
+        permissions: ["write", "read"],
+        description: "Register new hospital",
+      },
+      {
+        name: "List Hospital",
+        icon: <List className="w-5 h-5" />,
+        href: "/hospital/list",
+        permissions: ["read"],
+        description: "View all registered hospitals",
+      },
+    ],
+    description: "Hospital management system",
   },
   {
     id: "camp",

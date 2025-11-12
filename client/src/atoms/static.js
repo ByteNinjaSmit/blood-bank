@@ -12,7 +12,8 @@ export const ModuleArray = [
   "Queue",
   "Report",
   "Admin",
-  "Site"
+  "Site",
+  "Hospital"
 ];
 
 export const RoleArray = [

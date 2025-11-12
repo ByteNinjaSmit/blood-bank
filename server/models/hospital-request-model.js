@@ -84,11 +84,13 @@ const HospitalRequestSchema = new Schema({
     enum: ['pending', 'matched', 'approved', 'issued', 'completed', 'rejected'],
     default: 'pending'
   },
-  siteId: {
-    type: Types.ObjectId,
-    ref: 'Site',
-    required: true
-  },
+  requestedAt: { type: Date, default: Date.now },
+  approvedAt: Date,
+  issuedAt: Date,
+  completedAt: Date,
+
+  approvedBy: { type: Types.ObjectId, ref: "User" },
+  issuedBy: { type: Types.ObjectId, ref: "User" },
   createdAt: {
     type: Date,
     default: Date.now

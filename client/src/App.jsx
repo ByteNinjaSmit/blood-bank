@@ -30,6 +30,7 @@ import CreateDonation from './components/donation/Create-Donation';
 import UserManage from './page/user-manage/UserManage';
 import Dashboard from './page/dashboard/Dashboard';
 import CreateDonorPage from './page/donor/CreateDonor';
+import { AddHospital, ListHospital } from './page/hospital';
 
 
 const App = () => {
@@ -95,6 +96,9 @@ const App = () => {
           {/* Admin Module */}
           <Route path="/admin/user-manage" element={<UserManage />} />
 
+          {/* Hospital Module */}
+          <Route path="/hospital/add" element={<AddHospital />} />
+          <Route path="/hospital/list" element={<ListHospital />} />
 
           {/*For Dashboard - Loading*/}
 
