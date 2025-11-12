@@ -26,9 +26,10 @@ import CampDonationManagement from './page/camp/CampDonationManagement';
 import ScrollToTop from './page/dashboard/layout/ScrollToTop';
 import Loader from './components/utils/Spinner';
 import { useAuth } from './store/auth';
-import CreateDonation from './components/camp/Create-Donation';
+import CreateDonation from './components/donation/Create-Donation';
 import UserManage from './page/user-manage/UserManage';
 import Dashboard from './page/dashboard/Dashboard';
+import CreateDonorPage from './page/donor/CreateDonor';
 
 
 const App = () => {
@@ -88,7 +89,7 @@ const App = () => {
           <Route path="/donations/view-donation" element={<DonationManagement />} />
 
           {/* Donor Module */}
-          <Route path="/donor/create-donor" element={<DonorManagement />} />
+          <Route path="/donor/create-donor" element={<CreateDonorPage />} />
           <Route path="/donor/view-donor" element={<DonorManagement />} />
 
           {/* Admin Module */}

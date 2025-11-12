@@ -5,7 +5,6 @@ const HospitalRequestSchema = new Schema({
   requestId: {
     type: String,
     required: true,
-    unique: true, // e.g., HREQ-2025-001
     trim: true
   },
   hospitalId: {
