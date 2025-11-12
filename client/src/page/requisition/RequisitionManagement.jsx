@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Stepper, { Step } from '@/components/Stepper';
 import { useAuth } from '@/store/auth';
 import RequisitionHeader from './components/RequisitionHeader';
@@ -12,6 +12,7 @@ import AddHospitalModal from './components/AddHospitalModal';
 
 const RequisitionManagement = () => {
   const navigate = useNavigate();
+  const params = useParams();
   const { authorizationToken } = useAuth();
 
   const {
@@ -41,7 +42,15 @@ const RequisitionManagement = () => {
     handleIssue,
     handleComplete,
     handleReject,
+    loadRequest,
   } = useRequisition(authorizationToken);
+
+  React.useEffect(() => {
+    if (params?.id) {
+      // Load existing request and jump to appropriate step
+      loadRequest(params.id);
+    }
+  }, [params?.id]);
 
   return (
     <>

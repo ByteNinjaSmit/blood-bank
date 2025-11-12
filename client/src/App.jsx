@@ -32,7 +32,7 @@ import Dashboard from './page/dashboard/Dashboard';
 import CreateDonorPage from './page/donor/CreateDonor';
 import { AddHospital, ListHospital } from './page/hospital';
 import RequisitionManagement from './page/requisition/RequisitionManagement';
-
+import RequisitionList from './page/requisition/RequisitionList';
 
 const App = () => {
   const pathname = useLocation().pathname;
@@ -103,6 +103,8 @@ const App = () => {
 
           {/* Requisition Module */}
           <Route path="/requisition" element={<RequisitionManagement />} />
+          <Route path="/requisition/:id" element={<RequisitionManagement />} />
+          <Route path="/requisition/list" element={<RequisitionList />} />
 
           {/*For Dashboard - Loading*/}
 

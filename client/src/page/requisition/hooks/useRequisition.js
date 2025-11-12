@@ -166,6 +166,23 @@ export default function useRequisition(authToken) {
     if (r.success) setRequestDoc(r.data);
   };
 
+  const statusToStep = (status) => {
+    if (status === 'issued' || status === 'completed') return 4;
+    if (status === 'approved') return 3;
+    return 2; // pending or matched
+  };
+
+  const loadRequest = async (id) => {
+    const r = await requisitionApi.getRequest(id);
+    if (!r.success || !r.data) {
+      toast.error(r.error || 'Failed to load request');
+      return false;
+    }
+    setRequestDoc(r.data);
+    setCurrentStep(statusToStep(r.data.status));
+    return true;
+  };
+
   const handleMatch = async (id = requestDoc?._id) => {
     if (!id) return;
     setMatching(true);
@@ -251,5 +268,6 @@ export default function useRequisition(authToken) {
     handleIssue,
     handleComplete,
     handleReject,
+    loadRequest,
   };
 }

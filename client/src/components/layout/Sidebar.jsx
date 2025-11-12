@@ -72,8 +72,23 @@ const MODULES = [
     id: "requisition",
     name: "Requisition",
     icon: <IoIosSend className="w-5 h-5" />,
-    href: "/requisition",
     permissions: ["read", "write"],
+    subModules: [
+      {
+        name: "Manage",
+        icon: <Plus className="w-5 h-5" />,
+        href: "/requisition",
+        permissions: ["write", "read"],
+        description: "Create and manage requisitions",
+      },
+      {
+        name: "List",
+        icon: <List className="w-5 h-5" />,
+        href: "/requisition/list",
+        permissions: ["read"],
+        description: "View and act on requisitions",
+      },
+    ],
     description: "Manage blood requests and orders",
   },
   {
