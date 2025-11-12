@@ -242,7 +242,6 @@ app.use(errorMiddleware);
 // ==============================
 connectToDatabase()
   .then(() => {
-    console.log("✅ MongoDB connected");
     logger.info("✅ MongoDB connected");
 
     server.listen(PORT, () => {

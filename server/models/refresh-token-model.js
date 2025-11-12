@@ -4,7 +4,7 @@ const { Schema, Types } = mongoose;
 const RefreshTokenSchema = new Schema({
   userId: { type: Types.ObjectId, ref: 'User', required: true, index: true },
   token: { type: String, required: true, index: true, unique: true },
-  expiresAt: { type: Date, required: true, index: true },
+  expiresAt: { type: Date, required: true },
   revoked: { type: Boolean, default: false, index: true },
   revokedAt: { type: Date, default: null },
   replacedByToken: { type: String, default: null },
