@@ -1,6 +1,6 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import { BLOOD_GROUPS, COMPONENT_TYPES, RH_TYPES, URGENCY } from '../constants';
+import { BLOOD_GROUPS, COMPONENT_TYPES, RH_TYPES, URGENCY, UNIT_OPTIONS } from '../constants';
 
 export default function RequestedComponentsList({ items, onItemChange, onAdd, onRemove }) {
   return (
@@ -22,7 +22,9 @@ export default function RequestedComponentsList({ items, onItemChange, onAdd, on
             </div>
             <div>
               <label className="block text-sm text-gray-700 mb-1">Units</label>
-              <input type="number" min={1} className="w-full px-3 py-2 border rounded-lg" value={r.units} onChange={(e) => onItemChange(idx, { units: e.target.value })} />
+              <select className="w-full px-3 py-2 border rounded-lg" value={r.units} onChange={(e) => onItemChange(idx, { units: e.target.value })}>
+                {UNIT_OPTIONS.map((n) => (<option key={n} value={n}>{n}</option>))}
+              </select>
             </div>
             <div>
               <label className="block text-sm text-gray-700 mb-1">Group</label>

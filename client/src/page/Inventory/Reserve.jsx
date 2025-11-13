@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Loader2, Hand } from "lucide-react";
 import { toast } from "sonner";
+import { COMPONENT_TYPES, SEX_TYPES } from "@/page/requisition/constants";
 
 const Reserve = () => {
   const { API, authorizationToken, user } = useAuth();
+  const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
   const [rows, setRows] = useState([]);
@@ -29,7 +32,7 @@ const Reserve = () => {
         params: {
           page,
           limit,
-          status: 'in-stock',
+          status: 'reserved',
           componentType: componentType || undefined,
           search: search || undefined,
           sortBy,
@@ -49,25 +52,8 @@ const Reserve = () => {
   const toggle = (id) => setSelected((s) => ({ ...s, [id]: !s[id] }));
   const allSelectedIds = Object.keys(selected).filter((id) => selected[id]);
 
-  const reserve = async () => {
-    if (allSelectedIds.length === 0) return toast.warning("Select items to reserve");
-    try {
-      setIsLoading(true);
-      await axios.post(`${API}/api/inventory/reserve`, {
-        inventoryIds: allSelectedIds,
-        userId: user?._id || user?.id,
-      }, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
-      });
-      toast.success("Reserved selected items");
-      setSelected({});
-      fetchRows(pagination.page);
-    } catch (e) {
-      toast.error(e?.response?.data?.message || "Failed to reserve");
-    } finally {
-      setIsLoading(false);
-    }
+  const handleAdd = () => {
+    navigate('/inventory/reserve/new');
   };
 
   useEffect(() => {
@@ -83,8 +69,8 @@ const Reserve = () => {
             <Hand className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Reserve Stock</h1>
-            <p className="text-gray-600 mt-1">Select in-stock components to reserve</p>
+            <h1 className="text-2xl font-bold text-gray-900">Reserved Stock</h1>
+            <p className="text-gray-600 mt-1">Viewing only currently reserved components</p>
           </div>
         </div>
 
@@ -92,17 +78,16 @@ const Reserve = () => {
           <div className="p-4 border-b">
             <div className="flex items-center justify-between mb-3">
               <div className="text-sm text-gray-600">Total: {pagination.total || 0}</div>
-              <div className="text-xs text-gray-500">Selected: <span className="font-medium">{allSelectedIds.length}</span></div>
+              <div />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               <div className="flex flex-col">
                 <label className="text-xs text-gray-600 mb-1">Component</label>
                 <select value={componentType} onChange={(e)=>{setComponentType(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
                   <option value="">All</option>
-                  <option value="RBC">RBC</option>
-                  <option value="FFP">FFP</option>
-                  <option value="Platelet">Platelet</option>
-                  <option value="Cryo">Cryo</option>
+                  {COMPONENT_TYPES.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="flex flex-col md:col-span-2">
@@ -120,8 +105,8 @@ const Reserve = () => {
                 <Button onClick={()=>fetchRows(pagination.page)} variant="outline" size="sm" className="h-10" disabled={isLoading}>
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
                 </Button>
-                <Button onClick={reserve} size="sm" className="h-10" disabled={isLoading || allSelectedIds.length===0}>
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Reserve (${allSelectedIds.length})`}
+                <Button onClick={handleAdd} size="sm" className="h-10" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Add`}
                 </Button>
               </div>
             </div>
@@ -131,30 +116,40 @@ const Reserve = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3"></th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag No</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Component</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reserved For</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reserved Until</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Age</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Sex</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {isLoading ? (
-                  <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
+                  <tr><td colSpan="10" className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-500">No items found.</td></tr>
+                  <tr><td colSpan="10" className="px-4 py-8 text-center text-gray-500">No items found.</td></tr>
                 ) : (
                   rows.map((r) => (
                     <tr key={r._id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <input type="checkbox" checked={!!selected[r._id]} onChange={() => toggle(r._id)} />
-                      </td>
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{r?.bag?.bagNo || r.bagNo}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl} mL</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{r?.hospital?.name || '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{r?.reservedUntil ? new Date(r.reservedUntil).toLocaleDateString() : '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{r?.reservedPatientName || '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{(r?.reservedPatientAge ?? '') !== '' ? r.reservedPatientAge : '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{(() => {
+                        const sex = r?.reservedPatientSex;
+                        const found = (SEX_TYPES || []).find(s => s.value === sex);
+                        return found ? found.label : (sex || '—');
+                      })()}</td>
                     </tr>
                   ))
                 )}
@@ -210,3 +205,4 @@ const Reserve = () => {
 };
 
 export default Reserve;
+

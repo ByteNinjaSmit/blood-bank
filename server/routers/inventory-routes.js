@@ -22,7 +22,7 @@ router.route('/near-expiry').get(authMiddleware,inventoryController.getNearExpir
 
 // Reserve inventory items for a hospital request
 router.route('/reserve').post(authMiddleware,inventoryController.reserveInventory);
-
+router.route('/reserve/fifo').post(authMiddleware, inventoryController.reserveByCriteriaFIFO);
 
 // Issue reserved inventory
 router.route('/issue').post(authMiddleware,inventoryController.issueInventory)

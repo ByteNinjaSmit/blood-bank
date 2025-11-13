@@ -10,6 +10,7 @@ const Inventory = require('../models/inventory-model');
 const Component = require('../models/component-model');
 const BloodBag = require('../models/bloodbag-model');
 const HospitalRequest = require('../models/hospital-request-model');
+const Hospital = require('../models/hospital-model');
 
 // Helpers
 const toInt = (v, d) => {
@@ -38,8 +39,8 @@ async function listInventory(req, res, next) {
     // search applied on bag.bagNo after lookup
 
     const compFilter = {};
-    if (componentType) compFilter.componentType = componentType;
-    if (siteId) compFilter.siteId = siteId;
+    if (componentType) compFilter['component.componentType'] = componentType;
+    if (siteId) compFilter['component.siteId'] = siteId;
 
     const allowedSort = {
       createdAt: 'createdAt',
@@ -57,6 +58,8 @@ async function listInventory(req, res, next) {
       { $unwind: '$component' },
       { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
       { $unwind: '$bag' },
+      { $lookup: { from: 'hospitals', localField: 'reservedForHospital', foreignField: '_id', as: 'hospital' } },
+      { $unwind: { path: '$hospital', preserveNullAndEmptyArrays: true } },
       { $match: compFilter },
       ...(search ? [{ $match: { 'bag.bagNo': { $regex: search, $options: 'i' } } }] : []),
       {
@@ -66,6 +69,12 @@ async function listInventory(req, res, next) {
           inStockDate: 1,
           createdAt: 1,
           reservedFor: 1,
+          reservedForHospital: 1,
+          reservedAt: 1,
+          reservedUntil: 1,
+          reservedPatientName: 1,
+          reservedPatientAge: 1,
+          reservedPatientSex: 1,
           componentId: 1,
           bagNo: 1,
           'component.componentType': 1,
@@ -76,6 +85,8 @@ async function listInventory(req, res, next) {
           'bag.segmentNo': 1,
           'bag.bloodGroup': 1,
           'bag.rh': 1,
+          'hospital._id': 1,
+          'hospital.name': 1,
         },
       },
       { $sort: sort },
@@ -109,6 +120,83 @@ async function listInventory(req, res, next) {
         totalPages: Math.ceil(total / limit),
       },
     });
+  } catch (err) {
+    next(err);
+  }
+
+}
+
+async function reserveByCriteriaFIFO(req, res, next) {
+  try {
+    const now = new Date();
+    const { hospitalId, reservedUntil, items = [], siteId, patient } = req.body || {};
+    if (!hospitalId) {
+      return res.status(400).json({ success: false, message: 'hospitalId is required' });
+    }
+    const hospital = await Hospital.findById(hospitalId);
+    if (!hospital) return res.status(404).json({ success: false, message: 'Hospital not found' });
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'No items to reserve' });
+    }
+    if (!patient || !patient.name || patient.sex == null || (patient.age == null || Number.isNaN(Number(patient.age)))) {
+      return res.status(400).json({ success: false, message: 'Patient name, age and sex are required for reservation' });
+    }
+    const until = reservedUntil ? new Date(reservedUntil) : null;
+    const pn = patient?.name || null;
+    const pa = typeof patient?.age === 'number' ? patient.age : (patient?.age ? Number(patient.age) : null);
+    const ps = patient?.sex || null;
+    const selections = [];
+    const shortages = [];
+    for (const rc of items) {
+      if (!rc?.componentType || !rc?.units || !rc?.bloodGroup || !rc?.rh) {
+        return res.status(400).json({ success: false, message: 'Invalid item' });
+      }
+      const compFilter = { 'component.componentType': rc.componentType };
+      if (siteId) compFilter['component.siteId'] = siteId;
+      const pipeline = [
+        { $match: { status: 'in-stock' } },
+        { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+        { $unwind: '$component' },
+        { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
+        { $unwind: '$bag' },
+        { $match: { ...compFilter, 'bag.bloodGroup': rc.bloodGroup, 'bag.rh': rc.rh, 'component.expiryDate': { $gte: now } } },
+        { $sort: { inStockDate: 1, 'component.expiryDate': 1 } },
+        { $limit: rc.units },
+        { $project: { _id: 1 } },
+      ];
+      const docs = await Inventory.aggregate(pipeline);
+      const ids = docs.map(d => d._id);
+      if (ids.length < rc.units) {
+        shortages.push({ componentType: rc.componentType, required: rc.units, available: ids.length });
+      }
+      selections.push(...ids);
+    }
+    if (shortages.length) {
+      return res.status(409).json({ success: false, message: 'Insufficient stock to reserve', data: { shortages } });
+    }
+    const upd = await Inventory.updateMany(
+      { _id: { $in: selections }, status: 'in-stock' },
+      { $set: { status: 'reserved', reservedForHospital: hospitalId, reservedAt: now, reservedUntil: until, reservedPatientName: pn, reservedPatientAge: pa, reservedPatientSex: ps } }
+    );
+    if (upd.modifiedCount !== selections.length) {
+      return res.status(409).json({ success: false, message: 'Concurrent update detected while reserving' });
+    }
+    const details = await Inventory.aggregate([
+      { $match: { _id: { $in: selections } } },
+      { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+      { $unwind: '$component' },
+      { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
+      { $unwind: '$bag' },
+      { $project: {
+          _id: 1, status: 1, inStockDate: 1, createdAt: 1,
+          reservedFor: 1, reservedForHospital: 1, reservedAt: 1, reservedUntil: 1,
+          reservedPatientName: 1, reservedPatientAge: 1, reservedPatientSex: 1,
+          componentId: 1, bagNo: 1,
+          'component.componentType': 1, 'component.volumeMl': 1, 'component.expiryDate': 1, 'component.siteId': 1,
+          'bag.bagNo': 1, 'bag.segmentNo': 1, 'bag.bloodGroup': 1, 'bag.rh': 1,
+      }},
+    ]);
+    return res.status(200).json({ success: true, data: { matchedCount: selections.length, inventoryIds: selections, items: details } });
   } catch (err) {
     next(err);
   }
@@ -302,6 +390,7 @@ module.exports = {
   listInventory,
   getNearExpiryInventory,
   reserveInventory,
+  reserveByCriteriaFIFO,
   issueInventory,
   discardInventory
 };

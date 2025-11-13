@@ -16,6 +16,7 @@ import SerologyResults from './page/Serology/SerologyResults';
 import ViewDiscarded from './components/discard/View-Discarded';
 import Stock from './page/Inventory/Stock';
 import Reserve from './page/Inventory/Reserve';
+import ReserveWizard from './page/Inventory/ReserveWizard';
 import Issue from './page/Inventory/Issue';
 import InventoryNearExpiry from './page/Inventory/NearExpiry';
 import DonationManagement from './page/donation/DonationManagement';
@@ -79,6 +80,7 @@ const App = () => {
 
           <Route path="/inventory/stock" element={<Stock />} />
           <Route path="/inventory/reserve" element={<Reserve />} />
+          <Route path="/inventory/reserve/new" element={<ReserveWizard />} />
           <Route path="/inventory/issue" element={<Issue />} />
           <Route path="/inventory/near-expiry" element={<InventoryNearExpiry />} />
 
