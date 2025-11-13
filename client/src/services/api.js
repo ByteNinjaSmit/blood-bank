@@ -31,7 +31,7 @@ class ApiService {
       const response = await this.client.get(url, { params });
       return { data: response.data, error: null };
     } catch (error) {
-      return { data: null, error: error.response?.data?.message || error.message };
+      return { data: null, error: error.response?.data?.message || error.message, errorData: error.response?.data };
     }
   }
 
@@ -43,7 +43,7 @@ class ApiService {
       const response = await this.client.post(url, data);
       return { data: response.data, error: null };
     } catch (error) {
-      return { data: null, error: error.response?.data?.message || error.message };
+      return { data: null, error: error.response?.data?.message || error.message, errorData: error.response?.data };
     }
   }
 
@@ -55,7 +55,7 @@ class ApiService {
       const response = await this.client.put(url, data);
       return { data: response.data, error: null };
     } catch (error) {
-      return { data: null, error: error.response?.data?.message || error.message };
+      return { data: null, error: error.response?.data?.message || error.message, errorData: error.response?.data };
     }
   }
 
@@ -67,7 +67,7 @@ class ApiService {
       const response = await this.client.patch(url, data);
       return { data: response.data, error: null };
     } catch (error) {
-      return { data: null, error: error.response?.data?.message || error.message };
+      return { data: null, error: error.response?.data?.message || error.message, errorData: error.response?.data };
     }
   }
 
@@ -79,9 +79,10 @@ class ApiService {
       const response = await this.client.delete(url);
       return { data: response.data, error: null };
     } catch (error) {
-      return { data: null, error: error.response?.data?.message || error.message };
+      return { data: null, error: error.response?.data?.message || error.message, errorData: error.response?.data };
     }
   }
 }
 
 export default new ApiService();
+

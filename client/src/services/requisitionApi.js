@@ -10,8 +10,8 @@ class RequisitionApiService {
   }
 
   _wrap(resp) {
-    const { data, error } = resp;
-    if (error) return { success: false, error, data: null };
+    const { data, error, errorData } = resp;
+    if (error) return { success: false, error, data: null, errorData };
     return { success: true, data: data?.data ?? data, raw: data };
   }
 
@@ -49,3 +49,4 @@ class RequisitionApiService {
 }
 
 export default new RequisitionApiService();
+

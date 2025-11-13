@@ -43,6 +43,7 @@ export default function useRequisition(authToken) {
   const [requestDoc, setRequestDoc] = useState(null);
   const [matching, setMatching] = useState(false);
   const [matchedResult, setMatchedResult] = useState(null);
+  const [shortages, setShortages] = useState(null);
   const [issuing, setIssuing] = useState(false);
   const [approving, setApproving] = useState(false);
   const [completing, setCompleting] = useState(false);
@@ -189,11 +190,23 @@ export default function useRequisition(authToken) {
     const res = await requisitionApi.match(id);
     setMatching(false);
     if (!res.success) {
-      if (res?.raw?.message) toast.error(res.raw.message);
-      else toast.error(res.error || 'Matching failed');
+      const errMsg = res?.error || res?.raw?.message || 'Matching failed';
+      const sh = res?.errorData?.data?.shortages;
+      if (Array.isArray(sh) && sh.length) {
+        setShortages(sh);
+        // Show compact user message summarizing first shortage
+        const s0 = sh[0];
+        toast.error(`Insufficient stock: ${s0.available} of ${s0.required} ${s0.componentType} available`);
+      } else {
+        setShortages(null);
+        toast.error(errMsg);
+      }
+      setMatchedResult(null);
+      await refreshRequest(id);
       return;
     }
     setMatchedResult(res.data);
+    setShortages(null);
     await refreshRequest(id);
     toast.success('Matched and reserved');
   };
@@ -253,6 +266,7 @@ export default function useRequisition(authToken) {
     requestDoc,
     matching,
     matchedResult,
+    shortages,
     issuing,
     approving,
     completing,

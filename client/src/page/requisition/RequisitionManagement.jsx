@@ -30,6 +30,7 @@ const RequisitionManagement = () => {
     requestDoc,
     matching,
     matchedResult,
+    shortages,
     issuing,
     approving,
     completing,
@@ -61,6 +62,7 @@ const RequisitionManagement = () => {
           <Stepper
             onStepChange={(s) => setCurrentStep(s)}
             nextButtonProps={{ disabled: currentStep === 1 && !requestDoc?._id }}
+            disableStepIndicators={currentStep === 1 && !requestDoc?._id}
             stepCircleContainerClassName="bg-white"
             contentClassName="bg-white rounded-xl shadow border border-gray-100"
             footerClassName="bg-white rounded-b-xl"
@@ -86,6 +88,7 @@ const RequisitionManagement = () => {
                 matching={matching}
                 onMatch={() => handleMatch()}
                 onReject={handleReject}
+                shortages={shortages}
               />
             </Step>
 
@@ -122,3 +125,4 @@ const RequisitionManagement = () => {
 };
 
 export default RequisitionManagement;
+

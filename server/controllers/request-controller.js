@@ -118,7 +118,7 @@ async function matchRequest(req, res, next) {
         { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
         { $unwind: '$bag' },
         { $match: { 'component.componentType': rc.componentType, 'bag.bloodGroup': rc.bloodGroup, 'bag.rh': rc.rh, 'component.expiryDate': { $gte: now } } },
-        { $sort: { 'component.expiryDate': 1, inStockDate: 1 } },
+        { $sort: { inStockDate: 1, 'component.expiryDate': 1 } },
         { $limit: rc.units },
         { $project: { _id: 1 } },
       ];

@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function MatchReviewStep({ requestDoc, matchedResult, matching, onMatch, onReject }) {
+export default function MatchReviewStep({ requestDoc, matchedResult, matching, onMatch, onReject, shortages }) {
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -14,6 +14,19 @@ export default function MatchReviewStep({ requestDoc, matchedResult, matching, o
           </button>
         </div>
       </div>
+
+      {Array.isArray(shortages) && shortages.length > 0 && (
+        <div className="p-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900">
+          <p className="font-medium">Insufficient stock to fully match this request.</p>
+          <ul className="mt-2 text-sm list-disc pl-5 space-y-1">
+            {shortages.map((s, idx) => (
+              <li key={idx}>
+                {s.componentType}: {s.available} of {s.required} available. Please adjust units or inventory.
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {matchedResult && (
         <div className="p-4 rounded-lg border border-green-200 bg-green-50 text-green-900">
@@ -73,3 +86,4 @@ export default function MatchReviewStep({ requestDoc, matchedResult, matching, o
     </div>
   );
 }
+
