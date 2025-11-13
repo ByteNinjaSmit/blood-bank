@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, MapPin, Phone, Mail, Users, Calendar, Droplets, Plus, Activity } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Mail, Users, Calendar, Droplets, Plus, Activity, Clock } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
@@ -103,6 +103,14 @@ const CampDetails = () => {
     );
   }
 
+  const durationDays = Math.max(1, Math.ceil((new Date(camp.dateTo) - new Date(camp.dateFrom)) / 86400000));
+  const formatDate = (d) => new Date(d).toLocaleDateString();
+  const nowMs = Date.now();
+  const startMs = new Date(camp.dateFrom).getTime();
+  const endMs = new Date(camp.dateTo).getTime();
+  const progressPercent = Math.max(0, Math.min(100, ((nowMs - startMs) / Math.max(1, endMs - startMs)) * 100));
+  const progressLabel = `${Math.round(progressPercent)}% complete`;
+
   const facilities = [
     {
       id: "view-donor",
@@ -133,7 +141,7 @@ const CampDetails = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-white border-b border-orange-100 shadow-sm">
+      <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Button
             variant="outline"
@@ -143,166 +151,202 @@ const CampDetails = () => {
             <ArrowLeft className="w-5 h-5" />
             Back to Camp List
           </Button>
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 bg-gradient-to-br from-orange-800 to-orange-900 rounded-xl">
-              <Droplets className="w-8 h-8 text-white" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg border border-gray-200">
+                <Droplets className="w-6 h-6 text-orange-800" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">Camp Management</h1>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <span className="truncate" title={camp.name}>{camp.name}</span>
+                  <span>•</span>
+                  {getProgressBadge(getProgressStatus(camp))}
+                </div>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Camp Management</h1>
-              <p className="text-gray-600 mt-1">Comprehensive blood bank camp management system</p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/camp-donors?id=${campId}`)}
+                title="View donors for this camp"
+                className="hidden sm:flex"
+              >
+                <Users className="w-4 h-4 mr-2" /> Donors
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/camp-donation?id=${campId}`)}
+                title="View donations for this camp"
+                className="hidden sm:flex"
+              >
+                <Activity className="w-4 h-4 mr-2" /> Donations
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/donor/create-donor`)}
+                title="Create a new donor"
+                className="hidden md:flex"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Create Donor
+              </Button>
+              <Button
+                onClick={() => navigate(`/donations/create-donation?campId=${campId}`)}
+                title="Create a new donation"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Create Donation
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <div className="rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between" title="Total donors who have donated in this camp">
+              <span className="text-sm text-gray-500">Donors</span>
+              <Users className="w-4 h-4 text-gray-400" />
+            </div>
+            <div className="mt-2 text-2xl font-semibold text-gray-900">{camp?.donorCount || 0}</div>
+          </div>
+          <div className="rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between" title="Total donations recorded in this camp">
+              <span className="text-sm text-gray-500">Donations</span>
+              <Droplets className="w-4 h-4 text-gray-400" />
+            </div>
+            <div className="mt-2 text-2xl font-semibold text-gray-900">{camp?.bagsCount || 0}</div>
+          </div>
+          <div className="rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between" title="Camp duration">
+              <span className="text-sm text-gray-500">Duration</span>
+              <Clock className="w-4 h-4 text-gray-400" />
+            </div>
+            <div className="mt-2 text-2xl font-semibold text-gray-900">{durationDays}</div>
+            <div className="text-xs text-gray-500">day{durationDays > 1 ? 's' : ''}</div>
+          </div>
+          <div className="rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between" title="Staff assigned">
+              <span className="text-sm text-gray-500">Staff</span>
+              <Users className="w-4 h-4 text-gray-400" />
+            </div>
+            <div className="mt-2 text-2xl font-semibold text-gray-900">{camp.staff?.length || 0}</div>
+          </div>
+        </div>
         {/* Camp Information */}
-        <div className="bg-white rounded-2xl shadow-lg border border-orange-100 p-6 mb-8">
-          <div className="flex items-center gap-4 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">{camp.name}</h2>
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <h2 className="text-xl font-bold text-gray-900">{camp.name}</h2>
             {getProgressBadge(getProgressStatus(camp))}
           </div>
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-800" title="Internal camp identifier">
+              ID: <span className="font-mono">{camp.siteId}</span>
+            </span>
+            <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-800" title="Start and end dates">
+              <Clock className="inline w-3 h-3 mr-1" />{formatDate(camp.dateFrom)} → {formatDate(camp.dateTo)}
+            </span>
+            <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-800" title="Created date">
+              <Calendar className="inline w-3 h-3 mr-1" />{new Date(camp.createdAt).toLocaleDateString()}
+            </span>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Column */}
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-1">Description</p>
-                <p className="text-gray-600 text-sm">{camp.description || "No description provided"}</p>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <MapPin className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Address</p>
-                  <p className="text-gray-600 text-sm">{camp.address}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2 space-y-3">
+              {camp.description && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs font-medium text-gray-500 mb-1">Description</p>
+                  <p className="text-sm text-gray-700">{camp.description}</p>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Phone className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Phone</p>
-                  <p className="text-gray-600 text-sm">{camp.contactInfo?.phone}</p>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg" title="Camp address">
+                  <MapPin className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500">Address</p>
+                    <p className="text-sm text-gray-700 truncate">{camp.address}</p>
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Mail className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Email</p>
-                  <p className="text-gray-600 text-sm">{camp.contactInfo?.email}</p>
+                <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg" title="Contact phone">
+                  <Phone className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500">Phone</p>
+                    <p className="text-sm text-gray-700">{camp.contactInfo?.phone}</p>
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Users className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-1">Created By</p>
-                  <p className="text-gray-600 text-sm">{camp.createdBy?.name?.first} {camp.createdBy?.name?.last}</p>
+                <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg" title="Contact email">
+                  <Mail className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500">Email</p>
+                    <p className="text-sm text-gray-700 truncate">{camp.contactInfo?.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg" title="Camp created by">
+                  <Users className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500">Created By</p>
+                    <p className="text-sm text-gray-700">{camp.createdBy?.name?.first} {camp.createdBy?.name?.last}</p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Column */}
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-1">Site ID</p>
-                <p className="text-gray-600 font-mono text-sm">{camp.siteId}</p>
-              </div>
-              
-              <div className="flex flex-col gap-3">
-                {/* Staff Count */}
-                <div className="flex items-center gap-3">
-                  <Users className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Staff Count</p>
-                    <p className="text-gray-600 text-sm">{camp.staff?.length || 0} members</p>
-                  </div>
-                </div>
-
-                {/* Staff List */}
-                <div className="mt-2">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Staff Members</p>
-                  <div className="grid gap-2">
-                    {camp.staff && camp.staff.length > 0 ? (
-                      camp.staff.map((member, index) => (
-                        <div
-                          key={member._id || index}
-                          className="flex items-center justify-between p-3 rounded-md border border-gray-200 bg-gray-50 hover:bg-gray-100 transition"
-                        >
-                          <div>
-                            <p className="text-sm font-semibold text-gray-800">
-                              {member.name?.first} {member.name?.last}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {member.role ? member.role.charAt(0).toUpperCase() + member.role.slice(1) : "Staff"}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs text-gray-600">{member.email}</p>
-                            <p className="text-xs text-gray-600">{member.phone}</p>
-                          </div>
+            <div className="space-y-3">
+              {camp.staff && camp.staff.length > 0 && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs font-medium text-gray-500 mb-2">Staff ({camp.staff.length})</p>
+                  <div className="space-y-2">
+                    {camp.staff.slice(0, 3).map((member, index) => (
+                      <div key={member._id || index} className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-800 flex items-center justify-center text-xs font-semibold" title={`${member.name?.first || ''} ${member.name?.last || ''}`}>
+                          {(member?.name?.first?.[0] || 'S')}{(member?.name?.last?.[0] || '')}
                         </div>
-                      ))
-                    ) : (
-                      <div className="p-3 rounded-md border border-gray-200 bg-gray-50 text-sm text-gray-500">
-                        No staff assigned
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-gray-700 truncate">
+                            {member.name?.first} {member.name?.last}
+                          </p>
+                          <p className="text-xs text-gray-500">{member.role || 'Staff'}</p>
+                        </div>
                       </div>
+                    ))}
+                    {camp.staff.length > 3 && (
+                      <p className="text-xs text-gray-500">+{camp.staff.length - 3} more</p>
                     )}
                   </div>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Calendar className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Created Date</p>
-                  <p className="text-gray-600 text-sm">{new Date(camp.createdAt).toLocaleDateString()}</p>
+              )}
+              {camp.lastUpdatedBy && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs font-medium text-gray-500 mb-1">Last Updated</p>
+                  <p className="text-sm text-gray-700">{camp.lastUpdatedBy?.name?.first} {camp.lastUpdatedBy?.name?.last}</p>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Users className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-1">Updated By</p>
-                  <p className="text-gray-600 text-sm">{camp.lastUpdatedBy?.name?.first} {camp.lastUpdatedBy?.name?.last}</p>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Facilities Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {facilities.map((facility) => {
             const IconComponent = facility.icon;
             return (
               <div
                 key={facility.id}
                 onClick={() => handleFacilityClick(facility.id)}
-                className="group cursor-pointer bg-white rounded-2xl border border-gray-200 transition-transform duration-300 hover:shadow-xl hover:shadow-orange-100 overflow-hidden"
+                className="group cursor-pointer bg-white rounded-lg border border-gray-200 hover:border-orange-300 hover:bg-orange-50 transition-colors"
+                title={facility.title}
               >
-                <div className="p-8">
-                  <div className="flex items-start justify-between mb-6">
-                    <div className={`p-4 bg-orange-800 rounded-xl group-hover:scale-110 transition-transform duration-300`}>
-                      <IconComponent className="w-8 h-8 text-white" />
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={`p-2 rounded-lg bg-orange-100`}>
+                      <IconComponent className="w-5 h-5 text-orange-800" />
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-500">Current</p>
-                      <p className="text-lg font-semibold text-orange-800">{facility.stats}</p>
-                    </div>
+                    <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
                   </div>
-
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-orange-800 transition-colors">
+                  <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-orange-800 transition-colors">
                     {facility.title}
                   </h3>
-                  <p className="text-gray-600 mb-6 leading-relaxed">{facility.description}</p>
-
-                  <div className="flex items-center text-orange-800 font-medium group-hover:text-orange-700 transition-colors">
-                    <span>Access Facility</span>
-                    <ArrowLeft className="w-4 h-4 ml-2 rotate-180 group-hover:translate-x-1 transition-transform" />
-                  </div>
+                  <p className="text-xs text-gray-500 mb-2">{facility.stats}</p>
                 </div>
               </div>
             );
@@ -310,16 +354,17 @@ const CampDetails = () => {
         </div>
 
         {/* Security Notice */}
-        <div className="mt-16 bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-8 border border-orange-200">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-800 to-orange-900 rounded-full mb-4">
-              <Droplets className="w-8 h-8 text-white" />
+        <div className="mt-8 bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <Droplets className="w-5 h-5 text-orange-800" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Medical-Grade Security</h3>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              All donor and donation data is protected with HIPAA-compliant security measures, ensuring complete privacy
-              and regulatory compliance for your blood bank operations.
-            </p>
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-1">Medical-Grade Security</h3>
+              <p className="text-sm text-gray-600">
+                All data is protected with HIPAA-compliant security measures for complete privacy and regulatory compliance.
+              </p>
+            </div>
           </div>
         </div>
       </div>

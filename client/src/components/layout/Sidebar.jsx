@@ -32,8 +32,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/store/auth';
+import { checkAccess } from '@/atoms/static';
 import { FiUserPlus } from "react-icons/fi";
-import { FaBoxOpen, FaChartPie, FaEye, FaHeart, FaListUl, FaMicroscope, FaTrash, FaUser } from "react-icons/fa";
+import { FaBoxOpen, FaChartPie, FaEye, FaHeart, FaListUl, FaMicroscope, FaTrash, FaUser, FaHospital } from "react-icons/fa";
 import { SiPytest } from "react-icons/si";
 import { GiCardDiscard, GiDrop , GiChemicalDrop , GiCampingTent } from "react-icons/gi";
 import { IoIosSend } from "react-icons/io";
@@ -43,12 +44,75 @@ import { FaUsersCog } from "react-icons/fa";
 
 const MODULES = [
   {
+    id: "dashboard",
+    name: "Dashboard",
+    icon: <BarChart3 className="w-5 h-5" />,
+    href: "/dashboard",
+    permissions: ["read"],
+    description: "Operational analytics overview",
+    always: true,
+  },
+    {
+    id: "admin",
+    name: "Admin",
+    icon: <Shield className="w-5 h-5" />,
+    permissions: ["admin"],
+    subModules: [
+      {
+        name: "User Manage",
+        href: "/admin/user-manage",
+        permissions: ["admin"],
+        description: "Manage users, roles, and permissions",
+        icon: <Users className="w-5 h-5" />,
+      }
+    ],
+    description: "Administration",
+  },
+  {
     id: "requisition",
     name: "Requisition",
     icon: <IoIosSend className="w-5 h-5" />,
-    href: "/requisition",
     permissions: ["read", "write"],
+    subModules: [
+      {
+        name: "Manage",
+        icon: <Plus className="w-5 h-5" />,
+        href: "/requisition",
+        permissions: ["write", "read"],
+        description: "Create and manage requisitions",
+      },
+      {
+        name: "List",
+        icon: <List className="w-5 h-5" />,
+        href: "/requisition/list",
+        permissions: ["read"],
+        description: "View and act on requisitions",
+      },
+    ],
     description: "Manage blood requests and orders",
+  },
+  {
+    id: "hospital",
+    name: "Hospital",
+    icon: <FaHospital className="w-5 h-5" />,
+    permissions: ["read", "write"],
+    subModules: [
+      {
+        name: "Add Hospital",
+        icon: <Plus className="w-5 h-5" />,
+        href: "/hospital/add",
+        permissions: ["write", "read"],
+        description: "Register new hospital",
+      },
+      {
+        name: "List Hospital",
+        icon: <List className="w-5 h-5" />,
+        href: "/hospital/list",
+        permissions: ["read"],
+        description: "View all registered hospitals",
+      },
+    ],
+    description: "Hospital management system",
   },
   {
     id: "camp",
@@ -164,6 +228,22 @@ const MODULES = [
     icon: <FaMicroscope className="w-5 h-5" />,
     href: "/labs",
     permissions: ["read", "admin"],
+    subModules: [
+      {
+        name: "Serology Results",
+        href: "/labs/serology-results",
+        permissions: ["read"],
+        description: "View serology testing results",
+        icon: <FaEye className="w-5 h-5" />,
+      },
+      {
+        name: "Serology",
+        href: "/labs/serology",
+        permissions: ["write", "read"],
+        description: "Enter serology results",
+        icon: <FaMicroscope className="w-5 h-5" />,
+      },
+    ],
     description: "Laboratory testing",
   },
   {
@@ -172,6 +252,12 @@ const MODULES = [
     icon: <FaBoxOpen className="w-5 h-5" />,
     permissions: ["read", "write"],
     subModules: [
+      {
+        name: "Stock",
+        href: "/inventory/stock",
+        permissions: ["read", "write"],
+        description: "Display current stock",
+      },
       {
         name: "Reserve",
         href: "/inventory/reserve",
@@ -183,12 +269,6 @@ const MODULES = [
         href: "/inventory/issue",
         permissions: ["write"],
         description: "Issue blood units",
-      },
-      {
-        name: "Stock",
-        href: "/inventory/stock",
-        permissions: ["read", "write"],
-        description: "Display current stock",
       },
     ],
     description: "Blood stock management",
@@ -256,26 +336,14 @@ const MODULES = [
     ],
     description: "Analytics and reporting",
   },
+
 ];
 
-const getUserPermissions = (role) => {
-  switch (role) {
-    case "admin":
-      return ["read", "write", "admin"];
-    case "doctor":
-      return ["read", "write"];
-    case "nurse":
-      return ["read", "write"];
-    case "technician":
-      return ["read"];
-    default:
-      return ["read"];
-  }
-};
-
-const hasPermission = (userPermissions, requiredPermissions) => {
-  return requiredPermissions.some((permission) => userPermissions.includes(permission));
-};
+// Access helper wrappers around user.permissions
+const canViewModule = (user, moduleName) => checkAccess(user, moduleName, 'view');
+const canCreateInModule = (user, moduleName) => checkAccess(user, moduleName, 'create');
+const canUpdateInModule = (user, moduleName) => checkAccess(user, moduleName, 'update');
+const canDeleteInModule = (user, moduleName) => checkAccess(user, moduleName, 'delete');
 
 const Sidebar = ({
   isOpen,
@@ -295,20 +363,14 @@ const Sidebar = ({
   const [selectedSubModule, setSelectedSubModule] = useState(null);
   const [tempOpenForSubmodule, setTempOpenForSubmodule] = useState(false);
 
-  // Memoize user permissions to prevent unnecessary recalculations
-  const userPermissions = useMemo(() =>
-    getUserPermissions(user?.role),
-    [user?.role]
-  );
-
   // Memoize filtered modules to prevent unnecessary re-renders
   const filteredModules = useMemo(() =>
     MODULES.filter(
       (module) =>
         module.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        hasPermission(userPermissions, module.permissions)
+        (module.always || canViewModule(user, module.name))
     ),
-    [searchQuery, userPermissions]
+    [searchQuery, user]
   );
 
   // Set current module and submodule based on location
@@ -335,7 +397,7 @@ const Sidebar = ({
 
   // Handle module click with sidebar auto-open for submodules
   const handleModuleClick = useCallback((module) => {
-    if (!hasPermission(userPermissions, module.permissions)) {
+    if (!module.always && !canViewModule(user, module.name)) {
       toast.error("ACCESS DENIED!!", {
         description: "You don't have permission to access this section"
       });
@@ -373,10 +435,11 @@ const Sidebar = ({
       // Close temporary sidebar if it was opened for submodules
       setTempOpenForSubmodule(false);
     }
-  }, [userPermissions, navigate, isMobile, onCloseMobile, isOpen]);
+  }, [user, navigate, isMobile, onCloseMobile, isOpen]);
 
   const handleSubModuleClick = useCallback((module, subModule) => {
-    if (!hasPermission(userPermissions, subModule.permissions)) {
+    // Default to requiring view access for submodules unless always allowed
+    if (!module.always && !canViewModule(user, module.name)) {
       toast.error("ACCESS DENIED!!", {
         description: "You don't have permission to access this section"
       });
@@ -389,7 +452,7 @@ const Sidebar = ({
     }
     // Close temporary sidebar after submodule selection
     setTempOpenForSubmodule(false);
-  }, [userPermissions, navigate, isMobile, onCloseMobile]);
+  }, [user, navigate, isMobile, onCloseMobile]);
 
   // Close temporary sidebar when clicking outside or when main sidebar is toggled open
   useEffect(() => {
@@ -527,7 +590,7 @@ const Sidebar = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm">{module.name}</span>
-                          {!hasPermission(userPermissions, module.permissions) && (
+                          {!canViewModule(user, module.name) && (
                             <Lock className="w-3 h-3 text-red-300" />
                           )}
                         </div>
@@ -544,7 +607,7 @@ const Sidebar = ({
                       <div className="text-xs opacity-80 truncate">{module.description}</div>
                     </div>
                   )}
-                  {!shouldDisplayOpen && !hasPermission(userPermissions, module.permissions) && (
+                  {!shouldDisplayOpen && !canViewModule(user, module.name) && (
                     <Lock className="w-2 h-2 absolute top-1 right-1 text-red-300" />
                   )}
                 </div>
@@ -583,7 +646,7 @@ const Sidebar = ({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">{subModule.name}</span>
-                              {!hasPermission(userPermissions, subModule.permissions) && (
+                              {!canViewModule(user, module.name) && (
                                 <Lock className="w-3 h-3 text-red-300" />
                               )}
                             </div>

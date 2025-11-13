@@ -19,6 +19,7 @@ router
 router
   .route("/:id")
   .get(authMiddleware, hospitalController.getHospitalById)
-  .put(authMiddleware, hospitalController.updateHospital);
+  .put(authMiddleware, hospitalController.updateHospital)
+  .delete(authMiddleware, hospitalController.deleteHospital);
 
 module.exports = router;

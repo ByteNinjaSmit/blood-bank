@@ -39,29 +39,6 @@ const ComponentSchema = new Schema(
       type: Date,
       required: true,
     },
-    testResults: [
-      {
-        test: {
-          type: String,
-          enum: ["HIV", "HBsAg", "HCV", "VDRL", "MP", "NA"],
-          // required: true
-        },
-        result: {
-          type: String,
-          enum: ["Positive", "Negative", "Indeterminate"],
-          // required: true
-        },
-        testedAt: {
-          type: Date,
-          // required: true
-        },
-        technicianId: {
-          type: Types.ObjectId,
-          ref: "User",
-          // required: true
-        },
-      },
-    ],
     status: {
       type: String,
       enum: ["lab-testing","in-stock", "reserved", "issued", "discarded"],

@@ -1,5 +1,5 @@
 import React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   ArrowRight,
   Lock,
@@ -21,7 +21,7 @@ import { toast } from "sonner"
 
 export default function BloodBankDoctorLoginPage() {
   const navigate = useNavigate();
-  const { API, storeTokenInCookies, isLoggedIn, isLoading } = useAuth();
+  const { isLoggedIn, loginStartOtp, verifyOtpLogin, resendOtpLogin } = useAuth();
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     username: "",
@@ -30,6 +30,14 @@ export default function BloodBankDoctorLoginPage() {
   const [mounted, setMounted] = useState(false)
   const isMobile = useIsMobile();
   const [isLoginLoading, setIsLoginLoading] = useState(false);
+  // OTP state
+  const [step, setStep] = useState("credentials"); // "credentials" | "otp"
+  const [txnId, setTxnId] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [expiresIn, setExpiresIn] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [verifying, setVerifying] = useState(false);
+  const otpRefs = useRef([]);
 
   useEffect(() => {
     setMounted(true)
@@ -41,31 +49,110 @@ export default function BloodBankDoctorLoginPage() {
   }
 
   const handleSubmit = async (e) => {
-    setIsLoginLoading(true);
-    e.preventDefault()
-    console.log("Blood bank doctor login:", formData)
-    try {
-      const response = await axios.post(`${API}/api/auth/login`, {
-        email: formData.username,
-        password: formData.password,
-      });
-      if (response.status === 200) {
-        const data = response.data;
-        storeTokenInCookies(data.token);
-        navigate("/");
-        toast.success(data.message || "Login successful");
+    e.preventDefault();
+    if (step === "credentials") {
+      setIsLoginLoading(true);
+      try {
+        const res = await loginStartOtp(formData.username, formData.password);
+        setTxnId(res.txnId);
+        setExpiresIn(res.expiresInSeconds || 300);
+        setResendCooldown(res.resendCooldownSeconds || 30);
+        setStep("otp");
+        toast.success("OTP sent to your email");
+      } catch (error) {
+        const message = error?.response?.data?.message || "Login failed. Please try again.";
+        toast.error(message);
+      } finally {
+        setIsLoginLoading(false);
       }
-    } catch (error) {
-      toast.error(error.response.data.message || "Login failed. Please try again.");
-    } finally {
-      setIsLoginLoading(false);
+    } else if (step === "otp") {
+      // verify OTP
+      const code = otp.join("");
+      if (code.length !== 6) {
+        return toast.error("Enter 6-digit OTP");
+      }
+      setVerifying(true);
+      try {
+        await verifyOtpLogin(formData.username, txnId, code);
+        toast.success("Login successful");
+        navigate("/");
+      } catch (error) {
+        const message = error?.response?.data?.message || "Invalid OTP";
+        toast.error(message);
+      } finally {
+        setVerifying(false);
+      }
     }
   };
 
+  // Countdown timers
+  useEffect(() => {
+    if (step !== "otp") return;
+    if (expiresIn <= 0 && resendCooldown <= 0) return;
+    const t = setInterval(() => {
+      setExpiresIn((s) => (s > 0 ? s - 1 : 0));
+      setResendCooldown((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [step, expiresIn, resendCooldown]);
 
-      if (isLoggedIn) {
-        navigate('/');
+  const handleResend = async () => {
+    if (resendCooldown > 0) return;
+    try {
+      const res = await resendOtpLogin(formData.username, txnId);
+      setResendCooldown(res.resendCooldownSeconds || 30);
+      setExpiresIn(res.expiresInSeconds ?? expiresIn);
+      toast.success("OTP resent");
+    } catch (e) {
+      const msg = e?.response?.data?.message || "Failed to resend OTP";
+      toast.error(msg);
+    }
+  };
+
+  const handleOtpChange = (idx, val) => {
+    const v = val.replace(/\D/g, "").slice(0, 1);
+    const next = [...otp];
+    next[idx] = v;
+    setOtp(next);
+    if (v && idx < otp.length - 1) {
+      otpRefs.current[idx + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (idx, e) => {
+    if (e.key === 'Backspace') {
+      if (!otp[idx] && idx > 0) {
+        otpRefs.current[idx - 1]?.focus();
       }
+      return;
+    }
+    if (e.key === 'ArrowLeft' && idx > 0) {
+      e.preventDefault();
+      otpRefs.current[idx - 1]?.focus();
+    }
+    if (e.key === 'ArrowRight' && idx < otp.length - 1) {
+      e.preventDefault();
+      otpRefs.current[idx + 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    const data = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, otp.length);
+    if (!data) return;
+    e.preventDefault();
+    const next = [...otp];
+    for (let i = 0; i < data.length; i++) {
+      next[i] = data[i];
+    }
+    setOtp(next);
+    const focusIndex = Math.min(data.length, otp.length - 1);
+    otpRefs.current[focusIndex]?.focus();
+  };
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate('/');
+    }
+  }, [isLoggedIn, navigate]);
 
 
 
@@ -144,90 +231,84 @@ export default function BloodBankDoctorLoginPage() {
           <p className="text-gray-600 mb-6 sm:mb-8 text-sm sm:text-base">Sign in to access the blood bank system</p>
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-            {/* Username field */}
-            <div className="space-y-2">
-              <label htmlFor="username" className="text-sm font-medium text-gray-700 block">
-                Email ID
-              </label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                  <User className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+            {step === "credentials" && (
+              <>
+                {/* Email */}
+                <div className="space-y-2">
+                  <label htmlFor="username" className="text-sm font-medium text-gray-700 block">Email ID</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
+                      <User className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+                    </div>
+                    <input id="username" name="username" type="email" required value={formData.username} onChange={handleChange}
+                      className="block w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-4 border-2 border-gray-200 rounded-xl sm:rounded-2xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-800 text-sm sm:text-base"
+                      placeholder="Enter your Email ID" />
+                  </div>
                 </div>
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  required
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="block w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-4 border-2 border-gray-200 rounded-xl sm:rounded-2xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-800 text-sm sm:text-base"
-                  placeholder="Enter your Email ID"
-                />
-              </div>
-            </div>
-
-            {/* Password field */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-sm font-medium text-gray-700 block">
-                  Password
-                </label>
-                <Link href="#" className="text-sm font-medium text-red-800 hover:text-red-900">
-                  Forgot password?
-                </Link>
-              </div>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+                {/* Password */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="password" className="text-sm font-medium text-gray-700 block">Password</label>
+                    <Link href="#" className="text-sm font-medium text-red-800 hover:text-red-900">Forgot password?</Link>
+                  </div>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
+                      <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+                    </div>
+                    <input id="password" name="password" type={showPassword ? "text" : "password"} required value={formData.password} onChange={handleChange}
+                      className="block w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-3 sm:py-4 border-2 border-gray-200 rounded-xl sm:rounded-2xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-800 text-sm sm:text-base"
+                      placeholder="••••••••" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute cursor-pointer right-0 pr-3 sm:pr-4 inset-y-0 flex items-center">
+                      {showPassword ? (<EyeOff className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />) : (<Eye className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />)}
+                    </button>
+                  </div>
                 </div>
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="block w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-3 sm:py-4 border-2 border-gray-200 rounded-xl sm:rounded-2xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-800 text-sm sm:text-base"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute cursor-pointer right-0 pr-3 sm:pr-4 inset-y-0 flex items-center"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+                <button type="submit" className={`w-full flex cursor-pointer items-center justify-center px-4 sm:px-6 py-3 sm:py-4 border border-transparent rounded-xl sm:rounded-2xl text-sm sm:text-base font-medium text-white bg-gradient-to-r from-red-800 to-red-900 hover:from-red-900 hover:to-red-950 transition-all duration-200 ${isLoginLoading ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isLoginLoading}>
+                  {isLoginLoading ? (
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path fill="currentColor" d="M4 12a8 8 0 1 1 16 0a8 8 0 0 1-16 0zm0 0a8 8 0 0 1 16 0a8 8 0 0 1-16 0z" className="opacity-50" /></svg>
                   ) : (
-                    <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+                    "Send OTP"
                   )}
                 </button>
-              </div>
-            </div>
-            <button
-              type="submit"
-              className={`w-full flex cursor-pointer items-center justify-center px-4 sm:px-6 py-3 sm:py-4 border border-transparent rounded-xl sm:rounded-2xl text-sm sm:text-base font-medium text-white bg-gradient-to-r from-red-800 to-red-900 hover:from-red-900 hover:to-red-950 transition-all duration-200 ${isLoginLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={isLoginLoading}  // Disable button while loading
-            >
-              {isLoginLoading ? (
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path
-                    fill="currentColor"
-                    d="M4 12a8 8 0 1 1 16 0a8 8 0 0 1-16 0zm0 0a8 8 0 0 1 16 0a8 8 0 0 1-16 0z"
-                    className="opacity-50"
-                  />
-                </svg>
-              ) : (
-                "Login"
-              )}
-            </button>
+              </>
+            )}
 
+            {step === "otp" && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 block">Enter 6-digit OTP</label>
+                  <div className="flex items-center gap-2 justify-between">
+                    {otp.map((d, i) => (
+                      <input
+                        key={i}
+                        ref={(el) => (otpRefs.current[i] = el)}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={1}
+                        value={otp[i]}
+                        onChange={(e) => handleOtpChange(i, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                        onPaste={i === 0 ? handleOtpPaste : undefined}
+                        className="w-11 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-semibold border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-800"
+                      />
+                    ))}
+                  </div>
+                  <div className="text-xs sm:text-sm text-gray-600 flex items-center justify-between mt-1">
+                    <span>Expires in {Math.floor(expiresIn/60)}:{String(expiresIn%60).padStart(2,'0')}</span>
+                    <button type="button" onClick={handleResend} disabled={resendCooldown>0}
+                      className={`text-red-800 hover:text-red-900 ${resendCooldown>0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                      {resendCooldown>0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setStep("credentials")} className="w-1/3 px-4 py-3 rounded-xl border-2 border-gray-200 text-gray-700">Back</button>
+                  <button type="submit" className={`flex-1 flex items-center justify-center px-4 py-3 rounded-xl text-white bg-gradient-to-r from-red-800 to-red-900 ${verifying ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} disabled={verifying}>
+                    {verifying ? 'Verifying…' : 'Verify & Login'}
+                  </button>
+                </div>
+              </>
+            )}
           </form>
 
           {/* Security Badge */}

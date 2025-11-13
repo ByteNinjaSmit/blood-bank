@@ -7,265 +7,390 @@ POST /inventory/discard – Discard expired/unusable stock
 */
 
 const Inventory = require('../models/inventory-model');
+const Component = require('../models/component-model');
+const BloodBag = require('../models/bloodbag-model');
 const HospitalRequest = require('../models/hospital-request-model');
+const Hospital = require('../models/hospital-model');
 
-// List inventory items with filters
-const listInventory = async (req, res, next) => {
-  try {
-    const { bloodGroup, rh, componentType, status, siteId } = req.query;
-    
-    // Build filter object based on query parameters
-    const filter = {};
-    
-    if (bloodGroup) filter.bloodGroup = bloodGroup;
-    if (rh) filter.rh = rh;
-    if (componentType) filter.componentType = componentType;
-    if (status) filter.status = status;
-    if (siteId) filter.siteId = siteId;
-    
-    const inventory = await Inventory.find(filter)
-      .populate('componentId', 'donationId')
-      .populate('reservedFor', 'requestId hospitalId')
-      .sort({ expiryDate: 1 }); // Sort by expiry date (oldest first)
-    
-    res.status(200).json({
-      success: true,
-      count: inventory.length,
-      data: inventory
-    });
-  } catch (error) {
-    next(error);
-  }
+// Helpers
+const toInt = (v, d) => {
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) ? n : d;
 };
 
-// Get near-expiry inventory items
-const getNearExpiryInventory = async (req, res, next) => {
+// GET /inventory – List in-stock components (with filters/pagination)
+async function listInventory(req, res, next) {
   try {
-    const { days = 7, siteId } = req.query;
-    
-    // Calculate date threshold for near expiry (default: 7 days from now)
-    const expiryThreshold = new Date();
-    expiryThreshold.setDate(expiryThreshold.getDate() + parseInt(days));
-    
-    const filter = {
-      expiryDate: { $lte: expiryThreshold },
-      status: 'in-stock' // Only consider in-stock items
+    const page = toInt(req.query.page, 1);
+    const limit = toInt(req.query.limit, 10);
+    const skip = (page - 1) * limit;
+
+    const {
+      status = 'in-stock',
+      componentType,
+      siteId,
+      search, // bagNo search
+      sortBy = 'createdAt',
+      order = 'desc',
+    } = req.query;
+
+    const invFilter = {};
+    if (status) invFilter.status = status;
+    // search applied on bag.bagNo after lookup
+
+    const compFilter = {};
+    if (componentType) compFilter['component.componentType'] = componentType;
+    if (siteId) compFilter['component.siteId'] = siteId;
+
+    const allowedSort = {
+      createdAt: 'createdAt',
+      inStockDate: 'inStockDate',
+      expiryDate: 'component.expiryDate',
+      bagNo: 'bag.bagNo',
     };
-    
-    if (siteId) filter.siteId = siteId;
-    
-    const nearExpiryItems = await Inventory.find(filter)
-      .populate('componentId', 'donationId')
-      .sort({ expiryDate: 1 });
-    
-    res.status(200).json({
-      success: true,
-      count: nearExpiryItems.length,
-      data: nearExpiryItems
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+    const sortField = allowedSort[sortBy] || 'createdAt';
+    const sort = { [sortField]: order === 'asc' ? 1 : -1 };
 
-// Reserve inventory items for a hospital request
-const reserveInventory = async (req, res, next) => {
-  try {
-    const { requestId, inventoryIds } = req.body;
-    
-    if (!requestId || !inventoryIds || !Array.isArray(inventoryIds) || inventoryIds.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Request ID and inventory IDs array are required'
-      });
-    }
-    
-    // Verify request exists
-    const request = await HospitalRequest.findById(requestId);
-    if (!request) {
-      return res.status(404).json({
-        success: false,
-        message: 'Hospital request not found'
-      });
-    }
-    
-    // Verify all inventory items exist and are available
-    const inventoryItems = await Inventory.find({
-      _id: { $in: inventoryIds },
-      status: 'in-stock'
-    });
-    
-    if (inventoryItems.length !== inventoryIds.length) {
-      return res.status(400).json({
-        success: false,
-        message: 'One or more inventory items not found or not available'
-      });
-    }
-    
-    // Update inventory items to reserved status
-    await Inventory.updateMany(
-      { _id: { $in: inventoryIds } },
-      { status: 'reserved', reservedFor: requestId }
-    );
-    
-    // Update request with matched inventory
-    const matchedInventory = inventoryIds.map(id => ({
-      inventoryId: id,
-      reservedAt: new Date()
-    }));
-    
-    request.matchedInventory = matchedInventory;
-    request.status = 'matched';
-    await request.save();
-    
-    res.status(200).json({
-      success: true,
-      message: 'Inventory items reserved successfully',
-      data: {
-        request,
-        reservedItems: inventoryItems
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+    // Use aggregation to join Component and BloodBag
+    const pipeline = [
+      { $match: invFilter },
+      { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+      { $unwind: '$component' },
+      { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
+      { $unwind: '$bag' },
+      { $lookup: { from: 'hospitals', localField: 'reservedForHospital', foreignField: '_id', as: 'hospital' } },
+      { $unwind: { path: '$hospital', preserveNullAndEmptyArrays: true } },
+      { $match: compFilter },
+      ...(search ? [{ $match: { 'bag.bagNo': { $regex: search, $options: 'i' } } }] : []),
+      {
+        $project: {
+          _id: 1,
+          status: 1,
+          inStockDate: 1,
+          createdAt: 1,
+          reservedFor: 1,
+          reservedForHospital: 1,
+          reservedAt: 1,
+          reservedUntil: 1,
+          reservedPatientName: 1,
+          reservedPatientAge: 1,
+          reservedPatientSex: 1,
+          componentId: 1,
+          bagNo: 1,
+          'component.componentType': 1,
+          'component.volumeMl': 1,
+          'component.expiryDate': 1,
+          'component.siteId': 1,
+          'bag.bagNo': 1,
+          'bag.segmentNo': 1,
+          'bag.bloodGroup': 1,
+          'bag.rh': 1,
+          'hospital._id': 1,
+          'hospital.name': 1,
+        },
+      },
+      { $sort: sort },
+      { $skip: skip },
+      { $limit: limit },
+    ];
 
-// Issue reserved inventory
-const issueInventory = async (req, res, next) => {
-  try {
-    const { requestId } = req.body;
-    
-    if (!requestId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Request ID is required'
-      });
-    }
-    
-    // Verify request exists and is in approved status
-    const request = await HospitalRequest.findById(requestId);
-    if (!request) {
-      return res.status(404).json({
-        success: false,
-        message: 'Hospital request not found'
-      });
-    }
-    
-    if (request.status !== 'approved') {
-      return res.status(400).json({
-        success: false,
-        message: `Request cannot be issued as it is in ${request.status} status. It must be in 'approved' status.`
-      });
-    }
-    
-    // Get inventory items reserved for this request
-    const inventoryIds = request.matchedInventory.map(item => item.inventoryId);
-    
-    // Update inventory items to issued status
-    await Inventory.updateMany(
-      { _id: { $in: inventoryIds } },
-      { status: 'issued' }
-    );
-    
-    // Update request status
-    request.status = 'issued';
-    await request.save();
-    
-    res.status(200).json({
-      success: true,
-      message: 'Inventory items issued successfully',
-      data: request
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+    const [items, totalAgg] = await Promise.all([
+      Inventory.aggregate(pipeline),
+      Inventory.aggregate([
+        { $match: invFilter },
+        { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+        { $unwind: '$component' },
+        { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
+        { $unwind: '$bag' },
+        { $match: compFilter },
+        ...(search ? [{ $match: { 'bag.bagNo': { $regex: search, $options: 'i' } } }] : []),
+        { $count: 'count' },
+      ]),
+    ]);
 
-// Discard inventory items
-const discardInventory = async (req, res, next) => {
-  try {
-    const { inventoryIds, reason } = req.body;
-    
-    if (!inventoryIds || !Array.isArray(inventoryIds) || inventoryIds.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Inventory IDs array is required'
-      });
-    }
-    
-    // Verify all inventory items exist and are not already discarded
-    const inventoryItems = await Inventory.find({
-      _id: { $in: inventoryIds },
-      status: { $ne: 'discarded' }
-    });
-    
-    if (inventoryItems.length !== inventoryIds.length) {
-      return res.status(400).json({
-        success: false,
-        message: 'One or more inventory items not found or already discarded'
-      });
-    }
-    
-    // Check if any items are reserved and update the corresponding requests
-    const reservedItems = inventoryItems.filter(item => 
-      item.status === 'reserved' && item.reservedFor
-    );
-    
-    // Get unique request IDs
-    const affectedRequestIds = [...new Set(
-      reservedItems.map(item => item.reservedFor.toString())
-    )];
-    
-    // Update affected requests
-    for (const requestId of affectedRequestIds) {
-      const request = await HospitalRequest.findById(requestId);
-      if (request) {
-        // Remove discarded items from matchedInventory
-        const discardedItemIds = reservedItems
-          .filter(item => item.reservedFor.toString() === requestId)
-          .map(item => item._id.toString());
-        
-        request.matchedInventory = request.matchedInventory.filter(
-          match => !discardedItemIds.includes(match.inventoryId.toString())
-        );
-        
-        // If no matched inventory remains, revert to pending status
-        if (request.matchedInventory.length === 0) {
-          request.status = 'pending';
-        }
-        
-        await request.save();
-      }
-    }
-    
-    // Update inventory items to discarded status
-    await Inventory.updateMany(
-      { _id: { $in: inventoryIds } },
-      { 
-        status: 'discarded', 
-        reservedFor: null,
-        discardReason: reason || 'Not specified'
-      }
-    );
-    
-    res.status(200).json({
+    const total = totalAgg?.[0]?.count || 0;
+
+    return res.status(200).json({
       success: true,
-      message: 'Inventory items discarded successfully',
-      data: {
-        discardedItems: inventoryItems,
-        affectedRequests: affectedRequestIds
-      }
+      data: items,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
-};
+
+}
+
+async function reserveByCriteriaFIFO(req, res, next) {
+  try {
+    const now = new Date();
+    const { hospitalId, reservedUntil, items = [], siteId, patient } = req.body || {};
+    if (!hospitalId) {
+      return res.status(400).json({ success: false, message: 'hospitalId is required' });
+    }
+    const hospital = await Hospital.findById(hospitalId);
+    if (!hospital) return res.status(404).json({ success: false, message: 'Hospital not found' });
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'No items to reserve' });
+    }
+    if (!patient || !patient.name || patient.sex == null || (patient.age == null || Number.isNaN(Number(patient.age)))) {
+      return res.status(400).json({ success: false, message: 'Patient name, age and sex are required for reservation' });
+    }
+    const until = reservedUntil ? new Date(reservedUntil) : null;
+    const pn = patient?.name || null;
+    const pa = typeof patient?.age === 'number' ? patient.age : (patient?.age ? Number(patient.age) : null);
+    const ps = patient?.sex || null;
+    const selections = [];
+    const shortages = [];
+    for (const rc of items) {
+      if (!rc?.componentType || !rc?.units || !rc?.bloodGroup || !rc?.rh) {
+        return res.status(400).json({ success: false, message: 'Invalid item' });
+      }
+      const compFilter = { 'component.componentType': rc.componentType };
+      if (siteId) compFilter['component.siteId'] = siteId;
+      const pipeline = [
+        { $match: { status: 'in-stock' } },
+        { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+        { $unwind: '$component' },
+        { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
+        { $unwind: '$bag' },
+        { $match: { ...compFilter, 'bag.bloodGroup': rc.bloodGroup, 'bag.rh': rc.rh, 'component.expiryDate': { $gte: now } } },
+        { $sort: { inStockDate: 1, 'component.expiryDate': 1 } },
+        { $limit: rc.units },
+        { $project: { _id: 1 } },
+      ];
+      const docs = await Inventory.aggregate(pipeline);
+      const ids = docs.map(d => d._id);
+      if (ids.length < rc.units) {
+        shortages.push({ componentType: rc.componentType, required: rc.units, available: ids.length });
+      }
+      selections.push(...ids);
+    }
+    if (shortages.length) {
+      return res.status(409).json({ success: false, message: 'Insufficient stock to reserve', data: { shortages } });
+    }
+    const upd = await Inventory.updateMany(
+      { _id: { $in: selections }, status: 'in-stock' },
+      { $set: { status: 'reserved', reservedForHospital: hospitalId, reservedAt: now, reservedUntil: until, reservedPatientName: pn, reservedPatientAge: pa, reservedPatientSex: ps } }
+    );
+    if (upd.modifiedCount !== selections.length) {
+      return res.status(409).json({ success: false, message: 'Concurrent update detected while reserving' });
+    }
+    const details = await Inventory.aggregate([
+      { $match: { _id: { $in: selections } } },
+      { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+      { $unwind: '$component' },
+      { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
+      { $unwind: '$bag' },
+      { $project: {
+          _id: 1, status: 1, inStockDate: 1, createdAt: 1,
+          reservedFor: 1, reservedForHospital: 1, reservedAt: 1, reservedUntil: 1,
+          reservedPatientName: 1, reservedPatientAge: 1, reservedPatientSex: 1,
+          componentId: 1, bagNo: 1,
+          'component.componentType': 1, 'component.volumeMl': 1, 'component.expiryDate': 1, 'component.siteId': 1,
+          'bag.bagNo': 1, 'bag.segmentNo': 1, 'bag.bloodGroup': 1, 'bag.rh': 1,
+      }},
+    ]);
+    return res.status(200).json({ success: true, data: { matchedCount: selections.length, inventoryIds: selections, items: details } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// GET /inventory/near-expiry – Get near-expiry items
+async function getNearExpiryInventory(req, res, next) {
+  try {
+    const page = toInt(req.query.page, 1);
+    const limit = toInt(req.query.limit, 10);
+    const skip = (page - 1) * limit;
+    const { siteId, componentType, sortBy = 'expiryDate', order = 'asc' } = req.query;
+
+    const thresholdsDays = { Platelet: 1, RBC: 7, FFP: 30, Cryo: 30 };
+    const now = new Date();
+
+    const compFilter = { status: 'in-stock' };
+    if (siteId) compFilter.siteId = siteId;
+    if (componentType) compFilter.componentType = componentType;
+
+    const sort = { [sortBy]: order === 'asc' ? 1 : -1 };
+
+    // Join Inventory->Component and filter by component expiry proximity
+    const pipeline = [
+      { $match: { status: 'in-stock' } },
+      { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+      { $unwind: '$component' },
+      { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
+      { $unwind: '$bag' },
+      { $match: compFilter },
+      {
+        $addFields: {
+          daysToExpiry: {
+            $ceil: {
+              $divide: [{ $subtract: ['$component.expiryDate', now] }, 1000 * 60 * 60 * 24],
+            },
+          },
+          threshold: {
+            $cond: [
+              { $eq: ['$component.componentType', 'Platelet'] }, thresholdsDays.Platelet,
+              { $cond: [
+                { $eq: ['$component.componentType', 'RBC'] }, thresholdsDays.RBC,
+                { $cond: [
+                  { $eq: ['$component.componentType', 'FFP'] }, thresholdsDays.FFP,
+                  { $cond: [ { $eq: ['$component.componentType', 'Cryo'] }, thresholdsDays.Cryo, 7 ] }
+                ] }
+              ] }
+            ]
+          }
+        },
+      },
+      {
+        $match: {
+          $expr: { $lte: [ '$daysToExpiry', '$threshold' ] }
+        },
+      },
+      { $sort: sort },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $project: {
+          _id: 1,
+          status: 1,
+          inStockDate: 1,
+          createdAt: 1,
+          daysToExpiry: 1,
+          component: {
+            componentType: 1,
+            volumeMl: 1,
+            expiryDate: 1,
+            siteId: 1,
+          },
+          bag: {
+            bagNo: 1,
+            segmentNo: 1,
+            bloodGroup: 1,
+            rh: 1,
+          },
+        },
+      },
+    ];
+
+    const [items, totalAgg] = await Promise.all([
+      Inventory.aggregate(pipeline),
+      Inventory.aggregate([
+        { $match: { status: 'in-stock' } },
+        { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+        { $unwind: '$component' },
+        { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
+        { $unwind: '$bag' },
+        { $match: compFilter },
+        {
+          $addFields: {
+            daysToExpiry: {
+              $ceil: {
+                $divide: [{ $subtract: ['$component.expiryDate', now] }, 1000 * 60 * 60 * 24],
+              },
+            },
+            threshold: {
+              $cond: [
+                { $eq: ['$component.componentType', 'Platelet'] }, thresholdsDays.Platelet,
+                { $cond: [
+                  { $eq: ['$component.componentType', 'RBC'] }, thresholdsDays.RBC,
+                  { $cond: [
+                    { $eq: ['$component.componentType', 'FFP'] }, thresholdsDays.FFP,
+                    { $cond: [ { $eq: ['$component.componentType', 'Cryo'] }, thresholdsDays.Cryo, 7 ] }
+                  ] }
+                ] }
+              ]
+            }
+          },
+        },
+        {
+          $match: {
+            $expr: { $lte: [ '$daysToExpiry', '$threshold' ] }
+          },
+        },
+        { $count: 'count' },
+      ]),
+    ]);
+
+    const total = totalAgg?.[0]?.count || 0;
+
+    return res.status(200).json({
+      success: true,
+      data: items,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /inventory/reserve – Reserve stock for request
+async function reserveInventory(req, res, next) {
+  try {
+    const { inventoryIds = [], requestId, userId } = req.body;
+    if (!Array.isArray(inventoryIds) || inventoryIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'No inventory selected' });
+    }
+    const result = await Inventory.updateMany(
+      { _id: { $in: inventoryIds }, status: 'in-stock' },
+      { $set: { status: 'reserved', reservedFor: requestId || null, updatedAt: new Date(), updatedBy: userId } }
+    );
+    return res.status(200).json({ success: true, matched: result.matchedCount, modified: result.modifiedCount });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /inventory/issue – Issue reserved stock
+async function issueInventory(req, res, next) {
+  try {
+    const { inventoryIds = [], userId } = req.body;
+    if (!Array.isArray(inventoryIds) || inventoryIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'No inventory selected' });
+    }
+    const result = await Inventory.updateMany(
+      { _id: { $in: inventoryIds }, status: 'reserved' },
+      { $set: { status: 'issued', updatedAt: new Date(), updatedBy: userId } }
+    );
+    return res.status(200).json({ success: true, matched: result.matchedCount, modified: result.modifiedCount });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /inventory/discard – Discard stock
+async function discardInventory(req, res, next) {
+  try {
+    const { inventoryIds = [], reason = 'manual-discard', userId } = req.body;
+    if (!Array.isArray(inventoryIds) || inventoryIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'No inventory selected' });
+    }
+    const result = await Inventory.updateMany(
+      { _id: { $in: inventoryIds }, status: { $in: ['in-stock', 'reserved'] } },
+      { $set: { status: 'discarded', updatedAt: new Date(), updatedBy: userId } }
+    );
+    return res.status(200).json({ success: true, matched: result.matchedCount, modified: result.modifiedCount });
+  } catch (err) {
+    next(err);
+  }
+}
 
 module.exports = {
   listInventory,
   getNearExpiryInventory,
   reserveInventory,
+  reserveByCriteriaFIFO,
   issueInventory,
   discardInventory
 };

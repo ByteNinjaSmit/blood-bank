@@ -1,16 +1,17 @@
 "use client"
 
-import { useState } from "react"
-import { useSearchParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, Search, Plus, Droplets, X } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom"
+import { ArrowLeft, Search, Plus, Droplets, X, CheckCircle } from "lucide-react"
 import axios from "axios"
 import { useAuth } from "@/store/auth"
 import { toast } from "sonner"
-import CreateDonor from "./Create-Donor"
+import CreateDonor from "../donor/Create-Donor"
 import Stepper, { Step } from "@/components/Stepper"
 
 const CreateDonation = ({ onCreateDonor }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const campId = searchParams.get("campId")
   const { API, authorizationToken } = useAuth()
@@ -20,6 +21,9 @@ const CreateDonation = ({ onCreateDonor }) => {
   const [showPopup, setShowPopup] = useState(false)
   const [showCreateDonor, setShowCreateDonor] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [currentStep, setCurrentStep] = useState(1)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [savedDonation, setSavedDonation] = useState(null)
 
   // Donor Search Fields
   const [donorInfo, setDonorInfo] = useState({
@@ -52,6 +56,38 @@ const CreateDonation = ({ onCreateDonor }) => {
     atypicalAntibody: "",
   })
 
+  // Prefill and enforce blood group/Rh and optionally weight from donor to avoid backend mismatch & speed up
+  useEffect(() => {
+    if (donor) {
+      const donorBG = donor?.bloodGroup
+      const donorRh = donor?.rh
+      const donorWeight = donor?.weightKg
+      setFormData((prev) => ({
+        ...prev,
+        bloodGroup: donorBG || prev.bloodGroup,
+        rh: donorRh || prev.rh,
+        weightKg: prev.weightKg || (donorWeight ? String(donorWeight) : prev.weightKg),
+      }))
+    }
+  }, [donor])
+
+  // Accept donor from navigation state and skip search step
+  useEffect(() => {
+    const navDonor = location?.state?.donor
+    if (navDonor) {
+      setDonor(navDonor)
+      setCurrentStep(2)
+    }
+  }, [location?.state])
+
+  const getDonorName = (d) => {
+    if (!d) return ""
+    const f = d?.name?.firstName || d?.firstName || ""
+    const m = d?.name?.middleName || d?.middleName || ""
+    const l = d?.name?.lastName || d?.lastName || ""
+    return [f, m, l].filter(Boolean).join(" ")
+  }
+
   const handleDonorSearch = async () => {
     setLoading(true)
     setError("")
@@ -66,6 +102,7 @@ const CreateDonation = ({ onCreateDonor }) => {
       if (res.status === 200) {
         setDonor(res.data.donor)
         setShowPopup(false)
+        setCurrentStep(2)
       }
     } catch (error) {
       if (error.response?.status === 404) {
@@ -113,7 +150,8 @@ const CreateDonation = ({ onCreateDonor }) => {
         withCredentials: true,
       })
       if (response.status === 201) {
-        navigate(campId ? `/camp-details/?id=${campId}` : "/donations")
+        setSavedDonation(response.data.data)
+        setShowSuccess(true)
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Error creating donation")
@@ -122,13 +160,40 @@ const CreateDonation = ({ onCreateDonor }) => {
     }
   }
 
+  const resetDonationForSameDonor = () => {
+    // Reset bag info and vitals, keep donor and prefilled group/Rh
+    setFormData((prev) => ({
+      ...prev,
+      bagNo: "",
+      segmentNo: "",
+      batchNo: "",
+      typeOfBag: "",
+      hb: "",
+      weightKg: donor?.weightKg ? String(donor.weightKg) : "",
+      pulse: "",
+      tempC: "",
+      bp: "",
+      // bloodGroup and rh remain as is (prefilled from donor)
+    }))
+    setShowSuccess(false)
+    setCurrentStep(2)
+  }
+
+  const startNewDonorFlow = () => {
+    setShowSuccess(false)
+    setDonor(null)
+    setDonorInfo({ firstName: "", middleName: "", lastName: "", dob: "", uid: "", phone: "", donorId: "" })
+    setCurrentStep(1)
+    setShowCreateDonor(true)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
           <button
-            onClick={() => navigate(campId ? `/camp-details/?id=${campId}` : "/donations")}
+            onClick={() => navigate(campId ? `/camp-details/?id=${campId}` : "/donations/view-donation")}
             className="flex items-center gap-2 px-4 py-2 text-orange-800 bg-orange-50 hover:bg-orange-100 rounded-lg border border-orange-200"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -149,13 +214,23 @@ const CreateDonation = ({ onCreateDonor }) => {
       <div className=" mx-auto px-4 py-8">
         <Stepper
           onFinalStepCompleted={handleSubmit}
+          onStepChange={(s) => setCurrentStep(s)}
+          nextButtonProps={{ disabled: currentStep === 1 && !donor }}
           stepCircleContainerClassName="bg-white"
           contentClassName="bg-white rounded-xl shadow border border-gray-100"
           footerClassName="bg-white rounded-b-xl"
         >
           {/* Step 1: Donor Search */}
           <Step>
-            <div className="p-6">
+            <div
+              className="p-6"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault()
+                  if (searchRequiredFilled) handleDonorSearch()
+                }
+              }}
+            >
               <h2 className="text-lg font-semibold text-gray-800 mb-4">Donor Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {Object.entries({
@@ -224,6 +299,13 @@ const CreateDonation = ({ onCreateDonor }) => {
                 >
                   <Search className="w-4 h-4" /> Search
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateDonor(true)}
+                  className="px-5 py-2 rounded-lg border border-orange-200 text-orange-800 hover:bg-orange-50"
+                >
+                  <Plus className="w-4 h-4 inline mr-1" /> Create Donor
+                </button>
                 {!searchRequiredFilled && (
                   <span className="text-sm text-gray-500 self-center">
                     Enter First, Middle, Last name and DOB to search
@@ -265,6 +347,16 @@ const CreateDonation = ({ onCreateDonor }) => {
                       onCreated={(created) => {
                         setDonor(created)
                         setShowCreateDonor(false)
+                        setCurrentStep(2)
+                      }}
+                      prefill={{
+                        donorId: donorInfo.donorId,
+                        firstName: donorInfo.firstName,
+                        middleName: donorInfo.middleName,
+                        lastName: donorInfo.lastName,
+                        dob: donorInfo.dob,
+                        uid: donorInfo.uid,
+                        phone: donorInfo.phone,
                       }}
                     />
                   </div>
@@ -274,10 +366,10 @@ const CreateDonation = ({ onCreateDonor }) => {
               {donor && (
                 <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                   <p className="text-sm text-green-800">
-                    ✓ Donor selected:{" "}
-                    <strong>
-                      {donor.firstName} {donor.lastName}
-                    </strong>
+                    ✓ Donor selected: <strong>{getDonorName(donor)}</strong>
+                    {donor?.donorId ? (
+                      <span className="text-gray-600"> (ID: {donor.donorId})</span>
+                    ) : null}
                   </p>
                 </div>
               )}
@@ -361,6 +453,7 @@ const CreateDonation = ({ onCreateDonor }) => {
                     value={formData.bloodGroup}
                     onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg"
+                    disabled={!!donor}
                     required
                   >
                     <option value="">Select</option>
@@ -369,6 +462,9 @@ const CreateDonation = ({ onCreateDonor }) => {
                     <option value="AB">AB</option>
                     <option value="O">O</option>
                   </select>
+                  {donor && (
+                    <p className="text-xs text-gray-500 mt-1">Prefilled from donor record</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm mb-1">Rh Factor</label>
@@ -376,12 +472,16 @@ const CreateDonation = ({ onCreateDonor }) => {
                     value={formData.rh}
                     onChange={(e) => setFormData({ ...formData, rh: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg"
+                    disabled={!!donor}
                     required
                   >
                     <option value="">Select</option>
                     <option value="Positive">Positive</option>
                     <option value="Negative">Negative</option>
                   </select>
+                  {donor && (
+                    <p className="text-xs text-gray-500 mt-1">Prefilled from donor record</p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm mb-1">Atypical Antibody</label>
@@ -410,7 +510,7 @@ const CreateDonation = ({ onCreateDonor }) => {
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                   <h4 className="font-semibold text-blue-900 mb-2">Donor Information</h4>
                   <p className="text-sm text-blue-800">
-                    <strong>Name:</strong> {donor?.firstName} {donor?.middleName} {donor?.lastName}
+                    <strong>Name:</strong> {getDonorName(donor)}
                   </p>
                   <p className="text-sm text-blue-800">
                     <strong>Donor ID:</strong> {donor?.donorId}
@@ -471,6 +571,46 @@ const CreateDonation = ({ onCreateDonor }) => {
           </Step>
         </Stepper>
       </div>
+
+      {showSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 border border-green-200">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-green-100 rounded-full">
+                <CheckCircle className="w-6 h-6 text-green-700" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Donation recorded successfully</h3>
+                <p className="text-sm text-gray-600 mt-1">Choose your next action to keep the queue moving fast.</p>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <button
+                onClick={resetDonationForSameDonor}
+                className="w-full px-4 py-2 rounded-lg bg-orange-800 text-white hover:bg-orange-900"
+              >
+                Add another bag for this donor
+              </button>
+              <button
+                onClick={startNewDonorFlow}
+                className="w-full px-4 py-2 rounded-lg border border-orange-200 text-orange-800 hover:bg-orange-50"
+              >
+                Create new donor & continue
+              </button>
+              <button
+                onClick={() => {
+                  setShowSuccess(false)
+                  navigate(campId ? `/camp-details/?id=${campId}` : "/donations/view-donation")
+                }}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                {campId ? "Back to Camp" : "Go to Donations"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

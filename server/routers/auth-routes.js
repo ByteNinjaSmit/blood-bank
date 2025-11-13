@@ -10,11 +10,19 @@ const router = express.Router();
 const authController = require("../controllers/auth-controller");
 const authMiddleware = require("../middlewares/auth-middleware"); 
 
-router.route("/register").post(authController.registerUser);
-router.route("/login").post(authController.loginUser);
-router.route("/current").get(authMiddleware, authController.getCurrentUser);
-// router.post('/refresh', authController.refresh);
-// router.post('/logout', authController.logout);
+router.post("/register", authController.registerUser);
+// Registration OTP endpoints
+router.post("/register/start-otp", authController.startRegisterOtp);
+router.post("/register/verify-otp", authController.verifyRegisterOtp);
+router.post("/register/resend-otp", authController.resendRegisterOtp);
+router.post("/login", authController.loginUser);
+// OTP login endpoints
+router.post("/login/start-otp", authController.startOtpLogin);
+router.post("/login/verify-otp", authController.verifyOtpLogin);
+router.post("/login/resend-otp", authController.resendOtpLogin);
+router.post("/refresh", authController.refreshToken);
+router.post("/logout", authController.logout);
+router.get("/current", authMiddleware, authController.getCurrentUser);
 // router.post('/change-password', authMiddleware, authController.changePassword);
 
 module.exports = router;

@@ -41,10 +41,9 @@ const getList = async (req, res, next) => {
             { path: "components", model: "Component" },
           ],
         })
-        .populate("componentId") // Populate discarded component if exists
+        .populate("componentId") // For component-level discard
         .populate("siteId", "name"),
-
-        DiscardLog.countDocuments(filter),
+      DiscardLog.countDocuments(filter),
     ]);
 
     // Format Response
@@ -53,10 +52,10 @@ const getList = async (req, res, next) => {
       const donor = bag.donor || {};
       const component = log.componentId || null;
 
-      // 🧪 Prepare test results
-      const testResults = component?.testResults
-        ?.map((t) => `${t.test}: ${t.result}`)
-        ?.join(", ") || "N/A";
+      // 🧪 FIXED — TEST RESULTS ARE FROM BAG, NOT COMPONENT
+      const testResults = bag?.testResults?.length
+        ? bag.testResults.map((t) => `${t.test}: ${t.result}`).join(", ")
+        : "N/A";
 
       return {
         id: log._id.toString(),
@@ -65,7 +64,9 @@ const getList = async (req, res, next) => {
         reason: log.reason || "N/A",
         discardedAt: log.discardedAt?.toISOString().split("T")[0] || "N/A",
         createdAt: log.createdAt?.toISOString() || "N/A",
-        itemId: component?._id || null,
+
+        // ID (either component or bag)
+        itemId: component?._id || bag._id || null,
 
         // 🧍 Donor Info
         donorId: donor.uid || "N/A",
@@ -97,10 +98,13 @@ const getList = async (req, res, next) => {
         },
         status: bag.status || "N/A",
 
-        // 🧫 Component Info
+        // 🧫 Component Info (only when component discarded)
         componentId: component?.componentId || null,
         componentType: component?.componentType || null,
+
+        // 🧪 FIXED — BAG LEVEL TEST RESULTS
         testResults,
+
         siteId: log.siteId?.name || "N/A",
       };
     });
@@ -123,12 +127,14 @@ const getList = async (req, res, next) => {
 };
 
 
+
 // ============================================================
-// 🧾 GET SINGLE DISCARDED ITEM DETAILS
+// 🧾 GET SINGLE DISCARDED ITEM DETAILS (Final Updated Version)
 // ============================================================
 const getSingleDetails = async (req, res, next) => {
   try {
     const { id } = req.params;
+
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({
         success: false,
@@ -144,7 +150,7 @@ const getSingleDetails = async (req, res, next) => {
           { path: "components", model: "Component" },
         ],
       })
-      .populate("componentId")
+      .populate("componentId") // include component only if discarded individually
       .populate("siteId", "name");
 
     if (!log) {
@@ -158,39 +164,59 @@ const getSingleDetails = async (req, res, next) => {
     const donor = bag.donor || {};
     const component = log.componentId || null;
 
+    // 🧪 FIXED — TEST RESULTS MUST COME FROM BAG
+    const bagTestResults = bag.testResults?.length
+      ? bag.testResults.map((t) => ({
+        test: t.test,
+        result: t.result,
+        testedAt: t.testedAt,
+      }))
+      : [];
+
+    // 🧫 Component test results removed (as per new model)
+    const componentTestResults = [];
+
     const formatted = {
       id: log._id.toString(),
       itemType: log.itemType,
       isAutoDiscarded: log.isAutoDiscarded,
-      reason: log.reason,
-      discardedAt: log.discardedAt,
-      createdAt: log.createdAt,
+      reason: log.reason || "N/A",
 
+      discardedAt: log.discardedAt || null,
+      createdAt: log.createdAt || null,
+
+      // 🏥 Site Info
       site: log.siteId
-        ? { id: log.siteId._id, name: log.siteId.name }
+        ? {
+          id: log.siteId._id,
+          name: log.siteId.name,
+        }
         : null,
 
       // 💉 Bag Info
-      bag: {
-        id: bag._id,
-        bagNo: bag.bagNo,
-        segmentId: bag.segmentNo,
-        collectionDate: bag.collectionDate,
-        expiryDate: bag.expiryDate,
-        status: bag.status,
-        initialVitals: bag.initialVitals,
-        bloodGroup: bag.bloodGroup,
-        rh: bag.rh,
-      },
+      bag: bag
+        ? {
+          id: bag._id,
+          bagNo: bag.bagNo,
+          segmentId: bag.segmentNo,
+          collectionDate: bag.collectionDate,
+          expiryDate: bag.expiryDate,
+          status: bag.status,
+          initialVitals: bag.initialVitals,
+          bloodGroup: bag.bloodGroup,
+          rh: bag.rh,
+          testResults: bagTestResults, // ✅ Correct source
+        }
+        : null,
 
-      // 🧫 Component Info (if applicable)
+      // 🧫 Component Info (only if a component was discarded)
       component: component
         ? {
           id: component._id,
           componentId: component.componentId,
           componentType: component.componentType,
-          testResults: component.testResults || [],
           status: component.status,
+          testResults: componentTestResults, // always empty now
         }
         : null,
 
@@ -220,6 +246,7 @@ const getSingleDetails = async (req, res, next) => {
     next(error);
   }
 };
+
 
 // Discard Model (Manual)
 const discardItem = async (req, res, next) => {

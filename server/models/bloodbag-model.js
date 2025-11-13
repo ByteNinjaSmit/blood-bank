@@ -73,10 +73,10 @@ const BloodBagSchema = new Schema({
   status: {
     type: String,
     enum: [
-      "collected",
-      "component-separated",
-      "testing",
-      "passed",
+      "collected",  // instial before compoennet separate
+      "component-separated",  // after the complete separation
+      "testing",  // in the serology stage
+      "passed", // After the all test successfully passed means  in stock
       "failed",
       "quarantined",
       "issued",
@@ -120,6 +120,31 @@ const BloodBagSchema = new Schema({
     ref: "User",
     required: true,
   },
+  testResults: [
+    {
+      test: {
+        type: String,
+        enum: ["HIV", "HBsAg", "HCV", "VDRL", "MP", "NA"],
+        // required: true
+      },
+      result: {
+        type: String,
+        enum: ["Positive", "Negative", "Indeterminate"],
+        // required: true
+      },
+      testedAt: {
+        type: Date,
+        // required: true
+      },
+      technicianId: {
+        type: Types.ObjectId,
+        ref: "User",
+        // required: true
+      },
+    },
+  ],
+  crossMatched: { type: Boolean, default: false },
+  crossMatchedFor: { type: Types.ObjectId, ref: "HospitalRequest" },
 });
 
 // Auto-update updatedAt before save

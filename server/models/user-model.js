@@ -51,13 +51,18 @@ const UserSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ["active", "inactive"],
+    enum: ["active", "inactive", "pending", "blocked", "rejected"],
     default: "active",
   },
-  permissions: {
-    type: [String],
-    default: [],
-  },
+  permissions: [
+    {
+      moduleName: { type: String, required: true },
+      view: { type: Boolean, default: false },
+      create: { type: Boolean, default: false },
+      update: { type: Boolean, default: false },
+      delete: { type: Boolean, default: false },
+    },
+  ],
   siteId: {
     type: Types.ObjectId,
     ref: "Site",
@@ -102,6 +107,14 @@ UserSchema.pre("save", async function (next) {
   }
 
   if (!user.isModified("password")) {
+    return next();
+  }
+
+  // If password already appears to be a bcrypt hash, skip re-hashing
+  // This handles flows where a hashed password is assigned before save (e.g., OTP registration payload)
+  const looksHashed =
+    typeof user.password === "string" && /^(\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53})$/.test(user.password);
+  if (looksHashed) {
     return next();
   }
 

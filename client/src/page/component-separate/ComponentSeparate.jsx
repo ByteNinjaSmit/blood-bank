@@ -45,7 +45,7 @@ const ComponentSeparate = () => {
       });
       setBagIdByBagNo(map);
     } catch (error) {
-      toast.error("Failed to load bags to separate");
+      toast.error(error.response.data.message);
       setBags([]);
     } finally {
       setIsLoading(false);

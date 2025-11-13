@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import {
     ArrowRight,
@@ -26,7 +26,7 @@ import { useAuth } from "@/store/auth"
 
 export default function RegisterPage() {
     const navigate = useNavigate();
-    const { API, isLoggedIn } = useAuth();
+    const { isLoggedIn, registerStartOtp, verifyRegisterOtp, resendRegisterOtp } = useAuth();
     const [currentStep, setCurrentStep] = useState(1)
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -106,37 +106,103 @@ export default function RegisterPage() {
         setCurrentStep(1)
     }
 
+    // OTP state and handlers
+    const [txnId, setTxnId] = useState("");
+    const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+    const [expiresIn, setExpiresIn] = useState(0);
+    const [resendCooldown, setResendCooldown] = useState(0);
+    const [verifying, setVerifying] = useState(false);
+    const otpRefs = useRef([]);
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         if (formData.password !== formData.confirmPassword) {
             toast.warning("Passwords don't match!")
             return
         }
-        console.log("Blood bank doctor registration:", formData)
-        // Add your registration logic here
-
         try {
-            const response = await axios.post(`${API}/api/auth/register`, {
+            const payload = {
                 publicId: formData.publicId,
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 email: formData.email,
                 phone: formData.phone,
                 role: formData.role,
-                password: formData.confirmPassword
-            });
-
-            if (response.status === 201) {
-                toast.success(response.data.message);
-                navigate("/login");
-                console.log(response.data);
-                console.log("Registration successful");
-            }
+                password: formData.confirmPassword,
+            };
+            const res = await registerStartOtp(payload);
+            setTxnId(res.txnId);
+            setExpiresIn(res.expiresInSeconds || 300);
+            setResendCooldown(res.resendCooldownSeconds || 30);
+            setCurrentStep(3);
+            toast.success("OTP sent to your email");
         } catch (error) {
-            toast.error(error.response.data.message);
+            const msg = error?.response?.data?.message || "Failed to start registration";
+            toast.error(msg);
         }
-
     }
+
+    // Countdown timers
+    useEffect(() => {
+        if (currentStep !== 3) return;
+        if (expiresIn <= 0 && resendCooldown <= 0) return;
+        const t = setInterval(() => {
+            setExpiresIn((s) => (s > 0 ? s - 1 : 0));
+            setResendCooldown((s) => (s > 0 ? s - 1 : 0));
+        }, 1000);
+        return () => clearInterval(t);
+    }, [currentStep, expiresIn, resendCooldown]);
+
+    const handleResend = async () => {
+        if (resendCooldown > 0) return;
+        try {
+            const res = await resendRegisterOtp(formData.email, txnId);
+            setResendCooldown(res.resendCooldownSeconds || 30);
+            setExpiresIn(res.expiresInSeconds ?? expiresIn);
+            toast.success("OTP resent");
+        } catch (e) {
+            const msg = e?.response?.data?.message || "Failed to resend OTP";
+            toast.error(msg);
+        }
+    };
+
+    const handleOtpChange = (idx, val) => {
+        const v = val.replace(/\D/g, "").slice(0, 1);
+        const next = [...otp];
+        next[idx] = v;
+        setOtp(next);
+        if (v && idx < otp.length - 1) {
+            otpRefs.current[idx + 1]?.focus();
+        }
+    };
+
+    const handleOtpKeyDown = (idx, e) => {
+        if (e.key === 'Backspace') {
+            if (!otp[idx] && idx > 0) {
+                otpRefs.current[idx - 1]?.focus();
+            }
+            return;
+        }
+        if (e.key === 'ArrowLeft' && idx > 0) {
+            e.preventDefault();
+            otpRefs.current[idx - 1]?.focus();
+        }
+        if (e.key === 'ArrowRight' && idx < otp.length - 1) {
+            e.preventDefault();
+            otpRefs.current[idx + 1]?.focus();
+        }
+    };
+
+    const handleOtpPaste = (e) => {
+        const data = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, otp.length);
+        if (!data) return;
+        e.preventDefault();
+        const next = [...otp];
+        for (let i = 0; i < data.length; i++) next[i] = data[i];
+        setOtp(next);
+        const focusIndex = Math.min(data.length, otp.length - 1);
+        otpRefs.current[focusIndex]?.focus();
+    };
 
     const bloodBankFeatures = [
         { icon: Droplets, label: "Blood Inventory", description: "Manage blood units and stock levels" },
@@ -250,6 +316,12 @@ export default function RegisterPage() {
                             >
                                 2
                             </div>
+                            <div className={`w-16 h-1 mx-2 ${currentStep >= 3 ? "bg-red-800" : "bg-gray-200"}`}></div>
+                            <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep >= 3 ? "bg-red-800 text-white" : "bg-gray-200 text-gray-600"}`}
+                            >
+                                3
+                            </div>
                         </div>
                     </div>
 
@@ -357,6 +429,73 @@ export default function RegisterPage() {
                                 Continue to Account Setup
                                 <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                             </button>
+                        </form>
+                    )}
+
+                    {/* Step 3: Email OTP Verify */}
+                    {currentStep === 3 && (
+                        <form onSubmit={(e) => { e.preventDefault(); }} className="w-full space-y-4 sm:space-y-6">
+                            <div className="text-center mb-4">
+                                <h2 className="text-lg font-semibold text-gray-900">Verify Your Email</h2>
+                                <p className="text-sm text-gray-600">Enter the 6-digit OTP sent to <span className="font-medium">{formData.email}</span></p>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700 block">One-Time Passcode</label>
+                                <div className="flex items-center gap-2 justify-between">
+                                    {otp.map((d, i) => (
+                                        <input
+                                            key={i}
+                                            ref={(el) => (otpRefs.current[i] = el)}
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            maxLength={1}
+                                            value={otp[i]}
+                                            onChange={(e) => handleOtpChange(i, e.target.value)}
+                                            onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                                            onPaste={i === 0 ? handleOtpPaste : undefined}
+                                            className="w-11 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-semibold border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-800"
+                                        />
+                                    ))}
+                                </div>
+                                <div className="text-xs sm:text-sm text-gray-600 flex items-center justify-between mt-1">
+                                    <span>Expires in {Math.floor(expiresIn/60)}:{String(expiresIn%60).padStart(2,'0')}</span>
+                                    <button type="button" onClick={handleResend} disabled={resendCooldown>0}
+                                        className={`text-red-800 hover:text-red-900 ${resendCooldown>0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                                        {resendCooldown>0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setCurrentStep(2)}
+                                    className="w-1/3 px-4 py-3 rounded-xl border-2 border-gray-200 text-gray-700"
+                                >
+                                    Back
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        const code = otp.join("");
+                                        if (code.length !== 6) return toast.error("Enter 6-digit OTP");
+                                        setVerifying(true);
+                                        try {
+                                            await verifyRegisterOtp(formData.email, txnId, code);
+                                            toast.success("Registration complete. You can now login.");
+                                            navigate("/login");
+                                        } catch (e) {
+                                            const msg = e?.response?.data?.message || "Invalid OTP";
+                                            toast.error(msg);
+                                        } finally {
+                                            setVerifying(false);
+                                        }
+                                    }}
+                                    className={`flex-1 flex items-center justify-center px-4 py-3 rounded-xl text-white bg-gradient-to-r from-red-800 to-red-900 ${verifying ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                    disabled={verifying}
+                                >
+                                    {verifying ? 'Verifying…' : 'Verify & Create Account'}
+                                </button>
+                            </div>
                         </form>
                     )}
 

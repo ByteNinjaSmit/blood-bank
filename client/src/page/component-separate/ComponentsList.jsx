@@ -229,13 +229,6 @@ const ComponentsList = () => {
       {/* Header */}
       <div className="bg-white border-b border-red-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center cursor-pointer gap-3 text-red-800 border border-red-200 hover:bg-red-50 bg-white shadow-sm hover:shadow-md transition-all duration-300 rounded-xl px-6 py-3 mb-6 h-11"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back
-          </button>
           
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">

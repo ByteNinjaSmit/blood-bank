@@ -9,7 +9,14 @@ GET /CURRENT-USER  For Verifying and Getting Data
 // controllers/auth-controller.js
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const User = require("../models/user-model"); // Mongoose User model
+const RefreshToken = require("../models/refresh-token-model");
+const LoginOtp = require("../models/login-otp-model");
+const emailOtpQueue = require("../queues/email-otp-queue");
+const logger = require('../utils/logger');
+const authService = require("../services/auth-service");
+const RegistrationOtp = require("../models/registration-otp-model");
 
 const registerUser = async (req, res, next) => {
   try {
@@ -94,11 +101,9 @@ const loginUser = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Step 3: Check if the account is active (optional)
-    if (user.status === "inactive") {
-      return res
-        .status(400)
-        .json({ error: "Account is inactive. Please contact support." });
+    // Step 3: Enforce approval - only active users can login
+    if (user.status !== "active") {
+      return res.status(403).json({ message: "Your account is pending admin approval. Please try again after approval." });
     }
 
     // Step 4: Compare the password
@@ -107,14 +112,15 @@ const loginUser = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Step 5: Generate a JWT token
-    const token = await user.generateToken();
+    // Step 5: Generate tokens
+    const { accessToken, refreshToken } = await authService.generateTokenPair(user, req.ip);
 
     // Step 6: Update the last login time
     user.lastLoginAt = new Date();
     await user.save();
 
-    // Step 7: Send the response with user data (excluding password) and the token
+    // Step 7: Set refresh cookie and return access token
+    authService.setRefreshCookie(res, refreshToken);
     return res.status(200).json({
       user: {
         userId: user._id,
@@ -123,8 +129,10 @@ const loginUser = async (req, res, next) => {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        permissions: user.permissions || [],
       },
-      token,
+      accessToken,
+      expiresIn: authService.ACCESS_TTL,
     });
   } catch (error) {
     next(error);
@@ -137,16 +145,10 @@ const loginUser = async (req, res, next) => {
 
 const getCurrentUser = async (req, res, next) => {
   try {
-    const token = req.cookies?.authToken;
-
-    if (!token) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized: No token provided" });
-    }
-
-    // Verify and decode token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    const auth = req.header("Authorization");
+    if (!auth) return res.status(401).json({ message: "Unauthorized" });
+    const jwtToken = auth.replace("Bearer", "").trim();
+    const decoded = jwt.verify(jwtToken, process.env.JWT_SECRET_KEY);
     const { userID } = decoded;
 
     // Fetch user
@@ -166,8 +168,336 @@ const getCurrentUser = async (req, res, next) => {
   }
 };
 
+const refreshToken = async (req, res, next) => {
+  try {
+    const tokenCookie = req.cookies?.refreshToken;
+    if (!tokenCookie) {
+      authService.clearRefreshCookie(res);
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(tokenCookie, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET_KEY);
+    } catch (e) {
+      authService.clearRefreshCookie(res);
+      return res.status(401).json({ message: "Invalid refresh token" });
+    }
+
+    const user = await User.findById(decoded.userID);
+    if (!user) {
+      authService.clearRefreshCookie(res);
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const newRefresh = await authService.rotateRefreshToken(tokenCookie, user._id, req.ip);
+      const accessToken = authService.signAccessToken({ userID: user._id.toString(), email: user.email, role: user.role });
+      authService.setRefreshCookie(res, newRefresh);
+      return res.status(200).json({ accessToken, expiresIn: authService.ACCESS_TTL });
+    } catch (err) {
+      // Handle missing/deleted/expired/revoked DB token gracefully
+      await authService.revokeRefreshToken(tokenCookie, req.ip).catch(()=>{});
+      authService.clearRefreshCookie(res);
+      return res.status(401).json({ message: "Refresh token invalid or expired" });
+    }
+  } catch (error) {
+    authService.clearRefreshCookie(res);
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+};
+
+const logout = async (req, res, next) => {
+  try {
+    const tokenCookie = req.cookies?.refreshToken;
+    if (tokenCookie) await authService.revokeRefreshToken(tokenCookie, req.ip);
+    authService.clearRefreshCookie(res);
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   loginUser,
   registerUser,
   getCurrentUser,
+  refreshToken,
+  logout,
 };
+
+// ---------------------------
+// OTP Login (Email)
+// ---------------------------
+
+const OTP_TTL_SECONDS = 300; // 5 minutes
+const RESEND_COOLDOWN_SECONDS = 30; // throttle resend
+
+function generate6Digit() {
+  // cryptographically strong 6-digit code
+  return ("000000" + (crypto.randomInt(0, 1000000))).slice(-6);
+}
+
+function nowPlusSeconds(sec) {
+  return new Date(Date.now() + sec * 1000);
+}
+
+async function startOtpLogin(req, res, next) {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    if (user.status !== "active") {
+      return res.status(403).json({ message: "Your account is pending admin approval. Please try again after approval." });
+    }
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) return res.status(400).json({ message: "Invalid credentials" });
+
+    // create OTP record (invalidate previous)
+    const code = generate6Digit();
+    const codeHash = await bcrypt.hash(code, 10);
+    const txnId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex");
+
+    await LoginOtp.deleteMany({ email });
+    await LoginOtp.create({
+      email,
+      codeHash,
+      expiresAt: nowPlusSeconds(OTP_TTL_SECONDS),
+      attempts: 0,
+      maxAttempts: 5,
+      lastSentAt: new Date(),
+      txnId,
+    });
+
+    // enqueue email job
+    await emailOtpQueue.add('send-email-otp', { email, code, txnId, expiresInSeconds: OTP_TTL_SECONDS }, { removeOnComplete: true, attempts: 3, backoff: { type: 'exponential', delay: 10000 } });
+    logger.info({ email, txnId }, '[Auth] Enqueued OTP email');
+
+    return res.status(200).json({ success: true, txnId, email, expiresInSeconds: OTP_TTL_SECONDS, resendCooldownSeconds: RESEND_COOLDOWN_SECONDS });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function resendOtpLogin(req, res, next) {
+  try {
+    const { email, txnId } = req.body;
+    if (!email || !txnId) return res.status(400).json({ message: "email and txnId are required" });
+
+    const doc = await LoginOtp.findOne({ email, txnId });
+    if (!doc) return res.status(404).json({ message: "OTP session not found" });
+    if (doc.expiresAt < new Date()) return res.status(400).json({ message: "OTP expired. Start again." });
+
+    const since = (Date.now() - new Date(doc.lastSentAt).getTime()) / 1000;
+    if (since < RESEND_COOLDOWN_SECONDS) {
+      return res.status(429).json({ message: `Please wait ${Math.ceil(RESEND_COOLDOWN_SECONDS - since)}s before resending` });
+    }
+
+    const code = generate6Digit();
+    const codeHash = await bcrypt.hash(code, 10);
+    doc.codeHash = codeHash;
+    doc.lastSentAt = new Date();
+    // extend validity minimally on resend or keep original TTL? keep original to avoid abuse
+    await doc.save();
+
+    await emailOtpQueue.add('send-email-otp', {
+      email,
+      code,
+      txnId,
+      expiresInSeconds: Math.max(0, Math.floor((doc.expiresAt.getTime() - Date.now()) / 1000))
+    }, { removeOnComplete: true, attempts: 3, backoff: { type: 'exponential', delay: 10000 } });
+    logger.info({ email, txnId }, '[Auth] Enqueued OTP email (resend)');
+
+    return res.status(200).json({ success: true, txnId, email, expiresInSeconds: Math.max(0, Math.floor((doc.expiresAt.getTime() - Date.now()) / 1000)), resendCooldownSeconds: RESEND_COOLDOWN_SECONDS });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function verifyOtpLogin(req, res, next) {
+  try {
+    const { email, txnId, code } = req.body;
+    if (!email || !txnId || !code) return res.status(400).json({ message: "email, txnId and code are required" });
+
+    const doc = await LoginOtp.findOne({ email, txnId });
+    if (!doc) return res.status(404).json({ message: "OTP session not found" });
+    if (doc.expiresAt < new Date()) {
+      await doc.deleteOne().catch(()=>{});
+      return res.status(400).json({ message: "OTP expired. Start again." });
+    }
+    if (doc.attempts >= doc.maxAttempts) {
+      await doc.deleteOne().catch(()=>{});
+      return res.status(429).json({ message: "Too many attempts. Start again." });
+    }
+
+    const isMatch = await bcrypt.compare(code, doc.codeHash);
+    if (!isMatch) {
+      doc.attempts += 1;
+      await doc.save();
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    // OTP OK: consume session
+    await doc.deleteOne().catch(()=>{});
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "Invalid session" });
+
+    const { accessToken, refreshToken } = await authService.generateTokenPair(user, req.ip);
+    user.lastLoginAt = new Date();
+    await user.save();
+    authService.setRefreshCookie(res, refreshToken);
+
+    return res.status(200).json({
+      user: {
+        userId: user._id,
+        publicId: user.publicId,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        permissions: user.permissions || [],
+      },
+      accessToken,
+      expiresIn: authService.ACCESS_TTL,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Export OTP handlers
+module.exports.startOtpLogin = startOtpLogin;
+module.exports.verifyOtpLogin = verifyOtpLogin;
+module.exports.resendOtpLogin = resendOtpLogin;
+
+// ---------------------------
+// Registration via Email OTP
+// ---------------------------
+const REG_OTP_TTL_SECONDS = 300;
+const REG_RESEND_COOLDOWN_SECONDS = 30;
+
+async function startRegisterOtp(req, res, next) {
+  try {
+    const { publicId, firstName, lastName, email, phone, role, password, siteId } = req.body;
+    if (!publicId || !firstName || !lastName || !email || !role || !password) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+    // duplicates
+    if (await User.findOne({ email })) return res.status(400).json({ message: "Email already exists" });
+    if (phone && await User.findOne({ phone })) return res.status(400).json({ message: "Phone number already in use" });
+
+    // create OTP
+    const code = ("000000" + crypto.randomInt(0, 1_000_000)).slice(-6);
+    const codeHash = await bcrypt.hash(code, 10);
+    const txnId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex");
+
+    // hash password for payload storage
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await RegistrationOtp.deleteMany({ email });
+    await RegistrationOtp.create({
+      email,
+      codeHash,
+      expiresAt: new Date(Date.now() + REG_OTP_TTL_SECONDS * 1000),
+      attempts: 0,
+      maxAttempts: 5,
+      lastSentAt: new Date(),
+      txnId,
+      payload: {
+        publicId,
+        firstName,
+        lastName,
+        phone: phone || null,
+        role,
+        passwordHash,
+        createdBy: null,
+        updatedBy: null,
+        siteId: siteId || null,
+        status: 'pending',
+      }
+    });
+
+    await emailOtpQueue.add('send-email-otp', { email, code, txnId, expiresInSeconds: REG_OTP_TTL_SECONDS }, { removeOnComplete: true, attempts: 3, backoff: { type: 'exponential', delay: 10000 } });
+    logger.info({ email, txnId }, '[Auth] Enqueued Registration OTP email');
+
+    return res.status(200).json({ success: true, txnId, email, expiresInSeconds: REG_OTP_TTL_SECONDS, resendCooldownSeconds: REG_RESEND_COOLDOWN_SECONDS });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function resendRegisterOtp(req, res, next) {
+  try {
+    const { email, txnId } = req.body;
+    if (!email || !txnId) return res.status(400).json({ message: "email and txnId are required" });
+    const doc = await RegistrationOtp.findOne({ email, txnId });
+    if (!doc) return res.status(404).json({ message: "OTP session not found" });
+    if (doc.expiresAt < new Date()) return res.status(400).json({ message: "OTP expired. Start again." });
+    const since = (Date.now() - new Date(doc.lastSentAt).getTime()) / 1000;
+    if (since < REG_RESEND_COOLDOWN_SECONDS) {
+      return res.status(429).json({ message: `Please wait ${Math.ceil(REG_RESEND_COOLDOWN_SECONDS - since)}s before resending` });
+    }
+
+    const code = ("000000" + crypto.randomInt(0, 1_000_000)).slice(-6);
+    const codeHash = await bcrypt.hash(code, 10);
+    doc.codeHash = codeHash;
+    doc.lastSentAt = new Date();
+    await doc.save();
+
+    await emailOtpQueue.add('send-email-otp', { email, code, txnId, expiresInSeconds: Math.max(0, Math.floor((doc.expiresAt.getTime() - Date.now()) / 1000)) }, { removeOnComplete: true, attempts: 3, backoff: { type: 'exponential', delay: 10000 } });
+    logger.info({ email, txnId }, '[Auth] Enqueued Registration OTP email (resend)');
+
+    return res.status(200).json({ success: true, txnId, email, expiresInSeconds: Math.max(0, Math.floor((doc.expiresAt.getTime() - Date.now()) / 1000)), resendCooldownSeconds: REG_RESEND_COOLDOWN_SECONDS });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function verifyRegisterOtp(req, res, next) {
+  try {
+    const { email, txnId, code } = req.body;
+    if (!email || !txnId || !code) return res.status(400).json({ message: "email, txnId and code are required" });
+    const doc = await RegistrationOtp.findOne({ email, txnId });
+    if (!doc) return res.status(404).json({ message: "OTP session not found" });
+    if (doc.expiresAt < new Date()) { await doc.deleteOne().catch(()=>{}); return res.status(400).json({ message: "OTP expired. Start again." }); }
+    if (doc.attempts >= doc.maxAttempts) { await doc.deleteOne().catch(()=>{}); return res.status(429).json({ message: "Too many attempts. Start again." }); }
+
+    const ok = await bcrypt.compare(code, doc.codeHash);
+    if (!ok) { doc.attempts += 1; await doc.save(); return res.status(400).json({ message: "Invalid OTP" }); }
+
+    // consume session and create user
+    const payload = doc.payload || {};
+    await doc.deleteOne().catch(()=>{});
+
+    // Double-check duplicates before creation
+    if (await User.findOne({ email })) return res.status(400).json({ message: "Email already exists" });
+    if (payload.phone && await User.findOne({ phone: payload.phone })) return res.status(400).json({ message: "Phone number already in use" });
+
+    const user = new User({
+      publicId: payload.publicId,
+      name: { first: payload.firstName, last: payload.lastName },
+      email,
+      phone: payload.phone || null,
+      role: payload.role,
+      password: payload.passwordHash, // already hashed
+      permissions: [],
+      siteId: payload.siteId || null,
+      status: 'pending',
+      createdBy: null,
+      updatedBy: null,
+    });
+    const saved = await user.save();
+
+    return res.status(201).json({ success: true, user: { userId: saved._id, publicId: saved.publicId, name: saved.name, email: saved.email, phone: saved.phone, role: saved.role } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports.startRegisterOtp = startRegisterOtp;
+module.exports.verifyRegisterOtp = verifyRegisterOtp;
+module.exports.resendRegisterOtp = resendRegisterOtp;

@@ -33,7 +33,7 @@ function initializeEmailTransporter() {
   }
 }
 
-async function sendEmail(to, subject, text, attachmentPath) {
+async function sendEmail(to, subject, text, attachmentPath, html) {
   // Initialize transporter if not already done
   if (!isInitialized) {
     initializeEmailTransporter();
@@ -48,6 +48,7 @@ async function sendEmail(to, subject, text, attachmentPath) {
     to,
     subject,
     text,
+    html,
     attachments: attachmentPath ? [{ path: attachmentPath }] : [],
   };
 
