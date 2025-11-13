@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import donationService from '@/services/donationService';
+import campService from '@/services/campService';
 import apiService from '@/services/api';
 import { useAuth } from '@/store/auth';
 import { toast } from 'sonner';
@@ -30,6 +31,23 @@ export const useDonation = () => {
       toast.error(apiError);
     } else {
       setDonations(data.data || []);
+    }
+    
+    setLoading(false);
+  };
+
+  // Fetch donations for a specific camp (site)
+  const fetchCampDonations = async (siteId) => {
+    setLoading(true);
+    setError(null);
+    
+    const { data, error: apiError } = await campService.getCampDonations(siteId);
+    
+    if (apiError) {
+      setError(apiError);
+      toast.error(apiError);
+    } else {
+      setDonations((data && data.data && data.data.donations) ? data.data.donations : []);
     }
     
     setLoading(false);
@@ -128,5 +146,6 @@ export const useDonation = () => {
     updateDonation,
     updateDonationStatus,
     deleteDonation,
+    fetchCampDonations,
   };
 };

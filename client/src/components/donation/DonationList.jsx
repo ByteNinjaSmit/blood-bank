@@ -12,7 +12,7 @@ const DonationList = ({
   onDeleteDonation,
   campId = null 
 }) => {
-  const { donations, loading, error, fetchDonations, deleteDonation } = useDonation();
+  const { donations, loading, error, fetchDonations, deleteDonation, fetchCampDonations } = useDonation();
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     typeOfBag: '',
@@ -21,8 +21,12 @@ const DonationList = ({
   });
 
   useEffect(() => {
-    fetchDonations();
-  }, []);
+    if (campId) {
+      fetchCampDonations(campId);
+    } else {
+      fetchDonations();
+    }
+  }, [campId]);
 
   const filteredDonations = donations.filter((donation) => {
     return (

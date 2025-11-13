@@ -13,14 +13,18 @@ const DonorList = ({
   onDeleteDonor,
   campId = null 
 }) => {
-  const { donors, loading, error, fetchDonors, deleteDonor } = useDonor();
+  const { donors, loading, error, fetchDonors, deleteDonor, fetchCampDonors } = useDonor();
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodGroupFilter, setBloodGroupFilter] = useState('');
   const [eligibilityFilter, setEligibilityFilter] = useState('');
 
   useEffect(() => {
-    fetchDonors();
-  }, []);
+    if (campId) {
+      fetchCampDonors(campId);
+    } else {
+      fetchDonors();
+    }
+  }, [campId]);
 
   const filteredDonors = donors.filter((donor) => {
     const matchesSearch = 

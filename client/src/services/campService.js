@@ -26,6 +26,16 @@ class CampService {
   async deleteCamp(id) {
     return await apiService.delete(`/api/site/${id}`);
   }
+
+  // Get donations for a specific camp (site)
+  async getCampDonations(siteId) {
+    return await apiService.get(`/api/site/camp-donations/${siteId}`);
+  }
+
+  // Get donors for a specific camp (site)
+  async getCampDonors(siteId) {
+    return await apiService.get(`/api/site/camp-donors/${siteId}`);
+  }
 }
 
 export default new CampService();
