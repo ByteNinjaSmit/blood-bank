@@ -31,6 +31,11 @@ class DonorService {
   async deleteDonor(id) {
     return await apiService.delete(`/api/donor/${id}`);
   }
+
+  // Force delete donor with cascade
+  async forceDeleteDonor(id) {
+    return await apiService.delete(`/api/donor/force/${id}`);
+  }
 }
 
 export default new DonorService();

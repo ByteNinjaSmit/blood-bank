@@ -8,6 +8,11 @@ DELETE /donors/:id – Soft delete donor
 */
 
 const Donor = require("../models/donor-model");
+const BloodBag = require("../models/bloodbag-model");
+const Component = require("../models/component-model");
+const Inventory = require("../models/inventory-model");
+const DiscardLog = require("../models/discard-model");
+const Site = require("../models/site-model");
 const mongoose = require("mongoose");
 
 const registerDonor = async (req, res, next) => {
@@ -134,7 +139,7 @@ const registerDonor = async (req, res, next) => {
 const updateDonor = async (req, res, next) => {
   try {
     const { id } = req.params; // Donor ID from the URL
-    const {
+    let {
       donorId,
       name,
       uid,
@@ -207,6 +212,38 @@ const updateDonor = async (req, res, next) => {
     });
   } catch (error) {
     next(error); // Pass any errors to the error handling middleware
+  }
+};
+
+// ------------------
+// Safe Delete Donor (block if donations exist)
+// ------------------
+const deleteDonor = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "Donor ID Invalid." });
+    }
+
+    const donor = await Donor.findById(id).select("donationHistory");
+    if (!donor) {
+      return res.status(404).json({ message: "Donor not found." });
+    }
+
+    if (Array.isArray(donor.donationHistory) && donor.donationHistory.length > 0) {
+      return res.status(409).json({
+        code: "DONOR_HAS_DONATIONS",
+        message:
+          "Donor has donation history and cannot be deleted. Contact an administrator to force delete if necessary.",
+      });
+    }
+
+    await Donor.findByIdAndDelete(id);
+
+    return res.status(200).json({ message: "Donor deleted successfully." });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -322,12 +359,10 @@ const searchDonorLatestDonation = async (req, res, next) => {
 
     // Enforce at least one valid search strategy to avoid full-collection scans
     if (!hasNameDob && !hasStrongIdentifier) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Provide either firstName, lastName and dob, or at least one of phone, uid, donorId to search donor.",
-        });
+      return res.status(400).json({
+        message:
+          "Provide either firstName, lastName and dob, or at least one of phone, uid, donorId to search donor.",
+      });
     }
 
     // Build dynamic search query using any provided fields
@@ -358,18 +393,16 @@ const searchDonorLatestDonation = async (req, res, next) => {
       searchQuery.donorId = donorId;
     }
 
-    // We already enforce the 4 required fields above
-
     const donor = await Donor.findOne(searchQuery)
       .populate({
         path: "donationHistory.donationId",
         select: "bagNo segmentNo typeOfBag bloodGroup rh collectionDate expiryDate status",
-        model: "BloodBag"
+        model: "BloodBag",
       })
       .populate({
         path: "createdBy updatedBy",
         select: "name.first name.last phone",
-        model: "User"
+        model: "User",
       })
       .select("-__v");
 
@@ -414,18 +447,86 @@ const searchDonorLatestDonation = async (req, res, next) => {
               donorId: latestDonation.donorId,
               bagNo: latestDonation.bagNo,
               date: latestDonation.date,
-              donationId: latestDonation.donationId
+              donationId: latestDonation.donationId,
             }
-          : null
-      }
+          : null,
+      },
     });
-
   } catch (error) {
     console.error("Error in searchDonorLatestDonation:", error);
     next(error);
   }
 };
 
+// ------------------
+// Force Delete Donor with Cascade (admin / privileged only)
+// ------------------
+const forceDeleteDonor = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "Donor ID Invalid." });
+    }
+
+    const donor = await Donor.findById(id);
+    if (!donor) {
+      return res.status(404).json({ message: "Donor not found." });
+    }
+
+    const user = req.user;
+    const isAdmin = user?.role === "admin";
+    const perms = user?.permissions || [];
+    const canDeleteModule = perms.some((p) =>
+      ["donor", "donors", "donor management"].includes(String(p.moduleName || "").toLowerCase()) && p.delete
+    );
+
+    if (!isAdmin && !canDeleteModule) {
+      return res.status(403).json({ message: "You do not have permission to force delete donors." });
+    }
+
+    // Find all blood bags linked to this donor
+    const bags = await BloodBag.find({ donor: id }).select("_id");
+    const bagIds = bags.map((b) => b._id);
+
+    // Find all components derived from those bags
+    const components = await Component.find({ donationId: { $in: bagIds } }).select("_id");
+    const componentIds = components.map((c) => c._id);
+
+    // Delete discard logs related to these bags or components
+    await DiscardLog.deleteMany({
+      $or: [{ bagNo: { $in: bagIds } }, { componentId: { $in: componentIds } }],
+    });
+
+    // Delete inventory entries for these bags
+    await Inventory.deleteMany({ bagNo: { $in: bagIds } });
+
+    // Delete components
+    await Component.deleteMany({ donationId: { $in: bagIds } });
+
+    // Delete blood bags
+    await BloodBag.deleteMany({ _id: { $in: bagIds } });
+
+    // Detach donor and bags from sites
+    await Site.updateMany(
+      {},
+      {
+        $pull: {
+          bagsData: { $in: bagIds },
+          donorData: donor._id,
+        },
+      }
+    );
+
+    // Finally delete donor
+    await Donor.findByIdAndDelete(id);
+
+    return res.status(200).json({ message: "Donor and all related data deleted successfully." });
+  } catch (error) {
+    console.error("Error in forceDeleteDonor:", error);
+    next(error);
+  }
+};
 
 module.exports = {
   registerDonor,
@@ -433,5 +534,6 @@ module.exports = {
   getDonorDetails,
   listDonors,
   searchDonorLatestDonation,
-
+  deleteDonor,
+  forceDeleteDonor,
 };

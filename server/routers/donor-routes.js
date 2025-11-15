@@ -13,10 +13,15 @@ const router = express.Router();
 const donorController = require('../controllers/donor-controller');
 const authMiddleware = require('../middlewares/auth-middleware');
 
-router.route('/new').post(authMiddleware,donorController.registerDonor);
-router.route('/update/:id').put(authMiddleware,donorController.updateDonor);
-router.route('/list').get(authMiddleware,donorController.listDonors);
-router.route('/search').get(authMiddleware,donorController.searchDonorLatestDonation);
-router.route('/:id').get(authMiddleware,donorController.getDonorDetails);
+router.route('/new').post(authMiddleware, donorController.registerDonor);
+router.route('/update/:id').put(authMiddleware, donorController.updateDonor);
+router.route('/list').get(authMiddleware, donorController.listDonors);
+router.route('/search').get(authMiddleware, donorController.searchDonorLatestDonation);
+// Force delete must be declared before generic :id route
+router.route('/force/:id').delete(authMiddleware, donorController.forceDeleteDonor);
+router
+  .route('/:id')
+  .get(authMiddleware, donorController.getDonorDetails)
+  .delete(authMiddleware, donorController.deleteDonor);
 
 module.exports = router;
