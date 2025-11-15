@@ -111,25 +111,67 @@ const DonationManagement = () => {
       </Modal>
 
       {/* Edit Donation Modal */}
-      <Modal
-        isOpen={showEditModal}
-        onClose={() => {
+      <CustomModal
+        open={showEditModal && !!selectedDonation}
+        title={selectedDonation ? `Edit Donation - ${selectedDonation.bagNo}` : 'Edit Donation'}
+        description={
+          selectedDonation
+            ? `Update details for donation ${selectedDonation.bagNo}.`
+            : ''
+        }
+        onCancel={() => {
           setShowEditModal(false);
           setSelectedDonation(null);
         }}
-        title="Edit Donation"
-        size="xl"
+        onConfirm={() => {
+          setShowEditModal(false);
+          setSelectedDonation(null);
+        }}
+        size="lg"
+        hideFooter
       >
-        <DonationForm
-          initialData={selectedDonation}
-          onSubmit={handleUpdateDonation}
-          onCancel={() => {
-            setShowEditModal(false);
-            setSelectedDonation(null);
-          }}
-          loading={loading}
-        />
-      </Modal>
+        {selectedDonation && (
+          <>
+            <div className="mb-4 rounded-lg bg-white/70 border border-orange-100 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide mb-1">
+                  Editing donation
+                </p>
+                <h3 className="text-lg font-semibold text-slate-900">
+                  Bag {selectedDonation.bagNo}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Collected on{' '}
+                  {selectedDonation.collectionDate
+                    ? new Date(selectedDonation.collectionDate).toLocaleDateString()
+                    : 'Unknown date'}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-800 font-medium">
+                  {selectedDonation.bloodGroup}{' '}
+                  {selectedDonation.rh === 'Positive' ? '+' : '-'}
+                </span>
+                {selectedDonation.status && (
+                  <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700 font-medium">
+                    Status: {selectedDonation.status}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <DonationForm
+              initialData={selectedDonation}
+              onSubmit={handleUpdateDonation}
+              onCancel={() => {
+                setShowEditModal(false);
+                setSelectedDonation(null);
+              }}
+              loading={loading}
+            />
+          </>
+        )}
+      </CustomModal>
 
       {/* View Donation Modal */}
       <CustomModal
@@ -145,7 +187,7 @@ const DonationManagement = () => {
             : ''
         }
         cancelText="Close"
-        confirmText="OK"
+        confirmText="Close"
         onCancel={() => {
           setShowViewModal(false);
           setViewDonation(null);
@@ -154,6 +196,7 @@ const DonationManagement = () => {
           setShowViewModal(false);
           setViewDonation(null);
         }}
+        size="lg"
       >
         {viewDonation && <DonationDetails donation={viewDonation} />}
       </CustomModal>
