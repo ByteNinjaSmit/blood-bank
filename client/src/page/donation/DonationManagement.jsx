@@ -3,32 +3,20 @@ import { ArrowLeft, Droplets } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import DonationList from '@/components/donation/DonationList';
-import DonationForm from '@/components/donation/DonationForm';
 import DonationDetails from '@/components/donation/DonationDetails';
-import Modal from '@/components/shared/Modal';
 import CustomModal from '@/components/CustomModal';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { useDonation } from '@/hooks/useDonation';
 
 const DonationManagement = () => {
   const navigate = useNavigate();
-  const { createDonation, updateDonation, getDonationById } = useDonation();
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const { updateDonation, getDonationById } = useDonation();
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDonation, setSelectedDonation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewDonation, setViewDonation] = useState(null);
   const [viewLoading, setViewLoading] = useState(false);
-
-  const handleCreateDonation = async (donationData) => {
-    setLoading(true);
-    const result = await createDonation(donationData);
-    if (result.success) {
-      setShowCreateModal(false);
-    }
-    setLoading(false);
-  };
 
   const handleEditDonation = (donation) => {
     setSelectedDonation(donation);
@@ -89,26 +77,12 @@ const DonationManagement = () => {
           </div>
         )}
         <DonationList
-          onAddDonation={() => setShowCreateModal(true)}
+          onAddDonation={() => navigate('/donations/create-donation')}
           onViewDonation={handleViewDonation}
           onEditDonation={handleEditDonation}
           onDeleteDonation={handleDeleteDonation}
         />
       </div>
-
-      {/* Create Donation Modal */}
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        title="Create New Donation"
-        size="xl"
-      >
-        <DonationForm
-          onSubmit={handleCreateDonation}
-          onCancel={() => setShowCreateModal(false)}
-          loading={loading}
-        />
-      </Modal>
 
       {/* Edit Donation Modal */}
       <CustomModal
