@@ -18,11 +18,37 @@ const DonationDetails = ({ donation }) => {
   };
 
   return (
-    <div className="space-y-4 text-sm text-slate-800">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-6 text-sm text-slate-800">
+      {/* Summary */}
+      <div className="rounded-lg bg-white/70 border border-slate-100 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <p className="font-semibold text-slate-700 mb-1">Bag Information</p>
-          <div className="space-y-1 text-slate-600">
+          <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide mb-1">
+            Donation overview
+          </p>
+          <h3 className="text-lg font-semibold text-slate-900">
+            Bag {donation.bagNo}
+          </h3>
+          <p className="text-xs text-slate-500 mt-1">
+            Collected on {formatDate(donation.collectionDate)}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-800 font-medium">
+            {donation.bloodGroup} {donation.rh === 'Positive' ? '+' : '-'}
+          </span>
+          {donation.status && (
+            <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700 font-medium">
+              Status: {donation.status}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Bag & Donor */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-4">
+          <p className="font-semibold text-slate-700 mb-2">Bag Information</p>
+          <div className="space-y-1.5 text-slate-600">
             <p>
               <span className="font-medium">Bag No:</span> {donation.bagNo}
             </p>
@@ -38,20 +64,14 @@ const DonationDetails = ({ donation }) => {
               <span className="font-medium">Type of Bag:</span> {donation.typeOfBag}
             </p>
             <p>
-              <span className="font-medium">Status:</span>{' '}
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
-                {donation.status}
-              </span>
-            </p>
-            <p>
-              <span className="font-medium">Collection Date:</span>{' '}
+              <span className="font-medium">Collection Date & Time:</span>{' '}
               {formatDateTime(donation.collectionDate)}
             </p>
           </div>
         </div>
-        <div>
-          <p className="font-semibold text-slate-700 mb-1">Donor & Site</p>
-          <div className="space-y-1 text-slate-600">
+        <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-4">
+          <p className="font-semibold text-slate-700 mb-2">Donor & Site</p>
+          <div className="space-y-1.5 text-slate-600">
             {donation.donor && (
               <p>
                 <span className="font-medium">Donor:</span>{' '}
@@ -77,8 +97,8 @@ const DonationDetails = ({ donation }) => {
       </div>
 
       {donation.initialVitals && (
-        <div>
-          <p className="font-semibold text-slate-700 mb-1">Initial Vitals</p>
+        <div className="rounded-lg border border-slate-100 bg-white/70 p-4">
+          <p className="font-semibold text-slate-700 mb-2">Initial Vitals</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-600">
             <p>
               <span className="font-medium">Hb:</span> {donation.initialVitals.hb} g/dL
@@ -100,8 +120,8 @@ const DonationDetails = ({ donation }) => {
       )}
 
       {Array.isArray(donation.components) && donation.components.length > 0 && (
-        <div>
-          <p className="font-semibold text-slate-700 mb-1">Components</p>
+        <div className="rounded-lg border border-slate-100 bg-white/70 p-4">
+          <p className="font-semibold text-slate-700 mb-2">Components</p>
           <div className="border rounded-lg divide-y">
             {donation.components.map((comp) => (
               <div
