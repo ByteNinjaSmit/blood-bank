@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Eye, Edit, Trash2, Download } from 'lucide-react';
 import Table from '@/components/shared/Table';
 import Button from '@/components/shared/Button';
-import Modal from '@/components/shared/Modal';
+import CustomModal from '@/components/CustomModal';
 import { toast } from 'sonner';
 import { useDonor } from '@/hooks/useDonor';
 import { useAuth } from '@/store/auth';
@@ -318,76 +318,36 @@ const DonorList = ({
       </div>
 
       {/* Delete confirmation modal */}
-      <Modal
-        isOpen={showDeleteModal && !!deleteTarget}
-        onClose={() => {
+      <CustomModal
+        open={showDeleteModal && !!deleteTarget}
+        title="Delete Donor"
+        description={`Are you sure you want to delete donor ${(deleteTarget && (`${deleteTarget?.name?.firstName || ''} ${deleteTarget?.name?.lastName || ''}`.trim() || deleteTarget?.donorId)) || ''}? This action cannot be undone.`}
+        onCancel={() => {
           setShowDeleteModal(false);
           setDeleteTarget(null);
         }}
-        title="Delete Donor"
-        size="md"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-slate-700">
-            Are you sure you want to delete donor
-            {" "}
-            <span className="font-semibold">
-              {`${deleteTarget?.name?.firstName || ''} ${deleteTarget?.name?.lastName || ''}`.trim() ||
-                deleteTarget?.donorId}
-            </span>
-            ? This action cannot be undone.
-          </p>
-          <div className="flex justify-end gap-3 mt-6">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowDeleteModal(false);
-                setDeleteTarget(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleDeleteConfirm}>
-              Delete
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        onConfirm={handleDeleteConfirm}
+        confirmText="Delete"
+        confirmVariant="danger"
+      />
 
       {/* Force delete confirmation modal */}
-      <Modal
-        isOpen={showForceModal && !!deleteTarget}
-        onClose={() => {
+      <CustomModal
+        open={showForceModal && !!deleteTarget}
+        title="Force Delete Donor & Related Data"
+        description="This donor has donation history. Force deleting will remove the donor and all related blood bags, components, inventory entries, and discard logs. This action is permanent."
+        onCancel={() => {
           setShowForceModal(false);
           setDeleteTarget(null);
         }}
-        title="Force Delete Donor & Related Data"
-        size="md"
+        onConfirm={handleForceDeleteConfirm}
+        confirmText="Force Delete"
+        confirmVariant="danger"
       >
-        <div className="space-y-4">
-          <p className="text-sm text-slate-700">
-            This donor has donation history. Force deleting will remove the donor and <span className="font-semibold">all
-            related blood bags, components, inventory entries, and discard logs</span>. This action is permanent.
-          </p>
-          <p className="text-sm text-red-700 font-medium">
-            Proceed only if you fully understand the impact.
-          </p>
-          <div className="flex justify-end gap-3 mt-6">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowForceModal(false);
-                setDeleteTarget(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleForceDeleteConfirm}>
-              Force Delete
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        <p className="text-sm text-red-700 font-medium mt-2">
+          Proceed only if you fully understand the impact.
+        </p>
+      </CustomModal>
     </div>
   );
 };
