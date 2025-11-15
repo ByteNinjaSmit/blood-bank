@@ -35,9 +35,12 @@ const CreateDonation = ({ onCreateDonor }) => {
     phone: "",
     donorId: "",
   })
-
-  const searchRequiredFilled =
-    donorInfo.firstName.trim() && donorInfo.middleName.trim() && donorInfo.lastName.trim() && donorInfo.dob
+  // Allow search by either (first + last name + dob) OR any of uid / phone / donorId
+  const hasNameDob =
+    donorInfo.firstName.trim() && donorInfo.lastName.trim() && donorInfo.dob
+  const hasStrongIdentifier =
+    donorInfo.uid.trim() || donorInfo.phone.trim() || donorInfo.donorId.trim()
+  const canSearchDonor = !!(hasNameDob || hasStrongIdentifier)
 
   // Donation Form Data
   const [formData, setFormData] = useState({
@@ -108,7 +111,9 @@ const CreateDonation = ({ onCreateDonor }) => {
       if (error.response?.status === 404) {
         setShowPopup(true)
       } else {
-        toast.error("Something went wrong while searching donor.")
+        const message = error.response?.data?.message || "Something went wrong while searching donor."
+        setError(message)
+        toast.error(message)
       }
     } finally {
       setLoading(false)
@@ -227,7 +232,7 @@ const CreateDonation = ({ onCreateDonor }) => {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault()
-                  if (searchRequiredFilled) handleDonorSearch()
+                  if (canSearchDonor) handleDonorSearch()
                 }
               }}
             >
@@ -290,9 +295,9 @@ const CreateDonation = ({ onCreateDonor }) => {
                 <button
                   type="button"
                   onClick={handleDonorSearch}
-                  disabled={loading || !searchRequiredFilled}
+                  disabled={loading || !canSearchDonor}
                   className={`px-5 py-2 rounded-lg flex items-center gap-2 ${
-                    loading || !searchRequiredFilled
+                    loading || !canSearchDonor
                       ? "bg-orange-300 cursor-not-allowed"
                       : "bg-orange-800 hover:bg-orange-900 text-white"
                   }`}
@@ -306,9 +311,9 @@ const CreateDonation = ({ onCreateDonor }) => {
                 >
                   <Plus className="w-4 h-4 inline mr-1" /> Create Donor
                 </button>
-                {!searchRequiredFilled && (
+                {!canSearchDonor && (
                   <span className="text-sm text-gray-500 self-center">
-                    Enter First, Middle, Last name and DOB to search
+                    Enter First & Last name with DOB, or Phone / UID / Donor ID to search
                   </span>
                 )}
               </div>

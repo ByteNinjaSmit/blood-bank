@@ -117,18 +117,38 @@ export const useDonor = () => {
     setLoading(true);
     setError(null);
     
-    const { error: apiError } = await donorService.deleteDonor(id);
+    const { error: apiError, errorData } = await donorService.deleteDonor(id);
     
     if (apiError) {
       setError(apiError);
       toast.error(apiError);
-      return { success: false };
+      return { success: false, code: errorData?.code, message: apiError };
     } else {
       setDonors(prev => prev.filter(donor => donor._id !== id));
       toast.success('Donor deleted successfully');
       return { success: true };
     }
     
+    setLoading(false);
+  };
+
+  // Force delete donor (cascade)
+  const forceDeleteDonor = async (id) => {
+    setLoading(true);
+    setError(null);
+
+    const { error: apiError } = await donorService.forceDeleteDonor(id);
+
+    if (apiError) {
+      setError(apiError);
+      toast.error(apiError);
+      return { success: false };
+    } else {
+      setDonors(prev => prev.filter(donor => donor._id !== id));
+      toast.success('Donor and related data deleted successfully');
+      return { success: true };
+    }
+
     setLoading(false);
   };
 
@@ -141,6 +161,7 @@ export const useDonor = () => {
     searchDonor,
     updateDonor,
     deleteDonor,
+    forceDeleteDonor,
     fetchCampDonors,
   };
 };

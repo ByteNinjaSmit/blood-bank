@@ -16,4 +16,12 @@ const donationController = require('../controllers/donation-bloodbag-controller'
 router.route('/new').post(authMiddleware,donationController.newDonation);
 router.route('/list').get(authMiddleware,donationController.getAllDonations);
 
+router.route('/:id')
+  .get(authMiddleware, donationController.getDonationById)
+  .put(authMiddleware, donationController.updateDonation)
+  .delete(authMiddleware, donationController.deleteDonation);
+
+router.route('/:id/status')
+  .put(authMiddleware, donationController.updateDonationStatus);
+
 module.exports = router;

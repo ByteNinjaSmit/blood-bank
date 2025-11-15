@@ -7,7 +7,7 @@ class HospitalApiService {
 
   // Initialize API service with auth token
   initialize(authToken) {
-    apiService.initialize('', authToken);
+    apiService.initialize(import.meta.env.VITE_APP_URI_API, authToken);
   }
 
   // Enhanced error handling for better user feedback

@@ -17,6 +17,34 @@ const DonorManagement = () => {
   const [selectedDonor, setSelectedDonor] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const editInitialData = selectedDonor
+    ? {
+        donorId: selectedDonor.donorId || '',
+        firstName: selectedDonor.name?.firstName || '',
+        middleName: selectedDonor.name?.middleName || '',
+        lastName: selectedDonor.name?.lastName || '',
+        uid: selectedDonor.uid || '',
+        dob: selectedDonor.dob ? new Date(selectedDonor.dob).toISOString().split('T')[0] : '',
+        sex: selectedDonor.sex || '',
+        phone: selectedDonor.phone || '',
+        email: selectedDonor.email || '',
+        addressLine1: selectedDonor.address?.line1 || '',
+        addressLine2: selectedDonor.address?.line2 || '',
+        city: selectedDonor.address?.city || '',
+        district: selectedDonor.address?.district || '',
+        state: selectedDonor.address?.state || '',
+        pincode: selectedDonor.address?.pincode || '',
+        occupation: selectedDonor.occupation || '',
+        weightKg: selectedDonor.weightKg != null ? String(selectedDonor.weightKg) : '',
+        bloodGroup: selectedDonor.bloodGroup || '',
+        rh: selectedDonor.rh || '',
+        eligibilityStatus: selectedDonor.eligibilityStatus || '',
+        lastDonationDate: selectedDonor.lastDonationDate
+          ? new Date(selectedDonor.lastDonationDate).toISOString().split('T')[0]
+          : '',
+      }
+    : null;
+
   const handleCreateDonor = async (donorData) => {
     setLoading(true);
     const result = await createDonor(donorData);
@@ -105,9 +133,33 @@ const DonorManagement = () => {
         }}
         title="Edit Donor"
         size="xl"
+        className="bg-gradient-to-b from-orange-50 to-white"
       >
+        {selectedDonor && (
+          <div className="mb-4 rounded-lg bg-white/70 border border-orange-100 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide mb-1">Editing donor</p>
+              <h3 className="text-lg font-semibold text-slate-900">
+                {selectedDonor.name?.firstName} {selectedDonor.name?.lastName}
+              </h3>
+              <p className="text-xs text-slate-500">
+                ID: <span className="font-mono">{selectedDonor.donorId}</span>
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-800 font-medium">
+                {selectedDonor.bloodGroup} {selectedDonor.rh === 'Positive' ? '+' : '-'}
+              </span>
+              {selectedDonor.lastDonationDate && (
+                <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700">
+                  Last donation: {new Date(selectedDonor.lastDonationDate).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
         <DonorForm
-          initialData={selectedDonor}
+          initialData={editInitialData}
           onSubmit={handleUpdateDonor}
           onCancel={() => {
             setShowEditModal(false);

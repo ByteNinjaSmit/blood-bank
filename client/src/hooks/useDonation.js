@@ -36,6 +36,18 @@ export const useDonation = () => {
     setLoading(false);
   };
 
+  // Get single donation details by ID (non-blocking for global loading state)
+  const getDonationById = async (id) => {
+    const { data, error: apiError } = await donationService.getDonationById(id);
+
+    if (apiError) {
+      toast.error(apiError);
+      return { success: false, data: null };
+    }
+
+    return { success: true, data: data?.data || null };
+  };
+
   // Fetch donations for a specific camp (site)
   const fetchCampDonations = async (siteId) => {
     setLoading(true);
@@ -147,5 +159,6 @@ export const useDonation = () => {
     updateDonationStatus,
     deleteDonation,
     fetchCampDonations,
+    getDonationById,
   };
 };

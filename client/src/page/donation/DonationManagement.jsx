@@ -4,16 +4,22 @@ import { useNavigate } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import DonationList from '@/components/donation/DonationList';
 import DonationForm from '@/components/donation/DonationForm';
+import DonationDetails from '@/components/donation/DonationDetails';
 import Modal from '@/components/shared/Modal';
+import CustomModal from '@/components/CustomModal';
+import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { useDonation } from '@/hooks/useDonation';
 
 const DonationManagement = () => {
   const navigate = useNavigate();
-  const { createDonation, updateDonation } = useDonation();
+  const { createDonation, updateDonation, getDonationById } = useDonation();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDonation, setSelectedDonation] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewDonation, setViewDonation] = useState(null);
+  const [viewLoading, setViewLoading] = useState(false);
 
   const handleCreateDonation = async (donationData) => {
     setLoading(true);
@@ -39,9 +45,14 @@ const DonationManagement = () => {
     setLoading(false);
   };
 
-  const handleViewDonation = (donation) => {
-    console.log('View donation:', donation);
-    // TODO: Implement view donation details
+  const handleViewDonation = async (donation) => {
+    setViewLoading(true);
+    const result = await getDonationById(donation._id);
+    if (result.success) {
+      setViewDonation(result.data);
+      setShowViewModal(true);
+    }
+    setViewLoading(false);
   };
 
   const handleDeleteDonation = (donation) => {
@@ -72,6 +83,11 @@ const DonationManagement = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {viewLoading && (
+          <div className="mb-4">
+            <LoadingSpinner message="Loading donation details..." />
+          </div>
+        )}
         <DonationList
           onAddDonation={() => setShowCreateModal(true)}
           onViewDonation={handleViewDonation}
@@ -114,6 +130,33 @@ const DonationManagement = () => {
           loading={loading}
         />
       </Modal>
+
+      {/* View Donation Modal */}
+      <CustomModal
+        open={showViewModal && !!viewDonation}
+        title={viewDonation ? `Donation Details - ${viewDonation.bagNo}` : 'Donation Details'}
+        description={
+          viewDonation
+            ? `Donor: ${
+                (viewDonation.donor && viewDonation.donor.name && viewDonation.donor.name.firstName) || ''
+              } ${
+                (viewDonation.donor && viewDonation.donor.name && viewDonation.donor.name.lastName) || ''
+              } · Blood Group: ${viewDonation.bloodGroup} ${viewDonation.rh === 'Positive' ? '+' : '-'}`
+            : ''
+        }
+        cancelText="Close"
+        confirmText="OK"
+        onCancel={() => {
+          setShowViewModal(false);
+          setViewDonation(null);
+        }}
+        onConfirm={() => {
+          setShowViewModal(false);
+          setViewDonation(null);
+        }}
+      >
+        {viewDonation && <DonationDetails donation={viewDonation} />}
+      </CustomModal>
     </div>
   );
 };

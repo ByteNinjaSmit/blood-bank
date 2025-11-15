@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Eye, Edit, Trash2, Download } from 'lucide-react';
 import Table from '@/components/shared/Table';
 import Button from '@/components/shared/Button';
-import LoadingSpinner from '@/components/shared/LoadingSpinner';
+import CustomModal from '@/components/CustomModal';
+import { toast } from 'sonner';
 import { useDonor } from '@/hooks/useDonor';
+import { useAuth } from '@/store/auth';
+import { checkAccess } from '@/page/user-manage/utils/access';
 import EnhancedLoader from '../utils/Spinner';
 
 const DonorList = ({ 
@@ -13,10 +16,15 @@ const DonorList = ({
   onDeleteDonor,
   campId = null 
 }) => {
-  const { donors, loading, error, fetchDonors, deleteDonor, fetchCampDonors } = useDonor();
+  const { donors, loading, error, fetchDonors, deleteDonor, forceDeleteDonor, fetchCampDonors } = useDonor();
+  const { user } = useAuth();
+  const donorAccess = checkAccess(user, ["donor","donors","donor management"]);
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodGroupFilter, setBloodGroupFilter] = useState('');
   const [eligibilityFilter, setEligibilityFilter] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showForceModal, setShowForceModal] = useState(false);
 
   useEffect(() => {
     if (campId) {
@@ -75,13 +83,52 @@ const DonorList = ({
     return age;
   };
 
-  const handleDelete = async (donor) => {
-    if (window.confirm(`Are you sure you want to delete ${donor.name?.firstName} ${donor.name?.lastName}?`)) {
-      const result = await deleteDonor(donor._id);
-      if (result.success && onDeleteDonor) {
-        onDeleteDonor(donor);
-      }
+  const handleDelete = (donor) => {
+    if (!donorAccess.canDelete) {
+      toast.error('You do not have permission to delete donors.');
+      return;
     }
+    setDeleteTarget(donor);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    const donor = deleteTarget;
+
+    const result = await deleteDonor(donor._id);
+
+    if (result.success) {
+      if (onDeleteDonor) onDeleteDonor(donor);
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
+      return;
+    }
+
+    if (result.code === 'DONOR_HAS_DONATIONS') {
+      // Inform user about existing donations
+      toast.error(result.message || 'Donor has donation history and cannot be deleted.');
+
+      // Offer force delete only if user has stronger access (admin/delete)
+      if (donorAccess.canDelete) {
+        setShowDeleteModal(false);
+        setShowForceModal(true);
+      }
+    } else {
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleForceDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    const donor = deleteTarget;
+    const forceResult = await forceDeleteDonor(donor._id);
+    if (forceResult.success && onDeleteDonor) {
+      onDeleteDonor(donor);
+    }
+    setShowForceModal(false);
+    setDeleteTarget(null);
   };
 
   const handleExport = () => {
@@ -236,22 +283,26 @@ const DonorList = ({
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onEditDonor && onEditDonor(donor)}
-                      title="Edit"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(donor)}
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    {donorAccess.canUpdate && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onEditDonor && onEditDonor(donor)}
+                        title="Edit"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {donorAccess.canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(donor)}
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </Table.Cell>
               </Table.Row>
@@ -265,6 +316,38 @@ const DonorList = ({
           </div>
         )}
       </div>
+
+      {/* Delete confirmation modal */}
+      <CustomModal
+        open={showDeleteModal && !!deleteTarget}
+        title="Delete Donor"
+        description={`Are you sure you want to delete donor ${(deleteTarget && (`${deleteTarget?.name?.firstName || ''} ${deleteTarget?.name?.lastName || ''}`.trim() || deleteTarget?.donorId)) || ''}? This action cannot be undone.`}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        confirmText="Delete"
+        confirmVariant="danger"
+      />
+
+      {/* Force delete confirmation modal */}
+      <CustomModal
+        open={showForceModal && !!deleteTarget}
+        title="Force Delete Donor & Related Data"
+        description="This donor has donation history. Force deleting will remove the donor and all related blood bags, components, inventory entries, and discard logs. This action is permanent."
+        onCancel={() => {
+          setShowForceModal(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={handleForceDeleteConfirm}
+        confirmText="Force Delete"
+        confirmVariant="danger"
+      >
+        <p className="text-sm text-red-700 font-medium mt-2">
+          Proceed only if you fully understand the impact.
+        </p>
+      </CustomModal>
     </div>
   );
 };
