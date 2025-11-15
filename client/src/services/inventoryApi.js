@@ -6,7 +6,7 @@ class InventoryApiService {
   }
 
   initialize(authToken) {
-    apiService.initialize('', authToken);
+    apiService.initialize(import.meta.env.VITE_APP_URI_API, authToken);
   }
 
   _wrap(resp) {
