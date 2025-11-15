@@ -210,10 +210,158 @@ const getAllDonations = async (req, res, next) => {
     }
 };
 
+// ------------
+// GET Donation Details by ID
+// ------------
 
+const getDonationById = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ message: "Invalid donation ID" });
+        }
+
+        const bloodBag = await BloodBag.findById(id)
+            .populate("donor", "name.firstName name.lastName bloodGroup rh dob phone")
+            .populate("siteId", "name address")
+            .populate("components", "componentId componentType volumeMl status expiryDate");
+
+        if (!bloodBag) {
+            return res.status(404).json({ message: "Donation not found" });
+        }
+
+        return res.status(200).json({
+            message: "Donation details fetched successfully.",
+            data: bloodBag,
+        });
+    } catch (error) {
+        console.error("Error in getDonationById:", error);
+        next(error);
+    }
+};
+
+// ------------
+// UPDATE Donation
+// ------------
+
+const updateDonation = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ message: "Invalid donation ID" });
+        }
+
+        const userId = req.user?._id;
+
+        if (userId && !mongoose.isValidObjectId(userId)) {
+            return res.status(400).json({ message: "Invalid user (updatedBy)" });
+        }
+
+        const updateData = {
+            ...req.body,
+        };
+
+        if (userId) {
+            updateData.updatedBy = userId;
+        }
+
+        const updatedBag = await BloodBag.findByIdAndUpdate(id, updateData, {
+            new: true,
+        });
+
+        if (!updatedBag) {
+            return res.status(404).json({ message: "Donation not found" });
+        }
+
+        return res.status(200).json({
+            message: "Donation updated successfully.",
+            data: updatedBag,
+        });
+    } catch (error) {
+        console.error("Error in updateDonation:", error);
+        next(error);
+    }
+};
+
+// ------------
+// UPDATE Donation Status
+// ------------
+
+const updateDonationStatus = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ message: "Invalid donation ID" });
+        }
+
+        if (!status) {
+            return res.status(400).json({ message: "Status is required" });
+        }
+
+        const userId = req.user?._id;
+
+        const updateData = { status };
+        if (userId && mongoose.isValidObjectId(userId)) {
+            updateData.updatedBy = userId;
+        }
+
+        const updatedBag = await BloodBag.findByIdAndUpdate(id, updateData, {
+            new: true,
+        });
+
+        if (!updatedBag) {
+            return res.status(404).json({ message: "Donation not found" });
+        }
+
+        return res.status(200).json({
+            message: "Donation status updated successfully.",
+            data: updatedBag,
+        });
+    } catch (error) {
+        console.error("Error in updateDonationStatus:", error);
+        next(error);
+    }
+};
+
+// ------------
+// DELETE Donation
+// ------------
+
+const deleteDonation = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ message: "Invalid donation ID" });
+        }
+
+        const existing = await BloodBag.findById(id);
+
+        if (!existing) {
+            return res.status(404).json({ message: "Donation not found" });
+        }
+
+        await BloodBag.findByIdAndDelete(id);
+
+        return res.status(200).json({
+            message: "Donation deleted successfully.",
+        });
+    } catch (error) {
+        console.error("Error in deleteDonation:", error);
+        next(error);
+    }
+};
 
 
 module.exports = {
     newDonation,
-    getAllDonations
+    getAllDonations,
+    getDonationById,
+    updateDonation,
+    updateDonationStatus,
+    deleteDonation,
 };

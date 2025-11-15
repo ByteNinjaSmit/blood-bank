@@ -3,6 +3,7 @@ import { Search, Plus, Eye, Edit, Trash2, Download, Filter } from 'lucide-react'
 import Table from '@/components/shared/Table';
 import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
+import CustomModal from '@/components/CustomModal';
 import { useDonation } from '@/hooks/useDonation';
 
 const DonationList = ({ 
@@ -19,6 +20,8 @@ const DonationList = ({
     bloodGroup: '',
     status: '',
   });
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     if (campId) {
@@ -70,13 +73,22 @@ const DonationList = ({
     }
   };
 
-  const handleDelete = async (donation) => {
-    if (window.confirm(`Are you sure you want to delete donation ${donation.bagNo}?`)) {
-      const result = await deleteDonation(donation._id);
-      if (result.success && onDeleteDonation) {
-        onDeleteDonation(donation);
-      }
+  const handleDelete = (donation) => {
+    setDeleteTarget(donation);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    const donation = deleteTarget;
+
+    const result = await deleteDonation(donation._id);
+    if (result.success && onDeleteDonation) {
+      onDeleteDonation(donation);
     }
+
+    setShowDeleteModal(false);
+    setDeleteTarget(null);
   };
 
   const handleExport = () => {
@@ -256,6 +268,24 @@ const DonationList = ({
           </div>
         )}
       </div>
+
+      {/* Delete confirmation modal */}
+      <CustomModal
+        open={showDeleteModal && !!deleteTarget}
+        title="Delete Donation"
+        description={
+          deleteTarget
+            ? `Are you sure you want to delete donation ${deleteTarget.bagNo}? This action cannot be undone.`
+            : ''
+        }
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        confirmText="Delete"
+        confirmVariant="danger"
+      />
     </div>
   );
 };
