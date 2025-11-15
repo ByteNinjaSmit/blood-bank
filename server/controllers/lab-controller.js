@@ -10,6 +10,7 @@ const BloodBag = require("../models/bloodbag-model");
 const Inventory = require("../models/inventory-model")
 const mongoose = require("mongoose");
 const logger = require("../utils/logger");
+const DiscardLog = require("../models/discard-model");
 
 // GET finalized/recorded serology results
 const getSerologyResults = async (req, res, next) => {
