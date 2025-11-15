@@ -9,7 +9,7 @@ import Stepper, { Step } from "@/components/Stepper"
 
 const CampRegistration = () => {
   const { API, authorizationToken } = useAuth()
-  const router = useNavigate()
+  const navigate = useNavigate()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [staffList, setStaffList] = useState([])
   const [errors, setErrors] = useState({})
@@ -174,7 +174,7 @@ const CampRegistration = () => {
           dateFrom: "",
           dateTo: "",
         })
-        router.push("/camp-listing")
+        navigate("/camp-listing")
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Error creating camp")

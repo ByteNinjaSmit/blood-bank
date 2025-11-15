@@ -4,14 +4,16 @@ import React, { useState, useMemo } from "react"
 import { Plus, Eye, Edit, Trash2, Filter, X, Search, ChevronDown, MapPin, Users, Phone, Calendar, Droplets } from "lucide-react"
 import { useNavigate, Link } from "react-router-dom"
 import axios from "axios"
+import { toast } from "sonner"
 import { useAuth } from "@/store/auth"
 import Loader from "@/components/utils/Spinner"
 import { PageHeader } from "@/components/Header"
+import CampEditModal from "./CampEditModal"
+import { useCamp } from "@/hooks/useCamp"
 
 const CampList = ({ OnBack }) => {
   const { API, authorizationToken } = useAuth()
-  const [camps, setCamps] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { camps, loading, fetchCamps, updateCamp, deleteCamp } = useCamp()
   const navigate = useNavigate()
 
   const [searchTerm, setSearchTerm] = useState("")
@@ -19,24 +21,38 @@ const CampList = ({ OnBack }) => {
   const [showFilters, setShowFilters] = useState(false)
   const [dateRangeFilter, setDateRangeFilter] = useState("all")
 
-  React.useEffect(() => {
-    getCamps()
-  }, [API])
+  const [staffList, setStaffList] = useState([])
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [editingCamp, setEditingCamp] = useState(null)
+  const [editSaving, setEditSaving] = useState(false)
+  const [editErrors, setEditErrors] = useState({})
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    address: "",
+    phone: "",
+    email: "",
+    dateFrom: "",
+    dateTo: "",
+    staff: [],
+  })
 
-  const getCamps = async () => {
-    setLoading(true)
+  React.useEffect(() => {
+    fetchCamps()
+    getStaffNames()
+  }, [API, authorizationToken])
+
+  const getStaffNames = async () => {
     try {
-      const response = await axios.get(`${API}/api/site/list`, {
+      const response = await axios.get(`${API}/api/site/staff-list`, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       })
       if (response.status === 200) {
-        setCamps(response.data.data)
+        setStaffList(response.data.data || [])
       }
     } catch (error) {
-      console.error("Error fetching camps:", error)
-    } finally {
-      setLoading(false)
+      console.error("Error fetching staff list:", error)
     }
   }
 
@@ -64,10 +80,9 @@ const CampList = ({ OnBack }) => {
     })
   }, [camps, searchTerm, statusFilter])
 
-  const handleDelete = (camp) => {
-    if (window.confirm(`Are you sure you want to delete "${camp.name}"?`)) {
-      setCamps(camps.filter((c) => c._id !== camp._id))
-    }
+  const handleDelete = async (camp) => {
+    if (!window.confirm(`Are you sure you want to delete "${camp.name}"?`)) return
+    await deleteCamp(camp._id)
   }
 
   const getStatusBadge = (status) => {
@@ -82,6 +97,101 @@ const CampList = ({ OnBack }) => {
         {status}
       </span>
     )
+  }
+
+  const openEdit = (camp) => {
+    setEditingCamp(camp)
+    setEditForm({
+      name: camp.name || "",
+      description: camp.description || "",
+      address: camp.address || "",
+      phone: camp.contactInfo?.phone || "",
+      email: camp.contactInfo?.email || "",
+      dateFrom: camp.dateFrom ? camp.dateFrom.slice(0, 10) : "",
+      dateTo: camp.dateTo ? camp.dateTo.slice(0, 10) : "",
+      staff: (camp.staff || []).map((member) => member._id),
+    })
+    setEditErrors({})
+    setEditModalOpen(true)
+  }
+
+  const closeEdit = () => {
+    if (editSaving) return
+    setEditModalOpen(false)
+    setEditingCamp(null)
+    setEditErrors({})
+  }
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target
+    setEditForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
+  const toggleStaffInEdit = (staffId) => {
+    setEditForm((prev) => ({
+      ...prev,
+      staff: prev.staff.includes(staffId)
+        ? prev.staff.filter((id) => id !== staffId)
+        : [...prev.staff, staffId],
+    }))
+  }
+
+  const validateEditForm = () => {
+    const errs = {}
+
+    if (!editForm.name.trim()) errs.name = "Camp name is required"
+    if (!editForm.address.trim()) errs.address = "Address is required"
+    if (!editForm.phone.trim()) errs.phone = "Phone is required"
+    if (!editForm.email.trim()) errs.email = "Email is required"
+    if (!editForm.dateFrom) errs.dateFrom = "Start date is required"
+    if (!editForm.dateTo) errs.dateTo = "End date is required"
+
+    if (editForm.email && !/\S+@\S+\.\S+/.test(editForm.email)) {
+      errs.email = "Email format is invalid"
+    }
+
+    const phoneRegex = /^\d{10}$/
+    if (editForm.phone && !phoneRegex.test(editForm.phone)) {
+      errs.phone = "Phone format should be 10 digits"
+    }
+
+    if (editForm.dateFrom && editForm.dateTo && new Date(editForm.dateTo) < new Date(editForm.dateFrom)) {
+      errs.dateTo = "End date cannot be earlier than start date"
+    }
+
+    setEditErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault()
+    if (!editingCamp) return
+    if (!validateEditForm()) return
+
+    setEditSaving(true)
+    try {
+      const payload = {
+        name: editForm.name.trim(),
+        description: editForm.description,
+        address: editForm.address.trim(),
+        phone: editForm.phone.trim(),
+        email: editForm.email.trim(),
+        staff: editForm.staff,
+        dateFrom: editForm.dateFrom,
+        dateTo: editForm.dateTo,
+      }
+
+      const { success } = await updateCamp(editingCamp._id, payload)
+      if (success) {
+        setEditModalOpen(false)
+        setEditingCamp(null)
+      }
+    } finally {
+      setEditSaving(false)
+    }
   }
 
   if (loading) {
@@ -290,6 +400,8 @@ const CampList = ({ OnBack }) => {
                     </button>
                   </Link>
                   <button
+                    type="button"
+                    onClick={() => openEdit(camp)}
                     className="inline-flex items-center gap-2 px-4 py-2 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg font-medium transition-colors border border-green-200"
                     title="Edit"
                   >
@@ -315,6 +427,18 @@ const CampList = ({ OnBack }) => {
           </div>
         )}
       </div>
+      <CampEditModal
+        open={editModalOpen}
+        camp={editingCamp}
+        staffList={staffList}
+        form={editForm}
+        errors={editErrors}
+        saving={editSaving}
+        onChange={handleEditChange}
+        onToggleStaff={toggleStaffInEdit}
+        onClose={closeEdit}
+        onSubmit={handleEditSubmit}
+      />
     </div>
   )
 }
