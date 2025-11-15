@@ -251,13 +251,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
         )}
 
         <form
-          onSubmit={(e) => handleSubmit(e, "save")}
-          onKeyDown={(e) => {
-            if (mode === "quick" && e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSubmit(e, "save-next");
-            }
-          }}
+          onSubmit={(e) => handleSubmit(e, mode === "quick" ? "save-next" : "save")}
           className="space-y-6"
         >
           <div className="flex items-center justify-between">

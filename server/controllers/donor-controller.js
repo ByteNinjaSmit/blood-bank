@@ -308,15 +308,26 @@ const listDonors = async (req, res, next) => {
 
 
 // ---------------------
-// SEARCH Donor by Name + DOB and get Latest Donation
+// SEARCH Donor by flexible criteria and get Latest Donation
+// Supports:
+//   - Name + DOB (firstName, lastName, optional middleName, dob)
+//   - OR any of: uid, phone, donorId
 // ---------------------
 const searchDonorLatestDonation = async (req, res, next) => {
   try {
     const { firstName, middleName, lastName, dob, uid, phone, donorId } = req.query;
 
-    // Enforce required fields for search
-    if (!firstName || !middleName || !lastName || !dob) {
-      return res.status(400).json({ message: "firstName, middleName, lastName and dob are required." });
+    const hasNameDob = firstName && lastName && dob;
+    const hasStrongIdentifier = uid || phone || donorId;
+
+    // Enforce at least one valid search strategy to avoid full-collection scans
+    if (!hasNameDob && !hasStrongIdentifier) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Provide either firstName, lastName and dob, or at least one of phone, uid, donorId to search donor.",
+        });
     }
 
     // Build dynamic search query using any provided fields
@@ -414,9 +425,6 @@ const searchDonorLatestDonation = async (req, res, next) => {
     next(error);
   }
 };
-
-
-
 
 
 module.exports = {
