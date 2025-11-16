@@ -1,27 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Eye, Edit, Trash2, Download, Filter } from 'lucide-react';
+import { Search, Plus, Eye, Download, Filter } from 'lucide-react';
 import Table from '@/components/shared/Table';
 import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
-import CustomModal from '@/components/CustomModal';
 import { useDonation } from '@/hooks/useDonation';
 
 const DonationList = ({ 
   onAddDonation, 
   onViewDonation, 
-  onEditDonation, 
-  onDeleteDonation,
-  campId = null 
+  campId = null,
 }) => {
-  const { donations, loading, error, fetchDonations, deleteDonation, fetchCampDonations } = useDonation();
+  const { donations, loading, error, fetchDonations, fetchCampDonations } = useDonation();
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     typeOfBag: '',
     bloodGroup: '',
     status: '',
   });
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     if (campId) {
@@ -71,24 +66,6 @@ const DonationList = ({
       default:
         return status;
     }
-  };
-
-  const handleDelete = (donation) => {
-    setDeleteTarget(donation);
-    setShowDeleteModal(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
-    const donation = deleteTarget;
-
-    const result = await deleteDonation(donation._id);
-    if (result.success && onDeleteDonation) {
-      onDeleteDonation(donation);
-    }
-
-    setShowDeleteModal(false);
-    setDeleteTarget(null);
   };
 
   const handleExport = () => {
@@ -239,22 +216,6 @@ const DonationList = ({
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onEditDonation && onEditDonation(donation)}
-                      title="Edit"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(donation)}
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
                 </Table.Cell>
               </Table.Row>
@@ -268,24 +229,6 @@ const DonationList = ({
           </div>
         )}
       </div>
-
-      {/* Delete confirmation modal */}
-      <CustomModal
-        open={showDeleteModal && !!deleteTarget}
-        title="Delete Donation"
-        description={
-          deleteTarget
-            ? `Are you sure you want to delete donation ${deleteTarget.bagNo}? This action cannot be undone.`
-            : ''
-        }
-        onCancel={() => {
-          setShowDeleteModal(false);
-          setDeleteTarget(null);
-        }}
-        onConfirm={handleDeleteConfirm}
-        confirmText="Delete"
-        confirmVariant="danger"
-      />
     </div>
   );
 };

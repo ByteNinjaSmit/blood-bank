@@ -5,7 +5,7 @@ import axios from "axios"
 import { useAuth } from "@/store/auth"
 import { useNavigate } from "react-router-dom"
 
-const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterCreate = "back", prefill = {}, showPostCreateActions = false, onStartDonation }) => {
+const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterCreate = "back", prefill = {}, showPostCreateActions = false, onStartDonation, originCampId }) => {
   const { API, authorizationToken } = useAuth()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -81,6 +81,10 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
   }
 
   const validateForm = () => {
+    if (!formData.city || !formData.district || !formData.state || !formData.pincode) {
+      setError("City, District, State and Pincode are required")
+      return false
+    }
     if (formData.uid && !/^\d{12}$/.test(formData.uid)) {
       setError("UID must be exactly 12 digits when provided")
       return false
@@ -164,6 +168,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
         rh: formData.rh,
         eligibilityStatus: formData.eligibilityStatus,
         lastDonationDate: formData.lastDonationDate || undefined,
+        siteId: originCampId || undefined,
       }
       const response = await axios.post(
         `${API}/api/donor/new`,
@@ -198,7 +203,13 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
         }
       }
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to create donor. Please try again.")
+      const apiMessage = err?.response?.data?.message
+      const extraDetails = err?.response?.data?.extraDetails
+      if (extraDetails) {
+        setError(`${apiMessage || "Validation error"}: ${extraDetails}`)
+      } else {
+        setError(apiMessage || "Failed to create donor. Please try again.")
+      }
     } finally {
       setLoading(false)
     }
@@ -427,6 +438,56 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                     placeholder="123456789012"
                     maxLength={12}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">District *</label>
+                  <input
+                    type="text"
+                    name="district"
+                    value={formData.district}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
+                  <select
+                    name="state"
+                    value={formData.state}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                    required
+                  >
+                    <option value="">Select State</option>
+                    {states.map((state) => (
+                      <option key={state} value={state}>
+                        {state}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Pincode *</label>
+                  <input
+                    type="text"
+                    name="pincode"
+                    value={formData.pincode}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                    required
                   />
                 </div>
               </div>
@@ -730,14 +791,6 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
               className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
             >
               Cancel
-            </button>
-            <button
-              type="button"
-              onClick={(e) => handleSubmit(e, "save-next")}
-              disabled={loading}
-              className="px-6 py-2 border border-orange-300 text-orange-800 rounded-md hover:bg-orange-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Save & Add Next
             </button>
             <button
               type="submit"

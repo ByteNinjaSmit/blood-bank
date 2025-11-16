@@ -10,10 +10,8 @@ import { useDonation } from '@/hooks/useDonation';
 const CampDonationManagement = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { createDonation, updateDonation } = useDonation();
+  const { createDonation } = useDonation();
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedDonation, setSelectedDonation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [campId, setCampId] = useState(null);
 
@@ -35,28 +33,9 @@ const CampDonationManagement = () => {
     setLoading(false);
   };
 
-  const handleEditDonation = (donation) => {
-    setSelectedDonation(donation);
-    setShowEditModal(true);
-  };
-
-  const handleUpdateDonation = async (donationData) => {
-    setLoading(true);
-    const result = await updateDonation(selectedDonation._id, donationData);
-    if (result.success) {
-      setShowEditModal(false);
-      setSelectedDonation(null);
-    }
-    setLoading(false);
-  };
-
   const handleViewDonation = (donation) => {
     console.log('View donation:', donation);
     // TODO: Implement view donation details
-  };
-
-  const handleDeleteDonation = (donation) => {
-    console.log('Donation deleted:', donation);
   };
 
   if (!campId) {
@@ -101,8 +80,6 @@ const CampDonationManagement = () => {
           campId={campId}
           onAddDonation={() => setShowCreateModal(true)}
           onViewDonation={handleViewDonation}
-          onEditDonation={handleEditDonation}
-          onDeleteDonation={handleDeleteDonation}
         />
       </div>
 
@@ -121,27 +98,6 @@ const CampDonationManagement = () => {
         />
       </Modal>
 
-      {/* Edit Donation Modal */}
-      <Modal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setSelectedDonation(null);
-        }}
-        title="Edit Donation"
-        size="xl"
-      >
-        <DonationForm
-          initialData={selectedDonation}
-          campId={campId}
-          onSubmit={handleUpdateDonation}
-          onCancel={() => {
-            setShowEditModal(false);
-            setSelectedDonation(null);
-          }}
-          loading={loading}
-        />
-      </Modal>
     </div>
   );
 };

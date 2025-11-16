@@ -6,8 +6,13 @@ import { ArrowLeft, Search, Plus, Droplets, X, CheckCircle } from "lucide-react"
 import axios from "axios"
 import { useAuth } from "@/store/auth"
 import { toast } from "sonner"
-import CreateDonor from "../donor/Create-Donor"
 import Stepper, { Step } from "@/components/Stepper"
+import CustomModal from "@/components/CustomModal"
+import DonorSearchStep from "@/components/donation/steps/DonorSearchStep"
+import BagInformationStep from "@/components/donation/steps/BagInformationStep"
+import InitialVitalsStep from "@/components/donation/steps/InitialVitalsStep"
+import BloodGroupStep from "@/components/donation/steps/BloodGroupStep"
+import ReviewSubmitStep from "@/components/donation/steps/ReviewSubmitStep"
 
 const CreateDonation = ({ onCreateDonor }) => {
   const navigate = useNavigate()
@@ -24,6 +29,7 @@ const CreateDonation = ({ onCreateDonor }) => {
   const [currentStep, setCurrentStep] = useState(1)
   const [showSuccess, setShowSuccess] = useState(false)
   const [savedDonation, setSavedDonation] = useState(null)
+  const [fieldErrors, setFieldErrors] = useState({})
 
   // Donor Search Fields
   const [donorInfo, setDonorInfo] = useState({
@@ -79,7 +85,6 @@ const CreateDonation = ({ onCreateDonor }) => {
     const navDonor = location?.state?.donor
     if (navDonor) {
       setDonor(navDonor)
-      setCurrentStep(2)
     }
   }, [location?.state])
 
@@ -89,6 +94,70 @@ const CreateDonation = ({ onCreateDonor }) => {
     const m = d?.name?.middleName || d?.middleName || ""
     const l = d?.name?.lastName || d?.lastName || ""
     return [f, m, l].filter(Boolean).join(" ")
+  }
+
+  const handleDonorInfoFieldChange = (field, value) => {
+    setDonorInfo((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleToggleAdvanced = () => {
+    setShowAdvanced((v) => !v)
+  }
+
+  const handleOpenCreateDonor = () => {
+    setShowCreateDonor(true)
+  }
+
+  const handleCloseCreateDonor = () => {
+    setShowCreateDonor(false)
+  }
+
+  const handleClosePopup = () => {
+    setShowPopup(false)
+  }
+
+  const handleDonorCreated = (created) => {
+    setDonor(created)
+    setShowCreateDonor(false)
+  }
+
+  const handleFormFieldChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => ({ ...prev, [field]: undefined }))
+    }
+  }
+
+  const isCurrentStepComplete = () => {
+    if (currentStep === 1) {
+      return !!donor
+    }
+
+    if (currentStep === 2) {
+      return (
+        formData.bagNo.trim() &&
+        formData.segmentNo.trim() &&
+        formData.batchNo.trim() &&
+        formData.typeOfBag
+      )
+    }
+
+    if (currentStep === 3) {
+      return (
+        formData.hb &&
+        formData.weightKg &&
+        formData.pulse &&
+        formData.tempC &&
+        formData.bp.trim()
+      )
+    }
+
+    if (currentStep === 4) {
+      return formData.bloodGroup && formData.rh
+    }
+
+    // Step 5 is review; by the time user reaches here, previous steps are already valid
+    return true
   }
 
   const handleDonorSearch = async () => {
@@ -105,7 +174,6 @@ const CreateDonation = ({ onCreateDonor }) => {
       if (res.status === 200) {
         setDonor(res.data.donor)
         setShowPopup(false)
-        setCurrentStep(2)
       }
     } catch (error) {
       if (error.response?.status === 404) {
@@ -125,6 +193,27 @@ const CreateDonation = ({ onCreateDonor }) => {
       toast.error("Please search and select a donor before submitting.")
       return
     }
+
+    const newErrors = {}
+    if (!formData.bagNo.trim()) newErrors.bagNo = "Bag number is required."
+    if (!formData.segmentNo.trim()) newErrors.segmentNo = "Segment number is required."
+    if (!formData.batchNo.trim()) newErrors.batchNo = "Batch number is required."
+    if (!formData.typeOfBag) newErrors.typeOfBag = "Type of bag is required."
+    if (!formData.hb) newErrors.hb = "Hemoglobin value is required."
+    if (!formData.weightKg) newErrors.weightKg = "Weight is required."
+    if (!formData.pulse) newErrors.pulse = "Pulse is required."
+    if (!formData.tempC) newErrors.tempC = "Temperature is required."
+    if (!formData.bp.trim()) newErrors.bp = "Blood pressure is required."
+    if (!formData.bloodGroup) newErrors.bloodGroup = "Blood group is required."
+    if (!formData.rh) newErrors.rh = "Rh factor is required."
+
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors)
+      toast.error("Please fill all required fields before submitting.")
+      return
+    }
+
+    setFieldErrors({})
 
     const payload = {
       bagNo: formData.bagNo,
@@ -166,30 +255,23 @@ const CreateDonation = ({ onCreateDonor }) => {
   }
 
   const resetDonationForSameDonor = () => {
-    // Reset bag info and vitals, keep donor and prefilled group/Rh
-    setFormData((prev) => ({
-      ...prev,
-      bagNo: "",
-      segmentNo: "",
-      batchNo: "",
-      typeOfBag: "",
-      hb: "",
-      weightKg: donor?.weightKg ? String(donor.weightKg) : "",
-      pulse: "",
-      tempC: "",
-      bp: "",
-      // bloodGroup and rh remain as is (prefilled from donor)
-    }))
+    // Start a fresh donation flow for the same donor by navigating to a new
+    // Create Donation page instance, passing donor in navigation state.
     setShowSuccess(false)
-    setCurrentStep(2)
+    if (!donor) {
+      navigate(campId ? `/donations/create-donation?campId=${campId}` : "/donations/create-donation")
+      return
+    }
+    navigate(
+      campId ? `/donations/create-donation?campId=${campId}` : "/donations/create-donation",
+      { state: { donor } }
+    )
   }
 
   const startNewDonorFlow = () => {
+    // Go to Create Donor page (camp-aware when applicable)
     setShowSuccess(false)
-    setDonor(null)
-    setDonorInfo({ firstName: "", middleName: "", lastName: "", dob: "", uid: "", phone: "", donorId: "" })
-    setCurrentStep(1)
-    setShowCreateDonor(true)
+    navigate(campId ? `/donor/create-donor?campId=${campId}` : "/donor/create-donor")
   }
 
   return (
@@ -198,7 +280,7 @@ const CreateDonation = ({ onCreateDonor }) => {
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
           <button
-            onClick={() => navigate(campId ? `/camp-details/?id=${campId}` : "/donations/view-donation")}
+            onClick={() => navigate(campId ? `/camp-details?id=${campId}` : "/donations/view-donation")}
             className="flex items-center gap-2 px-4 py-2 text-orange-800 bg-orange-50 hover:bg-orange-100 rounded-lg border border-orange-200"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -215,406 +297,121 @@ const CreateDonation = ({ onCreateDonor }) => {
           </div>
         </div>
       </div>
-
+      
       <div className=" mx-auto px-4 py-8">
         <Stepper
           onFinalStepCompleted={handleSubmit}
           onStepChange={(s) => setCurrentStep(s)}
-          nextButtonProps={{ disabled: currentStep === 1 && !donor }}
+          nextButtonProps={{
+            disabled: !isCurrentStepComplete(),
+            className: !isCurrentStepComplete()
+              ? "duration-350 flex items-center justify-center rounded-full bg-gray-300 py-1.5 px-3.5 font-medium tracking-tight text-gray-500 cursor-not-allowed"
+              : "duration-350 flex items-center justify-center rounded-full bg-red-800 py-1.5 px-3.5 font-medium tracking-tight text-white transition hover:bg-red-900 active:bg-red-950",
+          }}
+          disableStepIndicators
           stepCircleContainerClassName="bg-white"
           contentClassName="bg-white rounded-xl shadow border border-gray-100"
           footerClassName="bg-white rounded-b-xl"
         >
           {/* Step 1: Donor Search */}
           <Step>
-            <div
-              className="p-6"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault()
-                  if (canSearchDonor) handleDonorSearch()
-                }
-              }}
-            >
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Donor Information</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries({
-                  firstName: "First Name",
-                  middleName: "Middle Name",
-                  lastName: "Last Name",
-                }).map(([key, label]) => (
-                  <div key={key}>
-                    <label className="block text-sm text-gray-700 mb-1">{label}</label>
-                    <input
-                      type="text"
-                      value={donorInfo[key]}
-                      onChange={(e) => setDonorInfo({ ...donorInfo, [key]: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg"
-                    />
-                  </div>
-                ))}
-                <div>
-                  <label className="block text-sm text-gray-700 mb-1">Date of Birth</label>
-                  <input
-                    type="date"
-                    value={donorInfo.dob}
-                    onChange={(e) => setDonorInfo({ ...donorInfo, dob: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg"
-                  />
-                </div>
-              </div>
-              <div className="mt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAdvanced((v) => !v)}
-                  className="text-sm text-orange-800 hover:underline"
-                >
-                  {showAdvanced ? "Hide advanced" : "Show advanced (UID, Phone, Donor ID)"}
-                </button>
-              </div>
-              {showAdvanced && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-                  {Object.entries({
-                    uid: "UID (12 digits)",
-                    phone: "Phone (10 digits)",
-                    donorId: "Donor ID",
-                  }).map(([key, label]) => (
-                    <div key={key}>
-                      <label className="block text-sm text-gray-700 mb-1">{label}</label>
-                      <input
-                        type="text"
-                        value={donorInfo[key]}
-                        onChange={(e) => setDonorInfo({ ...donorInfo, [key]: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-lg"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="mt-4 flex gap-4">
-                <button
-                  type="button"
-                  onClick={handleDonorSearch}
-                  disabled={loading || !canSearchDonor}
-                  className={`px-5 py-2 rounded-lg flex items-center gap-2 ${
-                    loading || !canSearchDonor
-                      ? "bg-orange-300 cursor-not-allowed"
-                      : "bg-orange-800 hover:bg-orange-900 text-white"
-                  }`}
-                >
-                  <Search className="w-4 h-4" /> Search
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateDonor(true)}
-                  className="px-5 py-2 rounded-lg border border-orange-200 text-orange-800 hover:bg-orange-50"
-                >
-                  <Plus className="w-4 h-4 inline mr-1" /> Create Donor
-                </button>
-                {!canSearchDonor && (
-                  <span className="text-sm text-gray-500 self-center">
-                    Enter First & Last name with DOB, or Phone / UID / Donor ID to search
-                  </span>
-                )}
-              </div>
-              {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
-
-              {/* Donor Not Found Popup */}
-              {showPopup && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-                  <div className="bg-white p-6 rounded-xl shadow-xl w-96 relative">
-                    <button
-                      onClick={() => setShowPopup(false)}
-                      className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                    <h2 className="text-lg font-bold mb-4">Donor Not Found</h2>
-                    <p className="text-gray-600 mb-6">No donor matched your search. Create one now and continue.</p>
-                    <button
-                      onClick={() => {
-                        setShowPopup(false)
-                        setShowCreateDonor(true)
-                      }}
-                      className="px-5 py-2 bg-orange-800 text-white rounded-lg hover:bg-orange-900 flex items-center gap-2"
-                    >
-                      <Plus className="w-4 h-4" /> Create Donor
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {showCreateDonor && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                  <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-                    <CreateDonor
-                      onBack={() => setShowCreateDonor(false)}
-                      onCreated={(created) => {
-                        setDonor(created)
-                        setShowCreateDonor(false)
-                        setCurrentStep(2)
-                      }}
-                      prefill={{
-                        donorId: donorInfo.donorId,
-                        firstName: donorInfo.firstName,
-                        middleName: donorInfo.middleName,
-                        lastName: donorInfo.lastName,
-                        dob: donorInfo.dob,
-                        uid: donorInfo.uid,
-                        phone: donorInfo.phone,
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {donor && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm text-green-800">
-                    ✓ Donor selected: <strong>{getDonorName(donor)}</strong>
-                    {donor?.donorId ? (
-                      <span className="text-gray-600"> (ID: {donor.donorId})</span>
-                    ) : null}
-                  </p>
-                </div>
-              )}
-            </div>
+            <DonorSearchStep
+              donorInfo={donorInfo}
+              onDonorInfoFieldChange={handleDonorInfoFieldChange}
+              canSearchDonor={canSearchDonor}
+              showAdvanced={showAdvanced}
+              onToggleAdvanced={handleToggleAdvanced}
+              loading={loading}
+              error={error}
+              onSearch={handleDonorSearch}
+              onOpenCreateDonor={handleOpenCreateDonor}
+              showPopup={showPopup}
+              onClosePopup={handleClosePopup}
+              showCreateDonor={showCreateDonor}
+              onCloseCreateDonor={handleCloseCreateDonor}
+              onDonorCreated={handleDonorCreated}
+              getDonorName={getDonorName}
+              donor={donor}
+            />
           </Step>
 
           {/* Step 2: Bag Information */}
           <Step>
-            <div className="p-6">
-              <h3 className="font-semibold text-gray-800 mb-4">Bag Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { key: "bagNo", label: "Bag No" },
-                  { key: "segmentNo", label: "Segment No" },
-                  { key: "batchNo", label: "Batch No" },
-                ].map(({ key, label }) => (
-                  <div key={key}>
-                    <label className="block text-sm mb-1">{label}</label>
-                    <input
-                      type="text"
-                      value={formData[key]}
-                      onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg"
-                      required
-                    />
-                  </div>
-                ))}
-                <div>
-                  <label className="block text-sm mb-1">Type of Bag</label>
-                  <select
-                    value={formData.typeOfBag}
-                    onChange={(e) => setFormData({ ...formData, typeOfBag: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg"
-                    required
-                  >
-                    <option value="">Select type</option>
-                    <option value="DB">Double Bag</option>
-                    <option value="TB">Triple Bag</option>
-                    <option value="QB">Quadruple Bag</option>
-                  </select>
-                </div>
-              </div>
-            </div>
+            <BagInformationStep
+              formData={formData}
+              fieldErrors={fieldErrors}
+              onFieldChange={handleFormFieldChange}
+            />
           </Step>
 
           {/* Step 3: Initial Vitals */}
           <Step>
-            <div className="p-6">
-              <h3 className="font-semibold text-gray-800 mb-4">Initial Vitals</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { key: "hb", label: "Hemoglobin (g/dL)", type: "number" },
-                  { key: "weightKg", label: "Weight (kg)", type: "number" },
-                  { key: "pulse", label: "Pulse (bpm)", type: "number" },
-                  { key: "tempC", label: "Temperature (°C)", type: "number" },
-                  { key: "bp", label: "Blood Pressure", type: "text" },
-                ].map(({ key, label, type }) => (
-                  <div key={key}>
-                    <label className="block text-sm mb-1">{label}</label>
-                    <input
-                      type={type}
-                      value={formData[key]}
-                      onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg"
-                      required
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
+            <InitialVitalsStep
+              formData={formData}
+              fieldErrors={fieldErrors}
+              onFieldChange={handleFormFieldChange}
+            />
           </Step>
 
           {/* Step 4: Blood Group Information */}
           <Step>
-            <div className="p-6">
-              <h3 className="font-semibold text-gray-800 mb-4">Blood Group Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm mb-1">Blood Group</label>
-                  <select
-                    value={formData.bloodGroup}
-                    onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg"
-                    disabled={!!donor}
-                    required
-                  >
-                    <option value="">Select</option>
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="AB">AB</option>
-                    <option value="O">O</option>
-                  </select>
-                  {donor && (
-                    <p className="text-xs text-gray-500 mt-1">Prefilled from donor record</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm mb-1">Rh Factor</label>
-                  <select
-                    value={formData.rh}
-                    onChange={(e) => setFormData({ ...formData, rh: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg"
-                    disabled={!!donor}
-                    required
-                  >
-                    <option value="">Select</option>
-                    <option value="Positive">Positive</option>
-                    <option value="Negative">Negative</option>
-                  </select>
-                  {donor && (
-                    <p className="text-xs text-gray-500 mt-1">Prefilled from donor record</p>
-                  )}
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm mb-1">Atypical Antibody</label>
-                  <input
-                    type="text"
-                    value={formData.atypicalAntibody}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        atypicalAntibody: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg"
-                  />
-                </div>
-              </div>
-            </div>
+            <BloodGroupStep
+              formData={formData}
+              fieldErrors={fieldErrors}
+              donor={donor}
+              onFieldChange={handleFormFieldChange}
+            />
           </Step>
 
           {/* Step 5: Review & Submit */}
           <Step>
-            <div className="p-6">
-              <h3 className="font-semibold text-gray-800 mb-4">Review Donation Details</h3>
-              <div className="space-y-4">
-                {/* Donor Info */}
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <h4 className="font-semibold text-blue-900 mb-2">Donor Information</h4>
-                  <p className="text-sm text-blue-800">
-                    <strong>Name:</strong> {getDonorName(donor)}
-                  </p>
-                  <p className="text-sm text-blue-800">
-                    <strong>Donor ID:</strong> {donor?.donorId}
-                  </p>
-                </div>
-
-                {/* Bag Info */}
-                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                  <h4 className="font-semibold text-purple-900 mb-2">Bag Information</h4>
-                  <p className="text-sm text-purple-800">
-                    <strong>Bag No:</strong> {formData.bagNo}
-                  </p>
-                  <p className="text-sm text-purple-800">
-                    <strong>Segment No:</strong> {formData.segmentNo}
-                  </p>
-                  <p className="text-sm text-purple-800">
-                    <strong>Batch No:</strong> {formData.batchNo}
-                  </p>
-                  <p className="text-sm text-purple-800">
-                    <strong>Type:</strong> {formData.typeOfBag}
-                  </p>
-                </div>
-
-                {/* Vitals */}
-                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                  <h4 className="font-semibold text-green-900 mb-2">Initial Vitals</h4>
-                  <p className="text-sm text-green-800">
-                    <strong>Hemoglobin:</strong> {formData.hb} g/dL
-                  </p>
-                  <p className="text-sm text-green-800">
-                    <strong>Weight:</strong> {formData.weightKg} kg
-                  </p>
-                  <p className="text-sm text-green-800">
-                    <strong>Pulse:</strong> {formData.pulse} bpm
-                  </p>
-                  <p className="text-sm text-green-800">
-                    <strong>Temperature:</strong> {formData.tempC}°C
-                  </p>
-                  <p className="text-sm text-green-800">
-                    <strong>Blood Pressure:</strong> {formData.bp}
-                  </p>
-                </div>
-
-                {/* Blood Group */}
-                <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                  <h4 className="font-semibold text-orange-900 mb-2">Blood Group</h4>
-                  <p className="text-sm text-orange-800">
-                    <strong>Group:</strong> {formData.bloodGroup} {formData.rh}
-                  </p>
-                  {formData.atypicalAntibody && (
-                    <p className="text-sm text-orange-800">
-                      <strong>Atypical Antibody:</strong> {formData.atypicalAntibody}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
+            <ReviewSubmitStep donor={donor} formData={formData} getDonorName={getDonorName} />
           </Step>
         </Stepper>
       </div>
 
       {showSuccess && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 border border-green-200">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-green-100 rounded-full">
-                <CheckCircle className="w-6 h-6 text-green-700" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Donation recorded successfully</h3>
-                <p className="text-sm text-gray-600 mt-1">Choose your next action to keep the queue moving fast.</p>
-              </div>
+        <CustomModal
+          open={showSuccess}
+          title="Donation recorded successfully"
+          description="Choose your next action to continue."
+          onCancel={() => setShowSuccess(false)}
+          hideFooter
+          size="md"
+        >
+          <div className="flex items-start gap-3 mb-4">
+            <div className="p-2 bg-green-100 rounded-full">
+              <CheckCircle className="w-6 h-6 text-green-700" />
             </div>
-
-            <div className="mt-6 space-y-3">
-              <button
-                onClick={resetDonationForSameDonor}
-                className="w-full px-4 py-2 rounded-lg bg-orange-800 text-white hover:bg-orange-900"
-              >
-                Add another bag for this donor
-              </button>
-              <button
-                onClick={startNewDonorFlow}
-                className="w-full px-4 py-2 rounded-lg border border-orange-200 text-orange-800 hover:bg-orange-50"
-              >
-                Create new donor & continue
-              </button>
-              <button
-                onClick={() => {
-                  setShowSuccess(false)
-                  navigate(campId ? `/camp-details/?id=${campId}` : "/donations/view-donation")
-                }}
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-              >
-                {campId ? "Back to Camp" : "Go to Donations"}
-              </button>
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">Donation recorded successfully</h3>
+              <p className="text-sm text-gray-600 mt-1">What would you like to do next?</p>
             </div>
           </div>
-        </div>
+          <div className="space-y-3">
+            <button
+              onClick={startNewDonorFlow}
+              className="w-full px-4 py-2 rounded-lg border border-orange-200 text-orange-800 hover:bg-orange-50"
+            >
+              Create new donor
+            </button>
+            <button
+              onClick={resetDonationForSameDonor}
+              className="w-full px-4 py-2 rounded-lg bg-orange-800 text-white hover:bg-orange-900"
+            >
+              New donation
+            </button>
+            <button
+              onClick={() => {
+                setShowSuccess(false)
+                navigate(campId ? `/camp-details?id=${campId}` : "/donations/view-donation")
+              }}
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              {campId ? "Back to Camp" : "Donation list (view)"}
+            </button>
+          </div>
+        </CustomModal>
       )}
     </div>
   )

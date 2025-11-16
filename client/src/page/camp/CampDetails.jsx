@@ -184,7 +184,7 @@ const CampDetails = () => {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => navigate(`/donor/create-donor`)}
+                onClick={() => navigate(`/donor/create-donor?campId=${campId}`)}
                 title="Create a new donor"
                 className="hidden md:flex"
               >
