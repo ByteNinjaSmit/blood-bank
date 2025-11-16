@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
-import { Loader2, Microscope, ArrowLeft } from "lucide-react";
+import { Loader2, Microscope } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import CustomModal from "@/components/CustomModal";
 
 const SerologyResults = () => {
   const { API, authorizationToken } = useAuth();
@@ -16,6 +17,8 @@ const SerologyResults = () => {
   const [search, setSearch] = useState("");
   const [order, setOrder] = useState("desc");
   const [sortBy, setSortBy] = useState("updatedAt");
+  const [selectedBag, setSelectedBag] = useState(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   const fetchBags = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
@@ -47,6 +50,17 @@ const SerologyResults = () => {
       status === "discarded" || status === "failed" ? "bg-red-50 text-red-700 border-red-200" :
       "bg-amber-50 text-amber-700 border-amber-200";
     return <span className={`px-2 py-0.5 rounded-full text-xs border ${cls}`}>{status}</span>;
+  };
+
+  const formatBlood = (group, rh) => {
+    if (!group && !rh) return "-";
+    const symbol = rh === "Positive" ? "+" : rh === "Negative" ? "-" : (rh || "");
+    return `${group || ""} ${symbol}`.trim();
+  };
+
+  const handleViewDetails = (bag) => {
+    setSelectedBag(bag);
+    setShowDetails(true);
   };
 
   return (
@@ -139,10 +153,10 @@ const SerologyResults = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag No</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segment</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Site</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Collected</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tests</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
@@ -163,22 +177,39 @@ const SerologyResults = () => {
                     <tr key={`${bag.bagNo}-${idx}`} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{bag.bagNo}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.segmentNo || "-"}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{bag.bloodGroup} {bag.rh}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{bag?.siteId?.name || "-"}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{formatBlood(bag.bloodGroup, bag.rh)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.collectionDate ? new Date(bag.collectionDate).toLocaleDateString() : "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{statusBadge(bag.status)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">
                         {Array.isArray(bag.testResults) && bag.testResults.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {bag.testResults.map((t, i) => (
-                              <span key={i} className="px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-100">
-                                {t.test}: {t.result}
-                              </span>
-                            ))}
+                            {bag.testResults.map((t, i) => {
+                              const isPositive = String(t.result).toLowerCase() === "positive";
+                              const chipCls = isPositive
+                                ? "bg-red-50 text-red-700 border-red-200"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-200";
+                              return (
+                                <span
+                                  key={i}
+                                  className={`px-2 py-0.5 rounded-full text-xs border ${chipCls}`}
+                                >
+                                  {t.test}: {t.result}
+                                </span>
+                              );
+                            })}
                           </div>
                         ) : (
                           <span className="text-xs text-gray-400">Not tested</span>
                         )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(bag)}
+                        >
+                          View
+                        </Button>
                       </td>
                     </tr>
                   ))
@@ -188,6 +219,77 @@ const SerologyResults = () => {
           </div>
         </div>
       </div>
+
+      {showDetails && selectedBag && (
+        <CustomModal
+          open={showDetails}
+          title={`Bag ${selectedBag.bagNo} – Serology details`}
+          description={selectedBag.status ? `Status: ${selectedBag.status}` : ""}
+          onCancel={() => {
+            setShowDetails(false);
+            setSelectedBag(null);
+          }}
+          size="lg"
+          hideFooter
+        >
+          <div className="space-y-4 text-sm text-slate-800">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1.5">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Bag Information</p>
+                <p><span className="font-medium">Bag No:</span> {selectedBag.bagNo}</p>
+                <p><span className="font-medium">Segment No:</span> {selectedBag.segmentNo || "-"}</p>
+                <p><span className="font-medium">Blood Group:</span> {formatBlood(selectedBag.bloodGroup, selectedBag.rh)}</p>
+                <p>
+                  <span className="font-medium">Collection Date:</span>{" "}
+                  {selectedBag.collectionDate ? new Date(selectedBag.collectionDate).toLocaleString() : "-"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1.5">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Summary</p>
+                <p>
+                  <span className="font-medium">Status:</span> {selectedBag.status}{" "}
+                  {statusBadge(selectedBag.status)}
+                </p>
+                {selectedBag.updatedAt && (
+                  <p>
+                    <span className="font-medium">Last Updated:</span>{" "}
+                    {new Date(selectedBag.updatedAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-slate-100 bg-white/80 p-3">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Test Results</p>
+              {Array.isArray(selectedBag.testResults) && selectedBag.testResults.length > 0 ? (
+                <div className="divide-y text-sm">
+                  {selectedBag.testResults.map((t, idx) => (
+                    <div key={idx} className="flex items-center justify-between py-2">
+                      <div>
+                        <p className="font-medium text-slate-800">{t.test}</p>
+                        {t.notes && <p className="text-xs text-slate-500 mt-0.5">{t.notes}</p>}
+                      </div>
+                      {(() => {
+                        const isPositive = String(t.result).toLowerCase() === "positive";
+                        const chipCls = isPositive
+                          ? "bg-red-50 text-red-700 border-red-200"
+                          : "bg-emerald-50 text-emerald-700 border-emerald-200";
+                        return (
+                          <span className={`px-2 py-0.5 rounded-full text-xs border ${chipCls}`}>
+                            {t.result}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">No serology tests recorded for this bag.</p>
+              )}
+            </div>
+          </div>
+        </CustomModal>
+      )}
     </div>
   );
 };
