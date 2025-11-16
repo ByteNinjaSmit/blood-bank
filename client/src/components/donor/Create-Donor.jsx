@@ -5,7 +5,7 @@ import axios from "axios"
 import { useAuth } from "@/store/auth"
 import { useNavigate } from "react-router-dom"
 
-const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterCreate = "back", prefill = {}, showPostCreateActions = false, onStartDonation }) => {
+const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterCreate = "back", prefill = {}, showPostCreateActions = false, onStartDonation, originCampId }) => {
   const { API, authorizationToken } = useAuth()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -168,6 +168,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
         rh: formData.rh,
         eligibilityStatus: formData.eligibilityStatus,
         lastDonationDate: formData.lastDonationDate || undefined,
+        siteId: originCampId || undefined,
       }
       const response = await axios.post(
         `${API}/api/donor/new`,

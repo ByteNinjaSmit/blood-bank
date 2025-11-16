@@ -35,6 +35,7 @@ const registerDonor = async (req, res, next) => {
       rh,
       eligibilityStatus,
       lastDonationDate,
+      siteId,
     } = req.body;
 
     // Convert email to lowercase if it's provided
@@ -96,7 +97,21 @@ const registerDonor = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid date of birth." });
     }
 
-    // Create a new donor
+    // Optional: validate siteId if provided
+    let resolvedSiteId = null;
+    if (siteId) {
+      if (!mongoose.isValidObjectId(siteId)) {
+        return res.status(400).json({ message: "Invalid Site ID provided for donor." });
+      }
+
+      const site = await Site.findById(siteId).select("_id");
+      if (!site) {
+        return res.status(404).json({ message: "Site not found for provided siteId." });
+      }
+      resolvedSiteId = site._id;
+    }
+
+    // Create a new donor (do NOT persist siteId here; site linkage is tracked on Site.donorData)
     const newDonor = new Donor({
       donorId,
       name: {
@@ -122,6 +137,13 @@ const registerDonor = async (req, res, next) => {
 
     // Save the donor to the database
     await newDonor.save();
+
+    // If donor is linked to a site, push into site's donorData for camp reporting
+    if (resolvedSiteId) {
+      await Site.findByIdAndUpdate(resolvedSiteId, {
+        $addToSet: { donorData: newDonor._id },
+      });
+    }
 
     // Return success response
     return res.status(201).json({
