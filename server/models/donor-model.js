@@ -69,7 +69,7 @@ const DonorSchema = new Schema({
     },
     city: {
       type: String,
-      // required: true,
+      required: true,
     },
     district: {
       type: String,
