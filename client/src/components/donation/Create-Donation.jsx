@@ -80,6 +80,14 @@ const CreateDonation = ({ onCreateDonor }) => {
     }
   }, [donor])
 
+  const getDonorName = (d) => {
+    if (!d) return ""
+    const f = d?.name?.firstName || d?.firstName || ""
+    const m = d?.name?.middleName || d?.middleName || ""
+    const l = d?.name?.lastName || d?.lastName || ""
+    return [f, m, l].filter(Boolean).join(" ")
+  }
+
   const handleDonorSelected = async (d) => {
     try {
       setLoading(true)
@@ -107,13 +115,7 @@ const CreateDonation = ({ onCreateDonor }) => {
     }
   }, [location?.state])
 
-  const getDonorName = (d) => {
-    if (!d) return ""
-    const f = d?.name?.firstName || d?.firstName || ""
-    const m = d?.name?.middleName || d?.middleName || ""
-    const l = d?.name?.lastName || d?.lastName || ""
-    return [f, m, l].filter(Boolean).join(" ")
-  }
+  
 
   const handleDonorInfoFieldChange = (field, value) => {
     setDonorInfo((prev) => ({ ...prev, [field]: value }))

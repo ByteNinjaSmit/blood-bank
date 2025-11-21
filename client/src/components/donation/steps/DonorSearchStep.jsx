@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Search, Plus, X } from "lucide-react";
+import { Search, Plus, X, Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/store/auth";
 import CreateDonor from "../../donor/Create-Donor";
 
@@ -28,6 +28,8 @@ const DonorSearchStep = ({
   const [results, setResults] = useState([]);
   const [qLoading, setQLoading] = useState(false);
   const [qError, setQError] = useState("");
+  const [selectedId, setSelectedId] = useState(null);
+  const [selectingId, setSelectingId] = useState(null);
 
   useEffect(() => {
     if (!query.trim()) { setResults([]); setQError(""); return; }
@@ -52,6 +54,34 @@ const DonorSearchStep = ({
     return () => clearTimeout(t);
   }, [query, API, authorizationToken]);
 
+  const handleSelect = async (d) => {
+    try {
+      setSelectingId(d._id);
+      setSelectedId(d._id);
+      await onDonorSelected?.(d);
+    } finally {
+      setSelectingId(null);
+    }
+  };
+
+  const highlight = (text) => {
+    if (!query) return text;
+    const s = String(text || '');
+    const q = query.trim();
+    const i = s.toLowerCase().indexOf(q.toLowerCase());
+    if (i === -1) return text;
+    const pre = s.slice(0, i);
+    const mid = s.slice(i, i + q.length);
+    const post = s.slice(i + q.length);
+    return (
+      <>
+        {pre}
+        <mark className="bg-yellow-200 text-yellow-900 rounded px-0.5">{mid}</mark>
+        {post}
+      </>
+    );
+  };
+
   return (
     <div
       className="p-6"
@@ -68,13 +98,26 @@ const DonorSearchStep = ({
         <div className="md:w-2/3 space-y-4">
           <div>
             <label className="block text-sm text-gray-700 mb-1">Quick Search</label>
-            <input
-              type="text"
-              placeholder="Search donor by Name, Phone, Donor ID, UID, Email, City..."
-              className="w-full px-3 py-2 border rounded-lg"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+            <div className="relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search donor by Name, Phone, Donor ID, UID, Email, City..."
+                className="w-full pl-9 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              {query && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => setQuery("")}
+                  className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
             {qError && <p className="text-red-600 text-xs mt-1">{qError}</p>}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -133,15 +176,15 @@ const DonorSearchStep = ({
               ))}
             </div>
           )}
-          <div className="mt-4 flex gap-4">
+          <div className="mt-4 flex gap-3">
             <button
               type="button"
               onClick={onSearch}
               disabled={loading || !canSearchDonor}
-              className={`px-5 py-2 rounded-lg flex items-center gap-2 ${
+              className={`px-3 py-1.5 rounded-md flex items-center gap-2 border ${
                 loading || !canSearchDonor
-                  ? "bg-orange-300 cursor-not-allowed"
-                  : "bg-orange-800 hover:bg-orange-900 text-white"
+                  ? "border-gray-200 text-gray-400 cursor-not-allowed opacity-50"
+                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
               }`}
             >
               <Search className="w-4 h-4" /> Search
@@ -149,36 +192,63 @@ const DonorSearchStep = ({
             <button
               type="button"
               onClick={onOpenCreateDonor}
-              className="px-5 py-2 rounded-lg border border-orange-200 text-orange-800 hover:bg-orange-50"
+              className="px-3 py-1.5 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               <Plus className="w-4 h-4 inline mr-1" /> Create Donor
             </button>
-            {!canSearchDonor && (
-              <span className="text-sm text-gray-500 self-center">
-                Enter First & Last name with DOB, or Phone / UID / Donor ID to search
-              </span>
-            )}
           </div>
           {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
         </div>
         {/* RIGHT: live results */}
-        <div className="md:w-1/3 border rounded-lg p-3 h-[500px] overflow-y-auto bg-gray-50">
-          <div className="text-sm text-gray-600 mb-2">Results</div>
+        <div className="md:w-1/3 border rounded-lg p-3 h-[360px] overflow-y-auto bg-gray-50">
+          <div className="sticky top-0 bg-gray-50 pb-2 mb-2 flex items-center justify-between">
+            <div className="text-sm text-gray-600">Results</div>
+            <div className="text-xs text-gray-500">{results.length} found</div>
+          </div>
           {qLoading ? (
-            <div className="text-sm text-gray-500">Searching…</div>
+            <div className="space-y-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="p-3 bg-white border border-gray-200 rounded-lg animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-1/3 mb-2" />
+                  <div className="h-3 bg-gray-100 rounded w-1/2 mb-1" />
+                  <div className="h-3 bg-gray-100 rounded w-2/3" />
+                </div>
+              ))}
+            </div>
           ) : results.length === 0 ? (
             <div className="text-sm text-gray-500">{query ? 'No results' : 'Start typing to search donors'}</div>
           ) : (
             results.map((d) => (
               <div
                 key={d._id}
-                onClick={() => onDonorSelected?.(d)}
-                className="p-3 mb-2 bg-white shadow hover:bg-red-50 cursor-pointer rounded-lg"
+                role="button"
+                tabIndex={0}
+                aria-selected={selectedId === d._id}
+                onClick={() => handleSelect(d)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSelect(d); }}
+                className={`group p-3 mb-2 bg-white border rounded-lg cursor-pointer transition hover:bg-red-50 ${
+                  selectedId === d._id ? 'ring-2 ring-red-600 border-red-600' : 'border-gray-200'
+                }`}
               >
-                <p className="font-semibold text-gray-900">{d.fullName} {d.age ? (<span className="text-xs text-gray-500">• {d.age}y</span>) : null}</p>
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-gray-900">
+                    {highlight(d.fullName)} {d.age ? (<span className="text-xs text-gray-500">• {d.age}y</span>) : null}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {selectingId === d._id ? (
+                      <Loader2 className="w-4 h-4 text-red-700 animate-spin" />
+                    ) : selectedId === d._id ? (
+                      <Check className="w-4 h-4 text-green-600" />
+                    ) : null}
+                  </div>
+                </div>
                 <p className="text-xs text-gray-600">DOB: {d.dob ? new Date(d.dob).toLocaleDateString() : '—'}</p>
-                <p className="text-xs text-gray-500">Donor ID: {d.donorId} • Phone: {d.phone || '—'}</p>
-                <p className="text-xs text-gray-500">{d.bloodGroup || '—'} {d.rh || ''} {d.city ? `• ${d.city}` : ''}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800">{d.bloodGroup || '—'}{d.rh ? d.rh : ''}</span>
+                  {d.city ? <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">{highlight(d.city)}</span> : null}
+                  {d.donorId ? <span className="px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-800">ID: {highlight(d.donorId)}</span> : null}
+                  {d.phone ? <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">{highlight(d.phone)}</span> : null}
+                </div>
               </div>
             ))
           )}
