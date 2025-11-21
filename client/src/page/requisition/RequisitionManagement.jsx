@@ -69,10 +69,15 @@ const RequisitionManagement = () => {
     return !!requestDoc?._id && okStatus.includes(requestDoc?.status);
   }, [requestDoc]);
 
+  const canProceedFromStep4 = React.useMemo(() => {
+    return requestDoc?.status === 'completed';
+  }, [requestDoc]);
+
   const nextDisabled =
     (currentStep === 1 && !canProceedFromStep1) ||
     (currentStep === 2 && !canProceedFromStep2) ||
-    (currentStep === 3 && !canProceedFromStep3);
+    (currentStep === 3 && !canProceedFromStep3) ||
+    (currentStep === 4 && !canProceedFromStep4);
 
   return (
     <>
@@ -135,7 +140,13 @@ const RequisitionManagement = () => {
               <CompleteStep
                 requestDoc={requestDoc}
                 completing={completing}
-                onComplete={handleComplete}
+                onComplete={async () => {
+                  const ok = await handleComplete();
+                  if (ok) {
+                    toast.success('Requisition completed');
+                    navigate('/requisition/list');
+                  }
+                }}
               />
             </Step>
           </Stepper>

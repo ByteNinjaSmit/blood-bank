@@ -4,7 +4,7 @@ import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Loader2, PackageCheck } from "lucide-react";
 import { toast } from "sonner";
-import Modal from "@/components/shared/Modal";
+import CustomModal from "@/components/CustomModal";
 
 const Issue = () => {
   const { API, authorizationToken, user } = useAuth();
@@ -224,7 +224,7 @@ const Issue = () => {
           </div>
         </div>
       </div>
-      <Modal isOpen={viewOpen} onClose={closeView} title={status === 'issued' ? 'Issued Component Details' : 'Reserved Component Details'} size="lg">
+      <CustomModal open={viewOpen} onCancel={closeView} title={status === 'issued' ? 'Issued Component Details' : 'Reserved Component Details'} size="lg" hideFooter>
         {viewItem && (
           <div className="space-y-4 text-sm">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -285,7 +285,7 @@ const Issue = () => {
             </div>
           </div>
         )}
-      </Modal>
+      </CustomModal>
     </div>
   );
 };

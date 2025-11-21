@@ -96,7 +96,7 @@ async function listInventory(req, res, next) {
           'bag.rh': 1,
           'hospital._id': 1,
           'hospital.name': 1,
-          request: { patient: 1 },
+          'request.patient': 1,
         },
       },
       { $sort: sort },

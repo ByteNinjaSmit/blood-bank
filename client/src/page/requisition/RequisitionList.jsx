@@ -4,7 +4,7 @@ import { useAuth } from '@/store/auth';
 import requisitionApi from '@/services/requisitionApi';
 import hospitalApi from '@/services/hospitalApi';
 import { toast } from 'sonner';
-import Modal from '@/components/shared/Modal';
+import CustomModal from '@/components/CustomModal';
 
 const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'rejected'];
 
@@ -31,8 +31,18 @@ export default function RequisitionList() {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewDoc, setViewDoc] = useState(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [selected, setSelected] = useState({});
+  const [searchInput, setSearchInput] = useState('');
 
   const fmt = (d) => (d ? new Date(d).toLocaleString() : '—');
+  const statusClass = (s) => (
+    s === 'pending' ? 'bg-gray-100 text-gray-700' :
+    s === 'matched' ? 'bg-amber-100 text-amber-800' :
+    s === 'approved' ? 'bg-blue-100 text-blue-800' :
+    s === 'issued' ? 'bg-green-100 text-green-800' :
+    s === 'completed' ? 'bg-purple-100 text-purple-800' :
+    s === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-700'
+  );
 
   useEffect(() => {
     hospitalApi.initialize(authorizationToken);
@@ -75,6 +85,17 @@ export default function RequisitionList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit]);
 
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setFilters((p) => ({ ...p, search: searchInput }));
+      setPage(1);
+      fetchList();
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
+
   const applyFilters = () => {
     setPage(1);
     fetchList();
@@ -112,6 +133,61 @@ export default function RequisitionList() {
     return false;
   };
 
+  const toggle = (id) => setSelected((m) => ({ ...m, [id]: !m[id] }));
+  const allSelectedIds = Object.keys(selected).filter((id) => selected[id]);
+  const clearSelection = () => setSelected({});
+
+  const bulkAction = async (action) => {
+    if (allSelectedIds.length === 0) return;
+    const rows = data.filter((r) => allSelectedIds.includes(r._id));
+    const allowed = rows.filter((r) => can(r, action)).map((r) => r._id);
+    if (allowed.length === 0) {
+      toast.error('No selected rows are eligible for this action');
+      return;
+    }
+    try {
+      await Promise.allSettled(allowed.map(async (id) => {
+        let res;
+        if (action === 'match') res = await requisitionApi.match(id);
+        if (action === 'approve') res = await requisitionApi.approve(id);
+        if (action === 'issue') res = await requisitionApi.issue(id);
+        if (action === 'complete') res = await requisitionApi.complete(id);
+        if (action === 'reject') res = await requisitionApi.reject(id);
+        return res;
+      }));
+      toast.success(`Bulk ${action} attempted for ${allowed.length} item(s)`);
+      clearSelection();
+      fetchList();
+    } catch (e) {
+      toast.error('Bulk action failed');
+    }
+  };
+
+  const exportCsv = () => {
+    const cols = ['Request ID','Hospital','Patient','Age','Sex','Requested At','Status'];
+    const rows = data.map((r) => [
+      r.requestId,
+      r.hospitalId?.name || '',
+      r.patient?.name || '',
+      r.patient?.age ?? '',
+      r.patient?.sex || '',
+      r.requestedAt ? new Date(r.requestedAt).toISOString() : '',
+      r.status
+    ]);
+    const csv = ['\uFEFF' + cols.join(','), ...rows.map((row) => row.map((v) => `"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'requisitions.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const setSort = (col) => {
+    setFilters((p) => ({ ...p, sortBy: col, order: p.sortBy === col && p.order === 'desc' ? 'asc' : 'desc' }));
+    setPage(1);
+    fetchList();
+  };
+
   const openView = async (row) => {
     try {
       setViewLoading(true);
@@ -138,7 +214,7 @@ export default function RequisitionList() {
           <h1 className="text-2xl font-bold text-gray-900">Requisition List</h1>
           <p className="text-gray-600 text-sm">Filter, paginate, and manage requests</p>
         </div>
-      <Modal isOpen={viewOpen} onClose={closeView} title="Requisition Details" size="xl">
+      <CustomModal open={viewOpen} onCancel={closeView} title="Requisition Details" size="lg" hideFooter>
         {!viewDoc || viewLoading ? (
           <div className="text-gray-600">Loading…</div>
         ) : (
@@ -227,7 +303,7 @@ export default function RequisitionList() {
             </div>
           </div>
         )}
-      </Modal>
+      </CustomModal>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
@@ -235,7 +311,7 @@ export default function RequisitionList() {
           <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
             <div className="md:col-span-2">
               <label className="block text-sm text-gray-700 mb-1">Search</label>
-              <input className="w-full px-3 py-2 border rounded-lg" placeholder="Request ID or Patient name" value={filters.search} onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))} />
+              <input className="w-full px-3 py-2 border rounded-lg" placeholder="Request ID or Patient name" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
             </div>
             <div>
               <label className="block text-sm text-gray-700 mb-1">Status</label>
@@ -264,6 +340,7 @@ export default function RequisitionList() {
             <div className="flex gap-2">
               <button type="button" onClick={applyFilters} className="px-4 py-2 rounded-lg bg-orange-800 text-white hover:bg-orange-900" disabled={loading}>Apply</button>
               <button type="button" onClick={resetFilters} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50" disabled={loading}>Reset</button>
+              <button type="button" onClick={exportCsv} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50" disabled={loading}>Export CSV</button>
             </div>
             <div className="flex items-center gap-2">
               <label className="text-sm text-gray-700">Rows</label>
@@ -275,31 +352,51 @@ export default function RequisitionList() {
         </div>
 
         <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+          {allSelectedIds.length > 0 && (
+            <div className="flex items-center justify-between p-3 border-b bg-amber-50 text-sm">
+              <div className="text-amber-900">Selected: {allSelectedIds.length}</div>
+              <div className="flex gap-2">
+                <button onClick={() => bulkAction('approve')} className="px-3 py-1 rounded bg-blue-700 hover:bg-blue-800 text-white">Approve</button>
+                <button onClick={() => bulkAction('issue')} className="px-3 py-1 rounded bg-green-700 hover:bg-green-800 text-white">Issue</button>
+                <button onClick={() => bulkAction('complete')} className="px-3 py-1 rounded bg-purple-700 hover:bg-purple-800 text-white">Complete</button>
+                <button onClick={() => bulkAction('reject')} className="px-3 py-1 rounded border border-red-200 text-red-700 hover:bg-red-50">Reject</button>
+                <button onClick={clearSelection} className="px-3 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">Clear</button>
+              </div>
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-600">
-                  <th className="p-3 border-b">Request ID</th>
-                  <th className="p-3 border-b">Hospital</th>
+                  <th className="p-3 border-b w-10">
+                    <input type="checkbox" aria-label="Select all" onChange={(e) => {
+                      const checked = e.target.checked; const map = {};
+                      if (checked) data.forEach((r) => { map[r._id] = true; });
+                      setSelected(map);
+                    }} />
+                  </th>
+                  <th className="p-3 border-b cursor-pointer" onClick={() => setSort('requestId')}>Request ID</th>
+                  <th className="p-3 border-b cursor-pointer" onClick={() => setSort('hospitalId')}>Hospital</th>
                   <th className="p-3 border-b">Patient</th>
-                  <th className="p-3 border-b">Requested At</th>
-                  <th className="p-3 border-b">Status</th>
+                  <th className="p-3 border-b cursor-pointer" onClick={() => setSort('requestedAt')}>Requested At</th>
+                  <th className="p-3 border-b cursor-pointer" onClick={() => setSort('status')}>Status</th>
                   <th className="p-3 border-b">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} className="p-4 text-center text-gray-500">Loading…</td></tr>
+                  <tr><td colSpan={7} className="p-4 text-center text-gray-500">Loading…</td></tr>
                 ) : data.length === 0 ? (
-                  <tr><td colSpan={6} className="p-4 text-center text-gray-500">No requisitions found</td></tr>
+                  <tr><td colSpan={7} className="p-4 text-center text-gray-500">No requisitions found</td></tr>
                 ) : (
                   data.map((row) => (
                     <tr key={row._id} className="border-t">
+                      <td className="p-3"><input type="checkbox" checked={!!selected[row._id]} onChange={() => toggle(row._id)} /></td>
                       <td className="p-3 font-medium">{row.requestId}</td>
                       <td className="p-3">{row.hospitalId?.name || '—'}</td>
                       <td className="p-3">{row.patient?.name} ({row.patient?.age}/{row.patient?.sex})</td>
                       <td className="p-3">{row.requestedAt ? new Date(row.requestedAt).toLocaleString() : '—'}</td>
-                      <td className="p-3 capitalize">{row.status}</td>
+                      <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass(row.status)}`}>{row.status}</span></td>
                       <td className="p-3">
                         <div className="flex flex-wrap gap-2">
                           <button onClick={() => openView(row)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">View</button>
