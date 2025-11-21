@@ -5,7 +5,7 @@ export default function HospitalSelect({ hospitals, loading, value, onChange, on
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <label className="block text-sm text-gray-700">Hospital</label>
+        <label className="block text-sm text-gray-700">Hospital <span className="text-red-600">*</span></label>
         <button
           type="button"
           onClick={onAdd}

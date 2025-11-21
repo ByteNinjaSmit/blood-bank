@@ -4,6 +4,7 @@ import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Loader2, PackageCheck } from "lucide-react";
 import { toast } from "sonner";
+import CustomModal from "@/components/CustomModal";
 
 const Issue = () => {
   const { API, authorizationToken, user } = useAuth();
@@ -19,6 +20,9 @@ const Issue = () => {
   const [sortBy, setSortBy] = useState("createdAt");
 
   const [selected, setSelected] = useState({});
+  const [status, setStatus] = useState('reserved');
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewItem, setViewItem] = useState(null);
 
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
@@ -29,7 +33,7 @@ const Issue = () => {
         params: {
           page,
           limit,
-          status: 'reserved',
+          status,
           componentType: componentType || undefined,
           search: search || undefined,
           sortBy,
@@ -39,7 +43,7 @@ const Issue = () => {
       setRows(Array.isArray(res.data?.data) ? res.data.data : []);
       setPagination((p) => ({ ...p, ...(res.data?.pagination || {}) }));
     } catch (e) {
-      toast.error(e?.response?.data?.message || "Failed to fetch reserved");
+      toast.error(e?.response?.data?.message || "Failed to fetch inventory");
       setRows([]);
     } finally {
       setIsLoading(false);
@@ -73,7 +77,11 @@ const Issue = () => {
   useEffect(() => {
     fetchRows(1, pagination.limit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [componentType, search, order, sortBy]);
+  }, [status, componentType, search, order, sortBy]);
+
+  const openView = (item) => { setViewItem(item); setViewOpen(true); };
+  const closeView = () => { setViewOpen(false); setViewItem(null); };
+  const fmt = (d) => (d ? new Date(d).toLocaleString() : '—');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -94,7 +102,14 @@ const Issue = () => {
               <div className="text-sm text-gray-600">Total: {pagination.total || 0}</div>
               <div className="text-xs text-gray-500">Selected: <span className="font-medium">{allSelectedIds.length}</span></div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-600 mb-1">Status</label>
+                <select value={status} onChange={(e)=>{setStatus(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
+                  <option value="reserved">Reserved</option>
+                  <option value="issued">Issued</option>
+                </select>
+              </div>
               <div className="flex flex-col">
                 <label className="text-xs text-gray-600 mb-1">Component</label>
                 <select value={componentType} onChange={(e)=>{setComponentType(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
@@ -120,7 +135,7 @@ const Issue = () => {
                 <Button onClick={()=>fetchRows(pagination.page)} variant="outline" size="sm" className="h-10" disabled={isLoading}>
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
                 </Button>
-                <Button onClick={issue} size="sm" className="h-10" disabled={isLoading || allSelectedIds.length===0}>
+                <Button onClick={issue} size="sm" className="h-10" disabled={isLoading || allSelectedIds.length===0 || status!== 'reserved'}>
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Issue (${allSelectedIds.length})`}
                 </Button>
               </div>
@@ -137,24 +152,28 @@ const Issue = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {isLoading ? (
-                  <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
+                  <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-500">No items found.</td></tr>
+                  <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-500">No items found.</td></tr>
                 ) : (
                   rows.map((r) => (
                     <tr key={r._id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
-                        <input type="checkbox" checked={!!selected[r._id]} onChange={() => toggle(r._id)} />
+                        <input type="checkbox" checked={!!selected[r._id]} onChange={() => toggle(r._id)} disabled={status!== 'reserved'} />
                       </td>
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{r?.bag?.bagNo || r.bagNo}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl} mL</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '-'}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <button onClick={() => openView(r)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">View</button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -205,6 +224,68 @@ const Issue = () => {
           </div>
         </div>
       </div>
+      <CustomModal open={viewOpen} onCancel={closeView} title={status === 'issued' ? 'Issued Component Details' : 'Reserved Component Details'} size="lg" hideFooter>
+        {viewItem && (
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-gray-600">Bag No</div>
+                <div className="font-medium">{viewItem?.bag?.bagNo || viewItem?.bagNo}</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Component</div>
+                <div className="font-medium">{viewItem?.component?.componentType} • {viewItem?.component?.volumeMl} mL</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Blood Group</div>
+                <div className="font-medium">{viewItem?.bag ? `${viewItem.bag.bloodGroup} ${viewItem.bag.rh}` : '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Expiry</div>
+                <div className="font-medium">{viewItem?.component?.expiryDate ? new Date(viewItem.component.expiryDate).toLocaleDateString() : '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Status</div>
+                <div className="font-medium capitalize">{viewItem?.status}</div>
+              </div>
+              {viewItem?.hospital && (
+                <div>
+                  <div className="text-gray-600">Hospital</div>
+                  <div className="font-medium">{viewItem.hospital?.name}</div>
+                </div>
+              )}
+              {((viewItem?.request && viewItem.request.patient) || viewItem?.reservedPatientName) && (
+                <div className="md:col-span-2">
+                  <div className="text-gray-600">Patient</div>
+                  <div className="font-medium">
+                    {viewItem?.request?.patient
+                      ? `${viewItem.request.patient.name} • ${viewItem.request.patient.age}/${viewItem.request.patient.sex}`
+                      : `${viewItem.reservedPatientName} • ${viewItem.reservedPatientAge}/${viewItem.reservedPatientSex}`}
+                  </div>
+                </div>
+              )}
+              {viewItem?.reservedAt && (
+                <div>
+                  <div className="text-gray-600">Reserved At</div>
+                  <div className="font-medium">{fmt(viewItem.reservedAt)}</div>
+                </div>
+              )}
+              {viewItem?.issuedAt && (
+                <div>
+                  <div className="text-gray-600">Issued At</div>
+                  <div className="font-medium">{fmt(viewItem.issuedAt)}</div>
+                </div>
+              )}
+              {viewItem?.issuedBy && (
+                <div>
+                  <div className="text-gray-600">Issued By</div>
+                  <div className="font-medium">{String(viewItem.issuedBy)}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </CustomModal>
     </div>
   );
 };

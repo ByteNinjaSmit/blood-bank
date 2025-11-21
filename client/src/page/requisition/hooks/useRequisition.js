@@ -233,13 +233,17 @@ export default function useRequisition(authToken) {
   };
 
   const handleComplete = async () => {
-    if (!requestDoc?._id) return;
+    if (!requestDoc?._id) return false;
     setCompleting(true);
     const res = await requisitionApi.complete(requestDoc._id);
     setCompleting(false);
-    if (!res.success) return toast.error(res.error || 'Completion failed');
+    if (!res.success) {
+      toast.error(res.error || 'Completion failed');
+      return false;
+    }
     await refreshRequest(requestDoc._id);
     toast.success('Completed');
+    return true;
   };
 
   const handleReject = async () => {

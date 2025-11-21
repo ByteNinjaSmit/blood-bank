@@ -15,31 +15,31 @@ export default function RequestedComponentsList({ items, onItemChange, onAdd, on
         {items.map((r, idx) => (
           <div key={idx} className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Component</label>
+              <label className="block text-sm text-gray-700 mb-1">Component <span className="text-red-600">*</span></label>
               <select className="w-full px-3 py-2 border rounded-lg" value={r.componentType} onChange={(e) => onItemChange(idx, { componentType: e.target.value })}>
                 {COMPONENT_TYPES.map((c) => (<option key={c.value} value={c.value}>{c.label}</option>))}
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Units</label>
+              <label className="block text-sm text-gray-700 mb-1">Units <span className="text-red-600">*</span></label>
               <select className="w-full px-3 py-2 border rounded-lg" value={r.units} onChange={(e) => onItemChange(idx, { units: e.target.value })}>
                 {UNIT_OPTIONS.map((n) => (<option key={n} value={n}>{n}</option>))}
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Group</label>
+              <label className="block text-sm text-gray-700 mb-1">Group <span className="text-red-600">*</span></label>
               <select className="w-full px-3 py-2 border rounded-lg" value={r.bloodGroup} onChange={(e) => onItemChange(idx, { bloodGroup: e.target.value })}>
                 {BLOOD_GROUPS.map((g) => (<option key={g} value={g}>{g}</option>))}
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Rh</label>
+              <label className="block text-sm text-gray-700 mb-1">Rh <span className="text-red-600">*</span></label>
               <select className="w-full px-3 py-2 border rounded-lg" value={r.rh} onChange={(e) => onItemChange(idx, { rh: e.target.value })}>
                 {RH_TYPES.map((rh) => (<option key={rh} value={rh}>{rh}</option>))}
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Urgency</label>
+              <label className="block text-sm text-gray-700 mb-1">Urgency <span className="text-red-600">*</span></label>
               <select className="w-full px-3 py-2 border rounded-lg" value={r.urgency} onChange={(e) => onItemChange(idx, { urgency: e.target.value })}>
                 {URGENCY.map((u) => (<option key={u} value={u}>{u}</option>))}
               </select>
