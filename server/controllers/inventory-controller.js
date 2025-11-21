@@ -60,6 +60,12 @@ async function listInventory(req, res, next) {
       { $unwind: '$bag' },
       { $lookup: { from: 'hospitals', localField: 'reservedForHospital', foreignField: '_id', as: 'hospital' } },
       { $unwind: { path: '$hospital', preserveNullAndEmptyArrays: true } },
+      // Also join requisition to get hospital and patient when reserved via request
+      { $lookup: { from: 'hospitalrequests', localField: 'reservedFor', foreignField: '_id', as: 'request' } },
+      { $unwind: { path: '$request', preserveNullAndEmptyArrays: true } },
+      { $lookup: { from: 'hospitals', localField: 'request.hospitalId', foreignField: '_id', as: 'reqHospital' } },
+      { $unwind: { path: '$reqHospital', preserveNullAndEmptyArrays: true } },
+      { $addFields: { hospital: { $ifNull: ['$hospital', '$reqHospital'] } } },
       { $match: compFilter },
       ...(search ? [{ $match: { 'bag.bagNo': { $regex: search, $options: 'i' } } }] : []),
       {
@@ -68,6 +74,9 @@ async function listInventory(req, res, next) {
           status: 1,
           inStockDate: 1,
           createdAt: 1,
+          updatedAt: 1,
+          issuedAt: 1,
+          issuedBy: 1,
           reservedFor: 1,
           reservedForHospital: 1,
           reservedAt: 1,
@@ -87,6 +96,7 @@ async function listInventory(req, res, next) {
           'bag.rh': 1,
           'hospital._id': 1,
           'hospital.name': 1,
+          request: { patient: 1 },
         },
       },
       { $sort: sort },
@@ -359,9 +369,10 @@ async function issueInventory(req, res, next) {
     if (!Array.isArray(inventoryIds) || inventoryIds.length === 0) {
       return res.status(400).json({ success: false, message: 'No inventory selected' });
     }
+    const now = new Date();
     const result = await Inventory.updateMany(
       { _id: { $in: inventoryIds }, status: 'reserved' },
-      { $set: { status: 'issued', updatedAt: new Date(), updatedBy: userId } }
+      { $set: { status: 'issued', issuedAt: now, issuedBy: userId, updatedAt: now } }
     );
     return res.status(200).json({ success: true, matched: result.matchedCount, modified: result.modifiedCount });
   } catch (err) {

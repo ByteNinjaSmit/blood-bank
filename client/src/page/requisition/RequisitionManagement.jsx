@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Stepper, { Step } from '@/components/Stepper';
 import { useAuth } from '@/store/auth';
+import { toast } from 'sonner';
 import RequisitionHeader from './components/RequisitionHeader';
 import useRequisition from './hooks/useRequisition';
 import RequestCreationStep from './steps/RequestCreationStep';
@@ -53,6 +54,26 @@ const RequisitionManagement = () => {
     }
   }, [params?.id]);
 
+  const canProceedFromStep1 = React.useMemo(() => {
+    const okStatus = ['matched', 'approved', 'issued', 'completed'];
+    return !!requestDoc?._id && okStatus.includes(requestDoc?.status);
+  }, [requestDoc]);
+
+  const canProceedFromStep2 = React.useMemo(() => {
+    const okStatus = ['approved', 'issued', 'completed'];
+    return !!requestDoc?._id && okStatus.includes(requestDoc?.status);
+  }, [requestDoc]);
+
+  const canProceedFromStep3 = React.useMemo(() => {
+    const okStatus = ['issued', 'completed'];
+    return !!requestDoc?._id && okStatus.includes(requestDoc?.status);
+  }, [requestDoc]);
+
+  const nextDisabled =
+    (currentStep === 1 && !canProceedFromStep1) ||
+    (currentStep === 2 && !canProceedFromStep2) ||
+    (currentStep === 3 && !canProceedFromStep3);
+
   return (
     <>
       <div className="min-h-screen bg-gray-50">
@@ -61,8 +82,16 @@ const RequisitionManagement = () => {
         <div className="max-w-7xl mx-auto px-4 py-8">
           <Stepper
             onStepChange={(s) => setCurrentStep(s)}
-            nextButtonProps={{ disabled: currentStep === 1 && !requestDoc?._id }}
-            disableStepIndicators={currentStep === 1 && !requestDoc?._id}
+            onFinalStepCompleted={() => {
+              if (requestDoc?.status !== 'completed') {
+                toast.error('Please complete the request before finishing');
+                return;
+              }
+              toast.success('Requisition flow completed');
+              navigate('/requisition/list');
+            }}
+            nextButtonProps={{ disabled: nextDisabled }}
+            disableStepIndicators={nextDisabled}
             stepCircleContainerClassName="bg-white"
             contentClassName="bg-white rounded-xl shadow border border-gray-100"
             footerClassName="bg-white rounded-b-xl"

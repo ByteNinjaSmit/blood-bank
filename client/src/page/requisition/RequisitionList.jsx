@@ -4,6 +4,7 @@ import { useAuth } from '@/store/auth';
 import requisitionApi from '@/services/requisitionApi';
 import hospitalApi from '@/services/hospitalApi';
 import { toast } from 'sonner';
+import Modal from '@/components/shared/Modal';
 
 const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'rejected'];
 
@@ -27,6 +28,11 @@ export default function RequisitionList() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewDoc, setViewDoc] = useState(null);
+  const [viewLoading, setViewLoading] = useState(false);
+
+  const fmt = (d) => (d ? new Date(d).toLocaleString() : '—');
 
   useEffect(() => {
     hospitalApi.initialize(authorizationToken);
@@ -106,6 +112,25 @@ export default function RequisitionList() {
     return false;
   };
 
+  const openView = async (row) => {
+    try {
+      setViewLoading(true);
+      setViewOpen(true);
+      const res = await requisitionApi.getRequest(row._id);
+      if (!res.success) {
+        toast.error(res.error || 'Failed to load requisition');
+        setViewDoc(null);
+        return;
+      }
+      setViewDoc(res.data);
+    } catch (e) {
+      toast.error('Network error');
+    } finally {
+      setViewLoading(false);
+    }
+  };
+  const closeView = () => { setViewOpen(false); setViewDoc(null); };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200 shadow-sm">
@@ -113,6 +138,96 @@ export default function RequisitionList() {
           <h1 className="text-2xl font-bold text-gray-900">Requisition List</h1>
           <p className="text-gray-600 text-sm">Filter, paginate, and manage requests</p>
         </div>
+      <Modal isOpen={viewOpen} onClose={closeView} title="Requisition Details" size="xl">
+        {!viewDoc || viewLoading ? (
+          <div className="text-gray-600">Loading…</div>
+        ) : (
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-gray-600">Request ID</div>
+                <div className="font-medium">{viewDoc.requestId}</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Status</div>
+                <div className="font-medium capitalize">{viewDoc.status}</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Hospital</div>
+                <div className="font-medium">{viewDoc.hospitalId?.name}</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Requested At</div>
+                <div className="font-medium">{fmt(viewDoc.requestedAt)}</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <div className="text-gray-600">Patient</div>
+                <div className="font-medium">{viewDoc.patient?.name} • {viewDoc.patient?.age}/{viewDoc.patient?.sex} • MRN: {viewDoc.patient?.mrn || '—'}</div>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">Requested Components</h4>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-600">
+                      <th className="p-2">Component</th>
+                      <th className="p-2">Units</th>
+                      <th className="p-2">Group</th>
+                      <th className="p-2">Rh</th>
+                      <th className="p-2">Urgency</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {viewDoc.requestedComponents?.map((c, idx) => (
+                      <tr key={idx} className="border-t">
+                        <td className="p-2">{c.componentType}</td>
+                        <td className="p-2">{c.units}</td>
+                        <td className="p-2">{c.bloodGroup}</td>
+                        <td className="p-2">{c.rh}</td>
+                        <td className="p-2 capitalize">{c.urgency}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">Matched/Reserved Inventory</h4>
+              {viewDoc?.matchedInventory?.length ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-gray-600">
+                        <th className="p-2">Inventory ID</th>
+                        <th className="p-2">Component</th>
+                        <th className="p-2">Bag No</th>
+                        <th className="p-2">Blood</th>
+                        <th className="p-2">Reserved At</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {viewDoc.matchedInventory.map((mi, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="p-2">{typeof mi.inventoryId === 'object' ? mi.inventoryId?._id : mi.inventoryId}</td>
+                          <td className="p-2">{mi?.inventoryId?.componentId?.componentType || '—'}</td>
+                          <td className="p-2">{mi?.inventoryId?.bagNo?.bagNo || '—'}</td>
+                          <td className="p-2">{mi?.inventoryId?.bagNo ? `${mi.inventoryId.bagNo.bloodGroup} ${mi.inventoryId.bagNo.rh}` : '—'}</td>
+                          <td className="p-2">{mi?.reservedAt ? fmt(mi.reservedAt) : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-gray-600 text-sm">No matched inventory yet.</div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
@@ -187,6 +302,7 @@ export default function RequisitionList() {
                       <td className="p-3 capitalize">{row.status}</td>
                       <td className="p-3">
                         <div className="flex flex-wrap gap-2">
+                          <button onClick={() => openView(row)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">View</button>
                           <button onClick={() => navigate(`/requisition/${row._id}`)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">Manage</button>
                           <button disabled={!can(row, 'match')} onClick={() => callAction(row._id, 'match')} className={`px-3 py-1 rounded ${can(row,'match') ? 'bg-orange-800 hover:bg-orange-900 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Match</button>
                           <button disabled={!can(row, 'approve')} onClick={() => callAction(row._id, 'approve')} className={`px-3 py-1 rounded ${can(row,'approve') ? 'bg-blue-700 hover:bg-blue-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Approve</button>

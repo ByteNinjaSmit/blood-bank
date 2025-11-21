@@ -7,7 +7,7 @@ import { Toaster } from 'sonner'
 import { AuthProvider } from './store/auth';
 ReactDOM.createRoot(document.getElementById('root')).render(
   // <React.StrictMode>
-        <AuthProvider>
+  <AuthProvider>
 
     <BrowserRouter>
       <Toaster
@@ -62,9 +62,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             },
           },
         }}
-        />
+      />
       <App />
     </BrowserRouter>
-        </AuthProvider>
+  </AuthProvider>
   // </React.StrictMode>,
 )
