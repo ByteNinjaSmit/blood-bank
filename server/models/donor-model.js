@@ -156,6 +156,19 @@ DonorSchema.pre("save", function (next) {
   next();
 });
 
+// Indexes for fast search (define before model compilation)
+DonorSchema.index({ 'name.firstName': 1 });
+DonorSchema.index({ 'name.middleName': 1 });
+DonorSchema.index({ 'name.lastName': 1 });
+DonorSchema.index({ donorId: 1 });
+DonorSchema.index({ phone: 1 });
+DonorSchema.index({ uid: 1 });
+DonorSchema.index({ email: 1 });
+DonorSchema.index({ 'address.city': 1 });
+DonorSchema.index({ bloodGroup: 1 });
+// Optional text index for generic full-text search (not used by regex but helpful for $text queries)
+DonorSchema.index({ 'name.firstName': 'text', 'name.lastName': 'text', donorId: 'text', phone: 'text', email: 'text' });
+
 const Donor = mongoose.model("Donor", DonorSchema);
 
 module.exports = Donor;

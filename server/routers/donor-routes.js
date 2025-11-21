@@ -17,6 +17,7 @@ router.route('/new').post(authMiddleware, donorController.registerDonor);
 router.route('/update/:id').put(authMiddleware, donorController.updateDonor);
 router.route('/list').get(authMiddleware, donorController.listDonors);
 router.route('/search').get(authMiddleware, donorController.searchDonorLatestDonation);
+router.route('/search/fast').get(authMiddleware, donorController.fastSearchDonors);
 // Force delete must be declared before generic :id route
 router.route('/force/:id').delete(authMiddleware, donorController.forceDeleteDonor);
 router

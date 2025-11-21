@@ -155,6 +155,68 @@ const registerDonor = async (req, res, next) => {
   }
 };
 
+// ---------------------
+// FAST SEARCH Donors by single query across multiple fields
+// Accepts: q (string), limit (default 20)
+// Matches: first/middle/last name, phone, donorId, uid, email, address.city, bloodGroup
+// ---------------------
+const fastSearchDonors = async (req, res, next) => {
+  try {
+    const raw = (req.query.q || '').toString().trim();
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+    if (!raw) return res.status(200).json({ success: true, data: [] });
+
+    // Escape regex special chars
+    const esc = raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx = new RegExp(esc, 'i');
+
+    const donors = await Donor.find({
+      $or: [
+        { 'name.firstName': rx },
+        { 'name.middleName': rx },
+        { 'name.lastName': rx },
+        { phone: rx },
+        { donorId: rx },
+        { uid: rx },
+        { email: rx },
+        { 'address.city': rx },
+        { bloodGroup: rx },
+      ],
+    })
+      .limit(limit)
+      .select('donorId name uid dob sex phone email address bloodGroup rh lastDonationDate')
+      .lean();
+
+    const nowYear = new Date().getFullYear();
+    const results = donors.map((d) => {
+      const f = d?.name?.firstName || '';
+      const m = d?.name?.middleName || '';
+      const l = d?.name?.lastName || '';
+      const fullName = [f, m, l].filter(Boolean).join(' ');
+      const age = d?.dob ? (nowYear - new Date(d.dob).getFullYear()) : null;
+      return {
+        _id: d._id,
+        donorId: d.donorId,
+        fullName,
+        dob: d.dob,
+        age,
+        sex: d.sex,
+        phone: d.phone,
+        email: d.email,
+        uid: d.uid,
+        city: d?.address?.city,
+        bloodGroup: d.bloodGroup,
+        rh: d.rh,
+        lastDonationDate: d.lastDonationDate,
+      };
+    });
+
+    return res.status(200).json({ success: true, data: results });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ------------------
 // Update Donor
 // ------------------
@@ -556,6 +618,7 @@ module.exports = {
   getDonorDetails,
   listDonors,
   searchDonorLatestDonation,
+  fastSearchDonors,
   deleteDonor,
   forceDeleteDonor,
 };
