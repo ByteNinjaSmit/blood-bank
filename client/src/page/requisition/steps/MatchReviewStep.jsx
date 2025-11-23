@@ -1,15 +1,35 @@
 import React from 'react';
 
 export default function MatchReviewStep({ requestDoc, matchedResult, matching, onMatch, onReject, shortages }) {
+  const status = requestDoc?.status;
+  const canMatch = !!requestDoc?._id && status === 'pending' && !matching;
+  const canReject = !!requestDoc?._id && ['pending', 'matched', 'approved'].includes(status);
+
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-gray-800">Match Results (FIFO)</h3>
         <div className="flex gap-3">
-          <button disabled={!requestDoc?._id || matching} onClick={onMatch} className={`px-4 py-2 rounded-lg ${matching ? 'bg-orange-300' : 'bg-orange-800 hover:bg-orange-900'} text-white`}>
+          <button
+            disabled={!canMatch}
+            onClick={onMatch}
+            className={`px-4 py-2 rounded-lg text-white ${
+              canMatch
+                ? 'bg-orange-800 hover:bg-orange-900 cursor-pointer'
+                : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+            }`}
+          >
             {matching ? 'Matching…' : 'Re-run Match'}
           </button>
-          <button disabled={!requestDoc?._id} onClick={onReject} className="px-4 py-2 rounded-lg border border-red-200 text-red-700 hover:bg-red-50">
+          <button
+            disabled={!canReject}
+            onClick={onReject}
+            className={`px-4 py-2 rounded-lg border ${
+              canReject
+                ? 'border-red-200 text-red-700 hover:bg-red-50 cursor-pointer'
+                : 'border-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
             Reject Request
           </button>
         </div>

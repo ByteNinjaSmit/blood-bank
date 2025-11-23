@@ -1,20 +1,42 @@
 import React from 'react';
 
 export default function ApproveIssueStep({ requestDoc, approving, issuing, onApprove, onIssue }) {
+  const status = requestDoc?.status;
+  const hasMatches = Array.isArray(requestDoc?.matchedInventory) && requestDoc.matchedInventory.length > 0;
+  const canApprove = !!requestDoc?._id && status === 'matched' && !approving;
+  const canIssue = !!requestDoc?._id && ['matched', 'approved'].includes(status) && hasMatches && !issuing;
+
   const handleIssueClick = () => {
-    if (!requestDoc?._id) return;
+    if (!canIssue) return;
     const count = Array.isArray(requestDoc?.matchedInventory) ? requestDoc.matchedInventory.length : 0;
     const ok = window.confirm(`Issue ${count} unit(s) for request ${requestDoc?.requestId}?`);
     if (ok) onIssue();
   };
+
   return (
     <div className="p-6 space-y-4">
       <h3 className="font-semibold text-gray-800">Approve and Issue</h3>
       <div className="flex gap-3">
-        <button disabled={!requestDoc?._id || approving} onClick={onApprove} className={`px-4 py-2 rounded-lg ${approving ? 'bg-blue-300' : 'bg-blue-700 hover:bg-blue-800'} text-white`}>
+        <button
+          disabled={!canApprove}
+          onClick={onApprove}
+          className={`px-4 py-2 rounded-lg text-white ${
+            canApprove
+              ? 'bg-blue-700 hover:bg-blue-800 cursor-pointer'
+              : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+          }`}
+        >
           {approving ? 'Approving…' : 'Approve'}
         </button>
-        <button disabled={!requestDoc?._id || issuing} onClick={handleIssueClick} className={`px-4 py-2 rounded-lg ${issuing ? 'bg-green-300' : 'bg-green-700 hover:bg-green-800'} text-white`}>
+        <button
+          disabled={!canIssue}
+          onClick={handleIssueClick}
+          className={`px-4 py-2 rounded-lg text-white ${
+            canIssue
+              ? 'bg-green-700 hover:bg-green-800 cursor-pointer'
+              : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+          }`}
+        >
           {issuing ? 'Issuing…' : 'Issue Units'}
         </button>
       </div>

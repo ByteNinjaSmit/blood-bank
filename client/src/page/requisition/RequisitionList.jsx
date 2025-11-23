@@ -243,6 +243,11 @@ export default function RequisitionList() {
                 <div className="font-medium">{viewDoc.patient?.name} • {viewDoc.patient?.age}/{viewDoc.patient?.sex} • MRN: {viewDoc.patient?.mrn || '—'}</div>
               </div>
             </div>
+            {viewDoc.status === 'rejected' && (
+              <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-red-800 text-sm">
+                This request has been rejected. No further actions (match, approve, issue, complete) are allowed.
+              </div>
+            )}
             <div>
               <h4 className="font-semibold mb-2">Requested Components</h4>
               <div className="overflow-x-auto">
@@ -400,12 +405,16 @@ export default function RequisitionList() {
                       <td className="p-3">
                         <div className="flex flex-wrap gap-2">
                           <button onClick={() => openView(row)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">View</button>
-                          <button onClick={() => navigate(`/requisition/${row._id}`)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">Manage</button>
-                          <button disabled={!can(row, 'match')} onClick={() => callAction(row._id, 'match')} className={`px-3 py-1 rounded ${can(row,'match') ? 'bg-orange-800 hover:bg-orange-900 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Match</button>
-                          <button disabled={!can(row, 'approve')} onClick={() => callAction(row._id, 'approve')} className={`px-3 py-1 rounded ${can(row,'approve') ? 'bg-blue-700 hover:bg-blue-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Approve</button>
-                          <button disabled={!can(row, 'issue')} onClick={() => callAction(row._id, 'issue')} className={`px-3 py-1 rounded ${can(row,'issue') ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Issue</button>
-                          <button disabled={!can(row, 'complete')} onClick={() => callAction(row._id, 'complete')} className={`px-3 py-1 rounded ${can(row,'complete') ? 'bg-purple-700 hover:bg-purple-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Complete</button>
-                          <button disabled={!can(row, 'reject')} onClick={() => callAction(row._id, 'reject')} className={`px-3 py-1 rounded ${can(row,'reject') ? 'border border-red-200 text-red-700 hover:bg-red-50' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Reject</button>
+                          {row.status !== 'rejected' && (
+                            <>
+                              <button onClick={() => navigate(`/requisition/${row._id}`)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">Manage</button>
+                              <button disabled={!can(row, 'match')} onClick={() => callAction(row._id, 'match')} className={`px-3 py-1 rounded ${can(row,'match') ? 'bg-orange-800 hover:bg-orange-900 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Match</button>
+                              <button disabled={!can(row, 'approve')} onClick={() => callAction(row._id, 'approve')} className={`px-3 py-1 rounded ${can(row,'approve') ? 'bg-blue-700 hover:bg-blue-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Approve</button>
+                              <button disabled={!can(row, 'issue')} onClick={() => callAction(row._id, 'issue')} className={`px-3 py-1 rounded ${can(row,'issue') ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Issue</button>
+                              <button disabled={!can(row, 'complete')} onClick={() => callAction(row._id, 'complete')} className={`px-3 py-1 rounded ${can(row,'complete') ? 'bg-purple-700 hover:bg-purple-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Complete</button>
+                              <button disabled={!can(row, 'reject')} onClick={() => callAction(row._id, 'reject')} className={`px-3 py-1 rounded ${can(row,'reject') ? 'border border-red-200 text-red-700 hover:bg-red-50' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Reject</button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

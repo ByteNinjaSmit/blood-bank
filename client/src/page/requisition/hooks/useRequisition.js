@@ -153,9 +153,9 @@ export default function useRequisition(authToken) {
       const res = await requisitionApi.createRequest(payload);
       if (!res.success) return toast.error(res.error || 'Failed to create request');
       setRequestDoc(res.data);
-      toast.success('Request created');
-      setCurrentStep(2);
-      // auto match
+      toast.success(res?.raw?.message || 'Request created');
+      // auto match immediately after creating the request; the user can
+      // then Continue to the Match Review step once matching succeeds.
       await handleMatch(res.data?._id);
     } catch (e) {
       toast.error('Failed to create request');
@@ -170,7 +170,8 @@ export default function useRequisition(authToken) {
   const statusToStep = (status) => {
     if (status === 'issued' || status === 'completed') return 4;
     if (status === 'approved') return 3;
-    return 2; // pending or matched
+    // pending or matched -> start from Match Review
+    return 2;
   };
 
   const loadRequest = async (id) => {
@@ -180,7 +181,6 @@ export default function useRequisition(authToken) {
       return false;
     }
     setRequestDoc(r.data);
-    setCurrentStep(statusToStep(r.data.status));
     return true;
   };
 
@@ -228,8 +228,7 @@ export default function useRequisition(authToken) {
     setIssuing(false);
     if (!res.success) return toast.error(res.error || 'Issuing failed');
     await refreshRequest(requestDoc._id);
-    toast.success('Issued');
-    setCurrentStep(4);
+    toast.success(res?.raw?.message || 'Units issued');
   };
 
   const handleComplete = async () => {
@@ -242,16 +241,20 @@ export default function useRequisition(authToken) {
       return false;
     }
     await refreshRequest(requestDoc._id);
-    toast.success('Completed');
+    toast.success(res?.raw?.message || 'Request completed');
     return true;
   };
 
   const handleReject = async () => {
-    if (!requestDoc?._id) return;
+    if (!requestDoc?._id) return false;
     const res = await requisitionApi.reject(requestDoc._id);
-    if (!res.success) return toast.error(res.error || 'Rejection failed');
+    if (!res.success) {
+      toast.error(res.error || 'Rejection failed');
+      return false;
+    }
     await refreshRequest(requestDoc._id);
     toast.success('Request rejected');
+    return true;
   };
 
   return {
