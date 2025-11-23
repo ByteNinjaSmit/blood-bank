@@ -30,6 +30,7 @@ const CreateDonation = ({ onCreateDonor }) => {
   const [showSuccess, setShowSuccess] = useState(false)
   const [savedDonation, setSavedDonation] = useState(null)
   const [fieldErrors, setFieldErrors] = useState({})
+  const [stepperKey, setStepperKey] = useState(0)
 
   // Donor Search Fields
   const [donorInfo, setDonorInfo] = useState({
@@ -276,17 +277,46 @@ const CreateDonation = ({ onCreateDonor }) => {
   }
 
   const resetDonationForSameDonor = () => {
-    // Start a fresh donation flow for the same donor by navigating to a new
-    // Create Donation page instance, passing donor in navigation state.
+    // Start a fresh donation flow for the same donor within the same page
+    // by resetting local state and restarting the stepper.
     setShowSuccess(false)
-    if (!donor) {
-      navigate(campId ? `/donations/create-donation?campId=${campId}` : "/donations/create-donation")
-      return
-    }
-    navigate(
-      campId ? `/donations/create-donation?campId=${campId}` : "/donations/create-donation",
-      { state: { donor } }
-    )
+    setSavedDonation(null)
+    setFieldErrors({})
+    setCurrentStep(1)
+    setStepperKey((prev) => prev + 1)
+
+    const today = new Date().toISOString().split("T")[0]
+
+    setFormData(() => {
+      const base = {
+        bagNo: "",
+        segmentNo: "",
+        batchNo: "",
+        typeOfBag: "",
+        collectionDate: today,
+        hb: "",
+        weightKg: "",
+        pulse: "",
+        tempC: "",
+        bp: "",
+        bloodGroup: "",
+        rh: "",
+        atypicalAntibody: "",
+      }
+
+      if (!donor) return base
+
+      const donorBG = donor?.bloodGroup
+      const donorRh = donor?.rh
+      const donorWeight = donor?.weightKg
+
+      return {
+        ...base,
+        bloodGroup: donorBG || "",
+        rh: donorRh || "",
+        weightKg: donorWeight ? String(donorWeight) : "",
+      }
+    })
   }
 
   const startNewDonorFlow = () => {
@@ -321,6 +351,7 @@ const CreateDonation = ({ onCreateDonor }) => {
       
       <div className=" mx-auto px-4 py-8">
         <Stepper
+          key={stepperKey}
           onFinalStepCompleted={handleSubmit}
           onStepChange={(s) => setCurrentStep(s)}
           nextButtonProps={{
