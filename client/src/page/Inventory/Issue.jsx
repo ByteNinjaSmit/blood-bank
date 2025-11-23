@@ -20,7 +20,7 @@ const Issue = () => {
   const [sortBy, setSortBy] = useState("createdAt");
 
   const [selected, setSelected] = useState({});
-  const [status, setStatus] = useState('reserved');
+  const [status, setStatus] = useState('issued');
   const [viewOpen, setViewOpen] = useState(false);
   const [viewItem, setViewItem] = useState(null);
 
@@ -106,8 +106,8 @@ const Issue = () => {
               <div className="flex flex-col">
                 <label className="text-xs text-gray-600 mb-1">Status</label>
                 <select value={status} onChange={(e)=>{setStatus(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
-                  <option value="reserved">Reserved</option>
                   <option value="issued">Issued</option>
+                  <option value="reserved">Reserved</option>
                 </select>
               </div>
               <div className="flex flex-col">

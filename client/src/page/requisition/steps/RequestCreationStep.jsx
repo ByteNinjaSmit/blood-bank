@@ -14,6 +14,8 @@ export default function RequestCreationStep({
   requestDoc,
   openAddHospital,
 }) {
+  const readOnly = !!requestDoc?._id;
+
   return (
     <div className="p-6 space-y-6">
       <h2 className="text-lg font-semibold text-gray-800">Request Details</h2>
@@ -22,28 +24,44 @@ export default function RequestCreationStep({
           hospitals={hospitals}
           loading={hospitalsLoading}
           value={form.hospitalId}
-          onChange={(v) => setForm((p) => ({ ...p, hospitalId: v }))}
-          onAdd={openAddHospital}
+          onChange={(v) => {
+            if (readOnly) return;
+            setForm((p) => ({ ...p, hospitalId: v }));
+          }}
+          onAdd={readOnly ? undefined : openAddHospital}
+          disabled={readOnly}
         />
         <PatientForm
           patient={form.patient}
-          onChange={(patch) => setForm((p) => ({ ...p, patient: { ...p.patient, ...patch } }))}
+          onChange={(patch) => {
+            if (readOnly) return;
+            setForm((p) => ({ ...p, patient: { ...p.patient, ...patch } }));
+          }}
+          readOnly={readOnly}
         />
       </div>
 
       <RequestedComponentsList
         items={form.requestedComponents}
-        onItemChange={(idx, patch) => setForm((p) => {
-          const arr = [...p.requestedComponents];
-          arr[idx] = { ...arr[idx], ...patch };
-          return { ...p, requestedComponents: arr };
-        })}
-        onAdd={addRequestLine}
-        onRemove={removeRequestLine}
+        onItemChange={(idx, patch) => {
+          if (readOnly) return;
+          setForm((p) => {
+            const arr = [...p.requestedComponents];
+            arr[idx] = { ...arr[idx], ...patch };
+            return { ...p, requestedComponents: arr };
+          });
+        }}
+        onAdd={readOnly ? undefined : addRequestLine}
+        onRemove={readOnly ? undefined : removeRequestLine}
+        readOnly={readOnly}
       />
 
       <div className="pt-4">
-        <button type="button" onClick={handleCreate} className="px-5 py-2 rounded-lg bg-orange-800 text-white hover:bg-orange-900">
+        <button
+          type="button"
+          onClick={readOnly ? undefined : handleCreate}
+          className={`px-5 py-2 rounded-lg ${readOnly ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-orange-800 text-white hover:bg-orange-900'}`}
+        >
           Create Request & Auto-Match FIFO
         </button>
       </div>

@@ -78,25 +78,10 @@ const CampDonationManagement = () => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <DonationList
           campId={campId}
-          onAddDonation={() => setShowCreateModal(true)}
+          onAddDonation={() => navigate(`/donations/create-donation?campId=${campId}`)}
           onViewDonation={handleViewDonation}
         />
       </div>
-
-      {/* Create Donation Modal */}
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        title="Create New Donation"
-        size="xl"
-      >
-        <DonationForm
-          campId={campId}
-          onSubmit={handleCreateDonation}
-          onCancel={() => setShowCreateModal(false)}
-          loading={loading}
-        />
-      </Modal>
 
     </div>
   );
