@@ -48,6 +48,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/store/auth';
 import hospitalApi from '@/services/hospitalApi';
+import { Textarea } from '@/components/ui/textarea';
+import CustomModal from '@/components/CustomModal';
 
 const ListHospital = () => {
   const navigate = useNavigate();
@@ -57,6 +59,17 @@ const ListHospital = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [hospitalToDelete, setHospitalToDelete] = useState(null);
+  const [selectedHospital, setSelectedHospital] = useState(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    address: '',
+    contactPerson: '',
+    phone: ''
+  });
+  const [editErrors, setEditErrors] = useState({});
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   // Pagination and filtering state
   const [currentPage, setCurrentPage] = useState(1);
@@ -198,6 +211,104 @@ const ListHospital = () => {
       setDeleteDialogOpen(false);
       setHospitalToDelete(null);
     }
+  };
+
+  const handleViewClick = (hospital) => {
+    setSelectedHospital(hospital);
+    setViewModalOpen(true);
+  };
+
+  const handleEditClick = (hospital) => {
+    setSelectedHospital(hospital);
+    setEditFormData({
+      name: hospital.name || '',
+      address: hospital.address || '',
+      contactPerson: hospital.contactPerson || '',
+      phone: hospital.phone || ''
+    });
+    setEditErrors({});
+    setEditModalOpen(true);
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (editErrors[name]) {
+      setEditErrors((prev) => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const validateEditForm = () => {
+    const newErrors = {};
+
+    if (!editFormData.name.trim()) {
+      newErrors.name = 'Hospital name is required';
+    }
+
+    if (!editFormData.address.trim()) {
+      newErrors.address = 'Address is required';
+    }
+
+    if (!editFormData.contactPerson.trim()) {
+      newErrors.contactPerson = 'Contact person is required';
+    }
+
+    if (!editFormData.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    } else if (!/^[+]?[\d\s\-\(\)]{10,15}$/.test(editFormData.phone)) {
+      newErrors.phone = 'Please enter a valid phone number';
+    }
+
+    setEditErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleEditSave = async () => {
+    if (!selectedHospital || !validateEditForm()) {
+      if (!selectedHospital) {
+        toast.error('No hospital selected');
+      } else {
+        toast.error('Please fix the errors in the form');
+      }
+      return;
+    }
+
+    setEditSubmitting(true);
+
+    try {
+      hospitalApi.initialize(authorizationToken);
+
+      const result = await hospitalApi.updateHospital(selectedHospital._id, editFormData);
+
+      if (!result.success) {
+        toast.error(result.error || 'Failed to update hospital');
+      } else {
+        const successMessage = result.data?.message || 'Hospital updated successfully!';
+        toast.success(successMessage);
+        setEditModalOpen(false);
+        setSelectedHospital(null);
+        fetchHospitals();
+      }
+    } catch (error) {
+      console.error('Error updating hospital:', error);
+      toast.error('Network error. Please check your connection and try again.');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const handleCloseModals = () => {
+    setViewModalOpen(false);
+    setEditModalOpen(false);
+    setSelectedHospital(null);
+    setEditErrors({});
   };
 
   // Generate page numbers for pagination
@@ -447,14 +558,14 @@ const ListHospital = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => navigate(`/hospital/view/${hospital._id}`)}
+                              onClick={() => handleViewClick(hospital)}
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => navigate(`/hospital/edit/${hospital._id}`)}
+                              onClick={() => handleEditClick(hospital)}
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -533,6 +644,133 @@ const ListHospital = () => {
           )}
         </CardContent>
       </Card>
+
+      <CustomModal
+        open={viewModalOpen && !!selectedHospital}
+        title={selectedHospital ? `Hospital Details - ${selectedHospital.name}` : 'Hospital Details'}
+        description="Review the full information for this hospital."
+        onCancel={handleCloseModals}
+        hideFooter
+        size="lg"
+      >
+        {selectedHospital && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Building2 className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">{selectedHospital.hospitalId}</div>
+                <div className="text-xl font-semibold text-gray-900">{selectedHospital.name}</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-gray-500">Contact Person</Label>
+                <div className="text-sm text-gray-900">{selectedHospital.contactPerson}</div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-gray-500">Phone</Label>
+                <div className="flex items-center text-sm text-gray-900">
+                  <Phone className="w-3 h-3 mr-1" />
+                  {selectedHospital.phone}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-gray-500">Address</Label>
+              <div className="flex items-start text-sm text-gray-900">
+                <MapPin className="w-3 h-3 mr-1 mt-0.5" />
+                <span>{selectedHospital.address}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-500">
+              <div>
+                <span className="font-medium">Created:</span>{' '}
+                {selectedHospital.createdAt ? new Date(selectedHospital.createdAt).toLocaleString() : '-'}
+              </div>
+              <div>
+                <span className="font-medium">Last Updated:</span>{' '}
+                {selectedHospital.updatedAt ? new Date(selectedHospital.updatedAt).toLocaleString() : '-'}
+              </div>
+            </div>
+          </div>
+        )}
+      </CustomModal>
+
+      <CustomModal
+        open={editModalOpen && !!selectedHospital}
+        title={selectedHospital ? `Edit Hospital - ${selectedHospital.name}` : 'Edit Hospital'}
+        description="Update the hospital details. Fields marked with * are required."
+        onCancel={handleCloseModals}
+        onConfirm={handleEditSave}
+        confirmText={editSubmitting ? 'Saving...' : 'Save Changes'}
+        cancelText="Cancel"
+        confirmVariant="primary"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Hospital Name *</Label>
+              <Input
+                id="edit-name"
+                name="name"
+                value={editFormData.name}
+                onChange={handleEditInputChange}
+                placeholder="Enter hospital name"
+                className={editErrors.name ? 'border-red-500' : ''}
+              />
+              {editErrors.name && (
+                <p className="text-xs text-red-500">{editErrors.name}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-contactPerson">Contact Person *</Label>
+              <Input
+                id="edit-contactPerson"
+                name="contactPerson"
+                value={editFormData.contactPerson}
+                onChange={handleEditInputChange}
+                placeholder="Enter contact person name"
+                className={editErrors.contactPerson ? 'border-red-500' : ''}
+              />
+              {editErrors.contactPerson && (
+                <p className="text-xs text-red-500">{editErrors.contactPerson}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-phone">Phone Number *</Label>
+              <Input
+                id="edit-phone"
+                name="phone"
+                value={editFormData.phone}
+                onChange={handleEditInputChange}
+                placeholder="Enter phone number"
+                className={editErrors.phone ? 'border-red-500' : ''}
+              />
+              {editErrors.phone && (
+                <p className="text-xs text-red-500">{editErrors.phone}</p>
+              )}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-address">Address *</Label>
+            <Textarea
+              id="edit-address"
+              name="address"
+              value={editFormData.address}
+              onChange={handleEditInputChange}
+              placeholder="Enter complete hospital address"
+              rows={3}
+              className={editErrors.address ? 'border-red-500' : ''}
+            />
+            {editErrors.address && (
+              <p className="text-xs text-red-500">{editErrors.address}</p>
+            )}
+          </div>
+        </div>
+      </CustomModal>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
