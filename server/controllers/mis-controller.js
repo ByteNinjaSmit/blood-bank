@@ -195,10 +195,25 @@ exports.getCampMIS = async (req, res) => {
             },
             {
                 $project: {
+                    siteId: 1,
                     name: 1,
                     address: 1,
                     dateFrom: 1,
                     dateTo: 1,
+                    staffCount: { $size: { $ifNull: ["$staff", []] } },
+                    donorCount: { $size: { $ifNull: ["$donorData", []] } },
+                    durationDays: {
+                        $max: [
+                            1,
+                            {
+                                $dateDiff: {
+                                    startDate: "$dateFrom",
+                                    endDate: "$dateTo",
+                                    unit: "day"
+                                }
+                            }
+                        ]
+                    },
                     totalBags: { $size: "$bags" },
                     discardedBags: {
                         $size: {
@@ -215,6 +230,15 @@ exports.getCampMIS = async (req, res) => {
                                 input: "$bags",
                                 as: "bag",
                                 cond: { $eq: ["$$bag.status", "failed"] }
+                            }
+                        }
+                    },
+                    testedBags: {
+                        $size: {
+                            $filter: {
+                                input: "$bags",
+                                as: "bag",
+                                cond: { $in: ["$$bag.status", ["passed", "failed"]] }
                             }
                         }
                     }

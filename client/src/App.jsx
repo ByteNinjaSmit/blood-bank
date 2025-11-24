@@ -37,6 +37,7 @@ import RequisitionList from './page/requisition/RequisitionList';
 import DonorMIS from './page/mis/DonorMIS';
 import DonationMIS from './page/mis/DonationMIS';
 import CampMIS from './page/mis/CampMIS';
+import CampReports from './page/camp/CampReports';
 import BagMIS from './page/mis/BagMIS';
 import ComponentMIS from './page/mis/ComponentMIS';
 import InventoryMIS from './page/mis/InventoryMIS';
@@ -83,6 +84,7 @@ const App = () => {
           <Route path="/camp-listing" element={<CampListing />} />
           <Route path="/camp-donors" element={<CampDonorManagement />} />
           <Route path="/camp-donation" element={<CampDonationManagement />} />
+          <Route path="/camp-reports" element={<CampReports />} />
 
           {/*  Dashboard - Component Routes */}
           <Route path="/component/list" element={<ComponentsList />} />
