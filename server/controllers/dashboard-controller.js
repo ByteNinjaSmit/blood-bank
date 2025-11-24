@@ -6,6 +6,7 @@ const Inventory = require("../models/inventory-model");
 const HospitalRequest = require("../models/hospital-request-model");
 const Transfusion = require("../models/transfusion-model");
 const DiscardLog = require("../models/discard-model");
+const Site = require("../models/site-model");
 
 const toObjectId = (v) => (mongoose.Types.ObjectId.isValid(v) ? new mongoose.Types.ObjectId(v) : null);
 
@@ -226,6 +227,206 @@ async function getOverview(req, res, next) {
     // Donors created within period (no site field on Donor)
     const donorsFiltered = await Donor.countDocuments({ ...(fromDate ? matchDate('createdAt') : {}) });
 
+    // ==============================
+    // Rich KPI Overview Computations
+    // ==============================
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
+    const sixMonthsAgo = new Date(now.getTime());
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const [
+      maleDonors,
+      femaleDonors,
+      otherDonors,
+      firstTimeDonors,
+      repeatDonors,
+      componentsProducedAgg,
+      campsConducted,
+      campAgg,
+      expiringToday,
+      testsPending,
+      delayedTesting,
+      missingExpiry,
+      inactiveDonors,
+    ] = await Promise.all([
+      Donor.countDocuments({ sex: "M" }),
+      Donor.countDocuments({ sex: "F" }),
+      Donor.countDocuments({ sex: "O" }),
+      Donor.countDocuments({ "donationHistory.0": { $exists: true }, "donationHistory.1": { $exists: false } }),
+      Donor.countDocuments({ "donationHistory.1": { $exists: true } }),
+      Component.aggregate([
+        { $match: { ...siteMatchComponent, ...(fromDate ? matchDate("createdAt") : {}) } },
+        { $group: { _id: "$componentType", count: { $sum: 1 } } },
+      ]),
+      Site.countDocuments(fromDate ? { dateFrom: { $gte: fromDate, $lte: toDate } } : {}),
+      BloodBag.aggregate([
+        {
+          $match: {
+            ...siteMatchBag,
+            siteId: { $ne: null },
+            ...(fromDate ? matchDate("collectionDate") : {}),
+          },
+        },
+        {
+          $facet: {
+            donors: [
+              { $group: { _id: "$donor" } },
+              { $count: "count" },
+            ],
+            collections: [{ $count: "count" }],
+            failures: [
+              { $unwind: "$testResults" },
+              { $match: { "testResults.result": "Positive" } },
+              { $count: "count" },
+            ],
+          },
+        },
+      ]),
+      Component.countDocuments({
+        status: "in-stock",
+        expiryDate: { $gte: startOfToday, $lt: startOfTomorrow },
+        ...siteMatchComponent,
+      }),
+      BloodBag.countDocuments({
+        status: "testing",
+        ...siteMatchBag,
+      }),
+      BloodBag.countDocuments({
+        status: "testing",
+        collectionDate: { $lte: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
+        ...siteMatchBag,
+      }),
+      Component.countDocuments({
+        $or: [{ expiryDate: { $exists: false } }, { expiryDate: null }],
+        ...siteMatchComponent,
+      }),
+      Donor.countDocuments({
+        $or: [
+          { lastDonationDate: { $lt: sixMonthsAgo } },
+          { lastDonationDate: { $exists: false } },
+        ],
+      }),
+    ]);
+
+    const componentsProducedTotal = (componentsProducedAgg || []).reduce((sum, x) => sum + (x.count || 0), 0);
+    const componentProducedMap = (componentsProducedAgg || []).reduce((acc, x) => {
+      acc[x._id] = x.count || 0;
+      return acc;
+    }, {});
+
+    const campFacet = Array.isArray(campAgg) && campAgg.length > 0 ? campAgg[0] : {};
+    const campDonors = campFacet.donors?.[0]?.count || 0;
+    const campCollections = campFacet.collections?.[0]?.count || 0;
+    const campFailures = campFacet.failures?.[0]?.count || 0;
+
+    const stockByGroupMap = stockByGroup.reduce((acc, x) => {
+      const key = `${x.bloodGroup || "Unknown"}|${x.rh || "Unknown"}`;
+      acc[key] = x.value || 0;
+      return acc;
+    }, {});
+    const stockFor = (group, rh) => stockByGroupMap[`${group}|${rh}`] || 0;
+
+    const componentStockMap = stockByComponent.reduce((acc, x) => {
+      acc[x.componentType] = x.value || 0;
+      return acc;
+    }, {});
+
+    const requestsStatusMap = requestsByStatus.reduce((acc, x) => {
+      acc[x.status] = x.value || 0;
+      return acc;
+    }, {});
+    const totalRequests = requestsByStatus.reduce((sum, x) => sum + (x.value || 0), 0);
+
+    const testsTotal = positivityAgg.reduce((sum, x) => sum + (x.count || 0), 0);
+
+    const overview = {
+      donorDonation: {
+        donors: donorsTotal,
+        newDonors: donorsFiltered,
+        donations: donationsInRange,
+        donationsInHouse: 0, // can be refined to split by in-house vs camp
+        donationsCamp: 0,
+        maleDonors,
+        femaleDonors,
+        otherDonors,
+        firstTimeDonors,
+        repeatDonors,
+      },
+      bloodBags: {
+        bagsCollected: donationsInRange,
+        bagsTested: testsTotal,
+        bagsPassed: bloodbagStatusPie.find((x) => x.status === "passed")?.value || 0,
+        bagsFailed: bloodbagStatusPie.find((x) => x.status === "failed")?.value || 0,
+        bagsPending: bloodbagStatusPie.find((x) => x.status === "testing")?.value || 0,
+        bagsQuarantined: bloodbagStatusPie.find((x) => x.status === "quarantined")?.value || 0,
+      },
+      components: {
+        componentsProduced: componentsProducedTotal,
+        rbcProduced: componentProducedMap.RBC || 0,
+        pltProduced: componentProducedMap.Platelet || 0,
+        ffpProduced: componentProducedMap.FFP || 0,
+        cryoProduced: componentProducedMap.Cryo || 0,
+      },
+      inventory: {
+        inStock: (componentStockMap.RBC || 0) + (componentStockMap.FFP || 0) + (componentStockMap.Platelet || 0) + (componentStockMap.Cryo || 0),
+        reserved: reservedInRange,
+        issued: issuedInRange,
+        discarded: discardedInRange,
+        nearExpiryTotal,
+        expiredUnits: 0,
+      },
+      bloodGroups: {
+        Opos: stockFor("O", "Positive"),
+        Oneg: stockFor("O", "Negative"),
+        Apos: stockFor("A", "Positive"),
+        Aneg: stockFor("A", "Negative"),
+        Bpos: stockFor("B", "Positive"),
+        Bneg: stockFor("B", "Negative"),
+        ABpos: stockFor("AB", "Positive"),
+        ABneg: stockFor("AB", "Negative"),
+      },
+      componentAvailability: {
+        rbcStock: componentStockMap.RBC || 0,
+        pltStock: componentStockMap.Platelet || 0,
+        ffpStock: componentStockMap.FFP || 0,
+        cryoStock: componentStockMap.Cryo || 0,
+      },
+      hospitalRequests: {
+        totalRequests,
+        pendingRequests: requestsStatusMap.pending || 0,
+        matchedRequests: requestsStatusMap.matched || 0,
+        approvedRequests: requestsStatusMap.approved || 0,
+        issuedRequests: requestsStatusMap.issued || 0,
+        completedRequests: requestsStatusMap.completed || 0,
+        rejectedRequests: requestsStatusMap.rejected || 0,
+        totalUnitsRequested,
+      },
+      testingSerology: {
+        testsTotal,
+        hivPos: (positivity.HIV && positivity.HIV.Positive) || 0,
+        hbvPos: (positivity.HBsAg && positivity.HBsAg.Positive) || 0,
+        hcvPos: (positivity.HCV && positivity.HCV.Positive) || 0,
+        vdrlPos: (positivity.VDRL && positivity.VDRL.Positive) || 0,
+        mpPos: (positivity.MP && positivity.MP.Positive) || 0,
+        natPos: (positivity.NA && positivity.NA.Positive) || 0,
+      },
+      camps: {
+        campsConducted,
+        campDonors,
+        campCollections,
+        campFailures,
+      },
+      alerts: {
+        expiringToday,
+        testsPending,
+        delayedTesting,
+        missingExpiry,
+        inactiveDonors,
+      },
+    };
+
     return res.status(200).json({
       success: true,
       data: {
@@ -254,6 +455,7 @@ async function getOverview(req, res, next) {
         transfusionsLast30d: transfusionsInRange,
         positivity,
         bloodbagStatusPie,
+        overview,
       },
     });
   } catch (err) {
