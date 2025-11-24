@@ -480,48 +480,64 @@ export default function Dashboard() {
       </div>
 
       {/* Positivity by Test */}
-      {positivitySeries.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Test Results Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{ Positive: { label: "Positive", color: "#dc2626" }, Negative: { label: "Negative", color: "#16a34a" }, Indeterminate: { label: "Indeterminate", color: "#64748b" } }}>
-              <BarChart data={positivitySeries}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="test" />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Legend content={<ChartLegendContent />} />
-                <Bar dataKey="Positive" isAnimationActive={false} stackId="a" fill="var(--color-Positive)" />
-                <Bar dataKey="Negative" isAnimationActive={false} stackId="a" fill="var(--color-Negative)" />
-                <Bar dataKey="Indeterminate" isAnimationActive={false} stackId="a" fill="var(--color-Indeterminate)" />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      )}
-
       {/* BloodBag Status Pie */}
-      {bloodbagStatusPie.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>BloodBag Status (Period)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{}}>
-              <PieChart>
-                <Tooltip content={<ChartTooltipContent />} />
-                <Pie data={bloodbagStatusPie} isAnimationActive={false} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110}>
-                  {bloodbagStatusPie.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={pieColor(entry.key || entry.name, index)} />
-                  ))}
-                </Pie>
-                <Legend />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+      {(positivitySeries.length > 0 || bloodbagStatusPie.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {positivitySeries.length > 0 && (
+            <Card className="h-full">
+              <CardHeader className="pb-3">
+                <CardTitle>Test Results Distribution</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="h-72">
+                  <ChartContainer config={{ Positive: { label: "Positive", color: "#dc2626" }, Negative: { label: "Negative", color: "#16a34a" }, Indeterminate: { label: "Indeterminate", color: "#64748b" } }}>
+                    <BarChart data={positivitySeries}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="test" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip content={<ChartTooltipContent />} />
+                      <Legend content={<ChartLegendContent />} />
+                      <Bar dataKey="Positive" isAnimationActive={false} stackId="a" fill="var(--color-Positive)" />
+                      <Bar dataKey="Negative" isAnimationActive={false} stackId="a" fill="var(--color-Negative)" />
+                      <Bar dataKey="Indeterminate" isAnimationActive={false} stackId="a" fill="var(--color-Indeterminate)" />
+                    </BarChart>
+                  </ChartContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {bloodbagStatusPie.length > 0 && (
+            <Card className="h-full">
+              <CardHeader className="pb-3">
+                <CardTitle>BloodBag Status (Period)</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="h-72 flex items-center justify-center">
+                  <ChartContainer config={{}}>
+                    <PieChart>
+                      <Tooltip content={<ChartTooltipContent />} />
+                      <Pie
+                        data={bloodbagStatusPie}
+                        isAnimationActive={false}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={110}
+                      >
+                        {bloodbagStatusPie.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={pieColor(entry.key || entry.name, index)} />
+                        ))}
+                      </Pie>
+                      <Legend />
+                    </PieChart>
+                  </ChartContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
     </div>
   );
