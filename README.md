@@ -80,9 +80,9 @@ The main entrypoint is `server/server.js`, which:
 ```mermaid
 flowchart LR
   subgraph Users
-    UA[Admin / Staff\n(React client)]
-    UH[Hospital / External Users\n(React client)]
-    UV[Public Visitor\n(Next.js site)]
+    UA[Admin / Staff (React client)]
+    UH[Hospital / External Users (React client)]
+    UV[Public Visitor (Next.js site)]
   end
 
   UA -->|HTTPS / REST| API[Express REST API]
@@ -103,7 +103,7 @@ flowchart LR
   subgraph Background
     API -->|enqueue jobs| Queues[Redis + Bull Queues]
     Queues --> Jobs[Background Workers]
-    Jobs --> Reports[PDF Reports\n(Expiry / Discard)]
+    Jobs --> Reports[PDF Reports (Expiry / Discard)]
     Jobs --> Email[Email Service]
     Email --> AdminInbox[Admin Inbox]
   end
@@ -123,14 +123,14 @@ flowchart LR
 ```mermaid
 flowchart LR
   DonorReg[Donor Registration] --> Screening[Medical Screening & Eligibility]
-  Screening -->|Eligible| Donation[Blood Donation\n(Blood Bag Collection)]
+  Screening -->|Eligible| Donation[Blood Donation (Blood Bag Collection)]
   Screening -->|Not eligible| EndScreen[Donor Deferred]
 
   Donation --> Lab[Serology / Lab Testing]
   Lab -->|Pass| CompSep[Component Separation]
   Lab -->|Fail| DiscardLab[Mark Unit as Discarded]
 
-  CompSep --> Inventory[Component Inventory\n(RBC / Platelets / FFP / Cryo / ...)]
+  CompSep --> Inventory[Component Inventory (RBC / Platelets / FFP / Cryo / ...)]
 
   Inventory --> Request[Hospital / Internal Request]
   Request --> Matching[Match & Reserve Components]
@@ -142,7 +142,7 @@ flowchart LR
   ExpiryQueue --> ExpiryJob[Expiry Report Job]
   ExpiryJob --> ExpiryPDF[Near-Expiry PDF Report]
   ExpiryPDF --> ExpiryEmail[Email to Admin]
-  ExpiryEmail --> ReviewAction[Admin Review & Action\n(Transfer / Discard / Prioritize)]
+  ExpiryEmail --> ReviewAction[Admin Review & Action (Transfer / Discard / Prioritize)]
 ```
 
 **Where this lives in code:**
@@ -207,6 +207,122 @@ Below is a high-level outline of the main functional areas and how they fit toge
 - **User, Auth & Admin**
   - Role-based access: admin, staff, developer (and other roles as configured).
   - JWT-based authentication, OTP login/registration flows, and session management.
+
+## Key Workflows (Step-by-Step)
+
+- **Authentication & OTP Login**
+  1. User opens the client login page.
+  2. Submits credentials, which are sent to `/api/auth/login` or `/api/auth/login/start-otp`.
+  3. For OTP flows, an email is sent via the email-OTP job and queue.
+  4. User verifies OTP via `/api/auth/login/verify-otp`; the backend issues a JWT access token and refresh cookie.
+  5. The client stores the access token in memory/context and attaches it to subsequent API requests.
+
+- **Requisition → Matching → Issue**
+  1. A hospital or internal department creates a component request from the client UI.
+  2. The backend validates the request and searches inventory for compatible components.
+  3. Matching components are reserved against the request.
+  4. On confirmation, reserved units are issued and the request is marked completed or partially completed.
+  5. Inventory, audit, and MIS statistics are updated.
+
+- **Camp Workflow**
+  1. Admin configures a donation camp (site, date, organizers, targets).
+  2. Camp donors are registered and donations recorded under the camp.
+  3. Lab/serology, component separation, and inventory flows proceed as for regular donations.
+  4. Camp reports summarize donors, units collected, and outcomes.
+
+- **Expiry & Discard Workflow**
+  1. Inventory is monitored for near-expiry components based on thresholds per component type.
+  2. The scheduled expiry job generates a near-expiry PDF report and emails it to the admin.
+  3. Admin reviews the report and may prioritize use, transfer, or discard of units.
+  4. Discarded units are recorded via discard controllers/routes and appear in discard/MIS reports.
+
+- **MIS Reporting Workflow**
+  1. Operational data is generated continuously from donors, donations, components, inventory, and requests.
+  2. The MIS module queries MongoDB via MIS controllers/routes to aggregate KPIs (e.g., units collected, issued, discarded, near-expiry counts).
+  3. The client renders MIS dashboards and reports with filters (date range, blood group, component type, site, hospital).
+  4. Users can export or print reports for audits, compliance, and management review.
+
+- **Audit Logging Workflow**
+  1. Critical actions (create/update/delete on donors, donations, components, inventory, requests, hospitals, and users) are captured in audit logs.
+  2. The backend records who performed the action, what changed, and when, via audit controllers/models.
+  3. Authorized users can review audit history to trace changes, support investigations, and ensure regulatory compliance.
+
+- **Camp Reporting Workflow**
+  1. For each camp, all registered donors and donations are linked to the camp record.
+  2. The MIS/camp reports module summarizes total donors, successful donations, deferrals, and component output by camp.
+  3. Users can break down results by blood group, site, date, and other filters to evaluate camp performance.
+
+---
+
+## Detailed Auth & OTP Sequence (Diagram)
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant C as Client App
+  participant A as Auth API
+  participant Q as Email OTP Queue
+  participant E as Email Service
+
+  U->>C: Enter email and password
+  C->>A: POST /api/auth/login/start-otp
+  A->>Q: Enqueue OTP email job
+  Q->>E: Process job and send OTP email
+  E-->>U: Deliver OTP email with code
+
+  U->>C: Submit OTP code
+  C->>A: POST /api/auth/login/verify-otp
+  A-->>C: Return access token and refresh cookie
+  C-->>U: Login success and redirect to dashboard
+```
+
+---
+
+## Detailed Requisition & Matching Sequence (Diagram)
+
+```mermaid
+sequenceDiagram
+  participant H as Hospital User
+  participant C as Client App
+  participant R as Requests API
+  participant I as Inventory API
+  participant DB as MongoDB
+
+  H->>C: Fill requisition form
+  C->>R: POST /api/requests
+  R->>DB: Save request document
+  R-->>C: Return created request
+
+  C->>R: GET /api/requests/{id}/match
+  R->>I: Query inventory for compatible components
+  I->>DB: Find in-stock components
+  I-->>R: Return candidate components
+  R-->>C: Return match suggestions
+
+  H->>C: Confirm components to issue
+  C->>R: POST /api/requests/{id}/issue
+  R->>DB: Update request status and inventory records
+  R-->>C: Return issue confirmation
+```
+
+---
+
+## Module to Screen Map (Quick Reference)
+
+| Area              | Backend (examples)                             | Client (examples)                         | Description |
+|-------------------|-------------------------------------------------|-------------------------------------------|-------------|
+| Donor             | `/api/donor` (donor-routes, donor-controller)  | `client/src/page/donor`                   | Donor registration, update, listing. |
+| Donation          | `/api/donation` (donation-routes)              | `client/src/page/donation`                | Create and manage blood bag donations. |
+| Serology / Lab    | `/api/sernology` (lab-routes)                  | `client/src/page/Serology`                | Record lab test results and mark units safe/unsafe. |
+| Components        | `/api/component` (component-routes)            | `client/src/page/component-separate`      | Separate whole blood into components and track component details. |
+| Inventory         | `/api/inventory` (inventory-routes)            | `client/src/page/Inventory`               | View and manage component stock, filters, and statuses. |
+| Hospitals         | `/api/hospitals` (hospital-routes)             | `client/src/page/hospital`                | Maintain hospital master data and contacts. |
+| Requests/Requisition | `/api/requests` (request-routes)           | `client/src/page/requisition`             | Capture and manage component requests, matching, and issue. |
+| Transfusion/Issue | `/api/transfusion` (transfusion-routes)        | Related issue screens within requisition   | Record issued units and transfusion details. |
+| Discard           | `/api/discard` (discard-routes)                | Discard-related views in inventory/MIS     | Mark and report discarded units (expired, lab failed, damaged). |
+| Camps             | Camp-related APIs (within donation/site flows) | `client/src/page/camp`                    | Configure camps, link donors/donations, and view camp reports. |
+| MIS & Reports     | `/api/mis`, `/api/report` (mis/report-routes)  | `client/src/page/mis`                     | Aggregate operational KPIs and generate MIS reports. |
+| Users & Admin     | `/api/users`, `/api/admin`                     | `client/src/page/user-manage`, dashboard  | Manage users, roles, and admin operations. |
 
 ---
 
