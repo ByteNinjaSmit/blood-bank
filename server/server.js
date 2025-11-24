@@ -50,6 +50,7 @@ const testRoutes = require('./routers/test-routes');
 const adminRoutes = require('./routers/admin-routes');
 const dashboardRoutes = require('./routers/dashboard-routes');
 const misRoutes = require('./routers/mis-routes');
+const appointmentRoutes = require('./routers/appointment-routes');
 
 
 // Server Setup
@@ -67,7 +68,12 @@ app.use(cookieParser());
 
 // Cors
 
-const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
+const allowedOrigins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+];
 const PORT = process.env.PORT || 5000;
 // CORS Policy
 const io = new Server(server, {
@@ -226,6 +232,7 @@ app.use("/api/test",testRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/mis', misRoutes);
+app.use('/api/appointments', appointmentRoutes);
 
 
 
