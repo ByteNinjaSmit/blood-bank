@@ -6,10 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
-import { FlaskConical, Filter, RefreshCw } from "lucide-react";
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
+import { FlaskConical, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 const number = (v) => (typeof v === "number" ? v : 0);
+const COLORS = ["#ef4444", "#22c55e", "#f59e0b", "#3b82f6"];
 
 export default function TestingMIS() {
   const { API } = useAuth();
@@ -17,73 +21,72 @@ export default function TestingMIS() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
 
-  const [preset, setPreset] = useState("30d");
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await axios.get(`${API}/api/mis/serology`, {
+        withCredentials: true,
+      });
+      setData(res.data?.data || null);
+    } catch (e) {
+      setError(e?.response?.data?.message || e.message || "Failed to load Serology MIS");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const params = {};
-        if (preset === "all") {
-          params.period = "all";
-        } else if (["7d", "30d"].includes(preset)) {
-          params.period = preset;
-        } else {
-          params.period = "30d";
-        }
-        const res = await axios.get(`${API}/api/mis/testing`, {
-          params,
-          withCredentials: true,
-        });
-        if (!mounted) return;
-        setData(res.data?.data || null);
-      } catch (e) {
-        if (!mounted) return;
-        setError(e?.response?.data?.message || e.message || "Failed to load Testing MIS");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [API, preset]);
+    fetchData();
+  }, [API]);
 
-  const summary = data?.summary || {};
-  const statusSummary = data?.statusSummary || [];
-  const technicianWise = data?.technicianWise || [];
-  const positivity = data?.positivity || {};
+  const failures = data?.failures || [];
+  const overall = data?.overall || [];
 
-  const positivityRows = useMemo(
-    () =>
-      Object.entries(positivity).map(([test, values]) => ({
-        test,
-        positive: number(values.Positive),
-        negative: number(values.Negative),
-        indeterminate: number(values.Indeterminate),
-      })),
-    [positivity]
-  );
+  const failureData = useMemo(() => failures.map(f => ({ name: f._id || "Unknown", value: f.count })), [failures]);
+  const overallData = useMemo(() => overall.map(o => ({ name: o._id || "Unknown", value: o.count })), [overall]);
 
-  const statusSeries = useMemo(
-    () => statusSummary.map((x) => ({ name: x.status || "unknown", value: number(x.count) })),
-    [statusSummary]
-  );
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Serology MIS Report", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
+
+    const failData = failures.map(f => [f._id, f.count]);
+    autoTable(doc, {
+      startY: 30,
+      head: [["Test Type", "Positive Count"]],
+      body: failData,
+    });
+
+    const overallTable = overall.map(o => [o._id, o.count]);
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [["Status", "Count"]],
+      body: overallTable,
+    });
+
+    doc.save("serology_mis.pdf");
+  };
+
+  const exportExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    const failData = failures.map(f => ({ Test: f._id, PositiveCount: f.count }));
+    const wsFail = XLSX.utils.json_to_sheet(failData);
+    XLSX.utils.book_append_sheet(wb, wsFail, "Failures");
+
+    const overallData = overall.map(o => ({ Status: o._id, Count: o.count }));
+    const wsOverall = XLSX.utils.json_to_sheet(overallData);
+    XLSX.utils.book_append_sheet(wb, wsOverall, "Overall");
+
+    XLSX.writeFile(wb, "serology_mis.xlsx");
+  };
 
   if (loading) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="p-6 flex items-center gap-3 animate-pulse">
-            <div className="w-8 h-8 rounded-full bg-slate-200" />
-            <div>
-              <div className="h-4 w-40 bg-slate-200 rounded mb-2" />
-              <div className="h-3 w-24 bg-slate-100 rounded" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="p-6 flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -91,12 +94,10 @@ export default function TestingMIS() {
   if (error) {
     return (
       <div className="p-6">
-        <Card className="border-red-200">
-          <CardHeader>
-            <CardTitle className="text-red-700">Testing MIS Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-red-600 text-sm">{error}</p>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6 text-red-600">
+            Error: {error}
+            <Button variant="outline" size="sm" className="ml-4" onClick={fetchData}>Retry</Button>
           </CardContent>
         </Card>
       </div>
@@ -108,145 +109,128 @@ export default function TestingMIS() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700">
+            <div className="p-2 rounded-lg bg-pink-100 text-pink-700">
               <FlaskConical className="w-5 h-5" />
             </div>
             <div>
-              <CardTitle>Testing / Serology MIS</CardTitle>
-              <p className="text-sm text-slate-600">Testing load, positivity and technician activity</p>
+              <CardTitle>Serology MIS</CardTitle>
+              <p className="text-sm text-slate-600">Test results, failure analysis, and quality control</p>
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-slate-500" />
-              <span className="text-xs text-slate-500">Range</span>
-            </div>
-            {["7d", "30d", "all"].map((key) => (
-              <Button
-                key={key}
-                size="sm"
-                variant={preset === key ? "default" : "outline"}
-                onClick={() => setPreset(key)}
-              >
-                {key}
-              </Button>
-            ))}
-            <Button
-              size="icon"
-              variant="outline"
-              className="h-8 w-8"
-              onClick={() => {
-                setPreset("30d");
-              }}
-            >
-              <RefreshCw className="w-4 h-4" />
+            <Button variant="outline" size="sm" onClick={fetchData}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportPDF}>
+              <FileText className="w-4 h-4 mr-2 text-red-600" />
+              PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportExcel}>
+              <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />
+              Excel
             </Button>
           </div>
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Kpi label="Bags Tested" value={number(summary.totalBagsTested)} />
-        <Kpi label="Total Tests" value={number(summary.totalTests)} />
-        <Kpi label="Positive Tests" value={number(summary.totalPositiveTests)} />
-        <Kpi label="Positivity %" value={number(summary.positivityRate)} suffix="%" />
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Bag Status (Collection)</CardTitle>
+            <CardTitle className="text-sm">Overall Testing Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={{ value: { label: "Bags", color: "#0ea5e9" } }}>
-              <BarChart data={statusSeries} barCategoryGap={12}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" fill="var(--color-value)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
+            <div className="h-[300px] w-full flex items-center justify-center">
+              {overallData.length > 0 ? (
+                <ChartContainer config={{}} className="h-full w-full">
+                  <PieChart>
+                    <Pie
+                      data={overallData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {overallData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Legend />
+                  </PieChart>
+                </ChartContainer>
+              ) : (
+                <div className="text-slate-400 text-sm">No data available</div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Technician-wise Testing</CardTitle>
+            <CardTitle className="text-sm">TTI Failure Analysis (Positive Cases)</CardTitle>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
+          <CardContent>
+            <div className="h-[300px] w-full">
+              {failureData.length > 0 ? (
+                <ChartContainer config={{ value: { label: "Positive Cases", color: "#ef4444" } }} className="h-full w-full">
+                  <BarChart data={failureData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                    <XAxis type="number" allowDecimals={false} />
+                    <YAxis dataKey="name" type="category" width={80} />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="value" fill="#ef4444" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-slate-400 text-sm">No positive cases recorded</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Detailed Failure Report</CardTitle>
+          </CardHeader>
+          <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Technician</TableHead>
-                  <TableHead className="text-right">Tests</TableHead>
+                  <TableHead>Test Type</TableHead>
+                  <TableHead className="text-right">Positive Count</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {technicianWise.map((t) => (
-                  <TableRow key={t.technicianId || "unknown"}>
-                    <TableCell>
-                      <div className="font-medium">{t.name || t.technicianId || "Unknown"}</div>
-                      <div className="text-xs text-slate-500 truncate max-w-[12rem]">{t.technicianId}</div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="outline">{number(t.tests)}</Badge>
+                {failures.length > 0 ? (
+                  failures.map((row, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{row._id}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="destructive">{number(row.count)}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right text-xs text-slate-500">
+                        Discard & Notify
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-8 text-slate-500">
+                      No failures recorded
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Positivity by Test</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Test</TableHead>
-                <TableHead className="text-right">Positive</TableHead>
-                <TableHead className="text-right">Negative</TableHead>
-                <TableHead className="text-right">Indeterminate</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {positivityRows.map((row) => (
-                <TableRow key={row.test}>
-                  <TableCell>{row.test}</TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="outline">{row.positive}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="outline">{row.negative}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="outline">{row.indeterminate}</Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </div>
-  );
-}
-
-function Kpi({ label, value, suffix }) {
-  return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-4 flex flex-col gap-2">
-        <div className="text-xs text-slate-500">{label}</div>
-        <div className="inline-flex items-baseline gap-1 text-xl font-semibold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-lg w-fit">
-          <span>{number(value).toLocaleString()}</span>
-          {suffix && <span className="text-xs">{suffix}</span>}
-        </div>
-      </CardContent>
-    </Card>
   );
 }

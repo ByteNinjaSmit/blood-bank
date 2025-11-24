@@ -5,7 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Shield, Filter, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, FileText, FileSpreadsheet, Clock, Calendar } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 const number = (v) => (typeof v === "number" ? v : 0);
 
@@ -15,58 +18,62 @@ export default function ExceptionMIS() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
 
-  const [preset, setPreset] = useState("30d");
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await axios.get(`${API}/api/mis/audit`, {
+        withCredentials: true,
+      });
+      setData(res.data?.data || null);
+    } catch (e) {
+      setError(e?.response?.data?.message || e.message || "Failed to load Exception MIS");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const params = {};
-        if (preset === "all") {
-          params.period = "all";
-        } else if (["7d", "30d"].includes(preset)) {
-          params.period = preset;
-        } else {
-          params.period = "30d";
-        }
-        const res = await axios.get(`${API}/api/mis/exceptions`, {
-          params,
-          withCredentials: true,
-        });
-        if (!mounted) return;
-        setData(res.data?.data || null);
-      } catch (e) {
-        if (!mounted) return;
-        setError(e?.response?.data?.message || e.message || "Failed to load Exception MIS");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [API, preset]);
+    fetchData();
+  }, [API]);
 
-  const summary = data?.summary || {};
-  const byEntityType = data?.byEntityType || [];
-  const byAction = data?.byAction || [];
-  const byUser = data?.byUser || [];
-  const bySite = data?.bySite || [];
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Exception & Audit MIS Report", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
+
+    const kpiData = [
+      ["Bags Stuck in Testing (>24h)", number(data?.stuckInTesting)],
+      ["Components Near Expiry (≤3 days)", number(data?.nearExpiry)]
+    ];
+
+    autoTable(doc, {
+      startY: 30,
+      head: [["Exception Type", "Count"]],
+      body: kpiData,
+    });
+
+    doc.save("exception_mis.pdf");
+  };
+
+  const exportExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    const kpiData = [
+      { Exception: "Bags Stuck in Testing (>24h)", Count: number(data?.stuckInTesting) },
+      { Exception: "Components Near Expiry (≤3 days)", Count: number(data?.nearExpiry) }
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(kpiData);
+    XLSX.utils.book_append_sheet(wb, ws, "Exceptions");
+    XLSX.writeFile(wb, "exception_mis.xlsx");
+  };
 
   if (loading) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="p-6 flex items-center gap-3 animate-pulse">
-            <div className="w-8 h-8 rounded-full bg-slate-200" />
-            <div>
-              <div className="h-4 w-40 bg-slate-200 rounded mb-2" />
-              <div className="h-3 w-24 bg-slate-100 rounded" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="p-6 flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -74,12 +81,10 @@ export default function ExceptionMIS() {
   if (error) {
     return (
       <div className="p-6">
-        <Card className="border-red-200">
-          <CardHeader>
-            <CardTitle className="text-red-700">Exception MIS Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-red-600 text-sm">{error}</p>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6 text-red-600">
+            Error: {error}
+            <Button variant="outline" size="sm" className="ml-4" onClick={fetchData}>Retry</Button>
           </CardContent>
         </Card>
       </div>
@@ -91,163 +96,134 @@ export default function ExceptionMIS() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-slate-100 text-slate-700">
-              <Shield className="w-5 h-5" />
+            <div className="p-2 rounded-lg bg-orange-100 text-orange-700">
+              <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <CardTitle>Exception / Audit MIS</CardTitle>
-              <p className="text-sm text-slate-600">Audit trail by entity, user and site</p>
+              <CardTitle>Exception & Audit MIS</CardTitle>
+              <p className="text-sm text-slate-600">Quality control alerts and operational exceptions</p>
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-slate-500" />
-              <span className="text-xs text-slate-500">Range</span>
-            </div>
-            {["7d", "30d", "all"].map((key) => (
-              <Button
-                key={key}
-                size="sm"
-                variant={preset === key ? "default" : "outline"}
-                onClick={() => setPreset(key)}
-              >
-                {key}
-              </Button>
-            ))}
-            <Button
-              size="icon"
-              variant="outline"
-              className="h-8 w-8"
-              onClick={() => {
-                setPreset("30d");
-              }}
-            >
-              <RefreshCw className="w-4 h-4" />
+            <Button variant="outline" size="sm" onClick={fetchData}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportPDF}>
+              <FileText className="w-4 h-4 mr-2 text-red-600" />
+              PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportExcel}>
+              <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />
+              Excel
             </Button>
           </div>
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Kpi label="Total Events" value={number(summary.totalEvents)} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">By Entity Type</CardTitle>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Entity Type</TableHead>
-                  <TableHead className="text-right">Events</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {byEntityType.map((row) => (
-                  <TableRow key={row.entityType || "Unknown"}>
-                    <TableCell>{row.entityType || "Unknown"}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="outline">{number(row.count)}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-lg bg-orange-100">
+                <Clock className="w-6 h-6 text-orange-700" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-orange-900 mb-1">Bags Stuck in Testing</h3>
+                <p className="text-xs text-orange-700 mb-3">Units in testing status for more than 24 hours</p>
+                <div className="text-3xl font-bold text-orange-900">{number(data?.stuckInTesting)}</div>
+                {number(data?.stuckInTesting) > 0 && (
+                  <Badge variant="destructive" className="mt-3">Action Required</Badge>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">By Action</CardTitle>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Action</TableHead>
-                  <TableHead className="text-right">Events</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {byAction.map((row) => (
-                  <TableRow key={row.action || "Unknown"}>
-                    <TableCell>{row.action || "Unknown"}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="outline">{number(row.count)}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-lg bg-red-100">
+                <Calendar className="w-6 h-6 text-red-700" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-red-900 mb-1">Components Near Expiry</h3>
+                <p className="text-xs text-red-700 mb-3">In-stock components expiring within 3 days</p>
+                <div className="text-3xl font-bold text-red-900">{number(data?.nearExpiry)}</div>
+                {number(data?.nearExpiry) > 0 && (
+                  <Badge variant="destructive" className="mt-3">Urgent</Badge>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Top Users & Sites</CardTitle>
+          <CardTitle className="text-sm">Exception Details</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="text-right">Events</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {byUser.map((row) => (
-                  <TableRow key={row.userId || row.name || "unknown"}>
-                    <TableCell>{row.name || "Unknown"}</TableCell>
-                    <TableCell className="capitalize">{row.role || "-"}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="outline">{number(row.count)}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Site</TableHead>
-                  <TableHead className="text-right">Events</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bySite.map((row) => (
-                  <TableRow key={row.siteId || row.siteName || "unknown"}>
-                    <TableCell className="truncate max-w-[12rem]">{row.siteName || "Unknown"}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="outline">{number(row.count)}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Exception Type</TableHead>
+                <TableHead className="text-right">Count</TableHead>
+                <TableHead className="text-right">Severity</TableHead>
+                <TableHead className="text-right">Recommended Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell className="font-medium">Bags Stuck in Testing (&gt;24h)</TableCell>
+                <TableCell className="text-right">
+                  <Badge variant={number(data?.stuckInTesting) > 0 ? "destructive" : "outline"}>
+                    {number(data?.stuckInTesting)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                    Medium
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right text-xs text-slate-600">
+                  Complete testing immediately
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Components Near Expiry (≤3 days)</TableCell>
+                <TableCell className="text-right">
+                  <Badge variant={number(data?.nearExpiry) > 0 ? "destructive" : "outline"}>
+                    {number(data?.nearExpiry)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Badge variant="destructive">High</Badge>
+                </TableCell>
+                <TableCell className="text-right text-xs text-slate-600">
+                  Issue or discard before expiry
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
-    </div>
-  );
-}
 
-function Kpi({ label, value }) {
-  return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-4 flex flex-col gap-2">
-        <div className="text-xs text-slate-500">{label}</div>
-        <div className="inline-flex items-baseline gap-1 text-xl font-semibold text-slate-800 bg-slate-50 px-3 py-1 rounded-lg w-fit">
-          <span>{number(value).toLocaleString()}</span>
-        </div>
-      </CardContent>
-    </Card>
+      {(number(data?.stuckInTesting) === 0 && number(data?.nearExpiry) === 0) && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-6 text-center">
+            <div className="flex flex-col items-center gap-2">
+              <div className="p-3 rounded-full bg-green-100">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-green-900">All Clear!</h3>
+              <p className="text-sm text-green-700">No exceptions or audit alerts at this time.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

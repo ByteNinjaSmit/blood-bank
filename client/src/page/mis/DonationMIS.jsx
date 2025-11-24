@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, BarChart, Bar } from "recharts";
-import { Activity, Filter, Calendar as CalendarIcon, RefreshCw } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { Activity, Filter, Calendar as CalendarIcon, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 const number = (v) => (typeof v === "number" ? v : 0);
 
@@ -19,61 +20,38 @@ export default function DonationMIS() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
 
-  const [preset, setPreset] = useState("30d");
-  const [openCal, setOpenCal] = useState(false);
-  const [range, setRange] = useState({ from: null, to: null });
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await axios.get(`${API}/api/mis/donations`, {
+        withCredentials: true,
+      });
+      setData(res.data?.data || null);
+    } catch (e) {
+      setError(e?.response?.data?.message || e.message || "Failed to load Donation MIS");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const params = {};
-        if (preset === "all") {
-          params.period = "all";
-        } else if (["7d", "30d"].includes(preset)) {
-          params.period = preset;
-        } else if (preset === "custom" && range?.from && range?.to) {
-          const fromISO = new Date(range.from).toISOString().slice(0, 10);
-          const toISO = new Date(range.to).toISOString().slice(0, 10);
-          params.from = fromISO;
-          params.to = toISO;
-        } else {
-          params.period = "30d";
-        }
-        const res = await axios.get(`${API}/api/mis/donations`, {
-          params,
-          withCredentials: true,
-        });
-        if (!mounted) return;
-        setData(res.data?.data || null);
-      } catch (e) {
-        if (!mounted) return;
-        setError(e?.response?.data?.message || e.message || "Failed to load Donation MIS");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [API, preset, range?.from, range?.to]);
+    fetchData();
+  }, [API]);
 
   const summary = data?.summary || {};
   const breakdowns = data?.breakdowns || {};
-  const trends = data?.trends || {};
-  const peaks = data?.peaks || {};
+  const trends = data?.trends || [];
 
   const donationsTrend = useMemo(
-    () => (trends.daily || []).map((d) => ({ date: d.date, value: number(d.count) })),
-    [trends.daily]
+    () => (trends || []).map((d) => ({ date: new Date(d.date).toLocaleDateString(), value: number(d.count) })),
+    [trends]
   );
 
   const bgSeries = useMemo(
     () =>
       (breakdowns.byBloodGroup || []).map((g) => ({
-        name: `${g.bloodGroup || "?"} ${g.rh || ""}`.trim(),
+        name: g._id || "Unknown",
         value: number(g.count),
       })),
     [breakdowns.byBloodGroup]
@@ -82,24 +60,61 @@ export default function DonationMIS() {
   const siteSeries = useMemo(
     () =>
       (breakdowns.bySite || []).map((s) => ({
-        name: s.siteName || "In-house",
+        name: s._id || "In-house",
         value: number(s.count),
       })),
     [breakdowns.bySite]
   );
 
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Donation MIS Report", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
+
+    const summaryData = [
+      ["Total Donations", summary.total],
+      ...Object.entries(breakdowns.bySite || []).map(s => [s._id, s.count])
+    ];
+
+    autoTable(doc, {
+      startY: 30,
+      head: [["Metric", "Value"]],
+      body: summaryData,
+    });
+
+    const bgData = breakdowns.byBloodGroup?.map(g => [g._id, g.count]) || [];
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [["Blood Group", "Count"]],
+      body: bgData,
+    });
+
+    doc.save("donation_mis.pdf");
+  };
+
+  const exportExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    const summaryRows = [
+      { Metric: "Total Donations", Value: summary.total },
+      ...(breakdowns.bySite || []).map(s => ({ Metric: s._id, Value: s.count }))
+    ];
+    const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+    const bgRows = breakdowns.byBloodGroup?.map(g => ({ BloodGroup: g._id, Count: g.count })) || [];
+    const wsBG = XLSX.utils.json_to_sheet(bgRows);
+    XLSX.utils.book_append_sheet(wb, wsBG, "Blood Groups");
+
+    XLSX.writeFile(wb, "donation_mis.xlsx");
+  };
+
   if (loading) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="p-6 flex items-center gap-3 animate-pulse">
-            <div className="w-8 h-8 rounded-full bg-slate-200" />
-            <div>
-              <div className="h-4 w-40 bg-slate-200 rounded mb-2" />
-              <div className="h-3 w-24 bg-slate-100 rounded" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="p-6 flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -107,12 +122,10 @@ export default function DonationMIS() {
   if (error) {
     return (
       <div className="p-6">
-        <Card className="border-red-200">
-          <CardHeader>
-            <CardTitle className="text-red-700">Donation MIS Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-red-600 text-sm">{error}</p>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6 text-red-600">
+            Error: {error}
+            <Button variant="outline" size="sm" className="ml-4" onClick={fetchData}>Retry</Button>
           </CardContent>
         </Card>
       </div>
@@ -121,7 +134,6 @@ export default function DonationMIS() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header & Filters */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -134,100 +146,60 @@ export default function DonationMIS() {
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-slate-500" />
-              <span className="text-xs text-slate-500">Range</span>
-            </div>
-            {["7d", "30d", "all"].map((key) => (
-              <Button
-                key={key}
-                size="sm"
-                variant={preset === key ? "default" : "outline"}
-                onClick={() => setPreset(key)}
-              >
-                {key}
-              </Button>
-            ))}
-            <Popover open={openCal} onOpenChange={setOpenCal}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={preset === "custom" ? "default" : "outline"}
-                  size="sm"
-                  className="ml-1"
-                >
-                  <CalendarIcon className="w-4 h-4 mr-1" />
-                  {range?.from && range?.to
-                    ? `${new Date(range.from).toLocaleDateString()} – ${new Date(range.to).toLocaleDateString()}`
-                    : "Pick range"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="p-2" align="start">
-                <Calendar
-                  mode="range"
-                  selected={range}
-                  onSelect={(r) => {
-                    setRange(r || { from: null, to: null });
-                    if (r?.from && r?.to) setPreset("custom");
-                  }}
-                  numberOfMonths={2}
-                  disabled={{ after: new Date() }}
-                />
-              </PopoverContent>
-            </Popover>
-            <Button
-              size="icon"
-              variant="outline"
-              className="h-8 w-8"
-              onClick={() => {
-                setPreset("30d");
-                setRange({ from: null, to: null });
-              }}
-            >
-              <RefreshCw className="w-4 h-4" />
+            <Button variant="outline" size="sm" onClick={fetchData}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportPDF}>
+              <FileText className="w-4 h-4 mr-2 text-red-600" />
+              PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportExcel}>
+              <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />
+              Excel
             </Button>
           </div>
         </CardHeader>
       </Card>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        <Kpi label="Total Donations" value={number(summary.totalDonations)} tone="red" />
-        <Kpi label="In-house" value={number(summary.inHouseDonations)} tone="emerald" />
-        <Kpi label="Camp" value={number(summary.campDonations)} tone="indigo" />
-        <Kpi label="Peak Hour" value={peaks.hourOfDay?.hour ?? "-"} tone="amber" plain />
-        <Kpi label="Peak Day" value={peaks.dayOfWeek?.dayOfWeek ?? "-"} tone="sky" plain />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Kpi label="Total Donations" value={number(summary.total)} tone="red" />
+        {(breakdowns.bySite || []).map(s => (
+          <Kpi key={s._id} label={s._id} value={number(s.count)} tone="emerald" />
+        ))}
       </div>
 
-      {/* Trends & Distributions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">Daily Donation Trend</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={{ value: { label: "Donations", color: "#ef4444" } }}>
-              <AreaChart data={donationsTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="donations-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#ef4444"
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
-                  fill="url(#donations-fill)"
-                />
-              </AreaChart>
-            </ChartContainer>
+            <div className="h-[300px] w-full">
+              <ChartContainer config={{ value: { label: "Donations", color: "#ef4444" } }} className="h-full w-full">
+                <AreaChart data={donationsTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="donations-fill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip content={<ChartTooltipContent />} />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                    fill="url(#donations-fill)"
+                  />
+                </AreaChart>
+              </ChartContainer>
+            </div>
           </CardContent>
         </Card>
 
@@ -236,20 +208,21 @@ export default function DonationMIS() {
             <CardTitle className="text-sm">Camp vs In-house (Sites)</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={{ value: { label: "Donations", color: "#0ea5e9" } }}>
-              <BarChart data={siteSeries} barCategoryGap={12}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" fill="var(--color-value)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
+            <div className="h-[300px] w-full">
+              <ChartContainer config={{ value: { label: "Donations", color: "#0ea5e9" } }} className="h-full w-full">
+                <BarChart data={siteSeries} barCategoryGap={12}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="value" fill="#0ea5e9" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Blood Group & Rh Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -260,15 +233,13 @@ export default function DonationMIS() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Blood Group</TableHead>
-                  <TableHead>Rh</TableHead>
                   <TableHead className="text-right">Donations</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {(breakdowns.byBloodGroup || []).map((row) => (
-                  <TableRow key={`${row.bloodGroup || "?"}-${row.rh || "?"}`}>
-                    <TableCell>{row.bloodGroup || "Unknown"}</TableCell>
-                    <TableCell>{row.rh || "Unknown"}</TableCell>
+                  <TableRow key={row._id}>
+                    <TableCell>{row._id || "Unknown"}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant="outline">{number(row.count)}</Badge>
                     </TableCell>
@@ -281,51 +252,27 @@ export default function DonationMIS() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Gender & Rh Summary</CardTitle>
+            <CardTitle className="text-sm">Gender Summary</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h3 className="text-xs font-medium text-slate-500 mb-2 uppercase tracking-wide">By Gender</h3>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Gender</TableHead>
-                    <TableHead className="text-right">Donations</TableHead>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Gender</TableHead>
+                  <TableHead className="text-right">Donations</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(breakdowns.byGender || []).map((row) => (
+                  <TableRow key={row._id || "Unknown"}>
+                    <TableCell>{row._id || "Unknown"}</TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant="outline">{number(row.count)}</Badge>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(breakdowns.byGender || []).map((row) => (
-                    <TableRow key={row.sex || "Unknown"}>
-                      <TableCell>{row.sex || "Unknown"}</TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="outline">{number(row.count)}</Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <div>
-              <h3 className="text-xs font-medium text-slate-500 mb-2 uppercase tracking-wide">By Rh</h3>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Rh</TableHead>
-                    <TableHead className="text-right">Donations</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(breakdowns.byRh || []).map((row) => (
-                    <TableRow key={row.rh || "Unknown"}>
-                      <TableCell>{row.rh || "Unknown"}</TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="outline">{number(row.count)}</Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </div>
@@ -333,7 +280,7 @@ export default function DonationMIS() {
   );
 }
 
-function Kpi({ label, value, tone, plain }) {
+function Kpi({ label, value, tone }) {
   const toneClass = useMemo(() => {
     switch (tone) {
       case "red":
@@ -351,14 +298,12 @@ function Kpi({ label, value, tone, plain }) {
     }
   }, [tone]);
 
-  const display = plain ? value : number(value).toLocaleString();
-
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-4 flex flex-col gap-2">
         <div className="text-xs text-slate-500">{label}</div>
         <div className={`inline-flex items-baseline gap-1 text-xl font-semibold ${toneClass} px-3 py-1 rounded-lg w-fit`}>
-          <span>{display}</span>
+          <span>{number(value).toLocaleString()}</span>
         </div>
       </CardContent>
     </Card>

@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
-import { Package, Filter, RefreshCw } from "lucide-react";
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from "recharts";
+import { Package, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 const number = (v) => (typeof v === "number" ? v : 0);
 
@@ -15,62 +18,113 @@ export default function InventoryMIS() {
   const { API } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [data, setData] = useState(null);
+  const [data, setData] = useState([]);
 
-  const [preset, setPreset] = useState("30d");
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await axios.get(`${API}/api/mis/inventory`, {
+        withCredentials: true,
+      });
+      setData(res.data?.data || []);
+    } catch (e) {
+      setError(e?.response?.data?.message || e.message || "Failed to load Inventory MIS");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const params = {};
-        if (preset === "all") {
-          params.period = "all";
-        } else if (["7d", "30d"].includes(preset)) {
-          params.period = preset;
-        } else {
-          params.period = "30d";
-        }
-        const res = await axios.get(`${API}/api/mis/inventory`, {
-          params,
-          withCredentials: true,
-        });
-        if (!mounted) return;
-        setData(res.data?.data || null);
-      } catch (e) {
-        if (!mounted) return;
-        setError(e?.response?.data?.message || e.message || "Failed to load Inventory MIS");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [API, preset]);
+    fetchData();
+  }, [API]);
 
-  const summary = data?.summary || {};
-  const breakdowns = data?.breakdowns || {};
+  // Process data for charts and tables
+  const summary = useMemo(() => {
+    let total = 0;
+    const byType = {};
+    const byGroup = {};
 
-  const statusSeries = useMemo(
-    () => (breakdowns.byStatus || []).map((x) => ({ name: x.status || "unknown", value: number(x.count) })),
-    [breakdowns.byStatus]
-  );
+    data.forEach(item => {
+      total += item.count;
+
+      const type = item._id.type;
+      byType[type] = (byType[type] || 0) + item.count;
+
+      const group = `${item._id.group} ${item._id.rh}`;
+      byGroup[group] = (byGroup[group] || 0) + item.count;
+    });
+
+    return { total, byType, byGroup };
+  }, [data]);
+
+  const chartData = useMemo(() => {
+    return Object.entries(summary.byGroup).map(([name, value]) => ({ name, value }));
+  }, [summary]);
+
+  const typeChartData = useMemo(() => {
+    return Object.entries(summary.byType).map(([name, value]) => ({ name, value }));
+  }, [summary]);
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Inventory MIS Report", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
+
+    const summaryData = [
+      ["Total Units In Stock", summary.total],
+      ...Object.entries(summary.byType).map(([k, v]) => [`Total ${k}`, v])
+    ];
+
+    autoTable(doc, {
+      startY: 30,
+      head: [["Metric", "Value"]],
+      body: summaryData,
+    });
+
+    const tableData = data.map(item => [
+      item._id.group,
+      item._id.rh,
+      item._id.type,
+      item.count
+    ]);
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [["Blood Group", "Rh", "Component", "Count"]],
+      body: tableData,
+    });
+
+    doc.save("inventory_mis.pdf");
+  };
+
+  const exportExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    const summaryRows = [
+      { Metric: "Total Units", Value: summary.total },
+      ...Object.entries(summary.byType).map(([k, v]) => ({ Metric: k, Value: v }))
+    ];
+    const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+    const detailRows = data.map(item => ({
+      BloodGroup: item._id.group,
+      Rh: item._id.rh,
+      Component: item._id.type,
+      Count: item.count
+    }));
+    const wsDetails = XLSX.utils.json_to_sheet(detailRows);
+    XLSX.utils.book_append_sheet(wb, wsDetails, "Details");
+
+    XLSX.writeFile(wb, "inventory_mis.xlsx");
+  };
 
   if (loading) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="p-6 flex items-center gap-3 animate-pulse">
-            <div className="w-8 h-8 rounded-full bg-slate-200" />
-            <div>
-              <div className="h-4 w-40 bg-slate-200 rounded mb-2" />
-              <div className="h-3 w-24 bg-slate-100 rounded" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="p-6 flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -78,12 +132,10 @@ export default function InventoryMIS() {
   if (error) {
     return (
       <div className="p-6">
-        <Card className="border-red-200">
-          <CardHeader>
-            <CardTitle className="text-red-700">Inventory MIS Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-red-600 text-sm">{error}</p>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6 text-red-600">
+            Error: {error}
+            <Button variant="outline" size="sm" className="ml-4" onClick={fetchData}>Retry</Button>
           </CardContent>
         </Card>
       </div>
@@ -100,111 +152,95 @@ export default function InventoryMIS() {
             </div>
             <div>
               <CardTitle>Inventory MIS</CardTitle>
-              <p className="text-sm text-slate-600">Inventory lifecycle across statuses and components</p>
+              <p className="text-sm text-slate-600">Current stock levels by blood group and component</p>
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-slate-500" />
-              <span className="text-xs text-slate-500">Range</span>
-            </div>
-            {["7d", "30d", "all"].map((key) => (
-              <Button
-                key={key}
-                size="sm"
-                variant={preset === key ? "default" : "outline"}
-                onClick={() => setPreset(key)}
-              >
-                {key}
-              </Button>
-            ))}
-            <Button
-              size="icon"
-              variant="outline"
-              className="h-8 w-8"
-              onClick={() => {
-                setPreset("30d");
-              }}
-            >
-              <RefreshCw className="w-4 h-4" />
+            <Button variant="outline" size="sm" onClick={fetchData}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportPDF}>
+              <FileText className="w-4 h-4 mr-2 text-red-600" />
+              PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportExcel}>
+              <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />
+              Excel
             </Button>
           </div>
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        <Kpi label="Total Units" value={number(summary.total)} />
-        <Kpi label="In Stock" value={number(summary.inStock)} />
-        <Kpi label="Reserved" value={number(summary.reserved)} />
-        <Kpi label="Issued" value={number(summary.issued)} />
-        <Kpi label="Discarded" value={number(summary.discarded)} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Kpi label="Total Units In Stock" value={summary.total} />
+        {Object.entries(summary.byType).map(([type, count]) => (
+          <Kpi key={type} label={type} value={count} />
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">By Status</CardTitle>
+            <CardTitle className="text-sm">Stock by Blood Group</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={{ value: { label: "Units", color: "#f59e0b" } }}>
-              <BarChart data={statusSeries} barCategoryGap={12}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" fill="var(--color-value)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
+            <div className="h-[300px] w-full">
+              <ChartContainer config={{ value: { label: "Units", color: "#f59e0b" } }} className="h-full w-full">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="value" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Reserved by Hospital</CardTitle>
+            <CardTitle className="text-sm">Stock by Component Type</CardTitle>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Hospital</TableHead>
-                  <TableHead className="text-right">Reserved Units</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(breakdowns.byHospitalReserved || []).map((row) => (
-                  <TableRow key={row.hospitalId || row.name || "unknown"}>
-                    <TableCell className="truncate max-w-[12rem]">{row.name || "Unknown"}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="outline">{number(row.reservedUnits)}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <CardContent>
+            <div className="h-[300px] w-full">
+              <ChartContainer config={{ value: { label: "Units", color: "#8b5cf6" } }} className="h-full w-full">
+                <BarChart data={typeChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Component Type & Status</CardTitle>
+          <CardTitle className="text-sm">Detailed Stock Report</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Blood Group</TableHead>
+                <TableHead>Rh Factor</TableHead>
                 <TableHead>Component Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Units</TableHead>
+                <TableHead className="text-right">Count</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(breakdowns.byComponentType || []).map((row, idx) => (
+              {data.map((row, idx) => (
                 <TableRow key={idx}>
-                  <TableCell>{row.componentType || "Unknown"}</TableCell>
-                  <TableCell className="capitalize">{row.status || "unknown"}</TableCell>
+                  <TableCell className="font-medium">{row._id.group}</TableCell>
+                  <TableCell>{row._id.rh}</TableCell>
+                  <TableCell>{row._id.type}</TableCell>
                   <TableCell className="text-right">
-                    <Badge variant="outline">{number(row.count)}</Badge>
+                    <Badge variant="outline" className="bg-slate-50">{number(row.count)}</Badge>
                   </TableCell>
                 </TableRow>
               ))}

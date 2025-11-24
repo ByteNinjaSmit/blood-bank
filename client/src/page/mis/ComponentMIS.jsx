@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
-import { TestTube, Filter, Calendar as CalendarIcon, RefreshCw } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
+import { Layers, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 const number = (v) => (typeof v === "number" ? v : 0);
+const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088FE", "#00C49F"];
 
 export default function ComponentMIS() {
   const { API } = useAuth();
@@ -19,78 +21,74 @@ export default function ComponentMIS() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
 
-  const [preset, setPreset] = useState("30d");
-  const [openCal, setOpenCal] = useState(false);
-  const [range, setRange] = useState({ from: null, to: null });
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await axios.get(`${API}/api/mis/components`, {
+        withCredentials: true,
+      });
+      setData(res.data?.data || null);
+    } catch (e) {
+      setError(e?.response?.data?.message || e.message || "Failed to load Component MIS");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const params = {};
-        if (preset === "all") {
-          params.period = "all";
-        } else if (["7d", "30d"].includes(preset)) {
-          params.period = preset;
-        } else if (preset === "custom" && range?.from && range?.to) {
-          const fromISO = new Date(range.from).toISOString().slice(0, 10);
-          const toISO = new Date(range.to).toISOString().slice(0, 10);
-          params.from = fromISO;
-          params.to = toISO;
-        } else {
-          params.period = "30d";
-        }
-        const res = await axios.get(`${API}/api/mis/components`, {
-          params,
-          withCredentials: true,
-        });
-        if (!mounted) return;
-        setData(res.data?.data || null);
-      } catch (e) {
-        if (!mounted) return;
-        setError(e?.response?.data?.message || e.message || "Failed to load Component MIS");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [API, preset, range?.from, range?.to]);
+    fetchData();
+  }, [API]);
 
-  const summary = data?.summary || {};
-  const breakdowns = data?.breakdowns || {};
-  const nearExpiry = data?.nearExpiry || {};
+  const production = data?.production || [];
+  const ageing = data?.ageing || [];
+  const status = data?.status || [];
 
-  const typeSeries = useMemo(
-    () => (breakdowns.byType || []).map((x) => ({ name: x.componentType || "Unknown", value: number(x.count) })),
-    [breakdowns.byType]
-  );
+  const productionData = useMemo(() => production.map(p => ({ name: p._id || "Unknown", value: p.count })), [production]);
+  const ageingData = useMemo(() => ageing.map(a => ({ name: `${a._id} days`, value: a.count })), [ageing]);
+  const statusData = useMemo(() => status.map(s => ({ name: s._id || "Unknown", value: s.count })), [status]);
 
-  const statusSeries = useMemo(
-    () => (breakdowns.byStatus || []).map((x) => ({ name: x.status || "unknown", value: number(x.count) })),
-    [breakdowns.byStatus]
-  );
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Component MIS Report", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
 
-  const nearExpirySeries = useMemo(
-    () => (nearExpiry.byType || []).map((x) => ({ name: x.componentType || "Unknown", value: number(x.count) })),
-    [nearExpiry.byType]
-  );
+    const prodData = production.map(p => [p._id, p.count, number(p.avgVolume).toFixed(1) + " ml"]);
+    autoTable(doc, {
+      startY: 30,
+      head: [["Component", "Count", "Avg Volume"]],
+      body: prodData,
+    });
+
+    const ageData = ageing.map(a => [`${a._id} days`, a.count]);
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [["Age Bucket", "Count"]],
+      body: ageData,
+    });
+
+    doc.save("component_mis.pdf");
+  };
+
+  const exportExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    const prodData = production.map(p => ({ Component: p._id, Count: p.count, AvgVolume: p.avgVolume }));
+    const wsProd = XLSX.utils.json_to_sheet(prodData);
+    XLSX.utils.book_append_sheet(wb, wsProd, "Production");
+
+    const ageData = ageing.map(a => ({ AgeBucket: `${a._id} days`, Count: a.count }));
+    const wsAge = XLSX.utils.json_to_sheet(ageData);
+    XLSX.utils.book_append_sheet(wb, wsAge, "Ageing");
+
+    XLSX.writeFile(wb, "component_mis.xlsx");
+  };
 
   if (loading) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="p-6 flex items-center gap-3 animate-pulse">
-            <div className="w-8 h-8 rounded-full bg-slate-200" />
-            <div>
-              <div className="h-4 w-40 bg-slate-200 rounded mb-2" />
-              <div className="h-3 w-24 bg-slate-100 rounded" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="p-6 flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -98,12 +96,10 @@ export default function ComponentMIS() {
   if (error) {
     return (
       <div className="p-6">
-        <Card className="border-red-200">
-          <CardHeader>
-            <CardTitle className="text-red-700">Component MIS Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-red-600 text-sm">{error}</p>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6 text-red-600">
+            Error: {error}
+            <Button variant="outline" size="sm" className="ml-4" onClick={fetchData}>Retry</Button>
           </CardContent>
         </Card>
       </div>
@@ -116,169 +112,161 @@ export default function ComponentMIS() {
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-violet-100 text-violet-700">
-              <TestTube className="w-5 h-5" />
+              <Layers className="w-5 h-5" />
             </div>
             <div>
               <CardTitle>Component MIS</CardTitle>
-              <p className="text-sm text-slate-600">Component stock, status and near-expiry overview</p>
+              <p className="text-sm text-slate-600">Production, ageing analysis, and status tracking</p>
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-slate-500" />
-              <span className="text-xs text-slate-500">Range</span>
-            </div>
-            {["7d", "30d", "all"].map((key) => (
-              <Button
-                key={key}
-                size="sm"
-                variant={preset === key ? "default" : "outline"}
-                onClick={() => setPreset(key)}
-              >
-                {key}
-              </Button>
-            ))}
-            <Popover open={openCal} onOpenChange={setOpenCal}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={preset === "custom" ? "default" : "outline"}
-                  size="sm"
-                  className="ml-1"
-                >
-                  <CalendarIcon className="w-4 h-4 mr-1" />
-                  {range?.from && range?.to
-                    ? `${new Date(range.from).toLocaleDateString()} – ${new Date(range.to).toLocaleDateString()}`
-                    : "Pick range"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="p-2" align="start">
-                <Calendar
-                  mode="range"
-                  selected={range}
-                  onSelect={(r) => {
-                    setRange(r || { from: null, to: null });
-                    if (r?.from && r?.to) setPreset("custom");
-                  }}
-                  numberOfMonths={2}
-                  disabled={{ after: new Date() }}
-                />
-              </PopoverContent>
-            </Popover>
-            <Button
-              size="icon"
-              variant="outline"
-              className="h-8 w-8"
-              onClick={() => {
-                setPreset("30d");
-                setRange({ from: null, to: null });
-              }}
-            >
-              <RefreshCw className="w-4 h-4" />
+            <Button variant="outline" size="sm" onClick={fetchData}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportPDF}>
+              <FileText className="w-4 h-4 mr-2 text-red-600" />
+              PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportExcel}>
+              <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />
+              Excel
             </Button>
           </div>
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-        <Kpi label="Total Components" value={number(summary.totalComponents)} />
-        <Kpi label="In Stock" value={number(summary.inStock)} />
-        <Kpi label="Reserved" value={number(summary.reserved)} />
-        <Kpi label="Issued" value={number(summary.issued)} />
-        <Kpi label="Discarded" value={number(summary.discarded)} />
-        <Kpi label="Near Expiry" value={number(nearExpiry.total)} />
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">By Component Type</CardTitle>
+            <CardTitle className="text-sm">Production Summary</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={{ value: { label: "Units", color: "#6366f1" } }}>
-              <BarChart data={typeSeries} barCategoryGap={12}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" fill="var(--color-value)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
+            <div className="h-[250px] w-full flex items-center justify-center">
+              {productionData.length > 0 ? (
+                <ChartContainer config={{}} className="h-full w-full">
+                  <PieChart>
+                    <Pie
+                      data={productionData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {productionData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Legend />
+                  </PieChart>
+                </ChartContainer>
+              ) : (
+                <div className="text-slate-400 text-sm">No data available</div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-sm">By Status</CardTitle>
+            <CardTitle className="text-sm">Ageing Analysis (Days in Stock)</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={{ value: { label: "Units", color: "#0ea5e9" } }}>
-              <BarChart data={statusSeries} barCategoryGap={12}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" fill="var(--color-value)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Near-expiry by Type</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{ value: { label: "Units", color: "#f97316" } }}>
-              <BarChart data={nearExpirySeries} barCategoryGap={12}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" fill="var(--color-value)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
+            <div className="h-[250px] w-full">
+              {ageingData.length > 0 ? (
+                <ChartContainer config={{ value: { label: "Units", color: "#f59e0b" } }} className="h-full w-full">
+                  <BarChart data={ageingData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="value" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-slate-400 text-sm">No ageing data available</div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Site-wise Components</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Site</TableHead>
-                <TableHead className="text-right">Units</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(breakdowns.bySite || []).map((row) => (
-                <TableRow key={row.siteId || row.siteName || "unknown"}>
-                  <TableCell className="truncate max-w-[12rem]">{row.siteName || "In-house"}</TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="outline">{number(row.count)}</Badge>
-                  </TableCell>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Detailed Production Stats</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Component</TableHead>
+                  <TableHead className="text-right">Count</TableHead>
+                  <TableHead className="text-right">Avg Volume</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+              </TableHeader>
+              <TableBody>
+                {production.length > 0 ? (
+                  production.map((row, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{row._id}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="outline">{number(row.count)}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right text-slate-600">
+                        {number(row.avgVolume).toFixed(1)} ml
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-8 text-slate-500">
+                      No production data
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-function Kpi({ label, value }) {
-  return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-4 flex flex-col gap-2">
-        <div className="text-xs text-slate-500">{label}</div>
-        <div className="inline-flex items-baseline gap-1 text-xl font-semibold text-violet-800 bg-violet-50 px-3 py-1 rounded-lg w-fit">
-          <span>{number(value).toLocaleString()}</span>
-        </div>
-      </CardContent>
-    </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Status Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Count</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {status.length > 0 ? (
+                  status.map((row, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="capitalize">{row._id}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="secondary">{number(row.count)}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center py-8 text-slate-500">
+                      No status data
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }

@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
-import { IoIosSend } from "react-icons/io";
-import { Filter, RefreshCw } from "lucide-react";
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
+import { Building2, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 const number = (v) => (typeof v === "number" ? v : 0);
+const COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6"];
 
 export default function IssueMIS() {
   const { API } = useAuth();
@@ -18,63 +21,72 @@ export default function IssueMIS() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
 
-  const [preset, setPreset] = useState("30d");
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await axios.get(`${API}/api/mis/issues`, {
+        withCredentials: true,
+      });
+      setData(res.data?.data || null);
+    } catch (e) {
+      setError(e?.response?.data?.message || e.message || "Failed to load Issue MIS");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const params = {};
-        if (preset === "all") {
-          params.period = "all";
-        } else if (["7d", "30d"].includes(preset)) {
-          params.period = preset;
-        } else {
-          params.period = "30d";
-        }
-        const res = await axios.get(`${API}/api/mis/issues`, {
-          params,
-          withCredentials: true,
-        });
-        if (!mounted) return;
-        setData(res.data?.data || null);
-      } catch (e) {
-        if (!mounted) return;
-        setError(e?.response?.data?.message || e.message || "Failed to load Issue MIS");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [API, preset]);
+    fetchData();
+  }, [API]);
 
-  const summary = data?.summary || {};
-  const statuses = data?.statuses || [];
-  const components = data?.components || [];
-  const hospitals = data?.hospitals || [];
-  const turnaround = data?.turnaround || {};
+  const issues = data?.issues || [];
+  const hospitalWise = data?.hospitalWise || [];
 
-  const statusSeries = useMemo(
-    () => statuses.map((x) => ({ name: x.status || "unknown", value: number(x.count) })),
-    [statuses]
-  );
+  const statusData = useMemo(() => issues.map(i => ({ name: i._id || "Unknown", value: i.count })), [issues]);
+  const hospitalData = useMemo(() => hospitalWise.map(h => ({ name: h._id || "Unknown", value: h.count })), [hospitalWise]);
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Hospital Issue MIS Report", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
+
+    const statusTable = issues.map(i => [i._id, i.count]);
+    autoTable(doc, {
+      startY: 30,
+      head: [["Request Status", "Count"]],
+      body: statusTable,
+    });
+
+    const hospitalTable = hospitalWise.map(h => [h._id, h.count]);
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [["Hospital", "Units Issued"]],
+      body: hospitalTable,
+    });
+
+    doc.save("issue_mis.pdf");
+  };
+
+  const exportExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    const statusData = issues.map(i => ({ Status: i._id, Count: i.count }));
+    const wsStatus = XLSX.utils.json_to_sheet(statusData);
+    XLSX.utils.book_append_sheet(wb, wsStatus, "Status");
+
+    const hospitalData = hospitalWise.map(h => ({ Hospital: h._id, UnitsIssued: h.count }));
+    const wsHospital = XLSX.utils.json_to_sheet(hospitalData);
+    XLSX.utils.book_append_sheet(wb, wsHospital, "Hospitals");
+
+    XLSX.writeFile(wb, "issue_mis.xlsx");
+  };
 
   if (loading) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="p-6 flex items-center gap-3 animate-pulse">
-            <div className="w-8 h-8 rounded-full bg-slate-200" />
-            <div>
-              <div className="h-4 w-40 bg-slate-200 rounded mb-2" />
-              <div className="h-3 w-24 bg-slate-100 rounded" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="p-6 flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -82,12 +94,10 @@ export default function IssueMIS() {
   if (error) {
     return (
       <div className="p-6">
-        <Card className="border-red-200">
-          <CardHeader>
-            <CardTitle className="text-red-700">Issue MIS Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-red-600 text-sm">{error}</p>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6 text-red-600">
+            Error: {error}
+            <Button variant="outline" size="sm" className="ml-4" onClick={fetchData}>Retry</Button>
           </CardContent>
         </Card>
       </div>
@@ -99,137 +109,160 @@ export default function IssueMIS() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-sky-100 text-sky-700">
-              <IoIosSend className="w-5 h-5" />
+            <div className="p-2 rounded-lg bg-blue-100 text-blue-700">
+              <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <CardTitle>Hospital Request & Issue MIS</CardTitle>
-              <p className="text-sm text-slate-600">Requests, issues and turnaround</p>
+              <CardTitle>Hospital Issue MIS</CardTitle>
+              <p className="text-sm text-slate-600">Blood requests, issuance status, and hospital utilization</p>
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-slate-500" />
-              <span className="text-xs text-slate-500">Range</span>
-            </div>
-            {["7d", "30d", "all"].map((key) => (
-              <Button
-                key={key}
-                size="sm"
-                variant={preset === key ? "default" : "outline"}
-                onClick={() => setPreset(key)}
-              >
-                {key}
-              </Button>
-            ))}
-            <Button
-              size="icon"
-              variant="outline"
-              className="h-8 w-8"
-              onClick={() => {
-                setPreset("30d");
-              }}
-            >
-              <RefreshCw className="w-4 h-4" />
+            <Button variant="outline" size="sm" onClick={fetchData}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportPDF}>
+              <FileText className="w-4 h-4 mr-2 text-red-600" />
+              PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportExcel}>
+              <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />
+              Excel
             </Button>
           </div>
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Kpi label="Total Requests" value={number(summary.totalRequests)} />
-        <Kpi label="Total Units Requested" value={number(summary.totalUnitsRequested)} />
-        <Kpi label="Avg Approval (hrs)" value={number(turnaround.avgApprovalHours)} />
-        <Kpi label="Avg Issue (hrs)" value={number(turnaround.avgIssueHours)} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Request Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px] w-full flex items-center justify-center">
+              {statusData.length > 0 ? (
+                <ChartContainer config={{}} className="h-full w-full">
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Legend />
+                  </PieChart>
+                </ChartContainer>
+              ) : (
+                <div className="text-slate-400 text-sm">No data available</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm">Top Hospitals by Issuance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px] w-full">
+              {hospitalData.length > 0 ? (
+                <ChartContainer config={{ value: { label: "Units Issued", color: "#3b82f6" } }} className="h-full w-full">
+                  <BarChart data={hospitalData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-15} textAnchor="end" height={60} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-slate-400 text-sm">No issuance data available</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Requests by Status</CardTitle>
+            <CardTitle className="text-sm">Detailed Request Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={{ value: { label: "Requests", color: "#0ea5e9" } }}>
-              <BarChart data={statusSeries} barCategoryGap={12}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" fill="var(--color-value)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Count</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {issues.length > 0 ? (
+                  issues.map((row, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="capitalize">{row._id}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="secondary">{number(row.count)}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center py-8 text-slate-500">
+                      No requests found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Requests by Hospital</CardTitle>
+            <CardTitle className="text-sm">Hospital Utilization</CardTitle>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
+          <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Hospital</TableHead>
-                  <TableHead className="text-right">Requests</TableHead>
+                  <TableHead className="text-right">Units Issued</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {hospitals.map((h) => (
-                  <TableRow key={h.hospitalId || h.name || "unknown"}>
-                    <TableCell className="truncate max-w-[12rem]">{h.name || "Unknown"}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="outline">{number(h.count)}</Badge>
+                {hospitalWise.length > 0 ? (
+                  hospitalWise.map((row, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{row._id}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          {number(row.count)}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center py-8 text-slate-500">
+                      No hospital data
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Units by Component</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Component</TableHead>
-                <TableHead>Blood Group</TableHead>
-                <TableHead>Rh</TableHead>
-                <TableHead className="text-right">Units</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {components.map((c, idx) => (
-                <TableRow key={idx}>
-                  <TableCell>{c.componentType || "Unknown"}</TableCell>
-                  <TableCell>{c.bloodGroup || "Unknown"}</TableCell>
-                  <TableCell>{c.rh || "Unknown"}</TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="outline">{number(c.units)}</Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </div>
-  );
-}
-
-function Kpi({ label, value }) {
-  return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-4 flex flex-col gap-2">
-        <div className="text-xs text-slate-500">{label}</div>
-        <div className="inline-flex items-baseline gap-1 text-xl font-semibold text-sky-800 bg-sky-50 px-3 py-1 rounded-lg w-fit">
-          <span>{number(value).toLocaleString()}</span>
-        </div>
-      </CardContent>
-    </Card>
   );
 }

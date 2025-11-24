@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
-import { Droplets, Filter, Calendar as CalendarIcon, RefreshCw } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
+import { Droplet, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 const number = (v) => (typeof v === "number" ? v : 0);
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#ef4444", "#64748b"];
 
 export default function BagMIS() {
   const { API } = useAuth();
@@ -19,79 +21,85 @@ export default function BagMIS() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
 
-  const [preset, setPreset] = useState("30d");
-  const [openCal, setOpenCal] = useState(false);
-  const [range, setRange] = useState({ from: null, to: null });
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await axios.get(`${API}/api/mis/bags`, {
+        withCredentials: true,
+      });
+      setData(res.data?.data || null);
+    } catch (e) {
+      setError(e?.response?.data?.message || e.message || "Failed to load Blood Bag MIS");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const params = {};
-        if (preset === "all") {
-          params.period = "all";
-        } else if (["7d", "30d"].includes(preset)) {
-          params.period = preset;
-        } else if (preset === "custom" && range?.from && range?.to) {
-          const fromISO = new Date(range.from).toISOString().slice(0, 10);
-          const toISO = new Date(range.to).toISOString().slice(0, 10);
-          params.from = fromISO;
-          params.to = toISO;
-        } else {
-          params.period = "30d";
-        }
-        const res = await axios.get(`${API}/api/mis/bags`, {
-          params,
-          withCredentials: true,
-        });
-        if (!mounted) return;
-        setData(res.data?.data || null);
-      } catch (e) {
-        if (!mounted) return;
-        setError(e?.response?.data?.message || e.message || "Failed to load Blood Bag MIS");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [API, preset, range?.from, range?.to]);
+    fetchData();
+  }, [API]);
 
-  const summary = data?.summary || {};
-  const statuses = data?.statuses || [];
-  const breakdowns = data?.breakdowns || {};
-  const testing = data?.testing || {};
-  const technicianWise = data?.technicianWise || [];
+  const register = data?.register || {};
+  const stats = data?.stats || [];
 
-  const statusSeries = useMemo(
-    () => statuses.map((s) => ({ name: s.status || "unknown", value: number(s.count) })),
-    [statuses]
-  );
+  const statusData = useMemo(() => stats.map(s => ({ name: s._id || "Unknown", value: s.count })), [stats]);
 
-  const bgSeries = useMemo(
-    () =>
-      (breakdowns.byBloodGroup || []).map((g) => ({
-        name: `${g.bloodGroup || "?"} ${g.rh || ""}`.trim(),
-        value: number(g.count),
-      })),
-    [breakdowns.byBloodGroup]
-  );
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Blood Bag MIS Report", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
+
+    const summaryData = stats.map(s => [s._id, s.count]);
+    autoTable(doc, {
+      startY: 30,
+      head: [["Status", "Count"]],
+      body: summaryData,
+    });
+
+    const bagRows = (register.bags || []).map(b => [
+      b.bagNo,
+      b.donor?.donorId || "-",
+      b.bloodGroup || "-",
+      new Date(b.collectionDate).toLocaleDateString(),
+      b.status
+    ]);
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [["Bag No", "Donor ID", "Group", "Collected", "Status"]],
+      body: bagRows,
+    });
+
+    doc.save("blood_bag_mis.pdf");
+  };
+
+  const exportExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    const summaryData = stats.map(s => ({ Status: s._id, Count: s.count }));
+    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+    const bagData = (register.bags || []).map(b => ({
+      BagNo: b.bagNo,
+      DonorID: b.donor?.donorId || "-",
+      BloodGroup: b.bloodGroup || "-",
+      CollectionDate: new Date(b.collectionDate).toLocaleDateString(),
+      Status: b.status,
+      Site: b.siteId?.name || "In-house"
+    }));
+    const wsBags = XLSX.utils.json_to_sheet(bagData);
+    XLSX.utils.book_append_sheet(wb, wsBags, "Bags");
+
+    XLSX.writeFile(wb, "blood_bag_mis.xlsx");
+  };
 
   if (loading) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="p-6 flex items-center gap-3 animate-pulse">
-            <div className="w-8 h-8 rounded-full bg-slate-200" />
-            <div>
-              <div className="h-4 w-40 bg-slate-200 rounded mb-2" />
-              <div className="h-3 w-24 bg-slate-100 rounded" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="p-6 flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -99,12 +107,10 @@ export default function BagMIS() {
   if (error) {
     return (
       <div className="p-6">
-        <Card className="border-red-200">
-          <CardHeader>
-            <CardTitle className="text-red-700">Blood Bag MIS Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-red-600 text-sm">{error}</p>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6 text-red-600">
+            Error: {error}
+            <Button variant="outline" size="sm" className="ml-4" onClick={fetchData}>Retry</Button>
           </CardContent>
         </Card>
       </div>
@@ -113,169 +119,129 @@ export default function BagMIS() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header & Filters */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-sky-100 text-sky-700">
-              <Droplets className="w-5 h-5" />
+            <div className="p-2 rounded-lg bg-red-100 text-red-700">
+              <Droplet className="w-5 h-5" />
             </div>
             <div>
               <CardTitle>Blood Bag MIS</CardTitle>
-              <p className="text-sm text-slate-600">Lifecycle, group mix and testing status</p>
+              <p className="text-sm text-slate-600">Tracking collection, testing, and processing status</p>
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-slate-500" />
-              <span className="text-xs text-slate-500">Range</span>
-            </div>
-            {["7d", "30d", "all"].map((key) => (
-              <Button
-                key={key}
-                size="sm"
-                variant={preset === key ? "default" : "outline"}
-                onClick={() => setPreset(key)}
-              >
-                {key}
-              </Button>
-            ))}
-            <Popover open={openCal} onOpenChange={setOpenCal}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={preset === "custom" ? "default" : "outline"}
-                  size="sm"
-                  className="ml-1"
-                >
-                  <CalendarIcon className="w-4 h-4 mr-1" />
-                  {range?.from && range?.to
-                    ? `${new Date(range.from).toLocaleDateString()} – ${new Date(range.to).toLocaleDateString()}`
-                    : "Pick range"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="p-2" align="start">
-                <Calendar
-                  mode="range"
-                  selected={range}
-                  onSelect={(r) => {
-                    setRange(r || { from: null, to: null });
-                    if (r?.from && r?.to) setPreset("custom");
-                  }}
-                  numberOfMonths={2}
-                  disabled={{ after: new Date() }}
-                />
-              </PopoverContent>
-            </Popover>
-            <Button
-              size="icon"
-              variant="outline"
-              className="h-8 w-8"
-              onClick={() => {
-                setPreset("30d");
-                setRange({ from: null, to: null });
-              }}
-            >
-              <RefreshCw className="w-4 h-4" />
+            <Button variant="outline" size="sm" onClick={fetchData}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportPDF}>
+              <FileText className="w-4 h-4 mr-2 text-red-600" />
+              PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportExcel}>
+              <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />
+              Excel
             </Button>
           </div>
         </CardHeader>
       </Card>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-        <Kpi label="Total Bags" value={number(summary.totalBags)} />
-        <Kpi label="In-house Bags" value={number(summary.inHouseBags)} />
-        <Kpi label="Camp Bags" value={number(summary.campBags)} />
-        <Kpi label="Pending Testing" value={number(testing.pendingTesting)} />
-        <Kpi label="Passed" value={number(testing.passedTesting)} />
-        <Kpi label="Failed" value={number(testing.failedTesting)} />
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-sm">Status Breakdown</CardTitle>
+            <CardTitle className="text-sm">Status Distribution</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={{ value: { label: "Bags", color: "#0ea5e9" } }}>
-              <BarChart data={statusSeries} barCategoryGap={12}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" fill="var(--color-value)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
+            <div className="h-[300px] w-full flex items-center justify-center">
+              {statusData.length > 0 ? (
+                <ChartContainer config={{}} className="h-full w-full">
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Legend />
+                  </PieChart>
+                </ChartContainer>
+              ) : (
+                <div className="text-slate-400 text-sm">No data available</div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-sm">Blood Group Mix</CardTitle>
+            <CardTitle className="text-sm">Recent Blood Bags</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={{ value: { label: "Bags", color: "#f97316" } }}>
-              <BarChart data={bgSeries} barCategoryGap={12}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" fill="var(--color-value)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Technician table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Technician-wise Collection</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Technician</TableHead>
-                <TableHead className="text-right">Bags Collected</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {technicianWise.map((t) => (
-                <TableRow key={t.technicianId || "unknown"}>
-                  <TableCell>
-                    <div className="font-medium">
-                      {t.name?.first || t.name?.last
-                        ? `${t.name?.first || ""} ${t.name?.last || ""}`.trim()
-                        : "Unknown"}
-                    </div>
-                    <div className="text-xs text-slate-500 truncate max-w-[12rem]">
-                      {t.technicianId}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="outline">{number(t.count)}</Badge>
-                  </TableCell>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Bag No</TableHead>
+                  <TableHead>Donor ID</TableHead>
+                  <TableHead>Group</TableHead>
+                  <TableHead>Collected</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {(register.bags || []).length > 0 ? (
+                  (register.bags || []).map((bag) => (
+                    <TableRow key={bag._id}>
+                      <TableCell className="font-mono text-xs">{bag.bagNo}</TableCell>
+                      <TableCell className="text-xs">{bag.donor?.donorId || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{bag.bloodGroup || "?"}</Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-500">
+                        {new Date(bag.collectionDate).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={bag.status} />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                      No bags found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
 
-function Kpi({ label, value }) {
+function StatusBadge({ status }) {
+  const styles = {
+    collected: "bg-blue-100 text-blue-700",
+    "component-separated": "bg-indigo-100 text-indigo-700",
+    testing: "bg-amber-100 text-amber-700",
+    passed: "bg-emerald-100 text-emerald-700",
+    failed: "bg-red-100 text-red-700",
+    issued: "bg-slate-100 text-slate-700",
+    discarded: "bg-red-50 text-red-600 border-red-200",
+  };
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-4 flex flex-col gap-2">
-        <div className="text-xs text-slate-500">{label}</div>
-        <div className="inline-flex items-baseline gap-1 text-xl font-semibold text-sky-800 bg-sky-50 px-3 py-1 rounded-lg w-fit">
-          <span>{number(value).toLocaleString()}</span>
-        </div>
-      </CardContent>
-    </Card>
+    <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status] || "bg-gray-100 text-gray-700"}`}>
+      {status}
+    </span>
   );
 }
