@@ -34,6 +34,19 @@ import CreateDonorPage from './page/donor/CreateDonor';
 import { AddHospital, ListHospital } from './page/hospital';
 import RequisitionManagement from './page/requisition/RequisitionManagement';
 import RequisitionList from './page/requisition/RequisitionList';
+import DonorMIS from './page/mis/DonorMIS';
+import DonationMIS from './page/mis/DonationMIS';
+import CampMIS from './page/mis/CampMIS';
+import CampReports from './page/camp/CampReports';
+import BagMIS from './page/mis/BagMIS';
+import ComponentMIS from './page/mis/ComponentMIS';
+import InventoryMIS from './page/mis/InventoryMIS';
+import IssueMIS from './page/mis/IssueMIS';
+import DiscardMIS from './page/mis/DiscardMIS';
+import TestingMIS from './page/mis/TestingMIS';
+import ExceptionMIS from './page/mis/ExceptionMIS';
+import RegulatoryMIS from './page/mis/RegulatoryMIS';
+import ExecutiveMIS from './page/mis/ExecutiveMIS';
 
 const App = () => {
   const pathname = useLocation().pathname;
@@ -71,6 +84,7 @@ const App = () => {
           <Route path="/camp-listing" element={<CampListing />} />
           <Route path="/camp-donors" element={<CampDonorManagement />} />
           <Route path="/camp-donation" element={<CampDonationManagement />} />
+          <Route path="/camp-reports" element={<CampReports />} />
 
           {/*  Dashboard - Component Routes */}
           <Route path="/component/list" element={<ComponentsList />} />
@@ -107,6 +121,20 @@ const App = () => {
           <Route path="/requisition" element={<RequisitionManagement />} />
           <Route path="/requisition/:id" element={<RequisitionManagement />} />
           <Route path="/requisition/list" element={<RequisitionList />} />
+
+          {/* MIS Module */}
+          <Route path="/mis/donors" element={<DonorMIS />} />
+          <Route path="/mis/donations" element={<DonationMIS />} />
+          <Route path="/mis/camps" element={<CampMIS />} />
+          <Route path="/mis/bags" element={<BagMIS />} />
+          <Route path="/mis/components" element={<ComponentMIS />} />
+          <Route path="/mis/inventory" element={<InventoryMIS />} />
+          <Route path="/mis/issues" element={<IssueMIS />} />
+          <Route path="/mis/discards" element={<DiscardMIS />} />
+          <Route path="/mis/testing" element={<TestingMIS />} />
+          <Route path="/mis/exceptions" element={<ExceptionMIS />} />
+          <Route path="/mis/regulatory" element={<RegulatoryMIS />} />
+          <Route path="/mis/executive" element={<ExecutiveMIS />} />
 
           {/*For Dashboard - Loading*/}
 

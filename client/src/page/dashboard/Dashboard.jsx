@@ -132,6 +132,18 @@ export default function Dashboard() {
     return m;
   }, [stockByComponent]);
 
+  const overview = payload?.overview || {};
+  const donorDonation = overview.donorDonation || {};
+  const bloodBags = overview.bloodBags || {};
+  const componentsOverview = overview.components || {};
+  const inventoryOverview = overview.inventory || {};
+  const bloodGroups = overview.bloodGroups || {};
+  const componentAvailability = overview.componentAvailability || {};
+  const hospitalRequests = overview.hospitalRequests || {};
+  const testingSerology = overview.testingSerology || {};
+  const camps = overview.camps || {};
+  const alerts = overview.alerts || {};
+
   if (loading) {
     return (
       <div className="p-6 grid gap-6 animate-pulse">
@@ -212,13 +224,179 @@ export default function Dashboard() {
         </CardContent>
       </Card>
       {/* KPI Cards (filtered) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <Kpi icon={Users} label="Donors" value={number(totals.donors)} color="text-orange-700" />
-        <Kpi icon={Activity} label="Donations" value={number(totals.donations)} color="text-red-700" />
-        <Kpi icon={Droplets} label="In Stock" value={number(totals.inStock)} color="text-rose-700" />
-        <Kpi icon={ClipboardList} label="Reserved" value={number(totals.reserved)} color="text-amber-700" />
-        <Kpi icon={Truck} label="Issued" value={number(totals.issued)} color="text-emerald-700" />
-        <Kpi icon={Package} label="Discarded" value={number(totals.discarded)} color="text-slate-700" />
+      <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Users className="w-4 h-4 text-orange-600" />
+              Donor & Donation Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Stat label="Total Donors" value={donorDonation.donors} />
+            <Stat label="New Donors (Range)" value={donorDonation.newDonors} />
+            <Stat label="Total Donations" value={donorDonation.donations} />
+            <Stat label="In-House Donations" value={donorDonation.donationsInHouse} />
+            <Stat label="Camp Donations" value={donorDonation.donationsCamp} />
+            <Stat label="Male Donors" value={donorDonation.maleDonors} />
+            <Stat label="Female Donors" value={donorDonation.femaleDonors} />
+            <Stat label="Other Donors" value={donorDonation.otherDonors} />
+            <Stat label="First-Time Donors" value={donorDonation.firstTimeDonors} />
+            <Stat label="Repeat Donors" value={donorDonation.repeatDonors} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Droplets className="w-4 h-4 text-red-600" />
+              Blood Bag Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Stat label="Total Bags Collected" value={bloodBags.bagsCollected} />
+            <Stat label="Bags Tested" value={bloodBags.bagsTested} />
+            <Stat label="Bags Passed" value={bloodBags.bagsPassed} />
+            <Stat label="Bags Failed" value={bloodBags.bagsFailed} />
+            <Stat label="Pending Testing" value={bloodBags.bagsPending} />
+            <Stat label="Quarantined" value={bloodBags.bagsQuarantined} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Package className="w-4 h-4 text-violet-600" />
+              Component Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Stat label="Total Components Produced" value={componentsOverview.componentsProduced} />
+            <Stat label="RBC Units Produced" value={componentsOverview.rbcProduced} />
+            <Stat label="Platelet Units Produced" value={componentsOverview.pltProduced} />
+            <Stat label="FFP Units Produced" value={componentsOverview.ffpProduced} />
+            <Stat label="Cryo Units Produced" value={componentsOverview.cryoProduced} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <ClipboardList className="w-4 h-4 text-amber-600" />
+              Inventory Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Stat label="Total In-Stock Units" value={inventoryOverview.inStock} />
+            <Stat label="Reserved Units" value={inventoryOverview.reserved} />
+            <Stat label="Issued Units (Range)" value={inventoryOverview.issued} />
+            <Stat label="Discarded Units (Range)" value={inventoryOverview.discarded} />
+            <Stat label="Near-Expiry Units" value={inventoryOverview.nearExpiryTotal} />
+            <Stat label="Expired Units" value={inventoryOverview.expiredUnits} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Droplets className="w-4 h-4 text-rose-600" />
+              Blood Group & Rh Availability
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Stat label="O+ Stock" value={bloodGroups.Opos} />
+            <Stat label="O- Stock" value={bloodGroups.Oneg} />
+            <Stat label="A+ Stock" value={bloodGroups.Apos} />
+            <Stat label="A- Stock" value={bloodGroups.Aneg} />
+            <Stat label="B+ Stock" value={bloodGroups.Bpos} />
+            <Stat label="B- Stock" value={bloodGroups.Bneg} />
+            <Stat label="AB+ Stock" value={bloodGroups.ABpos} />
+            <Stat label="AB- Stock" value={bloodGroups.ABneg} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Droplets className="w-4 h-4 text-sky-600" />
+              Component Type Availability
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Stat label="RBC In-Stock" value={componentAvailability.rbcStock} />
+            <Stat label="Platelet In-Stock" value={componentAvailability.pltStock} />
+            <Stat label="FFP In-Stock" value={componentAvailability.ffpStock} />
+            <Stat label="Cryo In-Stock" value={componentAvailability.cryoStock} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <ClipboardList className="w-4 h-4 text-blue-600" />
+              Hospital Request Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Stat label="Total Requests" value={hospitalRequests.totalRequests} />
+            <Stat label="Pending Requests" value={hospitalRequests.pendingRequests} />
+            <Stat label="Matched Requests" value={hospitalRequests.matchedRequests} />
+            <Stat label="Approved Requests" value={hospitalRequests.approvedRequests} />
+            <Stat label="Issued Requests" value={hospitalRequests.issuedRequests} />
+            <Stat label="Completed Requests" value={hospitalRequests.completedRequests} />
+            <Stat label="Rejected Requests" value={hospitalRequests.rejectedRequests} />
+            <Stat label="Total Units Requested" value={hospitalRequests.totalUnitsRequested} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Activity className="w-4 h-4 text-emerald-600" />
+              Testing & Serology Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Stat label="Total Tests Performed" value={testingSerology.testsTotal} />
+            <Stat label="HIV Positive" value={testingSerology.hivPos} />
+            <Stat label="HBsAg Positive" value={testingSerology.hbvPos} />
+            <Stat label="HCV Positive" value={testingSerology.hcvPos} />
+            <Stat label="VDRL Positive" value={testingSerology.vdrlPos} />
+            <Stat label="MP Positive" value={testingSerology.mpPos} />
+            <Stat label="NAT Positive" value={testingSerology.natPos} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Truck className="w-4 h-4 text-indigo-600" />
+              Camp Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Stat label="Camps Conducted" value={camps.campsConducted} />
+            <Stat label="Camp Donors" value={camps.campDonors} />
+            <Stat label="Camp Collections" value={camps.campCollections} />
+            <Stat label="Camp Serology Failures" value={camps.campFailures} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+              Exception & Alerts
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Stat label="Units Expiring Today" value={alerts.expiringToday} />
+            <Stat label="Tests Pending" value={alerts.testsPending} />
+            <Stat label="Bags Delayed Testing (>24h)" value={alerts.delayedTesting} />
+            <Stat label="Components Missing Expiry" value={alerts.missingExpiry} />
+            <Stat label="Inactive Donors (>6 months)" value={alerts.inactiveDonors} />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Trends */}
@@ -302,48 +480,64 @@ export default function Dashboard() {
       </div>
 
       {/* Positivity by Test */}
-      {positivitySeries.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Test Results Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{ Positive: { label: "Positive", color: "#dc2626" }, Negative: { label: "Negative", color: "#16a34a" }, Indeterminate: { label: "Indeterminate", color: "#64748b" } }}>
-              <BarChart data={positivitySeries}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="test" />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Legend content={<ChartLegendContent />} />
-                <Bar dataKey="Positive" isAnimationActive={false} stackId="a" fill="var(--color-Positive)" />
-                <Bar dataKey="Negative" isAnimationActive={false} stackId="a" fill="var(--color-Negative)" />
-                <Bar dataKey="Indeterminate" isAnimationActive={false} stackId="a" fill="var(--color-Indeterminate)" />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      )}
-
       {/* BloodBag Status Pie */}
-      {bloodbagStatusPie.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>BloodBag Status (Period)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{}}>
-              <PieChart>
-                <Tooltip content={<ChartTooltipContent />} />
-                <Pie data={bloodbagStatusPie} isAnimationActive={false} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110}>
-                  {bloodbagStatusPie.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={pieColor(entry.key || entry.name, index)} />
-                  ))}
-                </Pie>
-                <Legend />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+      {(positivitySeries.length > 0 || bloodbagStatusPie.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {positivitySeries.length > 0 && (
+            <Card className="h-full">
+              <CardHeader className="pb-3">
+                <CardTitle>Test Results Distribution</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="h-72">
+                  <ChartContainer config={{ Positive: { label: "Positive", color: "#dc2626" }, Negative: { label: "Negative", color: "#16a34a" }, Indeterminate: { label: "Indeterminate", color: "#64748b" } }}>
+                    <BarChart data={positivitySeries}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="test" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip content={<ChartTooltipContent />} />
+                      <Legend content={<ChartLegendContent />} />
+                      <Bar dataKey="Positive" isAnimationActive={false} stackId="a" fill="var(--color-Positive)" />
+                      <Bar dataKey="Negative" isAnimationActive={false} stackId="a" fill="var(--color-Negative)" />
+                      <Bar dataKey="Indeterminate" isAnimationActive={false} stackId="a" fill="var(--color-Indeterminate)" />
+                    </BarChart>
+                  </ChartContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {bloodbagStatusPie.length > 0 && (
+            <Card className="h-full">
+              <CardHeader className="pb-3">
+                <CardTitle>BloodBag Status (Period)</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="h-72 flex items-center justify-center">
+                  <ChartContainer config={{}}>
+                    <PieChart>
+                      <Tooltip content={<ChartTooltipContent />} />
+                      <Pie
+                        data={bloodbagStatusPie}
+                        isAnimationActive={false}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={110}
+                      >
+                        {bloodbagStatusPie.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={pieColor(entry.key || entry.name, index)} />
+                        ))}
+                      </Pie>
+                      <Legend />
+                    </PieChart>
+                  </ChartContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
     </div>
   );
@@ -365,6 +559,17 @@ function Kpi({ icon: Icon, label, value, color }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
+      <span className="text-slate-500 truncate">{label}</span>
+      <span className="font-semibold text-slate-900 tabular-nums">
+        {number(value).toLocaleString()}
+      </span>
+    </div>
   );
 }
 

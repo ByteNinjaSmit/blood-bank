@@ -13,7 +13,8 @@ export const ModuleArray = [
   "Report",
   "Admin",
   "Site",
-  "Hospital"
+  "Hospital",
+  "MIS"
 ];
 
 export const RoleArray = [
