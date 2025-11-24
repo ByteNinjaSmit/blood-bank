@@ -61,6 +61,107 @@ const createPublicAppointment = async (req, res, next) => {
   }
 };
 
+// Authenticated list endpoint for internal system (dashboard)
+// Supports filters, search and pagination
+const listAppointments = async (req, res, next) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "appointmentDate",
+      sortOrder = "desc",
+      status,
+      fromDate,
+      toDate,
+      search,
+    } = req.query;
+
+    const filter = {};
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (fromDate || toDate) {
+      filter.appointmentDate = {};
+      if (fromDate) {
+        const from = new Date(fromDate);
+        if (!isNaN(from)) {
+          filter.appointmentDate.$gte = from;
+        }
+      }
+      if (toDate) {
+        const to = new Date(toDate);
+        if (!isNaN(to)) {
+          // include full day
+          to.setHours(23, 59, 59, 999);
+          filter.appointmentDate.$lte = to;
+        }
+      }
+      if (Object.keys(filter.appointmentDate).length === 0) {
+        delete filter.appointmentDate;
+      }
+    }
+
+    if (search) {
+      const raw = String(search).trim();
+      if (raw) {
+        const esc = raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const rx = new RegExp(esc, "i");
+        filter.$or = [
+          { fullName: rx },
+          { mobileNo: rx },
+          { email: rx },
+          { bloodGroup: rx },
+        ];
+      }
+    }
+
+    const pageNumber = Math.max(1, parseInt(page, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
+    const skip = (pageNumber - 1) * pageSize;
+
+    const validSortFields = ["appointmentDate", "createdAt", "fullName", "status"];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : "appointmentDate";
+    const sortOptions = { [sortField]: sortOrder === "asc" ? 1 : -1 };
+
+    const totalCount = await Appointment.countDocuments(filter);
+    const totalPages = Math.ceil(totalCount / pageSize) || 0;
+
+    const appointments = await Appointment.find(filter)
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(pageSize)
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      data: appointments,
+      pagination: {
+        currentPage: pageNumber,
+        totalPages,
+        totalCount,
+        pageSize,
+        hasNextPage: pageNumber < totalPages,
+        hasPrevPage: pageNumber > 1,
+      },
+      filters: {
+        status: status || null,
+        fromDate: fromDate || null,
+        toDate: toDate || null,
+        search: search || null,
+      },
+      sorting: {
+        sortBy: sortField,
+        sortOrder,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createPublicAppointment,
+  listAppointments,
 };

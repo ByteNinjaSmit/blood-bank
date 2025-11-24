@@ -28,6 +28,7 @@ const logger = require('./utils/logger'); // Import the logger
 require('./queues/expiry-queue'); // This will start the expiry queue scheduler
 require('./queues/discard-queue'); // ensures auto initialization
 require('./queues/email-otp-queue'); // initialize Email OTP queue
+require('./queues/birthday-queue'); // initialize Birthday SMS queue
 
 
 // Middleware
