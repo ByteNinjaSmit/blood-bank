@@ -49,21 +49,10 @@ export default function Footer() {
                         <h4 className="font-bold text-lg flex items-center gap-2"><FaLocationDot/> Locations</h4>
                         <div className="space-y-4 text-sm">
                             <div>
-                                <p className="font-semibold mb-1">Location 1:</p>
+                                <p className="font-semibold mb-1">Sanjivani Blood Bank, Kopargaon</p>
                                 <p className="text-primary-foreground/90">
-                                    Medical Plaza Building,<br />
-                                    Floor 3, Sector 5,<br />
-                                    Metro Heights,<br />
-                                    Pin Code: 560034
-                                </p>
-                            </div>
-                            <div>
-                                <p className="font-semibold mb-1">Location 2:</p>
-                                <p className="text-primary-foreground/90">
-                                    Central Healthcare Hub,<br />
-                                    District Medical Complex,<br />
-                                    Downtown Area,<br />
-                                    Pin Code: 523034
+                                    Vivekanand Nagar,<br />
+                                    Kopargaon, Maharashtra 423601
                                 </p>
                             </div>
                         </div>

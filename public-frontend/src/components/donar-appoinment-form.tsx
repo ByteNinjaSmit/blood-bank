@@ -117,7 +117,7 @@ export default function BloodDonationForm() {
   }
 
   return (
-    <div className="min-h-screen bg-background py-8 sm:py-12 pr-4 sm:pr-6 lg:pr-8">
+    <div id="donation-form" className="min-h-screen bg-background py-8 sm:py-12 pr-4 sm:pr-6 lg:pr-8">
       <div className=" mx-auto">
         {/* Header Section */}
         <div className="text-center mb-10 sm:mb-14 flex justify-center items-center">

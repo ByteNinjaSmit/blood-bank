@@ -11,10 +11,10 @@ export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false)
 
     const navLinks = [
-        { label: 'Home', href: '#', icon: FaHome },
-        { label: 'Info', href: '#', icon: IoInformationCircle },
-        { label: 'Join Us', href: '#', icon: FaImage },
-        { label: 'Contact', href: '#', icon: FaUser }
+        { label: 'Home', href: '#home', icon: FaHome },
+        { label: 'About', href: '#about', icon: IoInformationCircle },
+        { label: 'Donate', href: '#donation-form', icon: FaImage },
+        { label: 'Contact', href: '#contact', icon: FaUser }
     ]
 
     const socialLinks = [
@@ -112,7 +112,7 @@ export default function Navbar() {
                         ))}
 
                         <div className="px-4 py-3 border-t border-border">
-                            <p className="text-xs text-muted-foreground mb-3">www.mybloodbank.com</p>
+                            <p className="text-xs text-muted-foreground mb-3">www.sanjivanibloodbank.org</p>
                             <div className="flex gap-3">
                                 {socialLinks.map((social) => (
                                     <Link

@@ -4,7 +4,7 @@ import { SiTicktick } from "react-icons/si";
 export default function AboutSection() {
  
   return (
-    <div className="w-full bg-linear-to-br from-background to-muted mt-10 lg:mt-0">
+    <div id="about" className="w-full bg-linear-to-br from-background to-muted mt-10 lg:mt-0">
       {/* About Section with Inclined Bottom */}
       <div className="bg-primary relative overflow-hidden"
       // style={{
@@ -35,7 +35,7 @@ export default function AboutSection() {
                 <div className="rounded-r-2xl   overflow-hidden shadow-2xl bg-gradient-to-br from-primary-foreground/10 to-primary-foreground/5 border border-primary-foreground/20">
                   <iframe
                     title="Sanjivani Blood Bank location"
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1921044.762537746!2d72.03193315624995!3d19.880509500000002!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bdc445f2f8849fd%3A0x8d207602e827dc43!2sSanjivani%20Blood%20Bank%2C%20Kopargaon!5e0!3m2!1sen!2sin!4v1763227960100!5m2!1sen!2sin"
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d13614.279379086149!2d74.47097476856362!3d19.886050665822744!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bdc445f2f8849fd%3A0x8d207602e827dc43!2sSanjivani%20Blood%20Bank%2C%20Kopargaon!5e1!3m2!1sen!2sin!4v1764143748201!5m2!1sen!2sin"
                     width="800"
                     height="450"
                     style={{ border: 0 }}
