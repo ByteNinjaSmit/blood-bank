@@ -41,59 +41,257 @@ export default function BloodBankWelcome() {
 
   const bloodBankCapabilities = [
     {
-      category: "Donor Management System",
+      category: "Donor & Camp Management",
       icon: Users,
       color: "orange",
-      description: "Complete control over donor registration and management",
+      description: "End-to-end management of donors, donations, appointments, and camps.",
       features: [
-        { icon: Plus, title: "Register Donors", desc: "Add new donors with medical history and eligibility" },
-        { icon: Edit3, title: "Update Profiles", desc: "Modify donor information, status, and medical records" },
-        { icon: UserCheck, title: "Eligibility Check", desc: "Verify donor eligibility based on medical criteria" },
-        { icon: Search, title: "Donor Search", desc: "Find donors by blood type, location, or availability" },
-        { icon: Filter, title: "Smart Filtering", desc: "Filter by blood type, donation history, or status" },
-        { icon: Calendar, title: "Appointment Scheduling", desc: "Manage donation appointments and reminders" },
+        {
+          icon: Users,
+          title: "Donor List",
+          desc: "Search, filter, and manage all registered donors.",
+          link: "/donor/view-donor",
+        },
+        {
+          icon: Plus,
+          title: "Create Donor",
+          desc: "Register new donors with complete medical and contact details.",
+          link: "/donor/create-donor",
+        },
+        {
+          icon: Heart,
+          title: "Donation List",
+          desc: "Review all recorded donations from in-house and camps.",
+          link: "/donations/view-donation",
+        },
+        {
+          icon: Plus,
+          title: "Create Donation",
+          desc: "Capture new donation events for eligible donors.",
+          link: "/donations/create-donation",
+        },
+        {
+          icon: Calendar,
+          title: "Appointment List",
+          desc: "Monitor and manage upcoming donation appointments.",
+          link: "/appointments",
+        },
+        {
+          icon: Users,
+          title: "Camp Registration",
+          desc: "Plan and register new blood donation camps.",
+          link: "/camp-registration",
+        },
+        {
+          icon: Users,
+          title: "Camp List",
+          desc: "View all scheduled and completed camps.",
+          link: "/camp-listing",
+        },
+        {
+          icon: Users,
+          title: "Camp Donors",
+          desc: "Manage donors associated with specific camps.",
+          link: "/camp-donors",
+        },
+        {
+          icon: Users,
+          title: "Camp Donations",
+          desc: "Track donations collected at each camp.",
+          link: "/camp-donation",
+        },
+        {
+          icon: BarChart3,
+          title: "Camp Reports",
+          desc: "Analyze camp performance and collection outcomes.",
+          link: "/camp-reports",
+        },
       ],
     },
     {
-      category: "Blood Inventory Management",
+      category: "Inventory & Components",
       icon: Droplets,
       color: "red",
-      description: "Real-time blood stock monitoring and inventory control",
+      description: "Real-time control of stock, reservations, issues, and components.",
       features: [
-        { icon: Eye, title: "Stock Monitoring", desc: "Track blood units by type, expiry, and availability" },
-        { icon: Clock, title: "Expiry Tracking", desc: "Monitor blood unit expiration dates and alerts" },
-        { icon: AlertTriangle, title: "Low Stock Alerts", desc: "Automated notifications for critical stock levels" },
-        { icon: Database, title: "Batch Management", desc: "Track blood collection batches and testing results" },
-        { icon: Activity, title: "Usage Analytics", desc: "Monitor blood usage patterns and demand forecasting" },
-        { icon: Layers, title: "Cross-matching", desc: "Manage blood compatibility and cross-matching records" },
+        {
+          icon: Droplets,
+          title: "Inventory Stock",
+          desc: "Monitor available units by group, component, and expiry.",
+          link: "/inventory/stock",
+        },
+        {
+          icon: Layers,
+          title: "Reserve Units",
+          desc: "Reserve blood units for hospitals and critical patients.",
+          link: "/inventory/reserve",
+        },
+        {
+          icon: Activity,
+          title: "Issue Units",
+          desc: "Issue blood and track utilization in real time.",
+          link: "/inventory/issue",
+        },
+        {
+          icon: Database,
+          title: "Components List",
+          desc: "View all separated blood components across inventory.",
+          link: "/component/list",
+        },
+        {
+          icon: Database,
+          title: "Separate Components",
+          desc: "Process and separate whole blood into components.",
+          link: "/component/separate",
+        },
+        {
+          icon: AlertTriangle,
+          title: "Near-Expiry Components",
+          desc: "Identify components nearing expiry for priority usage.",
+          link: "/component/near-expiry",
+        },
+        {
+          icon: AlertTriangle,
+          title: "Near-Expiry Inventory",
+          desc: "Monitor near-expiry stock to minimize wastage.",
+          link: "/inventory/near-expiry",
+        },
+        {
+          icon: AlertTriangle,
+          title: "Discard List",
+          desc: "Review and manage discarded units with reasons and audit.",
+          link: "/discard",
+        },
       ],
     },
     {
-      category: "Medical Administration",
+      category: "Hospitals, Labs & Admin",
       icon: Heart,
       color: "blue",
-      description: "Comprehensive medical records and healthcare management",
+      description: "Hospital mapping, requisitions, laboratory workflows, and admin.",
       features: [
-        { icon: FileText, title: "Medical Records", desc: "Maintain detailed donor and patient medical histories" },
-        { icon: Shield, title: "Safety Protocols", desc: "Implement and monitor blood safety procedures" },
-        { icon: Activity, title: "Health Screening", desc: "Manage pre-donation health assessments" },
-        { icon: Database, title: "Test Results", desc: "Track blood testing results and quality assurance" },
-        { icon: UserCheck, title: "Staff Management", desc: "Manage medical staff roles and certifications" },
-        { icon: Lock, title: "Privacy Control", desc: "Ensure HIPAA compliance and data protection" },
+        {
+          icon: FileText,
+          title: "Add Hospital",
+          desc: "Register new hospitals linked to the blood bank.",
+          link: "/hospital/add",
+        },
+        {
+          icon: FileText,
+          title: "Hospital List",
+          desc: "View and manage all registered hospitals.",
+          link: "/hospital/list",
+        },
+        {
+          icon: FileText,
+          title: "Requisition Workflow",
+          desc: "Create and process blood requisitions from hospitals.",
+          link: "/requisition",
+        },
+        {
+          icon: FileText,
+          title: "Requisition List",
+          desc: "Monitor pending, in-progress, and completed requisitions.",
+          link: "/requisition/list",
+        },
+        {
+          icon: Activity,
+          title: "Serology Entry",
+          desc: "Enter serology testing results for collected units.",
+          link: "/labs/serology",
+        },
+        {
+          icon: Eye,
+          title: "Serology Results",
+          desc: "Review finalized serology results and statuses.",
+          link: "/labs/serology-results",
+        },
+        {
+          icon: Shield,
+          title: "User & Role Admin",
+          desc: "Manage users, roles, and permissions for the system.",
+          link: "/admin/user-manage",
+        },
       ],
     },
     {
-      category: "Analytics & Reports",
+      category: "Analytics & MIS",
       icon: BarChart3,
       color: "green",
-      description: "Data-driven insights for better blood bank operations",
+      description: "Dashboards and MIS reports for operational and regulatory insights.",
       features: [
-        { icon: Target, title: "Collection Metrics", desc: "Track donation targets and achievement rates" },
-        { icon: Star, title: "Donor Analytics", desc: "Analyze donor behavior and retention patterns" },
-        { icon: BarChart3, title: "Usage Reports", desc: "Monitor blood distribution and hospital demands" },
-        { icon: Clock, title: "Efficiency Tracking", desc: "Measure processing times and operational efficiency" },
-        { icon: Zap, title: "Real-time Dashboard", desc: "Live updates on inventory, donors, and operations" },
-        { icon: Award, title: "Quality Metrics", desc: "Track quality indicators and compliance scores" },
+        {
+          icon: BarChart3,
+          title: "Operations Dashboard",
+          desc: "High-level operational view of key blood bank KPIs.",
+          link: "/dashboard",
+        },
+        {
+          icon: Users,
+          title: "Donor MIS",
+          desc: "Analytics on donor base, activity, and retention.",
+          link: "/mis/donors",
+        },
+        {
+          icon: Heart,
+          title: "Donation MIS",
+          desc: "Track donation patterns across in-house and camps.",
+          link: "/mis/donations",
+        },
+        {
+          icon: Users,
+          title: "Camp MIS",
+          desc: "Camp-wise KPIs, performance, and rankings.",
+          link: "/mis/camps",
+        },
+        {
+          icon: Droplets,
+          title: "Bag MIS",
+          desc: "Lifecycle analytics for blood bags and processing.",
+          link: "/mis/bags",
+        },
+        {
+          icon: Layers,
+          title: "Component MIS",
+          desc: "Component stock, near-expiry, and utilization analytics.",
+          link: "/mis/components",
+        },
+        {
+          icon: Droplets,
+          title: "Inventory MIS",
+          desc: "Stock, reservations, and utilization analytics.",
+          link: "/mis/inventory",
+        },
+        {
+          icon: AlertTriangle,
+          title: "Discard MIS",
+          desc: "Discard reasons, wastage trends, and compliance.",
+          link: "/mis/discards",
+        },
+        {
+          icon: Activity,
+          title: "Testing MIS",
+          desc: "Testing load, positivity, and quality metrics.",
+          link: "/mis/testing",
+        },
+        {
+          icon: Shield,
+          title: "Exception MIS",
+          desc: "Exception tracking and audit trail analytics.",
+          link: "/mis/exceptions",
+        },
+        {
+          icon: Shield,
+          title: "Regulatory MIS",
+          desc: "Mandatory testing, compliance, and statutory reports.",
+          link: "/mis/regulatory",
+        },
+        {
+          icon: Award,
+          title: "Executive MIS",
+          desc: "Top-level MIS KPIs and regulatory overview.",
+          link: "/mis/executive",
+        },
       ],
     },
   ]
@@ -168,20 +366,40 @@ export default function BloodBankWelcome() {
               {/* Features Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {capability.features.map((feature, featureIndex) => (
-                  <div
-                    key={featureIndex}
-                    className="bg-white border-2 border-orange-100 rounded-2xl p-6 shadow-lg hover:shadow-xl hover:scale-105 hover:border-orange-200 transition-all duration-300 group"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="bg-orange-100 rounded-xl p-3 group-hover:bg-orange-200 transition-colors duration-300">
-                        <feature.icon className="w-6 h-6 text-orange-800" />
+                  feature.link ? (
+                    <Link
+                      key={featureIndex}
+                      to={feature.link}
+                      className="block group focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white rounded-2xl"
+                    >
+                      <div className="bg-white border-2 border-orange-100 rounded-2xl p-6 shadow-lg hover:shadow-xl hover:scale-105 hover:border-orange-200 transition-all duration-300 cursor-pointer">
+                        <div className="flex items-start gap-4">
+                          <div className="bg-orange-100 rounded-xl p-3 group-hover:bg-orange-200 transition-colors duration-300">
+                            <feature.icon className="w-6 h-6 text-orange-800" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-gray-800 font-semibold text-lg mb-2">{feature.title}</h3>
+                            <p className="text-gray-600 text-sm leading-relaxed">{feature.desc}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="text-gray-800 font-semibold text-lg mb-2">{feature.title}</h3>
-                        <p className="text-gray-600 text-sm leading-relaxed">{feature.desc}</p>
+                    </Link>
+                  ) : (
+                    <div
+                      key={featureIndex}
+                      className="bg-white border-2 border-orange-100 rounded-2xl p-6 shadow-lg hover:shadow-xl hover:scale-105 hover:border-orange-200 transition-all duration-300 group"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="bg-orange-100 rounded-xl p-3 group-hover:bg-orange-200 transition-colors duration-300">
+                          <feature.icon className="w-6 h-6 text-orange-800" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-gray-800 font-semibold text-lg mb-2">{feature.title}</h3>
+                          <p className="text-gray-600 text-sm leading-relaxed">{feature.desc}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )
                 ))}
               </div>
             </div>
