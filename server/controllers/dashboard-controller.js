@@ -101,7 +101,6 @@ async function getOverview(req, res, next) {
     const thresholdsDays = { Platelet: 1, RBC: 7, FFP: 30, Cryo: 30 };
     const nearExpiryAgg = await Component.aggregate([
       { $match: { status: "in-stock", expiryDate: { $ne: null }, ...siteMatchComponent } },
-      ...(fromDate ? [{ $match: matchDate('expiryDate') }] : []),
       {
         $addFields: {
           daysToExpiry: { $ceil: { $divide: [{ $subtract: ["$expiryDate", now] }, 86400000] } },
@@ -118,7 +117,16 @@ async function getOverview(req, res, next) {
           },
         },
       },
-      { $match: { $expr: { $lte: ["$daysToExpiry", "$threshold"] } } },
+      {
+        $match: {
+          $expr: {
+            $and: [
+              { $gte: ["$daysToExpiry", 0] },
+              { $lte: ["$daysToExpiry", "$threshold"] },
+            ],
+          },
+        },
+      },
       { $group: { _id: "$componentType", count: { $sum: 1 } } },
     ]);
 
