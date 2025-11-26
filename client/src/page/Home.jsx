@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import TestAPI from "@/components/TestAPI"
+import { useAuth } from "@/store/auth"
+import { checkAccess } from "@/atoms/static"
 // import SidebarDemo from "@/components/SidebarDemo"
 import {
   Users,
@@ -39,7 +41,14 @@ export default function BloodBankWelcome() {
     setMounted(true)
   }, [])
 
-  const bloodBankCapabilities = [
+  const { user } = useAuth()
+
+  const canViewModule = (moduleName) => {
+    if (!moduleName) return true
+    return checkAccess(user, moduleName, 'view')
+  }
+
+  const rawBloodBankCapabilities = [
     {
       category: "Donor & Camp Management",
       icon: Users,
@@ -50,60 +59,70 @@ export default function BloodBankWelcome() {
           icon: Users,
           title: "Donor List",
           desc: "Search, filter, and manage all registered donors.",
+          moduleName: "Donor",
           link: "/donor/view-donor",
         },
         {
           icon: Plus,
           title: "Create Donor",
           desc: "Register new donors with complete medical and contact details.",
+          moduleName: "Donor",
           link: "/donor/create-donor",
         },
         {
           icon: Heart,
           title: "Donation List",
           desc: "Review all recorded donations from in-house and camps.",
+          moduleName: "Donations",
           link: "/donations/view-donation",
         },
         {
           icon: Plus,
           title: "Create Donation",
           desc: "Capture new donation events for eligible donors.",
+          moduleName: "Donations",
           link: "/donations/create-donation",
         },
         {
           icon: Calendar,
           title: "Appointment List",
           desc: "Monitor and manage upcoming donation appointments.",
+          moduleName: "Appointments",
           link: "/appointments",
         },
         {
           icon: Users,
           title: "Camp Registration",
           desc: "Plan and register new blood donation camps.",
+          moduleName: "Camp",
           link: "/camp-registration",
         },
         {
           icon: Users,
           title: "Camp List",
           desc: "View all scheduled and completed camps.",
+          moduleName: "Camp",
           link: "/camp-listing",
         },
         {
           icon: Users,
           title: "Camp Donors",
           desc: "Manage donors associated with specific camps.",
+          moduleName: "Camp",
           link: "/camp-donors",
         },
         {
           icon: Users,
           title: "Camp Donations",
           desc: "Track donations collected at each camp.",
+          moduleName: "Camp",
           link: "/camp-donation",
         },
         {
           icon: BarChart3,
           title: "Camp Reports",
           desc: "Analyze camp performance and collection outcomes.",
+          moduleName: "Camp",
           link: "/camp-reports",
         },
       ],
@@ -118,48 +137,56 @@ export default function BloodBankWelcome() {
           icon: Droplets,
           title: "Inventory Stock",
           desc: "Monitor available units by group, component, and expiry.",
+          moduleName: "Inventory",
           link: "/inventory/stock",
         },
         {
           icon: Layers,
           title: "Reserve Units",
           desc: "Reserve blood units for hospitals and critical patients.",
+          moduleName: "Inventory",
           link: "/inventory/reserve",
         },
         {
           icon: Activity,
           title: "Issue Units",
           desc: "Issue blood and track utilization in real time.",
+          moduleName: "Inventory",
           link: "/inventory/issue",
         },
         {
           icon: Database,
           title: "Components List",
           desc: "View all separated blood components across inventory.",
+          moduleName: "Component",
           link: "/component/list",
         },
         {
           icon: Database,
           title: "Separate Components",
           desc: "Process and separate whole blood into components.",
+          moduleName: "Component",
           link: "/component/separate",
         },
         {
           icon: AlertTriangle,
           title: "Near-Expiry Components",
           desc: "Identify components nearing expiry for priority usage.",
+          moduleName: "Component",
           link: "/component/near-expiry",
         },
         {
           icon: AlertTriangle,
           title: "Near-Expiry Inventory",
           desc: "Monitor near-expiry stock to minimize wastage.",
+          moduleName: "Inventory",
           link: "/inventory/near-expiry",
         },
         {
           icon: AlertTriangle,
           title: "Discard List",
           desc: "Review and manage discarded units with reasons and audit.",
+          moduleName: "Discard",
           link: "/discard",
         },
       ],
@@ -174,42 +201,49 @@ export default function BloodBankWelcome() {
           icon: FileText,
           title: "Add Hospital",
           desc: "Register new hospitals linked to the blood bank.",
+          moduleName: "Hospital",
           link: "/hospital/add",
         },
         {
           icon: FileText,
           title: "Hospital List",
           desc: "View and manage all registered hospitals.",
+          moduleName: "Hospital",
           link: "/hospital/list",
         },
         {
           icon: FileText,
           title: "Requisition Workflow",
           desc: "Create and process blood requisitions from hospitals.",
+          moduleName: "Requisition",
           link: "/requisition",
         },
         {
           icon: FileText,
           title: "Requisition List",
           desc: "Monitor pending, in-progress, and completed requisitions.",
+          moduleName: "Requisition",
           link: "/requisition/list",
         },
         {
           icon: Activity,
           title: "Serology Entry",
           desc: "Enter serology testing results for collected units.",
+          moduleName: "Labs",
           link: "/labs/serology",
         },
         {
           icon: Eye,
           title: "Serology Results",
           desc: "Review finalized serology results and statuses.",
+          moduleName: "Labs",
           link: "/labs/serology-results",
         },
         {
           icon: Shield,
           title: "User & Role Admin",
           desc: "Manage users, roles, and permissions for the system.",
+          moduleName: "Admin",
           link: "/admin/user-manage",
         },
       ],
@@ -224,77 +258,96 @@ export default function BloodBankWelcome() {
           icon: BarChart3,
           title: "Operations Dashboard",
           desc: "High-level operational view of key blood bank KPIs.",
+          moduleName: "Dashboard",
           link: "/dashboard",
         },
         {
           icon: Users,
           title: "Donor MIS",
           desc: "Analytics on donor base, activity, and retention.",
+          moduleName: "MIS",
           link: "/mis/donors",
         },
         {
           icon: Heart,
           title: "Donation MIS",
           desc: "Track donation patterns across in-house and camps.",
+          moduleName: "MIS",
           link: "/mis/donations",
         },
         {
           icon: Users,
           title: "Camp MIS",
           desc: "Camp-wise KPIs, performance, and rankings.",
+          moduleName: "MIS",
           link: "/mis/camps",
         },
         {
           icon: Droplets,
           title: "Bag MIS",
           desc: "Lifecycle analytics for blood bags and processing.",
+          moduleName: "MIS",
           link: "/mis/bags",
         },
         {
           icon: Layers,
           title: "Component MIS",
           desc: "Component stock, near-expiry, and utilization analytics.",
+          moduleName: "MIS",
           link: "/mis/components",
         },
         {
           icon: Droplets,
           title: "Inventory MIS",
           desc: "Stock, reservations, and utilization analytics.",
+          moduleName: "MIS",
           link: "/mis/inventory",
         },
         {
           icon: AlertTriangle,
           title: "Discard MIS",
           desc: "Discard reasons, wastage trends, and compliance.",
+          moduleName: "MIS",
           link: "/mis/discards",
         },
         {
           icon: Activity,
           title: "Testing MIS",
           desc: "Testing load, positivity, and quality metrics.",
+          moduleName: "MIS",
           link: "/mis/testing",
         },
         {
           icon: Shield,
           title: "Exception MIS",
           desc: "Exception tracking and audit trail analytics.",
+          moduleName: "MIS",
           link: "/mis/exceptions",
         },
         {
           icon: Shield,
           title: "Regulatory MIS",
           desc: "Mandatory testing, compliance, and statutory reports.",
+          moduleName: "MIS",
           link: "/mis/regulatory",
         },
         {
           icon: Award,
           title: "Executive MIS",
           desc: "Top-level MIS KPIs and regulatory overview.",
+          moduleName: "MIS",
           link: "/mis/executive",
         },
       ],
     },
   ]
+
+  const bloodBankCapabilities = rawBloodBankCapabilities
+    .map((capability) => ({
+      ...capability,
+      features: capability.features.filter((feature) => canViewModule(feature.moduleName)),
+    }))
+    .filter((capability) => capability.features.length > 0)
 
   const quickAccessLinks = [
     { icon: Users, label: "Donor Management", link: "/donors", color: "orange" },
