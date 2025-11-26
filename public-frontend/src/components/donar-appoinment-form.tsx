@@ -1,5 +1,7 @@
 "use client"
 import { useState } from "react"
+import type { ChangeEvent, FormEvent } from "react"
+import axios from "axios"
 import { User, Phone, Mail, Droplets, Calendar, MapPin, Heart, CheckCircle, Clock, MapPinIcon, AlertCircle, Check, Clock1, Clock10Icon, ClockAlertIcon, ClockPlusIcon } from 'lucide-react'
 
 export default function BloodDonationForm() {
@@ -16,13 +18,15 @@ export default function BloodDonationForm() {
   })
 
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleBloodGroupChange = (e) => {
+  const handleBloodGroupChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setFormData((prev) => ({
       ...prev,
@@ -31,15 +35,39 @@ export default function BloodDonationForm() {
     }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setError(null)
+    setLoading(true)
+
     const finalData = {
       ...formData,
-      bloodGroup: formData.bloodGroup === "other" ? formData.otherBloodGroup : formData.bloodGroup
+      bloodGroup: formData.bloodGroup === "other" ? formData.otherBloodGroup : formData.bloodGroup,
     }
-    console.log("[v0] Form submitted:", finalData)
-    setSubmitted(true)
-    setTimeout(() => {
+
+    try {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000"
+
+      await axios.post(
+        `${apiBaseUrl}/api/appointments/public-booking`,
+        {
+          fullName: finalData.fullName,
+          gender: finalData.gender,
+          mobileNo: finalData.mobileNo,
+          email: finalData.email,
+          bloodGroup: finalData.bloodGroup,
+          birthDate: finalData.birthDate,
+          address: finalData.address,
+          appointmentDate: finalData.appointmentDate,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      )
+
+      setSubmitted(true)
       setFormData({
         fullName: "",
         gender: "",
@@ -51,8 +79,17 @@ export default function BloodDonationForm() {
         address: "",
         appointmentDate: "",
       })
-      setSubmitted(false)
-    }, 3000)
+
+      setTimeout(() => {
+        setSubmitted(false)
+      }, 3000)
+    } catch (err) {
+      console.error("Appointment booking failed:", err)
+      const message = err instanceof Error ? err.message : "Something went wrong. Please try again."
+      setError(message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const bloodGroups = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"]
@@ -80,7 +117,7 @@ export default function BloodDonationForm() {
   }
 
   return (
-    <div className="min-h-screen bg-background py-8 sm:py-12 pr-4 sm:pr-6 lg:pr-8">
+    <div id="donation-form" className="min-h-screen bg-background py-8 sm:py-12 pr-4 sm:pr-6 lg:pr-8">
       <div className=" mx-auto">
         {/* Header Section */}
         <div className="text-center mb-10 sm:mb-14 flex justify-center items-center">
@@ -119,7 +156,7 @@ export default function BloodDonationForm() {
                     {/* When */}
                     <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/20">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0 mt-1">
+                        <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center shrink-0 mt-1">
                           <Clock className="w-5 h-5 text-white" />
                         </div>
                         <div>
@@ -135,7 +172,7 @@ export default function BloodDonationForm() {
                     {/* Where */}
                     <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/20">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0 mt-1">
+                        <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center shrink-0 mt-1">
                           <MapPinIcon className="w-5 h-5 text-white" />
                         </div>
                         <div>
@@ -149,7 +186,7 @@ export default function BloodDonationForm() {
                     {/* Blood Type */}
                     <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/20">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0 mt-1">
+                        <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center shrink-0 mt-1">
                           <Droplets className="w-5 h-5 text-white" />
                         </div>
                         <div>
@@ -165,7 +202,7 @@ export default function BloodDonationForm() {
                     {/* Important Notice */}
                     <div className="bg-yellow-50/20 border border-yellow-200/30 rounded-xl p-4 mt-6">
                       <div className="flex items-start gap-2">
-                        <AlertCircle className="w-5 h-5 text-yellow-200 flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="w-5 h-5 text-yellow-200 shrink-0 mt-0.5" />
                         <p className="text-xs text-yellow-50">
                           Please arrive 10 minutes early. Bring a valid ID and hydrate well before your appointment.
                         </p>
@@ -405,11 +442,17 @@ export default function BloodDonationForm() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  className="w-full flex items-center justify-center px-6 py-4 rounded-lg text-base font-semibold text-primary-foreground bg-primary hover:bg-accent transition-all duration-200 mt-8 shadow-md hover:shadow-lg active:scale-95"
+                  disabled={loading}
+                  className="w-full flex items-center justify-center px-6 py-4 rounded-lg text-base font-semibold text-primary-foreground bg-primary hover:bg-accent transition-all duration-200 mt-8 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   <ClockPlusIcon className="mr-2 h-5 w-5" />
-                  Schedule Donation
+                  {loading ? "Scheduling..." : "Schedule Donation"}
                 </button>
+                {error && (
+                  <p className="mt-4 text-sm text-red-500 text-center">
+                    {error}
+                  </p>
+                )}
               </form>
 
               {/* Important Information Badge */}

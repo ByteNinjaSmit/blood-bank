@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 
 export default function Hero() {
     return (
-        <section className="relative min-h-screen overflow-hidden bg-gradient-to-br from-background to-muted md:pt-0">
+        <section id="home" className="relative min-h-screen overflow-hidden bg-gradient-to-br from-background to-muted md:pt-0">
             <div className="absolute inset-0 z-10">
                 <div className="absolute top-0 left-0 w-full h-full opacity-5">
                     <img src="/bg.webp" alt="background" className="w-full h-full object-cover" />

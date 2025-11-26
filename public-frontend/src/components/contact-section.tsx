@@ -21,8 +21,8 @@ export default function ContactSection() {
     {
       icon: MapPin,
       label: "Location",
-      value: "Kopargaon, Maharashtra",
-      detail: "Easy access & free parking",
+      value: "Sanjivani Blood Bank, Kopargaon",
+      detail: "Vivekanand Nagar, Kopargaon, Maharashtra 423601",
       href: "#"
     },
     {
@@ -42,7 +42,7 @@ export default function ContactSection() {
   ]
 
   return (
-    <div className="w-full bg-background">
+    <div id="contact" className="w-full bg-background">
       {/* Contact Section with Inclined Bottom */}
       <div
         className="bg-primary relative overflow-hidden p-6"

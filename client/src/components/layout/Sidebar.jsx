@@ -169,6 +169,22 @@ const MODULES = [
     description: "Manage donor records",
   },
   {
+    id: "appointments",
+    name: "Appointments",
+    icon: <Calendar className="w-5 h-5" />,
+    permissions: ["read"],
+    subModules: [
+      {
+        name: "Appointment List",
+        icon: <List className="w-5 h-5" />,
+        href: "/appointments",
+        permissions: ["read"],
+        description: "View public donation appointments",
+      },
+    ],
+    description: "Manage donor appointments",
+  },
+  {
     id: "donations",
     name: "Donations",
     icon: <FaHeart className="w-5 h-5" />,

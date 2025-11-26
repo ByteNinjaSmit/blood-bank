@@ -260,7 +260,12 @@ async function getNearExpiryInventory(req, res, next) {
       },
       {
         $match: {
-          $expr: { $lte: [ '$daysToExpiry', '$threshold' ] }
+          $expr: {
+            $and: [
+              { $gte: [ '$daysToExpiry', 0 ] },
+              { $lte: [ '$daysToExpiry', '$threshold' ] },
+            ],
+          }
         },
       },
       { $sort: sort },
@@ -321,7 +326,12 @@ async function getNearExpiryInventory(req, res, next) {
         },
         {
           $match: {
-            $expr: { $lte: [ '$daysToExpiry', '$threshold' ] }
+            $expr: {
+              $and: [
+                { $gte: [ '$daysToExpiry', 0 ] },
+                { $lte: [ '$daysToExpiry', '$threshold' ] },
+              ],
+            }
           },
         },
         { $count: 'count' },

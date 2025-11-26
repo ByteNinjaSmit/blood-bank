@@ -13,7 +13,7 @@ const page = () => {
       <AboutSection/>
       <StatisticsSection/>
       <BloodDonationForm/>
-      {/* <ContactSection/> */}
+      <ContactSection/>
       <Footer/>
     </div>
   )

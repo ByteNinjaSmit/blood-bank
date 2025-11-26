@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "@/store/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +36,7 @@ const number = (v) => (typeof v === "number" ? v : 0);
 
 export default function Dashboard() {
   const { API } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [payload, setPayload] = useState(null);
@@ -137,6 +139,18 @@ export default function Dashboard() {
   const bloodBags = overview.bloodBags || {};
   const componentsOverview = overview.components || {};
   const inventoryOverview = overview.inventory || {};
+  const inStockTotal = number(inventoryOverview.inStock);
+  const nearExpiryPercent = inStockTotal > 0 ? Math.round((nearExpiryTotal / inStockTotal) * 100) : 0;
+  const nearExpiryRiskLabel =
+    nearExpiryPercent >= 30 ? "Critical" :
+    nearExpiryPercent >= 15 ? "High" :
+    nearExpiryPercent > 0 ? "Moderate" :
+    "Healthy";
+  const nearExpiryRiskVariant =
+    nearExpiryPercent >= 30 ? "destructive" :
+    nearExpiryPercent >= 15 ? "default" :
+    nearExpiryPercent > 0 ? "outline" :
+    "secondary";
   const bloodGroups = overview.bloodGroups || {};
   const componentAvailability = overview.componentAvailability || {};
   const hospitalRequests = overview.hospitalRequests || {};
@@ -201,11 +215,18 @@ export default function Dashboard() {
             ))}
             <Popover open={openCal} onOpenChange={setOpenCal}>
               <PopoverTrigger asChild>
-                <Button variant={preset === 'custom' ? "default" : "outline"} size="sm" className="ml-2">
-                  <CalendarIcon className="w-4 h-4 mr-1"/> {range?.from && range?.to ? `${new Date(range.from).toLocaleDateString()} – ${new Date(range.to).toLocaleDateString()}` : "Pick range"}
+                <Button variant={preset === "custom" ? "default" : "outline"} size="sm" className="ml-2">
+                  <CalendarIcon className="w-4 h-4 mr-1" />
+                  {range?.from && range?.to
+                    ? `${new Date(range.from).toLocaleDateString()} - ${new Date(range.to).toLocaleDateString()}`
+                    : "Pick range"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="p-2" align="start">
+              <PopoverContent
+                className="p-2 bg-white shadow-2xl border border-slate-200 rounded-xl z-50"
+                align="start"
+                sideOffset={8}
+              >
                 <Calendar
                   mode="range"
                   selected={range}
@@ -221,6 +242,17 @@ export default function Dashboard() {
               </PopoverContent>
             </Popover>
           </div>
+        </CardContent>
+      </Card>
+      {/* High-level KPIs strip */}
+      <Card className="border-slate-100 bg-slate-50/80 backdrop-blur-sm">
+        <CardContent className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <SummaryStat label="Donations (range)" value={totals.donations} />
+          <SummaryStat label="In-Stock Units" value={totals.inStock} />
+          <SummaryStat label="Reserved Units" value={totals.reserved} />
+          <SummaryStat label="Issued (range)" value={totals.issued} />
+          <SummaryStat label="Discarded (range)" value={totals.discarded} />
+          <SummaryStat label="Transfusions (range)" value={totals.transfusions} />
         </CardContent>
       </Card>
       {/* KPI Cards (filtered) */}
@@ -439,9 +471,54 @@ export default function Dashboard() {
                 <Bar dataKey="value" isAnimationActive={false} fill="var(--color-value)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ChartContainer>
-            <div className="mt-4 text-sm text-slate-600 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
-              Monitor near-expiry units to reduce wastage. Total: <span className="font-semibold ml-1">{nearExpiryTotal}</span>
+            <div className="mt-4 flex flex-col gap-3">
+              <div className="text-sm text-slate-600 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                <span>
+                  Monitor near-expiry units to reduce wastage.
+                  <span className="font-semibold ml-1">Total: {nearExpiryTotal}</span>
+                </span>
+              </div>
+              {nearExpiryByComponent && nearExpiryByComponent.length > 0 && (
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {nearExpiryByComponent.map((item) => (
+                    <span
+                      key={item.name}
+                      className="px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100"
+                    >
+                      {item.name}: <span className="font-semibold ml-1">{number(item.value)}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="text-xs text-slate-500">
+                Thresholds: Platelet up to 1 day, RBC up to 7 days, FFP up to 30 days, Cryo up to 30 days.
+              </div>
+              <div className="mt-1">
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>Near-expiry share of in-stock</span>
+                  <Badge variant={nearExpiryRiskVariant} className="text-[11px]">
+                    {nearExpiryPercent}% · {nearExpiryRiskLabel}
+                  </Badge>
+                </div>
+                <Progress className="mt-1" value={Math.min(100, nearExpiryPercent)} />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/inventory/near-expiry")}
+                >
+                  View inventory near expiry
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/component/near-expiry")}
+                >
+                  View components list
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -559,6 +636,17 @@ function Kpi({ icon: Icon, label, value, color }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function SummaryStat({ label, value }) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-xs text-slate-500 truncate">{label}</span>
+      <span className="text-sm font-semibold text-slate-900 tabular-nums">
+        {number(value).toLocaleString()}
+      </span>
+    </div>
   );
 }
 

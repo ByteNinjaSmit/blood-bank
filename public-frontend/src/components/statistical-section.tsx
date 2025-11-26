@@ -38,7 +38,7 @@ export default function StatisticsSection() {
   ]
 
   return (
-    <div className="w-full bg-background py-16 sm:py-20 lg:py-24">
+    <div id="statistics" className="w-full bg-background py-16 sm:py-20 lg:py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
        <div className="text-center mb-10 sm:mb-14 flex justify-center items-center">
             <div className="pl-5 border-l-8 ml-2 md:ml-0 border-dotted border-primary w-fit space-y-2">

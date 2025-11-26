@@ -47,6 +47,7 @@ import TestingMIS from './page/mis/TestingMIS';
 import ExceptionMIS from './page/mis/ExceptionMIS';
 import RegulatoryMIS from './page/mis/RegulatoryMIS';
 import ExecutiveMIS from './page/mis/ExecutiveMIS';
+import AppointmentList from './page/appointment/AppointmentList';
 
 const App = () => {
   const pathname = useLocation().pathname;
@@ -109,6 +110,9 @@ const App = () => {
           {/* Donor Module */}
           <Route path="/donor/create-donor" element={<CreateDonorPage />} />
           <Route path="/donor/view-donor" element={<DonorManagement />} />
+
+          {/* Appointments Module */}
+          <Route path="/appointments" element={<AppointmentList />} />
 
           {/* Admin Module */}
           <Route path="/admin/user-manage" element={<UserManage />} />

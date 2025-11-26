@@ -80,9 +80,9 @@ The main entrypoint is `server/server.js`, which:
 ```mermaid
 flowchart LR
   subgraph Users
-    UA[Admin / Staff (React client)]
-    UH[Hospital / External Users (React client)]
-    UV[Public Visitor (Next.js site)]
+    UA[Admin and Staff React Client]
+    UH[Hospital and External Users React Client]
+    UV[Public Visitor Next.js Site]
   end
 
   UA -->|HTTPS / REST| API[Express REST API]
@@ -103,7 +103,7 @@ flowchart LR
   subgraph Background
     API -->|enqueue jobs| Queues[Redis + Bull Queues]
     Queues --> Jobs[Background Workers]
-    Jobs --> Reports[PDF Reports (Expiry / Discard)]
+    Jobs --> Reports[PDF Reports for Expiry and Discard]
     Jobs --> Email[Email Service]
     Email --> AdminInbox[Admin Inbox]
   end
@@ -122,15 +122,15 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  DonorReg[Donor Registration] --> Screening[Medical Screening & Eligibility]
-  Screening -->|Eligible| Donation[Blood Donation (Blood Bag Collection)]
+  DonorReg[Donor Registration] --> Screening[Medical Screening and Eligibility]
+  Screening -->|Eligible| Donation[Blood Donation - Blood Bag Collection]
   Screening -->|Not eligible| EndScreen[Donor Deferred]
 
   Donation --> Lab[Serology / Lab Testing]
   Lab -->|Pass| CompSep[Component Separation]
   Lab -->|Fail| DiscardLab[Mark Unit as Discarded]
 
-  CompSep --> Inventory[Component Inventory (RBC / Platelets / FFP / Cryo / ...)]
+  CompSep --> Inventory[Component Inventory - RBC, Platelets, FFP, Cryo]
 
   Inventory --> Request[Hospital / Internal Request]
   Request --> Matching[Match & Reserve Components]
@@ -142,7 +142,7 @@ flowchart LR
   ExpiryQueue --> ExpiryJob[Expiry Report Job]
   ExpiryJob --> ExpiryPDF[Near-Expiry PDF Report]
   ExpiryPDF --> ExpiryEmail[Email to Admin]
-  ExpiryEmail --> ReviewAction[Admin Review & Action (Transfer / Discard / Prioritize)]
+  ExpiryEmail --> ReviewAction[Admin Review and Action - Transfer, Discard, Prioritize]
 ```
 
 **Where this lives in code:**
