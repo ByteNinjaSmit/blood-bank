@@ -139,6 +139,18 @@ export default function Dashboard() {
   const bloodBags = overview.bloodBags || {};
   const componentsOverview = overview.components || {};
   const inventoryOverview = overview.inventory || {};
+  const inStockTotal = number(inventoryOverview.inStock);
+  const nearExpiryPercent = inStockTotal > 0 ? Math.round((nearExpiryTotal / inStockTotal) * 100) : 0;
+  const nearExpiryRiskLabel =
+    nearExpiryPercent >= 30 ? "Critical" :
+    nearExpiryPercent >= 15 ? "High" :
+    nearExpiryPercent > 0 ? "Moderate" :
+    "Healthy";
+  const nearExpiryRiskVariant =
+    nearExpiryPercent >= 30 ? "destructive" :
+    nearExpiryPercent >= 15 ? "default" :
+    nearExpiryPercent > 0 ? "outline" :
+    "secondary";
   const bloodGroups = overview.bloodGroups || {};
   const componentAvailability = overview.componentAvailability || {};
   const hospitalRequests = overview.hospitalRequests || {};
@@ -210,7 +222,11 @@ export default function Dashboard() {
                     : "Pick range"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="p-2" align="start">
+              <PopoverContent
+                className="p-2 bg-white shadow-2xl border border-slate-200 rounded-xl z-50"
+                align="start"
+                sideOffset={8}
+              >
                 <Calendar
                   mode="range"
                   selected={range}
@@ -229,7 +245,7 @@ export default function Dashboard() {
         </CardContent>
       </Card>
       {/* High-level KPIs strip */}
-      <Card>
+      <Card className="border-slate-100 bg-slate-50/80 backdrop-blur-sm">
         <CardContent className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <SummaryStat label="Donations (range)" value={totals.donations} />
           <SummaryStat label="In-Stock Units" value={totals.inStock} />
@@ -477,6 +493,15 @@ export default function Dashboard() {
               )}
               <div className="text-xs text-slate-500">
                 Thresholds: Platelet up to 1 day, RBC up to 7 days, FFP up to 30 days, Cryo up to 30 days.
+              </div>
+              <div className="mt-1">
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>Near-expiry share of in-stock</span>
+                  <Badge variant={nearExpiryRiskVariant} className="text-[11px]">
+                    {nearExpiryPercent}% · {nearExpiryRiskLabel}
+                  </Badge>
+                </div>
+                <Progress className="mt-1" value={Math.min(100, nearExpiryPercent)} />
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button
