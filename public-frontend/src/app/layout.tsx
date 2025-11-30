@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/main-navbar";
 import BackToTop from "@/components/utils/back-to-top-button";
+import { Analytics } from "@vercel/analytics/next"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +36,7 @@ export default function RootLayout({
       <body
       >
         <Navbar />
+        <Analytics/>
         {children}
         <BackToTop/>
       </body>
