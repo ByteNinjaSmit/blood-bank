@@ -92,7 +92,7 @@ export default function Footer() {
 
                 {/* Copyright */}
                 <div className="pt-8 text-center text-sm text-primary-foreground/80">
-                    <p>©{new Date().getFullYear()} Sanjivani Blood Bank. All Rights Reserved.</p>
+                    <p>© {new Date().getFullYear()} Sanjivani Blood Bank. All Rights Reserved.</p>
                 </div>
 
             </div>
