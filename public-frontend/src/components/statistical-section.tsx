@@ -40,21 +40,23 @@ export default function StatisticsSection() {
   return (
     <div id="statistics" className="w-full bg-background py-16 sm:py-20 lg:py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-       <div className="text-center mb-10 sm:mb-14 flex justify-center items-center">
-            <div className="pl-5 border-l-8 ml-2 md:ml-0 border-dotted border-primary w-fit space-y-2">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-primary">
-               Our Impact by Numbers
-              </h1>
+       <div className="text-center mb-12 sm:mb-16">
+          <div className="inline-block relative w-fit space-y-3">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-foreground leading-tight">
+              Our Impact <span className='text-primary'>by Numbers</span>
+            </h1>
 
-              <p className="text-base sm:text-lg  text-primary max-w-lg leading-relaxed">
-                Discover the remarkable difference we've made in saving lives and serving communities across the region
-              </p>
-            </div>
+            <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Discover the remarkable difference we've made in saving lives and serving communities across the region, powered by generous donations.
+            </p>
+             {/* Added subtle separator line */}
+            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-primary/30 rounded-full"></div>
           </div>
+        </div>
 
 
         {/* Statistics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 lg:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 lg:gap-4">
           {stats.map((stat, index) => {
             const Icon = stat.icon
             return (

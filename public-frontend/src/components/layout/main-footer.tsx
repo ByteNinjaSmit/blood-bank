@@ -13,10 +13,10 @@ import { ImDroplet } from "react-icons/im";
 export default function Footer() {
 
     const socialLinks = [
-        { icon: FaFacebook, label: 'Facebook' },
-        { icon: FaYoutube, label: 'YouTube' },
-        { icon: GrInstagram, label: 'Instagram' },
-        { icon: FaLinkedin, label: 'Linkedin' }
+        { icon: FaFacebook, label: 'Facebook', href: '#' },
+        { icon: FaYoutube, label: 'YouTube', href: '#' },
+        { icon: GrInstagram, label: 'Instagram', href: '#' },
+        { icon: FaLinkedin, label: 'Linkedin', href: '#' }
     ]
     return (
         <footer className="bg-primary text-primary-foreground py-16 px-6 md:px-12">

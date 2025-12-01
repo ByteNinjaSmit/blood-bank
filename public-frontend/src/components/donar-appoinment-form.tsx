@@ -2,7 +2,7 @@
 import { useState } from "react"
 import type { ChangeEvent, FormEvent } from "react"
 import axios from "axios"
-import { User, Phone, Mail, Droplets, Calendar, MapPin, Heart, CheckCircle, Clock, MapPinIcon, AlertCircle, Check, Clock1, Clock10Icon, ClockAlertIcon, ClockPlusIcon } from 'lucide-react'
+import { User, Phone, Mail, Droplets, Calendar, MapPin, Heart, CheckCircle, Clock, MapPinIcon, AlertCircle, ClockPlusIcon, HeartHandshake } from 'lucide-react'
 
 export default function BloodDonationForm() {
   const [formData, setFormData] = useState({
@@ -98,115 +98,119 @@ export default function BloodDonationForm() {
   if (submitted) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4 sm:p-8">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md bg-card p-8 rounded-2xl shadow-2xl border border-primary/20">
           <div className="mb-6 flex justify-center">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-primary rounded-full flex items-center justify-center shadow-2xl animate-pulse">
-              <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-primary-foreground" />
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-primary rounded-full flex items-center justify-center shadow-2xl animate-in fade-in zoom-in duration-500">
+              <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-primary-foreground fill-current" />
             </div>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
-            Thank You for Your Donation!
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground mb-3">
+            Appointment Confirmed! 🎉
           </h2>
-          <p className="text-muted-foreground mb-2 leading-relaxed">
-            Your appointment has been scheduled successfully. We look forward to seeing you on the scheduled date.
+          <p className="text-muted-foreground mb-4 leading-relaxed">
+            Thank you for your life-saving decision. We look forward to seeing you at the blood bank.
           </p>
-          <p className="text-sm text-muted-foreground">Redirecting...</p>
+          <div className='inline-flex items-center gap-2 text-primary font-semibold text-sm'>
+            <Clock className='w-4 h-4' />
+            <p>Redirecting in 3 seconds...</p>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div id="donation-form" className="min-h-screen bg-background py-8 sm:py-12 pr-4 sm:pr-6 lg:pr-8">
-      <div className=" mx-auto">
+    <div id="donation-form" className="min-h-screen bg-background py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
         {/* Header Section */}
-        <div className="text-center mb-10 sm:mb-14 flex justify-center items-center">
-          <div className="pl-5 border-l-8 ml-2 md:ml-0 border-dotted border-primary w-fit space-y-2">
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-              Blood Donation
+        <div className="text-center mb-12 sm:mb-16">
+          <div className="inline-block relative w-fit space-y-3">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
+              Schedule Your <span className='text-primary'>Donation</span>
             </h1>
 
-            <p className="text-muted-foreground max-w-lg leading-relaxed">
-              Save lives by scheduling your blood donation appointment today.
-              Your contribution makes a meaningful difference.
+            <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed text-lg sm:text-xl">
+              Your contribution makes a meaningful difference. Fill out the form below to book your appointment.
             </p>
+             <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-primary/30 rounded-full"></div>
           </div>
         </div>
 
         {/* Main Container with Sidebar and Form */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-10 lg:gap-16">
+          
+          {/* Sidebar / Appointment Details - Visual Refinement */}
           <div className="lg:col-span-2 sticky top-20 self-start hidden lg:block">
-            <div className="relative h-full min-h-96">
-              {/* Skewed Container with inclined bottom */}
-              <div className="bg-primary rounded-r-3xl pl-16 py-8 pr-8 relative overflow-hidden shadow-2xl">
+            <div className="bg-primary/5 rounded-3xl p-10 relative overflow-hidden shadow-xl border border-primary/10">
+              
+              {/* Background Accent */}
+              <div className="absolute -top-10 -left-10 w-40 h-40 bg-primary/10 rounded-full blur-[80px]"></div>
 
-                {/* Background Pattern */}
-                <div className="absolute inset-0 opacity-10">
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full blur-3xl"></div>
+              <div className="relative z-10 space-y-8">
+                <h2 className="text-3xl font-extrabold text-foreground flex items-center gap-2">
+                  <HeartHandshake className='w-7 h-7 text-primary fill-transparent' />
+                  Your Appointment
+                </h2>
+
+                {/* Info Cards */}
+                <div className="space-y-4">
+                  
+                  {/* When */}
+                  <div className="bg-card rounded-xl p-4 border border-border/50 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                        <Clock className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">When</p>
+                        <p className="text-sm sm:text-base font-bold text-foreground mt-1">
+                          {formData.appointmentDate ? new Date(formData.appointmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select a date'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">Available 9:00 AM - 5:00 PM</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Where */}
+                  <div className="bg-card rounded-xl p-4 border border-border/50 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                        <MapPinIcon className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Where</p>
+                        <p className="text-sm sm:text-base font-bold text-foreground mt-1">Sanjivani Central Blood Bank</p>
+                        <p className="text-xs text-muted-foreground mt-1">123 Vivekanand Nagar, Kopargaon</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Blood Type */}
+                  <div className="bg-card rounded-xl p-4 border border-border/50 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                        <Droplets className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Your Blood Type</p>
+                        <p className="text-sm sm:text-base font-bold text-foreground mt-1">
+                          {formData.bloodGroup === "other" ? formData.otherBloodGroup || 'Not selected' : formData.bloodGroup || 'Not selected'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">Needed for proper screening</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Content */}
-                <div className="relative z-10 border-l-4 border-dotted border-white/50 pl-8">
-                  <h2 className="text-2xl sm:text-3xl font-bold text-primary-foreground mb-8">
-                    Appointment Details
-                  </h2>
-
-                  {/* Info Cards */}
-                  <div className="space-y-5">
-                    {/* When */}
-                    <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center shrink-0 mt-1">
-                          <Clock className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-white/70 uppercase tracking-wide">When</p>
-                          <p className="text-sm sm:text-base font-semibold text-white mt-1">
-                            {formData.appointmentDate ? new Date(formData.appointmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select a date'}
-                          </p>
-                          <p className="text-xs text-white/60 mt-1">9:00 AM - 5:00 PM</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Where */}
-                    <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center shrink-0 mt-1">
-                          <MapPinIcon className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-white/70 uppercase tracking-wide">Where</p>
-                          <p className="text-sm sm:text-base font-semibold text-white mt-1">Central Blood Bank</p>
-                          <p className="text-xs text-white/60 mt-1">123 Medical Center, City</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Blood Type */}
-                    <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center shrink-0 mt-1">
-                          <Droplets className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-white/70 uppercase tracking-wide">Blood Type</p>
-                          <p className="text-sm sm:text-base font-semibold text-white mt-1">
-                            {formData.bloodGroup === "other" ? formData.otherBloodGroup || 'Not selected' : formData.bloodGroup || 'Not selected'}
-                          </p>
-                          <p className="text-xs text-white/60 mt-1">Verified & Screened</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Important Notice */}
-                    <div className="bg-yellow-50/20 border border-yellow-200/30 rounded-xl p-4 mt-6">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="w-5 h-5 text-yellow-200 shrink-0 mt-0.5" />
-                        <p className="text-xs text-yellow-50">
-                          Please arrive 10 minutes early. Bring a valid ID and hydrate well before your appointment.
+                {/* Important Notice - Stronger Visual */}
+                <div className="bg-primary/10 border border-primary/30 rounded-xl p-5 mt-6">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                        <p className="font-bold text-primary text-sm mb-1">Important Reminder</p>
+                        <p className="text-xs text-foreground/80">
+                            Please arrive **10 minutes early**. Bring a **valid ID** and hydrate well before your appointment.
                         </p>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -214,19 +218,20 @@ export default function BloodDonationForm() {
             </div>
           </div>
 
-          {/* Form Section */}
+          {/* Form Section - Clean, Card-like structure */}
           <div className="lg:col-span-3">
-            <div className="bg-transparent rounded-2xl p-6 sm:p-8 lg:p-10">
+            <div className="bg-card rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl border border-border/50">
               <form onSubmit={handleSubmit} className="space-y-7 sm:space-y-8">
+                
                 {/* Row 1: Full Name & Gender */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     <label htmlFor="fullName" className="text-sm font-semibold text-foreground block">
                       Full Name <span className="text-primary">*</span>
                     </label>
                     <div className="relative group">
                       <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-muted-foreground" />
+                        <User className="h-5 w-5 text-muted-foreground group-focus-within:text-primary" />
                       </div>
                       <input
                         id="fullName"
@@ -241,13 +246,13 @@ export default function BloodDonationForm() {
                     </div>
                   </div>
 
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     <label htmlFor="gender" className="text-sm font-semibold text-foreground block">
                       Gender <span className="text-primary">*</span>
                     </label>
                     <div className="relative group">
                       <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-muted-foreground" />
+                        <User className="h-5 w-5 text-muted-foreground group-focus-within:text-primary" />
                       </div>
                       <select
                         id="gender"
@@ -266,19 +271,22 @@ export default function BloodDonationForm() {
                           </option>
                         ))}
                       </select>
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <svg className="h-4 w-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                        </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Row 2: Mobile & Email */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     <label htmlFor="mobileNo" className="text-sm font-semibold text-foreground block">
                       Mobile Number <span className="text-primary">*</span>
                     </label>
                     <div className="relative group">
                       <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                        <Phone className="h-5 w-5 text-muted-foreground" />
+                        <Phone className="h-5 w-5 text-muted-foreground group-focus-within:text-primary" />
                       </div>
                       <input
                         id="mobileNo"
@@ -290,17 +298,18 @@ export default function BloodDonationForm() {
                         onChange={handleChange}
                         className="block w-full pl-11 sm:pl-12 pr-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm sm:text-base focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
                         placeholder="10-digit mobile number"
+                        title="10 digit mobile number"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     <label htmlFor="email" className="text-sm font-semibold text-foreground block">
                       Email <span className="text-xs text-muted-foreground">(Optional)</span>
                     </label>
                     <div className="relative group">
                       <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                        <Mail className="h-5 w-5 text-muted-foreground" />
+                        <Mail className="h-5 w-5 text-muted-foreground group-focus-within:text-primary" />
                       </div>
                       <input
                         id="email"
@@ -317,13 +326,13 @@ export default function BloodDonationForm() {
 
                 {/* Row 3: Date of Birth & Appointment Date */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     <label htmlFor="birthDate" className="text-sm font-semibold text-foreground block">
                       Date of Birth <span className="text-primary">*</span>
                     </label>
                     <div className="relative group">
                       <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                        <Calendar className="h-5 w-5 text-muted-foreground" />
+                        <Calendar className="h-5 w-5 text-muted-foreground group-focus-within:text-primary" />
                       </div>
                       <input
                         id="birthDate"
@@ -337,13 +346,13 @@ export default function BloodDonationForm() {
                     </div>
                   </div>
 
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     <label htmlFor="appointmentDate" className="text-sm font-semibold text-foreground block">
                       Appointment Date <span className="text-primary">*</span>
                     </label>
                     <div className="relative group">
                       <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                        <Calendar className="h-5 w-5 text-muted-foreground" />
+                        <Calendar className="h-5 w-5 text-muted-foreground group-focus-within:text-primary" />
                       </div>
                       <input
                         id="appointmentDate"
@@ -359,11 +368,11 @@ export default function BloodDonationForm() {
                 </div>
 
                 {/* Blood Group Selection */}
-                <div className="space-y-4">
+                <div className="space-y-4 pt-2">
                   <label className="text-sm font-semibold text-foreground block">
                     Blood Group <span className="text-primary">*</span>
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-3"> {/* Adjusted grid for better layout */}
                     {bloodGroups.map((group) => (
                       <label key={group} className="relative cursor-pointer">
                         <input
@@ -375,9 +384,9 @@ export default function BloodDonationForm() {
                           className="sr-only"
                           required
                         />
-                        <div className={`p-3 border-2 rounded-lg text-center font-semibold text-sm sm:text-base transition-all ${formData.bloodGroup === group
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border bg-background text-foreground hover:border-primary/50'
+                        <div className={`p-3 border-2 rounded-lg text-center font-bold text-sm sm:text-base transition-all ${formData.bloodGroup === group
+                            ? 'border-primary bg-primary text-white shadow-md' // Stronger selected style
+                            : 'border-border bg-card text-foreground hover:border-primary/50'
                           }`}>
                           {group}
                         </div>
@@ -393,9 +402,9 @@ export default function BloodDonationForm() {
                         onChange={handleBloodGroupChange}
                         className="sr-only"
                       />
-                      <div className={`p-3 border-2 rounded-lg text-center font-semibold text-sm sm:text-base transition-all ${formData.bloodGroup === "other"
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border bg-background text-foreground hover:border-primary/50'
+                      <div className={`p-3 border-2 rounded-lg text-center font-bold text-sm sm:text-base transition-all ${formData.bloodGroup === "other"
+                          ? 'border-primary bg-primary text-white shadow-md'
+                          : 'border-border bg-card text-foreground hover:border-primary/50'
                         }`}>
                         Other
                       </div>
@@ -409,7 +418,7 @@ export default function BloodDonationForm() {
                         name="otherBloodGroup"
                         value={formData.otherBloodGroup}
                         onChange={handleChange}
-                        placeholder="Please specify your blood group"
+                        placeholder="Please specify your rare blood group (e.g., Bombay type)"
                         className="block w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
                         required
                       />
@@ -418,13 +427,13 @@ export default function BloodDonationForm() {
                 </div>
 
                 {/* Address */}
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   <label htmlFor="address" className="text-sm font-semibold text-foreground block">
                     Address <span className="text-primary">*</span>
                   </label>
                   <div className="relative group">
                     <div className="absolute top-3 left-0 pl-3 sm:pl-4 flex items-start pointer-events-none">
-                      <MapPin className="h-5 w-5 text-muted-foreground mt-1" />
+                      <MapPin className="h-5 w-5 text-muted-foreground group-focus-within:text-primary" />
                     </div>
                     <textarea
                       id="address"
@@ -443,22 +452,24 @@ export default function BloodDonationForm() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex items-center justify-center px-6 py-4 rounded-lg text-base font-semibold text-primary-foreground bg-primary hover:bg-accent transition-all duration-200 mt-8 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center px-6 py-4 rounded-xl text-lg font-bold text-primary-foreground bg-primary hover:bg-accent transition-all duration-300 mt-8 shadow-xl hover:shadow-2xl active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  <ClockPlusIcon className="mr-2 h-5 w-5" />
-                  {loading ? "Scheduling..." : "Schedule Donation"}
+                  <ClockPlusIcon className="mr-3 h-5 w-5" />
+                  {loading ? "Scheduling Appointment..." : "Confirm & Schedule Donation"}
                 </button>
+                
                 {error && (
-                  <p className="mt-4 text-sm text-red-500 text-center">
+                  <p className="mt-4 text-sm text-red-500 text-center flex items-center justify-center gap-2">
+                    <AlertCircle className='w-4 h-4'/>
                     {error}
                   </p>
                 )}
               </form>
 
               {/* Important Information Badge */}
-              <div className="mt-8 bg-secondary rounded-lg p-4 border border-border">
-                <p className="text-xs sm:text-sm text-foreground">
-                  <span className="font-semibold">Important:</span> Ensure you meet all eligibility criteria before scheduling. Our team will contact you for confirmation.
+              <div className="mt-10 bg-muted rounded-xl p-4 border border-border shadow-inner">
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  <span className="font-bold text-foreground">Note:</span> Your eligibility will be confirmed on arrival. Please ensure you meet all criteria (age, weight, recent donation history) before scheduling.
                 </p>
               </div>
             </div>
