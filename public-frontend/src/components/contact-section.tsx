@@ -43,14 +43,12 @@ export default function ContactSection() {
 
   return (
     <div id="contact" className="w-full bg-background pt-16 sm:pt-20 lg:pt-24">
-      {/* Contact Section with Primary Background */}
       <div
         className="bg-primary relative overflow-hidden py-16 sm:py-24 lg:py-32 shadow-2xl"
       >
-        {/* Background shapes for depth */}
         <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-white/20 rounded-full blur-[120px]"></div>
-            <div className="absolute bottom-0 left-0 w-60 h-60 bg-white/20 rounded-full blur-[100px]"></div>
+          <div className="absolute top-0 right-0 w-80 h-80 bg-white/20 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-0 left-0 w-60 h-60 bg-white/20 rounded-full blur-[100px]"></div>
         </div>
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
@@ -60,16 +58,15 @@ export default function ContactSection() {
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white leading-tight">
                 Get in Touch 📞
               </h1>
-              
+
               <p className="text-base sm:text-lg text-white/80 max-w-2xl mx-auto leading-relaxed">
                 Reach out to us for urgent blood requirements, donation inquiries, or any medical assistance. Our dedicated team is here to help you <strong>24/7</strong>.
               </p>
-               <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-20 h-1 bg-white/50 rounded-full"></div>
+              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-20 h-1 bg-white/50 rounded-full"></div>
             </div>
           </div>
 
 
-          {/* Contact Info Grid - Enhanced Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mb-16">
             {contactInfo.map((item, index) => {
               const IconComponent = item.icon
@@ -79,19 +76,17 @@ export default function ContactSection() {
                   href={item.href}
                   className="group relative block transition-all duration-300 transform hover:-translate-y-1"
                 >
-                  {/* Card styling: Brighter background, strong border highlight */}
                   <div className="bg-white/10 backdrop-blur-md border-t-4 border-white/20 rounded-2xl p-6 sm:p-8 transition-all duration-300 hover:bg-white/20 hover:border-white/50 shadow-xl hover:shadow-2xl h-full flex items-start">
-                    <div className="flex items-start text-left space-x-4"> {/* Use text-left for better readability */}
-                      {/* Icon Container: Focused white background */}
+                    <div className="flex items-start text-left space-x-4">
                       <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shrink-0 shadow-md transition-all duration-300 group-hover:scale-110">
-                        <IconComponent className="w-6 h-6 text-primary" /> {/* Primary color icon */}
+                        <IconComponent className="w-6 h-6 text-primary" />
                       </div>
-                      
-                      <div className='flex flex-col'>
+
+                      <div className='flex flex-col min-w-0'> {/* Added min-w-0 */}
                         <p className="text-xs font-semibold text-white/70 uppercase tracking-widest mb-1">
                           {item.label}
                         </p>
-                        <p className="text-base sm:text-lg font-bold text-white break-words"> {/* Increased font weight */}
+                        <p className="text-sm sm:text-base font-bold text-white break-all"> {/* Changed font size and used break-all */}
                           {item.value}
                         </p>
                         <p className="text-xs text-white/60 mt-1">
@@ -105,7 +100,6 @@ export default function ContactSection() {
             })}
           </div>
 
-          {/* CTA Section - Prominent and action-oriented */}
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
             <a
               href="tel:+917979000000"
@@ -122,8 +116,6 @@ export default function ContactSection() {
               Schedule Appointment
             </button>
           </div>
-
-          {/* Social Links - Cleaned up and added subtle transition */}
           <div className="flex justify-center gap-4 sm:gap-6 flex-wrap pt-6 border-t border-white/30">
             {socialLinks.map((social, index) => {
               const IconComponent = social.icon
@@ -138,9 +130,8 @@ export default function ContactSection() {
                 >
                   <div className="w-12 h-12 bg-white/10 border border-white/25 rounded-full flex items-center justify-center hover:bg-white/30 transition-all duration-300 hover:scale-125 active:scale-95">
                     <IconComponent className="w-5 h-5 text-white group-hover:text-white" />
-                    {/* Added External link icon for non-Share links */}
                     {social.label !== 'Share Page' && (
-                        <ExternalLink className='w-3 h-3 text-white absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity' />
+                      <ExternalLink className='w-3 h-3 text-white absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity' />
                     )}
                   </div>
                 </a>
