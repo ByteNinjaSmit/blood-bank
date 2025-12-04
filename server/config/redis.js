@@ -3,13 +3,28 @@ const Queue = require('bull');
 const logger = require('../utils/logger');
 
 function createQueue(name, redisUrl) {
-  const opts = {
-    redis: { 
+  // Parse redis://redis:6379 to host and port for Bull
+  let redisConfig;
+  if (redisUrl.includes('://')) {
+    const url = new URL(redisUrl);
+    redisConfig = {
+      host: url.hostname,
+      port: parseInt(url.port) || 6379,
+      maxRetriesPerRequest: 3,
+      retryDelayOnFailover: 100,
+      enableReadyCheck: false
+    };
+  } else {
+    redisConfig = {
       url: redisUrl,
       maxRetriesPerRequest: 3,
       retryDelayOnFailover: 100,
       enableReadyCheck: false
-    },
+    };
+  }
+
+  const opts = {
+    redis: redisConfig,
     defaultJobOptions: {
       attempts: 3,
       backoff: { type: 'exponential', delay: 60_000 },

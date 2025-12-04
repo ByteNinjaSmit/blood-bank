@@ -9,3 +9,4 @@ node_modules
 .idea
 .idea/
 *.pdf
+.env
