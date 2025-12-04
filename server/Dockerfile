@@ -15,7 +15,11 @@ RUN apt-get update && \
 # Copy project files
 COPY . .
 
-# Run as non-root for security
+# Create logs directory and set permission for node user
+RUN mkdir -p /usr/src/app/logs && \
+    chown -R node:node /usr/src/app
+
+# Switch to non-root
 USER node
 
 EXPOSE 5000
