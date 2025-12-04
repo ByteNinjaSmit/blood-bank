@@ -1,40 +1,23 @@
-# Use Node.js 18 LTS
-FROM node:18-alpine
+FROM node:20-bookworm-slim
 
-# Set working directory
-WORKDIR /app
+WORKDIR /usr/src/app
 
-# Install dependencies for native modules
-RUN apk add --no-cache python3 make g++
+ENV NODE_ENV=production
+ENV NODE_OPTIONS=--max-old-space-size=256
 
-# Copy package files
+# Install curl for healthchecks, then install dependencies
 COPY package*.json ./
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/* && \
+    npm ci --omit=dev --quiet
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
-
-# Copy application code
+# Copy project files
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p logs reports uploads temp
+# Run as non-root for security
+USER node
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
-
-# Change ownership of the app directory
-RUN chown -R nodejs:nodejs /app
-
-# Switch to non-root user
-USER nodejs
-
-# Expose port
 EXPOSE 5000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
-
-# Start the application
-CMD ["npm", "run", "prod"]
+CMD ["node", "server.js"]

@@ -1,0 +1,119 @@
+version: "3.8"
+
+services:
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    # container_name: blood-bank-api
+    restart: unless-stopped
+    environment:
+      MONGODB_URI :  "mongodb+srv://admin:admin1234@cluster0.wvrn3hd.mongodb.net/"
+      PORT: "5000"
+      JWT_SECRET: "SMITRAJMERN2024"
+      CORS_SERVER: "http://localhost:5173"
+      ACCESS_TOKEN_EXPIRY : "15m"
+      REFRESH_TOKEN_EXPIRY : "7d"
+      JWT_SECRET_KEY : "BLOODBANK2025"
+      EMAIL_USER : "smitrajbankar.test@gmail.com"
+      EMAIL_PASS: "lehjvdcbvdfllcav"
+      NEAR_EXPIRY_DAYS : "2"
+      REPORTS_DIR : "./reports"
+      ADMIN_EMAIL : "smitrajbankar.subscription@gmail.com"
+      EMAIL_HOST : "smtp.gmail.com" 
+      EMAIL_PORT : "465"
+      EMAIL_SECURE: "true"
+      TIMEZONE: "Asia/Kolkata"
+      AWS_ACCESS_KEY_ID : "AKIAVDY2B2AHD3Z4SWZQ"
+      AWS_SECRET_ACCESS_KEY : "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" 
+      AWS_REGION : "ap-south-1"
+      SNS_PHONE : "7057991669"
+      TWILIO_ACCOUNT_SID: "AC4ee0a2e4d0ce07a8eb831190ed7d6772"
+      TWILIO_AUTH_TOKEN : "38cf552d1bb78b2594e1becb32ded85e"
+      TWILIO_PHONE_NUMBER: "+19104690618"
+      SYSTEM_USER_ID : "68acce6acb0096e64764d7d6"
+      NODE_ENV: "production"
+      REDIS_URL: "redis://redis:6379"
+
+    # ports:
+    #   - "5000:5000"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    # Resource limits (safe for e2-micro)
+    mem_limit: 384m
+    cpus: "0.8"
+
+    # Healthcheck for auto-recovery
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+    # Log rotation (important for 30GB disk)
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    networks:
+      - backend_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: blood-bank-redis
+    restart: unless-stopped
+
+    command: >
+      redis-server
+      --save 60 1
+      --loglevel warning
+      --maxmemory 192mb
+      --maxmemory-policy allkeys-lru
+
+    volumes:
+      - redis-data:/data
+
+    # Resource limits (safe for e2-micro)
+    mem_limit: 192m
+    cpus: "0.4"
+
+    # Healthcheck so API waits until Redis is ready
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+    networks:
+      - backend_net
+
+
+  nginx:
+    image: nginx:latest
+    container_name: bloodbank-nginx
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - backend_net
+
+volumes:
+  redis-data:
+
+networks:
+  backend_net:
+    driver: bridge
