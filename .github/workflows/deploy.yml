@@ -37,6 +37,7 @@ jobs:
           docker push $IMAGE:latest
           docker push $IMAGE:${{ github.sha }}
 
+
   deploy:
     needs: build-test-push
     runs-on: ubuntu-latest
@@ -54,11 +55,10 @@ jobs:
           script: |
             IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/blood-bank-api
             APP_DIR=/home/smitrajbankar11/blood-bank
-            LAST_IMAGE_FILE=$APP_DIR/.last_working_image
 
             cd $APP_DIR
 
-            echo "------ Pulling latest code from GitHub ------"
+            echo "------ Pulling latest code ------"
             git pull origin main
 
             echo "------ Pulling latest docker image ------"
@@ -68,39 +68,32 @@ jobs:
             sudo docker rm -f api_test || true
             sudo docker run -d --name api_test -p 6000:5000 $IMAGE:latest
 
-            echo "Waiting for application to boot..."
+            echo "Waiting 20 seconds for API to boot..."
             sleep 20
 
             echo "------ Running health check ------"
-            if curl -fsS http://localhost:6000/health > /dev/null; then
-                echo "Health OK. Saving image as stable."
-                echo "$IMAGE:latest" | sudo tee $LAST_IMAGE_FILE
-                sudo docker rm -f api_test
-            else
-                echo "❌ Health Check FAILED"
-                echo "------ Showing container logs ------"
-                sudo docker logs api_test || true
-                sudo docker rm -f api_test
+            for i in {1..5}; do
+              if curl -fs http://localhost:6000/health; then
+                echo "Health check PASSED ✅"
+                HEALTH_OK=true
+                break
+              fi
+              echo "Health check failed... retrying ($i/5)"
+              sleep 5
+            done
 
-                if [ -f "$LAST_IMAGE_FILE" ]; then
-                    echo "Rolling back to previous working image..."
-                    PREV_IMAGE=$(cat $LAST_IMAGE_FILE)
-                    sudo docker pull $PREV_IMAGE
-                    sudo docker compose down
-                    sudo docker compose up -d --scale api=2
-                    exit 1
-                else
-                    echo "❌ No previous image found. Cannot rollback!"
-                    exit 1
-                fi
+            sudo docker rm -f api_test
+
+            if [ "$HEALTH_OK" != true ]; then
+              echo "❌ Deployment stopped — health check failed"
+              exit 1
             fi
 
-            echo "------ Deploying NEW working image ------"
+            echo "------ Deploying new version ------"
             sudo docker compose down
-            sudo docker compose pull
             sudo docker compose up -d --scale api=2
 
-            echo "------ Cleaning unused Docker images ------"
+            echo "------ Cleaning unused images ------"
             sudo docker image prune -f
 
       - name: Deployment Success
@@ -109,4 +102,4 @@ jobs:
 
       - name: Deployment Failed
         if: failure()
-        run: echo "❌ Deployment Failed — Rollback Applied (if available)"
+        run: echo "❌ Deployment Failed"
