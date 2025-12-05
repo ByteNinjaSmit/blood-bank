@@ -5,50 +5,44 @@ on:
     branches: ["main"]
 
 jobs:
+
   build-test-push:
     runs-on: ubuntu-latest
-    name: Build, Test & Push Docker Image
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Login to Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Build image with version tag + latest
       - name: Build Docker Image
         run: |
           IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/blood-bank-api
           docker build -t $IMAGE:latest -t $IMAGE:${{ github.sha }} ./server
 
-      # Security Scan
-      - name: Scan Docker Image with Trivy
+      - name: Security Scan (Trivy)
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/blood-bank-api:latest
           format: table
           exit-code: 0
 
-      # Push Image
       - name: Push Docker Image
         run: |
           IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/blood-bank-api
           docker push $IMAGE:latest
           docker push $IMAGE:${{ github.sha }}
 
-
   deploy:
     needs: build-test-push
     runs-on: ubuntu-latest
-    name: Deploy to Production Server
 
     steps:
-      - name: Deploy via SSH
+      - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.1.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -56,33 +50,56 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script_stop: true
+
           script: |
             IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/blood-bank-api
-            cd ~/blood-bank
+            APP_DIR=/home/smitrajbankar11/blood-bank
+            LAST_IMAGE_FILE=$APP_DIR/.last_working_image
 
-            echo "------ Pulling Latest Docker Image ------"
+            cd $APP_DIR
+
+            echo "------ Pulling latest code from GitHub ------"
+            git pull origin main
+
+            echo "------ Pulling latest docker image ------"
             sudo docker pull $IMAGE:latest
 
-            echo "------ Running Temporary Health Test Container ------"
+            echo "------ Starting temporary test container ------"
             sudo docker rm -f api_test || true
             sudo docker run -d --name api_test -p 6000:5000 $IMAGE:latest
             sleep 10
 
-            echo "------ Checking Health ------"
+            echo "------ Running health check ------"
             if curl -fs http://localhost:6000/health; then
-                echo "Health Check PASSED"
+                echo "Health OK. Saving image tag as stable."
+                echo "$IMAGE:latest" | sudo tee $LAST_IMAGE_FILE
                 sudo docker rm -f api_test
             else
-                echo "❌ Health Check FAILED — ROLLING BACK"
+                echo "❌ New image FAILED health check!"
                 sudo docker rm -f api_test
-                exit 1
+
+                if [ -f "$LAST_IMAGE_FILE" ]; then
+                    echo "Rolling back to previous working image..."
+                    PREV_IMAGE=$(cat $LAST_IMAGE_FILE)
+                    sudo docker pull $PREV_IMAGE
+
+                    sudo docker compose down
+                    sudo docker compose up -d --scale api=2
+
+                    echo "Rollback completed."
+                    exit 1
+                else
+                    echo "❌ No previous image found. Cannot rollback!"
+                    exit 1
+                fi
             fi
 
-            echo "------ Deploying to Production ------"
+            echo "------ Deploying NEW working image ------"
             sudo docker compose down
+            sudo docker compose pull
             sudo docker compose up -d --scale api=2
 
-            echo "------ Cleaning Unused Docker Images ------"
+            echo "------ Cleaning unused images ------"
             sudo docker image prune -f
 
       - name: Deployment Success
@@ -91,4 +108,4 @@ jobs:
 
       - name: Deployment Failed
         if: failure()
-        run: echo "❌ Deployment Failed. Previous version kept running."
+        run: echo "❌ Deployment Failed — Rollback Applied (if available)"
