@@ -22,7 +22,7 @@ services:
       EMAIL_PORT: "465"
       EMAIL_SECURE: "true"
       TIMEZONE: "Asia/Kolkata"
-      AWS_ACCESS_KEY_ID: "AKIAVDY2B2AHD3ZSWZQ"
+      AWS_ACCESS_KEY_ID: "AKIAVDY2B2AHD3Z4SWZQ"
       AWS_SECRET_ACCESS_KEY: "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"
       AWS_REGION: "ap-south-1"
       SNS_PHONE: "7057991669"
@@ -56,7 +56,6 @@ services:
     networks:
       - backend_net
 
-
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -80,15 +79,8 @@ services:
       timeout: 3s
       retries: 5
 
-    logging:
-      driver: json-file
-      options:
-        max-size: "5m"
-        max-file: "2"
-
     networks:
       - backend_net
-
 
   nginx:
     image: nginx:latest
@@ -106,7 +98,6 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-
 
 volumes:
   redis-data:
