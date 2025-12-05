@@ -70,9 +70,33 @@ jobs:
             sudo docker run -d --name api_test \
               -p 6000:5000 \
               -e MONGODB_URI="mongodb+srv://admin:admin1234@cluster0.wvrn3hd.mongodb.net/" \
-              -e REDIS_URL="redis://localhost:6379" \
+              -e PORT=5000 \
+              -e JWT_SECRET="SMITRAJMERN2024" \
+              -e CORS_SERVER="http://localhost:5173" \
+              -e ACCESS_TOKEN_EXPIRY="15m" \
+              -e REFRESH_TOKEN_EXPIRY="7d" \
+              -e JWT_SECRET_KEY="BLOODBANK2025" \
+              -e EMAIL_USER="smitrajbankar.test@gmail.com" \
+              -e EMAIL_PASS="lehjvdcbvdfllcav" \
+              -e NEAR_EXPIRY_DAYS="2" \
+              -e REPORTS_DIR="./reports" \
+              -e ADMIN_EMAIL="smitrajbankar.subscription@gmail.com" \
+              -e EMAIL_HOST="smtp.gmail.com" \
+              -e EMAIL_PORT="465" \
+              -e EMAIL_SECURE="true" \
+              -e TIMEZONE="Asia/Kolkata" \
+              -e AWS_ACCESS_KEY_ID="AKIAVDY2B2AHD3Z4SWZQ" \
+              -e AWS_SECRET_ACCESS_KEY="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" \
+              -e AWS_REGION="ap-south-1" \
+              -e SNS_PHONE="7057991669" \
+              -e TWILIO_ACCOUNT_SID="AC4ee0a2e4d0ce07a8eb831190ed7d6772" \
+              -e TWILIO_AUTH_TOKEN="38cf552d1bb78b2594e1becb32ded85e" \
+              -e TWILIO_PHONE_NUMBER="+19104690618" \
+              -e SYSTEM_USER_ID="68acce6acb0096e64764d7d6" \
               -e NODE_ENV=production \
+              -e REDIS_URL="redis://localhost:6379" \
               $IMAGE:latest
+
 
             echo "Waiting for API to boot..."
             for i in {1..10}; do
