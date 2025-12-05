@@ -22,7 +22,7 @@ jobs:
       - name: Build Docker Image
         run: |
           IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/blood-bank-api
-          docker build -t $IMAGE:latest -t $IMAGE:${{ github.sha }} ./server
+          docker build --no-cache -t $IMAGE:latest -t $IMAGE:${{ github.sha }} ./server
 
       - name: Security Scan (Trivy)
         uses: aquasecurity/trivy-action@master
@@ -58,7 +58,7 @@ jobs:
 
             cd $APP_DIR
 
-            echo "------ Pulling latest code ------"
+            echo "------ Pulling latest code from GitHub ------"
             git pull origin main
 
             echo "------ Pulling latest docker image ------"
@@ -66,34 +66,39 @@ jobs:
 
             echo "------ Starting temporary test container ------"
             sudo docker rm -f api_test || true
-            sudo docker run -d --name api_test -p 6000:5000 $IMAGE:latest
 
-            echo "Waiting 20 seconds for API to boot..."
-            sleep 20
+            sudo docker run -d --name api_test \
+              -p 6000:5000 \
+              -e MONGODB_URI="mongodb+srv://admin:admin1234@cluster0.wvrn3hd.mongodb.net/" \
+              -e REDIS_URL="redis://localhost:6379" \
+              -e NODE_ENV=production \
+              $IMAGE:latest
 
-            echo "------ Running health check ------"
-            for i in {1..5}; do
+            echo "Waiting for API to boot..."
+            for i in {1..10}; do
               if curl -fs http://localhost:6000/health; then
                 echo "Health check PASSED ✅"
                 HEALTH_OK=true
                 break
               fi
-              echo "Health check failed... retrying ($i/5)"
+              echo "Health check failed... retrying ($i/10)"
               sleep 5
             done
 
+            echo "Stopping test container..."
             sudo docker rm -f api_test
 
             if [ "$HEALTH_OK" != true ]; then
-              echo "❌ Deployment stopped — health check failed"
+              echo "❌ Deployment cancelled — test container failed health check"
               exit 1
             fi
 
             echo "------ Deploying new version ------"
             sudo docker compose down
+            sudo docker compose pull
             sudo docker compose up -d --scale api=2
 
-            echo "------ Cleaning unused images ------"
+            echo "------ Cleaning unused docker images ------"
             sudo docker image prune -f
 
       - name: Deployment Success
