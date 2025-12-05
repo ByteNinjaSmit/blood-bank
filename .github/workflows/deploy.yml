@@ -67,26 +67,27 @@ jobs:
             echo "------ Starting temporary test container ------"
             sudo docker rm -f api_test || true
             sudo docker run -d --name api_test -p 6000:5000 $IMAGE:latest
-            sleep 10
+
+            echo "Waiting for application to boot..."
+            sleep 20
 
             echo "------ Running health check ------"
-            if curl -fs http://localhost:6000/health; then
-                echo "Health OK. Saving image tag as stable."
+            if curl -fsS http://localhost:6000/health > /dev/null; then
+                echo "Health OK. Saving image as stable."
                 echo "$IMAGE:latest" | sudo tee $LAST_IMAGE_FILE
                 sudo docker rm -f api_test
             else
-                echo "❌ New image FAILED health check!"
+                echo "❌ Health Check FAILED"
+                echo "------ Showing container logs ------"
+                sudo docker logs api_test || true
                 sudo docker rm -f api_test
 
                 if [ -f "$LAST_IMAGE_FILE" ]; then
                     echo "Rolling back to previous working image..."
                     PREV_IMAGE=$(cat $LAST_IMAGE_FILE)
                     sudo docker pull $PREV_IMAGE
-
                     sudo docker compose down
                     sudo docker compose up -d --scale api=2
-
-                    echo "Rollback completed."
                     exit 1
                 else
                     echo "❌ No previous image found. Cannot rollback!"
@@ -99,7 +100,7 @@ jobs:
             sudo docker compose pull
             sudo docker compose up -d --scale api=2
 
-            echo "------ Cleaning unused images ------"
+            echo "------ Cleaning unused Docker images ------"
             sudo docker image prune -f
 
       - name: Deployment Success
