@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import type { ChangeEvent, FormEvent } from "react"
-import axios from "axios"
+import { bookAppointment } from "@/actions/appointment"
 import { User, Phone, Mail, Droplets, Calendar, MapPin, Heart, CheckCircle, Clock, MapPinIcon, AlertCircle, ClockPlusIcon, HeartHandshake } from 'lucide-react'
 
 export default function BloodDonationForm() {
@@ -46,43 +46,28 @@ export default function BloodDonationForm() {
     }
 
     try {
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000"
+      const result = await bookAppointment(finalData)
 
-      await axios.post(
-        `${apiBaseUrl}/api/appointments/public-booking`,
-        {
-          fullName: finalData.fullName,
-          gender: finalData.gender,
-          mobileNo: finalData.mobileNo,
-          email: finalData.email,
-          bloodGroup: finalData.bloodGroup,
-          birthDate: finalData.birthDate,
-          address: finalData.address,
-          appointmentDate: finalData.appointmentDate,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      )
+      if (result.success) {
+        setSubmitted(true)
+        setFormData({
+          fullName: "",
+          gender: "",
+          mobileNo: "",
+          email: "",
+          bloodGroup: "",
+          otherBloodGroup: "",
+          birthDate: "",
+          address: "",
+          appointmentDate: "",
+        })
 
-      setSubmitted(true)
-      setFormData({
-        fullName: "",
-        gender: "",
-        mobileNo: "",
-        email: "",
-        bloodGroup: "",
-        otherBloodGroup: "",
-        birthDate: "",
-        address: "",
-        appointmentDate: "",
-      })
-
-      setTimeout(() => {
-        setSubmitted(false)
-      }, 3000)
+        setTimeout(() => {
+          setSubmitted(false)
+        }, 3000)
+      } else {
+        throw new Error(result.message)
+      }
     } catch (err) {
       console.error("Appointment booking failed:", err)
       const message = err instanceof Error ? err.message : "Something went wrong. Please try again."
@@ -132,17 +117,17 @@ export default function BloodDonationForm() {
             <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed text-lg sm:text-xl">
               Your contribution makes a meaningful difference. Fill out the form below to book your appointment.
             </p>
-             <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-primary/30 rounded-full"></div>
+            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-primary/30 rounded-full"></div>
           </div>
         </div>
 
         {/* Main Container with Sidebar and Form */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-10 lg:gap-16">
-          
+
           {/* Sidebar / Appointment Details - Visual Refinement */}
           <div className="lg:col-span-2 sticky top-20 self-start hidden lg:block">
             <div className="bg-primary/5 rounded-3xl p-10 relative overflow-hidden shadow-xl border border-primary/10">
-              
+
               {/* Background Accent */}
               <div className="absolute -top-10 -left-10 w-40 h-40 bg-primary/10 rounded-full blur-[80px]"></div>
 
@@ -154,7 +139,7 @@ export default function BloodDonationForm() {
 
                 {/* Info Cards */}
                 <div className="space-y-4">
-                  
+
                   {/* When */}
                   <div className="bg-card rounded-xl p-4 border border-border/50 shadow-sm">
                     <div className="flex items-start gap-3">
@@ -207,10 +192,10 @@ export default function BloodDonationForm() {
                   <div className="flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                     <div>
-                        <p className="font-bold text-primary text-sm mb-1">Important Reminder</p>
-                        <p className="text-xs text-foreground/80">
-                            Please arrive **10 minutes early**. Bring a **valid ID** and hydrate well before your appointment.
-                        </p>
+                      <p className="font-bold text-primary text-sm mb-1">Important Reminder</p>
+                      <p className="text-xs text-foreground/80">
+                        Please arrive **10 minutes early**. Bring a **valid ID** and hydrate well before your appointment.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -222,7 +207,7 @@ export default function BloodDonationForm() {
           <div className="lg:col-span-3">
             <div className="bg-card rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl border border-border/50">
               <form onSubmit={handleSubmit} className="space-y-7 sm:space-y-8">
-                
+
                 {/* Row 1: Full Name & Gender */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -272,8 +257,8 @@ export default function BloodDonationForm() {
                         ))}
                       </select>
                       <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <svg className="h-4 w-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                        </div>
+                        <svg className="h-4 w-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -385,8 +370,8 @@ export default function BloodDonationForm() {
                           required
                         />
                         <div className={`p-3 border-2 rounded-lg text-center font-bold text-sm sm:text-base transition-all ${formData.bloodGroup === group
-                            ? 'border-primary bg-primary text-white shadow-md' // Stronger selected style
-                            : 'border-border bg-card text-foreground hover:border-primary/50'
+                          ? 'border-primary bg-primary text-white shadow-md' // Stronger selected style
+                          : 'border-border bg-card text-foreground hover:border-primary/50'
                           }`}>
                           {group}
                         </div>
@@ -403,8 +388,8 @@ export default function BloodDonationForm() {
                         className="sr-only"
                       />
                       <div className={`p-3 border-2 rounded-lg text-center font-bold text-sm sm:text-base transition-all ${formData.bloodGroup === "other"
-                          ? 'border-primary bg-primary text-white shadow-md'
-                          : 'border-border bg-card text-foreground hover:border-primary/50'
+                        ? 'border-primary bg-primary text-white shadow-md'
+                        : 'border-border bg-card text-foreground hover:border-primary/50'
                         }`}>
                         Other
                       </div>
@@ -457,10 +442,10 @@ export default function BloodDonationForm() {
                   <ClockPlusIcon className="mr-3 h-5 w-5" />
                   {loading ? "Scheduling Appointment..." : "Confirm & Schedule Donation"}
                 </button>
-                
+
                 {error && (
                   <p className="mt-4 text-sm text-red-500 text-center flex items-center justify-center gap-2">
-                    <AlertCircle className='w-4 h-4'/>
+                    <AlertCircle className='w-4 h-4' />
                     {error}
                   </p>
                 )}
