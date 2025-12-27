@@ -3,7 +3,7 @@ FROM node:20-bookworm-slim
 WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
-ENV NODE_OPTIONS=--max-old-space-size=256
+ENV NODE_OPTIONS=--max-old-space-size=2048
 
 # Install curl for healthchecks, then install dependencies
 COPY package*.json ./
