@@ -70,14 +70,15 @@ app.use(cookieParser());
 // Cors
 
 const allowedOrigins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://sanjivanibloodbank.org",
-    "https://api.sanjivanibloodbank.org",
-    "https://system.sanjivanibloodbank.org"
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "https://sanjivanibloodbank.org",
+  "https://www.sanjivanibloodbank.org",
+  "https://system.sanjivanibloodbank.org",
 ];
+
 const PORT = process.env.PORT || 5000;
 // CORS Policy
 const io = new Server(server, {
