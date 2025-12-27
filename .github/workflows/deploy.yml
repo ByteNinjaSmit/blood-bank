@@ -54,7 +54,7 @@ jobs:
 
           script: |
             IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/blood-bank-api
-            APP_DIR=/home/smitrajbankar11/blood-bank
+            APP_DIR=/root/blood-bank
 
             cd $APP_DIR
 
@@ -73,7 +73,7 @@ jobs:
 
             sudo docker run -d --name api_test \
               --network host \
-              -e MONGODB_URI="mongodb+srv://admin:admin1234@cluster0.wvrn3hd.mongodb.net/" \
+              -e MONGODB_URI="mongodb://smitrajbankar:Amruta%401969%23Smitraj@212.85.24.35:27017/?authSource=admin/" \
               -e PORT=5000 \
               -e JWT_SECRET="SMITRAJMERN2024" \
               -e CORS_SERVER="http://localhost:5173" \
