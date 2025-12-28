@@ -12,6 +12,10 @@ export interface IAppointment extends Document {
     status: "pending" | "confirmed" | "cancelled";
     source: string;
     createdAt: Date;
+    recentIllness?: string;
+    surgery?: string;
+    medication?: string;
+    lastDonation?: Date;
 }
 
 const AppointmentSchema: Schema<IAppointment> = new Schema({
@@ -72,6 +76,21 @@ const AppointmentSchema: Schema<IAppointment> = new Schema({
         type: Date,
         default: Date.now,
     },
+    recentIllness: {
+        type: String,
+        default: "no",
+    },
+    surgery: {
+        type: String,
+        default: "no",
+    },
+    medication: {
+        type: String,
+        default: "no",
+    },
+    lastDonation: {
+        type: Date,
+    }
 });
 
 AppointmentSchema.index({ appointmentDate: 1 });

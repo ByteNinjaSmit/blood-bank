@@ -1,100 +1,105 @@
 "use client"
 
-import { Facebook, Linkedin, Instagram } from 'lucide-react'
+import { useLanguage } from '@/context/language-context';
+import { content } from '@/lib/content';
 import Link from 'next/link'
-import { FaYoutube, FaFacebook, FaLinkedin, FaHome, FaInfo, FaImage, FaUser } from "react-icons/fa";
-import { IoInformationCircle } from "react-icons/io5";
-import { GrInstagram } from "react-icons/gr";
-import Image from 'next/image';
-import { FaLocationDot ,FaClock } from "react-icons/fa6";
-import { ImDroplet } from "react-icons/im";
-
+import { Facebook, Youtube, Instagram, Linkedin, Phone, Mail, MapPin, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function Footer() {
+    const { language } = useLanguage();
+    const t = content[language].footer;
+    const nav = content[language].nav;
 
     const socialLinks = [
-        { icon: FaFacebook, label: 'Facebook', href: '#' },
-        { icon: FaYoutube, label: 'YouTube', href: '#' },
-        { icon: GrInstagram, label: 'Instagram', href: '#' },
-        { icon: FaLinkedin, label: 'Linkedin', href: '#' }
+        { icon: Facebook, label: 'Facebook', href: '#' },
+        { icon: Youtube, label: 'YouTube', href: '#' },
+        { icon: Instagram, label: 'Instagram', href: '#' },
+        { icon: Linkedin, label: 'Linkedin', href: '#' }
     ]
+
+    const quickLinks = [
+        { label: nav.home, href: '/' },
+        { label: nav.about, href: '/about' },
+        { label: nav.donate, href: '/donate' },
+        { label: nav.contact, href: '/' }
+    ]
+
     return (
-        <footer className="bg-primary text-primary-foreground py-16 px-6 md:px-12">
-            <div className="max-w-7xl mx-auto">
-                {/* Main footer content */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
-                    {/* Company Info */}
-                    <div className="space-y-4">
-                        <h3 className="text-2xl font-bold  flex items-center gap-2"><ImDroplet/>Sanjivani Blood Bank</h3>
-                        <p className="text-sm leading-relaxed text-primary-foreground/90">
-                            We enable healthcare professionals to deliver high-quality blood services, leading to the best possible outcome for patients.
+        <footer className="bg-background border-t border-border/40 pt-16 pb-8 font-sans">
+            <div className="max-w-7xl mx-auto px-6 lg:px-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8 mb-12">
+
+                    {/* Brand Identifier */}
+                    <div className="lg:col-span-4 space-y-4">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+                                <span className="font-bold text-lg">S</span>
+                            </div>
+                            <span className="text-xl font-bold tracking-tight text-foreground">Sanjivani Blood Bank</span>
+                        </div>
+                        <p className="text-muted-foreground leading-relaxed text-sm max-w-xs">
+                            {t.about}
                         </p>
-                        {/* Social Links */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex gap-3 pt-2">
                             {socialLinks.map((social) => (
                                 <Link
                                     key={social.label}
-                                    href="#"
-                                    aria-label={social.label}
-                                    className="w-7 h-7 rounded-full  text-primary hover:text-primary flex items-center justify-center text-xs transition-all hover:scale-110 duration-300"
+                                    href={social.href}
+                                    className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-white transition-all duration-300"
                                 >
-                                    <social.icon className='text-2xl' />
+                                    <social.icon className="w-4 h-4" />
                                 </Link>
                             ))}
                         </div>
                     </div>
 
-                    {/* Locations */}
-                    <div className="space-y-4">
-                        <h4 className="font-bold text-lg flex items-center gap-2"><FaLocationDot/> Locations</h4>
-                        <div className="space-y-4 text-sm">
-                            <div>
-                                <p className="font-semibold mb-1">Sanjivani Blood Bank, Kopargaon</p>
-                                <p className="text-primary-foreground/90">
-                                    Vivekanand Nagar,<br />
-                                    Kopargaon, Maharashtra 423601
-                                </p>
-                            </div>
-                        </div>
+                    {/* Quick Links */}
+                    <div className="lg:col-span-2 space-y-4">
+                        <h4 className="font-bold text-foreground text-sm uppercase tracking-wide">{t.quickLinks}</h4>
+                        <ul className="space-y-2.5">
+                            {quickLinks.map((link) => (
+                                <li key={link.label}>
+                                    <Link href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors inline-block">
+                                        {link.label}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
 
-
-                    {/* Working Days */}
-                    <div className="space-y-4">
-                        <h4 className="font-bold text-lg  flex items-center gap-2"><FaClock/> Working Days</h4>
-                        <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                                <span>Mon - Tue</span>
-                                <span>08:00 AM - 05:00 PM</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Wed - Thu</span>
-                                <span>09:00 AM - 06:00 PM</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Fri - Sat</span>
-                                <span>10:00 AM - 05:00 PM</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Sunday</span>
-                                <span>Emergency Only</span>
-                            </div>
-                            <div className="flex justify-between pt-2 border-t border-primary-foreground/20">
-                                <span>Phone Booking</span>
-                                <span>Mon - 10:00 AM</span>
-                            </div>
-                        </div>
+                    {/* Contact - Simplified */}
+                    <div className="lg:col-span-3 space-y-4">
+                        <h4 className="font-bold text-foreground text-sm uppercase tracking-wide">{t.locationsTitle}</h4>
+                        <ul className="space-y-3">
+                            <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                                <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                                <span>{t.address}</span>
+                            </li>
+                            <li className="flex items-center gap-3 text-sm text-muted-foreground">
+                                <Phone className="w-4 h-4 text-primary shrink-0" />
+                                <span>+91 94222 23117 / +91 94217 23117</span>
+                            </li>
+                            <li className="flex items-center gap-3 text-sm text-muted-foreground">
+                                <Phone className="w-4 h-4 text-primary shrink-0" />
+                                <span>02423 222237</span>
+                            </li>
+                            <li className="flex items-center gap-3 text-sm text-muted-foreground">
+                                <Mail className="w-4 h-4 text-primary shrink-0" />
+                                <span>contact@sanjivanibloodbank.org</span>
+                            </li>
+                        </ul>
                     </div>
                 </div>
 
-                {/* Divider */}
-                <div className="border-t border-primary-foreground/20"></div>
-
-                {/* Copyright */}
-                <div className="pt-8 text-center text-sm text-primary-foreground/80">
-                    <p>© {new Date().getFullYear()} Sanjivani Blood Bank. All Rights Reserved.</p>
+                <div className="pt-8 border-t border-border/40 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Sanjivani Blood Bank.</p>
+                    <div className="flex gap-6 text-xs text-muted-foreground font-medium">
+                        <Link href="#" className="hover:text-foreground transition-colors">Privacy</Link>
+                        <Link href="#" className="hover:text-foreground transition-colors">Terms</Link>
+                        <Link href="#" className="hover:text-foreground transition-colors">Cookies</Link>
+                    </div>
                 </div>
-
             </div>
         </footer>
     )

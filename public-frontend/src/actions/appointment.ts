@@ -12,6 +12,10 @@ interface AppointmentData {
     birthDate: string;
     address: string;
     appointmentDate: string;
+    recentIllness?: string;
+    surgery?: string;
+    medication?: string;
+    lastDonation?: string;
 }
 
 interface ActionResponse {

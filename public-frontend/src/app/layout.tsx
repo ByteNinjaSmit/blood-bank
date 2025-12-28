@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/layout/main-navbar";
 import BackToTop from "@/components/utils/back-to-top-button";
 import { Analytics } from "@vercel/analytics/next"
+import { LanguageProvider } from "@/context/language-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,12 +34,13 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body
-      >
-        <Navbar />
-        <Analytics/>
-        {children}
-        <BackToTop/>
+      <body>
+        <LanguageProvider>
+          <Navbar />
+          <Analytics />
+          {children}
+          <BackToTop />
+        </LanguageProvider>
       </body>
     </html>
   );
