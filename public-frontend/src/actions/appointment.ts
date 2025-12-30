@@ -4,14 +4,14 @@ import connectToDatabase from "@/lib/db";
 import Appointment from "@/models/appointment-model";
 
 interface AppointmentData {
-    fullName: string;
-    gender: string;
+    fullName?: string;
+    gender?: string;
     mobileNo: string;
     email?: string;
-    bloodGroup: string;
-    birthDate: string;
-    address: string;
-    appointmentDate: string;
+    bloodGroup?: string;
+    birthDate?: string;
+    address?: string;
+    appointmentDate?: string;
     recentIllness?: string;
     surgery?: string;
     medication?: string;
@@ -28,8 +28,16 @@ export async function bookAppointment(data: AppointmentData): Promise<ActionResp
     try {
         await connectToDatabase();
 
+        const sanitizedData = Object.fromEntries(
+            Object.entries(data).filter(([, value]) => {
+                if (value === undefined || value === null) return false;
+                if (typeof value === "string" && value.trim() === "") return false;
+                return true;
+            })
+        ) as AppointmentData;
+
         const newAppointment = new Appointment({
-            ...data,
+            ...sanitizedData,
             source: "public-frontend-nextjs",
         });
 

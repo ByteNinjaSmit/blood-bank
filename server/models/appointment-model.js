@@ -4,12 +4,12 @@ const { Schema } = mongoose;
 const AppointmentSchema = new Schema({
   fullName: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
   },
   gender: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
   },
   mobileNo: {
@@ -30,21 +30,21 @@ const AppointmentSchema = new Schema({
   },
   bloodGroup: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
   },
   birthDate: {
     type: Date,
-    required: true,
+    required: false,
   },
   address: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
   },
   appointmentDate: {
     type: Date,
-    required: true,
+    required: false,
   },
   status: {
     type: String,

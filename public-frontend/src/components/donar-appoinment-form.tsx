@@ -108,7 +108,7 @@ export default function BloodDonationForm() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="relative">
               <User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
-              <input name="fullName" required value={formData.fullName} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.fullNamePlaceholder} />
+              <input name="fullName" value={formData.fullName} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.fullNamePlaceholder} />
             </div>
             <div className="relative">
               <Phone className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
@@ -119,9 +119,9 @@ export default function BloodDonationForm() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="relative">
               <Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
-              <input name="birthDate" type="text" onFocus={(e) => e.target.type = 'date'} onBlur={(e) => e.target.type = 'text'} required value={formData.birthDate} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.birthDate} />
+              <input name="birthDate" type="text" onFocus={(e) => e.target.type = 'date'} onBlur={(e) => e.target.type = 'text'} value={formData.birthDate} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.birthDate} />
             </div>
-            <select name="gender" required value={formData.gender} onChange={handleChange} className="w-full px-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium text-muted-foreground">
+            <select name="gender" value={formData.gender} onChange={handleChange} className="w-full px-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium text-muted-foreground">
               <option value="">{t.selectGender}</option>
               {genderOptions.map((o, i) => <option key={o} value={o}>{t.genderOptions?.[i] || o}</option>)}
             </select>
@@ -176,12 +176,12 @@ export default function BloodDonationForm() {
 
           <div className="relative">
             <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
-            <input name="address" required value={formData.address} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.addressPlaceholder} />
+            <input name="address" value={formData.address} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.addressPlaceholder} />
           </div>
 
           <div className="relative">
             <Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
-            <input name="appointmentDate" type="text" onFocus={(e) => e.target.type = 'date'} onBlur={(e) => e.target.type = 'text'} required value={formData.appointmentDate} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.preferredDate} />
+            <input name="appointmentDate" type="text" onFocus={(e) => e.target.type = 'date'} onBlur={(e) => e.target.type = 'text'} value={formData.appointmentDate} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.preferredDate} />
           </div>
         </div>
 

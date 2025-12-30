@@ -13,8 +13,8 @@ const createPublicAppointment = async (req, res, next) => {
       appointmentDate,
     } = req.body;
 
-    if (!fullName || !gender || !mobileNo || !bloodGroup || !birthDate || !address || !appointmentDate) {
-      return res.status(400).json({ message: "Please fill in all required fields." });
+    if (!mobileNo) {
+      return res.status(400).json({ message: "Mobile number is required." });
     }
 
     if (!/^\d{10}$/.test(mobileNo)) {
@@ -25,17 +25,22 @@ const createPublicAppointment = async (req, res, next) => {
       email = email.toLowerCase().trim();
     }
 
-    const birthDateObj = new Date(birthDate);
-    const appointmentDateObj = new Date(appointmentDate);
-
-    if (isNaN(birthDateObj) || isNaN(appointmentDateObj)) {
-      return res.status(400).json({ message: "Invalid date format." });
+    const birthDateObj = birthDate ? new Date(birthDate) : null;
+    if (birthDateObj && isNaN(birthDateObj)) {
+      return res.status(400).json({ message: "Invalid birth date format." });
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (appointmentDateObj < today) {
-      return res.status(400).json({ message: "Appointment date cannot be in the past." });
+    const appointmentDateObj = appointmentDate ? new Date(appointmentDate) : null;
+    if (appointmentDateObj && isNaN(appointmentDateObj)) {
+      return res.status(400).json({ message: "Invalid appointment date format." });
+    }
+
+    if (appointmentDateObj) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (appointmentDateObj < today) {
+        return res.status(400).json({ message: "Appointment date cannot be in the past." });
+      }
     }
 
     const appointment = new Appointment({
@@ -44,9 +49,9 @@ const createPublicAppointment = async (req, res, next) => {
       mobileNo,
       email,
       bloodGroup,
-      birthDate: birthDateObj,
+      birthDate: birthDateObj || undefined,
       address,
-      appointmentDate: appointmentDateObj,
+      appointmentDate: appointmentDateObj || undefined,
       source: "public-frontend",
     });
 
