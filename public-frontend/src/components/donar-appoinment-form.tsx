@@ -89,10 +89,10 @@ export default function BloodDonationForm() {
   return (
     <div className="bg-white dark:bg-card rounded-3xl shadow-xl shadow-gray-200/50 dark:shadow-none border border-border/50 p-6 sm:p-8">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-foreground">Book Appointment</h2>
+        <h2 className="text-2xl font-bold text-foreground">{t.formTitle}</h2>
         <div className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 bg-green-100 text-green-700 rounded-full">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          Slots Open
+          {t.walkInBadge}
         </div>
       </div>
 

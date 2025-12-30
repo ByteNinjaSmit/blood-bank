@@ -80,6 +80,8 @@ export type ContentData = {
     };
     form: {
         personalDetails: string;
+        formTitle: string;
+        walkInBadge: string;
         fullName: string;
         fullNamePlaceholder: string;
         gender: string;
@@ -216,6 +218,8 @@ export const content: Record<'en' | 'mr', ContentData> = {
         },
         form: {
             personalDetails: "Personal Details",
+            formTitle: "Register as a Voluntary Blood Donor",
+            walkInBadge: "Walk-ins Welcome",
             fullName: "Full Name *",
             fullNamePlaceholder: "Enter Full Name",
             gender: "Gender *",
@@ -231,10 +235,10 @@ export const content: Record<'en' | 'mr', ContentData> = {
             medication: "Ongoing Medication?",
             lastDonation: "Previous Donation Date (Optional)",
             donationDetails: "Donation Details",
-            preferredDate: "Preferred Donation Date *",
+            preferredDate: "Preferred Donation Day (Optional) *",
             flexibleNote: "Flexible – final confirmation at blood bank",
             bloodGroup: "Blood Group (If Known)",
-            submitBtn: "Register as Donor",
+            submitBtn: "become a lifesaver",
             processing: "Processing...",
             yes: "Yes",
             no: "No",
@@ -350,6 +354,8 @@ export const content: Record<'en' | 'mr', ContentData> = {
         },
         form: {
             personalDetails: "वैयक्तिक माहिती",
+            formTitle: "स्वयंस्फूर्त रक्तदाता नोंदणी",
+            walkInBadge: "थेट (Walk-in) स्वागत",
             fullName: "पूर्ण नाव *",
             fullNamePlaceholder: "पूर्ण नाव प्रविष्ट करा",
             gender: "लिंग *",
@@ -365,10 +371,10 @@ export const content: Record<'en' | 'mr', ContentData> = {
             medication: "सध्याचे औषध चालू आहे का?",
             lastDonation: "मागील रक्तदानाची तारीख (ऐच्छिक)",
             donationDetails: "रक्तदान तपशील",
-            preferredDate: "पसंतीची रक्तदान तारीख *",
+            preferredDate: "पसंतीचा रक्तदान दिवस (ऐच्छिक) *",
             flexibleNote: "लवचिक – अंतिम पुष्टी रक्तपेढीमध्ये होईल",
             bloodGroup: "रक्तगट (माहित असल्यास)",
-            submitBtn: "रक्तदाता म्हणून नोंदणी करा",
+            submitBtn: "जीवनदाता बना – रक्तदान करा",
             processing: "प्रक्रिया सुरू आहे...",
             yes: "होय",
             no: "नाही",
