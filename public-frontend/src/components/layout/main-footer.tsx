@@ -93,7 +93,7 @@ export default function Footer() {
                 </div>
 
                 <div className="pt-8 border-t border-border/40 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Sanjivani Blood Bank.</p>
+                    <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Sanjivani Blood Bank. Designed & Developed by ByteNinjaTeam</p>
                     <div className="flex gap-6 text-xs text-muted-foreground font-medium">
                         <Link href="#" className="hover:text-foreground transition-colors">Privacy</Link>
                         <Link href="#" className="hover:text-foreground transition-colors">Terms</Link>
