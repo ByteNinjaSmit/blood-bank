@@ -9,6 +9,7 @@ import EducationSection from '@/components/education-section'
 import CampaignSection from '@/components/campaign-section'
 import AboutSection from '@/components/about-blood-bank'
 import HomeDonateSection from '@/components/home-donate-section'
+import FeedbackSection from '@/components/feedback-section'
 
 const page = () => {
   return (
@@ -21,6 +22,7 @@ const page = () => {
       <CampaignSection />
       <SafetySection />
       <HomeDonateSection />
+      <FeedbackSection />
       <ContactSection />
       <Footer />
     </div>

@@ -106,6 +106,14 @@ export type ContentData = {
         no: string;
         genderOptions: string[];
     };
+    feedback: {
+        title: string;
+        subtitle: string;
+        placeholder: string;
+        submitBtn: string;
+        successMessage: string;
+        errorMessage: string;
+    };
 }
 
 export const content: Record<'en' | 'mr', ContentData> = {
@@ -243,6 +251,14 @@ export const content: Record<'en' | 'mr', ContentData> = {
             yes: "Yes",
             no: "No",
             genderOptions: ["Male", "Female", "Other"]
+        },
+        feedback: {
+            title: "Your Feedback Matters",
+            subtitle: "Help us improve our services. Your suggestions are valuable to us.",
+            placeholder: "Share your thoughts, suggestions, or experience...",
+            submitBtn: "Submit Feedback",
+            successMessage: "Thank you for your feedback!",
+            errorMessage: "Failed to submit feedback. Please try again."
         }
     },
     mr: {
@@ -379,6 +395,14 @@ export const content: Record<'en' | 'mr', ContentData> = {
             yes: "होय",
             no: "नाही",
             genderOptions: ["पुरुष", "स्त्री", "इतर"]
+        },
+        feedback: {
+            title: "तुमचा अभिप्राय महत्त्वाचा आहे",
+            subtitle: "आम्हाला आमच्या सेवा सुधारण्यास मदत करा. तुमच्या सूचना आमच्यासाठी मौल्यवान आहेत.",
+            placeholder: "तुमचे विचार, सूचना किंवा अनुभव सामायिक करा...",
+            submitBtn: "अभिप्राय सबमिट करा",
+            successMessage: "तुमच्या अभिप्रायाबद्दल धन्यवाद!",
+            errorMessage: "अभिप्राय सबमिट करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा."
         }
     }
 };
