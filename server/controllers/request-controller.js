@@ -11,7 +11,7 @@ const HospitalRequest = require('../models/hospital-request-model');
 const Hospital = require('../models/hospital-model');
 const Inventory = require('../models/inventory-model');
 const Component = require('../models/component-model');
-const mongoose = require('mongoose');
+const { withOptionalTransaction } = require('../utils/with-optional-transaction');
 
 function toInt(v, d) {
   const n = parseInt(v, 10);
@@ -94,63 +94,78 @@ async function getRequestById(req, res, next) {
 }
 
 async function matchRequest(req, res, next) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
-    const { id } = req.params;
-    const now = new Date();
-    const request = await HospitalRequest.findById(id).session(session);
-    if (!request) {
-      await session.abortTransaction(); session.endSession();
-      return res.status(404).json({ success: false, message: 'Request not found' });
-    }
-    if (request.status !== 'pending') {
-      await session.abortTransaction(); session.endSession();
-      return res.status(400).json({ success: false, message: 'Only pending requests can be matched' });
-    }
-    const selections = [];
-    const shortages = [];
-    for (const rc of request.requestedComponents) {
-      const pipeline = [
-        { $match: { status: 'in-stock' } },
-        { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
-        { $unwind: '$component' },
-        { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
-        { $unwind: '$bag' },
-        { $match: { 'component.componentType': rc.componentType, 'bag.bloodGroup': rc.bloodGroup, 'bag.rh': rc.rh, 'component.expiryDate': { $gte: now } } },
-        { $sort: { inStockDate: 1, 'component.expiryDate': 1 } },
-        { $limit: rc.units },
-        { $project: { _id: 1 } },
-      ];
-      const docs = await Inventory.aggregate(pipeline).session(session);
-      const ids = docs.map(d => d._id);
-      if (ids.length < rc.units) {
-        shortages.push({ componentType: rc.componentType, required: rc.units, available: ids.length });
+    return await withOptionalTransaction(async (session) => {
+      const { id } = req.params;
+      const now = new Date();
+      const request = session
+        ? await HospitalRequest.findById(id).session(session)
+        : await HospitalRequest.findById(id);
+
+      if (!request) {
+        return res.status(404).json({ success: false, message: 'Request not found' });
       }
-      selections.push(...ids.map(i => ({ id: i, reservedAt: now })));
-    }
-    if (shortages.length) {
-      await session.abortTransaction(); session.endSession();
-      return res.status(409).json({ success: false, message: 'Insufficient stock to fully match request', data: { shortages } });
-    }
-    const invIds = selections.map(s => s.id);
-    const upd = await Inventory.updateMany(
-      { _id: { $in: invIds }, status: 'in-stock' },
-      { $set: { status: 'reserved', reservedFor: request._id, reservedAt: now } },
-      { session }
-    );
-    if (upd.modifiedCount !== invIds.length) {
-      await session.abortTransaction(); session.endSession();
-      return res.status(409).json({ success: false, message: 'Concurrent update detected while reserving stock' });
-    }
-    const matched = selections.map(s => ({ inventoryId: s.id, reservedAt: s.reservedAt }));
-    request.matchedInventory.push(...matched);
-    request.status = 'matched';
-    await request.save({ session });
-    await session.commitTransaction(); session.endSession();
-    return res.status(200).json({ success: true, message: 'Request matched and inventory reserved', data: { matchedCount: matched.length, inventoryIds: invIds } });
+      if (request.status !== 'pending') {
+        return res.status(400).json({ success: false, message: 'Only pending requests can be matched' });
+      }
+
+      const selections = [];
+      const shortages = [];
+      for (const rc of request.requestedComponents) {
+        const pipeline = [
+          { $match: { status: 'in-stock' } },
+          { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+          { $unwind: '$component' },
+          { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
+          { $unwind: '$bag' },
+          { $match: { 'component.componentType': rc.componentType, 'bag.bloodGroup': rc.bloodGroup, 'bag.rh': rc.rh, 'component.expiryDate': { $gte: now } } },
+          { $sort: { inStockDate: 1, 'component.expiryDate': 1 } },
+          { $limit: rc.units },
+          { $project: { _id: 1 } },
+        ];
+        const docs = session
+          ? await Inventory.aggregate(pipeline).session(session)
+          : await Inventory.aggregate(pipeline);
+        const ids = docs.map(d => d._id);
+        if (ids.length < rc.units) {
+          shortages.push({ componentType: rc.componentType, required: rc.units, available: ids.length });
+        }
+        selections.push(...ids.map(i => ({ id: i, reservedAt: now })));
+      }
+
+      if (shortages.length) {
+        return res.status(409).json({ success: false, message: 'Insufficient stock to fully match request', data: { shortages } });
+      }
+
+      const invIds = selections.map(s => s.id);
+      const upd = await Inventory.updateMany(
+        { _id: { $in: invIds }, status: 'in-stock' },
+        { $set: { status: 'reserved', reservedFor: request._id, reservedAt: now } },
+        session ? { session } : {}
+      );
+
+      if (upd.modifiedCount !== invIds.length) {
+        if (!session) {
+          await Inventory.updateMany(
+            { _id: { $in: invIds }, status: 'reserved', reservedFor: request._id, reservedAt: now },
+            { $set: { status: 'in-stock', reservedFor: null, reservedAt: null } }
+          );
+        }
+        return res.status(409).json({ success: false, message: 'Concurrent update detected while reserving stock' });
+      }
+
+      const matched = selections.map(s => ({ inventoryId: s.id, reservedAt: s.reservedAt }));
+      request.matchedInventory.push(...matched);
+      request.status = 'matched';
+      if (session) {
+        await request.save({ session });
+      } else {
+        await request.save();
+      }
+
+      return res.status(200).json({ success: true, message: 'Request matched and inventory reserved', data: { matchedCount: matched.length, inventoryIds: invIds } });
+    });
   } catch (err) {
-    await session.abortTransaction(); session.endSession();
     next(err);
   }
 }
@@ -170,55 +185,70 @@ async function approveRequest(req, res, next) {
 }
 
 async function issueRequest(req, res, next) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
-    const { id } = req.params;
-    const now = new Date();
-    const request = await HospitalRequest.findById(id).session(session);
-    if (!request) {
-      await session.abortTransaction(); session.endSession();
-      return res.status(404).json({ success: false, message: 'Request not found' });
-    }
-    if (!['approved', 'matched'].includes(request.status)) {
-      await session.abortTransaction(); session.endSession();
-      return res.status(400).json({ success: false, message: 'Only approved or matched requests can be issued' });
-    }
-    const reserved = await Inventory.aggregate([
-      { $match: { status: 'reserved', reservedFor: request._id } },
-      { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
-      { $unwind: '$component' },
-      { $match: { 'component.expiryDate': { $gte: now } } },
-      { $project: { _id: 1 } }
-    ]).session(session);
-    const invIds = reserved.map(r => r._id);
-    if (invIds.length === 0) {
-      await session.abortTransaction(); session.endSession();
-      return res.status(400).json({ success: false, message: 'No eligible reserved units to issue' });
-    }
-    const upd = await Inventory.updateMany(
-      { _id: { $in: invIds }, status: 'reserved', reservedFor: request._id },
-      { $set: { status: 'issued', issuedAt: now, issuedBy: req.userID || null } },
-      { session }
-    );
-    if (upd.modifiedCount === 0) {
-      await session.abortTransaction(); session.endSession();
-      return res.status(409).json({ success: false, message: 'Concurrent update detected while issuing' });
-    }
-    // Sync Component status to 'issued' for traceability
-    const affectedInv = await Inventory.find({ _id: { $in: invIds } }, { componentId: 1 }).session(session);
-    const compIds = affectedInv.map(d => d.componentId).filter(Boolean);
-    if (compIds.length) {
-      await Component.updateMany({ _id: { $in: compIds } }, { $set: { status: 'issued' } }, { session });
-    }
-    request.status = 'issued';
-    request.issuedAt = now;
-    request.issuedBy = req.userID || null;
-    await request.save({ session });
-    await session.commitTransaction(); session.endSession();
-    return res.status(200).json({ success: true, message: 'Units issued', data: { issuedCount: upd.modifiedCount, inventoryIds: invIds } });
+    return await withOptionalTransaction(async (session) => {
+      const { id } = req.params;
+      const now = new Date();
+      const request = session
+        ? await HospitalRequest.findById(id).session(session)
+        : await HospitalRequest.findById(id);
+
+      if (!request) {
+        return res.status(404).json({ success: false, message: 'Request not found' });
+      }
+      if (!['approved', 'matched'].includes(request.status)) {
+        return res.status(400).json({ success: false, message: 'Only approved or matched requests can be issued' });
+      }
+
+      const reservedAgg = Inventory.aggregate([
+        { $match: { status: 'reserved', reservedFor: request._id } },
+        { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+        { $unwind: '$component' },
+        { $match: { 'component.expiryDate': { $gte: now } } },
+        { $project: { _id: 1 } }
+      ]);
+
+      const reserved = session ? await reservedAgg.session(session) : await reservedAgg;
+      const invIds = reserved.map(r => r._id);
+      if (invIds.length === 0) {
+        return res.status(400).json({ success: false, message: 'No eligible reserved units to issue' });
+      }
+
+      const upd = await Inventory.updateMany(
+        { _id: { $in: invIds }, status: 'reserved', reservedFor: request._id },
+        { $set: { status: 'issued', issuedAt: now, issuedBy: req.userID || null } },
+        session ? { session } : {}
+      );
+
+      if (upd.modifiedCount === 0) {
+        return res.status(409).json({ success: false, message: 'Concurrent update detected while issuing' });
+      }
+
+      // Sync Component status to 'issued' for traceability
+      const affectedInv = session
+        ? await Inventory.find({ _id: { $in: invIds } }, { componentId: 1 }).session(session)
+        : await Inventory.find({ _id: { $in: invIds } }, { componentId: 1 });
+      const compIds = affectedInv.map(d => d.componentId).filter(Boolean);
+      if (compIds.length) {
+        await Component.updateMany(
+          { _id: { $in: compIds } },
+          { $set: { status: 'issued' } },
+          session ? { session } : {}
+        );
+      }
+
+      request.status = 'issued';
+      request.issuedAt = now;
+      request.issuedBy = req.userID || null;
+      if (session) {
+        await request.save({ session });
+      } else {
+        await request.save();
+      }
+
+      return res.status(200).json({ success: true, message: 'Units issued', data: { issuedCount: upd.modifiedCount, inventoryIds: invIds } });
+    });
   } catch (err) {
-    await session.abortTransaction(); session.endSession();
     next(err);
   }
 }
@@ -239,30 +269,35 @@ async function completeRequest(req, res, next) {
 }
 
 async function rejectRequest(req, res, next) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
-    const { id } = req.params;
-    const request = await HospitalRequest.findById(id).session(session);
-    if (!request) {
-      await session.abortTransaction(); session.endSession();
-      return res.status(404).json({ success: false, message: 'Request not found' });
-    }
-    if (!['pending', 'matched', 'approved'].includes(request.status)) {
-      await session.abortTransaction(); session.endSession();
-      return res.status(400).json({ success: false, message: 'Only pending, matched, or approved requests can be rejected' });
-    }
-    await Inventory.updateMany(
-      { reservedFor: request._id, status: 'reserved' },
-      { $set: { status: 'in-stock', reservedFor: null, reservedAt: null } },
-      { session }
-    );
-    request.status = 'rejected';
-    await request.save({ session });
-    await session.commitTransaction(); session.endSession();
-    return res.status(200).json({ success: true, message: 'Request rejected' });
+    return await withOptionalTransaction(async (session) => {
+      const { id } = req.params;
+      const request = session
+        ? await HospitalRequest.findById(id).session(session)
+        : await HospitalRequest.findById(id);
+
+      if (!request) {
+        return res.status(404).json({ success: false, message: 'Request not found' });
+      }
+      if (!['pending', 'matched', 'approved'].includes(request.status)) {
+        return res.status(400).json({ success: false, message: 'Only pending, matched, or approved requests can be rejected' });
+      }
+
+      await Inventory.updateMany(
+        { reservedFor: request._id, status: 'reserved' },
+        { $set: { status: 'in-stock', reservedFor: null, reservedAt: null } },
+        session ? { session } : {}
+      );
+      request.status = 'rejected';
+      if (session) {
+        await request.save({ session });
+      } else {
+        await request.save();
+      }
+
+      return res.status(200).json({ success: true, message: 'Request rejected' });
+    });
   } catch (err) {
-    await session.abortTransaction(); session.endSession();
     next(err);
   }
 }

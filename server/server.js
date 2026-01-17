@@ -188,7 +188,13 @@ app.use(
 // Defining Routes & API
 app.use((req, res, next) => {
     logger.info(`Received ${req.method} request to ${req.url}`);
-    logger.info(`Request body, ${req.body}`);
+    let bodyString = "";
+    try {
+        bodyString = JSON.stringify(req.body);
+    } catch (e) {
+        bodyString = "[unserializable]";
+    }
+    logger.info(`Request body: ${bodyString}`);
     logger.info(`Request IP, ${req.ip}`);
     // console.log(`Incoming request: ${req.method} ${req.url} from ${req.ip}`);
 

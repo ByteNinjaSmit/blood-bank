@@ -3,13 +3,13 @@ const logger = require('../utils/logger');
 
 const errorMiddleware = (err, req, res, next) => {
     // Log the error
-    logger.error({
+    logger.error('[Error] Unhandled error occurred', {
         error: err.message,
         stack: err.stack,
         url: req.url,
         method: req.method,
         ip: req.ip
-    }, '[Error] Unhandled error occurred');
+    });
 
     // Handle Multer-specific errors
     if (err instanceof multer.MulterError) {
