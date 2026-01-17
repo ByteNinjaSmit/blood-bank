@@ -23,8 +23,6 @@ services:
       EMAIL_PORT: "465"
       EMAIL_SECURE: "true"
       TIMEZONE: "Asia/Kolkata"
-      AWS_ACCESS_KEY_ID: "AKIAVDY2B2AHD3Z4SWZQ"
-      AWS_SECRET_ACCESS_KEY: "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"
       AWS_REGION: "ap-south-1"
       SNS_PHONE: "7057991669"
       TWILIO_ACCOUNT_SID: "AC4ee0a2e4d0ce07a8eb831190ed7d6772"
