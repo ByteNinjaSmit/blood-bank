@@ -156,6 +156,27 @@ const registerDonor = async (req, res, next) => {
 };
 
 // ---------------------
+// Helper function to check donation eligibility based on sex and last donation date
+// Males: 90 days (3 months), Females: 120 days (4 months)
+// ---------------------
+const checkDonationEligibility = (sex, lastDonationDate) => {
+  if (!lastDonationDate) {
+    return { isAvailableToDonate: true, nextEligibleDate: null, daysUntilEligible: 0 };
+  }
+
+  const waitingDays = sex === 'F' ? 120 : 90; // 120 days for females, 90 for males
+  const lastDate = new Date(lastDonationDate);
+  const nextEligibleDate = new Date(lastDate);
+  nextEligibleDate.setDate(nextEligibleDate.getDate() + waitingDays);
+
+  const now = new Date();
+  const isAvailableToDonate = now >= nextEligibleDate;
+  const daysUntilEligible = isAvailableToDonate ? 0 : Math.ceil((nextEligibleDate - now) / (1000 * 60 * 60 * 24));
+
+  return { isAvailableToDonate, nextEligibleDate, daysUntilEligible };
+};
+
+// ---------------------
 // FAST SEARCH Donors by single query across multiple fields
 // Accepts: q (string), limit (default 20)
 // Matches: first/middle/last name, phone, donorId, uid, email, address.city, bloodGroup
@@ -194,6 +215,10 @@ const fastSearchDonors = async (req, res, next) => {
       const l = d?.name?.lastName || '';
       const fullName = [f, m, l].filter(Boolean).join(' ');
       const age = d?.dob ? (nowYear - new Date(d.dob).getFullYear()) : null;
+
+      // Check donation eligibility
+      const eligibility = checkDonationEligibility(d.sex, d.lastDonationDate);
+
       return {
         _id: d._id,
         donorId: d.donorId,
@@ -208,6 +233,9 @@ const fastSearchDonors = async (req, res, next) => {
         bloodGroup: d.bloodGroup,
         rh: d.rh,
         lastDonationDate: d.lastDonationDate,
+        isAvailableToDonate: eligibility.isAvailableToDonate,
+        nextEligibleDate: eligibility.nextEligibleDate,
+        daysUntilEligible: eligibility.daysUntilEligible,
       };
     });
 
@@ -528,11 +556,11 @@ const searchDonorLatestDonation = async (req, res, next) => {
         updatedBy: donor.updatedBy,
         latestDonation: latestDonation
           ? {
-              donorId: latestDonation.donorId,
-              bagNo: latestDonation.bagNo,
-              date: latestDonation.date,
-              donationId: latestDonation.donationId,
-            }
+            donorId: latestDonation.donorId,
+            bagNo: latestDonation.bagNo,
+            date: latestDonation.date,
+            donationId: latestDonation.donationId,
+          }
           : null,
       },
     });

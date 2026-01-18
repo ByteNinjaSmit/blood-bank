@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Search, Plus, X, Check, Loader2 } from "lucide-react";
+import { Search, Plus, X, Check, Loader2, Lock, Unlock } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
 import CreateDonor from "../../donor/Create-Donor";
 
@@ -55,6 +56,17 @@ const DonorSearchStep = ({
   }, [query, API, authorizationToken]);
 
   const handleSelect = async (d) => {
+    // Check if donor is eligible to donate
+    if (d.isAvailableToDonate === false) {
+      const lastDate = d.lastDonationDate ? new Date(d.lastDonationDate).toLocaleDateString() : 'N/A';
+      const waitingPeriod = d.sex === 'F' ? '120 days (4 months)' : '90 days (3 months)';
+      toast.error(
+        `${d.fullName} cannot donate yet. Last donation was on ${lastDate}. The waiting period is ${waitingPeriod}. Eligible after ${d.daysUntilEligible} days.`,
+        { duration: 5000 }
+      );
+      return;
+    }
+
     try {
       setSelectingId(d._id);
       setSelectedId(d._id);
@@ -181,11 +193,10 @@ const DonorSearchStep = ({
               type="button"
               onClick={onSearch}
               disabled={loading || !canSearchDonor}
-              className={`px-3 py-1.5 rounded-md flex items-center gap-2 border ${
-                loading || !canSearchDonor
-                  ? "border-gray-200 text-gray-400 cursor-not-allowed opacity-50"
-                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
-              }`}
+              className={`px-3 py-1.5 rounded-md flex items-center gap-2 border ${loading || !canSearchDonor
+                ? "border-gray-200 text-gray-400 cursor-not-allowed opacity-50"
+                : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
             >
               <Search className="w-4 h-4" /> Search
             </button>
@@ -226,15 +237,20 @@ const DonorSearchStep = ({
                 aria-selected={selectedId === d._id}
                 onClick={() => handleSelect(d)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSelect(d); }}
-                className={`group p-3 mb-2 bg-white border rounded-lg cursor-pointer transition hover:bg-red-50 ${
-                  selectedId === d._id ? 'ring-2 ring-red-600 border-red-600' : 'border-gray-200'
-                }`}
+                className={`group p-3 mb-2 bg-white border rounded-lg cursor-pointer transition hover:bg-red-50 ${selectedId === d._id ? 'ring-2 ring-red-600 border-red-600' : 'border-gray-200'
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <p className="font-semibold text-gray-900">
                     {highlight(d.fullName)} {d.age ? (<span className="text-xs text-gray-500">• {d.age}y</span>) : null}
                   </p>
                   <div className="flex items-center gap-2">
+                    {/* Eligibility icon */}
+                    {d.isAvailableToDonate === false ? (
+                      <Lock className="w-4 h-4 text-red-600" title={`Locked: ${d.daysUntilEligible} days until eligible`} />
+                    ) : (
+                      <Unlock className="w-4 h-4 text-green-600" title="Available to donate" />
+                    )}
                     {selectingId === d._id ? (
                       <Loader2 className="w-4 h-4 text-red-700 animate-spin" />
                     ) : selectedId === d._id ? (
