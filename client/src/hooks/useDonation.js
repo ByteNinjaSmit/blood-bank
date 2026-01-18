@@ -9,6 +9,12 @@ import { toast } from 'sonner';
 export const useDonation = () => {
   const { API, authorizationToken } = useAuth();
   const [donations, setDonations] = useState([]);
+  const [pagination, setPagination] = useState({
+    totalBags: 0,
+    totalPages: 0,
+    currentPage: 1,
+    pageSize: 10,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -23,16 +29,19 @@ export const useDonation = () => {
   const fetchDonations = async (filters = {}) => {
     setLoading(true);
     setError(null);
-    
+
     const { data, error: apiError } = await donationService.listDonations(filters);
-    
+
     if (apiError) {
       setError(apiError);
       toast.error(apiError);
     } else {
       setDonations(data.data || []);
+      if (data.pagination) {
+        setPagination(data.pagination);
+      }
     }
-    
+
     setLoading(false);
   };
 
@@ -52,16 +61,16 @@ export const useDonation = () => {
   const fetchCampDonations = async (siteId) => {
     setLoading(true);
     setError(null);
-    
+
     const { data, error: apiError } = await campService.getCampDonations(siteId);
-    
+
     if (apiError) {
       setError(apiError);
       toast.error(apiError);
     } else {
       setDonations((data && data.data && data.data.donations) ? data.data.donations : []);
     }
-    
+
     setLoading(false);
   };
 
@@ -69,9 +78,9 @@ export const useDonation = () => {
   const createDonation = async (donationData) => {
     setLoading(true);
     setError(null);
-    
+
     const { data, error: apiError } = await donationService.createDonation(donationData);
-    
+
     if (apiError) {
       setError(apiError);
       toast.error(apiError);
@@ -81,7 +90,7 @@ export const useDonation = () => {
       toast.success('Donation created successfully');
       return { success: true, data: data.data };
     }
-    
+
     setLoading(false);
   };
 
@@ -89,21 +98,21 @@ export const useDonation = () => {
   const updateDonation = async (id, updateData) => {
     setLoading(true);
     setError(null);
-    
+
     const { data, error: apiError } = await donationService.updateDonation(id, updateData);
-    
+
     if (apiError) {
       setError(apiError);
       toast.error(apiError);
       return { success: false };
     } else {
-      setDonations(prev => prev.map(donation => 
+      setDonations(prev => prev.map(donation =>
         donation._id === id ? data.data : donation
       ));
       toast.success('Donation updated successfully');
       return { success: true, data: data.data };
     }
-    
+
     setLoading(false);
   };
 
@@ -111,21 +120,21 @@ export const useDonation = () => {
   const updateDonationStatus = async (id, status) => {
     setLoading(true);
     setError(null);
-    
+
     const { data, error: apiError } = await donationService.updateDonationStatus(id, status);
-    
+
     if (apiError) {
       setError(apiError);
       toast.error(apiError);
       return { success: false };
     } else {
-      setDonations(prev => prev.map(donation => 
+      setDonations(prev => prev.map(donation =>
         donation._id === id ? { ...donation, status } : donation
       ));
       toast.success('Donation status updated successfully');
       return { success: true };
     }
-    
+
     setLoading(false);
   };
 
@@ -133,9 +142,9 @@ export const useDonation = () => {
   const deleteDonation = async (id) => {
     setLoading(true);
     setError(null);
-    
+
     const { error: apiError } = await donationService.deleteDonation(id);
-    
+
     if (apiError) {
       setError(apiError);
       toast.error(apiError);
@@ -145,12 +154,13 @@ export const useDonation = () => {
       toast.success('Donation deleted successfully');
       return { success: true };
     }
-    
+
     setLoading(false);
   };
 
   return {
     donations,
+    pagination,
     loading,
     error,
     fetchDonations,

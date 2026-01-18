@@ -159,6 +159,7 @@ const getAllDonations = async (req, res, next) => {
         const {
             status,
             bloodGroup,
+            typeOfBag,
             fromDate,
             toDate,
             page = 1,
@@ -169,6 +170,7 @@ const getAllDonations = async (req, res, next) => {
 
         if (status) filters.status = status;
         if (bloodGroup) filters.bloodGroup = bloodGroup;
+        if (typeOfBag) filters.typeOfBag = typeOfBag;
 
         if (fromDate && toDate) {
             filters.collectionDate = {
@@ -186,7 +188,7 @@ const getAllDonations = async (req, res, next) => {
         const bloodBags = await BloodBag.find(filters)
             .skip(skip)
             .limit(Number(limit))
-            .select("bagNo segmentNo bloodGroup rh status collectionDate donor siteId components")
+            .select("bagNo segmentNo typeOfBag bloodGroup rh status collectionDate donor siteId components")
             .populate("donor", "name.firstName name.lastName bloodGroup rh")
             .populate("siteId", "name address")
             .populate("components", "componentId componentType volumeMl") // Populate component details

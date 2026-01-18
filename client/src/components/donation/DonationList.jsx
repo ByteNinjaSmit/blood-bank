@@ -1,38 +1,55 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, Eye, Download, Filter } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, Plus, Eye, Download, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import Table from '@/components/shared/Table';
 import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { useDonation } from '@/hooks/useDonation';
 
-const DonationList = ({ 
-  onAddDonation, 
-  onViewDonation, 
+const DonationList = ({
+  onAddDonation,
+  onViewDonation,
   campId = null,
 }) => {
-  const { donations, loading, error, fetchDonations, fetchCampDonations } = useDonation();
+  const { donations, pagination, loading, error, fetchDonations, fetchCampDonations } = useDonation();
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     typeOfBag: '',
     bloodGroup: '',
     status: '',
   });
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  useEffect(() => {
+  const loadDonations = useCallback(() => {
     if (campId) {
       fetchCampDonations(campId);
     } else {
-      fetchDonations();
-    }
-  }, [campId]);
+      const queryParams = {
+        page,
+        limit: rowsPerPage,
+      };
+      if (filters.typeOfBag) queryParams.typeOfBag = filters.typeOfBag;
+      if (filters.bloodGroup) queryParams.bloodGroup = filters.bloodGroup;
+      if (filters.status) queryParams.status = filters.status;
 
-  const filteredDonations = donations.filter((donation) => {
-    return (
-      (!filters.typeOfBag || donation.typeOfBag === filters.typeOfBag) &&
-      (!filters.bloodGroup || donation.bloodGroup === filters.bloodGroup) &&
-      (!filters.status || donation.status === filters.status)
-    );
-  });
+      fetchDonations(queryParams);
+    }
+  }, [campId, page, rowsPerPage, filters]);
+
+  useEffect(() => {
+    loadDonations();
+  }, [loadDonations]);
+
+  // Reset to page 1 when filters change
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setPage(1);
+  };
+
+  const handleRowsPerPageChange = (newLimit) => {
+    setRowsPerPage(newLimit);
+    setPage(1);
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -81,7 +98,7 @@ const DonationList = ({
     return (
       <div className="text-center py-8">
         <p className="text-red-600">Error loading donations: {error}</p>
-        <Button onClick={() => fetchDonations()} className="mt-4">
+        <Button onClick={loadDonations} className="mt-4">
           Retry
         </Button>
       </div>
@@ -97,7 +114,7 @@ const DonationList = ({
             {campId ? 'Camp Donations' : 'All Donations'}
           </h2>
           <p className="text-gray-600">
-            {filteredDonations.length} donation{filteredDonations.length !== 1 ? 's' : ''} found
+            {pagination.totalBags} donation{pagination.totalBags !== 1 ? 's' : ''} found
           </p>
         </div>
         <div className="flex gap-2">
@@ -105,16 +122,16 @@ const DonationList = ({
             <Plus className="w-4 h-4" />
             Add New Donation
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setShowFilters(!showFilters)}
             className="flex items-center gap-2"
           >
             <Filter className="w-4 h-4" />
             Filters
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={handleExport}
             className="flex items-center gap-2"
           >
@@ -133,7 +150,7 @@ const DonationList = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">Type of Bag</label>
               <select
                 value={filters.typeOfBag}
-                onChange={(e) => setFilters({ ...filters, typeOfBag: e.target.value })}
+                onChange={(e) => handleFilterChange('typeOfBag', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               >
                 <option value="">All Types</option>
@@ -146,7 +163,7 @@ const DonationList = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">Blood Group</label>
               <select
                 value={filters.bloodGroup}
-                onChange={(e) => setFilters({ ...filters, bloodGroup: e.target.value })}
+                onChange={(e) => handleFilterChange('bloodGroup', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               >
                 <option value="">All Groups</option>
@@ -160,7 +177,7 @@ const DonationList = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
               <select
                 value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               >
                 <option value="">All Status</option>
@@ -181,6 +198,7 @@ const DonationList = ({
           <Table.Header>
             <tr>
               <Table.Head>Bag No</Table.Head>
+              <Table.Head>Type</Table.Head>
               <Table.Head>Donor Name</Table.Head>
               <Table.Head>Blood Group</Table.Head>
               <Table.Head>Status</Table.Head>
@@ -189,9 +207,14 @@ const DonationList = ({
             </tr>
           </Table.Header>
           <Table.Body>
-            {filteredDonations.map((donation) => (
+            {donations.map((donation) => (
               <Table.Row key={donation._id}>
                 <Table.Cell className="font-medium">{donation.bagNo}</Table.Cell>
+                <Table.Cell>
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    {donation.typeOfBag || '-'}
+                  </span>
+                </Table.Cell>
                 <Table.Cell>
                   {donation.donor?.name?.firstName} {donation.donor?.name?.lastName}
                 </Table.Cell>
@@ -223,14 +246,59 @@ const DonationList = ({
           </Table.Body>
         </Table>
 
-        {filteredDonations.length === 0 && !loading && (
+        {donations.length === 0 && !loading && (
           <div className="p-8 text-center">
             <p className="text-gray-600">No donations found matching your criteria.</p>
           </div>
         )}
+
+        {/* Pagination Controls */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Rows per page:</span>
+            <select
+              value={rowsPerPage}
+              onChange={(e) => handleRowsPerPageChange(Number(e.target.value))}
+              className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">
+              Page {pagination.currentPage} of {pagination.totalPages || 1}
+              {' '}({pagination.totalBags} total)
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                disabled={page <= 1}
+                className="px-2 py-1"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(prev => Math.min(pagination.totalPages || 1, prev + 1))}
+                disabled={page >= (pagination.totalPages || 1)}
+                className="px-2 py-1"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
 export default DonationList;
+
