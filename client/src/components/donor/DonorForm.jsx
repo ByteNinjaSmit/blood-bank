@@ -4,11 +4,11 @@ import FormField from '@/components/shared/FormField';
 import Button from '@/components/shared/Button';
 import { states } from '@/constants/states';
 
-const DonorForm = ({ 
-  initialData = null, 
-  onSubmit, 
-  onCancel, 
-  loading = false 
+const DonorForm = ({
+  initialData = null,
+  onSubmit,
+  onCancel,
+  loading = false
 }) => {
   const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: initialData || {
@@ -55,7 +55,7 @@ const DonorForm = ({
       },
       weightKg: Number(data.weightKg),
     };
-    
+
     onSubmit(transformedData);
   };
 
@@ -68,13 +68,13 @@ const DonorForm = ({
           <FormField label="Donor ID" required error={errors.donorId?.message}>
             <FormField.Input
               {...register('donorId', { required: 'Donor ID is required' })}
-              placeholder="DNR-2025-0001"
+              placeholder="DNR-YY-MM-DD-HH-MM"
             />
           </FormField>
-          
+
           <FormField label="UID (12 digits)" error={errors.uid?.message}>
             <FormField.Input
-              {...register('uid', { 
+              {...register('uid', {
                 pattern: {
                   value: /^\d{12}$/,
                   message: 'UID must be exactly 12 digits'
@@ -96,20 +96,20 @@ const DonorForm = ({
               {...register('firstName', { required: 'First name is required' })}
             />
           </FormField>
-          
+
           <FormField label="Middle Name" error={errors.middleName?.message}>
             <FormField.Input
               {...register('middleName')}
             />
           </FormField>
-          
+
           <FormField label="Last Name" required error={errors.lastName?.message}>
             <FormField.Input
               {...register('lastName', { required: 'Last name is required' })}
             />
           </FormField>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField label="Date of Birth" required error={errors.dob?.message}>
             <FormField.Input
@@ -117,7 +117,7 @@ const DonorForm = ({
               {...register('dob', { required: 'Date of birth is required' })}
             />
           </FormField>
-          
+
           <FormField label="Sex" required error={errors.sex?.message}>
             <FormField.Select
               {...register('sex', { required: 'Sex is required' })}
@@ -128,12 +128,12 @@ const DonorForm = ({
               <option value="O">Other</option>
             </FormField.Select>
           </FormField>
-          
+
           <FormField label="Weight (Kg)" required error={errors.weightKg?.message}>
             <FormField.Input
               type="number"
               min="1"
-              {...register('weightKg', { 
+              {...register('weightKg', {
                 required: 'Weight is required',
                 min: { value: 1, message: 'Weight must be greater than 0' }
               })}
@@ -151,7 +151,7 @@ const DonorForm = ({
               type="tel"
               placeholder="9876543210"
               maxLength={10}
-              {...register('phone', { 
+              {...register('phone', {
                 required: 'Phone is required',
                 pattern: {
                   value: /^\d{10}$/,
@@ -160,7 +160,7 @@ const DonorForm = ({
               })}
             />
           </FormField>
-          
+
           <FormField label="Email" error={errors.email?.message}>
             <FormField.Input
               type="email"
@@ -173,34 +173,34 @@ const DonorForm = ({
             />
           </FormField>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <FormField label="Address Line 1" error={errors.addressLine1?.message}>
             <FormField.Input
               {...register('addressLine1')}
             />
           </FormField>
-          
+
           <FormField label="Address Line 2" error={errors.addressLine2?.message}>
             <FormField.Input
               {...register('addressLine2')}
             />
           </FormField>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <FormField label="City" required error={errors.city?.message}>
             <FormField.Input
               {...register('city', { required: 'City is required' })}
             />
           </FormField>
-          
+
           <FormField label="District" required error={errors.district?.message}>
             <FormField.Input
               {...register('district', { required: 'District is required' })}
             />
           </FormField>
-          
+
           <FormField label="State" required error={errors.state?.message}>
             <FormField.Select
               {...register('state', { required: 'State is required' })}
@@ -213,7 +213,7 @@ const DonorForm = ({
               ))}
             </FormField.Select>
           </FormField>
-          
+
           <FormField label="Pincode" required error={errors.pincode?.message}>
             <FormField.Input
               {...register('pincode', { required: 'Pincode is required' })}
@@ -237,7 +237,7 @@ const DonorForm = ({
               <option value="O">O</option>
             </FormField.Select>
           </FormField>
-          
+
           <FormField label="Rh Factor" required error={errors.rh?.message}>
             <FormField.Select
               {...register('rh', { required: 'Rh factor is required' })}
@@ -247,7 +247,7 @@ const DonorForm = ({
               <option value="Negative">Negative</option>
             </FormField.Select>
           </FormField>
-          
+
           <FormField label="Eligibility Status" required error={errors.eligibilityStatus?.message}>
             <FormField.Select
               {...register('eligibilityStatus', { required: 'Eligibility status is required' })}
@@ -259,14 +259,14 @@ const DonorForm = ({
             </FormField.Select>
           </FormField>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="Occupation" error={errors.occupation?.message}>
             <FormField.Input
               {...register('occupation')}
             />
           </FormField>
-          
+
           <FormField label="Last Donation Date" error={errors.lastDonationDate?.message}>
             <FormField.Input
               type="date"

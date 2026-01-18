@@ -192,7 +192,7 @@ const CreateDonationCamp = ({ onBack }) => {
                   name="donorId"
                   value={formData.donorId}
                   onChange={handleInputChange}
-                  placeholder="DNR-2025-0001"
+                  placeholder="DNR-YY-MM-DD-HH-MM"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
                   required
                 />

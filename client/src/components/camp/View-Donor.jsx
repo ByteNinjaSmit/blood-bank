@@ -16,7 +16,7 @@ const ViewDonor = ({ onBack }) => {
     const mockDonors = [
       {
         id: "1",
-        donorId: "DNR-2025-0001",
+        donorId: "DNR-YY-MM-DD-HH-MM",
         fullName: "John Michael Doe",
         lastDonationDate: "2024-12-15",
         uid: "123456789012",

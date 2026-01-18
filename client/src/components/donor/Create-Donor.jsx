@@ -130,9 +130,14 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
   }
 
   const generateDonorId = () => {
-    const year = new Date().getFullYear()
-    const seq = Math.floor(1000 + Math.random() * 9000)
-    setFormData((prev) => ({ ...prev, donorId: `DNR-${year}-${seq}` }))
+    const now = new Date()
+    const yy = String(now.getFullYear()).slice(-2)
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const dd = String(now.getDate()).padStart(2, '0')
+    const hh = String(now.getHours()).padStart(2, '0')
+    const min = String(now.getMinutes()).padStart(2, '0')
+
+    setFormData((prev) => ({ ...prev, donorId: `DNR-${yy}-${mm}-${dd}-${hh}-${min}` }))
     setTimeout(() => donorIdInputRef.current?.select(), 0)
   }
 
@@ -297,7 +302,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                       name="donorId"
                       value={formData.donorId}
                       onChange={handleInputChange}
-                      placeholder="DNR-2025-0001"
+                      placeholder="DNR-YY-MM-DD-HH-MM"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
                       required
                     />
@@ -500,15 +505,24 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Donor ID *</label>
-                    <input
-                      type="text"
-                      name="donorId"
-                      value={formData.donorId}
-                      onChange={handleInputChange}
-                      placeholder="DNR-2025-0001"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                      required
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        name="donorId"
+                        value={formData.donorId}
+                        onChange={handleInputChange}
+                        placeholder="DNR-YY-MM-DD-HH-MM"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={generateDonorId}
+                        className="px-3 py-2 border border-orange-300 text-orange-800 rounded-md hover:bg-orange-50"
+                      >
+                        Generate
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">UID (12 digits)</label>
