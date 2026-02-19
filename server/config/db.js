@@ -19,17 +19,17 @@ const connectToDatabase = async () => {
             bufferCommands: false,
             // useNewUrlParser: true,
             // useUnifiedTopology: true,
-            maxPoolSize:200,
+            maxPoolSize: 200,
             serverSelectionTimeoutMS: 5000, // Avoid long DB request waits
             socketTimeoutMS: 10000, // Close slow queries
 
         }).then((mongoose) => mongoose.connection)
-          .catch((error) => {
-            console.error("Failed to connect to MongoDB:", error);
-            throw new Error("Failed to connect to the database");
-            // process.exit(1); // 💡 Exit the process if DB connection fails
+            .catch((error) => {
+                console.error("Failed to connect to MongoDB:", error);
+                throw new Error("Failed to connect to the database");
+                // process.exit(1); // 💡 Exit the process if DB connection fails
 
-        });
+            });
     }
 
     cached.conn = await cached.promise;
