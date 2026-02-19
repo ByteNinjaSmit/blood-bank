@@ -25,6 +25,7 @@ const registerDonor = async (req, res, next) => {
       lastName,
       uid,
       dob,
+      age,
       sex,
       phone,
       email,
@@ -37,6 +38,16 @@ const registerDonor = async (req, res, next) => {
       lastDonationDate,
       siteId,
     } = req.body;
+
+    // If dob is not provided but age is, auto-calculate dob
+    if (!dob && age) {
+      const ageNum = parseInt(age, 10);
+      if (!isNaN(ageNum) && ageNum > 0) {
+        const now = new Date();
+        const birthYear = now.getFullYear() - ageNum;
+        dob = new Date(birthYear, 0, 1).toISOString(); // Jan 1 of (currentYear - age)
+      }
+    }
 
     // Convert email to lowercase if it's provided
     if (email) {

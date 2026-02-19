@@ -36,7 +36,7 @@ import { checkAccess } from '@/atoms/static';
 import { FiUserPlus } from "react-icons/fi";
 import { FaBoxOpen, FaChartPie, FaEye, FaHeart, FaListUl, FaMicroscope, FaTrash, FaUser, FaHospital } from "react-icons/fa";
 import { SiPytest } from "react-icons/si";
-import { GiCardDiscard, GiDrop , GiChemicalDrop , GiCampingTent } from "react-icons/gi";
+import { GiCardDiscard, GiDrop, GiChemicalDrop, GiCampingTent } from "react-icons/gi";
 import { IoIosSend } from "react-icons/io";
 import { PiTestTubeFill } from "react-icons/pi";
 import { MdDelete } from "react-icons/md";
@@ -52,7 +52,7 @@ const MODULES = [
     description: "Operational analytics overview",
     always: true,
   },
-    {
+  {
     id: "admin",
     name: "Admin",
     icon: <Shield className="w-5 h-5" />,
@@ -167,22 +167,6 @@ const MODULES = [
       },
     ],
     description: "Manage donor records",
-  },
-  {
-    id: "appointments",
-    name: "Appointments",
-    icon: <Calendar className="w-5 h-5" />,
-    permissions: ["read"],
-    subModules: [
-      {
-        name: "Appointment List",
-        icon: <List className="w-5 h-5" />,
-        href: "/appointments",
-        permissions: ["read"],
-        description: "View public donation appointments",
-      },
-    ],
-    description: "Manage donor appointments",
   },
   {
     id: "donations",
@@ -325,6 +309,22 @@ const MODULES = [
   //   ],
   //   description: "Donor queue management",
   // },
+  {
+    id: "appointments",
+    name: "Appointments",
+    icon: <Calendar className="w-5 h-5" />,
+    permissions: ["read"],
+    subModules: [
+      {
+        name: "Appointment List",
+        icon: <List className="w-5 h-5" />,
+        href: "/appointments",
+        permissions: ["read"],
+        description: "View public donation appointments",
+      },
+    ],
+    description: "Manage donor appointments",
+  },
   {
     id: "mis",
     name: "MIS",
