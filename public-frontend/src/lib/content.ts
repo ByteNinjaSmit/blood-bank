@@ -152,7 +152,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             links: [
                                 { label: "Explore eligibility criteria", href: "/eligibility-criteria" },
                                 { label: "Take our eligibility quiz", href: "/" },
-                                { label: "Recent changes to donation criteria", href: "/" }
+                                { label: "Recent changes to donation criteria", href: "/donation-criteria-changes" }
                             ]
                         },
                         {
@@ -178,7 +178,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             links: [
                                 { label: "Explore eligibility criteria", href: "/eligibility-criteria" },
                                 { label: "Take our eligibility quiz", href: "/" },
-                                { label: "Recent changes to donation criteria", href: "/" }
+                                { label: "Recent changes to donation criteria", href: "/donation-criteria-changes" }
                             ]
                         },
                         {
@@ -418,7 +418,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             links: [
                                 { label: "पात्रता निकष जाणून घ्या", href: "/eligibility-criteria" },
                                 { label: "पात्रता चाचणी घ्या", href: "/" },
-                                { label: "दान निकषातील अलीकडील बदल", href: "/" }
+                                { label: "दान निकषातील अलीकडील बदल", href: "/donation-criteria-changes" }
                             ]
                         },
                         {
@@ -444,7 +444,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             links: [
                                 { label: "पात्रता निकष जाणून घ्या", href: "/eligibility-criteria" },
                                 { label: "पात्रता चाचणी घ्या", href: "/" },
-                                { label: "दान निकषातील अलीकडील बदल", href: "/" }
+                                { label: "दान निकषातील अलीकडील बदल", href: "/donation-criteria-changes" }
                             ]
                         },
                         {
