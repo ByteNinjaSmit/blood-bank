@@ -160,7 +160,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             links: [
                                 { label: "First-time donor", href: "/donate" },
                                 { label: "What is my blood type?", href: "/blood-type" },
-                                { label: "Donation process", href: "/" },
+                                { label: "Donation process", href: "/donation-process" },
                                 { label: "Donor questionnaire", href: "/" },
                                 { label: "Donor wellness and safety", href: "/" }
                             ]
@@ -426,7 +426,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             links: [
                                 { label: "प्रथमच रक्तदाता", href: "/donate" },
                                 { label: "माझा रक्तगट कोणता?", href: "/blood-type" },
-                                { label: "दान प्रक्रिया", href: "/" },
+                                { label: "दान प्रक्रिया", href: "/donation-process" },
                                 { label: "दाता प्रश्नावली", href: "/" },
                                 { label: "दाता कल्याण आणि सुरक्षा", href: "/" }
                             ]
