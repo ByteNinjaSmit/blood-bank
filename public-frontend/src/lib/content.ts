@@ -150,7 +150,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                         {
                             title: "Am I eligible to donate blood?",
                             links: [
-                                { label: "Explore eligibility criteria", href: "/" },
+                                { label: "Explore eligibility criteria", href: "/eligibility-criteria" },
                                 { label: "Take our eligibility quiz", href: "/" },
                                 { label: "Recent changes to donation criteria", href: "/" }
                             ]
@@ -176,7 +176,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                         {
                             title: "Am I eligible to donate plasma?",
                             links: [
-                                { label: "Explore eligibility criteria", href: "/" },
+                                { label: "Explore eligibility criteria", href: "/eligibility-criteria" },
                                 { label: "Take our eligibility quiz", href: "/" },
                                 { label: "Recent changes to donation criteria", href: "/" }
                             ]
@@ -416,7 +416,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                         {
                             title: "मी रक्तदान करू शकतो का?",
                             links: [
-                                { label: "पात्रता निकष जाणून घ्या", href: "/" },
+                                { label: "पात्रता निकष जाणून घ्या", href: "/eligibility-criteria" },
                                 { label: "पात्रता चाचणी घ्या", href: "/" },
                                 { label: "दान निकषातील अलीकडील बदल", href: "/" }
                             ]
@@ -442,7 +442,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                         {
                             title: "मी प्लाझ्मा दान करू शकतो का?",
                             links: [
-                                { label: "पात्रता निकष जाणून घ्या", href: "/" },
+                                { label: "पात्रता निकष जाणून घ्या", href: "/eligibility-criteria" },
                                 { label: "पात्रता चाचणी घ्या", href: "/" },
                                 { label: "दान निकषातील अलीकडील बदल", href: "/" }
                             ]
