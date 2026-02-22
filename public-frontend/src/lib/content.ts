@@ -162,7 +162,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                                 { label: "What is my blood type?", href: "/blood-type" },
                                 { label: "Donation process", href: "/donation-process" },
                                 { label: "Donor questionnaire", href: "/" },
-                                { label: "Donor wellness and safety", href: "/" }
+                                { label: "Donor wellness and safety", href: "/donor-wellness" }
                             ]
                         }
                     ],
@@ -187,7 +187,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                                 { label: "Become a plasma donor", href: "/" },
                                 { label: "How your plasma donation helps", href: "/" },
                                 { label: "Donor Questionnaire", href: "/" },
-                                { label: "Donor wellness and safety", href: "/" },
+                                { label: "Donor wellness and safety", href: "/donor-wellness" },
                                 { label: "Donor centres hours & locations", href: "/" }
                             ]
                         }
@@ -428,7 +428,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                                 { label: "माझा रक्तगट कोणता?", href: "/blood-type" },
                                 { label: "दान प्रक्रिया", href: "/donation-process" },
                                 { label: "दाता प्रश्नावली", href: "/" },
-                                { label: "दाता कल्याण आणि सुरक्षा", href: "/" }
+                                { label: "दाता कल्याण आणि सुरक्षा", href: "/donor-wellness" }
                             ]
                         }
                     ],
@@ -453,7 +453,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                                 { label: "प्लाझ्मा दाता बना", href: "/" },
                                 { label: "तुमचे प्लाझ्मा दान कसे मदत करते", href: "/" },
                                 { label: "दाता प्रश्नावली", href: "/" },
-                                { label: "दाता कल्याण आणि सुरक्षा", href: "/" },
+                                { label: "दाता कल्याण आणि सुरक्षा", href: "/donor-wellness" },
                                 { label: "दाता केंद्रे तास आणि स्थाने", href: "/" }
                             ]
                         }
