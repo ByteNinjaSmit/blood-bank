@@ -18,12 +18,7 @@ export default function Footer() {
         { icon: Linkedin, label: 'Linkedin', href: '#' }
     ]
 
-    const quickLinks = [
-        { label: nav.home, href: '/' },
-        { label: nav.about, href: '/about' },
-        { label: nav.donate, href: '/donate' },
-        { label: nav.contact, href: '/' }
-    ]
+    const quickLinks = nav.mainLinks.slice(0, 4)
 
     return (
         <footer className="bg-background border-t border-border/40 pt-16 pb-8 font-sans">
@@ -58,8 +53,8 @@ export default function Footer() {
                     <div className="lg:col-span-2 space-y-4">
                         <h4 className="font-bold text-foreground text-sm uppercase tracking-wide">{t.quickLinks}</h4>
                         <ul className="space-y-2.5">
-                            {quickLinks.map((link) => (
-                                <li key={link.label}>
+                            {quickLinks.map((link, index) => (
+                                <li key={index}>
                                     <Link href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors inline-block">
                                         {link.label}
                                     </Link>

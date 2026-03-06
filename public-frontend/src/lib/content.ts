@@ -8,10 +8,18 @@ export type ContentData = {
         trustedBy: string;
     };
     nav: {
-        home: string;
-        about: string;
-        donate: string;
-        contact: string;
+        topLinks: { label: string; href: string }[];
+        mainLinks: {
+            label: string;
+            href: string;
+            columns?: {
+                title: string;
+                links: { label: string; href: string }[];
+            }[];
+            viewAllLabel?: string;
+            viewAllHref?: string;
+        }[];
+        bookNow: string;
     };
     about: {
         title: string;
@@ -127,10 +135,132 @@ export const content: Record<'en' | 'mr', ContentData> = {
             trustedBy: "Trusted by 100,000+ lives served"
         },
         nav: {
-            home: "Home",
-            about: "About",
-            donate: "Donate",
-            contact: "Contact"
+            topLinks: [
+                { label: "Hospital Services", href: "/" },
+                { label: "Research", href: "/" },
+                { label: "Careers", href: "/" },
+                { label: "Shop", href: "/" }
+            ],
+            bookNow: "BOOK NOW",
+            mainLinks: [
+                {
+                    label: "Blood",
+                    href: "/",
+                    columns: [
+                        {
+                            title: "Am I eligible to donate blood?",
+                            links: [
+                                { label: "Explore eligibility criteria", href: "/eligibility-criteria" },
+                                { label: "Take our eligibility quiz", href: "/" },
+                                { label: "Recent changes to donation criteria", href: "/donation-criteria-changes" }
+                            ]
+                        },
+                        {
+                            title: "Donating blood",
+                            links: [
+                                { label: "First-time donor", href: "/donate" },
+                                { label: "What is my blood type?", href: "/blood-type" },
+                                { label: "Donation process", href: "/donation-process" },
+                                { label: "Donor questionnaire", href: "/" },
+                                { label: "Donor wellness and safety", href: "/donor-wellness" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "View all Blood info",
+                    viewAllHref: "/"
+                },
+                {
+                    label: "Plasma for Life",
+                    href: "/",
+                    columns: [
+                        {
+                            title: "Am I eligible to donate plasma?",
+                            links: [
+                                { label: "Explore eligibility criteria", href: "/eligibility-criteria" },
+                                { label: "Take our eligibility quiz", href: "/" },
+                                { label: "Recent changes to donation criteria", href: "/donation-criteria-changes" }
+                            ]
+                        },
+                        {
+                            title: "Donating plasma",
+                            links: [
+                                { label: "Become a plasma donor", href: "/" },
+                                { label: "How your plasma donation helps", href: "/" },
+                                { label: "Donor Questionnaire", href: "/" },
+                                { label: "Donor wellness and safety", href: "/donor-wellness" },
+                                { label: "Donor centres hours & locations", href: "/" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "View all Plasma info",
+                    viewAllHref: "/"
+                },
+                {
+                    label: "Stem Cells",
+                    href: "/",
+                    columns: [
+                        {
+                            title: "About stem cells",
+                            links: [
+                                { label: "What are stem cells?", href: "/" },
+                                { label: "How to register", href: "/" },
+                                { label: "The donation process", href: "/" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "View all Stem Cell info",
+                    viewAllHref: "/"
+                },
+                {
+                    label: "Organs & Tissues",
+                    href: "/",
+                    columns: [
+                        {
+                            title: "About organ donation",
+                            links: [
+                                { label: "How to register", href: "/" },
+                                { label: "Organ donation process", href: "/" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "View all Organs & Tissues info",
+                    viewAllHref: "/"
+                },
+                {
+                    label: "Ways to Donate",
+                    href: "/donate",
+                    columns: [
+                        {
+                            title: "Donation options",
+                            links: [
+                                { label: "Book an appointment", href: "/donate" },
+                                { label: "Donor centres hours & locations", href: "/" },
+                                { label: "Recognition programs", href: "/" },
+                                { label: "Donating platelets", href: "/" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "View all Ways to Donate",
+                    viewAllHref: "/donate"
+                },
+                {
+                    label: "About Us",
+                    href: "/about",
+                    columns: [
+                        {
+                            title: "Our organization",
+                            links: [
+                                { label: "Our mission", href: "/about" },
+                                { label: "Our history", href: "/about" },
+                                { label: "Contact us", href: "/" },
+                                { label: "Accessibility in donor centres", href: "/" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "View all About Us",
+                    viewAllHref: "/about"
+                }
+            ]
         },
         pageNotFound: {
             title: "404 - Page Not Found",
@@ -271,10 +401,132 @@ export const content: Record<'en' | 'mr', ContentData> = {
             trustedBy: "१,००,०००+ रुग्णांचा विश्वास"
         },
         nav: {
-            home: "मुख्यपृष्ठ",
-            about: "आमच्याबद्दल",
-            donate: "रक्तदान करा",
-            contact: "संपर्क"
+            topLinks: [
+                { label: "रुग्णालय सेवा", href: "/" },
+                { label: "संशोधन", href: "/" },
+                { label: "करिअर", href: "/" },
+                { label: "शॉप", href: "/" }
+            ],
+            bookNow: "बुक करा",
+            mainLinks: [
+                {
+                    label: "रक्त",
+                    href: "/",
+                    columns: [
+                        {
+                            title: "मी रक्तदान करू शकतो का?",
+                            links: [
+                                { label: "पात्रता निकष जाणून घ्या", href: "/eligibility-criteria" },
+                                { label: "पात्रता चाचणी घ्या", href: "/" },
+                                { label: "दान निकषातील अलीकडील बदल", href: "/donation-criteria-changes" }
+                            ]
+                        },
+                        {
+                            title: "रक्तदान करणे",
+                            links: [
+                                { label: "प्रथमच रक्तदाता", href: "/donate" },
+                                { label: "माझा रक्तगट कोणता?", href: "/blood-type" },
+                                { label: "दान प्रक्रिया", href: "/donation-process" },
+                                { label: "दाता प्रश्नावली", href: "/" },
+                                { label: "दाता कल्याण आणि सुरक्षा", href: "/donor-wellness" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "सर्व रक्त माहिती पहा",
+                    viewAllHref: "/"
+                },
+                {
+                    label: "प्लाझ्मा फॉर लाइफ",
+                    href: "/",
+                    columns: [
+                        {
+                            title: "मी प्लाझ्मा दान करू शकतो का?",
+                            links: [
+                                { label: "पात्रता निकष जाणून घ्या", href: "/eligibility-criteria" },
+                                { label: "पात्रता चाचणी घ्या", href: "/" },
+                                { label: "दान निकषातील अलीकडील बदल", href: "/donation-criteria-changes" }
+                            ]
+                        },
+                        {
+                            title: "प्लाझ्मा दान करणे",
+                            links: [
+                                { label: "प्लाझ्मा दाता बना", href: "/" },
+                                { label: "तुमचे प्लाझ्मा दान कसे मदत करते", href: "/" },
+                                { label: "दाता प्रश्नावली", href: "/" },
+                                { label: "दाता कल्याण आणि सुरक्षा", href: "/donor-wellness" },
+                                { label: "दाता केंद्रे तास आणि स्थाने", href: "/" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "सर्व प्लाझ्मा माहिती पहा",
+                    viewAllHref: "/"
+                },
+                {
+                    label: "स्टेम सेल्स",
+                    href: "/",
+                    columns: [
+                        {
+                            title: "स्टेम सेल्सबद्दल",
+                            links: [
+                                { label: "स्टेम सेल्स म्हणजे काय?", href: "/" },
+                                { label: "नोंदणी कशी करावी", href: "/" },
+                                { label: "दान प्रक्रिया", href: "/" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "सर्व स्टेम सेल माहिती पहा",
+                    viewAllHref: "/"
+                },
+                {
+                    label: "अवयव आणि ऊती",
+                    href: "/",
+                    columns: [
+                        {
+                            title: "अवयव दानाबद्दल",
+                            links: [
+                                { label: "नोंदणी कशी करावी", href: "/" },
+                                { label: "अवयव दान प्रक्रिया", href: "/" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "सर्व अवयव आणि ऊती माहिती पहा",
+                    viewAllHref: "/"
+                },
+                {
+                    label: "दान करण्याचे मार्ग",
+                    href: "/donate",
+                    columns: [
+                        {
+                            title: "दान पर्याय",
+                            links: [
+                                { label: "अपॉइंटमेंट बुक करा", href: "/donate" },
+                                { label: "दाता केंद्रे तास आणि स्थाने", href: "/" },
+                                { label: "ओळख कार्यक्रम", href: "/" },
+                                { label: "प्लेटलेट्स दान", href: "/" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "सर्व दान मार्ग पहा",
+                    viewAllHref: "/donate"
+                },
+                {
+                    label: "आमच्याबद्दल",
+                    href: "/about",
+                    columns: [
+                        {
+                            title: "आमची संस्था",
+                            links: [
+                                { label: "आमचे ध्येय", href: "/about" },
+                                { label: "आमचा इतिहास", href: "/about" },
+                                { label: "संपर्क करा", href: "/" },
+                                { label: "दाता केंद्रांमध्ये सुलभता", href: "/" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "सर्व आमच्याबद्दल पहा",
+                    viewAllHref: "/about"
+                }
+            ]
         },
         pageNotFound: {
             title: "४०४ - पृष्ठ सापडले नाही",
