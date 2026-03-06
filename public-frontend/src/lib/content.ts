@@ -122,6 +122,14 @@ export type ContentData = {
         successMessage: string;
         errorMessage: string;
     };
+    donatePage: {
+        badge: string;
+        titleStart: string;
+        titleHighlight: string;
+        titleEnd: string;
+        description: string;
+        features: { title: string; desc: string }[];
+    };
 }
 
 export const content: Record<'en' | 'mr', ContentData> = {
@@ -389,6 +397,18 @@ export const content: Record<'en' | 'mr', ContentData> = {
             submitBtn: "Submit Feedback",
             successMessage: "Thank you for your feedback!",
             errorMessage: "Failed to submit feedback. Please try again."
+        },
+        donatePage: {
+            badge: "Donate Blood, Save Lives",
+            titleStart: "Your ",
+            titleHighlight: "15 Minutes",
+            titleEnd: " Can Save 3 Families.",
+            description: "Join a community of heroes. Safe, sterile, and simple process.",
+            features: [
+                { title: "Super Fast", desc: "Whole process takes ~45 mins" },
+                { title: "100% Safe", desc: "Sterile kits & expert care" },
+                { title: "Free Health Check", desc: "BP, Hb, & basic screening" }
+            ]
         }
     },
     mr: {
@@ -655,6 +675,18 @@ export const content: Record<'en' | 'mr', ContentData> = {
             submitBtn: "अभिप्राय सबमिट करा",
             successMessage: "तुमच्या अभिप्रायाबद्दल धन्यवाद!",
             errorMessage: "अभिप्राय सबमिट करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा."
+        },
+        donatePage: {
+            badge: "रक्तदान करा, जीवन वाचवा",
+            titleStart: "तुमची ",
+            titleHighlight: "१५ मिनिटे",
+            titleEnd: " ३ कुटुंबांचे जीवन वाचवू शकतात.",
+            description: "हिरोंच्या समुदायात सामील व्हा. सुरक्षित, निर्जंतुक आणि सोपी प्रक्रिया.",
+            features: [
+                { title: "अतिशय जलद", desc: "संपूर्ण प्रक्रियेस ~४५ मिनिटे लागतात" },
+                { title: "१००% सुरक्षित", desc: "निर्जंतुक किट आणि तज्ञांची काळजी" },
+                { title: "मोफत आरोग्य तपासणी", desc: "रक्तदाब, हिमोग्लोबिन आणि प्राथमिक चाचणी" }
+            ]
         }
     }
 };
