@@ -1,150 +1,23 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
     Heart, Clock, Droplet, ArrowRight, ChevronRight,
-    Pill, Syringe, Baby, Globe, User, Scale,
-    Phone, Mail, HelpCircle, Accessibility, TrendingUp,
-    RefreshCw, ShieldCheck, Sparkles, CalendarDays
+    Pill, Syringe, Baby, Globe, User,
+    Phone, Mail, Accessibility,
+    RefreshCw, ShieldCheck, Sparkles, AlertCircle, Wine, Plane
 } from 'lucide-react'
+import { useLanguage } from '@/context/language-context'
+import { content } from '@/lib/content'
 
-/* ─── Topic data (explorer tabs) ─── */
-const eligibilityTopics = [
-    {
-        id: 'age',
-        icon: User,
-        label: 'Age, gender and weight',
-        content: {
-            title: 'Age, Gender & Weight Requirements',
-            points: [
-                'You must be between 18 and 65 years old to donate blood.',
-                'Both males and females can donate blood.',
-                'You should weigh at least 45 kg (100 lbs) to be eligible.',
-                'For platelet donations, a minimum weight of 50 kg may be required.',
-                'Donors above 60 may need additional medical clearance.'
-            ]
-        }
-    },
-    {
-        id: 'community',
-        icon: ShieldCheck,
-        label: 'Tips for community',
-        content: {
-            title: 'Community Donation Tips',
-            points: [
-                'Encourage friends and family to donate together.',
-                'Organize blood donation drives at your workplace or community centre.',
-                'Share your donation experience on social media to inspire others.',
-                'Regular voluntary donors help maintain a stable blood supply.',
-                'Contact us to schedule a community blood drive.'
-            ]
-        }
-    },
-    {
-        id: 'hemoglobin',
-        icon: Droplet,
-        label: 'Hemoglobin and iron',
-        content: {
-            title: 'Hemoglobin & Iron Levels',
-            points: [
-                'Your hemoglobin level must be at least 12.5 g/dL to donate.',
-                'Eat iron-rich foods like spinach, lentils, and red meat before donating.',
-                'Vitamin C helps your body absorb iron more effectively.',
-                'Avoid tea or coffee immediately before your hemoglobin test.',
-                'Low hemoglobin does not always mean low iron — consult a doctor if repeatedly low.'
-            ]
-        }
-    }
-]
+/* ─── Static mappings ─── */
+const topicIcons = [User, Wine, Droplet, ShieldCheck, Pill, Syringe, Baby, Heart, Plane];
+const learnMoreIcons = [Accessibility, AlertCircle, RefreshCw];
+const learnMoreHrefs = ['/', '/', '/donation-criteria-changes'];
 
-/* ─── Topic cards (grid) ─── */
-const topicCards = [
-    {
-        icon: Pill,
-        title: 'Medical conditions and treatments',
-        desc: 'Certain conditions like diabetes, hypertension, or heart disease may affect your eligibility. Controlled conditions are often acceptable.',
-        href: '/'
-    },
-    {
-        icon: Syringe,
-        title: 'Medications and vaccines',
-        desc: 'Most common medications are fine, but some like blood thinners or antibiotics may require a waiting period.',
-        href: '/'
-    },
-    {
-        icon: Sparkles,
-        title: 'Piercings and tattoos',
-        desc: 'If done at a licensed facility, a 6-month waiting period usually applies. Ear piercings with a sterile gun are accepted immediately.',
-        href: '/'
-    },
-    {
-        icon: Baby,
-        title: 'Pregnancy',
-        desc: 'You cannot donate during pregnancy. A waiting period of 6 months after delivery or miscarriage is required.',
-        href: '/'
-    },
-    {
-        icon: Heart,
-        title: 'Sexual behaviour',
-        desc: 'Recent changes have updated many older policies. Eligibility is assessed based on individual risk factors, not orientation.',
-        href: '/'
-    },
-    {
-        icon: Globe,
-        title: 'Travel and living abroad',
-        desc: 'Travel to malaria-endemic areas requires a 3-month deferral. Certain countries may extend the waiting period.',
-        href: '/'
-    }
-]
-
-/* ─── Learn more cards ─── */
-const learnMoreCards = [
-    {
-        icon: Accessibility,
-        title: 'Accessibility',
-        desc: 'Our donor centres are wheelchair accessible with special accommodations to ensure every donor is comfortable.',
-        href: '/'
-    },
-    {
-        icon: TrendingUp,
-        title: 'Pulse and iron levels',
-        desc: "Your pulse should be between 60–100 bpm. We'll check your pulse and iron as part of the pre-donation screening.",
-        href: '/'
-    },
-    {
-        icon: RefreshCw,
-        title: 'Recent criteria changes',
-        desc: 'Donation criteria are reviewed regularly. See the latest updates to eligibility guidelines.',
-        href: '/'
-    }
-]
-
-/* ─── Donation frequency cards ─── */
-const frequencyCards = [
-    {
-        icon: Droplet,
-        title: 'To donate blood',
-        subtitle: 'returning donors must wait:',
-        value: '56 days',
-        color: 'from-red-500 to-rose-600'
-    },
-    {
-        icon: Syringe,
-        title: 'To donate plasma',
-        subtitle: 'returning donors must wait:',
-        value: '28 days',
-        color: 'from-amber-500 to-orange-500'
-    },
-    {
-        icon: Heart,
-        title: 'To donate platelets',
-        subtitle: 'returning donors must wait:',
-        value: '14 days',
-        color: 'from-pink-500 to-rose-500'
-    }
-]
+const frequencyImages = ['/donation-frquency-1.png', '/donation-frequency-2.png', '/donation-frquency-1.png'];
+const frequencyFilters = ['', '', 'hue-rotate(270deg) contrast(1.1)'];
 
 /* ─── Fade-in animation variants ─── */
 const fadeUp = {
@@ -160,13 +33,13 @@ const fadeUp = {
    MAIN COMPONENT
    ═══════════════════════════════════ */
 export default function EligibilityCriteria() {
-    const [activeTab, setActiveTab] = useState(0)
+    const { language } = useLanguage()
+    const t = content[language].eligibilityCriteriaPage
 
     return (
         <div className="bg-background">
             {/* ───────── HERO ───────── */}
             <section className="relative pt-32 pb-16 lg:pt-40 lg:pb-20 overflow-hidden">
-                {/* decorative blobs */}
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/8 rounded-full blur-[140px] -translate-y-1/3 translate-x-1/3 pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
 
@@ -180,19 +53,19 @@ export default function EligibilityCriteria() {
                         >
                             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold">
                                 <ShieldCheck className="w-4 h-4" />
-                                Blood Donation
+                                {t.heroBadge}
                             </span>
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1]">
-                                Eligibility{' '}
+                                {t.heroTitleStart}{' '}
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-rose-600">
-                                    Criteria
+                                    {t.heroTitleHighlight}
                                 </span>
                             </h1>
                             <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
-                                Thank you for your interest in donating blood! Before you give, please review the eligibility criteria below to ensure a safe donation experience for you and the recipient.
+                                {t.heroDescription1}
                             </p>
                             <p className="text-sm text-muted-foreground/80 max-w-lg">
-                                Not all conditions are listed here. If unsure about any medical condition or medication, please contact our team for a confidential assessment.
+                                {t.heroDescription2}
                             </p>
                         </motion.div>
 
@@ -209,7 +82,6 @@ export default function EligibilityCriteria() {
                                     alt="Blood donation"
                                     className="relative w-full h-full object-cover rounded-3xl shadow-2xl border-4 border-background"
                                 />
-                                {/* floating badge */}
                                 <motion.div
                                     className="absolute -bottom-6 -left-4 bg-background/95 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-border/50"
                                     animate={{ y: [0, -6, 0] }}
@@ -240,24 +112,17 @@ export default function EligibilityCriteria() {
                         </div>
                         <div>
                             <p className="text-white/90 text-sm font-medium uppercase tracking-wider">
-                                It only takes about
+                                {t.redBannerSubtitle}
                             </p>
                             <h2 className="text-2xl sm:text-3xl font-bold text-white italic">
-                                an hour of your time to change someone&apos;s life.
+                                {t.redBannerTitle}
                             </h2>
                         </div>
                     </div>
-                    <Link
-                        href="/donate"
-                        className="inline-flex items-center gap-2 bg-white text-primary px-7 py-3.5 rounded-full font-bold text-sm hover:bg-white/90 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 shrink-0"
-                    >
-                        Make an appointment
-                        <ArrowRight className="w-4 h-4" />
-                    </Link>
                 </div>
             </section>
 
-            {/* ───────── TOPIC EXPLORER (Tabs) ───────── */}
+            {/* ───────── TOPIC EXPLORER (Grid) ───────── */}
             <section className="py-16 lg:py-24">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <motion.div
@@ -268,113 +133,54 @@ export default function EligibilityCriteria() {
                         className="text-center mb-12"
                     >
                         <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-                            Explore the topics below to find out if you&apos;re{' '}
-                            <span className="text-primary">eligible to donate</span>
+                            {t.topicsTitleStart}{' '}
+                            <span className="text-primary">{t.topicsTitleHighlight}</span>
                         </h2>
-                        <p className="text-muted-foreground max-w-2xl mx-auto">
-                            Use the tabs below to learn about common eligibility factors. Select a topic to see detailed information.
+                        <p className="text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+                            {t.topicsDescription}
                         </p>
                     </motion.div>
 
-                    {/* Tab buttons */}
-                    <div className="flex flex-wrap justify-center gap-3 mb-10">
-                        {eligibilityTopics.map((topic, i) => (
-                            <button
-                                key={topic.id}
-                                onClick={() => setActiveTab(i)}
-                                className={`group inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold transition-all duration-300 cursor-pointer border
-                                    ${activeTab === i
-                                        ? 'bg-primary text-white border-primary shadow-lg shadow-primary/25'
-                                        : 'bg-background text-muted-foreground border-border hover:border-primary/30 hover:text-primary'
-                                    }`}
-                            >
-                                <topic.icon className={`w-4 h-4 transition-colors ${activeTab === i ? 'text-white' : 'text-muted-foreground group-hover:text-primary'}`} />
-                                {topic.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Tab content */}
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={activeTab}
-                            initial={{ opacity: 0, y: 15 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.3 }}
-                            className="bg-card border border-border/50 rounded-2xl p-8 sm:p-10 shadow-sm max-w-3xl mx-auto"
-                        >
-                            <h3 className="text-xl font-bold text-foreground mb-5 flex items-center gap-3">
-                                {(() => {
-                                    const Icon = eligibilityTopics[activeTab].icon
-                                    return <Icon className="w-6 h-6 text-primary" />
-                                })()}
-                                {eligibilityTopics[activeTab].content.title}
-                            </h3>
-                            <ul className="space-y-3">
-                                {eligibilityTopics[activeTab].content.points.map((point, i) => (
-                                    <motion.li
-                                        key={i}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: i * 0.06 }}
-                                        className="flex items-start gap-3 text-muted-foreground"
-                                    >
-                                        <ChevronRight className="w-4 h-4 text-primary shrink-0 mt-1" />
-                                        <span className="text-sm leading-relaxed">{point}</span>
-                                    </motion.li>
-                                ))}
-                            </ul>
-                        </motion.div>
-                    </AnimatePresence>
-                </div>
-            </section>
-
-            {/* ───────── TOPIC CARDS GRID ───────── */}
-            <section className="py-16 lg:py-20 bg-muted/30">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {topicCards.map((card, i) => (
-                            <motion.div
-                                key={card.title}
-                                custom={i}
-                                variants={fadeUp}
-                                initial="hidden"
-                                whileInView="visible"
-                                viewport={{ once: true }}
-                            >
-                                <Link href={card.href} className="group block bg-card rounded-2xl p-6 border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-300 h-full">
-                                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/15 transition-colors">
-                                        <card.icon className="w-6 h-6 text-primary" />
-                                    </div>
-                                    <h3 className="font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
-                                        {card.title}
+                    {/* Grid content */}
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {t.topics.map((topic, i) => {
+                            const Icon = topicIcons[i] || User;
+                            return (
+                                <motion.div
+                                    key={i}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ duration: 0.4, delay: i * 0.05 }}
+                                    className="bg-card border border-border/50 rounded-2xl p-7 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group h-full flex flex-col"
+                                >
+                                    <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-primary/10 transition-colors"></div>
+                                    <h3 className="text-lg font-bold text-foreground mb-5 flex items-center gap-3 relative z-10">
+                                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                                            <Icon className="w-6 h-6 text-primary" />
+                                        </div>
+                                        {topic.title}
                                     </h3>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        {card.desc}
-                                    </p>
-                                    <span className="inline-flex items-center gap-1 mt-4 text-sm font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                                        Learn more <ArrowRight className="w-3.5 h-3.5" />
-                                    </span>
-                                </Link>
-                            </motion.div>
-                        ))}
-                    </div>
-
-                    <div className="text-center mt-10">
-                        <Link
-                            href="/"
-                            className="inline-flex items-center gap-2 text-primary font-semibold text-sm hover:underline"
-                        >
-                            View all eligibility topics
-                            <ArrowRight className="w-4 h-4" />
-                        </Link>
+                                    <ul className="space-y-3 relative z-10 flex-grow">
+                                        {topic.points.map((point, idx) => (
+                                            <li
+                                                key={idx}
+                                                className="flex items-start gap-3 text-muted-foreground"
+                                            >
+                                                <ChevronRight className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                                                <span className="text-sm leading-relaxed">{point}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </motion.div>
+                            )
+                        })}
                     </div>
                 </div>
             </section>
 
             {/* ───────── LEARN MORE ───────── */}
-            <section className="py-16 lg:py-24">
+            <section className="py-16 lg:py-24 bg-muted/30">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -383,34 +189,42 @@ export default function EligibilityCriteria() {
                         className="text-center mb-12"
                     >
                         <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">
-                            Learn more about donating{' '}
-                            <span className="text-primary">blood and plasma</span>
+                            {t.learnMoreTitleStart}{' '}
+                            <span className="text-primary">{t.learnMoreTitleHighlight}</span>
                         </h2>
                     </motion.div>
 
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-                        {learnMoreCards.map((card, i) => (
-                            <motion.div
-                                key={card.title}
-                                custom={i}
-                                variants={fadeUp}
-                                initial="hidden"
-                                whileInView="visible"
-                                viewport={{ once: true }}
-                            >
-                                <Link href={card.href} className="group block bg-card rounded-2xl p-6 border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-300 h-full">
-                                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/15 transition-colors">
-                                        <card.icon className="w-6 h-6 text-primary" />
-                                    </div>
-                                    <h3 className="font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
-                                        {card.title}
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        {card.desc}
-                                    </p>
-                                </Link>
-                            </motion.div>
-                        ))}
+                        {t.learnMoreCards.map((card, i) => {
+                            const Icon = learnMoreIcons[i] || Accessibility;
+                            const href = learnMoreHrefs[i] || '/';
+                            return (
+                                <motion.div
+                                    key={i}
+                                    custom={i}
+                                    variants={fadeUp}
+                                    initial="hidden"
+                                    whileInView="visible"
+                                    viewport={{ once: true }}
+                                >
+                                    <Link href={href} className="group block bg-card rounded-2xl p-8 border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-300 h-full relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-primary/10 transition-colors"></div>
+                                        <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors relative z-10">
+                                            <Icon className="w-7 h-7 text-primary" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors relative z-10">
+                                            {card.title}
+                                        </h3>
+                                        <p className="text-base text-muted-foreground leading-relaxed relative z-10">
+                                            {card.desc}
+                                        </p>
+                                        <span className="inline-flex items-center gap-1 mt-6 text-sm font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity relative z-10">
+                                            {card.cta} <ArrowRight className="w-4 h-4" />
+                                        </span>
+                                    </Link>
+                                </motion.div>
+                            )
+                        })}
                     </div>
 
                     {/* First-time donor CTA */}
@@ -419,34 +233,34 @@ export default function EligibilityCriteria() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.6 }}
-                        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-muted/50 via-background to-primary/5 border border-border/50"
+                        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-muted/50 via-background to-primary/5 border border-border/50 shadow-sm hover:shadow-md transition-shadow"
                     >
                         <div className="grid lg:grid-cols-2 gap-8 items-center p-8 sm:p-12">
-                            <div className="space-y-5">
-                                <span className="inline-flex items-center gap-2 text-primary font-semibold text-sm">
+                            <div className="space-y-6">
+                                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary font-bold text-sm">
                                     <Sparkles className="w-4 h-4" />
-                                    New to blood donation?
+                                    {t.firstTimeBadge}
                                 </span>
                                 <h3 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight">
-                                    First time donor?{' '}
-                                    <span className="text-primary">Get started here.</span>
+                                    {t.firstTimeTitle}{' '}
+                                    <span className="text-primary block mt-1">{t.firstTimeTitleHighlight}</span>
                                 </h3>
-                                <p className="text-muted-foreground leading-relaxed max-w-md">
-                                    Everything you need to know about your first donation — from what to eat before, to what happens during and after. We&apos;ll guide you every step of the way.
+                                <p className="text-muted-foreground text-base sm:text-lg leading-relaxed max-w-md">
+                                    {t.firstTimeDescription}
                                 </p>
                                 <Link
                                     href="/donate"
-                                    className="inline-flex items-center gap-2 bg-primary text-white px-7 py-3.5 rounded-xl font-bold text-sm hover:bg-primary/90 transition-all shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5"
+                                    className="inline-flex items-center gap-2 bg-primary text-white px-8 py-4 rounded-xl font-bold text-base hover:bg-primary/90 transition-all shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5"
                                 >
-                                    Book Your First Appointment
-                                    <ArrowRight className="w-4 h-4" />
+                                    {t.firstTimeBtn}
+                                    <ArrowRight className="w-5 h-5" />
                                 </Link>
                             </div>
-                            <div className="hidden lg:block relative">
+                            <div className="hidden lg:block relative h-full min-h-[350px]">
                                 <img
-                                    src="/blood-2.webp"
-                                    alt="First time donor"
-                                    className="w-full h-[320px] object-cover rounded-2xl shadow-lg"
+                                    src="/first-time-donor.png"
+                                    alt="Happy donor giving blood"
+                                    className="absolute inset-0 w-full h-full object-cover rounded-2xl shadow-lg"
                                 />
                             </div>
                         </div>
@@ -455,75 +269,94 @@ export default function EligibilityCriteria() {
             </section>
 
             {/* ───────── DONATION FREQUENCY ───────── */}
-            <section className="py-16 lg:py-20 bg-muted/30">
+            <section className="py-16 lg:py-24">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        className="text-center mb-12"
+                        className="text-center mb-16"
                     >
-                        <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">
-                            Donation <span className="text-primary">Frequency</span>
+                        <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
+                            {t.frequencyTitle} <span className="text-primary">{t.frequencyTitleHighlight}</span>
                         </h2>
-                        <p className="text-muted-foreground max-w-xl mx-auto">
-                            Different types of donations have different waiting periods between each donation.
-                        </p>
                     </motion.div>
 
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-                        {frequencyCards.map((card, i) => (
-                            <motion.div
-                                key={card.title}
-                                custom={i}
-                                variants={fadeUp}
-                                initial="hidden"
-                                whileInView="visible"
-                                viewport={{ once: true }}
-                                className="relative bg-card rounded-2xl border border-border/50 overflow-hidden group hover:shadow-xl transition-all duration-300"
-                            >
-                                <div className={`h-1.5 bg-gradient-to-r ${card.color}`} />
-                                <div className="p-7 text-center">
-                                    <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                                        <card.icon className="w-7 h-7 text-primary" />
+                    <div className="grid md:grid-cols-3 gap-8 mb-10">
+                        {t.frequencyCards.map((card, i) => {
+                            const image = frequencyImages[i] || frequencyImages[0];
+                            const filter = frequencyFilters[i] || frequencyFilters[0];
+
+                            return (
+                                <motion.div
+                                    key={i}
+                                    custom={i}
+                                    variants={fadeUp}
+                                    initial="hidden"
+                                    whileInView="visible"
+                                    viewport={{ once: true }}
+                                    className="bg-card rounded-2xl border border-border/50 p-8 sm:p-10 text-center flex flex-col items-center group hover:shadow-lg transition-all"
+                                >
+                                    <div className="h-24 w-auto mb-8 relative">
+                                        <img
+                                            src={image}
+                                            alt={`${card.highlight} bag icon`}
+                                            className="h-full w-auto object-contain transition-transform group-hover:scale-110 duration-500"
+                                            style={{ filter: filter }}
+                                        />
                                     </div>
-                                    <h3 className="font-bold text-foreground text-lg mb-1">{card.title}</h3>
-                                    <p className="text-sm text-muted-foreground mb-4">{card.subtitle}</p>
-                                    <div className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-rose-600">
+                                    <h3 className="text-lg text-foreground font-semibold leading-relaxed mb-4">
+                                        {card.titleStart}
+                                        <span style={{
+                                            color: i === 0 ? '#e11d48' :
+                                                i === 1 ? '#f59e0b' : '#9333ea'
+                                        }} className="font-extrabold">{card.highlight}</span>
+                                        {card.subtitle}
+                                    </h3>
+                                    <div className="text-3xl font-extrabold text-foreground mb-4">
                                         {card.value}
                                     </div>
-                                </div>
-                            </motion.div>
-                        ))}
+                                    <p className="text-sm text-muted-foreground italic mt-auto">
+                                        {card.footnote}
+                                    </p>
+                                </motion.div>
+                            )
+                        })}
                     </div>
 
-                    <p className="text-center text-sm text-muted-foreground max-w-2xl mx-auto">
-                        All donation intervals are as per government of India guidelines. Individual cases may vary — consult our team for personalised advice.
-                    </p>
+                    <div className="text-center mt-10 max-w-3xl mx-auto space-y-2 pb-6 border-b border-border/50">
+                        <p className="text-base text-foreground font-semibold">
+                            {t.frequencyFooter1}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            {t.frequencyFooter2}
+                        </p>
+                    </div>
                 </div>
             </section>
 
             {/* ───────── SUPPORT CTA BANNER ───────── */}
             <section className="bg-gradient-to-r from-primary to-rose-700">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <div className="text-center space-y-5">
-                        <h2 className="text-2xl sm:text-3xl font-bold text-white">
-                            If you have questions or need support, please reach out:
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                    <div className="text-center space-y-8">
+                        <h2 className="text-3xl sm:text-4xl font-bold text-white max-w-2xl mx-auto leading-tight">
+                            {t.supportTitle}
                         </h2>
-                        <div className="flex flex-wrap justify-center gap-4">
+
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                            <Link
+                                href="/donate"
+                                className="inline-flex items-center gap-2 bg-white text-primary px-8 py-4 rounded-xl font-bold text-base hover:bg-white/90 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 w-full sm:w-auto justify-center"
+                            >
+                                {t.supportDonateBtn}
+                                <ArrowRight className="w-5 h-5" />
+                            </Link>
                             <a
                                 href="tel:+919422223117"
-                                className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white px-6 py-3 rounded-full text-sm font-semibold transition-colors backdrop-blur-sm border border-white/20"
+                                className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-8 py-4 rounded-xl text-base font-semibold transition-all backdrop-blur-sm border border-white/20 hover:border-white/40 w-full sm:w-auto justify-center"
                             >
-                                <Phone className="w-4 h-4" />
-                                +91 94222 23117
-                            </a>
-                            <a
-                                href="mailto:contact@sanjivanibloodbank.org"
-                                className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white px-6 py-3 rounded-full text-sm font-semibold transition-colors backdrop-blur-sm border border-white/20"
-                            >
-                                <Mail className="w-4 h-4" />
-                                contact@sanjivanibloodbank.org
+                                <Phone className="w-5 h-5" />
+                                {t.supportCallBtn}
                             </a>
                         </div>
                     </div>
