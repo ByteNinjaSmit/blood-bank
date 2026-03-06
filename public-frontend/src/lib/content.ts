@@ -100,6 +100,7 @@ export type ContentData = {
         address: string;
         addressPlaceholder: string;
         medicalHistory: string;
+        medicalWarning: string;
         recentIllness: string;
         surgery: string;
         medication: string;
@@ -113,6 +114,14 @@ export type ContentData = {
         yes: string;
         no: string;
         genderOptions: string[];
+        age: string;
+        agePlaceholder: string;
+        donationFrequency: string;
+        donationFrequencyOptions: string[];
+        wantReminder: string;
+        reminderDaysLabel: string;
+        reminderDaysOptions: string[];
+        predictedReminderDate: string;
     };
     feedback: {
         title: string;
@@ -418,6 +427,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
             address: "Full Address *",
             addressPlaceholder: "Enter current address",
             medicalHistory: "Medical History (Mandatory)",
+            medicalWarning: "Have you had any recent illness, surgery, or medication in the last 3 months?",
             recentIllness: "Recent Illness?",
             surgery: "Surgery (Last 6 months)?",
             medication: "Ongoing Medication?",
@@ -430,7 +440,15 @@ export const content: Record<'en' | 'mr', ContentData> = {
             processing: "Processing...",
             yes: "Yes",
             no: "No",
-            genderOptions: ["Male", "Female", "Other"]
+            genderOptions: ["Male", "Female", "Other"],
+            age: "Age",
+            agePlaceholder: "Years",
+            donationFrequency: "Donation Frequency (Per Year)",
+            donationFrequencyOptions: ["1 Time (Yearly)", "2 Times (Every 6 months)", "3 Times (Every 4 months)", "4 Times (Every 3 months)"],
+            wantReminder: "Send me a reminder for my next donation",
+            reminderDaysLabel: "Remind me before",
+            reminderDaysOptions: ["1 Day", "3 Days", "1 Week"],
+            predictedReminderDate: "You will be reminded on:"
         },
         feedback: {
             title: "Your Feedback Matters",
@@ -589,7 +607,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
             ],
             frequencyFooter1: "You can choose to donate either blood or plasma, depending on your eligibility and preference.",
             frequencyFooter2: "It’s important to note that you may need to wait 56 days between each program.",
-            supportTitle: "Ready to make a difference? Join Canada's Lifeline today.",
+            supportTitle: "Ready to make a difference? Join Sanjivani's Lifeline today.",
             supportDonateBtn: "Donate Now",
             supportCallBtn: "Have questions? Call us"
         }
@@ -837,6 +855,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
             address: "पूर्ण पत्ता *",
             addressPlaceholder: "सध्याचा पत्ता प्रविष्ट करा",
             medicalHistory: "वैद्यकीय इतिहास (अनिवार्य)",
+            medicalWarning: "तुम्हाला गेल्या ३ महिन्यात कोणताही आजार, शस्त्रक्रिया किंवा औषधोपचार झाला आहे का?",
             recentIllness: "अलीकडील आजार?",
             surgery: "शस्त्रक्रिया (गेल्या ६ महिन्यात)?",
             medication: "सध्याचे औषध चालू आहे का?",
@@ -849,7 +868,15 @@ export const content: Record<'en' | 'mr', ContentData> = {
             processing: "प्रक्रिया सुरू आहे...",
             yes: "होय",
             no: "नाही",
-            genderOptions: ["पुरुष", "स्त्री", "इतर"]
+            genderOptions: ["पुरुष", "स्त्री", "इतर"],
+            age: "वय",
+            agePlaceholder: "वर्षे",
+            donationFrequency: "रक्तदान वारंवारता (प्रति वर्ष)",
+            donationFrequencyOptions: ["१ वेळा (दरवर्षी)", "२ वेळा (दर ६ महिन्यांनी)", "३ वेळा (दर ४ महिन्यांनी)", "४ वेळा (दर ३ महिन्यांनी)"],
+            wantReminder: "पुढील रक्तदानासाठी मला आठवण करून द्या",
+            reminderDaysLabel: "यापूर्वी आठवण करा",
+            reminderDaysOptions: ["१ दिवस", "३ दिवस", "१ आठवडा"],
+            predictedReminderDate: "या दिवशी तुम्हाला आठवण करून दिली जाईल:"
         },
         feedback: {
             title: "तुमचा अभिप्राय महत्त्वाचा आहे",

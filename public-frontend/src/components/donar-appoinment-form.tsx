@@ -2,7 +2,7 @@
 import { useState } from "react"
 import type { ChangeEvent, FormEvent } from "react"
 import { bookAppointment } from "@/actions/appointment"
-import { User, Phone, Calendar, MapPin, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { User, Phone, Calendar, MapPin, CheckCircle, AlertCircle, Loader2, Bell } from 'lucide-react'
 import { useLanguage } from '@/context/language-context'
 import { content } from '@/lib/content'
 
@@ -18,12 +18,16 @@ export default function BloodDonationForm() {
     bloodGroup: "",
     otherBloodGroup: "",
     birthDate: "",
+    age: "",
     address: "",
     appointmentDate: "",
     recentIllness: "no",
     surgery: "no",
     medication: "no",
-    lastDonation: ""
+    lastDonation: "",
+    donationFrequency: "1",
+    wantReminder: false,
+    reminderDays: 1
   })
 
   const [submitted, setSubmitted] = useState(false)
@@ -31,8 +35,48 @@ export default function BloodDonationForm() {
   const [error, setError] = useState<string | null>(null)
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    const { name, value, type } = e.target;
+
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prev => ({ ...prev, [name]: checked }));
+      return;
+    }
+
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+
+      if (name === 'gender' && value === 'Female') {
+        if (newData.donationFrequency === '3' || newData.donationFrequency === '4') {
+          newData.donationFrequency = '2';
+        }
+      }
+
+      if (name === 'age' && value) {
+        const age = parseInt(value);
+        if (!isNaN(age)) {
+          const d = new Date();
+          d.setFullYear(d.getFullYear() - age);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          newData.birthDate = `${yyyy}-${mm}-${dd}`;
+        } else {
+          newData.birthDate = '';
+        }
+      }
+
+      if (name === 'birthDate' && value) {
+        const birthYear = new Date(value).getFullYear();
+        const currentYear = new Date().getFullYear();
+        const calculatedAge = currentYear - birthYear;
+        if (!isNaN(calculatedAge)) {
+          newData.age = calculatedAge.toString();
+        }
+      }
+
+      return newData;
+    });
   }
 
   const handleBloodGroupChange = (group: string) => {
@@ -51,6 +95,7 @@ export default function BloodDonationForm() {
     const finalData = {
       ...formData,
       bloodGroup: formData.bloodGroup === "other" ? formData.otherBloodGroup : formData.bloodGroup,
+      age: formData.age ? parseInt(formData.age) : undefined,
     }
 
     try {
@@ -58,7 +103,7 @@ export default function BloodDonationForm() {
       if (result.success) {
         setSubmitted(true)
         setFormData({
-          fullName: "", gender: "", mobileNo: "", email: "", bloodGroup: "", otherBloodGroup: "", birthDate: "", address: "", appointmentDate: "", recentIllness: "no", surgery: "no", medication: "no", lastDonation: ""
+          fullName: "", gender: "", mobileNo: "", email: "", bloodGroup: "", otherBloodGroup: "", birthDate: "", age: "", address: "", appointmentDate: "", recentIllness: "no", surgery: "no", medication: "no", lastDonation: "", donationFrequency: "1", wantReminder: false, reminderDays: 1
         })
         setTimeout(() => setSubmitted(false), 5000)
       } else {
@@ -73,6 +118,14 @@ export default function BloodDonationForm() {
 
   const bloodGroups = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"]
   const genderOptions = ["Male", "Female", "Other"]
+
+  const getPredictedReminderDate = () => {
+    if (!formData.appointmentDate || !formData.reminderDays) return null;
+    const aptDate = new Date(formData.appointmentDate);
+    if (isNaN(aptDate.getTime())) return null;
+    aptDate.setDate(aptDate.getDate() - parseInt(formData.reminderDays.toString()));
+    return aptDate.toLocaleDateString();
+  }
 
   if (submitted) {
     return (
@@ -106,25 +159,43 @@ export default function BloodDonationForm() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="relative">
-              <User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
-              <input name="fullName" value={formData.fullName} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.fullNamePlaceholder} />
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">{t.fullName}</label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
+                <input name="fullName" value={formData.fullName} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.fullNamePlaceholder} />
+              </div>
             </div>
-            <div className="relative">
-              <Phone className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
-              <input name="mobileNo" type="tel" required pattern="[0-9]{10}" value={formData.mobileNo} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.mobilePlaceholder} />
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">{t.mobileNo}</label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
+                <input name="mobileNo" type="tel" required pattern="[0-9]{10}" value={formData.mobileNo} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.mobilePlaceholder} />
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="relative">
-              <Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
-              <input name="birthDate" type="text" onFocus={(e) => e.target.type = 'date'} onBlur={(e) => e.target.type = 'text'} value={formData.birthDate} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.birthDate} />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <label className="block text-sm font-semibold text-foreground mb-1.5">{t.birthDate}</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
+                  <input name="birthDate" type="text" onFocus={(e) => e.target.type = 'date'} onBlur={(e) => e.target.type = 'text'} value={formData.birthDate} onChange={handleChange} className="w-full pl-10 pr-2 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.birthDate} />
+                </div>
+              </div>
+              <div className="relative w-24">
+                <label className="block text-sm font-semibold text-foreground mb-1.5">{t.age}</label>
+                <input name="age" type="number" min="18" max="100" value={formData.age} onChange={handleChange} className="w-full px-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder={t.agePlaceholder || "Years"} title={t.age} />
+              </div>
             </div>
-            <select name="gender" value={formData.gender} onChange={handleChange} className="w-full px-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium text-muted-foreground">
-              <option value="">{t.selectGender}</option>
-              {genderOptions.map((o, i) => <option key={o} value={o}>{t.genderOptions?.[i] || o}</option>)}
-            </select>
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">{t.gender}</label>
+              <select name="gender" value={formData.gender} onChange={handleChange} className="w-full px-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium text-muted-foreground">
+                <option value="">{t.selectGender}</option>
+                {genderOptions.map((o, i) => <option key={o} value={o}>{t.genderOptions?.[i] || o}</option>)}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -161,7 +232,7 @@ export default function BloodDonationForm() {
           </div>
           <div className="p-4 bg-yellow-50 dark:bg-yellow-900/10 rounded-xl flex gap-3 text-sm text-yellow-800 dark:text-yellow-200 border border-yellow-100 dark:border-yellow-900/20">
             <AlertCircle className="w-5 h-5 shrink-0" />
-            <p>Have you had any recent illness, surgery, or medication in the last 3 months?</p>
+            <p>{t.medicalWarning}</p>
           </div>
           <div className="flex gap-4">
             <label className="flex items-center gap-2 cursor-pointer bg-muted/30 px-4 py-2 rounded-lg hover:bg-muted/50 transition-colors">
@@ -174,14 +245,67 @@ export default function BloodDonationForm() {
             </label>
           </div>
 
-          <div className="relative">
-            <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
-            <input name="address" value={formData.address} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.addressPlaceholder} />
+          <div>
+            <label className="block text-sm font-semibold text-foreground mb-1.5">{t.address}</label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
+              <input name="address" value={formData.address} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.addressPlaceholder} />
+            </div>
+          </div>
+        </div>
+
+        {/* Donation Preferences */}
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">4</span>
+            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{t.donationDetails}</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">{t.preferredDate}</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
+                <input name="appointmentDate" type="text" onFocus={(e) => e.target.type = 'date'} onBlur={(e) => e.target.type = 'text'} min={new Date().toISOString().split('T')[0]} value={formData.appointmentDate} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.preferredDate} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">{t.donationFrequency}</label>
+              <select name="donationFrequency" value={formData.donationFrequency} onChange={handleChange} className="w-full px-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium text-muted-foreground">
+                {["1", "2", "3", "4"]
+                  .filter(val => formData.gender === "Female" ? ["1", "2"].includes(val) : true)
+                  .map((val) => {
+                    const i = parseInt(val) - 1;
+                    return <option key={val} value={val}>{t.donationFrequencyOptions?.[i] || val}</option>
+                  })}
+              </select>
+            </div>
           </div>
 
-          <div className="relative">
-            <Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground/50" />
-            <input name="appointmentDate" type="text" onFocus={(e) => e.target.type = 'date'} onBlur={(e) => e.target.type = 'text'} value={formData.appointmentDate} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-muted/30 border-0 rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all outline-none font-medium placeholder:text-muted-foreground/60" placeholder={t.preferredDate} />
+          <div className="space-y-3">
+            <label className="flex items-center gap-3 cursor-pointer bg-muted/30 px-4 py-3 rounded-xl hover:bg-muted/50 transition-colors">
+              <input type="checkbox" name="wantReminder" checked={formData.wantReminder} onChange={handleChange} className="accent-primary w-5 h-5 rounded" />
+              <Bell className="w-4 h-4 text-primary" />
+              <span className="font-medium text-sm text-foreground">{t.wantReminder}</span>
+            </label>
+
+            {formData.wantReminder && (
+              <div className="flex flex-col gap-3 p-4 bg-primary/5 rounded-xl border border-primary/10 ml-8 animate-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-semibold text-foreground whitespace-nowrap">{t.reminderDaysLabel}:</label>
+                  <select name="reminderDays" value={formData.reminderDays} onChange={handleChange} className="flex-1 px-4 py-2 text-sm bg-white dark:bg-card border-0 rounded-lg focus:ring-2 focus:ring-primary/20 transition-all outline-none font-medium text-foreground shadow-sm">
+                    {[1, 3, 7].map((days, i) => (
+                      <option key={days} value={days}>{t.reminderDaysOptions?.[i] || `${days} Days`}</option>
+                    ))}
+                  </select>
+                </div>
+                {getPredictedReminderDate() && (
+                  <div className="text-xs font-semibold text-primary flex items-center gap-1.5 bg-primary/10 w-fit px-3 py-1.5 rounded-lg border border-primary/20">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {t.predictedReminderDate} {getPredictedReminderDate()}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

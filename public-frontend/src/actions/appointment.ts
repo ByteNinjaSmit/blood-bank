@@ -10,12 +10,16 @@ interface AppointmentData {
     email?: string;
     bloodGroup?: string;
     birthDate?: string;
+    age?: number;
     address?: string;
     appointmentDate?: string;
     recentIllness?: string;
     surgery?: string;
     medication?: string;
     lastDonation?: string;
+    donationFrequency?: string;
+    wantReminder?: boolean;
+    reminderDays?: number;
 }
 
 interface ActionResponse {

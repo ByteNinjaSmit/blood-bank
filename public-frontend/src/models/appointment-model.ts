@@ -7,6 +7,7 @@ export interface IAppointment extends Document {
     email?: string;
     bloodGroup?: string;
     birthDate?: Date;
+    age?: number;
     address?: string;
     appointmentDate?: Date;
     status: "pending" | "confirmed" | "cancelled";
@@ -16,6 +17,9 @@ export interface IAppointment extends Document {
     surgery?: string;
     medication?: string;
     lastDonation?: Date;
+    donationFrequency?: string;
+    wantReminder?: boolean;
+    reminderDays?: number;
 }
 
 const AppointmentSchema: Schema<IAppointment> = new Schema({
@@ -54,6 +58,10 @@ const AppointmentSchema: Schema<IAppointment> = new Schema({
         type: Date,
         required: false,
     },
+    age: {
+        type: Number,
+        required: false,
+    },
     address: {
         type: String,
         required: false,
@@ -90,6 +98,19 @@ const AppointmentSchema: Schema<IAppointment> = new Schema({
     },
     lastDonation: {
         type: Date,
+    },
+    donationFrequency: {
+        type: String,
+        enum: ["1", "2", "3", "4"],
+        default: "1",
+    },
+    wantReminder: {
+        type: Boolean,
+        default: false,
+    },
+    reminderDays: {
+        type: Number,
+        default: 0,
     }
 });
 
