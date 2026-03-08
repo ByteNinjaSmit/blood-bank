@@ -228,63 +228,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                     viewAllLabel: "View all Blood info",
                     viewAllHref: "/"
                 },
-                {
-                    label: "Plasma for Life",
-                    href: "/",
-                    columns: [
-                        {
-                            title: "Am I eligible to donate plasma?",
-                            links: [
-                                { label: "Explore eligibility criteria", href: "/eligibility-criteria" },
-                                { label: "Take our eligibility quiz", href: "/" },
-                                { label: "Recent changes to donation criteria", href: "/donation-criteria-changes" }
-                            ]
-                        },
-                        {
-                            title: "Donating plasma",
-                            links: [
-                                { label: "Become a plasma donor", href: "/" },
-                                { label: "How your plasma donation helps", href: "/" },
-                                { label: "Donor Questionnaire", href: "/" },
-                                { label: "Donor wellness and safety", href: "/donor-wellness" },
-                                { label: "Donor centres hours & locations", href: "/" }
-                            ]
-                        }
-                    ],
-                    viewAllLabel: "View all Plasma info",
-                    viewAllHref: "/"
-                },
-                {
-                    label: "Stem Cells",
-                    href: "/",
-                    columns: [
-                        {
-                            title: "About stem cells",
-                            links: [
-                                { label: "What are stem cells?", href: "/" },
-                                { label: "How to register", href: "/" },
-                                { label: "The donation process", href: "/" }
-                            ]
-                        }
-                    ],
-                    viewAllLabel: "View all Stem Cell info",
-                    viewAllHref: "/"
-                },
-                {
-                    label: "Organs & Tissues",
-                    href: "/",
-                    columns: [
-                        {
-                            title: "About organ donation",
-                            links: [
-                                { label: "How to register", href: "/" },
-                                { label: "Organ donation process", href: "/" }
-                            ]
-                        }
-                    ],
-                    viewAllLabel: "View all Organs & Tissues info",
-                    viewAllHref: "/"
-                },
+
                 {
                     label: "Ways to Donate",
                     href: "/donate",
@@ -294,8 +238,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             links: [
                                 { label: "Book an appointment", href: "/donate" },
                                 { label: "Donor centres hours & locations", href: "/" },
-                                { label: "Recognition programs", href: "/" },
-                                { label: "Donating platelets", href: "/" }
+                                { label: "Recognition programs", href: "/" }
                             ]
                         }
                     ],
@@ -474,13 +417,13 @@ export const content: Record<'en' | 'mr', ContentData> = {
             heroBadge: "Eligibility criteria",
             heroTitleStart: "Am I eligible to ",
             heroTitleHighlight: "Donate?",
-            heroDescription1: "Thank you for your interest in donating blood, platelets and/or plasma! This section contains answers to common questions you might have before your appointment, to help determine if you’re able to donate.",
+            heroDescription1: "Thank you for your interest in donating blood! This section contains answers to common questions you might have before your appointment, to help determine if you’re able to donate.",
             heroDescription2: "We encourage all donors to review eligibility criteria before booking your appointment. Please keep in mind that donor eligibility can change over time. The final determination of eligibility will be made by our donor centre staff at the time of donation.",
             redBannerSubtitle: "Making a difference",
             redBannerTitle: "It only takes about an hour of your time to change someone’s life.",
             topicsTitleStart: "Explore the topics below to find out if you’re ",
             topicsTitleHighlight: "eligible to donate",
-            topicsDescription: "Various factors can determine whether a person can donate at any given time. Eligibility criteria can also differ depending on whether you are donating blood, platelets, or plasma. Sometimes, it’s not possible to donate, or we may ask that you wait before donating again.",
+            topicsDescription: "Various factors can determine whether a person can donate at any given time. Sometimes, it’s not possible to donate, or we may ask that you wait before donating again.",
             topics: [
                 {
                     title: "Age, gender and weight",
@@ -557,7 +500,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                 }
             ],
             learnMoreTitleStart: "Learn more about donating ",
-            learnMoreTitleHighlight: "blood and plasma",
+            learnMoreTitleHighlight: "blood",
             learnMoreCards: [
                 {
                     title: "Accessibility",
@@ -589,24 +532,8 @@ export const content: Record<'en' | 'mr', ContentData> = {
                     subtitle: ", returning donors must wait:",
                     value: "56-84 days*",
                     footnote: "*Donors registered as male (56 days), donors registered as female (84 days)"
-                },
-                {
-                    titleStart: "To donate ",
-                    highlight: "plasma",
-                    subtitle: ", returning donors must wait:",
-                    value: "6-56 days*",
-                    footnote: "*Depending on the specific donor program and location"
-                },
-                {
-                    titleStart: "To donate ",
-                    highlight: "platelets",
-                    subtitle: ", returning donors must wait:",
-                    value: "14 days*",
-                    footnote: "*New platelet donors are encouraged to donate once a month"
                 }
             ],
-            frequencyFooter1: "You can choose to donate either blood or plasma, depending on your eligibility and preference.",
-            frequencyFooter2: "It’s important to note that you may need to wait 56 days between each program.",
             supportTitle: "Ready to make a difference? Join Sanjivani's Lifeline today.",
             supportDonateBtn: "Donate Now",
             supportCallBtn: "Have questions? Call us"
@@ -656,63 +583,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                     viewAllLabel: "सर्व रक्त माहिती पहा",
                     viewAllHref: "/"
                 },
-                {
-                    label: "प्लाझ्मा फॉर लाइफ",
-                    href: "/",
-                    columns: [
-                        {
-                            title: "मी प्लाझ्मा दान करू शकतो का?",
-                            links: [
-                                { label: "पात्रता निकष जाणून घ्या", href: "/eligibility-criteria" },
-                                { label: "पात्रता चाचणी घ्या", href: "/" },
-                                { label: "दान निकषातील अलीकडील बदल", href: "/donation-criteria-changes" }
-                            ]
-                        },
-                        {
-                            title: "प्लाझ्मा दान करणे",
-                            links: [
-                                { label: "प्लाझ्मा दाता बना", href: "/" },
-                                { label: "तुमचे प्लाझ्मा दान कसे मदत करते", href: "/" },
-                                { label: "दाता प्रश्नावली", href: "/" },
-                                { label: "दाता कल्याण आणि सुरक्षा", href: "/donor-wellness" },
-                                { label: "दाता केंद्रे तास आणि स्थाने", href: "/" }
-                            ]
-                        }
-                    ],
-                    viewAllLabel: "सर्व प्लाझ्मा माहिती पहा",
-                    viewAllHref: "/"
-                },
-                {
-                    label: "स्टेम सेल्स",
-                    href: "/",
-                    columns: [
-                        {
-                            title: "स्टेम सेल्सबद्दल",
-                            links: [
-                                { label: "स्टेम सेल्स म्हणजे काय?", href: "/" },
-                                { label: "नोंदणी कशी करावी", href: "/" },
-                                { label: "दान प्रक्रिया", href: "/" }
-                            ]
-                        }
-                    ],
-                    viewAllLabel: "सर्व स्टेम सेल माहिती पहा",
-                    viewAllHref: "/"
-                },
-                {
-                    label: "अवयव आणि ऊती",
-                    href: "/",
-                    columns: [
-                        {
-                            title: "अवयव दानाबद्दल",
-                            links: [
-                                { label: "नोंदणी कशी करावी", href: "/" },
-                                { label: "अवयव दान प्रक्रिया", href: "/" }
-                            ]
-                        }
-                    ],
-                    viewAllLabel: "सर्व अवयव आणि ऊती माहिती पहा",
-                    viewAllHref: "/"
-                },
+
                 {
                     label: "दान करण्याचे मार्ग",
                     href: "/donate",
@@ -722,8 +593,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             links: [
                                 { label: "अपॉइंटमेंट बुक करा", href: "/donate" },
                                 { label: "दाता केंद्रे तास आणि स्थाने", href: "/" },
-                                { label: "ओळख कार्यक्रम", href: "/" },
-                                { label: "प्लेटलेट्स दान", href: "/" }
+                                { label: "ओळख कार्यक्रम", href: "/" }
                             ]
                         }
                     ],
