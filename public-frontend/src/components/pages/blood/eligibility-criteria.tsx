@@ -282,7 +282,7 @@ export default function EligibilityCriteria() {
                         </h2>
                     </motion.div>
 
-                    <div className="grid md:grid-cols-3 gap-8 mb-10">
+                    <div className="flex flex-wrap justify-center gap-8 mb-10">
                         {t.frequencyCards.map((card, i) => {
                             const image = frequencyImages[i] || frequencyImages[0];
                             const filter = frequencyFilters[i] || frequencyFilters[0];
@@ -295,7 +295,7 @@ export default function EligibilityCriteria() {
                                     initial="hidden"
                                     whileInView="visible"
                                     viewport={{ once: true }}
-                                    className="bg-card rounded-2xl border border-border/50 p-8 sm:p-10 text-center flex flex-col items-center group hover:shadow-lg transition-all"
+                                    className="bg-card rounded-2xl border border-border/50 p-8 sm:p-10 text-center flex flex-col items-center group hover:shadow-lg transition-all w-full max-w-sm"
                                 >
                                     <div className="h-24 w-auto mb-8 relative">
                                         <img
@@ -324,14 +324,7 @@ export default function EligibilityCriteria() {
                         })}
                     </div>
 
-                    <div className="text-center mt-10 max-w-3xl mx-auto space-y-2 pb-6 border-b border-border/50">
-                        <p className="text-base text-foreground font-semibold">
-                            {t.frequencyFooter1}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                            {t.frequencyFooter2}
-                        </p>
-                    </div>
+                    {/* Frequency footer removed */}
                 </div>
             </section>
 
