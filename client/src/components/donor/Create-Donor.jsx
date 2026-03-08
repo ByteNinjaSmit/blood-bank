@@ -15,6 +15,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
   const donorIdInputRef = useRef(null)
   const [showPostCreate, setShowPostCreate] = useState(false)
   const [createdDonor, setCreatedDonor] = useState(null)
+  const [dobMode, setDobMode] = useState("dob") // "dob" or "age"
 
   const [formData, setFormData] = useState({
     donorId: prefill?.donorId || "",
@@ -23,6 +24,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
     lastName: prefill?.lastName || "",
     uid: prefill?.uid || "",
     dob: prefill?.dob || "",
+    age: "",
     sex: prefill?.sex || "",
     phone: prefill?.phone || "",
     email: prefill?.email || "",
@@ -80,6 +82,36 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  // Calculate age from DOB
+  const calculateAgeFromDob = (dobStr) => {
+    if (!dobStr) return ""
+    const dob = new Date(dobStr)
+    const today = new Date()
+    let age = today.getFullYear() - dob.getFullYear()
+    const m = today.getMonth() - dob.getMonth()
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--
+    return age >= 0 ? String(age) : ""
+  }
+
+  // Calculate DOB from age (sets Jan 1 of birth year)
+  const calculateDobFromAge = (ageStr) => {
+    if (!ageStr) return ""
+    const ageNum = parseInt(ageStr, 10)
+    if (isNaN(ageNum) || ageNum <= 0) return ""
+    const birthYear = new Date().getFullYear() - ageNum
+    return `${birthYear}-01-01`
+  }
+
+  const handleDobChange = (e) => {
+    const dob = e.target.value
+    setFormData((prev) => ({ ...prev, dob, age: calculateAgeFromDob(dob) }))
+  }
+
+  const handleAgeChange = (e) => {
+    const age = e.target.value
+    setFormData((prev) => ({ ...prev, age, dob: calculateDobFromAge(age) }))
+  }
+
   const validateForm = () => {
     if (!formData.city || !formData.district || !formData.state || !formData.pincode) {
       setError("City, District, State and Pincode are required")
@@ -108,6 +140,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
       lastName: "",
       uid: "",
       dob: "",
+      age: "",
       sex: "",
       phone: "",
       email: "",
@@ -124,6 +157,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
       eligibilityStatus: "eligible",
       lastDonationDate: "",
     })
+    setDobMode("dob")
     setError("")
     setSuccess(false)
     donorIdInputRef.current?.focus()
@@ -155,7 +189,8 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
         middleName: formData.middleName || undefined,
         lastName: formData.lastName,
         uid: formData.uid || undefined,
-        dob: formData.dob,
+        dob: formData.dob || undefined,
+        age: formData.age ? Number(formData.age) : undefined,
         sex: formData.sex,
         phone: formData.phone,
         email: formData.email || undefined,
@@ -351,15 +386,57 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
-                  <input
-                    type="date"
-                    name="dob"
-                    value={formData.dob}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                    required
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth / Age *</label>
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setDobMode("dob")}
+                      className={`px-3 py-1 text-xs rounded-md border ${dobMode === "dob"
+                          ? "bg-orange-800 text-white border-orange-800"
+                          : "bg-white text-orange-800 border-orange-300 hover:bg-orange-50"
+                        }`}
+                    >
+                      Date of Birth
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDobMode("age")}
+                      className={`px-3 py-1 text-xs rounded-md border ${dobMode === "age"
+                          ? "bg-orange-800 text-white border-orange-800"
+                          : "bg-white text-orange-800 border-orange-300 hover:bg-orange-50"
+                        }`}
+                    >
+                      Age
+                    </button>
+                  </div>
+                  {dobMode === "dob" ? (
+                    <input
+                      type="date"
+                      name="dob"
+                      value={formData.dob}
+                      onChange={handleDobChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                      required={!formData.age}
+                    />
+                  ) : (
+                    <input
+                      type="number"
+                      name="age"
+                      value={formData.age}
+                      onChange={handleAgeChange}
+                      placeholder="Enter age in years"
+                      min="1"
+                      max="120"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                      required={!formData.dob}
+                    />
+                  )}
+                  {dobMode === "age" && formData.dob && (
+                    <p className="text-xs text-gray-500 mt-1">Auto-calculated DOB: {formData.dob}</p>
+                  )}
+                  {dobMode === "dob" && formData.age && (
+                    <p className="text-xs text-gray-500 mt-1">Age: {formData.age} years</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Sex *</label>
@@ -578,15 +655,57 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
-                    <input
-                      type="date"
-                      name="dob"
-                      value={formData.dob}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                      required
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth / Age *</label>
+                    <div className="flex gap-2 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => setDobMode("dob")}
+                        className={`px-3 py-1 text-xs rounded-md border ${dobMode === "dob"
+                            ? "bg-orange-800 text-white border-orange-800"
+                            : "bg-white text-orange-800 border-orange-300 hover:bg-orange-50"
+                          }`}
+                      >
+                        Date of Birth
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDobMode("age")}
+                        className={`px-3 py-1 text-xs rounded-md border ${dobMode === "age"
+                            ? "bg-orange-800 text-white border-orange-800"
+                            : "bg-white text-orange-800 border-orange-300 hover:bg-orange-50"
+                          }`}
+                      >
+                        Age
+                      </button>
+                    </div>
+                    {dobMode === "dob" ? (
+                      <input
+                        type="date"
+                        name="dob"
+                        value={formData.dob}
+                        onChange={handleDobChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                        required={!formData.age}
+                      />
+                    ) : (
+                      <input
+                        type="number"
+                        name="age"
+                        value={formData.age}
+                        onChange={handleAgeChange}
+                        placeholder="Enter age in years"
+                        min="1"
+                        max="120"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                        required={!formData.dob}
+                      />
+                    )}
+                    {dobMode === "age" && formData.dob && (
+                      <p className="text-xs text-gray-500 mt-1">Auto-calculated DOB: {formData.dob}</p>
+                    )}
+                    {dobMode === "dob" && formData.age && (
+                      <p className="text-xs text-gray-500 mt-1">Age: {formData.age} years</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Sex *</label>

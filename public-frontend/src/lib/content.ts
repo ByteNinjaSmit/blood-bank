@@ -8,10 +8,18 @@ export type ContentData = {
         trustedBy: string;
     };
     nav: {
-        home: string;
-        about: string;
-        donate: string;
-        contact: string;
+        topLinks: { label: string; href: string }[];
+        mainLinks: {
+            label: string;
+            href: string;
+            columns?: {
+                title: string;
+                links: { label: string; href: string }[];
+            }[];
+            viewAllLabel?: string;
+            viewAllHref?: string;
+        }[];
+        bookNow: string;
     };
     about: {
         title: string;
@@ -92,6 +100,7 @@ export type ContentData = {
         address: string;
         addressPlaceholder: string;
         medicalHistory: string;
+        medicalWarning: string;
         recentIllness: string;
         surgery: string;
         medication: string;
@@ -105,6 +114,14 @@ export type ContentData = {
         yes: string;
         no: string;
         genderOptions: string[];
+        age: string;
+        agePlaceholder: string;
+        donationFrequency: string;
+        donationFrequencyOptions: string[];
+        wantReminder: string;
+        reminderDaysLabel: string;
+        reminderDaysOptions: string[];
+        predictedReminderDate: string;
     };
     feedback: {
         title: string;
@@ -113,6 +130,54 @@ export type ContentData = {
         submitBtn: string;
         successMessage: string;
         errorMessage: string;
+    };
+    donatePage: {
+        badge: string;
+        titleStart: string;
+        titleHighlight: string;
+        titleEnd: string;
+        description: string;
+        features: { title: string; desc: string }[];
+    };
+    eligibilityCriteriaPage: {
+        heroBadge: string;
+        heroTitleStart: string;
+        heroTitleHighlight: string;
+        heroDescription1: string;
+        heroDescription2: string;
+        redBannerSubtitle: string;
+        redBannerTitle: string;
+        topicsTitleStart: string;
+        topicsTitleHighlight: string;
+        topicsDescription: string;
+        topics: {
+            title: string;
+            points: string[];
+        }[];
+        learnMoreTitleStart: string;
+        learnMoreTitleHighlight: string;
+        learnMoreCards: {
+            title: string;
+            desc: string;
+            cta: string;
+        }[];
+        firstTimeBadge: string;
+        firstTimeTitle: string;
+        firstTimeTitleHighlight: string;
+        firstTimeDescription: string;
+        firstTimeBtn: string;
+        frequencyTitle: string;
+        frequencyTitleHighlight: string;
+        frequencyCards: {
+            titleStart: string;
+            highlight: string;
+            subtitle: string;
+            value: string;
+            footnote: string;
+        }[];
+        supportTitle: string;
+        supportDonateBtn: string;
+        supportCallBtn: string;
     };
 }
 
@@ -127,10 +192,75 @@ export const content: Record<'en' | 'mr', ContentData> = {
             trustedBy: "Trusted by 100,000+ lives served"
         },
         nav: {
-            home: "Home",
-            about: "About",
-            donate: "Donate",
-            contact: "Contact"
+            topLinks: [
+                { label: "Hospital Services", href: "/" },
+                { label: "Research", href: "/" },
+                { label: "Careers", href: "/" },
+                { label: "Shop", href: "/" }
+            ],
+            bookNow: "BOOK NOW",
+            mainLinks: [
+                {
+                    label: "Blood",
+                    href: "/",
+                    columns: [
+                        {
+                            title: "Am I eligible to donate blood?",
+                            links: [
+                                { label: "Explore eligibility criteria", href: "/eligibility-criteria" },
+                                { label: "Take our eligibility quiz", href: "/" },
+                                { label: "Recent changes to donation criteria", href: "/donation-criteria-changes" }
+                            ]
+                        },
+                        {
+                            title: "Donating blood",
+                            links: [
+                                { label: "First-time donor", href: "/donate" },
+                                { label: "What is my blood type?", href: "/blood-type" },
+                                { label: "Donation process", href: "/donation-process" },
+                                { label: "Donor questionnaire", href: "/" },
+                                { label: "Donor wellness and safety", href: "/donor-wellness" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "View all Blood info",
+                    viewAllHref: "/"
+                },
+
+                {
+                    label: "Ways to Donate",
+                    href: "/donate",
+                    columns: [
+                        {
+                            title: "Donation options",
+                            links: [
+                                { label: "Book an appointment", href: "/donate" },
+                                { label: "Donor centres hours & locations", href: "/" },
+                                { label: "Recognition programs", href: "/" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "View all Ways to Donate",
+                    viewAllHref: "/donate"
+                },
+                {
+                    label: "About Us",
+                    href: "/about",
+                    columns: [
+                        {
+                            title: "Our organization",
+                            links: [
+                                { label: "Our mission", href: "/about" },
+                                { label: "Our history", href: "/about" },
+                                { label: "Contact us", href: "/" },
+                                { label: "Accessibility in donor centres", href: "/" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "View all About Us",
+                    viewAllHref: "/about"
+                }
+            ]
         },
         pageNotFound: {
             title: "404 - Page Not Found",
@@ -238,6 +368,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
             address: "Full Address *",
             addressPlaceholder: "Enter current address",
             medicalHistory: "Medical History (Mandatory)",
+            medicalWarning: "Have you had any recent illness, surgery, or medication in the last 3 months?",
             recentIllness: "Recent Illness?",
             surgery: "Surgery (Last 6 months)?",
             medication: "Ongoing Medication?",
@@ -250,7 +381,15 @@ export const content: Record<'en' | 'mr', ContentData> = {
             processing: "Processing...",
             yes: "Yes",
             no: "No",
-            genderOptions: ["Male", "Female", "Other"]
+            genderOptions: ["Male", "Female", "Other"],
+            age: "Age",
+            agePlaceholder: "Years",
+            donationFrequency: "Donation Frequency (Per Year)",
+            donationFrequencyOptions: ["1 Time (Yearly)", "2 Times (Every 6 months)", "3 Times (Every 4 months)", "4 Times (Every 3 months)"],
+            wantReminder: "Send me a reminder for my next donation",
+            reminderDaysLabel: "Remind me before",
+            reminderDaysOptions: ["1 Day", "3 Days", "1 Week"],
+            predictedReminderDate: "You will be reminded on:"
         },
         feedback: {
             title: "Your Feedback Matters",
@@ -259,6 +398,143 @@ export const content: Record<'en' | 'mr', ContentData> = {
             submitBtn: "Submit Feedback",
             successMessage: "Thank you for your feedback!",
             errorMessage: "Failed to submit feedback. Please try again."
+        },
+        donatePage: {
+            badge: "Donate Blood, Save Lives",
+            titleStart: "Your ",
+            titleHighlight: "15 Minutes",
+            titleEnd: " Can Save 3 Families.",
+            description: "Join a community of heroes. Safe, sterile, and simple process.",
+            features: [
+                { title: "Super Fast", desc: "Whole process takes ~45 mins" },
+                { title: "100% Safe", desc: "Sterile kits & expert care" },
+                { title: "Free Health Check", desc: "BP, Hb, & basic screening" }
+            ]
+        },
+        eligibilityCriteriaPage: {
+            heroBadge: "Eligibility criteria",
+            heroTitleStart: "Am I eligible to ",
+            heroTitleHighlight: "Donate?",
+            heroDescription1: "Thank you for your interest in donating blood! This section contains answers to common questions you might have before your appointment, to help determine if you’re able to donate.",
+            heroDescription2: "We encourage all donors to review eligibility criteria before booking your appointment. Please keep in mind that donor eligibility can change over time. The final determination of eligibility will be made by our donor centre staff at the time of donation.",
+            redBannerSubtitle: "Making a difference",
+            redBannerTitle: "It only takes about an hour of your time to change someone’s life.",
+            topicsTitleStart: "Explore the topics below to find out if you’re ",
+            topicsTitleHighlight: "eligible to donate",
+            topicsDescription: "Various factors can determine whether a person can donate at any given time. Sometimes, it’s not possible to donate, or we may ask that you wait before donating again.",
+            topics: [
+                {
+                    title: "Age, gender and weight",
+                    points: [
+                        "To become a blood donor you must be at least 17 years old.",
+                        "You must meet our minimum height and weight requirements.",
+                        "There is no upper age limit for donating blood.",
+                        "First-time donors above a certain age may require additional medical clearance."
+                    ]
+                },
+                {
+                    title: "Drugs and alcohol",
+                    points: [
+                        "Donors must not be impaired at the time of donation so we can obtain informed consent.",
+                        "You must be sober and able to understand the donation process fully.",
+                        "Illicit drug use may affect your eligibility depending on the substance and administration method."
+                    ]
+                },
+                {
+                    title: "Hemoglobin and iron",
+                    points: [
+                        "To ensure donors have sufficient hemoglobin after donation and to prevent anemia, a minimum hemoglobin level is required.",
+                        "Your hemoglobin will be tested at the donor centre before every donation.",
+                        "We recommend eating iron-rich foods in the weeks leading up to your donation."
+                    ]
+                },
+                {
+                    title: "Medical conditions and treatments",
+                    points: [
+                        "Some medical conditions effect your ability to donate or may make you temporarily ineligible to donate.",
+                        "Most chronic conditions are acceptable if they are stable and under control.",
+                        "If you have a heart condition, bleeding disorder, or history of cancer, special rules may apply."
+                    ]
+                },
+                {
+                    title: "Medications and vaccines",
+                    points: [
+                        "Most medications do not prevent you from donating.",
+                        "If you have recently been vaccinated, you may be temporarily ineligible for a short period.",
+                        "Some specifically restricted medications (like certain acne or hair loss drugs) require a waiting period."
+                    ]
+                },
+                {
+                    title: "Piercings and tattoos",
+                    points: [
+                        "Donors must wait three months after getting a tattoo or a piercing before returning to donate.",
+                        "This waiting period applies even if the procedure was done at a licensed, sterile facility.",
+                        "Ear piercing done with a sterile, single-use gun standard may be exempt from the 3-month wait."
+                    ]
+                },
+                {
+                    title: "Pregnancy",
+                    points: [
+                        "While pregnant, you are not eligible to donate.",
+                        "You must wait for at least six months after childbirth before you can donate again.",
+                        "The same waiting period applies following a miscarriage or termination of pregnancy."
+                    ]
+                },
+                {
+                    title: "Sexual behaviour",
+                    points: [
+                        "All donors are asked about sexual behaviour as part of the safety screening.",
+                        "Donors must wait three months after anal sex with a new partner or multiple sexual partners.",
+                        "Our screening questionnaire focuses on individual risk factors rather than sexual orientation."
+                    ]
+                },
+                {
+                    title: "Travel and living abroad",
+                    points: [
+                        "If you have previously lived or travelled outside the country, where you’ve been may affect your ability to donate.",
+                        "Travel to malaria-endemic areas usually requires a waiting period of 3 months to 1 year.",
+                        "Extended residency in certain countries may lead to longer deferrals."
+                    ]
+                }
+            ],
+            learnMoreTitleStart: "Learn more about donating ",
+            learnMoreTitleHighlight: "blood",
+            learnMoreCards: [
+                {
+                    title: "Accessibility",
+                    desc: "We are committed to making our donor centres as accessible and inclusive as possible for all. Find out how this affects your ability to donate.",
+                    cta: "Find out more"
+                },
+                {
+                    title: "False positive test results",
+                    desc: "Every donation is tested for infectious diseases. Occasionally, a test may suggest disease is present when in fact, it is not. Find out how this affects your ability to donate.",
+                    cta: "Find out more"
+                },
+                {
+                    title: "Recent criteria changes",
+                    desc: "Donor eligibility criteria change based on current scientific evidence. Donors who were previously deferred could now be eligible to donate. Don’t count yourself out.",
+                    cta: "Find out more"
+                }
+            ],
+            firstTimeBadge: "Impact Lives",
+            firstTimeTitle: "First-time donor? ",
+            firstTimeTitleHighlight: "Get started here.",
+            firstTimeDescription: "Giving blood can save someone’s life. But for a donor, the experience can be deeply rewarding and validating. It’s about more than just giving a part of yourself to someone else; together, we’re saving each other. Experience what you get when you give, today.",
+            firstTimeBtn: "Donate Now",
+            frequencyTitle: "Donation ",
+            frequencyTitleHighlight: "frequency",
+            frequencyCards: [
+                {
+                    titleStart: "To donate ",
+                    highlight: "blood",
+                    subtitle: ", returning donors must wait:",
+                    value: "56-84 days*",
+                    footnote: "*Donors registered as male (56 days), donors registered as female (84 days)"
+                }
+            ],
+            supportTitle: "Ready to make a difference? Join Sanjivani's Lifeline today.",
+            supportDonateBtn: "Donate Now",
+            supportCallBtn: "Have questions? Call us"
         }
     },
     mr: {
@@ -271,10 +547,75 @@ export const content: Record<'en' | 'mr', ContentData> = {
             trustedBy: "१,००,०००+ रुग्णांचा विश्वास"
         },
         nav: {
-            home: "मुख्यपृष्ठ",
-            about: "आमच्याबद्दल",
-            donate: "रक्तदान करा",
-            contact: "संपर्क"
+            topLinks: [
+                { label: "रुग्णालय सेवा", href: "/" },
+                { label: "संशोधन", href: "/" },
+                { label: "करिअर", href: "/" },
+                { label: "शॉप", href: "/" }
+            ],
+            bookNow: "बुक करा",
+            mainLinks: [
+                {
+                    label: "रक्त",
+                    href: "/",
+                    columns: [
+                        {
+                            title: "मी रक्तदान करू शकतो का?",
+                            links: [
+                                { label: "पात्रता निकष जाणून घ्या", href: "/eligibility-criteria" },
+                                { label: "पात्रता चाचणी घ्या", href: "/" },
+                                { label: "दान निकषातील अलीकडील बदल", href: "/donation-criteria-changes" }
+                            ]
+                        },
+                        {
+                            title: "रक्तदान करणे",
+                            links: [
+                                { label: "प्रथमच रक्तदाता", href: "/donate" },
+                                { label: "माझा रक्तगट कोणता?", href: "/blood-type" },
+                                { label: "दान प्रक्रिया", href: "/donation-process" },
+                                { label: "दाता प्रश्नावली", href: "/" },
+                                { label: "दाता कल्याण आणि सुरक्षा", href: "/donor-wellness" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "सर्व रक्त माहिती पहा",
+                    viewAllHref: "/"
+                },
+
+                {
+                    label: "दान करण्याचे मार्ग",
+                    href: "/donate",
+                    columns: [
+                        {
+                            title: "दान पर्याय",
+                            links: [
+                                { label: "अपॉइंटमेंट बुक करा", href: "/donate" },
+                                { label: "दाता केंद्रे तास आणि स्थाने", href: "/" },
+                                { label: "ओळख कार्यक्रम", href: "/" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "सर्व दान मार्ग पहा",
+                    viewAllHref: "/donate"
+                },
+                {
+                    label: "आमच्याबद्दल",
+                    href: "/about",
+                    columns: [
+                        {
+                            title: "आमची संस्था",
+                            links: [
+                                { label: "आमचे ध्येय", href: "/about" },
+                                { label: "आमचा इतिहास", href: "/about" },
+                                { label: "संपर्क करा", href: "/" },
+                                { label: "दाता केंद्रांमध्ये सुलभता", href: "/" }
+                            ]
+                        }
+                    ],
+                    viewAllLabel: "सर्व आमच्याबद्दल पहा",
+                    viewAllHref: "/about"
+                }
+            ]
         },
         pageNotFound: {
             title: "४०४ - पृष्ठ सापडले नाही",
@@ -382,6 +723,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
             address: "पूर्ण पत्ता *",
             addressPlaceholder: "सध्याचा पत्ता प्रविष्ट करा",
             medicalHistory: "वैद्यकीय इतिहास (अनिवार्य)",
+            medicalWarning: "तुम्हाला गेल्या ३ महिन्यात कोणताही आजार, शस्त्रक्रिया किंवा औषधोपचार झाला आहे का?",
             recentIllness: "अलीकडील आजार?",
             surgery: "शस्त्रक्रिया (गेल्या ६ महिन्यात)?",
             medication: "सध्याचे औषध चालू आहे का?",
@@ -394,7 +736,15 @@ export const content: Record<'en' | 'mr', ContentData> = {
             processing: "प्रक्रिया सुरू आहे...",
             yes: "होय",
             no: "नाही",
-            genderOptions: ["पुरुष", "स्त्री", "इतर"]
+            genderOptions: ["पुरुष", "स्त्री", "इतर"],
+            age: "वय",
+            agePlaceholder: "वर्षे",
+            donationFrequency: "रक्तदान वारंवारता (प्रति वर्ष)",
+            donationFrequencyOptions: ["१ वेळा (दरवर्षी)", "२ वेळा (दर ६ महिन्यांनी)", "३ वेळा (दर ४ महिन्यांनी)", "४ वेळा (दर ३ महिन्यांनी)"],
+            wantReminder: "पुढील रक्तदानासाठी मला आठवण करून द्या",
+            reminderDaysLabel: "यापूर्वी आठवण करा",
+            reminderDaysOptions: ["१ दिवस", "३ दिवस", "१ आठवडा"],
+            predictedReminderDate: "या दिवशी तुम्हाला आठवण करून दिली जाईल:"
         },
         feedback: {
             title: "तुमचा अभिप्राय महत्त्वाचा आहे",
@@ -403,6 +753,143 @@ export const content: Record<'en' | 'mr', ContentData> = {
             submitBtn: "अभिप्राय सबमिट करा",
             successMessage: "तुमच्या अभिप्रायाबद्दल धन्यवाद!",
             errorMessage: "अभिप्राय सबमिट करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा."
+        },
+        donatePage: {
+            badge: "रक्तदान करा, जीवन वाचवा",
+            titleStart: "तुमची ",
+            titleHighlight: "१५ मिनिटे",
+            titleEnd: " ३ कुटुंबांचे जीवन वाचवू शकतात.",
+            description: "हिरोंच्या समुदायात सामील व्हा. सुरक्षित, निर्जंतुक आणि सोपी प्रक्रिया.",
+            features: [
+                { title: "अतिशय जलद", desc: "संपूर्ण प्रक्रियेस ~४५ मिनिटे लागतात" },
+                { title: "१००% सुरक्षित", desc: "निर्जंतुक किट आणि तज्ञांची काळजी" },
+                { title: "मोफत आरोग्य तपासणी", desc: "रक्तदाब, हिमोग्लोबिन आणि प्राथमिक चाचणी" }
+            ]
+        },
+        eligibilityCriteriaPage: {
+            heroBadge: "पात्रता निकष",
+            heroTitleStart: "मी दानासाठी पात्र आहे ",
+            heroTitleHighlight: "का?",
+            heroDescription1: "रक्तदान करण्यात स्वारस्य दाखवल्याबद्दल धन्यवाद! या विभागात तुमच्या अपॉइंटमेंटपूर्वी तुम्हाला पडणाऱ्या सामान्य प्रश्नांची उत्तरे आहेत, ज्यामुळे तुम्ही दान करण्यास पात्र आहात की नाही हे ठरवण्यास मदत होईल.",
+            heroDescription2: "आम्ही सर्व देणगीदारांना अपॉइंटमेंट बुक करण्यापूर्वी पात्रता निकष वाचण्यास प्रोत्साहित करतो. कृपया लक्षात ठेवा की दात्याची पात्रता काळानुसार बदलू शकते. पात्रतेबाबत अंतिम निर्णय आमच्या रक्तकेंद्राच्या कर्मचाऱ्यांकडून दानाच्या वेळी घेतला जाईल.",
+            redBannerSubtitle: "एक पाऊल पुढे",
+            redBannerTitle: "तुमच्या वेळेचा फक्त एक तास एखाद्याचे आयुष्य बदलू शकतो.",
+            topicsTitleStart: "तुम्ही दान करण्यास पात्र आहात का हे शोधण्यासाठी खालील विषय ",
+            topicsTitleHighlight: "एक्सप्लोर करा",
+            topicsDescription: "विविध घटक एखादी व्यक्ती कोणत्याही वेळी दान करू शकते की नाही हे ठरवू शकतात. कधीकधी, दान करणे शक्य नसते किंवा आम्ही तुम्हाला पुन्हा दान करण्यापूर्वी थांबण्याची विनंती करू शकतो.",
+            topics: [
+                {
+                    title: "वय, लिंग आणि वजन",
+                    points: [
+                        "रक्तदाता होण्यासाठी तुमचे वय किमान १७ वर्षे असावे.",
+                        "तुम्ही आमच्या किमान उंची आणि वजनाच्या निकषांची पूर्तता केली पाहिजे.",
+                        "रक्तदानासाठी कोणतीही कमाल वयोमर्यादा नाही.",
+                        "ठराविक वयावरील पहिल्यांदा रक्तदान करणाऱ्यांना अतिरिक्त वैद्यकीय मंजुरीची आवश्यकता असू शकते."
+                    ]
+                },
+                {
+                    title: "अमली पदार्थ आणि मद्यपान",
+                    points: [
+                        "दानाच्या वेळी दात्यांनी अमली पदार्थांच्या प्रभावाखाली नसावे जेणेकरून आम्ही सुजाण संमती मिळवू शकू.",
+                        "तुम्ही शुद्धीत असावे आणि दान प्रक्रिया पूर्णपणे समजून घेण्यास सक्षम असावे.",
+                        "बेकायदेशीर औषधांचा वापर तुमच्या पात्रतेवर परिणाम करू शकतो."
+                    ]
+                },
+                {
+                    title: "हिमोग्लोबिन आणि लोह",
+                    points: [
+                        "दानानंतर दात्याकडे पुरेसे हिमोग्लोबिन आहे याची खात्री करण्यासाठी आणि अशक्तपणा टाळण्यासाठी, किमान हिमोग्लोबिनची पातळी आवश्यक आहे.",
+                        "प्रत्येक दानापूर्वी दाता केंद्रात तुमच्या हिमोग्लोबिनची चाचणी केली जाईल.",
+                        "तुमच्या दानाच्या काही आठवडे आधी लोहयुक्त आहार घेण्याची आम्ही शिफारस करतो."
+                    ]
+                },
+                {
+                    title: "वैद्यकीय स्थिती आणि उपचार",
+                    points: [
+                        "काही वैद्यकीय परिस्थिती तुमच्या दान करण्याच्या क्षमतेवर परिणाम करतात किंवा तुम्हाला दान करण्यासाठी तात्पुरते अपात्र करू शकतात.",
+                        "बहुतेक जुनाट परिस्थिती स्वीकार्य आहेत जर त्या स्थिर आणि नियंत्रणात असतील.",
+                        "जर तुम्हाला हृदयाची स्थिती, रक्तस्त्राव किंवा कर्करोगाचा इतिहास असेल तर विशेष नियम लागू होऊ शकतात."
+                    ]
+                },
+                {
+                    title: "औषधे आणि लसी",
+                    points: [
+                        "बहुतेक औषधे तुम्हाला दान करण्यापासून रोखत नाहीत.",
+                        "जर तुम्ही अलीकडेच लस घेतली असेल, तर तुम्ही अल्प काळासाठी तात्पुरते अपात्र असू शकता.",
+                        "काही प्रतिबंधित औषधांना (जसे मुरुम किंवा केस गळतीची काही औषधे) प्रतीक्षा कालावधी आवश्यक असतो."
+                    ]
+                },
+                {
+                    title: "पिअर्सिंग आणि टॅटू",
+                    points: [
+                        "टॅटू किंवा पिअर्सिंग केल्यानंतर दात्यांनी पुन्हा दान करण्यासाठी तीन महिने प्रतीक्षा करणे आवश्यक आहे.",
+                        "ही प्रक्रिया परवानाधारक, निर्जंतुक सुविधेमध्ये केली असली तरीही हा प्रतीक्षा कालावधी लागू होतो.",
+                        "निर्जंतुक, सिंगल-युज गनने केलेल्या कान टोचण्याला ३ महिन्यांच्या प्रतीक्षेतून सूट दिली जाऊ शकते."
+                    ]
+                },
+                {
+                    title: "गर्भधारणा",
+                    points: [
+                        "गरोदर असताना, तुम्ही दान करण्यास पात्र नाही.",
+                        "बाळंतपणानंतर किमान सहा महिने तुम्हाला पुन्हा दान करण्यापूर्वी प्रतीक्षा करावी लागेल.",
+                        "गर्भपात झाल्यानंतरही हाच प्रतीक्षा कालावधी लागू होतो."
+                    ]
+                },
+                {
+                    title: "लैंगिक वर्तन",
+                    points: [
+                        "सर्व दात्यांना सुरक्षितता तपासणीचा एक भाग म्हणून लैंगिक वर्तनाबद्दल विचारले जाते.",
+                        "नवीन भागीदार किंवा एकाधिक लैंगिक भागीदारांसोबत गुदद्वारासंबंधी संभोगानंतर दात्यांनी तीन महिने प्रतीक्षा करणे आवश्यक आहे.",
+                        "आमची स्क्रीनिंग प्रश्नावली लैंगिक प्रवृत्तीऐवजी वैयक्तिक जोखीम घटकांवर लक्ष केंद्रितാवर लक्ष केंद्रित करते."
+                    ]
+                },
+                {
+                    title: "प्रवास आणि परदेशातील वास्तव्य",
+                    points: [
+                        "तुम्ही यापूर्वी देशाबाहेर राहत असल्यास किंवा प्रवास केला असल्यास, तुम्ही कुठे गेला होता ते तुमच्या दान करण्याच्या क्षमतेवर परिणाम करू शकते.",
+                        "मलेरिया-स्थानिक भागात जाण्यासाठी साधारणपणे ३ महिने ते १ वर्षाचा प्रतीक्षा कालावधी लागतो.",
+                        "काही देशांमधील वाढीव निवासांमुळे जास्त प्रतीक्षा लागू शकते."
+                    ]
+                }
+            ],
+            learnMoreTitleStart: "रक्त दानाबद्दल ",
+            learnMoreTitleHighlight: "अधिक जाणून घ्या",
+            learnMoreCards: [
+                {
+                    title: "सुगमता (Accessibility)",
+                    desc: "आमची दाता केंद्रे सर्वांसाठी शक्य तितकी सुलभ आणि सर्वसमावेशक बनवण्यासाठी आम्ही कटिबद्ध आहोत. यामुळे तुमच्या दान करण्याच्या क्षमतेवर कसा परिणाम होतो ते शोधा.",
+                    cta: "अधिक जाणून घ्या"
+                },
+                {
+                    title: "चुकीचे पॉझिटिव्ह चाचणी परिणाम",
+                    desc: "प्रत्येक दानाची संसर्गजन्य रोगांसाठी चाचणी केली जाते. क्वचितच, एखादी चाचणी खोटा आजार सुचवू शकते. यामुळे तुमच्या दान करण्याच्या क्षमतेवर कसा परिणाम होतो ते शोधा.",
+                    cta: "अधिक जाणून घ्या"
+                },
+                {
+                    title: "नवीनतम निकष बदल",
+                    desc: "दाता पात्रता निकष सध्याच्या वैज्ञानिक पुराव्यांनुसार बदलतात. जे पूर्वी अपात्र होते ते आता पात्र असू शकतात.",
+                    cta: "अधिक जाणून घ्या"
+                }
+            ],
+            firstTimeBadge: "जीवन वाचवा",
+            firstTimeTitle: "पहिल्यांदाच रक्तदान करत आहात? ",
+            firstTimeTitleHighlight: "येथून सुरुवात करा.",
+            firstTimeDescription: "रक्त दिल्याने एखाद्याचे प्राण वाचू शकतात. परंतु दात्यासाठी, हा अनुभव अत्यंत समाधानकारक आणि प्रेरणादायी असू शकतो. हे फक्त स्वतःचा भाग दुसऱ्याला देण्यापुरते नाही; आपण एकत्र येऊन एकमेकांचे रक्षण करत आहोत. आजच दान करा आणि अनुभव घ्या.",
+            firstTimeBtn: "आत्ताच दान करा",
+            frequencyTitle: "दान ",
+            frequencyTitleHighlight: "वारंवारता",
+            frequencyCards: [
+                {
+                    titleStart: "दान करण्यासाठी ",
+                    highlight: "रक्त",
+                    subtitle: ", परत येणाऱ्या दात्यांनी प्रतीक्षा करावी:",
+                    value: "५६-८४ दिवस*",
+                    footnote: "*पुरुष म्हणून नोंदणीकृत दाते (५६ दिवस), महिला म्हणून नोंदणीकृत दाते (८४ दिवस)"
+                }
+            ],
+            supportTitle: "फरक घडवण्यासाठी तयार आहात? आजच आमच्या जीवनवाहिनीमध्ये सामील व्हा.",
+            supportDonateBtn: "आत्ताच दान करा",
+            supportCallBtn: "प्रश्न आहेत? आम्हाला कॉल करा"
         }
     }
 };

@@ -37,6 +37,10 @@ const AppointmentSchema = new Schema({
     type: Date,
     required: false,
   },
+  age: {
+    type: Number,
+    required: false,
+  },
   address: {
     type: String,
     required: false,
@@ -58,6 +62,34 @@ const AppointmentSchema = new Schema({
   createdAt: {
     type: Date,
     default: Date.now,
+  },
+  recentIllness: {
+    type: String,
+    default: "no",
+  },
+  surgery: {
+    type: String,
+    default: "no",
+  },
+  medication: {
+    type: String,
+    default: "no",
+  },
+  lastDonation: {
+    type: Date,
+  },
+  donationFrequency: {
+    type: String,
+    enum: ["1", "2", "3", "4"],
+    default: "1",
+  },
+  wantReminder: {
+    type: Boolean,
+    default: false,
+  },
+  reminderDays: {
+    type: Number,
+    default: 0,
   },
 });
 

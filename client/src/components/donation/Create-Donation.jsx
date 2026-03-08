@@ -10,9 +10,56 @@ import Stepper, { Step } from "@/components/Stepper"
 import CustomModal from "@/components/CustomModal"
 import DonorSearchStep from "@/components/donation/steps/DonorSearchStep"
 import BagInformationStep from "@/components/donation/steps/BagInformationStep"
+import MedicalQuestionsStep from "@/components/donation/steps/MedicalQuestionsStep"
 import InitialVitalsStep from "@/components/donation/steps/InitialVitalsStep"
+import BloodCollectionStep from "@/components/donation/steps/BloodCollectionStep"
+import DonorFitnessStep from "@/components/donation/steps/DonorFitnessStep"
 import BloodGroupStep from "@/components/donation/steps/BloodGroupStep"
 import ReviewSubmitStep from "@/components/donation/steps/ReviewSubmitStep"
+
+const INITIAL_FORM_DATA = {
+  // Bag info
+  bagNo: "",
+  segmentNo: "",
+  batchNo: "",
+  typeOfBag: "",
+  collectionDate: new Date().toISOString().split("T")[0],
+  // New bag-level fields
+  donationType: "",
+  totalDonationCount: "",
+  emergencyDonationWillingness: "",
+  lotNo: "",
+  // Medical examination details
+  hb: "",
+  weightKg: "",
+  pulse: "",
+  tempC: "",
+  bp: "",
+  pedalOedema: "",
+  o2Level: "",
+  lymphadenopathy: "",
+  cyanosis: "",
+  systematicExam: "",
+  skinDiseaseFreeAtPhlebotomy: "",
+  armsFreeFromPunctureScars: "",
+  volumeGmMl: "",
+  // Blood collection checklist
+  emptyBagExamined: false,
+  collectedWithin6to8Min: false,
+  crossCheckingDone: false,
+  // Donor fitness
+  donorIsFit: null,
+  rejectionReason: "",
+  // Blood group
+  bloodGroup: "",
+  rh: "",
+  atypicalAntibody: "",
+  // Medical questions q1-q36
+  q1: "", q2: "", q3: "", q4: "", q5: "", q6: "", q7: "", q8: "", q9: "", q10: "",
+  q11: "", q12: "", q13: "", q14: "", q15: "", q16: "", q17: "", q18: "", q19: "", q20: "",
+  q21: "", q22: "", q23: "", q24: "", q25: "", q26: "", q27: "", q28: "", q29: "", q30: "",
+  q31: "", q32: "", q33: "", q34: "", q35: "", q36: "",
+}
 
 const CreateDonation = ({ onCreateDonor }) => {
   const navigate = useNavigate()
@@ -42,7 +89,6 @@ const CreateDonation = ({ onCreateDonor }) => {
     phone: "",
     donorId: "",
   })
-  // Allow search by either (first + last name + dob) OR any of uid / phone / donorId
   const hasNameDob =
     donorInfo.firstName.trim() && donorInfo.lastName.trim() && donorInfo.dob
   const hasStrongIdentifier =
@@ -50,23 +96,9 @@ const CreateDonation = ({ onCreateDonor }) => {
   const canSearchDonor = !!(hasNameDob || hasStrongIdentifier)
 
   // Donation Form Data
-  const [formData, setFormData] = useState({
-    bagNo: "",
-    segmentNo: "",
-    batchNo: "",
-    typeOfBag: "",
-    collectionDate: new Date().toISOString().split("T")[0],
-    hb: "",
-    weightKg: "",
-    pulse: "",
-    tempC: "",
-    bp: "",
-    bloodGroup: "",
-    rh: "",
-    atypicalAntibody: "",
-  })
+  const [formData, setFormData] = useState({ ...INITIAL_FORM_DATA })
 
-  // Prefill and enforce blood group/Rh and optionally weight from donor to avoid backend mismatch & speed up
+  // Prefill blood group/Rh and weight from donor
   useEffect(() => {
     if (donor) {
       const donorBG = donor?.bloodGroup
@@ -92,7 +124,6 @@ const CreateDonation = ({ onCreateDonor }) => {
   const handleDonorSelected = async (d) => {
     try {
       setLoading(true)
-      // Fetch full donor details to ensure we have consistent schema (name object, history, etc.)
       const res = await axios.get(`${API}/api/donor/${d._id}`, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
@@ -102,21 +133,19 @@ const CreateDonation = ({ onCreateDonor }) => {
       setShowPopup(false)
       toast.success(`Selected donor ${getDonorName(full) || full.fullName || full.donorId}`)
     } catch (e) {
-      setDonor(d) // fallback to quick record
+      setDonor(d)
     } finally {
       setLoading(false)
     }
   }
 
-  // Accept donor from navigation state and skip search step
+  // Accept donor from navigation state
   useEffect(() => {
     const navDonor = location?.state?.donor
     if (navDonor) {
       setDonor(navDonor)
     }
   }, [location?.state])
-
-  
 
   const handleDonorInfoFieldChange = (field, value) => {
     setDonorInfo((prev) => ({ ...prev, [field]: value }))
@@ -150,10 +179,19 @@ const CreateDonation = ({ onCreateDonor }) => {
     }
   }
 
+  /*
+    Steps:
+    1 – Donor Search
+    2 – Bag Information (+ donation type, lot no, etc.)
+    3 – Medical History Questions (36 Q)
+    4 – Medical Examination Details (vitals + physicals)
+    5 – Blood Collection (3 checkboxes)
+    6 – Donor Fitness (fit/unfit)
+    7 – Blood Group
+    8 – Review & Submit
+  */
   const isCurrentStepComplete = () => {
-    if (currentStep === 1) {
-      return !!donor
-    }
+    if (currentStep === 1) return !!donor
 
     if (currentStep === 2) {
       return (
@@ -164,7 +202,11 @@ const CreateDonation = ({ onCreateDonor }) => {
       )
     }
 
-    if (currentStep === 3) {
+    // Step 3 – Medical questions: not strictly required, always allow proceed
+    if (currentStep === 3) return true
+
+    // Step 4 – Medical examination: require core vitals
+    if (currentStep === 4) {
       return (
         formData.hb &&
         formData.weightKg &&
@@ -174,11 +216,20 @@ const CreateDonation = ({ onCreateDonor }) => {
       )
     }
 
-    if (currentStep === 4) {
+    // Step 5 – Blood collection: always allow proceed
+    if (currentStep === 5) return true
+
+    // Step 6 – Donor fitness: must select fit or unfit
+    if (currentStep === 6) {
+      return formData.donorIsFit !== null
+    }
+
+    // Step 7 – Blood group
+    if (currentStep === 7) {
       return formData.bloodGroup && formData.rh
     }
 
-    // Step 5 is review; by the time user reaches here, previous steps are already valid
+    // Step 8 is review
     return true
   }
 
@@ -221,13 +272,17 @@ const CreateDonation = ({ onCreateDonor }) => {
     if (!formData.segmentNo.trim()) newErrors.segmentNo = "Segment number is required."
     if (!formData.batchNo.trim()) newErrors.batchNo = "Batch number is required."
     if (!formData.typeOfBag) newErrors.typeOfBag = "Type of bag is required."
-    if (!formData.hb) newErrors.hb = "Hemoglobin value is required."
+    if (!formData.hb) newErrors.hb = "Haemoglobin value is required."
     if (!formData.weightKg) newErrors.weightKg = "Weight is required."
     if (!formData.pulse) newErrors.pulse = "Pulse is required."
     if (!formData.tempC) newErrors.tempC = "Temperature is required."
     if (!formData.bp.trim()) newErrors.bp = "Blood pressure is required."
     if (!formData.bloodGroup) newErrors.bloodGroup = "Blood group is required."
     if (!formData.rh) newErrors.rh = "Rh factor is required."
+    if (formData.donorIsFit === null) newErrors.donorIsFit = "Please assess donor fitness."
+    if (formData.donorIsFit === false && !formData.rejectionReason?.trim()) {
+      newErrors.rejectionReason = "Rejection reason is required when donor is unfit."
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors)
@@ -237,19 +292,53 @@ const CreateDonation = ({ onCreateDonor }) => {
 
     setFieldErrors({})
 
+    // Build medical questions object
+    const medicalQuestions = {}
+    for (let i = 1; i <= 36; i++) {
+      const val = formData[`q${i}`]
+      if (val) medicalQuestions[`q${i}`] = val
+    }
+
     const payload = {
       bagNo: formData.bagNo,
       segmentNo: formData.segmentNo,
       batchNo: formData.batchNo,
       typeOfBag: formData.typeOfBag,
       donor: donor._id,
-      initialVitals: {
+      // New top-level fields
+      donationType: formData.donationType || undefined,
+      totalDonationCount: formData.totalDonationCount ? Number(formData.totalDonationCount) : undefined,
+      emergencyDonationWillingness: formData.emergencyDonationWillingness || undefined,
+      lotNo: formData.lotNo || undefined,
+      // Medical examination (new shape)
+      medicalExamination: {
         hb: Number.parseFloat(formData.hb),
         weightKg: Number.parseFloat(formData.weightKg),
         pulse: Number.parseInt(formData.pulse),
         tempC: Number.parseFloat(formData.tempC),
         bp: formData.bp,
+        pedalOedema: formData.pedalOedema || undefined,
+        o2Level: formData.o2Level ? Number.parseFloat(formData.o2Level) : undefined,
+        lymphadenopathy: formData.lymphadenopathy || undefined,
+        cyanosis: formData.cyanosis || undefined,
+        systematicExam: formData.systematicExam || undefined,
+        skinDiseaseFreeAtPhlebotomy: formData.skinDiseaseFreeAtPhlebotomy || undefined,
+        armsFreeFromPunctureScars: formData.armsFreeFromPunctureScars || undefined,
+        volumeGmMl: formData.volumeGmMl ? Number.parseFloat(formData.volumeGmMl) : undefined,
       },
+      // Blood collection checklist
+      bloodCollection: {
+        emptyBagExamined: !!formData.emptyBagExamined,
+        collectedWithin6to8Min: !!formData.collectedWithin6to8Min,
+        crossCheckingDone: !!formData.crossCheckingDone,
+      },
+      // Donor fitness
+      donorFitness: {
+        isFit: formData.donorIsFit,
+        rejectionReason: formData.donorIsFit === false ? formData.rejectionReason : undefined,
+      },
+      // Medical questions
+      medicalQuestions,
       bloodGroup: formData.bloodGroup,
       rh: formData.rh,
       atypicalAntibody: formData.atypicalAntibody,
@@ -277,32 +366,14 @@ const CreateDonation = ({ onCreateDonor }) => {
   }
 
   const resetDonationForSameDonor = () => {
-    // Start a fresh donation flow for the same donor within the same page
-    // by resetting local state and restarting the stepper.
     setShowSuccess(false)
     setSavedDonation(null)
     setFieldErrors({})
     setCurrentStep(1)
     setStepperKey((prev) => prev + 1)
 
-    const today = new Date().toISOString().split("T")[0]
-
     setFormData(() => {
-      const base = {
-        bagNo: "",
-        segmentNo: "",
-        batchNo: "",
-        typeOfBag: "",
-        collectionDate: today,
-        hb: "",
-        weightKg: "",
-        pulse: "",
-        tempC: "",
-        bp: "",
-        bloodGroup: "",
-        rh: "",
-        atypicalAntibody: "",
-      }
+      const base = { ...INITIAL_FORM_DATA, collectionDate: new Date().toISOString().split("T")[0] }
 
       if (!donor) return base
 
@@ -320,7 +391,6 @@ const CreateDonation = ({ onCreateDonor }) => {
   }
 
   const startNewDonorFlow = () => {
-    // Go to Create Donor page (camp-aware when applicable)
     setShowSuccess(false)
     navigate(campId ? `/donor/create-donor?campId=${campId}` : "/donor/create-donor")
   }
@@ -348,7 +418,7 @@ const CreateDonation = ({ onCreateDonor }) => {
           </div>
         </div>
       </div>
-      
+
       <div className=" mx-auto px-4 py-8">
         <Stepper
           key={stepperKey}
@@ -397,7 +467,15 @@ const CreateDonation = ({ onCreateDonor }) => {
             />
           </Step>
 
-          {/* Step 3: Initial Vitals */}
+          {/* Step 3: Medical History Questions */}
+          <Step>
+            <MedicalQuestionsStep
+              formData={formData}
+              onFieldChange={handleFormFieldChange}
+            />
+          </Step>
+
+          {/* Step 4: Medical Examination Details */}
           <Step>
             <InitialVitalsStep
               formData={formData}
@@ -406,7 +484,24 @@ const CreateDonation = ({ onCreateDonor }) => {
             />
           </Step>
 
-          {/* Step 4: Blood Group Information */}
+          {/* Step 5: Blood Collection */}
+          <Step>
+            <BloodCollectionStep
+              formData={formData}
+              onFieldChange={handleFormFieldChange}
+            />
+          </Step>
+
+          {/* Step 6: Donor Fitness */}
+          <Step>
+            <DonorFitnessStep
+              formData={formData}
+              fieldErrors={fieldErrors}
+              onFieldChange={handleFormFieldChange}
+            />
+          </Step>
+
+          {/* Step 7: Blood Group Information */}
           <Step>
             <BloodGroupStep
               formData={formData}
@@ -416,7 +511,7 @@ const CreateDonation = ({ onCreateDonor }) => {
             />
           </Step>
 
-          {/* Step 5: Review & Submit */}
+          {/* Step 8: Review & Submit */}
           <Step>
             <ReviewSubmitStep donor={donor} formData={formData} getDonorName={getDonorName} />
           </Step>

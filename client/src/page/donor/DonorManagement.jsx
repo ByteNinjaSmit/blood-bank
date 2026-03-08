@@ -19,30 +19,30 @@ const DonorManagement = () => {
 
   const editInitialData = selectedDonor
     ? {
-        donorId: selectedDonor.donorId || '',
-        firstName: selectedDonor.name?.firstName || '',
-        middleName: selectedDonor.name?.middleName || '',
-        lastName: selectedDonor.name?.lastName || '',
-        uid: selectedDonor.uid || '',
-        dob: selectedDonor.dob ? new Date(selectedDonor.dob).toISOString().split('T')[0] : '',
-        sex: selectedDonor.sex || '',
-        phone: selectedDonor.phone || '',
-        email: selectedDonor.email || '',
-        addressLine1: selectedDonor.address?.line1 || '',
-        addressLine2: selectedDonor.address?.line2 || '',
-        city: selectedDonor.address?.city || '',
-        district: selectedDonor.address?.district || '',
-        state: selectedDonor.address?.state || '',
-        pincode: selectedDonor.address?.pincode || '',
-        occupation: selectedDonor.occupation || '',
-        weightKg: selectedDonor.weightKg != null ? String(selectedDonor.weightKg) : '',
-        bloodGroup: selectedDonor.bloodGroup || '',
-        rh: selectedDonor.rh || '',
-        eligibilityStatus: selectedDonor.eligibilityStatus || '',
-        lastDonationDate: selectedDonor.lastDonationDate
-          ? new Date(selectedDonor.lastDonationDate).toISOString().split('T')[0]
-          : '',
-      }
+      donorId: selectedDonor.donorId || '',
+      firstName: selectedDonor.name?.firstName || '',
+      middleName: selectedDonor.name?.middleName || '',
+      lastName: selectedDonor.name?.lastName || '',
+      uid: selectedDonor.uid || '',
+      dob: selectedDonor.dob ? new Date(selectedDonor.dob).toISOString().split('T')[0] : '',
+      sex: selectedDonor.sex || '',
+      phone: selectedDonor.phone || '',
+      email: selectedDonor.email || '',
+      addressLine1: selectedDonor.address?.line1 || '',
+      addressLine2: selectedDonor.address?.line2 || '',
+      city: selectedDonor.address?.city || '',
+      district: selectedDonor.address?.district || '',
+      state: selectedDonor.address?.state || '',
+      pincode: selectedDonor.address?.pincode || '',
+      occupation: selectedDonor.occupation || '',
+      weightKg: selectedDonor.weightKg != null ? String(selectedDonor.weightKg) : '',
+      bloodGroup: selectedDonor.bloodGroup || '',
+      rh: selectedDonor.rh || '',
+      eligibilityStatus: selectedDonor.eligibilityStatus || '',
+      lastDonationDate: selectedDonor.lastDonationDate
+        ? new Date(selectedDonor.lastDonationDate).toISOString().split('T')[0]
+        : '',
+    }
     : null;
 
   const handleCreateDonor = async (donorData) => {
@@ -103,7 +103,7 @@ const DonorManagement = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <DonorList
-          onAddDonor={() => setShowCreateModal(true)}
+          onAddDonor={() => navigate('/donor/create-donor')}
           onViewDonor={handleViewDonor}
           onEditDonor={handleEditDonor}
           onDeleteDonor={handleDeleteDonor}

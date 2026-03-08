@@ -1,5 +1,8 @@
-// server.js
 const dotenv = require("dotenv");
+const dns = require("node:dns");
+// Fix for MongoDB Atlas DNS resolution issues on Windows
+dns.setServers(['8.8.8.8', '1.1.1.1']);
+dns.setDefaultResultOrder("ipv4first");
 dotenv.config();
 const express = require("express");
 const cors = require("cors");
@@ -70,13 +73,13 @@ app.use(cookieParser());
 // Cors
 
 const allowedOrigins = [
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-  "https://sanjivanibloodbank.org",
-  "https://www.sanjivanibloodbank.org",
-  "https://system.sanjivanibloodbank.org",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://sanjivanibloodbank.org",
+    "https://www.sanjivanibloodbank.org",
+    "https://system.sanjivanibloodbank.org",
 ];
 
 const PORT = process.env.PORT || 5000;
@@ -95,7 +98,7 @@ const io = new Server(server, {
     maxHttpBufferSize: 1e8,
     cookie: false,
     serveClient: false,
-    
+
 });
 
 // Redis Adapter setup
@@ -119,7 +122,7 @@ app.use(
 );
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); 
+app.use(express.urlencoded({ extended: true }));
 
 // DDos Protection
 //DDos protection and rate limiting
@@ -206,19 +209,19 @@ app.use((req, res, next) => {
 // 📊 Health Check
 // ==============================
 app.get("/health", (req, res) => {
-  res.json({
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || "development",
-    version: process.env.npm_package_version || "1.0.0",
-    services: {
-      database: true, // TODO: check DB status
-      redis: !!process.env.REDIS_URL,
-      email: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS),
-      pdf: true,
-    },
-  });
+    res.json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || "development",
+        version: process.env.npm_package_version || "1.0.0",
+        services: {
+            database: true, // TODO: check DB status
+            redis: !!process.env.REDIS_URL,
+            email: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS),
+            pdf: true,
+        },
+    });
 });
 
 
@@ -230,16 +233,16 @@ app.get("/", (req, res) => {
 // Remaining Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/site", siteRoutes);
-app.use("/api/donor",donorRoutes);
-app.use('/api/donation',donationRoute);
+app.use("/api/donor", donorRoutes);
+app.use('/api/donation', donationRoute);
 app.use("/api/hospitals", hospitalRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/component", componentRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/discard",discardRoutes);
-app.use('/api/sernology',labRoutes);
-app.use("/api/test",testRoutes);
+app.use("/api/discard", discardRoutes);
+app.use('/api/sernology', labRoutes);
+app.use("/api/test", testRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/mis', misRoutes);
@@ -261,29 +264,29 @@ app.use(errorMiddleware);
 // 📡 Start Server
 // ==============================
 connectToDatabase()
-  .then(() => {
-    logger.info("✅ MongoDB connected");
+    .then(() => {
+        logger.info("✅ MongoDB connected");
 
-    server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`Redis Running on ${process.env.REDIS_URL}`);
-      console.log(`📊 Health check: http://localhost:${PORT}/health`);
-    });
-  })
-  .catch((err) => {
-    console.error("❌ MongoDB connection failed:", err.message);
-    logger.error("❌ MongoDB connection failed:", err.message);
+        server.listen(PORT, () => {
+            console.log(`🚀 Server running on port ${PORT}`);
+            console.log(`Redis Running on ${process.env.REDIS_URL}`);
+            console.log(`📊 Health check: http://localhost:${PORT}/health`);
+        });
+    })
+    .catch((err) => {
+        console.error("❌ MongoDB connection failed:", err.message);
+        logger.error("❌ MongoDB connection failed:", err.message);
 
-    server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT} (DB connection failed)`);
+        server.listen(PORT, () => {
+            console.log(`🚀 Server running on port ${PORT} (DB connection failed)`);
+        });
     });
-  });
 
 // Graceful Shutdown
 process.on("SIGINT", () => {
-  console.log("⏳ Shutting down server...");
-  server.close(() => {
-    console.log("✅ Server shut down gracefully");
-    process.exit(0);
-  });
+    console.log("⏳ Shutting down server...");
+    server.close(() => {
+        console.log("✅ Server shut down gracefully");
+        process.exit(0);
+    });
 });

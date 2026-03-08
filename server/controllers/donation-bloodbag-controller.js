@@ -23,14 +23,22 @@ const newDonation = async (req, res, next) => {
             batchNo,
             typeOfBag,
             donor,
-            // expiryDate,
-            initialVitals: { hb, weightKg, pulse, tempC, bp },
+            // Legacy support – accept both shapes
+            initialVitals,
+            medicalExamination,
             bloodGroup,
             rh,
             atypicalAntibody,
-            // quarantineReason,
             siteId,
             donorId,
+            // New fields
+            donationType,
+            totalDonationCount,
+            emergencyDonationWillingness,
+            lotNo,
+            bloodCollection,
+            donorFitness,
+            medicalQuestions,
         } = req.body;
 
         const userId = req.user?._id;
@@ -82,8 +90,11 @@ const newDonation = async (req, res, next) => {
             });
         }
 
-
         const collectionDate = new Date();
+
+        // Build medicalExamination from new payload or fall back to legacy initialVitals
+        const medExam = medicalExamination || {};
+        const legacyVitals = initialVitals || {};
 
         const bloodBag = new BloodBag({
             bagNo,
@@ -92,19 +103,45 @@ const newDonation = async (req, res, next) => {
             typeOfBag,
             donor,
             collectionDate: Date.now(),
-            // expiryDate,
-            initialVitals: {
-                hb,
-                weightKg,
-                pulse,
-                tempC,
-                bp
+            // New top-level fields
+            donationType: donationType || undefined,
+            totalDonationCount: totalDonationCount || undefined,
+            emergencyDonationWillingness: emergencyDonationWillingness || undefined,
+            lotNo: lotNo || undefined,
+            // Medical examination (new shape)
+            medicalExamination: {
+                weightKg: medExam.weightKg,
+                hb: medExam.hb,
+                tempC: medExam.tempC,
+                pulse: medExam.pulse,
+                bp: medExam.bp,
+                pedalOedema: medExam.pedalOedema,
+                o2Level: medExam.o2Level,
+                lymphadenopathy: medExam.lymphadenopathy,
+                cyanosis: medExam.cyanosis,
+                systematicExam: medExam.systematicExam,
+                skinDiseaseFreeAtPhlebotomy: medExam.skinDiseaseFreeAtPhlebotomy,
+                armsFreeFromPunctureScars: medExam.armsFreeFromPunctureScars,
+                volumeGmMl: medExam.volumeGmMl,
             },
+            // Backward-compatible initialVitals mirror
+            initialVitals: {
+                hb: medExam.hb || legacyVitals.hb,
+                weightKg: medExam.weightKg || legacyVitals.weightKg,
+                pulse: medExam.pulse || legacyVitals.pulse,
+                tempC: medExam.tempC || legacyVitals.tempC,
+                bp: medExam.bp || legacyVitals.bp,
+            },
+            // Blood collection checklist
+            bloodCollection: bloodCollection || {},
+            // Donor fitness
+            donorFitness: donorFitness || {},
+            // Medical questions (q1-q36)
+            medicalQuestions: medicalQuestions || {},
             bloodGroup,
             rh,
             atypicalAntibody,
             status: 'collected',
-            // quarantineReason,
             siteId: siteId || null,
             createdBy: userId,
             updatedBy: userId
@@ -112,13 +149,12 @@ const newDonation = async (req, res, next) => {
 
         const savedBag = await bloodBag.save();
 
-
         await Donor.findByIdAndUpdate(
             donor,
             {
                 $push: {
                     donationHistory: {
-                        donorId: donorId, // <---- donorId string
+                        donorId: donorId,
                         donationId: savedBag._id,
                         bagNo: savedBag.bagNo,
                         date: collectionDate
