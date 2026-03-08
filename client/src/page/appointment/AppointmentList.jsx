@@ -345,6 +345,7 @@ const AppointmentList = () => {
                       <TableHead>Donor</TableHead>
                       <TableHead>Contact</TableHead>
                       <TableHead>Blood</TableHead>
+                      <TableHead>Medical Info</TableHead>
                       <TableHead>Appointment Date</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead>Status</TableHead>
@@ -361,7 +362,9 @@ const AppointmentList = () => {
                         </TableCell>
                         <TableCell>
                           <div className="font-medium">{appointment.fullName}</div>
-                          <div className="text-xs text-gray-500">{appointment.gender}</div>
+                          <div className="text-xs text-gray-500">
+                            {appointment.gender} {appointment.age ? `• ${appointment.age} yrs` : ''}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1 text-sm">
@@ -381,6 +384,18 @@ const AppointmentList = () => {
                           <div className="flex items-center gap-1 text-sm">
                             <Droplets className="w-3 h-3" />
                             {appointment.bloodGroup || '-'}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 text-[11px] leading-tight">
+                            {appointment.recentIllness === 'yes' && <span className="text-red-500 font-medium">⚠ Illness</span>}
+                            {appointment.surgery === 'yes' && <span className="text-red-500 font-medium">⚠ Surgery</span>}
+                            {appointment.medication === 'yes' && <span className="text-red-500 font-medium">⚠ Medication</span>}
+                            {appointment.lastDonation && <span className="text-blue-600">Last: {formatDate(appointment.lastDonation)}</span>}
+                            {(!appointment.recentIllness || appointment.recentIllness === 'no') && 
+                             (!appointment.surgery || appointment.surgery === 'no') && 
+                             (!appointment.medication || appointment.medication === 'no') && 
+                             !appointment.lastDonation && <span className="text-gray-400">-</span>}
                           </div>
                         </TableCell>
                         <TableCell>{formatDate(appointment.appointmentDate)}</TableCell>
