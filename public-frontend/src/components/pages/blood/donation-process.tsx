@@ -108,7 +108,7 @@ const faqs = [
     },
     {
         q: 'How often can I donate blood?',
-        a: 'You can donate whole blood every 56 days (about 8 weeks). Platelet donors can give every 14 days, and plasma donors every 28 days.'
+        a: 'In India, males can donate whole blood every 90 days (3 months), and females every 120 days (4 months). Platelet donors can give every 14 days.'
     },
     {
         q: 'What happens to my blood after donation?',
@@ -116,7 +116,7 @@ const faqs = [
     },
     {
         q: 'Can I donate if I have a tattoo or piercing?',
-        a: 'Yes, if it was done at a licensed facility, you are eligible to donate after a 6-month waiting period. Ear piercings with a sterile gun are accepted immediately.'
+        a: 'Yes, you are eligible to donate blood 12 months after getting a tattoo or a piercing. Ear piercings with a sterile single-use gun standard may be accepted earlier.'
     }
 ]
 

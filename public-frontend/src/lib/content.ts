@@ -426,10 +426,10 @@ export const content: Record<'en' | 'mr', ContentData> = {
                 {
                     title: "Age, gender and weight",
                     points: [
-                        "To become a blood donor you must be at least 17 years old.",
-                        "You must meet our minimum height and weight requirements.",
-                        "There is no upper age limit for donating blood.",
-                        "First-time donors above a certain age may require additional medical clearance."
+                        "To become a blood donor you must be between 18 and 65 years old.",
+                        "You must weigh at least 45 kg.",
+                        "First-time donors above the age of 60 may require additional medical clearance.",
+                        "Repeat donors may be eligible to donate up to the age of 65 (or 68 with medical certification)."
                     ]
                 },
                 {
@@ -467,17 +467,17 @@ export const content: Record<'en' | 'mr', ContentData> = {
                 {
                     title: "Piercings and tattoos",
                     points: [
-                        "Donors must wait three months after getting a tattoo or a piercing before returning to donate.",
+                        "Donors must wait 12 months after getting a tattoo or a piercing before returning to donate.",
                         "This waiting period applies even if the procedure was done at a licensed, sterile facility.",
-                        "Ear piercing done with a sterile, single-use gun standard may be exempt from the 3-month wait."
+                        "Ear piercing done with a sterile, single-use gun standard may be exempt after a short waiting period."
                     ]
                 },
                 {
                     title: "Pregnancy",
                     points: [
                         "While pregnant, you are not eligible to donate.",
-                        "You must wait for at least six months after childbirth before you can donate again.",
-                        "The same waiting period applies following a miscarriage or termination of pregnancy."
+                        "You must wait for at least 12 months after childbirth before you can donate again.",
+                        "A waiting period of 6 months applies following a miscarriage or termination of pregnancy."
                     ]
                 },
                 {
@@ -528,8 +528,8 @@ export const content: Record<'en' | 'mr', ContentData> = {
                     titleStart: "To donate ",
                     highlight: "blood",
                     subtitle: ", returning donors must wait:",
-                    value: "56-84 days*",
-                    footnote: "*Donors registered as male (56 days), donors registered as female (84 days)"
+                    value: "90-120 days*",
+                    footnote: "*Males (90 days), Females (120 days)"
                 }
             ],
             supportTitle: "Ready to make a difference? Join Sanjivani's Lifeline today.",
@@ -781,10 +781,10 @@ export const content: Record<'en' | 'mr', ContentData> = {
                 {
                     title: "वय, लिंग आणि वजन",
                     points: [
-                        "रक्तदाता होण्यासाठी तुमचे वय किमान १७ वर्षे असावे.",
-                        "तुम्ही आमच्या किमान उंची आणि वजनाच्या निकषांची पूर्तता केली पाहिजे.",
-                        "रक्तदानासाठी कोणतीही कमाल वयोमर्यादा नाही.",
-                        "ठराविक वयावरील पहिल्यांदा रक्तदान करणाऱ्यांना अतिरिक्त वैद्यकीय मंजुरीची आवश्यकता असू शकते."
+                        "रक्तदाता होण्यासाठी तुमचे वय १८ ते ६५ वर्षांच्या दरम्यान असावे.",
+                        "तुमचे वजन किमान ४५ किलो असावे.",
+                        "पहिल्यांदा रक्तदान करणाऱ्या ६० वर्षांवरील व्यक्तींना अतिरिक्त वैद्यकीय मंजुरीची आवश्यकता असू शकते.",
+                        "नियमित रक्तदाते ६५ वर्षांपर्यंत (वैद्यकीय प्रमाणपत्रासह ६८ पर्यंत) पात्र असू शकतात."
                     ]
                 },
                 {
@@ -822,17 +822,17 @@ export const content: Record<'en' | 'mr', ContentData> = {
                 {
                     title: "पिअर्सिंग आणि टॅटू",
                     points: [
-                        "टॅटू किंवा पिअर्सिंग केल्यानंतर दात्यांनी पुन्हा दान करण्यासाठी तीन महिने प्रतीक्षा करणे आवश्यक आहे.",
+                        "टॅटू किंवा पिअर्सिंग केल्यानंतर दात्यांनी पुन्हा दान करण्यासाठी १२ महिने प्रतीक्षा करणे आवश्यक आहे.",
                         "ही प्रक्रिया परवानाधारक, निर्जंतुक सुविधेमध्ये केली असली तरीही हा प्रतीक्षा कालावधी लागू होतो.",
-                        "निर्जंतुक, सिंगल-युज गनने केलेल्या कान टोचण्याला ३ महिन्यांच्या प्रतीक्षेतून सूट दिली जाऊ शकते."
+                        "निर्जंतुक, सिंगल-युज गनने केलेल्या कान टोचण्याला कमी कालावधीनंतर सूट दिली जाऊ शकते."
                     ]
                 },
                 {
                     title: "गर्भधारणा",
                     points: [
                         "गरोदर असताना, तुम्ही दान करण्यास पात्र नाही.",
-                        "बाळंतपणानंतर किमान सहा महिने तुम्हाला पुन्हा दान करण्यापूर्वी प्रतीक्षा करावी लागेल.",
-                        "गर्भपात झाल्यानंतरही हाच प्रतीक्षा कालावधी लागू होतो."
+                        "बाळंतपणानंतर किमान १२ महिने तुम्हाला पुन्हा दान करण्यापूर्वी प्रतीक्षा करावी लागेल.",
+                        "गर्भपात किंवा गर्भधारणा संपुष्टात आल्यानंतर ६ महिने प्रतीक्षा करावी लागेल."
                     ]
                 },
                 {
@@ -883,8 +883,8 @@ export const content: Record<'en' | 'mr', ContentData> = {
                     titleStart: "दान करण्यासाठी ",
                     highlight: "रक्त",
                     subtitle: ", परत येणाऱ्या दात्यांनी प्रतीक्षा करावी:",
-                    value: "५६-८४ दिवस*",
-                    footnote: "*पुरुष म्हणून नोंदणीकृत दाते (५६ दिवस), महिला म्हणून नोंदणीकृत दाते (८४ दिवस)"
+                    value: "९०-१२० दिवस*",
+                    footnote: "*पुरुष (९० दिवस), महिला (१२० दिवस)"
                 }
             ],
             supportTitle: "फरक घडवण्यासाठी तयार आहात? आजच आमच्या जीवनवाहिनीमध्ये सामील व्हा.",

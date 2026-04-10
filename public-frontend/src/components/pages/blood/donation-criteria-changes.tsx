@@ -11,13 +11,13 @@ import {
 const updates = [
     {
         date: 'January 15, 2025',
-        title: 'Hemoglobin threshold update for female donors',
-        body: 'Minimum hemoglobin level for female donors has been revised from 12.5 g/dL to 12.0 g/dL, aligning with the latest WHO guidelines. This change is expected to make thousands more women eligible to donate safely, while maintaining donor safety standards.'
+        title: 'Hemoglobin threshold maintained for safety',
+        body: 'Minimum hemoglobin level for all donors remains at 12.5 g/dL, ensuring donor health and safety. We continue to use high-precision HemoCue machines for accurate pre-donation screening.'
     },
     {
         date: 'November 22, 2024',
-        title: 'Tattoo and piercing deferral period reduced',
-        body: 'The deferral period for tattoos and body piercings done at licensed, regulated facilities has been reduced from 12 months to 6 months. Ear piercings done with sterile single-use guns are now accepted with no deferral period. This change reflects updated infection risk assessments and modern hygiene standards at professional body art studios.'
+        title: 'Tattoo and piercing deferral period remains 12 months',
+        body: 'To ensure maximum safety against transfusion-transmitted infections, we maintain a 12-month deferral period for tattoos and body piercings. This professional standard helps protect the blood supply while allowing donors to return once the safety window is complete.'
     },
     {
         date: 'September 8, 2024',
@@ -66,8 +66,8 @@ const updates = [
     },
     {
         date: 'January 1, 2023',
-        title: 'Post-pregnancy deferral remains unchanged',
-        body: 'Following a review, the 6-month post-delivery deferral period has been maintained. This applies to both vaginal and cesarean deliveries. Donors who have experienced a miscarriage are also subject to a 6-month deferral from the date of the event. Breastfeeding donors may be eligible after individual consultation with our medical team.'
+        title: 'Post-pregnancy deferral period clarified',
+        body: 'In accordance with national guidelines, the post-delivery deferral period is 12 months to allow for full maternal recovery. For miscarriage or termination of pregnancy, a 6-month deferral applies. These standards ensure the well-being of the mother before resuming voluntary blood donation.'
     }
 ]
 
