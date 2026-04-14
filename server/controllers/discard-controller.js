@@ -17,14 +17,31 @@ const getList = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     // Filters
+    const { itemType, siteId, search, fromDate, toDate, isAutoDiscarded, sortBy = "discardedAt" } = req.query;
     const filter = {};
-    if (req.query.itemType) filter.itemType = req.query.itemType;
-    if (req.query.siteId) filter.siteId = req.query.siteId;
-    if (req.query.isAutoDiscarded !== undefined)
-      filter.isAutoDiscarded = req.query.isAutoDiscarded === "true";
+
+    if (itemType) filter.itemType = itemType;
+    if (siteId) filter.siteId = siteId;
+    if (isAutoDiscarded !== undefined)
+      filter.isAutoDiscarded = isAutoDiscarded === "true";
+
+    // Date Range Filter (discardedAt)
+    if (fromDate || toDate) {
+      filter.discardedAt = {};
+      if (fromDate) filter.discardedAt.$gte = new Date(new Date(fromDate).setHours(0, 0, 0, 0));
+      if (toDate) filter.discardedAt.$lte = new Date(new Date(toDate).setHours(23, 59, 59, 999));
+    }
+
+    // Search Filter (Bag Number)
+    if (search) {
+      const BloodBag = require("../models/bloodbag-model");
+      const matchingBags = await BloodBag.find({
+        bagNo: { $regex: search, $options: "i" }
+      }).select("_id");
+      filter.bagNo = { $in: matchingBags.map(b => b._id) };
+    }
 
     // Sorting
-    const sortBy = req.query.sortBy || "discardedAt";
     const order = req.query.order === "asc" ? 1 : -1;
     const sort = { [sortBy]: order };
 

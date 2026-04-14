@@ -14,6 +14,7 @@ const InitialVitalsStep = ({ formData, fieldErrors, onFieldChange }) => {
             type="number"
             value={formData.weightKg}
             onChange={(e) => onFieldChange("weightKg", e.target.value)}
+            onWheel={(e) => e.target.blur()}
             className={`w-full px-3 py-2 border rounded-lg ${fieldErrors.weightKg ? "border-red-500" : "border-gray-300"}`}
             placeholder="e.g. 65"
           />
@@ -30,6 +31,7 @@ const InitialVitalsStep = ({ formData, fieldErrors, onFieldChange }) => {
             step="0.1"
             value={formData.hb}
             onChange={(e) => onFieldChange("hb", e.target.value)}
+            onWheel={(e) => e.target.blur()}
             className={`w-full px-3 py-2 border rounded-lg ${fieldErrors.hb ? "border-red-500" : "border-gray-300"}`}
             placeholder="e.g. 12.5"
           />
@@ -46,6 +48,7 @@ const InitialVitalsStep = ({ formData, fieldErrors, onFieldChange }) => {
             step="0.1"
             value={formData.tempC}
             onChange={(e) => onFieldChange("tempC", e.target.value)}
+            onWheel={(e) => e.target.blur()}
             className={`w-full px-3 py-2 border rounded-lg ${fieldErrors.tempC ? "border-red-500" : "border-gray-300"}`}
             placeholder="e.g. 98.6"
           />
@@ -61,6 +64,7 @@ const InitialVitalsStep = ({ formData, fieldErrors, onFieldChange }) => {
             type="number"
             value={formData.pulse}
             onChange={(e) => onFieldChange("pulse", e.target.value)}
+            onWheel={(e) => e.target.blur()}
             className={`w-full px-3 py-2 border rounded-lg ${fieldErrors.pulse ? "border-red-500" : "border-gray-300"}`}
             placeholder="e.g. 72"
           />
@@ -104,6 +108,7 @@ const InitialVitalsStep = ({ formData, fieldErrors, onFieldChange }) => {
             step="0.1"
             value={formData.o2Level || ""}
             onChange={(e) => onFieldChange("o2Level", e.target.value)}
+            onWheel={(e) => e.target.blur()}
             className="w-full px-3 py-2 border rounded-lg border-gray-300"
             placeholder="e.g. 98"
           />
@@ -141,11 +146,11 @@ const InitialVitalsStep = ({ formData, fieldErrors, onFieldChange }) => {
         <div>
           <label className="block text-sm mb-1">Systematic Exam CVS RS PA CNS GIS</label>
           <select
-            value={formData.systematicExam || ""}
+            value={formData.systematicExam || "Normal"}
             onChange={(e) => onFieldChange("systematicExam", e.target.value)}
             className="w-full px-3 py-2 border rounded-lg border-gray-300"
           >
-            <option value="">Select</option>
+            <option value="Normal">Normal</option>
             <option value="CVS">CVS</option>
             <option value="RS">RS</option>
             <option value="PA">PA</option>
@@ -162,6 +167,7 @@ const InitialVitalsStep = ({ formData, fieldErrors, onFieldChange }) => {
             step="0.1"
             value={formData.volumeGmMl || ""}
             onChange={(e) => onFieldChange("volumeGmMl", e.target.value)}
+            onWheel={(e) => e.target.blur()}
             className="w-full px-3 py-2 border rounded-lg border-gray-300"
             placeholder="e.g. 350"
           />

@@ -35,7 +35,7 @@ const NearExpiry = () => {
     isLoading: false,
     pagination: {
       page: 1,
-      limit: 10,
+      limit: 50,
       total: 0,
       totalPages: 0,
     },
@@ -271,102 +271,94 @@ const NearExpiry = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filters Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Filters & Search
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-              {/* Search */}
-              <div className="lg:col-span-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        {/* Compact Filters Section */}
+        <Card className="mb-4 border-yellow-50 shadow-sm">
+          <CardContent className="p-3">
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Search - Flexible Width */}
+              <div className="flex-1 min-w-[240px] space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Search</label>
+                <div className="relative group">
+                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-yellow-500 w-3.5 h-3.5 transition-colors" />
                   <Input
-                    placeholder="Search by component ID, bag number..."
+                    placeholder="Search ID or bag number..."
                     value={state.filters.search}
                     onChange={(e) => handleFilterChange("search", e.target.value)}
-                    className="pl-10 pr-10"
+                    className="pl-8 h-9 text-xs border-gray-200 bg-gray-50/50 focus:bg-white focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 transition-all shadow-none"
                     disabled={state.isLoading}
                   />
-                  {state.filters.search && (
-                    <button
-                      onClick={() => handleFilterChange("search", "")}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      disabled={state.isLoading}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                  {state.isLoading && !state.filters.search && (
-                    <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 animate-spin" />
-                  )}
                 </div>
               </div>
 
-              {/* Days Until Expiry Filter */}
-              <Select value={state.filters.days.toString()} onValueChange={(value) => handleFilterChange("days", parseInt(value))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Days Until Expiry" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="3">3 days</SelectItem>
-                  <SelectItem value="5">5 days</SelectItem>
-                  <SelectItem value="7">7 days</SelectItem>
-                  <SelectItem value="14">14 days</SelectItem>
-                  <SelectItem value="30">30 days</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* Days Filter */}
+              <div className="w-32 space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Expiry Days</label>
+                <Select value={state.filters.days.toString()} onValueChange={(value) => handleFilterChange("days", parseInt(value))}>
+                  <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                    <SelectValue placeholder="Days" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3" className="text-xs">3 days</SelectItem>
+                    <SelectItem value="5" className="text-xs">5 days</SelectItem>
+                    <SelectItem value="7" className="text-xs">7 days</SelectItem>
+                    <SelectItem value="14" className="text-xs">14 days</SelectItem>
+                    <SelectItem value="30" className="text-xs">30 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               {/* Component Type Filter */}
-              <Select value={state.filters.componentType || "all"} onValueChange={(value) => handleFilterChange("componentType", value === "all" ? "" : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Component Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {COMPONENT_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="w-40 space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Type</label>
+                <Select value={state.filters.componentType || "all"} onValueChange={(value) => handleFilterChange("componentType", value === "all" ? "" : value)}>
+                  <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {COMPONENT_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value} className="text-xs">
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               {/* Status Filter */}
-              <Select value={state.filters.status || "all"} onValueChange={(value) => handleFilterChange("status", value === "all" ? "" : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  {STATUS_OPTIONS.map((status) => (
-                    <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Filter Actions */}
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                {Object.values(state.filters).some(filter => filter !== "" && filter !== 7) && (
-                  <span>Filters applied</span>
-                )}
+              <div className="w-36 space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Status</label>
+                <Select value={state.filters.status || "all"} onValueChange={(value) => handleFilterChange("status", value === "all" ? "" : value)}>
+                  <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    {STATUS_OPTIONS.map((status) => (
+                      <SelectItem key={status.value} value={status.value} className="text-xs">
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={clearFilters}
-                disabled={!Object.values(state.filters).some(filter => filter !== "" && filter !== 7)}
-              >
-                Clear Filters
-              </Button>
+
+              {/* Compact Actions */}
+              <div className="flex items-center gap-2 border-l border-gray-200 pl-3 pt-4">
+                {Object.values(state.filters).some(filter => filter !== "" && filter !== 7) && (
+                  <button 
+                    onClick={clearFilters}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-100"
+                    title="Clear all filters"
+                  >
+                    <X className="w-3 h-3" />
+                    Reset
+                  </button>
+                )}
+                <div className="flex items-center gap-1">
+                   {state.isLoading && <Loader2 className="w-3 h-3 animate-spin text-gray-400" />}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

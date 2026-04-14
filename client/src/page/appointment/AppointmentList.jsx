@@ -184,294 +184,275 @@ const AppointmentList = () => {
   };
 
   return (
-    <div className="container mx-auto p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <Calendar className="w-6 h-6 text-red-600" />
+    <div className="min-h-screen bg-gray-50">
+      {/* Compact Header */}
+      <div className="bg-white border-b border-gray-100 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center gap-4">
+            <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+              <Calendar className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Appointments</h1>
-              <p className="text-gray-600">View and manage public blood donation appointments</p>
+              <h1 className="text-xl font-bold text-gray-900">Appointments</h1>
+              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Donation Schedule</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filters and Search */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            Filters & Search
-          </CardTitle>
-          <CardDescription>
-            Filter appointments by status, date and donor information
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-            {/* Search */}
-            <div className="space-y-2">
-              <Label htmlFor="search">Search by name, phone, email or blood group</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="search"
-                  placeholder="Search appointments..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                />
-                <Button onClick={handleSearch} size="sm">
-                  <Search className="w-4 h-4" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Compact Filters Section */}
+        <Card className="mb-4 border-red-100 shadow-sm transition-all duration-300">
+          <CardContent className="p-3">
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Search */}
+              <div className="flex-1 min-w-[240px] space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Search Donor</label>
+                <div className="relative group">
+                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 w-3.5 h-3.5 transition-colors" />
+                  <Input
+                    placeholder="Name, phone, or blood group..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    className="pl-8 h-9 text-xs border-gray-200 bg-gray-50/50 focus:bg-white focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-all shadow-none"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              {/* Status Filter */}
+              <div className="w-36 space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Status</label>
+                <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
+                  <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* From Date */}
+              <div className="w-36 space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">From Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5 pointer-events-none" />
+                  <Input
+                    type="date"
+                    value={filters.fromDate}
+                    onChange={(e) => handleFilterChange('fromDate', e.target.value)}
+                    className="pl-8 h-9 text-[10px] border-gray-200 bg-gray-50/50 shadow-none"
+                  />
+                </div>
+              </div>
+
+              {/* To Date */}
+              <div className="w-36 space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">To Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5 pointer-events-none" />
+                  <Input
+                    type="date"
+                    value={filters.toDate}
+                    onChange={(e) => handleFilterChange('toDate', e.target.value)}
+                    className="pl-8 h-9 text-[10px] border-gray-200 bg-gray-50/50 shadow-none"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 border-l border-gray-200 pl-3 pt-4">
+                {(searchQuery || filters.status !== 'all' || filters.fromDate || filters.toDate) && (
+                  <button 
+                    onClick={handleClearFilters}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-100"
+                    title="Clear all filters"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+                <Button onClick={fetchAppointments} variant="outline" size="sm" className="h-8 w-8 p-0" disabled={loading}>
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                 </Button>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Status Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={filters.status}
-                onValueChange={(value) => handleFilterChange('status', value)}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Date Range */}
-            <div className="space-y-2">
-              <Label>Appointment Date Range</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="date"
-                  value={filters.fromDate}
-                  onChange={(e) => handleFilterChange('fromDate', e.target.value)}
-                />
-                <Input
-                  type="date"
-                  value={filters.toDate}
-                  onChange={(e) => handleFilterChange('toDate', e.target.value)}
-                />
-              </div>
-            </div>
+        {/* Results Section */}
+        <div className="bg-white rounded-xl shadow-lg border border-red-100 overflow-hidden">
+          <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
+            <div className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Appointments ({totalCount})</div>
           </div>
-
-          <div className="flex justify-between items-center">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={handleClearFilters}
-                size="sm"
-              >
-                Clear Filters
-              </Button>
-              <Button
-                variant="outline"
-                onClick={fetchAppointments}
-                size="sm"
-                disabled={loading}
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Label htmlFor="pageSize">Rows per page:</Label>
-              <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
-                <SelectTrigger className="w-20" id="pageSize">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Results */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Appointments ({totalCount})</CardTitle>
-              <CardDescription>
-                {totalCount > 0
-                  ? `Showing ${((currentPage - 1) * pageSize) + 1} to ${Math.min(currentPage * pageSize, totalCount)} of ${totalCount} appointments`
-                  : 'No appointments found'}
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin" />
-              <span className="ml-2">Loading appointments...</span>
-            </div>
-          ) : appointments.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments found</h3>
-              <p className="text-gray-500 mb-4">
-                {filters.status !== 'all' || filters.fromDate || filters.toDate || searchQuery
-                  ? 'Try adjusting your filters or search criteria'
-                  : 'Public appointments will appear here once donors schedule them from the public site.'}
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Appointment</TableHead>
-                      <TableHead>Donor</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Blood</TableHead>
-                      <TableHead>Medical Info</TableHead>
-                      <TableHead>Appointment Date</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Source</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {appointments.map((appointment) => (
-                      <TableRow key={appointment._id}>
-                        <TableCell>
-                          <div className="font-mono text-xs">
-                            {getAppointmentCode(appointment._id)}
+          
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
+                  <TableHead className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Appointment</TableHead>
+                  <TableHead className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Donor</TableHead>
+                  <TableHead className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Contact</TableHead>
+                  <TableHead className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Blood</TableHead>
+                  <TableHead className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Medical Info</TableHead>
+                  <TableHead className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Date</TableHead>
+                  <TableHead className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Created</TableHead>
+                  <TableHead className="text-[10px] font-bold text-gray-500 uppercase tracking-widest text-center">Status</TableHead>
+                  <TableHead className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Source</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="py-12 text-center">
+                      <div className="flex flex-col items-center gap-2 text-gray-400">
+                        <Loader2 className="w-8 h-8 animate-spin" />
+                        <span className="text-xs font-bold uppercase tracking-widest">Loading Appointments...</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : appointments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="py-16 text-center">
+                      <div className="flex flex-col items-center gap-3 text-gray-400">
+                        <Calendar className="w-12 h-12 stroke-[1.5]" />
+                        <div className="max-w-[240px] mx-auto">
+                           <h3 className="text-sm font-bold text-gray-600 uppercase tracking-wider mb-1">No appointments found</h3>
+                           <p className="text-xs">Adjust your search or wait for new schedules.</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  appointments.map((appointment) => (
+                    <TableRow key={appointment._id} className="hover:bg-gray-50/80 transition-colors">
+                      <TableCell className="font-mono text-[10px] font-bold text-red-700 bg-red-50/30">
+                        {getAppointmentCode(appointment._id)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs font-bold text-gray-900">{appointment.fullName}</div>
+                        <div className="text-[10px] text-gray-500 font-medium uppercase tracking-tighter">
+                          {appointment.gender} {appointment.age ? `• ${appointment.age} YRS` : ''}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+                            <Phone className="w-3 h-3 text-gray-400" />
+                            {appointment.mobileNo}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">{appointment.fullName}</div>
-                          <div className="text-xs text-gray-500">
-                            {appointment.gender} {appointment.age ? `• ${appointment.age} yrs` : ''}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1 text-sm">
-                            <div className="flex items-center gap-1">
-                              <Phone className="w-3 h-3" />
-                              {appointment.mobileNo}
+                          {appointment.email && (
+                            <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
+                              <Mail className="w-3 h-3" />
+                              <span className="truncate max-w-[120px]">{appointment.email}</span>
                             </div>
-                            {appointment.email && (
-                              <div className="flex items-center gap-1 text-xs text-gray-500">
-                                <Mail className="w-3 h-3" />
-                                {appointment.email}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1 text-sm">
-                            <Droplets className="w-3 h-3" />
-                            {appointment.bloodGroup || '-'}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1 text-[11px] leading-tight">
-                            {appointment.recentIllness === 'yes' && <span className="text-red-500 font-medium">⚠ Illness</span>}
-                            {appointment.surgery === 'yes' && <span className="text-red-500 font-medium">⚠ Surgery</span>}
-                            {appointment.medication === 'yes' && <span className="text-red-500 font-medium">⚠ Medication</span>}
-                            {appointment.lastDonation && <span className="text-blue-600">Last: {formatDate(appointment.lastDonation)}</span>}
-                            {(!appointment.recentIllness || appointment.recentIllness === 'no') && 
-                             (!appointment.surgery || appointment.surgery === 'no') && 
-                             (!appointment.medication || appointment.medication === 'no') && 
-                             !appointment.lastDonation && <span className="text-gray-400">-</span>}
-                          </div>
-                        </TableCell>
-                        <TableCell>{formatDate(appointment.appointmentDate)}</TableCell>
-                        <TableCell>{formatDateTime(appointment.createdAt)}</TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusVariant(appointment.status)} className="capitalize">
-                            {appointment.status || 'pending'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {appointment.source || 'public-frontend'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-50 text-red-700 text-[10px] font-bold border border-red-100">
+                          <Droplets className="w-2.5 h-2.5" />
+                          {appointment.bloodGroup || 'UNK'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1 max-w-[150px]">
+                          {appointment.recentIllness === 'yes' && <Badge className="text-[8px] h-4 bg-red-100 text-red-700 border-red-200">ILLNESS</Badge>}
+                          {appointment.surgery === 'yes' && <Badge className="text-[8px] h-4 bg-red-100 text-red-700 border-red-200">SURGERY</Badge>}
+                          {appointment.medication === 'yes' && <Badge className="text-[8px] h-4 bg-red-100 text-red-700 border-red-200">MEDS</Badge>}
+                          {appointment.lastDonation && (
+                            <div className="text-[9px] text-gray-500 leading-tight">
+                              LAST: {formatDate(appointment.lastDonation)}
+                            </div>
+                          )}
+                          {!appointment.recentIllness || (appointment.recentIllness === 'no' && !appointment.surgery && !appointment.medication && !appointment.lastDonation) && (
+                            <span className="text-emerald-600 font-bold text-[9px]">CLEAN HLTH</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs font-bold text-gray-600">
+                        {formatDate(appointment.appointmentDate)}
+                      </TableCell>
+                      <TableCell className="text-[10px] text-gray-400 leading-tight">
+                        {formatDateTime(appointment.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={getStatusVariant(appointment.status)} className="text-[9px] h-4 leading-none uppercase tracking-widest px-2">
+                          {appointment.status || 'pending'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
+                        {appointment.source || 'WEB'}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Refined Pagination Footer */}
+          <div className="flex items-center justify-between p-4 border-t bg-gray-50/10">
+            <div className="flex items-center gap-4">
+              <div className="text-xs font-medium text-gray-500">
+                SHOWING {appointments.length > 0 ? ((currentPage - 1) * pageSize) + 1 : 0} TO {Math.min(currentPage * pageSize, totalCount)} OF {totalCount} RECORDS
               </div>
-
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-6">
-                  <div className="text-sm text-gray-500">
-                    Page {currentPage} of {totalPages}
-                  </div>
-
-                  <div className="flex items-center gap-2">
+              
+              <div className="flex items-center gap-2 border-l pl-4">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Per Page</span>
+                <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+                  <SelectTrigger className="w-16 h-7 text-[10px] font-bold bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <Button variant="outline" size="sm" onClick={() => handlePageChange(1)} disabled={currentPage === 1} className="h-7 px-2">
+                  <ChevronsLeft className="w-3 h-3" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="h-7 text-[10px] font-bold uppercase">
+                  PREV
+                </Button>
+                
+                <div className="flex items-center gap-1 mx-1">
+                  {getPageNumbers().map((page) => (
                     <Button
-                      variant="outline"
+                      key={page}
+                      variant={currentPage === page ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => handlePageChange(1)}
-                      disabled={currentPage === 1}
+                      onClick={() => handlePageChange(page)}
+                      className={`w-7 h-7 p-0 text-[10px] font-bold ${currentPage === page ? 'bg-red-600 hover:bg-red-700' : ''}`}
                     >
-                      <ChevronsLeft className="w-4 h-4" />
+                      {page}
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </Button>
-
-                    {getPageNumbers().map((page) => (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => handlePageChange(page)}
-                      >
-                        {page}
-                      </Button>
-                    ))}
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(totalPages)}
-                      disabled={currentPage === totalPages}
-                    >
-                      <ChevronsRight className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  ))}
                 </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+                
+                <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} className="h-7 text-[10px] font-bold uppercase">
+                  NEXT
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handlePageChange(totalPages)} disabled={currentPage === totalPages} className="h-7 px-2">
+                  <ChevronsRight className="w-3 h-3" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

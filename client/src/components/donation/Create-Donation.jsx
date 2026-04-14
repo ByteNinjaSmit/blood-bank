@@ -39,9 +39,9 @@ const INITIAL_FORM_DATA = {
   o2Level: "",
   lymphadenopathy: "",
   cyanosis: "",
-  systematicExam: "",
-  skinDiseaseFreeAtPhlebotomy: "",
-  armsFreeFromPunctureScars: "",
+  systematicExam: "Normal",
+  skinDiseaseFreeAtPhlebotomy: "Yes",
+  armsFreeFromPunctureScars: "Yes",
   volumeGmMl: "",
   // Blood collection checklist
   emptyBagExamined: false,
@@ -55,10 +55,10 @@ const INITIAL_FORM_DATA = {
   rh: "",
   atypicalAntibody: "",
   // Medical questions q1-q36
-  q1: "", q2: "", q3: "", q4: "", q5: "", q6: "", q7: "", q8: "", q9: "", q10: "",
-  q11: "", q12: "", q13: "", q14: "", q15: "", q16: "", q17: "", q18: "", q19: "", q20: "",
-  q21: "", q22: "", q23: "", q24: "", q25: "", q26: "", q27: "", q28: "", q29: "", q30: "",
-  q31: "", q32: "", q33: "", q34: "", q35: "", q36: "",
+  q1: "No", q2: "Yes", q3: "Yes", q4: "No", q5: "No", q6: "Yes", q7: "Yes", q8: "No", q9: "No", q10: "No",
+  q11: "No", q12: "No", q13: "No", q14: "No", q15: "No", q16: "No", q17: "No", q18: "No", q19: "No", q20: "No",
+  q21: "No", q22: "No", q23: "No", q24: "No", q25: "No", q26: "No", q27: "No", q28: "No", q29: "No", q30: "Yes",
+  q31: "Yes", q32: "Yes", q33: "Yes", q34: "Yes", q35: "Yes", q36: "Yes",
 }
 
 const CreateDonation = ({ onCreateDonor }) => {
@@ -72,28 +72,11 @@ const CreateDonation = ({ onCreateDonor }) => {
   const [donor, setDonor] = useState(null)
   const [showPopup, setShowPopup] = useState(false)
   const [showCreateDonor, setShowCreateDonor] = useState(false)
-  const [showAdvanced, setShowAdvanced] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
   const [showSuccess, setShowSuccess] = useState(false)
   const [savedDonation, setSavedDonation] = useState(null)
   const [fieldErrors, setFieldErrors] = useState({})
   const [stepperKey, setStepperKey] = useState(0)
-
-  // Donor Search Fields
-  const [donorInfo, setDonorInfo] = useState({
-    firstName: "",
-    middleName: "",
-    lastName: "",
-    dob: "",
-    uid: "",
-    phone: "",
-    donorId: "",
-  })
-  const hasNameDob =
-    donorInfo.firstName.trim() && donorInfo.lastName.trim() && donorInfo.dob
-  const hasStrongIdentifier =
-    donorInfo.uid.trim() || donorInfo.phone.trim() || donorInfo.donorId.trim()
-  const canSearchDonor = !!(hasNameDob || hasStrongIdentifier)
 
   // Donation Form Data
   const [formData, setFormData] = useState({ ...INITIAL_FORM_DATA })
@@ -104,14 +87,90 @@ const CreateDonation = ({ onCreateDonor }) => {
       const donorBG = donor?.bloodGroup
       const donorRh = donor?.rh
       const donorWeight = donor?.weightKg
-      setFormData((prev) => ({
-        ...prev,
-        bloodGroup: donorBG || prev.bloodGroup,
-        rh: donorRh || prev.rh,
-        weightKg: prev.weightKg || (donorWeight ? String(donorWeight) : prev.weightKg),
-      }))
+      setFormData((prev) => {
+        const updated = {
+          ...prev,
+          bloodGroup: donorBG || prev.bloodGroup,
+          rh: donorRh || prev.rh,
+          weightKg: prev.weightKg || (donorWeight ? String(donorWeight) : prev.weightKg),
+        }
+        return calculateFitness(updated)
+      })
     }
   }, [donor])
+
+  const calculateFitness = (data) => {
+    const reasons = []
+
+    // 1. Weight & Volume
+    const weight = Number.parseFloat(data.weightKg)
+    let volume = data.volumeGmMl
+    if (!isNaN(weight)) {
+      if (weight < 45) {
+        reasons.push("Weight must be at least 45 kg")
+      } else if (weight < 55) {
+        volume = "350"
+      } else {
+        volume = "450"
+      }
+    }
+
+    // 2. Vitals
+    const hb = Number.parseFloat(data.hb)
+    if (!isNaN(hb) && hb < 12.5) reasons.push("Haemoglobin (Hb) must be at least 12.5 gm%")
+
+    const temp = Number.parseFloat(data.tempC)
+    if (!isNaN(temp) && (temp < 36.5 || temp > 37.5)) reasons.push("Temperature must be between 36.5°C and 37.5°C")
+
+    const pulse = Number.parseInt(data.pulse)
+    if (!isNaN(pulse) && (pulse < 60 || pulse > 100)) reasons.push("Pulse must be between 60 and 100 bpm")
+
+    const o2 = Number.parseFloat(data.o2Level)
+    if (!isNaN(o2) && o2 < 95) reasons.push("Oxygen Saturation (SpO2) must be at least 95%")
+
+    // 3. BP Parsing (expected format: "120/80")
+    if (data.bp?.trim()) {
+      const parts = data.bp.split("/")
+      if (parts.length === 2) {
+        const sys = Number.parseInt(parts[0].trim())
+        const dia = Number.parseInt(parts[1].trim())
+        if (!isNaN(sys) && (sys < 100 || sys > 180)) reasons.push("Systolic BP must be between 100 and 180 mmHg")
+        if (!isNaN(dia) && (dia < 50 || dia > 100)) reasons.push("Diastolic BP must be between 50 and 100 mmHg")
+      }
+    }
+
+    // 4. Physical Exams
+    if (data.pedalOedema === "Yes") reasons.push("Pedal Oedema must be NO")
+    if (data.lymphadenopathy === "Yes") reasons.push("Lymphadenopathy must be NO")
+    if (data.cyanosis === "Yes") reasons.push("Cyanosis must be NO")
+    if (data.systematicExam && data.systematicExam !== "Normal") {
+      reasons.push(`Systematic Examination error: ${data.systematicExam} abnormal`)
+    }
+    if (data.skinDiseaseFreeAtPhlebotomy === "No") reasons.push("Donor must be free from skin disease at phlebotomy site")
+    if (data.armsFreeFromPunctureScars === "No") reasons.push("Arms must be free from skin puncture and scars")
+
+    // 5. Medical History Questions
+    const yesRequired = ["q2", "q3", "q6", "q7", "q30", "q31", "q32", "q33", "q34", "q35", "q36"]
+    for (let i = 1; i <= 36; i++) {
+      const field = `q${i}`
+      const val = data[field]
+      if (val) {
+        if (yesRequired.includes(field)) {
+          if (val === "No") reasons.push(`Medical Question ${i} requires a YES answer`)
+        } else {
+          if (val === "Yes") reasons.push(`Medical Question ${i} requires a NO answer`)
+        }
+      }
+    }
+
+    const isFit = reasons.length === 0
+    return {
+      ...data,
+      donorIsFit: isFit,
+      rejectionReason: isFit ? "" : reasons.join("; "),
+      volumeGmMl: volume,
+    }
+  }
 
   const getDonorName = (d) => {
     if (!d) return ""
@@ -147,13 +206,9 @@ const CreateDonation = ({ onCreateDonor }) => {
     }
   }, [location?.state])
 
-  const handleDonorInfoFieldChange = (field, value) => {
-    setDonorInfo((prev) => ({ ...prev, [field]: value }))
-  }
 
-  const handleToggleAdvanced = () => {
-    setShowAdvanced((v) => !v)
-  }
+
+
 
   const handleOpenCreateDonor = () => {
     setShowCreateDonor(true)
@@ -173,7 +228,10 @@ const CreateDonation = ({ onCreateDonor }) => {
   }
 
   const handleFormFieldChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((prev) => {
+      const updated = { ...prev, [field]: value }
+      return calculateFitness(updated)
+    })
     if (fieldErrors[field]) {
       setFieldErrors((prev) => ({ ...prev, [field]: undefined }))
     }
@@ -233,33 +291,7 @@ const CreateDonation = ({ onCreateDonor }) => {
     return true
   }
 
-  const handleDonorSearch = async () => {
-    setLoading(true)
-    setError("")
-    try {
-      const res = await axios.get(`${API}/api/donor/search`, {
-        params: donorInfo,
-        headers: {
-          Authorization: authorizationToken,
-        },
-        withCredentials: true,
-      })
-      if (res.status === 200) {
-        setDonor(res.data.donor)
-        setShowPopup(false)
-      }
-    } catch (error) {
-      if (error.response?.status === 404) {
-        setShowPopup(true)
-      } else {
-        const message = error.response?.data?.message || "Something went wrong while searching donor."
-        setError(message)
-        toast.error(message)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
+
 
   const handleSubmit = async () => {
     if (!donor) {
@@ -438,14 +470,8 @@ const CreateDonation = ({ onCreateDonor }) => {
           {/* Step 1: Donor Search */}
           <Step>
             <DonorSearchStep
-              donorInfo={donorInfo}
-              onDonorInfoFieldChange={handleDonorInfoFieldChange}
-              canSearchDonor={canSearchDonor}
-              showAdvanced={showAdvanced}
-              onToggleAdvanced={handleToggleAdvanced}
               loading={loading}
               error={error}
-              onSearch={handleDonorSearch}
               onOpenCreateDonor={handleOpenCreateDonor}
               showPopup={showPopup}
               onClosePopup={handleClosePopup}

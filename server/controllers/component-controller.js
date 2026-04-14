@@ -131,7 +131,7 @@ const getBagsToSeparateComponent = async (req, res, next) => {
         select: 'name',  // Only select name field from the Site model
         model: 'Site'
       })
-      .select('bagNo segmentNo collectionDate bloodGroup rh components siteId componentSeparationComplete'); // Fields to return from BloodBag
+      .select('bagNo segmentNo collectionDate bloodGroup rh components siteId componentSeparationComplete medicalExamination'); // Fields to return from BloodBag
 
     // Step 2: Check if there are no bags to separate
     if (!bags || bags.length === 0) {
@@ -147,6 +147,7 @@ const getBagsToSeparateComponent = async (req, res, next) => {
         collectionDate: bag.collectionDate,
         bloodGroup: bag.bloodGroup,
         rh: bag.rh,
+        volumeGmMl: bag.medicalExamination ? bag.medicalExamination.volumeGmMl : null,
         siteName: bag.siteId ? bag.siteId.name : null,
         componentSeparationComplete: bag.componentSeparationComplete,
         components: bag.components.map(component => ({
@@ -198,13 +199,20 @@ const separationCompleted = async (req, res, next) => {
 
 const getComponentsList = async (req, res, next) => {
   try {
-    const { type, status, expiryBefore, search, page = 1, limit = 10 } = req.query; // pagination + filters
+    const { type, status, expiryBefore, fromDate, toDate, search, page = 1, limit = 10 } = req.query; // pagination + filters
 
     // Build filter object
     const filter = {};
     if (type) filter.componentType = type;
     if (status) filter.status = status;
     if (expiryBefore) filter.expiryDate = { $lte: new Date(expiryBefore) };
+
+    // Add Date Range Filter (CreatedAt)
+    if (fromDate || toDate) {
+      filter.createdAt = {};
+      if (fromDate) filter.createdAt.$gte = new Date(new Date(fromDate).setHours(0, 0, 0, 0));
+      if (toDate) filter.createdAt.$lte = new Date(new Date(toDate).setHours(23, 59, 59, 999));
+    }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 

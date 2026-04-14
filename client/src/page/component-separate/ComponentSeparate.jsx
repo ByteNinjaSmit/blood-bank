@@ -19,6 +19,16 @@ const ComponentSeparate = () => {
   const [activeBag, setActiveBag] = useState(null);
   const [separateForm, setSeparateForm] = useState({ componentType: "RBC", volumeMl: 250 });
 
+  const getBagVolumeStats = (bag) => {
+    if (!bag) return { used: 0, total: 0, remaining: 0 };
+    const total = bag.volumeGmMl || 0;
+    const used = Array.isArray(bag.components)
+      ? bag.components.reduce((acc, c) => acc + (Number(c.volumeMl) || 0), 0)
+      : 0;
+    const remaining = total - used;
+    return { used, total, remaining };
+  };
+
   const fetchBags = async () => {
     setIsLoading(true);
     try {
@@ -57,13 +67,23 @@ const ComponentSeparate = () => {
   }, []);
 
   const openSeparate = (bag) => {
+    const { remaining } = getBagVolumeStats(bag);
     setActiveBag(bag);
-    setSeparateForm({ componentType: "RBC", volumeMl: 250 });
+    // Default to remaining or 250, whichever is smaller
+    setSeparateForm({ componentType: "RBC", volumeMl: Math.min(250, remaining) });
     setShowSeparateModal(true);
   };
 
   const submitSeparate = async () => {
     if (!activeBag) return;
+    const { remaining } = getBagVolumeStats(activeBag);
+    const inputVolume = Number(separateForm.volumeMl);
+
+    if (inputVolume > remaining) {
+      toast.error(`Cannot separate ${inputVolume}mL. Only ${remaining}mL remaining.`);
+      return;
+    }
+
     const donationId = bagIdByBagNo[activeBag.bagNo];
     if (!donationId) {
       toast.error("Unable to resolve donationId for this bag");
@@ -76,7 +96,7 @@ const ComponentSeparate = () => {
         {
           donationId,
           componentType: separateForm.componentType,
-          volumeMl: Number(separateForm.volumeMl),
+          volumeMl: inputVolume,
         },
         {
           headers: { Authorization: authorizationToken },
@@ -85,8 +105,16 @@ const ComponentSeparate = () => {
       );
       toast.success("Component separated successfully");
       setShowSeparateModal(false);
+      
+      // Auto-complete separation if volume is now 0
+      if (remaining - inputVolume <= 0) {
+        toast.info("Volume exhausted. Marking separation as completed.");
+        await markCompleted(activeBag);
+      } else {
+        await fetchBags();
+      }
+      
       setActiveBag(null);
-      await fetchBags();
     } catch (err) {
       const msg = err?.response?.data?.message || "Failed to separate component";
       toast.error(msg);
@@ -160,7 +188,7 @@ const ComponentSeparate = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag No</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segment</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Site</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Collected</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Components</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
@@ -185,7 +213,22 @@ const ComponentSeparate = () => {
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{bag.bagNo}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.segmentNo || "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.bloodGroup} {bag.rh}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{bag.siteName || "-"}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 font-semibold">
+                        {(() => {
+                          const { used, total } = getBagVolumeStats(bag);
+                          return (
+                            <div className="flex flex-col">
+                              <span>{used} / {total} mL</span>
+                              <div className="w-20 h-1 bg-gray-200 rounded-full mt-1 overflow-hidden">
+                                <div 
+                                  className={`h-full ${used >= total ? 'bg-green-500' : 'bg-red-500'}`} 
+                                  style={{ width: `${Math.min(100, (used / total) * 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.collectionDate ? new Date(bag.collectionDate).toLocaleDateString() : "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">
                         {Array.isArray(bag.components) && bag.components.length > 0 ? (
@@ -235,7 +278,14 @@ const ComponentSeparate = () => {
             <DialogTitle>Separate Component</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="text-sm text-gray-600">Bag: <span className="font-medium text-gray-900">{activeBag?.bagNo}</span></div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-600">Bag: <span className="font-medium text-gray-900">{activeBag?.bagNo}</span></span>
+              <span className="text-gray-600">
+                Remaining: <span className={`font-medium ${getBagVolumeStats(activeBag).remaining <= 0 ? 'text-red-500' : 'text-green-600'}`}>
+                  {getBagVolumeStats(activeBag).remaining} mL
+                </span>
+              </span>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Component</label>
               <select
@@ -253,16 +303,25 @@ const ComponentSeparate = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">Volume (mL)</label>
               <input
                 type="number"
-                className="w-full px-3 py-2 border rounded-md"
+                className={`w-full px-3 py-2 border rounded-md ${
+                  Number(separateForm.volumeMl) > getBagVolumeStats(activeBag).remaining ? 'border-red-500 focus:ring-red-500' : ''
+                }`}
                 value={separateForm.volumeMl}
                 onChange={(e) => setSeparateForm((s) => ({ ...s, volumeMl: e.target.value }))}
                 min={1}
+                max={getBagVolumeStats(activeBag).remaining}
               />
+              {Number(separateForm.volumeMl) > getBagVolumeStats(activeBag).remaining && (
+                <p className="text-xs text-red-500 mt-1">Cannot exceed remaining volume.</p>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowSeparateModal(false)}>Cancel</Button>
-            <Button onClick={submitSeparate} disabled={isActionLoading}>
+            <Button 
+              onClick={submitSeparate} 
+              disabled={isActionLoading || Number(separateForm.volumeMl) > getBagVolumeStats(activeBag).remaining || Number(separateForm.volumeMl) <= 0}
+            >
               {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Separate"}
             </Button>
           </DialogFooter>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import FormField from '@/components/shared/FormField';
 import Button from '@/components/shared/Button';
@@ -10,31 +10,203 @@ const DonorForm = ({
   onCancel,
   loading = false
 }) => {
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: initialData || {
-      donorId: '',
-      firstName: '',
-      middleName: '',
-      lastName: '',
-      uid: '',
-      dob: '',
-      sex: '',
-      phone: '',
-      email: '',
-      addressLine1: '',
-      addressLine2: '',
-      city: '',
-      district: '',
-      state: '',
-      pincode: '',
-      occupation: '',
-      weightKg: '',
-      bloodGroup: '',
-      rh: '',
-      eligibilityStatus: '',
-      lastDonationDate: '',
-    }
+  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
+    defaultValues: (() => {
+      if (!initialData) return {
+        donorId: '',
+        firstName: '',
+        middleName: '',
+        lastName: '',
+        uid: '',
+        dob: '',
+        sex: '',
+        phone: '',
+        email: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        district: '',
+        state: '',
+        pincode: '',
+        occupation: '',
+        weightKg: '',
+        bloodGroup: '',
+        rh: '',
+        eligibilityStatus: '',
+        lastDonationDate: '',
+        dobDisplay: '',
+        lastDonationDateDisplay: '',
+      };
+
+      // Helper to format date for display
+      const formatDate = (date) => {
+        if (!date) return '';
+        const d = new Date(date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+      };
+
+      // Handle both flat and nested initialData
+      return {
+        ...initialData,
+        // Flatten name if nested
+        firstName: initialData.firstName || initialData.name?.firstName || '',
+        middleName: initialData.middleName || initialData.name?.middleName || '',
+        lastName: initialData.lastName || initialData.name?.lastName || '',
+        // Flatten address if nested
+        addressLine1: initialData.addressLine1 || initialData.address?.line1 || '',
+        addressLine2: initialData.addressLine2 || initialData.address?.line2 || '',
+        city: initialData.city || initialData.address?.city || '',
+        district: initialData.district || initialData.address?.district || '',
+        state: initialData.state || initialData.address?.state || '',
+        pincode: initialData.pincode || initialData.address?.pincode || '',
+        // Format dates
+        dobDisplay: formatDate(initialData.dob),
+        lastDonationDateDisplay: formatDate(initialData.lastDonationDate),
+        // Ensure standard date format for internal fields
+        dob: initialData.dob ? new Date(initialData.dob).toISOString().split('T')[0] : '',
+        lastDonationDate: initialData.lastDonationDate ? new Date(initialData.lastDonationDate).toISOString().split('T')[0] : '',
+      };
+    })()
   });
+
+  const watchDob = watch('dob');
+  const watchWeight = watch('weightKg');
+
+  useEffect(() => {
+    if (watchDob && watchWeight) {
+      const dobDate = new Date(watchDob);
+      const today = new Date();
+      let age = today.getFullYear() - dobDate.getFullYear();
+      const m = today.getMonth() - dobDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) age--;
+
+      const weightNum = parseFloat(watchWeight);
+      if (!isNaN(age) && !isNaN(weightNum)) {
+        // Eligibility Criteria: 18-65 years old and at least 45kg
+        const isEligible = age >= 18 && age <= 65 && weightNum >= 45;
+        setValue('eligibilityStatus', isEligible ? 'eligible' : 'deferred');
+      }
+    }
+  }, [watchDob, watchWeight, setValue]);
+
+  useEffect(() => {
+    if (initialData) {
+      const formatDate = (date) => {
+        if (!date) return '';
+        const d = new Date(date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+      };
+
+      reset({
+        ...initialData,
+        firstName: initialData.firstName || initialData.name?.firstName || '',
+        middleName: initialData.middleName || initialData.name?.middleName || '',
+        lastName: initialData.lastName || initialData.name?.lastName || '',
+        addressLine1: initialData.addressLine1 || initialData.address?.line1 || '',
+        addressLine2: initialData.addressLine2 || initialData.address?.line2 || '',
+        city: initialData.city || initialData.address?.city || '',
+        district: initialData.district || initialData.address?.district || '',
+        state: initialData.state || initialData.address?.state || '',
+        pincode: initialData.pincode || initialData.address?.pincode || '',
+        dobDisplay: formatDate(initialData.dob),
+        lastDonationDateDisplay: formatDate(initialData.lastDonationDate),
+        dob: initialData.dob ? new Date(initialData.dob).toISOString().split('T')[0] : '',
+        lastDonationDate: initialData.lastDonationDate ? new Date(initialData.lastDonationDate).toISOString().split('T')[0] : '',
+      });
+    } else {
+      reset({
+        donorId: '',
+        firstName: '',
+        middleName: '',
+        lastName: '',
+        uid: '',
+        dob: '',
+        sex: '',
+        phone: '',
+        email: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        district: '',
+        state: '',
+        pincode: '',
+        occupation: '',
+        weightKg: '',
+        bloodGroup: '',
+        rh: '',
+        eligibilityStatus: '',
+        lastDonationDate: '',
+        dobDisplay: '',
+        lastDonationDateDisplay: '',
+      });
+    }
+  }, [initialData, reset]);
+
+  const handleDobDisplayChange = (e) => {
+    let val = e.target.value.replace(/\D/g, '').slice(0, 8);
+    let display = val;
+    if (val.length > 4) {
+      display = `${val.slice(0, 2)}/${val.slice(2, 4)}/${val.slice(4, 8)}`;
+    } else if (val.length > 2) {
+      display = `${val.slice(0, 2)}/${val.slice(2, 4)}`;
+    }
+    
+    setValue('dobDisplay', display);
+    
+    if (val.length === 8) {
+      const d = val.slice(0, 2);
+      const m = val.slice(2, 4);
+      const y = val.slice(4, 8);
+      setValue('dob', `${y}-${m}-${d}`);
+    }
+  };
+
+  const handleLastDonationDateDisplayChange = (e) => {
+    let val = e.target.value.replace(/\D/g, '').slice(0, 8);
+    let display = val;
+    if (val.length > 4) {
+      display = `${val.slice(0, 2)}/${val.slice(2, 4)}/${val.slice(4, 8)}`;
+    } else if (val.length > 2) {
+      display = `${val.slice(0, 2)}/${val.slice(2, 4)}`;
+    }
+    
+    setValue('lastDonationDateDisplay', display);
+    
+    if (val.length === 8) {
+      const d = val.slice(0, 2);
+      const m = val.slice(2, 4);
+      const y = val.slice(4, 8);
+      setValue('lastDonationDate', `${y}-${m}-${d}`);
+    }
+  };
+
+  const validateDate = (value) => {
+    if (!value) return true;
+    const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    if (!regex.test(value)) return "Format must be DD/MM/YYYY";
+
+    const parts = value.match(regex);
+    const d = parseInt(parts[1], 10);
+    const m = parseInt(parts[2], 10);
+    const y = parseInt(parts[3], 10);
+
+    if (m < 1 || m > 12) return "Invalid month (01-12)";
+    const daysInMonth = new Date(y, m, 0).getDate();
+    if (d < 1 || d > daysInMonth) return `Invalid day for month (01-${daysInMonth})`;
+
+    const inputDate = new Date(y, m - 1, d);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (inputDate > today) return "Date cannot be in the future";
+
+    return true;
+  };
 
   const handleFormSubmit = (data) => {
     // Transform data to match API structure
@@ -111,10 +283,15 @@ const DonorForm = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <FormField label="Date of Birth" required error={errors.dob?.message}>
+          <FormField label="Date of Birth" required error={errors.dobDisplay?.message}>
             <FormField.Input
-              type="date"
-              {...register('dob', { required: 'Date of birth is required' })}
+              type="text"
+              placeholder="DD/MM/YYYY"
+              {...register('dobDisplay', { 
+                required: 'Date of birth is required',
+                validate: validateDate,
+                onChange: handleDobDisplayChange
+              })}
             />
           </FormField>
 
@@ -267,10 +444,14 @@ const DonorForm = ({
             />
           </FormField>
 
-          <FormField label="Last Donation Date" error={errors.lastDonationDate?.message}>
+          <FormField label="Last Donation Date" error={errors.lastDonationDateDisplay?.message}>
             <FormField.Input
-              type="date"
-              {...register('lastDonationDate')}
+              type="text"
+              placeholder="DD/MM/YYYY"
+              {...register('lastDonationDateDisplay', { 
+                validate: validateDate,
+                onChange: handleLastDonationDateDisplayChange
+              })}
             />
           </FormField>
         </div>

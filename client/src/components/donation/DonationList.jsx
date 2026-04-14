@@ -201,6 +201,7 @@ const DonationList = ({
               <Table.Head>Type</Table.Head>
               <Table.Head>Donor Name</Table.Head>
               <Table.Head>Blood Group</Table.Head>
+              <Table.Head>Fitness</Table.Head>
               <Table.Head>Status</Table.Head>
               <Table.Head>Collection Date</Table.Head>
               <Table.Head>Actions</Table.Head>
@@ -220,6 +221,18 @@ const DonationList = ({
                 </Table.Cell>
                 <Table.Cell>
                   {donation.bloodGroup} {donation.rh === "Positive" ? "+" : "-"}
+                </Table.Cell>
+                <Table.Cell>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      donation.donorFitness?.isFit
+                        ? 'bg-green-100 text-green-800 border border-green-200'
+                        : 'bg-red-100 text-red-800 border border-red-200'
+                    }`}
+                    title={donation.donorFitness?.rejectionReason || ''}
+                  >
+                    {donation.donorFitness?.isFit ? 'Fit' : 'Unfit'}
+                  </span>
                 </Table.Cell>
                 <Table.Cell>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(donation.status)}`}>
