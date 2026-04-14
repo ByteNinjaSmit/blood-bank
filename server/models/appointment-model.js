@@ -55,9 +55,9 @@ const AppointmentSchema = new Schema({
     enum: ["pending", "confirmed", "cancelled"],
     default: "pending",
   },
-  source: {
+    source: {
     type: String,
-    default: "public-frontend",
+    default: "public-frontend-nextjs",
   },
   createdAt: {
     type: Date,
