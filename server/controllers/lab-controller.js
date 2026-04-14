@@ -19,12 +19,19 @@ const getSerologyResults = async (req, res, next) => {
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const { status, siteId, search, sortBy = "updatedAt", order = "desc" } = req.query;
-
+        const { status, siteId, search, fromDate, toDate, sortBy = "updatedAt", order = "desc" } = req.query;
+    
         // Exclude statuses: collected, component-separated, testing
         const baseFilter = {
             status: { $nin: ["collected", "component-separated", "testing"] }
         };
+    
+        // Add Date Range Filter (UpdatedAt)
+        if (fromDate || toDate) {
+            baseFilter.updatedAt = {};
+            if (fromDate) baseFilter.updatedAt.$gte = new Date(new Date(fromDate).setHours(0, 0, 0, 0));
+            if (toDate) baseFilter.updatedAt.$lte = new Date(new Date(toDate).setHours(23, 59, 59, 999));
+        }
 
         if (status) {
             baseFilter.status = status; // override to exact match if provided
