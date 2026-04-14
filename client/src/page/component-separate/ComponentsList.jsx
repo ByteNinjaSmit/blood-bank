@@ -35,7 +35,7 @@ const ComponentsList = () => {
     isLoading: false,
     pagination: {
       page: 1,
-      limit: 10,
+      limit: 50,
       total: 0,
       totalPages: 0,
     },
@@ -43,6 +43,8 @@ const ComponentsList = () => {
       type: "",
       status: "",
       expiryBefore: "",
+      fromDate: "",
+      toDate: "",
       search: "",
     },
   });
@@ -64,6 +66,8 @@ const ComponentsList = () => {
         ...(state.filters.type && { type: state.filters.type }),
         ...(state.filters.status && { status: state.filters.status }),
         ...(state.filters.expiryBefore && { expiryBefore: state.filters.expiryBefore }),
+        ...(state.filters.fromDate && { fromDate: state.filters.fromDate }),
+        ...(state.filters.toDate && { toDate: state.filters.toDate }),
         ...(state.filters.search && { search: state.filters.search }),
       };
 
@@ -129,7 +133,7 @@ const ComponentsList = () => {
     if (state.filters.search === "") {
       fetchComponents();
     }
-  }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore]);
+  }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore, state.filters.fromDate, state.filters.toDate]);
 
   // Single responsibility: Handle filter changes
   const handleFilterChange = (filterType, value) => {
@@ -168,6 +172,8 @@ const ComponentsList = () => {
         type: "",
         status: "",
         expiryBefore: "",
+        fromDate: "",
+        toDate: "",
         search: "",
       },
       pagination: { ...prev.pagination, page: 1 },
@@ -266,99 +272,119 @@ const ComponentsList = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Filters Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Filters & Search
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-              {/* Search */}
-              <div className="lg:col-span-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        {/* Compact Filters Section */}
+        <Card className="mb-4 border-red-50 shadow-sm">
+          <CardContent className="p-3">
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Search - Flexible Width */}
+              <div className="flex-1 min-w-[240px] space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Search</label>
+                <div className="relative group">
+                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 w-3.5 h-3.5 transition-colors" />
                   <Input
-                    placeholder="Search by bag number or component ID..."
+                    placeholder="Bag No, ID, or blood group..."
                     value={state.filters.search}
                     onChange={(e) => handleFilterChange("search", e.target.value)}
-                    className="pl-10 pr-10"
+                    className="pl-8 h-9 text-xs border-gray-200 bg-gray-50/50 focus:bg-white focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-all shadow-none"
                     disabled={state.isLoading}
                   />
-                  {state.filters.search && (
-                    <button
-                      onClick={() => handleFilterChange("search", "")}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      disabled={state.isLoading}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                  {state.isLoading && !state.filters.search && (
-                    <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 animate-spin" />
-                  )}
                 </div>
               </div>
 
-              {/* Component Type Filter */}
-              <Select value={state.filters.type || "all"} onValueChange={(value) => handleFilterChange("type", value === "all" ? "" : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Component Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {COMPONENT_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Status Filter */}
-              <Select value={state.filters.status || "all"} onValueChange={(value) => handleFilterChange("status", value === "all" ? "" : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  {STATUS_OPTIONS.map((status) => (
-                    <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Expiry Filter */}
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  type="date"
-                  placeholder="Expiry Before"
-                  value={state.filters.expiryBefore}
-                  onChange={(e) => handleFilterChange("expiryBefore", e.target.value)}
-                  className="pl-10"
-                />
+              {/* Type Dropdown */}
+              <div className="w-36 space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Type</label>
+                <Select value={state.filters.type || "all"} onValueChange={(value) => handleFilterChange("type", value === "all" ? "" : value)}>
+                  <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {COMPONENT_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value} className="text-xs">
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-            
-            {/* Filter Actions */}
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">
+
+              {/* Status Dropdown */}
+              <div className="w-36 space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Status</label>
+                <Select value={state.filters.status || "all"} onValueChange={(value) => handleFilterChange("status", value === "all" ? "" : value)}>
+                  <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    {STATUS_OPTIONS.map((status) => (
+                      <SelectItem key={status.value} value={status.value} className="text-xs">
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Expiry Field */}
+              <div className="w-36 space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Expiry Before</label>
+                <div className="relative">
+                  <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5 pointer-events-none" />
+                  <Input
+                    type="date"
+                    value={state.filters.expiryBefore}
+                    onChange={(e) => handleFilterChange("expiryBefore", e.target.value)}
+                    className="pl-8 h-9 text-[10px] border-gray-200 bg-gray-50/50 shadow-none"
+                  />
+                </div>
+              </div>
+
+              {/* From Date */}
+              <div className="w-36 space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">From Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5 pointer-events-none" />
+                  <Input
+                    type="date"
+                    value={state.filters.fromDate}
+                    onChange={(e) => handleFilterChange("fromDate", e.target.value)}
+                    className="pl-8 h-9 text-[10px] border-gray-200 bg-gray-50/50 shadow-none"
+                  />
+                </div>
+              </div>
+
+              {/* To Date */}
+              <div className="w-36 space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">To Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5 pointer-events-none" />
+                  <Input
+                    type="date"
+                    value={state.filters.toDate}
+                    onChange={(e) => handleFilterChange("toDate", e.target.value)}
+                    className="pl-8 h-9 text-[10px] border-gray-200 bg-gray-50/50 shadow-none"
+                  />
+                </div>
+              </div>
+
+              {/* Compact Actions */}
+              <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
                 {Object.values(state.filters).some(filter => filter !== "") && (
-                  <span>Filters applied</span>
+                  <button 
+                    onClick={clearFilters}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-100"
+                    title="Clear all filters"
+                  >
+                    <X className="w-3 h-3" />
+                    Reset
+                  </button>
                 )}
+                <div className="flex items-center gap-1">
+                   {state.isLoading && <Loader2 className="w-3 h-3 animate-spin text-gray-400" />}
+                </div>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={clearFilters}
-                disabled={!Object.values(state.filters).some(filter => filter !== "")}
-              >
-                Clear Filters
-              </Button>
             </div>
           </CardContent>
         </Card>

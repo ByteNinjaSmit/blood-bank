@@ -199,13 +199,20 @@ const separationCompleted = async (req, res, next) => {
 
 const getComponentsList = async (req, res, next) => {
   try {
-    const { type, status, expiryBefore, search, page = 1, limit = 10 } = req.query; // pagination + filters
+    const { type, status, expiryBefore, fromDate, toDate, search, page = 1, limit = 10 } = req.query; // pagination + filters
 
     // Build filter object
     const filter = {};
     if (type) filter.componentType = type;
     if (status) filter.status = status;
     if (expiryBefore) filter.expiryDate = { $lte: new Date(expiryBefore) };
+
+    // Add Date Range Filter (CreatedAt)
+    if (fromDate || toDate) {
+      filter.createdAt = {};
+      if (fromDate) filter.createdAt.$gte = new Date(new Date(fromDate).setHours(0, 0, 0, 0));
+      if (toDate) filter.createdAt.$lte = new Date(new Date(toDate).setHours(23, 59, 59, 999));
+    }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
