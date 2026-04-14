@@ -9,8 +9,16 @@ const createPublicAppointment = async (req, res, next) => {
       email,
       bloodGroup,
       birthDate,
+      age,
       address,
       appointmentDate,
+      recentIllness,
+      surgery,
+      medication,
+      lastDonation,
+      donationFrequency,
+      wantReminder,
+      reminderDays,
     } = req.body;
 
     if (!mobileNo) {
@@ -50,9 +58,17 @@ const createPublicAppointment = async (req, res, next) => {
       email,
       bloodGroup,
       birthDate: birthDateObj || undefined,
+      age: parseInt(age) || undefined,
       address,
       appointmentDate: appointmentDateObj || undefined,
-      source: "public-frontend",
+      recentIllness,
+      surgery,
+      medication,
+      lastDonation: lastDonation ? new Date(lastDonation) : undefined,
+      donationFrequency,
+      wantReminder: wantReminder === true || wantReminder === "true",
+      reminderDays: parseInt(reminderDays) || 0,
+      source: "public-frontend-nextjs",
     });
 
     await appointment.save();
