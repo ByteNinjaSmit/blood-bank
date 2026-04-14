@@ -232,45 +232,47 @@ const ComponentsList = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-red-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          
+      {/* Compact Header */}
+      <div className="bg-white border-b border-gray-100 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-red-800 to-red-900 rounded-xl">
-                <Package className="w-8 h-8 text-white" />
+              <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+                <Package className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Components List</h1>
-                <p className="text-gray-600 mt-1">
-                  Manage and track all blood components
+                <h1 className="text-xl font-bold text-gray-900">Components Inventory</h1>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                  Management Portal
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
-
-            <Button 
-              onClick={() => navigate("/component/separate")}
-              className="bg-red-600 hover:bg-red-700 text-white"
-              >
-              <TestTube className="w-4 h-4 mr-2" />
-              Separate Components
-            </Button>
-                        <Button 
-              onClick={() => navigate("/component/near-expiry")}
-              className="bg-red-600 hover:bg-red-700 text-white"
-              >
-              <TestTube className="w-4 h-4 mr-2" />
-              Near Expiry
-            </Button>
+            <div className="flex items-center gap-2">
+                <Button 
+                    onClick={() => navigate("/component/separate")}
+                    variant="outline"
+                    size="sm"
+                    className="h-9 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                >
+                    <TestTube className="w-3.5 h-3.5 mr-1.5 text-red-500" />
+                    Separate
+                </Button>
+                <Button 
+                    onClick={() => navigate("/component/near-expiry")}
+                    variant="outline"
+                    size="sm"
+                    className="h-9 border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+                >
+                    <AlertTriangle className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
+                    Near Expiry
+                </Button>
               </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Filters Card */}
         {/* Compact Filters Section */}
         <Card className="mb-4 border-red-50 shadow-sm">
@@ -529,10 +531,9 @@ const ComponentsList = () => {
               </table>
             </div>
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between mt-6">
+            <div className="flex items-center justify-between mt-6 bg-gray-50/10 p-4 border-t rounded-b-xl">
               <div className="flex items-center gap-4">
-                <div className="text-sm text-gray-700">
+                <div className="text-sm text-gray-500">
                   Showing {((state.pagination.page - 1) * state.pagination.limit) + 1} to{" "}
                   {Math.min(state.pagination.page * state.pagination.limit, state.pagination.total)} of{" "}
                   {state.pagination.total} results
@@ -544,7 +545,7 @@ const ComponentsList = () => {
                     value={state.pagination.limit.toString()} 
                     onValueChange={handleRowsPerPageChange}
                   >
-                    <SelectTrigger className="w-20">
+                    <SelectTrigger className="w-20 h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
