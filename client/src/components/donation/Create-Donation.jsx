@@ -72,28 +72,11 @@ const CreateDonation = ({ onCreateDonor }) => {
   const [donor, setDonor] = useState(null)
   const [showPopup, setShowPopup] = useState(false)
   const [showCreateDonor, setShowCreateDonor] = useState(false)
-  const [showAdvanced, setShowAdvanced] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
   const [showSuccess, setShowSuccess] = useState(false)
   const [savedDonation, setSavedDonation] = useState(null)
   const [fieldErrors, setFieldErrors] = useState({})
   const [stepperKey, setStepperKey] = useState(0)
-
-  // Donor Search Fields
-  const [donorInfo, setDonorInfo] = useState({
-    firstName: "",
-    middleName: "",
-    lastName: "",
-    dob: "",
-    uid: "",
-    phone: "",
-    donorId: "",
-  })
-  const hasNameDob =
-    donorInfo.firstName.trim() && donorInfo.lastName.trim() && donorInfo.dob
-  const hasStrongIdentifier =
-    donorInfo.uid.trim() || donorInfo.phone.trim() || donorInfo.donorId.trim()
-  const canSearchDonor = !!(hasNameDob || hasStrongIdentifier)
 
   // Donation Form Data
   const [formData, setFormData] = useState({ ...INITIAL_FORM_DATA })
@@ -147,13 +130,9 @@ const CreateDonation = ({ onCreateDonor }) => {
     }
   }, [location?.state])
 
-  const handleDonorInfoFieldChange = (field, value) => {
-    setDonorInfo((prev) => ({ ...prev, [field]: value }))
-  }
 
-  const handleToggleAdvanced = () => {
-    setShowAdvanced((v) => !v)
-  }
+
+
 
   const handleOpenCreateDonor = () => {
     setShowCreateDonor(true)
@@ -233,33 +212,7 @@ const CreateDonation = ({ onCreateDonor }) => {
     return true
   }
 
-  const handleDonorSearch = async () => {
-    setLoading(true)
-    setError("")
-    try {
-      const res = await axios.get(`${API}/api/donor/search`, {
-        params: donorInfo,
-        headers: {
-          Authorization: authorizationToken,
-        },
-        withCredentials: true,
-      })
-      if (res.status === 200) {
-        setDonor(res.data.donor)
-        setShowPopup(false)
-      }
-    } catch (error) {
-      if (error.response?.status === 404) {
-        setShowPopup(true)
-      } else {
-        const message = error.response?.data?.message || "Something went wrong while searching donor."
-        setError(message)
-        toast.error(message)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
+
 
   const handleSubmit = async () => {
     if (!donor) {
@@ -438,14 +391,8 @@ const CreateDonation = ({ onCreateDonor }) => {
           {/* Step 1: Donor Search */}
           <Step>
             <DonorSearchStep
-              donorInfo={donorInfo}
-              onDonorInfoFieldChange={handleDonorInfoFieldChange}
-              canSearchDonor={canSearchDonor}
-              showAdvanced={showAdvanced}
-              onToggleAdvanced={handleToggleAdvanced}
               loading={loading}
               error={error}
-              onSearch={handleDonorSearch}
               onOpenCreateDonor={handleOpenCreateDonor}
               showPopup={showPopup}
               onClosePopup={handleClosePopup}

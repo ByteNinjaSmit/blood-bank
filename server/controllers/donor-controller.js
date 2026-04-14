@@ -198,23 +198,27 @@ const fastSearchDonors = async (req, res, next) => {
     const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
     if (!raw) return res.status(200).json({ success: true, data: [] });
 
-    // Escape regex special chars
-    const esc = raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const rx = new RegExp(esc, 'i');
+    // Split query into words and escape special chars
+    const words = raw.split(/\s+/).filter(Boolean);
+    const conditions = words.map(word => {
+      const esc = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const rx = new RegExp(esc, 'i');
+      return {
+        $or: [
+          { 'name.firstName': rx },
+          { 'name.middleName': rx },
+          { 'name.lastName': rx },
+          { phone: rx },
+          { donorId: rx },
+          { uid: rx },
+          { email: rx },
+          { 'address.city': rx },
+          { bloodGroup: rx },
+        ],
+      };
+    });
 
-    const donors = await Donor.find({
-      $or: [
-        { 'name.firstName': rx },
-        { 'name.middleName': rx },
-        { 'name.lastName': rx },
-        { phone: rx },
-        { donorId: rx },
-        { uid: rx },
-        { email: rx },
-        { 'address.city': rx },
-        { bloodGroup: rx },
-      ],
-    })
+    const donors = await Donor.find({ $and: conditions })
       .limit(limit)
       .select('donorId name uid dob sex phone email address bloodGroup rh lastDonationDate')
       .lean();
