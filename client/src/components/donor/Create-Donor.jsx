@@ -40,6 +40,14 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
     rh: prefill?.rh || "Positive",
     eligibilityStatus: prefill?.eligibilityStatus || "eligible",
     lastDonationDate: prefill?.lastDonationDate || "",
+    dobDisplay: prefill?.dob ? (() => {
+      const parts = prefill.dob.split('-');
+      return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : prefill.dob;
+    })() : "",
+    lastDonationDateDisplay: prefill?.lastDonationDate ? (() => {
+      const parts = prefill.lastDonationDate.split('-');
+      return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : prefill.lastDonationDate;
+    })() : "",
   })
 
   useEffect(() => {
@@ -79,7 +87,14 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData((prev) => {
+      const newData = { ...prev, [name]: value }
+      if (name === "weightKg") {
+        const autoStatus = getAutoEligibilityStatus(newData.age, value)
+        if (autoStatus) newData.eligibilityStatus = autoStatus
+      }
+      return newData
+    })
   }
 
   // Calculate age from DOB
@@ -102,14 +117,81 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
     return `${birthYear}-01-01`
   }
 
+  // Auto-calculate eligibility status based on age and weight
+  const getAutoEligibilityStatus = (age, weight) => {
+    if (!age || !weight) return null
+    const ageNum = parseInt(age, 10)
+    const weightNum = parseFloat(weight)
+    if (isNaN(ageNum) || isNaN(weightNum)) return null
+
+    // Criteria: 18-65 years old and at least 45kg
+    const isEligible = ageNum >= 18 && ageNum <= 65 && weightNum >= 45
+    return isEligible ? "eligible" : "deferred"
+  }
+
   const handleDobChange = (e) => {
-    const dob = e.target.value
-    setFormData((prev) => ({ ...prev, dob, age: calculateAgeFromDob(dob) }))
+    let val = e.target.value.replace(/\D/g, '').slice(0, 8);
+    let display = val;
+    if (val.length > 4) {
+      display = `${val.slice(0, 2)}/${val.slice(2, 4)}/${val.slice(4, 8)}`;
+    } else if (val.length > 2) {
+      display = `${val.slice(0, 2)}/${val.slice(2, 4)}`;
+    }
+
+    let isoDob = "";
+    let age = "";
+    if (val.length === 8) {
+      const d = val.slice(0, 2);
+      const m = val.slice(2, 4);
+      const y = val.slice(4, 8);
+      isoDob = `${y}-${m}-${d}`;
+      age = calculateAgeFromDob(isoDob);
+    }
+
+    const autoStatus = getAutoEligibilityStatus(age, formData.weightKg)
+    setFormData((prev) => ({
+      ...prev,
+      dobDisplay: display,
+      dob: isoDob || prev.dob,
+      age: age || prev.age,
+      eligibilityStatus: autoStatus || prev.eligibilityStatus
+    }))
+  }
+
+  const handleLastDonationDateChange = (e) => {
+    let val = e.target.value.replace(/\D/g, '').slice(0, 8);
+    let display = val;
+    if (val.length > 4) {
+      display = `${val.slice(0, 2)}/${val.slice(2, 4)}/${val.slice(4, 8)}`;
+    } else if (val.length > 2) {
+      display = `${val.slice(0, 2)}/${val.slice(2, 4)}`;
+    }
+
+    let isoDate = "";
+    if (val.length === 8) {
+      const d = val.slice(0, 2);
+      const m = val.slice(2, 4);
+      const y = val.slice(4, 8);
+      isoDate = `${y}-${m}-${d}`;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      lastDonationDateDisplay: display,
+      lastDonationDate: isoDate || prev.lastDonationDate,
+    }))
   }
 
   const handleAgeChange = (e) => {
     const age = e.target.value
-    setFormData((prev) => ({ ...prev, age, dob: calculateDobFromAge(age) }))
+    const dob = calculateDobFromAge(age)
+    const autoStatus = getAutoEligibilityStatus(age, formData.weightKg)
+    setFormData((prev) => ({
+      ...prev,
+      age,
+      dob,
+      eligibilityStatus: autoStatus || prev.eligibilityStatus
+    }))
   }
 
   const validateForm = () => {
@@ -129,7 +211,46 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
       setError("Weight must be a positive number")
       return false
     }
+
+    if (dobMode === "dob") {
+      const dobCheck = validateDateString(formData.dobDisplay);
+      if (dobCheck !== true) {
+        setError(`Date of Birth: ${dobCheck}`);
+        return false;
+      }
+    }
+
+    if (formData.lastDonationDateDisplay) {
+      const ldCheck = validateDateString(formData.lastDonationDateDisplay);
+      if (ldCheck !== true) {
+        setError(`Last Donation Date: ${ldCheck}`);
+        return false;
+      }
+    }
+
     return true
+  }
+
+  const validateDateString = (dateStr) => {
+    if (!dateStr) return true;
+    const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    if (!regex.test(dateStr)) return "Format must be DD/MM/YYYY";
+
+    const parts = dateStr.match(regex);
+    const d = parseInt(parts[1], 10);
+    const m = parseInt(parts[2], 10);
+    const y = parseInt(parts[3], 10);
+
+    if (m < 1 || m > 12) return "Invalid month (01-12)";
+    const daysInMonth = new Date(y, m, 0).getDate();
+    if (d < 1 || d > daysInMonth) return `Invalid day for month (01-${daysInMonth})`;
+
+    const inputDate = new Date(y, m - 1, d);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (inputDate > today) return "Date cannot be in the future";
+
+    return true;
   }
 
   const resetForm = () => {
@@ -156,6 +277,8 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
       rh: "Positive",
       eligibilityStatus: "eligible",
       lastDonationDate: "",
+      dobDisplay: "",
+      lastDonationDateDisplay: "",
     })
     setDobMode("dob")
     setError("")
@@ -411,10 +534,11 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                   </div>
                   {dobMode === "dob" ? (
                     <input
-                      type="date"
-                      name="dob"
-                      value={formData.dob}
+                      type="text"
+                      name="dobDisplay"
+                      value={formData.dobDisplay}
                       onChange={handleDobChange}
+                      placeholder="DD/MM/YYYY"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
                       required={!formData.age}
                     />
@@ -680,10 +804,11 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                     </div>
                     {dobMode === "dob" ? (
                       <input
-                        type="date"
-                        name="dob"
-                        value={formData.dob}
+                        type="text"
+                        name="dobDisplay"
+                        value={formData.dobDisplay}
                         onChange={handleDobChange}
+                        placeholder="DD/MM/YYYY"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
                         required={!formData.age}
                       />
@@ -905,10 +1030,11 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Last Donation Date</label>
                     <input
-                      type="date"
-                      name="lastDonationDate"
-                      value={formData.lastDonationDate}
-                      onChange={handleInputChange}
+                      type="text"
+                      name="lastDonationDateDisplay"
+                      value={formData.lastDonationDateDisplay}
+                      onChange={handleLastDonationDateChange}
+                      placeholder="DD/MM/YYYY"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
                     />
                   </div>
