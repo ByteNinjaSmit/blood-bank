@@ -224,7 +224,7 @@ const getAllDonations = async (req, res, next) => {
         const bloodBags = await BloodBag.find(filters)
             .skip(skip)
             .limit(Number(limit))
-            .select("bagNo segmentNo typeOfBag bloodGroup rh status collectionDate donor siteId components")
+            .select("bagNo segmentNo typeOfBag bloodGroup rh status collectionDate donor siteId components donorFitness")
             .populate("donor", "name.firstName name.lastName bloodGroup rh")
             .populate("siteId", "name address")
             .populate("components", "componentId componentType volumeMl") // Populate component details

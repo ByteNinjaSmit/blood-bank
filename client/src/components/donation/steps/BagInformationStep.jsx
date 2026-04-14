@@ -77,6 +77,7 @@ const BagInformationStep = ({ formData, fieldErrors, onFieldChange }) => {
             min="1"
             value={formData.totalDonationCount || ""}
             onChange={(e) => onFieldChange("totalDonationCount", e.target.value)}
+            onWheel={(e) => e.target.blur()}
             className="w-full px-3 py-2 border rounded-lg border-gray-300"
             placeholder="e.g. 1"
           />
