@@ -131,7 +131,7 @@ const getBagsToSeparateComponent = async (req, res, next) => {
         select: 'name',  // Only select name field from the Site model
         model: 'Site'
       })
-      .select('bagNo segmentNo collectionDate bloodGroup rh components siteId componentSeparationComplete'); // Fields to return from BloodBag
+      .select('bagNo segmentNo collectionDate bloodGroup rh components siteId componentSeparationComplete medicalExamination'); // Fields to return from BloodBag
 
     // Step 2: Check if there are no bags to separate
     if (!bags || bags.length === 0) {
@@ -147,6 +147,7 @@ const getBagsToSeparateComponent = async (req, res, next) => {
         collectionDate: bag.collectionDate,
         bloodGroup: bag.bloodGroup,
         rh: bag.rh,
+        volumeGmMl: bag.medicalExamination ? bag.medicalExamination.volumeGmMl : null,
         siteName: bag.siteId ? bag.siteId.name : null,
         componentSeparationComplete: bag.componentSeparationComplete,
         components: bag.components.map(component => ({
