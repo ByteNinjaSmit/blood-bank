@@ -11,14 +11,14 @@ import {
 
 /* ─── 8 Blood types data ─── */
 const bloodTypes = [
-    { type: 'O+', percent: '37.4%', color: 'from-red-500 to-rose-600', description: 'Most common type. Can donate red blood cells to any Rh-positive type.' },
-    { type: 'O−', percent: '6.6%', color: 'from-red-700 to-red-800', description: 'Universal red cell donor. Can donate to all 8 blood types.' },
-    { type: 'A+', percent: '22.3%', color: 'from-rose-500 to-pink-600', description: 'Second most common type. Can donate to A+ and AB+ recipients.' },
-    { type: 'A−', percent: '5.5%', color: 'from-rose-700 to-pink-800', description: 'Can donate red cells to A+, A−, AB+, and AB− recipients.' },
-    { type: 'B+', percent: '8.5%', color: 'from-pink-500 to-fuchsia-600', description: 'Can donate to B+ and AB+ recipients.' },
-    { type: 'B−', percent: '1.5%', color: 'from-pink-700 to-fuchsia-800', description: 'Can donate red cells to B+, B−, AB+, and AB− recipients.' },
-    { type: 'AB+', percent: '3.4%', color: 'from-purple-500 to-violet-600', description: 'Universal plasma donor. Can receive red cells from all types.' },
-    { type: 'AB−', percent: '0.6%', color: 'from-purple-700 to-violet-800', description: 'Rarest type. Universal plasma donor and can receive from all negative types.' }
+    { type: 'O+', percent: '32.5%', color: 'from-red-500 to-rose-600', description: 'One of the most common types in India. Can donate red blood cells to any Rh-positive type.' },
+    { type: 'B+', percent: '32.1%', color: 'from-pink-500 to-fuchsia-600', description: 'Equally common as O+ in India. Can donate to B+ and AB+ recipients.' },
+    { type: 'A+', percent: '22.5%', color: 'from-rose-500 to-pink-600', description: 'Common type in India. Can donate to A+ and AB+ recipients.' },
+    { type: 'AB+', percent: '7.7%', color: 'from-purple-500 to-violet-600', description: 'Universal plasma donor. Found in about 8% of the Indian population.' },
+    { type: 'O−', percent: '2.0%', color: 'from-red-700 to-red-800', description: 'Universal red cell donor. Rare in India, comprising only 2% of the population.' },
+    { type: 'B−', percent: '1.5%', color: 'from-pink-700 to-fuchsia-800', description: 'Rare in India. Can donate red cells to B+, B−, AB+, and AB− recipients.' },
+    { type: 'A−', percent: '1.4%', color: 'from-rose-700 to-pink-800', description: 'Rare in India. Can donate red cells to A+, A−, AB+, and AB− recipients.' },
+    { type: 'AB−', percent: '0.3%', color: 'from-purple-700 to-violet-800', description: 'Rarest blood type in India. Universal plasma donor.' }
 ]
 
 /* ─── Blood type facts ─── */
@@ -66,14 +66,14 @@ const compatibilityData = {
 
 /* ─── Distribution data for visual chart ─── */
 const distribution = [
-    { type: 'O+', percent: 37.4, color: '#ef4444' },
-    { type: 'A+', percent: 22.3, color: '#f43f5e' },
-    { type: 'B+', percent: 8.5, color: '#ec4899' },
-    { type: 'AB+', percent: 3.4, color: '#a855f7' },
-    { type: 'O−', percent: 6.6, color: '#dc2626' },
-    { type: 'A−', percent: 5.5, color: '#e11d48' },
+    { type: 'O+', percent: 32.5, color: '#ef4444' },
+    { type: 'B+', percent: 32.1, color: '#ec4899' },
+    { type: 'A+', percent: 22.5, color: '#f43f5e' },
+    { type: 'AB+', percent: 7.7, color: '#a855f7' },
+    { type: 'O−', percent: 2.0, color: '#dc2626' },
     { type: 'B−', percent: 1.5, color: '#be185d' },
-    { type: 'AB−', percent: 0.6, color: '#7e22ce' }
+    { type: 'A−', percent: 1.4, color: '#e11d48' },
+    { type: 'AB−', percent: 0.3, color: '#7e22ce' }
 ]
 
 /* ─── Animation ─── */
@@ -154,7 +154,7 @@ export default function BloodType() {
                                 What is the most common blood type?
                             </h2>
                             <p className="text-muted-foreground leading-relaxed">
-                                <strong className="text-foreground">O-positive (O+)</strong> is the most common blood type, found in approximately 37.4% of the Indian population. Because it is so prevalent, O+ blood is always in high demand at hospitals and blood banks. If you have O+ blood, your donations are especially valuable and needed on a regular basis.
+                                <strong className="text-foreground">O-positive (O+)</strong> and <strong className="text-foreground">B-positive (B+)</strong> are the most common blood types in India, each found in approximately 32% of the population. Because they are so prevalent, these blood types are always in high demand at hospitals and blood banks. If you have O+ or B+ blood, your donations are especially valuable and needed on a regular basis.
                             </p>
                         </motion.div>
                         <motion.div

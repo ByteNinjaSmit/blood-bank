@@ -47,11 +47,11 @@ const faqs = [
     },
     {
         q: 'How often can I donate blood?',
-        a: 'You can donate whole blood every 56 days (about 8 weeks). Platelet donors can donate every 14 days, up to 24 times per year. Plasma donors can give every 28 days. These intervals allow your body sufficient time to fully replenish the donated components.'
+        a: 'In India, males can donate whole blood every 90 days (3 months), and females every 120 days (4 months). Platelet donors can donate every 14 days, up to 24 times per year. These intervals allow your body sufficient time to fully replenish the donated components.'
     },
     {
         q: 'Is there an age limit for blood donation?',
-        a: 'In India, healthy individuals aged 18 to 65 can donate blood. First-time donors must be between 18 and 60 years old. Repeat donors in good health may be eligible up to age 68 with annual medical certification. Donors under 18 require parental consent and must meet specific weight and health requirements.'
+        a: 'In India, healthy individuals aged 18 to 65 can donate blood. First-time donors must be between 18 and 60 years old. Repeat donors in good health may be eligible up to age 65 (extendable up to 68 with medical certification). Individuals under 18 years of age are not eligible to donate.'
     }
 ]
 
