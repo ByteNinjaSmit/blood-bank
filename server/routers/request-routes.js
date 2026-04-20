@@ -1,12 +1,14 @@
 /*
 POST   /requests                 → Create hospital request
 GET    /requests                 → List requests (filters)
+GET    /requests/compatibility-info → Get compatibility rules for a component
 GET    /requests/:id             → Get request details
-POST   /requests/:id/match       → Match request with inventory
+POST   /requests/:id/match       → Match request with inventory (compatibility-aware FIFO)
 PATCH  /requests/:id/approve     → Approve matched request
 PATCH  /requests/:id/issue       → Issue reserved units for request
 PATCH  /requests/:id/complete    → Complete request after confirmation
 PATCH  /requests/:id/reject      → Reject request
+PATCH  /requests/:id/crossmatch  → Update crossmatch status for a matched unit
  */
 
 const express = require('express');
@@ -22,6 +24,9 @@ router.post('/', requestController.createRequest);
 
 // List requests with filters
 router.get('/', requestController.listRequests);
+
+// Compatibility info (must be BEFORE /:id to avoid route conflict)
+router.get('/compatibility-info', requestController.getCompatibilityInfo);
 
 // Get request details
 router.get('/:id', requestController.getRequestById);
@@ -40,5 +45,8 @@ router.patch('/:id/complete', requestController.completeRequest);
 
 // Reject request
 router.patch('/:id/reject', requestController.rejectRequest);
+
+// Update crossmatch status for a matched unit
+router.patch('/:id/crossmatch', requestController.updateCrossmatch);
 
 module.exports = router;

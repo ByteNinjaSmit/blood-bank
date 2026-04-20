@@ -47,6 +47,7 @@ export default function useRequisition(authToken) {
   const [issuing, setIssuing] = useState(false);
   const [approving, setApproving] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [crossmatchUpdating, setCrossmatchUpdating] = useState(false);
 
   const canProceedToMatch = useMemo(() => !!requestDoc?._id, [requestDoc]);
 
@@ -257,6 +258,27 @@ export default function useRequisition(authToken) {
     return true;
   };
 
+  const handleCrossmatchUpdate = async (inventoryId, status) => {
+    if (!requestDoc?._id || !inventoryId) return false;
+    setCrossmatchUpdating(true);
+    const res = await requisitionApi.updateCrossmatch(requestDoc._id, {
+      inventoryId,
+      crossmatchStatus: status,
+    });
+    setCrossmatchUpdating(false);
+    if (!res.success) {
+      toast.error(res.error || 'Crossmatch update failed');
+      return false;
+    }
+    await refreshRequest(requestDoc._id);
+    toast.success(
+      status === 'compatible'
+        ? 'Crossmatch: Compatible ✓'
+        : 'Crossmatch: Incompatible — replacement attempted'
+    );
+    return true;
+  };
+
   return {
     // state
     currentStep,
@@ -277,6 +299,7 @@ export default function useRequisition(authToken) {
     issuing,
     approving,
     completing,
+    crossmatchUpdating,
     canProceedToMatch,
 
     // actions
@@ -289,6 +312,7 @@ export default function useRequisition(authToken) {
     handleIssue,
     handleComplete,
     handleReject,
+    handleCrossmatchUpdate,
     loadRequest,
   };
 }

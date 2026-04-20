@@ -35,6 +35,7 @@ const RequisitionManagement = () => {
     issuing,
     approving,
     completing,
+    crossmatchUpdating,
     handleCreateHospital,
     addRequestLine,
     removeRequestLine,
@@ -44,6 +45,7 @@ const RequisitionManagement = () => {
     handleIssue,
     handleComplete,
     handleReject,
+    handleCrossmatchUpdate,
     loadRequest,
   } = useRequisition(authorizationToken);
 
@@ -148,6 +150,8 @@ const RequisitionManagement = () => {
                 onMatch={() => handleMatch()}
                 onReject={handleRejectAndExit}
                 shortages={shortages}
+                onCrossmatchUpdate={handleCrossmatchUpdate}
+                crossmatchUpdating={crossmatchUpdating}
               />
             </Step>
 

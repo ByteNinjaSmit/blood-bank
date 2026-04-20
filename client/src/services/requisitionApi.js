@@ -46,6 +46,22 @@ class RequisitionApiService {
   async reject(id) {
     return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/reject`, {}));
   }
+
+  async updateCrossmatch(requestId, { inventoryId, crossmatchStatus }) {
+    return this._wrap(
+      await apiService.patch(`${this.baseUrl}/${requestId}/crossmatch`, {
+        inventoryId,
+        crossmatchStatus,
+      })
+    );
+  }
+
+  async getCompatibilityInfo(componentType, bloodGroup, rh) {
+    const params = { componentType };
+    if (bloodGroup) params.bloodGroup = bloodGroup;
+    if (rh) params.rh = rh;
+    return this._wrap(await apiService.get(`${this.baseUrl}/compatibility-info`, params));
+  }
 }
 
 export default new RequisitionApiService();

@@ -1,14 +1,116 @@
-import React from 'react';
+import React, { useState } from 'react';
+import CompatibilityMatrix from '../components/CompatibilityMatrix';
+import { ConfirmModal } from '../../../components/shared';
 
-export default function MatchReviewStep({ requestDoc, matchedResult, matching, onMatch, onReject, shortages }) {
+// ── Badge helpers ──
+
+function CompatBadge({ type }) {
+  if (type === 'exact') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
+        <span className="w-2 h-2 rounded-full bg-green-500" /> Exact
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+      <span className="w-2 h-2 rounded-full bg-yellow-500" /> Compatible
+    </span>
+  );
+}
+
+function CrossmatchBadge({ status, required, onMark, updating }) {
+  if (!required || status === 'not-required') {
+    return <span className="text-xs text-gray-400">N/A</span>;
+  }
+
+  const badges = {
+    pending: (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+        ⏳ Pending
+      </span>
+    ),
+    compatible: (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
+        ✅ Compatible
+      </span>
+    ),
+    incompatible: (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-800 border border-red-200">
+        ❌ Incompatible
+      </span>
+    ),
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      {badges[status] || badges.pending}
+      {status === 'pending' && onMark && (
+        <div className="flex gap-1">
+          <button
+            type="button"
+            disabled={updating}
+            onClick={() => onMark('compatible')}
+            className="px-2 py-0.5 text-xs rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+          >
+            ✓
+          </button>
+          <button
+            type="button"
+            disabled={updating}
+            onClick={() => onMark('incompatible')}
+            className="px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+          >
+            ✗
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Group matched inventory by component type ──
+
+function groupByComponent(matchedInventory) {
+  const groups = {};
+  for (const mi of matchedInventory || []) {
+    const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+    const compType = inv?.componentId?.componentType || 'Unknown';
+    if (!groups[compType]) groups[compType] = [];
+    groups[compType].push(mi);
+  }
+  return groups;
+}
+
+export default function MatchReviewStep({
+  requestDoc, matchedResult, matching, onMatch, onReject, shortages,
+  onCrossmatchUpdate, crossmatchUpdating,
+}) {
+  const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
   const status = requestDoc?.status;
   const canMatch = !!requestDoc?._id && status === 'pending' && !matching;
   const canReject = !!requestDoc?._id && ['pending', 'matched', 'approved'].includes(status);
+  const recipientGroup = requestDoc?.requestedComponents?.[0]?.bloodGroup || null;
+
+  const grouped = groupByComponent(requestDoc?.matchedInventory);
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-6 space-y-5">
+      <ConfirmModal
+        isOpen={rejectConfirmOpen}
+        onClose={() => setRejectConfirmOpen(false)}
+        onConfirm={onReject}
+        title="Reject Requisition"
+        message={`Are you sure you want to reject request ${requestDoc?.requestId}? This will release all matched inventory and cancel the request.`}
+        confirmText="Yes, Reject Request"
+        type="danger"
+      />
+
+      {/* Compatibility Reference (collapsible) */}
+      <CompatibilityMatrix recipientGroup={recipientGroup} />
+
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-gray-800">Match Results (FIFO)</h3>
+        <h3 className="font-semibold text-gray-800">Match Results (Compatibility-Aware FIFO)</h3>
         <div className="flex gap-3">
           <button
             disabled={!canMatch}
@@ -23,7 +125,7 @@ export default function MatchReviewStep({ requestDoc, matchedResult, matching, o
           </button>
           <button
             disabled={!canReject}
-            onClick={onReject}
+            onClick={() => setRejectConfirmOpen(true)}
             className={`px-4 py-2 rounded-lg border ${
               canReject
                 ? 'border-red-200 text-red-700 hover:bg-red-50 cursor-pointer'
@@ -35,19 +137,26 @@ export default function MatchReviewStep({ requestDoc, matchedResult, matching, o
         </div>
       </div>
 
+      {/* Shortages */}
       {Array.isArray(shortages) && shortages.length > 0 && (
         <div className="p-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900">
-          <p className="font-medium">Insufficient stock to fully match this request.</p>
+          <p className="font-medium">Insufficient compatible stock to fully match this request.</p>
           <ul className="mt-2 text-sm list-disc pl-5 space-y-1">
             {shortages.map((s, idx) => (
               <li key={idx}>
-                {s.componentType}: {s.available} of {s.required} available. Please adjust units or inventory.
+                <strong>{s.componentType}</strong> ({s.bloodGroup} {s.rh}): {s.available} of {s.required} available.
+                {Array.isArray(s.compatibleGroupsSearched) && (
+                  <span className="text-xs text-amber-700 ml-1">
+                    Searched: {s.compatibleGroupsSearched.join(', ')}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
         </div>
       )}
 
+      {/* Match result summary */}
       {matchedResult && (
         <div className="p-4 rounded-lg border border-green-200 bg-green-50 text-green-900">
           <p className="font-medium">Reserved units: {matchedResult?.matchedCount}</p>
@@ -57,6 +166,7 @@ export default function MatchReviewStep({ requestDoc, matchedResult, matching, o
         </div>
       )}
 
+      {/* Request Summary + Grouped Matched Inventory */}
       {requestDoc && (
         <div className="border rounded-lg">
           <div className="p-3 border-b bg-gray-50 rounded-t-lg font-medium">Request Summary</div>
@@ -70,32 +180,73 @@ export default function MatchReviewStep({ requestDoc, matchedResult, matching, o
               <p><span className="text-gray-600">Hospital:</span> <strong>{requestDoc.hospitalId?.name || '—'}</strong></p>
             </div>
           </div>
+
+          {/* Component-wise grouped inventory */}
           <div className="p-4 border-t">
-            <h4 className="font-semibold mb-2">Reserved Inventory</h4>
-            {requestDoc?.matchedInventory?.length ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-gray-600">
-                      <th className="p-2">Inventory ID</th>
-                      <th className="p-2">Component</th>
-                      <th className="p-2">Bag No</th>
-                      <th className="p-2">Blood</th>
-                      <th className="p-2">Reserved At</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {requestDoc.matchedInventory.map((mi) => (
-                      <tr key={mi.inventoryId} className="border-t">
-                        <td className="p-2">{typeof mi.inventoryId === 'object' ? mi.inventoryId?._id : mi.inventoryId}</td>
-                        <td className="p-2">{mi?.inventoryId?.componentId?.componentType || '—'}</td>
-                        <td className="p-2">{mi?.inventoryId?.bagNo?.bagNo || '—'}</td>
-                        <td className="p-2">{mi?.inventoryId?.bagNo ? `${mi.inventoryId.bagNo.bloodGroup} ${mi.inventoryId.bagNo.rh}` : '—'}</td>
-                        <td className="p-2">{mi?.reservedAt ? new Date(mi.reservedAt).toLocaleString() : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <h4 className="font-semibold mb-3">Reserved Inventory (by Component)</h4>
+            {Object.keys(grouped).length > 0 ? (
+              <div className="space-y-4">
+                {Object.entries(grouped).map(([compType, items]) => (
+                  <div key={compType} className="border rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-gray-50 border-b flex items-center gap-2">
+                      <span className="font-medium text-sm text-gray-800">{compType}</span>
+                      <span className="text-xs text-gray-500">({items.length} unit{items.length > 1 ? 's' : ''})</span>
+                      {compType === 'RBC' && (
+                        <span className="ml-auto text-xs text-red-600 font-medium flex items-center gap-1">
+                          🔬 Crossmatch Required
+                        </span>
+                      )}
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-gray-600 bg-gray-50">
+                            <th className="p-2">Bag No</th>
+                            <th className="p-2">Blood</th>
+                            <th className="p-2">Compatibility</th>
+                            <th className="p-2">Crossmatch</th>
+                            <th className="p-2">Reserved At</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {items.map((mi) => {
+                            const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+                            const invId = inv?._id || mi.inventoryId;
+                            const bagNo = inv?.bagNo?.bagNo || '—';
+                            const blood = inv?.bagNo
+                              ? `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}`
+                              : '—';
+
+                            return (
+                              <tr key={invId} className="border-t hover:bg-gray-50 transition-colors">
+                                <td className="p-2 font-mono text-xs">{bagNo}</td>
+                                <td className="p-2 font-semibold">{blood}</td>
+                                <td className="p-2">
+                                  <CompatBadge type={mi.compatibilityType || 'exact'} />
+                                </td>
+                                <td className="p-2">
+                                  <CrossmatchBadge
+                                    status={mi.crossmatchStatus || 'not-required'}
+                                    required={mi.crossmatchRequired || false}
+                                    updating={crossmatchUpdating}
+                                    onMark={
+                                      onCrossmatchUpdate && mi.crossmatchRequired && mi.crossmatchStatus === 'pending'
+                                        ? (s) => onCrossmatchUpdate(invId, s)
+                                        : null
+                                    }
+                                  />
+                                </td>
+                                <td className="p-2 text-xs text-gray-500">
+                                  {mi?.reservedAt ? new Date(mi.reservedAt).toLocaleString() : '—'}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="text-gray-600 text-sm">No inventory reserved yet.</p>
@@ -106,4 +257,3 @@ export default function MatchReviewStep({ requestDoc, matchedResult, matching, o
     </div>
   );
 }
-
