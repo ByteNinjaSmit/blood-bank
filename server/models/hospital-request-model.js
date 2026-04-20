@@ -43,7 +43,7 @@ const HospitalRequestSchema = new Schema({
     {
       componentType: {
         type: String,
-        enum: ['RBC', 'FFP', 'Platelet'],
+        enum: ['RBC', 'FFP', 'Platelet', 'Cryo'],
         required: true
       },
       units: {
@@ -76,6 +76,20 @@ const HospitalRequestSchema = new Schema({
       reservedAt: {
         type: Date,
         default: Date.now
+      },
+      compatibilityType: {
+        type: String,
+        enum: ['exact', 'compatible'],
+        default: 'exact'
+      },
+      crossmatchRequired: {
+        type: Boolean,
+        default: false
+      },
+      crossmatchStatus: {
+        type: String,
+        enum: ['not-required', 'pending', 'compatible', 'incompatible'],
+        default: 'not-required'
       }
     }
   ],
