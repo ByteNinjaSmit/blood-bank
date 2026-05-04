@@ -9,6 +9,13 @@ const Component = require('../models/component-model');
 const NEAR_EXPIRY_DAYS = Number(process.env.NEAR_EXPIRY_DAYS || 5);
 const REPORTS_DIR = process.env.REPORTS_DIR || './reports';
 
+const EXPIRY_THRESHOLDS = {
+  Platelet: 2,
+  RBC: 7,
+  FFP: 30,
+  Cryo: 30
+};
+
 // Ensure reports directory exists
 function ensureReportsDirectory() {
   if (!fs.existsSync(REPORTS_DIR)) {
@@ -16,7 +23,7 @@ function ensureReportsDirectory() {
       fs.mkdirSync(REPORTS_DIR, { recursive: true });
       logger.info(`[Expiry] Created reports directory: ${REPORTS_DIR}`);
     } catch (error) {
-      logger.error({ error: error.message }, '[Expiry] Failed to create reports directory');
+      logger.error('[Expiry] Failed to create reports directory', { error: error.message });
       throw new Error(`Failed to create reports directory: ${error.message}`);
     }
   }
@@ -41,19 +48,12 @@ async function findNearExpiryComponents() {
   try {
     const today = startOfDay();
 
-    const thresholds = {
-      Platelet: 2,
-      RBC: 7,
-      FFP: 30,
-      Cryo: 30
-    };
-
     const filter = {
       status: "in-stock", // only in-stock components
       $or: []
     };
 
-    Object.entries(thresholds).forEach(([componentType, days]) => {
+    Object.entries(EXPIRY_THRESHOLDS).forEach(([componentType, days]) => {
       const from = today;
       const to = endOfDay(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
       
@@ -76,11 +76,11 @@ async function findNearExpiryComponents() {
       })
       .sort({ expiryDate: 1 }); // soonest expiry first
 
-    logger.info({ count: components.length }, '[Expiry] Found near expiry in-stock components');
+    logger.info('[Expiry] Found near expiry in-stock components', { count: components.length });
     return components;
 
   } catch (error) {
-    logger.error({ error: error.message }, '[Expiry] Failed to find near expiry components');
+    logger.error('[Expiry] Failed to find near expiry components', { error: error.message });
     throw error;
   }
 }
@@ -111,12 +111,12 @@ function buildSummary(rows) {
 /**
  * Generates the PDF and returns { filePath, count }
  */
-async function generateExpiryReportPDF() {
+async function generateExpiryReportPDF(providedData = null) {
   try {
     // Ensure reports directory exists
     ensureReportsDirectory();
     
-    const data = await findNearExpiryComponents();
+    const data = providedData || await findNearExpiryComponents();
     const summary = buildSummary(data);
     const todayLabel = new Date().toISOString().slice(0,10); // YYYY-MM-DD
 
@@ -144,15 +144,16 @@ async function generateExpiryReportPDF() {
       detailRows: transformedData
     });
 
-    logger.info({ count: data.length, filePath }, '[Expiry] PDF generated successfully');
+    logger.info('[Expiry] PDF generated successfully', { count: data.length, filePath });
     return { filePath, count: data.length };
   } catch (error) {
-    logger.error({ error: error.message, stack: error.stack }, '[Expiry] Failed to generate PDF');
+    logger.error('[Expiry] Failed to generate PDF', { error: error.message, stack: error.stack });
     throw error;
   }
 }
 
 module.exports = {
   findNearExpiryComponents,
-  generateExpiryReportPDF
+  generateExpiryReportPDF,
+  EXPIRY_THRESHOLDS
 };

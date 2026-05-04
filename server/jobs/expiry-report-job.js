@@ -1,13 +1,13 @@
 // jobs/expiry-report-job.js
 const logger = require('../utils/logger');
-const { generateExpiryReportPDF } = require('../services/blood-expiry-service');
+const { generateExpiryReportPDF, findNearExpiryComponents, EXPIRY_THRESHOLDS } = require('../services/blood-expiry-service');
 const { sendEmail } = require('../services/email-service');
 const fs = require('fs');
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 async function processExpiryReportJob(job) {
-  logger.info({ jobId: job.id, jobType: job.name }, '[Expiry] Job started');
+  logger.info('[Expiry] Job started', { jobId: job.id, jobType: job.name });
 
   try {
     // Validate admin email
@@ -15,8 +15,17 @@ async function processExpiryReportJob(job) {
       throw new Error('ADMIN_EMAIL environment variable is not configured');
     }
 
-    // Generate PDF report
-    const { filePath, count } = await generateExpiryReportPDF();
+    // Step 1: Find near expiry components first
+    const components = await findNearExpiryComponents();
+    const count = components.length;
+
+    if (count === 0) {
+      logger.info('[Expiry] No components near expiry found. Skipping email.', { jobId: job.id });
+      return { count: 0, message: 'No near-expiry components found' };
+    }
+
+    // Step 3: Generate PDF report using the fetched components
+    const { filePath } = await generateExpiryReportPDF(components);
 
     // Verify PDF file exists
     if (!fs.existsSync(filePath)) {
@@ -36,10 +45,10 @@ async function processExpiryReportJob(job) {
       `- Generated at: ${new Date().toLocaleTimeString()}`,
       ``,
       `Component-specific thresholds used:`,
-      `- Platelets: 1 day`,
-      `- RBC: 7 days`,
-      `- FFP: 30 days`,
-      `- Cryo: 30 days`,
+      `- Platelets: ${EXPIRY_THRESHOLDS.Platelet} days`,
+      `- RBC: ${EXPIRY_THRESHOLDS.RBC} days`,
+      `- FFP: ${EXPIRY_THRESHOLDS.FFP} days`,
+      `- Cryo: ${EXPIRY_THRESHOLDS.Cryo} days`,
       ``,
       `Please review the attached report and take necessary action for components nearing expiry.`,
       ``,
@@ -51,10 +60,10 @@ async function processExpiryReportJob(job) {
     // Send email with attachment
     await sendEmail(ADMIN_EMAIL, subject, text, filePath);
 
-    logger.info({ jobId: job.id, filePath, count }, '[Expiry] Email sent successfully');
+    logger.info('[Expiry] Email sent successfully', { jobId: job.id, filePath, count });
     return { filePath, count };
   } catch (error) {
-    logger.error({ jobId: job.id, error: error.message, stack: error.stack }, '[Expiry] Job failed');
+    logger.error('[Expiry] Job failed', { jobId: job.id, error: error.message, stack: error.stack });
     throw error; // Re-throw to mark job as failed
   }
 }

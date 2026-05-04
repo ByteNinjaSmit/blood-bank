@@ -29,11 +29,17 @@ const consoleFormat = winston.format.combine(
   winston.format.timestamp({
     format: 'YYYY-MM-DD HH:mm:ss'
   }),
-  winston.format.printf(({ timestamp, level, message, stack }) => {
+  winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
+    // Stringify message if it's an object to prevent [object Object]
+    const msg = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
+    
+    // Format metadata if it exists (excluding internal winston fields)
+    const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
+    
     if (stack) {
-      return `${timestamp} ${level}: ${message}\n${stack}`;
+      return `${timestamp} ${level}: ${msg}${metaStr}\n${stack}`;
     }
-    return `${timestamp} ${level}: ${message}`;
+    return `${timestamp} ${level}: ${msg}${metaStr}`;
   })
 );
 
