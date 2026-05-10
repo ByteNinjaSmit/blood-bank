@@ -12,6 +12,21 @@ const HospitalRequestSchema = new Schema({
     ref: 'Hospital',
     required: true
   },
+  doctorName: {
+    type: String,
+    trim: true
+  },
+  requiredAt: {
+    type: Date
+  },
+  medicalOfficerSignature: {
+    type: String,
+    trim: true
+  },
+  hospitalSeal: {
+    type: String,
+    trim: true
+  },
   patient: {
     name: {
       type: String,
@@ -35,8 +50,41 @@ const HospitalRequestSchema = new Schema({
       type: String,
       trim: true
     },
+    indication: {
+      type: String,
+      trim: true
+    },
     hb: {
       type: Number
+    },
+    history: {
+      previousTransfusions: {
+        type: Number,
+        default: 0
+      },
+      approximateDate: {
+        type: String,
+        trim: true
+      },
+      presenceOfReaction: {
+        type: String,
+        enum: ['Presence', 'Absence', 'None'],
+        default: 'None'
+      }
+    },
+    pregnancy: {
+      numPregnancies: {
+        type: Number,
+        default: 0
+      },
+      numMiscarriages: {
+        type: Number,
+        default: 0
+      },
+      numChildrenWithHemolyticDisease: {
+        type: Number,
+        default: 0
+      }
     }
   },
   requestedComponents: [
