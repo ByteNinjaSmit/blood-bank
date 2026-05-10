@@ -10,6 +10,17 @@ export const defaultPatient = {
   mrn: '',
   diagnosis: '',
   hb: '',
+  indication: '',
+  history: {
+    previousTransfusions: 0,
+    approximateDate: '',
+    presenceOfReaction: 'None',
+  },
+  pregnancy: {
+    numPregnancies: 0,
+    numMiscarriages: 0,
+    numChildrenWithHemolyticDisease: 0,
+  },
 };
 
 export const defaultRequestedComponent = {
@@ -35,6 +46,10 @@ export default function useRequisition(authToken) {
   // Create request form state
   const [form, setForm] = useState({
     hospitalId: '',
+    doctorName: '',
+    requiredAt: '',
+    medicalOfficerSignature: '',
+    hospitalSeal: '',
     patient: { ...defaultPatient },
     requestedComponents: [ { ...defaultRequestedComponent } ],
   });
@@ -135,6 +150,10 @@ export default function useRequisition(authToken) {
       if (!form.requestedComponents.length) return toast.error('Add at least one component');
       const payload = {
         hospitalId: form.hospitalId,
+        doctorName: form.doctorName || undefined,
+        requiredAt: form.requiredAt || undefined,
+        medicalOfficerSignature: form.medicalOfficerSignature || undefined,
+        hospitalSeal: form.hospitalSeal || undefined,
         patient: {
           name: form.patient.name,
           age: Number(form.patient.age),
@@ -142,6 +161,17 @@ export default function useRequisition(authToken) {
           mrn: form.patient.mrn || undefined,
           diagnosis: form.patient.diagnosis || undefined,
           hb: form.patient.hb ? Number(form.patient.hb) : undefined,
+          indication: form.patient.indication || undefined,
+          history: {
+            previousTransfusions: Number(form.patient.history?.previousTransfusions || 0),
+            approximateDate: form.patient.history?.approximateDate || undefined,
+            presenceOfReaction: form.patient.history?.presenceOfReaction || 'None',
+          },
+          pregnancy: {
+            numPregnancies: Number(form.patient.pregnancy?.numPregnancies || 0),
+            numMiscarriages: Number(form.patient.pregnancy?.numMiscarriages || 0),
+            numChildrenWithHemolyticDisease: Number(form.patient.pregnancy?.numChildrenWithHemolyticDisease || 0),
+          },
         },
         requestedComponents: form.requestedComponents.map((r) => ({
           componentType: r.componentType,

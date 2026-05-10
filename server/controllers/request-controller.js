@@ -25,7 +25,7 @@ function toInt(v, d) {
 
 async function createRequest(req, res, next) {
   try {
-    const { hospitalId, patient, requestedComponents } = req.body;
+    const { hospitalId, patient, requestedComponents, doctorName, requiredAt, medicalOfficerSignature, hospitalSeal } = req.body;
     if (!hospitalId || !patient || !Array.isArray(requestedComponents) || requestedComponents.length === 0) {
       return res.status(400).json({ success: false, message: 'Invalid payload' });
     }
@@ -42,6 +42,10 @@ async function createRequest(req, res, next) {
     const created = await HospitalRequest.create({
       requestId: reqId,
       hospitalId,
+      doctorName,
+      requiredAt: requiredAt ? new Date(requiredAt) : undefined,
+      medicalOfficerSignature,
+      hospitalSeal,
       patient,
       requestedComponents,
       status: 'pending',
@@ -137,7 +141,7 @@ async function matchRequest(req, res, next) {
 
         // ── Build Rh filter based on component rules ──
         let rhFilter;
-        if (rc.componentType === 'RBC') {
+        if (['RBC', 'WB', 'LR-PCV'].includes(rc.componentType)) {
           // Strict Rh: Rh− recipient → only Rh−; Rh+ → both
           if (rc.rh === 'Negative') {
             rhFilter = { 'bag.rh': 'Negative' };
@@ -543,7 +547,7 @@ async function updateCrossmatch(req, res, next) {
             );
 
             let rhFilter;
-            if (compType === 'RBC' && originalRC.rh === 'Negative') {
+            if (['RBC', 'WB', 'LR-PCV'].includes(compType) && originalRC.rh === 'Negative') {
               rhFilter = { 'bag.rh': 'Negative' };
             } else {
               rhFilter = { 'bag.rh': { $in: ['Positive', 'Negative'] } };
