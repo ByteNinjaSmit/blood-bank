@@ -134,7 +134,6 @@ const corsOptions = {
     allowedHeaders: [
         "Content-Type",
         "Authorization",
-        "multipart/form-data",
     ],
 };
 
