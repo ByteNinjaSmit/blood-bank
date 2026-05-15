@@ -111,7 +111,7 @@ const App = () => {
           <Route path="/donor/create-donor" element={<CreateDonorPage />} />
           <Route path="/donor/view-donor" element={<DonorManagement />} />
 
-          {/* Appointments Module */}
+          {/* Volunteer Module */}
           <Route path="/appointments" element={<AppointmentList />} />
 
           {/* Admin Module */}

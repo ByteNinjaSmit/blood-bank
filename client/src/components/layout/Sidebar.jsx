@@ -311,19 +311,19 @@ const MODULES = [
   // },
   {
     id: "appointments",
-    name: "Appointments",
+    name: "Volunteer",
     icon: <Calendar className="w-5 h-5" />,
     permissions: ["read"],
     subModules: [
       {
-        name: "Appointment List",
+        name: "Volunteer List",
         icon: <List className="w-5 h-5" />,
         href: "/appointments",
         permissions: ["read"],
-        description: "View public donation appointments",
+        description: "View public donation volunteers",
       },
     ],
-    description: "Manage donor appointments",
+    description: "Manage donor volunteers",
   },
   {
     id: "mis",

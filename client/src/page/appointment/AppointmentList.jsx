@@ -210,7 +210,7 @@ const AppointmentList = () => {
               <Calendar className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Appointments</h1>
+              <h1 className="text-xl font-bold text-gray-900">Volunteers</h1>
               <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Donation Schedule</p>
             </div>
           </div>
@@ -304,14 +304,14 @@ const AppointmentList = () => {
         {/* Results Section */}
         <div className="bg-white rounded-xl shadow-lg border border-red-100 overflow-hidden">
           <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
-            <div className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Appointments ({totalCount})</div>
+            <div className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Volunteers ({totalCount})</div>
           </div>
           
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
-                  <TableHead className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Appointment</TableHead>
+                  <TableHead className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Volunteer</TableHead>
                   <TableHead className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Donor</TableHead>
                   <TableHead className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Contact</TableHead>
                   <TableHead className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Blood</TableHead>
@@ -329,7 +329,7 @@ const AppointmentList = () => {
                     <TableCell colSpan={9} className="py-12 text-center">
                       <div className="flex flex-col items-center gap-2 text-gray-400">
                         <Loader2 className="w-8 h-8 animate-spin" />
-                        <span className="text-xs font-bold uppercase tracking-widest">Loading Appointments...</span>
+                        <span className="text-xs font-bold uppercase tracking-widest">Loading Volunteers...</span>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -339,7 +339,7 @@ const AppointmentList = () => {
                       <div className="flex flex-col items-center gap-3 text-gray-400">
                         <Calendar className="w-12 h-12 stroke-[1.5]" />
                         <div className="max-w-[240px] mx-auto">
-                           <h3 className="text-sm font-bold text-gray-600 uppercase tracking-wider mb-1">No appointments found</h3>
+                           <h3 className="text-sm font-bold text-gray-600 uppercase tracking-wider mb-1">No volunteers found</h3>
                            <p className="text-xs">Adjust your search or wait for new schedules.</p>
                         </div>
                       </div>
@@ -485,7 +485,7 @@ const AppointmentList = () => {
       <CustomModal
         open={isDetailsModalOpen}
         onCancel={() => setIsDetailsModalOpen(false)}
-        title="Appointment Details"
+        title="Volunteer Details"
         size="lg"
         hideFooter
       >
@@ -636,7 +636,7 @@ const AppointmentList = () => {
                           <Clock className="w-5 h-5 text-indigo-600" />
                         </div>
                         <div>
-                          <p className="text-[10px] text-gray-400 font-bold uppercase leading-none mb-1">Appointment Date</p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase leading-none mb-1">Volunteer Date</p>
                           <p className="text-sm font-bold text-gray-900">{formatDate(selectedAppointment.appointmentDate)}</p>
                         </div>
                       </div>
