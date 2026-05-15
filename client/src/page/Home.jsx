@@ -85,9 +85,9 @@ export default function BloodBankWelcome() {
         },
         {
           icon: Calendar,
-          title: "Appointment List",
-          desc: "Monitor and manage upcoming donation appointments.",
-          moduleName: "Appointments",
+          title: "Volunteer List",
+          desc: "Monitor and manage upcoming donation volunteers.",
+          moduleName: "Volunteer",
           link: "/appointments",
         },
         {

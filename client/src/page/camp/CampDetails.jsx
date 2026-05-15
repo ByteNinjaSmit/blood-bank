@@ -105,6 +105,7 @@ const CampDetails = () => {
 
   const durationDays = Math.max(1, Math.ceil((new Date(camp.dateTo) - new Date(camp.dateFrom)) / 86400000));
   const formatDate = (d) => new Date(d).toLocaleDateString();
+  const formatDateTime = (d) => new Date(d).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   const nowMs = Date.now();
   const startMs = new Date(camp.dateFrom).getTime();
   const endMs = new Date(camp.dateTo).getTime();
@@ -244,7 +245,7 @@ const CampDetails = () => {
               ID: <span className="font-mono">{camp.siteId}</span>
             </span>
             <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-800" title="Start and end dates">
-              <Clock className="inline w-3 h-3 mr-1" />{formatDate(camp.dateFrom)} → {formatDate(camp.dateTo)}
+              <Clock className="inline w-3 h-3 mr-1" />{formatDateTime(camp.dateFrom)} → {formatDateTime(camp.dateTo)}
             </span>
             <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-800" title="Created date">
               <Calendar className="inline w-3 h-3 mr-1" />{new Date(camp.createdAt).toLocaleDateString()}

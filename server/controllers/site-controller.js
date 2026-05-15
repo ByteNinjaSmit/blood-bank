@@ -7,6 +7,7 @@ Get Details Of Site (View)
 
 const Site = require("../models/site-model");
 const User = require("../models/user-model");
+const VoluntaryCampDonation = require("../models/voluntary-camp-donation-model");
 const mongoose = require("mongoose");
 
 const createSite = async (req, res, next) => {
@@ -383,6 +384,87 @@ const campDonorList = async (req, res, next) => {
   }
 };
 
+const getVoluntaryCampDonations = async (req, res, next) => {
+  try {
+    const {
+      search,
+      status,
+      startDate,
+      endDate,
+      siteId,
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      sortOrder = "desc"
+    } = req.query;
+
+    let filter = {};
+
+    // Search filter
+    if (search) {
+      const searchRegex = new RegExp(search, "i");
+      filter.$or = [
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        { mobile: searchRegex },
+        { bloodGroup: searchRegex }
+      ];
+    }
+
+    // Status filter
+    if (status && status !== 'all') {
+      filter.status = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+    }
+
+    // Date range filter
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        filter.createdAt.$lte = end;
+      }
+    }
+
+    // Site filter
+    if (siteId && siteId !== 'all') {
+      if (mongoose.isValidObjectId(siteId)) {
+        filter.siteId = siteId;
+      }
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitResults = parseInt(limit);
+
+    const sort = {};
+    sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+
+    const donations = await VoluntaryCampDonation.find(filter)
+      .populate("siteId", "name siteId")
+      .skip(skip)
+      .limit(limitResults)
+      .sort(sort);
+
+    const totalCount = await VoluntaryCampDonation.countDocuments(filter);
+
+    return res.status(200).json({
+      success: true,
+      message: "Voluntary camp donations fetched successfully",
+      data: donations,
+      pagination: {
+        totalCount,
+        totalPages: Math.ceil(totalCount / limitResults),
+        currentPage: parseInt(page),
+        pageSize: limitResults
+      }
+    });
+  } catch (error) {
+    console.error("Error in getVoluntaryCampDonations:", error);
+    next(error);
+  }
+};
+
 module.exports = {
   createSite,
   updateSite,
@@ -393,4 +475,5 @@ module.exports = {
   getCampList,
   campDonationList,
   campDonorList,
+  getVoluntaryCampDonations,
 };

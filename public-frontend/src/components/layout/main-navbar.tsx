@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Heart, Droplets, Menu, X, ChevronDown, ChevronRight, Globe, Search } from 'lucide-react'
@@ -13,6 +14,9 @@ export default function Navbar() {
     const [activeDropdown, setActiveDropdown] = useState<number | null>(null)
     const [mobileExpanded, setMobileExpanded] = useState<number | null>(null)
     const { language, toggleLanguage } = useLanguage()
+    const pathname = usePathname()
+
+
 
     const timeoutRef = useRef<NodeJS.Timeout | null>(null)
     const navRef = useRef<HTMLDivElement>(null)
@@ -49,6 +53,8 @@ export default function Navbar() {
             setActiveDropdown(null)
         }, 300)
     }
+
+
 
     return (
         <nav

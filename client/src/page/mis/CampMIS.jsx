@@ -57,7 +57,7 @@ export default function CampMIS() {
     const tableData = data.map(camp => [
       camp.name,
       camp.address,
-      new Date(camp.dateFrom).toLocaleDateString(),
+      new Date(camp.dateFrom).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
       camp.totalBags,
       camp.discardedBags,
       camp.serologyFailures
@@ -78,8 +78,8 @@ export default function CampMIS() {
     const wsData = data.map(camp => ({
       "Camp Name": camp.name,
       "Location": camp.address,
-      "Date From": new Date(camp.dateFrom).toLocaleDateString(),
-      "Date To": new Date(camp.dateTo).toLocaleDateString(),
+      "Date From": new Date(camp.dateFrom).toLocaleString(),
+      "Date To": new Date(camp.dateTo).toLocaleString(),
       "Collected Bags": camp.totalBags,
       "Discarded Bags": camp.discardedBags,
       "Serology Failures": camp.serologyFailures
@@ -223,7 +223,7 @@ export default function CampMIS() {
                       </div>
                     </TableCell>
                     <TableCell className="text-xs">
-                      {new Date(camp.dateFrom).toLocaleDateString()}
+                      {new Date(camp.dateFrom).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                     </TableCell>
                     <TableCell className="text-right">
                       <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">

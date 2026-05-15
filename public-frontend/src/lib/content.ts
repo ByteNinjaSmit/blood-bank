@@ -179,6 +179,99 @@ export type ContentData = {
         supportDonateBtn: string;
         supportCallBtn: string;
     };
+    onsiteDonorPage: {
+        title: string;
+        description: string;
+        ongoingCamps: string;
+        upcomingCamps: string;
+        campHistory: string;
+        registerHere: string;
+        registerToDonate: string;
+        viewRecords: string;
+        completed: string;
+        noOngoing: string;
+        noUpcoming: string;
+        loadingCamps: string;
+    };
+    onsiteRegistrationForm: {
+        steps: {
+            identity: string;
+            contact: string;
+            history: string;
+            vitals: string;
+            examination: string;
+        };
+        fields: {
+            firstName: string;
+            middleName: string;
+            lastName: string;
+            sex: string;
+            dob: string;
+            age: string;
+            bloodGroup: string;
+            occupation: string;
+            camp: string;
+            address: string;
+            mobile: string;
+            pincode: string;
+            email: string;
+            isFirstTime: string;
+            isRepeated: string;
+            lastDonation: string;
+            totalDonations: string;
+            emergencyConsent: string;
+            weight: string;
+            hb: string;
+            temp: string;
+            pulse: string;
+            bp: string;
+            o2Level: string;
+            pedalOedema: string;
+            lymphadenopathy: string;
+            cyanosis: string;
+            skinDisease: string;
+            scars: string;
+        };
+        placeholders: {
+            firstName: string;
+            middleName: string;
+            lastName: string;
+            age: string;
+            select: string;
+            address: string;
+            mobile: string;
+            pincode: string;
+            email: string;
+            weight: string;
+            hb: string;
+            temp: string;
+            pulse: string;
+            bp: string;
+            o2Level: string;
+        };
+        messages: {
+            successTitle: string;
+            successDesc: string;
+            mandatoryError: string;
+            processing: string;
+            completeBtn: string;
+            nextBtn: string;
+            backBtn: string;
+            homeBtn: string;
+            anotherBtn: string;
+        };
+    };
+    incomingCampsPage: {
+        title: string;
+        description: string;
+        location: string;
+        schedule: string;
+        contact: string;
+        email: string;
+        confirmed: string;
+        registerBtn: string;
+        directionsBtn: string;
+    };
 }
 
 export const content: Record<'en' | 'mr', ContentData> = {
@@ -259,6 +352,18 @@ export const content: Record<'en' | 'mr', ContentData> = {
                     ],
                     viewAllLabel: "View all About Us",
                     viewAllHref: "/about"
+                },
+                {
+                    label: "Donation",
+                    href: "#",
+                    columns: [
+                        {
+                            title: "Donation Services",
+                            links: [
+                                { label: "Voluntary Camp Donation", href: "/onsite-donor" }
+                            ]
+                        }
+                    ]
                 }
             ]
         },
@@ -535,6 +640,99 @@ export const content: Record<'en' | 'mr', ContentData> = {
             supportTitle: "Ready to make a difference? Join Sanjivani's Lifeline today.",
             supportDonateBtn: "Donate Now",
             supportCallBtn: "Have questions? Call us"
+        },
+        onsiteDonorPage: {
+            title: "Voluntary Camp Donation",
+            description: "Find active blood donation camps near you. Register online to save time and help us prepare for your visit.",
+            ongoingCamps: "Ongoing Camps",
+            upcomingCamps: "Upcoming Camps",
+            campHistory: "Camp History",
+            registerHere: "Register Here",
+            registerToDonate: "Register to Donate",
+            viewRecords: "View Donation Records",
+            completed: "Completed",
+            noOngoing: "No ongoing camps at the moment.",
+            noUpcoming: "No upcoming camps scheduled.",
+            loadingCamps: "Loading Camps..."
+        },
+        onsiteRegistrationForm: {
+            steps: {
+                identity: "Identity",
+                contact: "Contact",
+                history: "History",
+                vitals: "Vitals",
+                examination: "Examination"
+            },
+            fields: {
+                firstName: "First Name",
+                middleName: "Father / Husband Name",
+                lastName: "Surname",
+                sex: "Sex",
+                dob: "Date of Birth",
+                age: "Age",
+                bloodGroup: "Blood Group",
+                occupation: "Occupation",
+                camp: "Current Camp / Location",
+                address: "Full Address",
+                mobile: "Mobile Number",
+                pincode: "City Pincode",
+                email: "Email Address",
+                isFirstTime: "First Time Donor?",
+                isRepeated: "Repeated Donor?",
+                lastDonation: "Last Donation Date",
+                totalDonations: "Total Donations to date",
+                emergencyConsent: "Available for emergency calls?",
+                weight: "Weight (kg)",
+                hb: "HB (gm%)",
+                temp: "Temp (°C)",
+                pulse: "Pulse (/min)",
+                bp: "BP (mmHg)",
+                o2Level: "O2 Level (%)",
+                pedalOedema: "Pedal Oedema",
+                lymphadenopathy: "Lymphadenopathy",
+                cyanosis: "Cyanosis",
+                skinDisease: "Free from skin disease?",
+                scars: "Free from scars/punctures?"
+            },
+            placeholders: {
+                firstName: "ENTER NAME",
+                middleName: "FATHER/HUSBAND",
+                lastName: "LAST NAME",
+                age: "Yrs",
+                select: "Select",
+                address: "Residential address",
+                mobile: "10-DIGIT MOBILE",
+                pincode: "423601",
+                email: "email@example.com",
+                weight: "kg",
+                hb: "eg: 12.5",
+                temp: "eg: 37.0",
+                pulse: "eg: 72",
+                bp: "eg: 120/80",
+                o2Level: "eg: 98"
+            },
+            messages: {
+                successTitle: "Thank you for registering!",
+                successDesc: "Your donation details have been successfully recorded. We appreciate your contribution.",
+                mandatoryError: "Please fill in all mandatory fields.",
+                processing: "Processing...",
+                completeBtn: "Complete & Consent",
+                nextBtn: "Next Step",
+                backBtn: "Back",
+                homeBtn: "Go to Home",
+                anotherBtn: "Register Another Donor"
+            }
+        },
+        incomingCampsPage: {
+            title: "Incoming Blood Camps",
+            description: "Stay informed about upcoming blood donation camps in and around Kopargaon. Join us in our mission to ensure no life is lost due to blood shortage.",
+            location: "Location",
+            schedule: "Schedule",
+            contact: "Contact",
+            email: "Email",
+            confirmed: "Confirmed",
+            registerBtn: "Register to Donate",
+            directionsBtn: "Get Directions"
         }
     },
     mr: {
@@ -614,6 +812,18 @@ export const content: Record<'en' | 'mr', ContentData> = {
                     ],
                     viewAllLabel: "सर्व आमच्याबद्दल पहा",
                     viewAllHref: "/about"
+                },
+                {
+                    label: "रक्तदान",
+                    href: "#",
+                    columns: [
+                        {
+                            title: "रक्तदान सेवा",
+                            links: [
+                                { label: "स्वैच्छिक शिबिर रक्तदान", href: "/onsite-donor" }
+                            ]
+                        }
+                    ]
                 }
             ]
         },
@@ -890,6 +1100,99 @@ export const content: Record<'en' | 'mr', ContentData> = {
             supportTitle: "फरक घडवण्यासाठी तयार आहात? आजच आमच्या जीवनवाहिनीमध्ये सामील व्हा.",
             supportDonateBtn: "आत्ताच दान करा",
             supportCallBtn: "प्रश्न आहेत? आम्हाला कॉल करा"
+        },
+        onsiteDonorPage: {
+            title: "स्वयंस्फूर्त शिबिर रक्तदान",
+            description: "तुमच्या जवळचे सक्रिय रक्तदान शिबिरे शोधा. तुमच्या भेटीची तयारी करण्यास मदत करण्यासाठी ऑनलाईन नोंदणी करा.",
+            ongoingCamps: "सुरू असलेली शिबिरे",
+            upcomingCamps: "येणारी शिबिरे",
+            campHistory: "शिबिर इतिहास",
+            registerHere: "येथे नोंदणी करा",
+            registerToDonate: "दाखल व्हा",
+            viewRecords: "नोंदी पहा",
+            completed: "पूर्ण झाले",
+            noOngoing: "सध्या कोणतेही शिबिर सुरू नाही.",
+            noUpcoming: "पुढील कोणतेही शिबिर नियोजित नाही.",
+            loadingCamps: "शिबिरे लोड होत आहेत..."
+        },
+        onsiteRegistrationForm: {
+            steps: {
+                identity: "ओळख",
+                contact: "संपर्क",
+                history: "इतिहास",
+                vitals: "तपासणी",
+                examination: "परीक्षण"
+            },
+            fields: {
+                firstName: "पहिले नाव",
+                middleName: "वडील / पतीचे नाव",
+                lastName: "आडनाव",
+                sex: "लिंग",
+                dob: "जन्मतारीख",
+                age: "वय",
+                bloodGroup: "रक्तगट",
+                occupation: "व्यवसाय",
+                camp: "सध्याचे शिबिर / ठिकाण",
+                address: "पूर्ण पत्ता",
+                mobile: "मोबाईल नंबर",
+                pincode: "पिनकोड",
+                email: "ईमेल पत्ता",
+                isFirstTime: "प्रथमच रक्तदान?",
+                isRepeated: "नियमित रक्तदाता?",
+                lastDonation: "मागील रक्तदानाची तारीख",
+                totalDonations: "एकूण रक्तदान संख्या",
+                emergencyConsent: "आपत्कालीन कॉलसाठी उपलब्ध?",
+                weight: "वजन (किलो)",
+                hb: "हिमोग्लोबिन (gm%)",
+                temp: "तापमान (°C)",
+                pulse: "नाडीचे ठोके (/min)",
+                bp: "रक्तदाब (mmHg)",
+                o2Level: "ऑक्सिजन पातळी (%)",
+                pedalOedema: "पॅडल एडेमा",
+                lymphadenopathy: "लिम्फॅडेनोपॅथी",
+                cyanosis: "सायनोसिस",
+                skinDisease: "त्वचारोग मुक्त?",
+                scars: "जखम/व्रण मुक्त?"
+            },
+            placeholders: {
+                firstName: "नाव प्रविष्ट करा",
+                middleName: "वडील/पतीचे नाव",
+                lastName: "आडनाव",
+                age: "वर्षे",
+                select: "निवडा",
+                address: "राहण्याचा पत्ता",
+                mobile: "१० अंकी मोबाईल",
+                pincode: "४२३६०१",
+                email: "ईमेल पत्ता",
+                weight: "किलो",
+                hb: "उदा: १२.५",
+                temp: "उदा: ३७.०",
+                pulse: "उदा: ७२",
+                bp: "उदा: १२०/८०",
+                o2Level: "उदा: ९८"
+            },
+            messages: {
+                successTitle: "नोंदणी केल्याबद्दल धन्यवाद!",
+                successDesc: "तुमचे तपशील यशस्वीरित्या रेकॉर्ड केले गेले आहेत. तुमच्या योगदानाबद्दल धन्यवाद.",
+                mandatoryError: "कृपया सर्व अनिवार्य फील्ड भरा.",
+                processing: "प्रक्रिया सुरू आहे...",
+                completeBtn: "पूर्ण करा आणि संमती द्या",
+                nextBtn: "पुढील पाऊल",
+                backBtn: "मागे",
+                homeBtn: "मुख्यपृष्ठावर जा",
+                anotherBtn: "दुसऱ्या दात्याची नोंदणी करा"
+            }
+        },
+        incomingCampsPage: {
+            title: "येणारी रक्तदान शिबिरे",
+            description: "कोपरगाव आणि आसपासच्या आगामी रक्तदान शिबिरांबद्दल माहिती मिळवा. रक्ताच्या कमतरतेमुळे कोणताही जीव जाऊ नये या आमच्या मोहिमेत सामील व्हा.",
+            location: "ठिकाण",
+            schedule: "वेळापत्रक",
+            contact: "संपर्क",
+            email: "ईमेल",
+            confirmed: "निश्चित",
+            registerBtn: "दानासाठी नोंदणी करा",
+            directionsBtn: "दिशा मिळवा"
         }
     }
 };

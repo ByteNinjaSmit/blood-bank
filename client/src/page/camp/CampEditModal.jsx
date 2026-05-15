@@ -120,7 +120,7 @@ const CampEditModal = ({
             <div className="space-y-2">
               <label className="block text-sm font-medium text-slate-700">Start Date *</label>
               <input
-                type="date"
+                type="datetime-local"
                 name="dateFrom"
                 value={form.dateFrom}
                 onChange={onChange}
@@ -134,7 +134,7 @@ const CampEditModal = ({
             <div className="space-y-2">
               <label className="block text-sm font-medium text-slate-700">End Date *</label>
               <input
-                type="date"
+                type="datetime-local"
                 name="dateTo"
                 value={form.dateTo}
                 onChange={onChange}

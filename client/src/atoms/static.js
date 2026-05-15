@@ -15,7 +15,7 @@ export const ModuleArray = [
   "Site",
   "Hospital",
   "MIS",
-  "Appointments"
+  "Volunteer"
 ];
 
 export const RoleArray = [
