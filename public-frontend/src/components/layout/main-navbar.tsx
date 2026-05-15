@@ -16,7 +16,7 @@ export default function Navbar() {
     const { language, toggleLanguage } = useLanguage()
     const pathname = usePathname()
 
-    const isOnsiteDonorPage = pathname?.startsWith('/onsite-donor')
+
 
     const timeoutRef = useRef<NodeJS.Timeout | null>(null)
     const navRef = useRef<HTMLDivElement>(null)
@@ -24,7 +24,6 @@ export default function Navbar() {
     const t = content[language].nav
 
     useEffect(() => {
-        if (isOnsiteDonorPage) return
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 20)
         }
@@ -55,7 +54,7 @@ export default function Navbar() {
         }, 300)
     }
 
-    if (isOnsiteDonorPage) return null
+
 
     return (
         <nav

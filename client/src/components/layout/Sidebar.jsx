@@ -322,6 +322,13 @@ const MODULES = [
         permissions: ["read"],
         description: "View public donation volunteers",
       },
+      {
+        name: "Camp Volunteer List",
+        icon: <GiCampingTent className="w-5 h-5" />,
+        href: "/camp-volunteers",
+        permissions: ["read"],
+        description: "View onsite camp donation volunteers",
+      },
     ],
     description: "Manage donor volunteers",
   },

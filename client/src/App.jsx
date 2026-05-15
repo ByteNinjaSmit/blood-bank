@@ -10,6 +10,7 @@ import Home from './page/Home';
 import CampRegisteration from './page/camp/Camp-Registeration';
 import CampListing from './page/camp/Camp-Listing';
 import CampDetails from './page/camp/CampDetails';
+import CampVolunteerList from './page/camp/CampVolunteerList';
 import { ComponentsList, ComponentSeparate, NearExpiry } from './page/component-separate';
 import Serology from './page/Serology/Serology';
 import SerologyResults from './page/Serology/SerologyResults';
@@ -113,6 +114,7 @@ const App = () => {
 
           {/* Volunteer Module */}
           <Route path="/appointments" element={<AppointmentList />} />
+          <Route path="/camp-volunteers" element={<CampVolunteerList />} />
 
           {/* Admin Module */}
           <Route path="/admin/user-manage" element={<UserManage />} />

@@ -20,7 +20,7 @@ export interface ISite extends Document {
   updatedAt: Date;
 }
 
-const SiteSchema: Schema<ISite> = new Schema(
+const SiteSchema = new Schema<ISite>(
   {
     siteId: {
       type: String,
@@ -55,7 +55,7 @@ const SiteSchema: Schema<ISite> = new Schema(
       type: Date,
       required: true,
       validate: {
-        validator: function (this: ISite, value: Date) {
+        validator: function (this: any, value: Date) {
           return this.dateFrom < value;
         },
         message: "End date must be after start date.",

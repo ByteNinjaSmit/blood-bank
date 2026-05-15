@@ -23,3 +23,23 @@ export async function getActiveCamps() {
     return { success: false, message: error.message };
   }
 }
+export async function getPastCamps() {
+  try {
+    await connectToDatabase();
+    const now = new Date();
+    // Fetch camps that have already ended
+    const camps = await Site.find({
+      dateTo: { $lt: now }
+    })
+    .sort({ dateFrom: -1 })
+    .lean();
+
+    return { 
+      success: true, 
+      data: JSON.parse(JSON.stringify(camps)) 
+    };
+  } catch (error: any) {
+    console.error("Failed to fetch past camps:", error);
+    return { success: false, message: error.message };
+  }
+}

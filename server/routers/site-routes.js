@@ -21,6 +21,7 @@ router.route('/staff-list').get(authMiddleware,siteController.getStaffList);
 router.route('/list').get(authMiddleware,siteController.getCampList);
 router.route('/camp-donations/:siteId').get(authMiddleware,siteController.campDonationList);
 router.route('/camp-donors/:siteId').get(authMiddleware,siteController.campDonorList);
+router.route('/voluntary-donations').get(authMiddleware,siteController.getVoluntaryCampDonations);
 
 
 

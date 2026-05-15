@@ -5,20 +5,25 @@ import { Calendar, MapPin, Phone, Mail, Clock, Droplets, ChevronLeft, ArrowRight
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { getActiveCamps } from '@/actions/camp'
-
-
+import { getActiveCamps, getPastCamps } from '@/actions/camp'
+import { useLanguage } from '@/context/language-context'
+import { content } from '@/lib/content'
 
 export default function VoluntaryCampDonationPage() {
+    const { language } = useLanguage()
+    const t = content[language]
     const [camps, setCamps] = useState<any[]>([])
+    const [pastCamps, setPastCamps] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         async function loadCamps() {
-            const res = await getActiveCamps()
-            if (res.success) {
-                setCamps(res.data)
-            }
+            const [activeRes, pastRes] = await Promise.all([
+                getActiveCamps(),
+                getPastCamps()
+            ])
+            if (activeRes.success) setCamps(activeRes.data)
+            if (pastRes.success) setPastCamps(pastRes.data)
             setLoading(false)
         }
         loadCamps()
@@ -29,172 +34,165 @@ export default function VoluntaryCampDonationPage() {
     const upcomingCamps = camps.filter(c => new Date(c.dateFrom) > now)
 
     return (
-        <main className="min-h-screen bg-gray-50 pb-20 font-inter">
-            {/* Minimal Header */}
-            <header className="bg-white border-b border-gray-100 py-6 px-4 md:px-12 flex items-center justify-between sticky top-0 z-50">
-                <Link href="/" className="flex items-center gap-3 group">
-                    <div className="bg-rose-50 p-2 rounded-xl group-hover:bg-rose-100 transition-colors">
-                        <Droplets className="text-[#8B0000] w-6 h-6" />
-                    </div>
-                    <span className="text-xl font-bold text-gray-900 tracking-tight">
-                        Voluntary<span className="text-[#8B0000]">Donation</span>
-                    </span>
-                </Link>
-                <Link href="/" className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-[#8B0000] transition-colors">
-                    <ChevronLeft size={18} /> Back to Website
-                </Link>
-            </header>
-
+        <main className="min-h-screen bg-gray-50 pb-20 font-inter pt-20 lg:pt-28">
             <div className="max-w-6xl mx-auto px-4 py-12">
                 <div className="mb-12 text-center">
-                    <h1 className="text-4xl font-black text-gray-900 mb-4 tracking-tight">Voluntary Camp Donation</h1>
+                    <h1 className="text-4xl font-black text-gray-900 mb-4 tracking-tight">
+                        {t.onsiteDonorPage.title}
+                    </h1>
                     <p className="text-gray-500 font-medium max-w-2xl mx-auto">
-                        Find active blood donation camps near you. Register online to save time and help us prepare for your visit.
+                        {t.onsiteDonorPage.description}
                     </p>
                 </div>
 
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-20">
-                        <Loader2 className="w-12 h-12 text-[#8B0000] animate-spin mb-4" />
-                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Synchronizing Camps...</p>
+                        <Loader2 className="w-10 h-10 text-[#8B0000] animate-spin mb-4" />
+                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">{t.onsiteDonorPage.loadingCamps}</p>
                     </div>
                 ) : (
-                    /* Big Rectangle Container */
-                    <div className="bg-white rounded-[48px] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden animate-in fade-in duration-700">
-                        
-                        {/* Ongoing Camps Section */}
-                        <div className="p-8 md:p-14 border-b border-gray-50">
-                            <div className="flex items-center gap-3 mb-10">
-                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                <h2 className="text-2xl font-black text-gray-900 uppercase tracking-widest">Ongoing Camps</h2>
-                            </div>
-
-                            {ongoingCamps.length === 0 ? (
-                                <div className="bg-gray-50/50 rounded-[32px] p-12 text-center border border-dashed border-gray-200">
-                                    <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">No camps are live right now</p>
+                    <>
+                        {/* Ongoing Camps */}
+                        <div className="bg-white rounded-[40px] border border-gray-100 shadow-xl shadow-gray-200/20 overflow-hidden mb-12">
+                            <div className="p-8 md:p-14 border-b border-gray-50">
+                                <div className="flex items-center gap-3 mb-10">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                    <h2 className="text-2xl font-black text-gray-900 uppercase tracking-widest">
+                                        {t.onsiteDonorPage.ongoingCamps}
+                                    </h2>
                                 </div>
-                            ) : (
-                                <div className="space-y-8">
-                                    {ongoingCamps.map((camp) => (
-                                        <div key={camp._id} className="bg-rose-50/30 rounded-[32px] p-8 md:p-10 border border-rose-100/50 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-                                            <div className="flex-1 space-y-6">
-                                                <div>
-                                                    <span className="text-[10px] font-black text-rose-400 uppercase tracking-[0.2em] mb-2 block">
-                                                        Active • {camp.siteId}
-                                                    </span>
-                                                    <h3 className="text-3xl font-bold text-gray-900 mb-3">{camp.name}</h3>
-                                                    <p className="text-gray-600 font-medium leading-relaxed max-w-xl">{camp.description || "Live donation camp in progress."}</p>
-                                                </div>
 
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                                    <div className="flex items-start gap-4">
-                                                        <MapPin className="text-[#8B0000] w-5 h-5 shrink-0 mt-1" />
-                                                        <div>
-                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Location</p>
-                                                            <p className="text-sm font-bold text-gray-700">{camp.address}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-start gap-4">
-                                                        <Clock className="text-[#8B0000] w-5 h-5 shrink-0 mt-1" />
-                                                        <div>
-                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Timing</p>
-                                                            <p className="text-sm font-bold text-gray-700">
-                                                                {new Date(camp.dateFrom).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(camp.dateTo).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="lg:border-l lg:border-rose-100 lg:pl-12">
-                                                <Link 
-                                                    href="/onsite-donor/ongoing-camp" 
-                                                    className="bg-[#8B0000] text-white px-10 py-5 rounded-[24px] font-black uppercase tracking-widest text-sm hover:bg-[#700000] transition-all shadow-xl shadow-rose-900/20 flex items-center justify-center gap-3 w-full lg:w-fit"
-                                                >
-                                                    Register Here <ArrowRight size={20} />
-                                                </Link>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Upcoming Camps Section */}
-                        <div className="p-8 md:p-14 bg-gray-50/30">
-                            <div className="flex items-center gap-3 mb-10">
-                                <div className="w-2 h-2 bg-amber-500 rounded-full" />
-                                <h2 className="text-2xl font-black text-gray-900 uppercase tracking-widest">Upcoming Camps</h2>
-                            </div>
-
-                            {upcomingCamps.length === 0 ? (
-                                <div className="p-8 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">
-                                    No upcoming camps scheduled
-                                </div>
-                            ) : (
-                                <div className="space-y-6">
-                                    {upcomingCamps.map((camp) => (
-                                        <div key={camp._id} className="bg-white rounded-[32px] p-8 border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:shadow-lg transition-shadow">
-                                            <div className="flex items-center gap-6">
-                                                <div className="bg-gray-50 p-5 rounded-2xl">
-                                                    <Calendar className="text-gray-400 w-8 h-8" />
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-3 mb-1">
-                                                        <h3 className="text-xl font-bold text-gray-900">{camp.name}</h3>
-                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded-full">
-                                                            {new Date(camp.dateFrom).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                {ongoingCamps.length === 0 ? (
+                                    <p className="text-gray-400 font-medium">{t.onsiteDonorPage.noOngoing}</p>
+                                ) : (
+                                    <div className="space-y-12">
+                                        {ongoingCamps.map((camp) => (
+                                            <div key={camp._id} className="flex flex-col lg:flex-row lg:items-center gap-10 group">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3 mb-4">
+                                                        <span className="text-[10px] font-black text-[#8B0000] bg-rose-50 px-3 py-1 rounded-full uppercase tracking-widest border border-rose-100">
+                                                            {camp.siteId}
+                                                        </span>
+                                                        <span className="text-[10px] font-black text-green-600 bg-green-50 px-3 py-1 rounded-full uppercase tracking-widest border border-green-100">
+                                                            Live Now
                                                         </span>
                                                     </div>
-                                                    <p className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                                                        <MapPin size={14} /> {camp.address}
-                                                    </p>
+                                                    <h3 className="text-3xl font-bold text-gray-900 mb-4 group-hover:text-[#8B0000] transition-colors">{camp.name}</h3>
+                                                    <div className="flex flex-wrap gap-6">
+                                                        <div className="flex items-center gap-2 text-gray-500 font-medium">
+                                                            <MapPin size={18} className="text-gray-300" />
+                                                            {camp.address}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 text-gray-500 font-medium">
+                                                            <Calendar size={18} className="text-gray-300" />
+                                                            {new Date(camp.dateFrom).toLocaleDateString()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="lg:border-l lg:border-rose-100 lg:pl-12">
+                                                    <Link 
+                                                        href={`/onsite-donor/ongoing-camp?campId=${camp._id}`} 
+                                                        className="bg-[#8B0000] text-white px-10 py-5 rounded-[24px] font-black uppercase tracking-widest text-sm hover:bg-[#700000] transition-all shadow-xl shadow-rose-900/20 flex items-center justify-center gap-3 w-full lg:w-fit"
+                                                    >
+                                                        {t.onsiteDonorPage.registerHere} <ArrowRight size={20} />
+                                                    </Link>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-4">
-                                                <Link href={`/donate?camp=${camp._id}`} className="px-6 py-3 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition-all">
-                                                    Register to Donate
-                                                </Link>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
 
-                    </div>
+                            {/* Upcoming Section */}
+                            <div className="p-8 md:p-14 bg-gray-50/30">
+                                <div className="flex items-center gap-3 mb-10">
+                                    <div className="w-2 h-2 bg-amber-500 rounded-full" />
+                                    <h2 className="text-2xl font-black text-gray-900 uppercase tracking-widest">
+                                        {t.onsiteDonorPage.upcomingCamps}
+                                    </h2>
+                                </div>
+
+                                {upcomingCamps.length === 0 ? (
+                                    <p className="text-gray-400 font-medium">{t.onsiteDonorPage.noUpcoming}</p>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {upcomingCamps.map((camp) => (
+                                            <div key={camp._id} className="bg-white p-8 rounded-[32px] border border-gray-100 hover:shadow-xl transition-all duration-500">
+                                                <div className="flex justify-between items-start mb-6">
+                                                    <div className="bg-rose-50 p-3 rounded-2xl">
+                                                        <Calendar className="text-[#8B0000] w-6 h-6" />
+                                                    </div>
+                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{camp.siteId}</span>
+                                                </div>
+                                                <h4 className="text-xl font-bold text-gray-900 mb-2">{camp.name}</h4>
+                                                <p className="text-gray-500 text-sm mb-6 flex items-center gap-2">
+                                                    <MapPin size={14} /> {camp.address}
+                                                </p>
+                                                <div className="flex items-center justify-between pt-6 border-t border-gray-50">
+                                                    <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                                        {new Date(camp.dateFrom).toLocaleDateString()}
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <Link href={`/donate?camp=${camp._id}`} className="px-6 py-3 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition-all">
+                                                            {t.onsiteDonorPage.registerToDonate}
+                                                        </Link>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </>
                 )}
 
-                {/* Info Footer */}
-                <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="bg-white p-8 rounded-[32px] border border-gray-100 flex items-center gap-6">
-                        <div className="bg-rose-50 p-4 rounded-2xl">
-                            <Activity className="text-[#8B0000]" />
+                {/* History Section */}
+                {!loading && pastCamps.length > 0 && (
+                    <div className="mt-24">
+                        <div className="flex items-center gap-3 mb-10">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                            <h2 className="text-2xl font-black text-gray-500 uppercase tracking-widest">
+                                {t.onsiteDonorPage.campHistory}
+                            </h2>
                         </div>
-                        <div>
-                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Live Units</p>
-                            <p className="text-xl font-bold text-gray-900">1,240+</p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {pastCamps.map((camp) => (
+                                <motion.div 
+                                    key={camp._id}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="bg-white rounded-3xl p-6 border border-gray-100 opacity-70 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500"
+                                >
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="bg-gray-50 p-3 rounded-xl">
+                                            <Calendar className="w-5 h-5 text-gray-400" />
+                                        </div>
+                                        <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded-md uppercase">
+                                            {t.onsiteDonorPage.completed}
+                                        </span>
+                                    </div>
+                                    <h3 className="text-lg font-bold text-gray-900 mb-2">{camp.name}</h3>
+                                    <div className="space-y-2 mb-6">
+                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                            <MapPin size={12} /> {camp.address}
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                            <Clock size={12} /> {new Date(camp.dateFrom).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                    <Link 
+                                        href={`/onsite-donor/ongoing-camp?campId=${camp._id}`}
+                                        className="text-[10px] font-black text-[#8B0000] uppercase tracking-wider hover:underline"
+                                    >
+                                        {t.onsiteDonorPage.viewRecords} →
+                                    </Link>
+                                </motion.div>
+                            ))}
                         </div>
                     </div>
-                    <div className="bg-white p-8 rounded-[32px] border border-gray-100 flex items-center gap-6">
-                        <div className="bg-rose-50 p-4 rounded-2xl">
-                            <Users className="text-[#8B0000]" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Active Donors</p>
-                            <p className="text-xl font-bold text-gray-900">45k+</p>
-                        </div>
-                    </div>
-                    <div className="bg-white p-8 rounded-[32px] border border-gray-100 flex items-center gap-6">
-                        <div className="bg-rose-50 p-4 rounded-2xl">
-                            <Droplets className="text-[#8B0000]" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Lives Saved</p>
-                            <p className="text-xl font-bold text-gray-900">100k+</p>
-                        </div>
-                    </div>
-                </div>
+                )}
             </div>
         </main>
     )
