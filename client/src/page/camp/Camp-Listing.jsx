@@ -107,8 +107,8 @@ const CampList = ({ OnBack }) => {
       address: camp.address || "",
       phone: camp.contactInfo?.phone || "",
       email: camp.contactInfo?.email || "",
-      dateFrom: camp.dateFrom ? camp.dateFrom.slice(0, 10) : "",
-      dateTo: camp.dateTo ? camp.dateTo.slice(0, 10) : "",
+      dateFrom: camp.dateFrom ? new Date(new Date(camp.dateFrom).getTime() - new Date(camp.dateFrom).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+      dateTo: camp.dateTo ? new Date(new Date(camp.dateTo).getTime() - new Date(camp.dateTo).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
       staff: (camp.staff || []).map((member) => member._id),
     })
     setEditErrors({})
@@ -339,7 +339,7 @@ const CampList = ({ OnBack }) => {
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Duration</p>
                       <p className="text-sm font-medium text-slate-900 mt-1">
                         {camp.dateFrom && camp.dateTo
-                          ? `${new Date(camp.dateFrom).toLocaleDateString()} - ${new Date(camp.dateTo).toLocaleDateString()}`
+                          ? `${new Date(camp.dateFrom).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} - ${new Date(camp.dateTo).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`
                           : "N/A"}
                       </p>
                     </div>

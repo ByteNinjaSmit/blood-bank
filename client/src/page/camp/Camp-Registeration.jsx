@@ -365,7 +365,7 @@ const CampRegistration = () => {
                       <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                     </div>
                     <input
-                      type="date"
+                      type="datetime-local"
                       name="dateFrom"
                       value={formData.dateFrom}
                       onChange={handleChange}
@@ -385,7 +385,7 @@ const CampRegistration = () => {
                       <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                     </div>
                     <input
-                      type="date"
+                      type="datetime-local"
                       name="dateTo"
                       value={formData.dateTo}
                       onChange={handleChange}

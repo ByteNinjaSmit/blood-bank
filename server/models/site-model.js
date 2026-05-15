@@ -37,6 +37,12 @@ const siteSchema = new Schema(
     dateTo: {
       type: Date,
       required: true, // mark as required if every camp must have an end
+      validate: {
+        validator: function (value) {
+          return this.dateFrom < value;
+        },
+        message: "End date must be after start date.",
+      },
     },
 
     // Reference to the User who created the site

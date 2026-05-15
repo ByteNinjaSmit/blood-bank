@@ -1,36 +1,33 @@
 'use client'
 
 import React from 'react'
-import { Calendar, MapPin, Phone, Mail, Clock, Droplets, ChevronLeft, ArrowRight, Activity, Users } from 'lucide-react'
+import { Calendar, MapPin, Phone, Mail, Clock, Droplets, ChevronLeft, ArrowRight, Activity, Users, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { getActiveCamps } from '@/actions/camp'
 
-const ongoingCamps = [
-    {
-        siteId: "CAMP-ONGOING-001",
-        name: "Sanjivani Mega Blood Camp",
-        description: "Live donation camp at Kopargaon Town Hall. All healthy citizens are invited.",
-        address: "Town Hall, Main Road, Kopargaon",
-        phone: "+91 94222 23117",
-        time: "09:00 AM - 06:00 PM",
-        status: "Live Now"
-    }
-]
 
-const upcomingCamps = [
-    {
-        siteId: "CAMP-2024-002",
-        name: "College Campus Drive",
-        description: "Blood donation drive for students and faculty.",
-        address: "Sanjivani College of Engineering, Kopargaon",
-        phone: "+91 94222 23117",
-        date: "2024-06-20",
-        time: "10:00 AM - 04:00 PM",
-        status: "Upcoming"
-    }
-]
 
 export default function VoluntaryCampDonationPage() {
+    const [camps, setCamps] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        async function loadCamps() {
+            const res = await getActiveCamps()
+            if (res.success) {
+                setCamps(res.data)
+            }
+            setLoading(false)
+        }
+        loadCamps()
+    }, [])
+
+    const now = new Date()
+    const ongoingCamps = camps.filter(c => new Date(c.dateFrom) <= now && new Date(c.dateTo) >= now)
+    const upcomingCamps = camps.filter(c => new Date(c.dateFrom) > now)
+
     return (
         <main className="min-h-screen bg-gray-50 pb-20 font-inter">
             {/* Minimal Header */}
@@ -56,99 +53,117 @@ export default function VoluntaryCampDonationPage() {
                     </p>
                 </div>
 
-                {/* Big Rectangle Container */}
-                <div className="bg-white rounded-[48px] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-                    
-                    {/* Ongoing Camps Section */}
-                    <div className="p-8 md:p-14 border-b border-gray-50">
-                        <div className="flex items-center gap-3 mb-10">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            <h2 className="text-2xl font-black text-gray-900 uppercase tracking-widest">Ongoing Camps</h2>
-                        </div>
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-20">
+                        <Loader2 className="w-12 h-12 text-[#8B0000] animate-spin mb-4" />
+                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Synchronizing Camps...</p>
+                    </div>
+                ) : (
+                    /* Big Rectangle Container */
+                    <div className="bg-white rounded-[48px] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden animate-in fade-in duration-700">
+                        
+                        {/* Ongoing Camps Section */}
+                        <div className="p-8 md:p-14 border-b border-gray-50">
+                            <div className="flex items-center gap-3 mb-10">
+                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                <h2 className="text-2xl font-black text-gray-900 uppercase tracking-widest">Ongoing Camps</h2>
+                            </div>
 
-                        <div className="space-y-8">
-                            {ongoingCamps.map((camp) => (
-                                <div key={camp.siteId} className="bg-rose-50/30 rounded-[32px] p-8 md:p-10 border border-rose-100/50 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-                                    <div className="flex-1 space-y-6">
-                                        <div>
-                                            <span className="text-[10px] font-black text-rose-400 uppercase tracking-[0.2em] mb-2 block">
-                                                Active • {camp.siteId}
-                                            </span>
-                                            <h3 className="text-3xl font-bold text-gray-900 mb-3">{camp.name}</h3>
-                                            <p className="text-gray-600 font-medium leading-relaxed max-w-xl">{camp.description}</p>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                            <div className="flex items-start gap-4">
-                                                <MapPin className="text-[#8B0000] w-5 h-5 shrink-0 mt-1" />
+                            {ongoingCamps.length === 0 ? (
+                                <div className="bg-gray-50/50 rounded-[32px] p-12 text-center border border-dashed border-gray-200">
+                                    <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">No camps are live right now</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-8">
+                                    {ongoingCamps.map((camp) => (
+                                        <div key={camp._id} className="bg-rose-50/30 rounded-[32px] p-8 md:p-10 border border-rose-100/50 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                                            <div className="flex-1 space-y-6">
                                                 <div>
-                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Location</p>
-                                                    <p className="text-sm font-bold text-gray-700">{camp.address}</p>
+                                                    <span className="text-[10px] font-black text-rose-400 uppercase tracking-[0.2em] mb-2 block">
+                                                        Active • {camp.siteId}
+                                                    </span>
+                                                    <h3 className="text-3xl font-bold text-gray-900 mb-3">{camp.name}</h3>
+                                                    <p className="text-gray-600 font-medium leading-relaxed max-w-xl">{camp.description || "Live donation camp in progress."}</p>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                                    <div className="flex items-start gap-4">
+                                                        <MapPin className="text-[#8B0000] w-5 h-5 shrink-0 mt-1" />
+                                                        <div>
+                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Location</p>
+                                                            <p className="text-sm font-bold text-gray-700">{camp.address}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-start gap-4">
+                                                        <Clock className="text-[#8B0000] w-5 h-5 shrink-0 mt-1" />
+                                                        <div>
+                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Timing</p>
+                                                            <p className="text-sm font-bold text-gray-700">
+                                                                {new Date(camp.dateFrom).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(camp.dateTo).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </p>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-start gap-4">
-                                                <Clock className="text-[#8B0000] w-5 h-5 shrink-0 mt-1" />
+
+                                            <div className="lg:border-l lg:border-rose-100 lg:pl-12">
+                                                <Link 
+                                                    href="/onsite-donor/ongoing-camp" 
+                                                    className="bg-[#8B0000] text-white px-10 py-5 rounded-[24px] font-black uppercase tracking-widest text-sm hover:bg-[#700000] transition-all shadow-xl shadow-rose-900/20 flex items-center justify-center gap-3 w-full lg:w-fit"
+                                                >
+                                                    Register Here <ArrowRight size={20} />
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Upcoming Camps Section */}
+                        <div className="p-8 md:p-14 bg-gray-50/30">
+                            <div className="flex items-center gap-3 mb-10">
+                                <div className="w-2 h-2 bg-amber-500 rounded-full" />
+                                <h2 className="text-2xl font-black text-gray-900 uppercase tracking-widest">Upcoming Camps</h2>
+                            </div>
+
+                            {upcomingCamps.length === 0 ? (
+                                <div className="p-8 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">
+                                    No upcoming camps scheduled
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {upcomingCamps.map((camp) => (
+                                        <div key={camp._id} className="bg-white rounded-[32px] p-8 border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:shadow-lg transition-shadow">
+                                            <div className="flex items-center gap-6">
+                                                <div className="bg-gray-50 p-5 rounded-2xl">
+                                                    <Calendar className="text-gray-400 w-8 h-8" />
+                                                </div>
                                                 <div>
-                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Timing</p>
-                                                    <p className="text-sm font-bold text-gray-700">{camp.time}</p>
+                                                    <div className="flex items-center gap-3 mb-1">
+                                                        <h3 className="text-xl font-bold text-gray-900">{camp.name}</h3>
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded-full">
+                                                            {new Date(camp.dateFrom).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                                                        <MapPin size={14} /> {camp.address}
+                                                    </p>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="lg:border-l lg:border-rose-100 lg:pl-12">
-                                        <Link 
-                                            href="/onsite-donor/ongoing-camp" 
-                                            className="bg-[#8B0000] text-white px-10 py-5 rounded-[24px] font-black uppercase tracking-widest text-sm hover:bg-[#700000] transition-all shadow-xl shadow-rose-900/20 flex items-center justify-center gap-3 w-full lg:w-fit"
-                                        >
-                                            Register Here <ArrowRight size={20} />
-                                        </Link>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Upcoming Camps Section */}
-                    <div className="p-8 md:p-14 bg-gray-50/30">
-                        <div className="flex items-center gap-3 mb-10">
-                            <div className="w-2 h-2 bg-amber-500 rounded-full" />
-                            <h2 className="text-2xl font-black text-gray-900 uppercase tracking-widest">Upcoming Camps</h2>
-                        </div>
-
-                        <div className="space-y-6">
-                            {upcomingCamps.map((camp) => (
-                                <div key={camp.siteId} className="bg-white rounded-[32px] p-8 border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:shadow-lg transition-shadow">
-                                    <div className="flex items-center gap-6">
-                                        <div className="bg-gray-50 p-5 rounded-2xl">
-                                            <Calendar className="text-gray-400 w-8 h-8" />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-3 mb-1">
-                                                <h3 className="text-xl font-bold text-gray-900">{camp.name}</h3>
-                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded-full">
-                                                    {new Date(camp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                                                </span>
+                                            <div className="flex items-center gap-4">
+                                                <Link href={`/donate?camp=${camp._id}`} className="px-6 py-3 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition-all">
+                                                    Register to Donate
+                                                </Link>
                                             </div>
-                                            <p className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                                                <MapPin size={14} /> {camp.address}
-                                            </p>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <button className="px-6 py-3 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all">
-                                            View Details
-                                        </button>
-                                        <button className="px-6 py-3 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition-all">
-                                            Remind Me
-                                        </button>
-                                    </div>
+                                    ))}
                                 </div>
-                            ))}
+                            )}
                         </div>
-                    </div>
 
-                </div>
+                    </div>
+                )}
 
                 {/* Info Footer */}
                 <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
