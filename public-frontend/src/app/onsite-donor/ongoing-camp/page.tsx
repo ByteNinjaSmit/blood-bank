@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { 
     User, 
     MapPin, 
@@ -26,6 +26,14 @@ import { voluntaryCampDonationSchema } from '@/schemas/voluntary-camp-donation-s
 import { z } from 'zod'
 
 export default function OnGoingCampRegistration() {
+    return (
+        <Suspense fallback={null}>
+            <OnGoingCampRegistrationForm />
+        </Suspense>
+    )
+}
+
+function OnGoingCampRegistrationForm() {
     const { language } = useLanguage()
     const t = content[language]
     const searchParams = useSearchParams()
