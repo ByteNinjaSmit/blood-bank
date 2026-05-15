@@ -259,6 +259,18 @@ export const content: Record<'en' | 'mr', ContentData> = {
                     ],
                     viewAllLabel: "View all About Us",
                     viewAllHref: "/about"
+                },
+                {
+                    label: "Donation",
+                    href: "#",
+                    columns: [
+                        {
+                            title: "Donation Services",
+                            links: [
+                                { label: "Voluntary Camp Donation", href: "/onsite-donor" }
+                            ]
+                        }
+                    ]
                 }
             ]
         },
@@ -614,6 +626,18 @@ export const content: Record<'en' | 'mr', ContentData> = {
                     ],
                     viewAllLabel: "सर्व आमच्याबद्दल पहा",
                     viewAllHref: "/about"
+                },
+                {
+                    label: "रक्तदान",
+                    href: "#",
+                    columns: [
+                        {
+                            title: "रक्तदान सेवा",
+                            links: [
+                                { label: "स्वैच्छिक शिबिर रक्तदान", href: "/onsite-donor" }
+                            ]
+                        }
+                    ]
                 }
             ]
         },
