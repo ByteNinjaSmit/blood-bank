@@ -47,7 +47,7 @@ export const useDonor = () => {
       setError(apiError);
       toast.error(apiError);
     } else {
-      setDonors((data && data.data && data.data.donors) ? data.data.donors : []);
+      setDonors(data?.donors || []);
     }
     
     setLoading(false);

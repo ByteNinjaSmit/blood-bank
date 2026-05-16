@@ -30,7 +30,7 @@ export const useCamp = () => {
         setError(apiError);
         toast.error(apiError);
       } else {
-        setCamps(data.data || []);
+        setCamps(data || []);
       }
     } finally {
       setLoading(false);
