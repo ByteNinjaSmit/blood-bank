@@ -132,11 +132,11 @@ export default function VoluntaryCampDonationPage() {
                                                     <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">
                                                         {new Date(camp.dateFrom).toLocaleDateString()}
                                                     </div>
-                                                    <div className="flex items-center gap-4">
+                                                    {/* <div className="flex items-center gap-4">
                                                         <Link href={`/donate?camp=${camp._id}`} className="px-6 py-3 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition-all">
                                                             {t.onsiteDonorPage.registerToDonate}
                                                         </Link>
-                                                    </div>
+                                                    </div> */}
                                                 </div>
                                             </div>
                                         ))}

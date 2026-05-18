@@ -80,9 +80,9 @@ const CampCard = ({ camp, t }: { camp: any, t: any }) => (
             </div>
 
             <div className="pt-10 border-t border-gray-50 flex flex-wrap gap-4">
-                <Link href={`/donate?camp=${camp._id}`} className="flex-1 min-w-fit px-8 py-4 rounded-2xl bg-[#8B0000] text-white font-bold hover:bg-[#700000] transition-all shadow-xl shadow-rose-900/20 text-center">
+                {/* <Link href={`/donate?camp=${camp._id}`} className="flex-1 min-w-fit px-8 py-4 rounded-2xl bg-[#8B0000] text-white font-bold hover:bg-[#700000] transition-all shadow-xl shadow-rose-900/20 text-center">
                     {t.incomingCampsPage.registerBtn}
-                </Link>
+                </Link> */}
                 <button className="flex-1 min-w-fit px-8 py-4 rounded-2xl border-2 border-gray-100 text-gray-700 font-bold hover:border-[#8B0000] hover:text-[#8B0000] transition-all">
                     {t.incomingCampsPage.directionsBtn}
                 </button>

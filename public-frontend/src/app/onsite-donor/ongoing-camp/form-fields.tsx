@@ -75,7 +75,7 @@ export const FormRadioGroup = ({ label, name, value, onChange, options, classNam
     </div>
 )
 
-export const FormVitalsInput = ({ label, name, value, onChange, placeholder, unit, step = '1', className = '', error }: FormFieldProps & { unit?: string, step?: string }) => (
+export const FormVitalsInput = ({ label, name, value, onChange, placeholder, unit, step = '1', className = '', error, type = 'number' }: FormFieldProps & { unit?: string, step?: string, type?: string }) => (
     <div className={`space-y-1.5 ${className}`}>
         <div className="flex justify-between items-center">
             <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{label} *</label>
@@ -85,8 +85,8 @@ export const FormVitalsInput = ({ label, name, value, onChange, placeholder, uni
             <input 
                 required 
                 name={name} 
-                type="number" 
-                step={step}
+                type={type} 
+                {...(type === 'number' ? { step } : {})}
                 value={value} 
                 onChange={onChange} 
                 className={`w-full px-4 py-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-[#8B0000]/10 outline-none font-bold text-lg text-gray-900 ${error ? 'border-rose-200' : 'border-gray-100'}`} 

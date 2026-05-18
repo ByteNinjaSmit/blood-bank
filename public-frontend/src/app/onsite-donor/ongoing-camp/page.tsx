@@ -1,13 +1,13 @@
 'use client'
 
 import React, { useState, useEffect, Suspense } from 'react'
-import { 
-    User, 
-    MapPin, 
-    CheckCircle, 
-    ArrowRight, 
-    ArrowLeft, 
-    Activity, 
+import {
+    User,
+    MapPin,
+    CheckCircle,
+    ArrowRight,
+    ArrowLeft,
+    Activity,
     Stethoscope,
     History,
     Home,
@@ -38,7 +38,7 @@ function OnGoingCampRegistrationForm() {
     const t = content[language]
     const searchParams = useSearchParams()
     const campIdParam = searchParams.get('campId')
-    
+
     const [currentStep, setCurrentStep] = useState(1)
     const [loading, setLoading] = useState(false)
     const [submitted, setSubmitted] = useState(false)
@@ -46,7 +46,9 @@ function OnGoingCampRegistrationForm() {
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
     const [camps, setCamps] = useState<any[]>([])
     const [loadingCamps, setLoadingCamps] = useState(true)
-    
+
+    const selectedCamp = camps.find((c: any) => c._id === formData.siteId)
+
     const [formData, setFormData] = useState({
         // 1. Identity
         firstName: '',
@@ -57,13 +59,13 @@ function OnGoingCampRegistrationForm() {
         age: '',
         occupation: '',
         bloodGroup: '',
-        
+
         // 2. Contact
         address: '',
         mobile: '',
         pincode: '',
         email: '',
-        
+
         // 3. Questionnaire
         isFirstTime: 'no',
         isRepeated: 'no',
@@ -181,7 +183,7 @@ function OnGoingCampRegistrationForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!validateStep(5)) return
-        
+
         setLoading(true)
         try {
             const result = await createVoluntaryCampDonation(formData)
@@ -234,10 +236,9 @@ function OnGoingCampRegistrationForm() {
                         const isCompleted = currentStep > step.id
                         return (
                             <div key={step.id} className="flex items-center gap-2 min-w-fit px-4">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                                    isActive ? 'bg-[#8B0000] text-white shadow-md shadow-rose-900/20' : 
-                                    isCompleted ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'
-                                }`}>
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${isActive ? 'bg-[#8B0000] text-white shadow-md shadow-rose-900/20' :
+                                        isCompleted ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'
+                                    }`}>
                                     {isCompleted ? <CheckCircle size={16} /> : <Icon size={16} />}
                                 </div>
                                 <div>
@@ -262,36 +263,47 @@ function OnGoingCampRegistrationForm() {
                                     </div>
 
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.sex} name="sex" value={formData.sex} onChange={handleInputChange} options={[{value: 'M', label: language === 'mr' ? 'पुरुष' : 'Male'}, {value: 'F', label: language === 'mr' ? 'स्त्री' : 'Female'}]} error={fieldErrors.sex} />
+                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.sex} name="sex" value={formData.sex} onChange={handleInputChange} options={[{ value: 'M', label: language === 'mr' ? 'पुरुष' : 'Male' }, { value: 'F', label: language === 'mr' ? 'स्त्री' : 'Female' }]} error={fieldErrors.sex} />
                                         <FormInput label={t.onsiteRegistrationForm.fields.dob} name="dob" type="date" value={formData.dob} onChange={handleInputChange} error={fieldErrors.dob} />
                                         <FormInput label={t.onsiteRegistrationForm.fields.age} name="age" type="number" value={formData.age} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.age} error={fieldErrors.age} />
-                                        <FormSelect label={t.onsiteRegistrationForm.fields.bloodGroup} name="bloodGroup" value={formData.bloodGroup} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.select} options={['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => ({value: bg, label: bg}))} error={fieldErrors.bloodGroup} />
+                                        <FormSelect label={t.onsiteRegistrationForm.fields.bloodGroup} name="bloodGroup" value={formData.bloodGroup} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.select} options={['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => ({ value: bg, label: bg }))} error={fieldErrors.bloodGroup} />
                                     </div>
 
-                                    <FormSelect 
-                                        label={t.onsiteRegistrationForm.fields.camp} 
-                                        name="siteId" 
-                                        value={formData.siteId} 
-                                        onChange={handleInputChange} 
-                                        placeholder={loadingCamps ? "Loading..." : t.onsiteRegistrationForm.placeholders.select} 
-                                        options={camps.map(c => ({value: c._id, label: `${c.name} (${new Date(c.dateFrom).toLocaleDateString()})`}))} 
-                                        error={fieldErrors.siteId}
-                                    />
+                                    {selectedCamp ? (
+                                        <div className="space-y-1.5">
+                                            <div className="flex justify-between items-center">
+                                                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{t.onsiteRegistrationForm.fields.camp} *</label>
+                                            </div>
+                                            <div className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl font-bold text-sm text-gray-700">
+                                                {selectedCamp.name} ({new Date(selectedCamp.dateFrom).toLocaleDateString()})
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <FormSelect
+                                            label={t.onsiteRegistrationForm.fields.camp}
+                                            name="siteId"
+                                            value={formData.siteId}
+                                            onChange={handleInputChange}
+                                            placeholder={loadingCamps ? "Loading..." : t.onsiteRegistrationForm.placeholders.select}
+                                            options={camps.map(c => ({ value: c._id, label: `${c.name} (${new Date(c.dateFrom).toLocaleDateString()})` }))}
+                                            error={fieldErrors.siteId}
+                                        />
+                                    )}
 
-                                    <FormSelect 
-                                        label={t.onsiteRegistrationForm.fields.occupation} 
-                                        name="occupation" 
-                                        value={formData.occupation} 
-                                        onChange={handleInputChange} 
-                                        placeholder={t.onsiteRegistrationForm.placeholders.select} 
+                                    <FormSelect
+                                        label={t.onsiteRegistrationForm.fields.occupation}
+                                        name="occupation"
+                                        value={formData.occupation}
+                                        onChange={handleInputChange}
+                                        placeholder={t.onsiteRegistrationForm.placeholders.select}
                                         options={[
-                                            {value: "Student", label: language === 'mr' ? 'विद्यार्थी' : 'Student'},
-                                            {value: "Service", label: language === 'mr' ? 'नोकरी' : 'Service'},
-                                            {value: "Business", label: language === 'mr' ? 'व्यवसाय' : 'Business'},
-                                            {value: "Self Employed", label: language === 'mr' ? 'स्वयंरोजगार' : 'Self Employed'},
-                                            {value: "Housewife", label: language === 'mr' ? 'गृहिणी' : 'Housewife'},
-                                            {value: "Other", label: language === 'mr' ? 'इतर' : 'Other'}
-                                        ]} 
+                                            { value: "Student", label: language === 'mr' ? 'विद्यार्थी' : 'Student' },
+                                            { value: "Service", label: language === 'mr' ? 'नोकरी' : 'Service' },
+                                            { value: "Business", label: language === 'mr' ? 'व्यवसाय' : 'Business' },
+                                            { value: "Self Employed", label: language === 'mr' ? 'स्वयंरोजगार' : 'Self Employed' },
+                                            { value: "Housewife", label: language === 'mr' ? 'गृहिणी' : 'Housewife' },
+                                            { value: "Other", label: language === 'mr' ? 'इतर' : 'Other' }
+                                        ]}
                                         error={fieldErrors.occupation}
                                     />
                                 </motion.div>
@@ -317,8 +329,8 @@ function OnGoingCampRegistrationForm() {
                             {currentStep === 3 && (
                                 <motion.div key="step3" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.isFirstTime} name="isFirstTime" value={formData.isFirstTime} onChange={handleInputChange} options={[{value: 'yes', label: language === 'mr' ? 'हो' : 'YES'}, {value: 'no', label: language === 'mr' ? 'नाही' : 'NO'}]} error={fieldErrors.isFirstTime} />
-                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.isRepeated} name="isRepeated" value={formData.isRepeated} onChange={handleInputChange} options={[{value: 'yes', label: language === 'mr' ? 'हो' : 'YES'}, {value: 'no', label: language === 'mr' ? 'नाही' : 'NO'}]} error={fieldErrors.isRepeated} />
+                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.isFirstTime} name="isFirstTime" value={formData.isFirstTime} onChange={handleInputChange} options={[{ value: 'yes', label: language === 'mr' ? 'हो' : 'YES' }, { value: 'no', label: language === 'mr' ? 'नाही' : 'NO' }]} error={fieldErrors.isFirstTime} />
+                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.isRepeated} name="isRepeated" value={formData.isRepeated} onChange={handleInputChange} options={[{ value: 'yes', label: language === 'mr' ? 'हो' : 'YES' }, { value: 'no', label: language === 'mr' ? 'नाही' : 'NO' }]} error={fieldErrors.isRepeated} />
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <FormInput label={t.onsiteRegistrationForm.fields.lastDonation} name="lastDonationDate" type="date" value={formData.lastDonationDate} onChange={handleInputChange} required={false} error={fieldErrors.lastDonationDate} />
@@ -348,7 +360,7 @@ function OnGoingCampRegistrationForm() {
                                         <FormVitalsInput label={t.onsiteRegistrationForm.fields.hb} name="hb" value={formData.hb} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.hb} unit="gm%" step="0.1" error={fieldErrors.hb} />
                                         <FormVitalsInput label={t.onsiteRegistrationForm.fields.temp} name="temp" value={formData.temp} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.temp} unit="°C" step="0.1" error={fieldErrors.temp} />
                                         <FormVitalsInput label={t.onsiteRegistrationForm.fields.pulse} name="pulse" value={formData.pulse} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.pulse} unit="/min" error={fieldErrors.pulse} />
-                                        <FormVitalsInput label={t.onsiteRegistrationForm.fields.bp} name="bp" value={formData.bp} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.bp} unit="mmHg" error={fieldErrors.bp} />
+                                        <FormVitalsInput label={t.onsiteRegistrationForm.fields.bp} name="bp" value={formData.bp} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.bp} unit="mmHg" type="text" error={fieldErrors.bp} />
                                         <FormVitalsInput label={t.onsiteRegistrationForm.fields.o2Level} name="o2Level" value={formData.o2Level} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.o2Level} unit="%" error={fieldErrors.o2Level} />
                                     </div>
                                 </motion.div>
@@ -357,9 +369,9 @@ function OnGoingCampRegistrationForm() {
                             {currentStep === 5 && (
                                 <motion.div key="step5" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.pedalOedema} name="pedalOedema" value={formData.pedalOedema} onChange={handleInputChange} options={[{value: 'yes', label: 'YES'}, {value: 'no', label: 'NO'}]} error={fieldErrors.pedalOedema} />
-                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.lymphadenopathy} name="lymphadenopathy" value={formData.lymphadenopathy} onChange={handleInputChange} options={[{value: 'yes', label: 'YES'}, {value: 'no', label: 'NO'}]} error={fieldErrors.lymphadenopathy} />
-                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.cyanosis} name="cyanosis" value={formData.cyanosis} onChange={handleInputChange} options={[{value: 'yes', label: 'YES'}, {value: 'no', label: 'NO'}]} error={fieldErrors.cyanosis} />
+                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.pedalOedema} name="pedalOedema" value={formData.pedalOedema} onChange={handleInputChange} options={[{ value: 'yes', label: 'YES' }, { value: 'no', label: 'NO' }]} error={fieldErrors.pedalOedema} />
+                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.lymphadenopathy} name="lymphadenopathy" value={formData.lymphadenopathy} onChange={handleInputChange} options={[{ value: 'yes', label: 'YES' }, { value: 'no', label: 'NO' }]} error={fieldErrors.lymphadenopathy} />
+                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.cyanosis} name="cyanosis" value={formData.cyanosis} onChange={handleInputChange} options={[{ value: 'yes', label: 'YES' }, { value: 'no', label: 'NO' }]} error={fieldErrors.cyanosis} />
                                     </div>
                                     <div className="space-y-3">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Systematic Exam (Click to toggle)</label>
@@ -373,8 +385,8 @@ function OnGoingCampRegistrationForm() {
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-50">
-                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.skinDisease} name="freeFromSkinDisease" value={formData.freeFromSkinDisease} onChange={handleInputChange} options={[{value: 'yes', label: 'YES'}, {value: 'no', label: 'NO'}]} error={fieldErrors.freeFromSkinDisease} />
-                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.scars} name="freeFromScars" value={formData.freeFromScars} onChange={handleInputChange} options={[{value: 'yes', label: 'YES'}, {value: 'no', label: 'NO'}]} error={fieldErrors.freeFromScars} />
+                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.skinDisease} name="freeFromSkinDisease" value={formData.freeFromSkinDisease} onChange={handleInputChange} options={[{ value: 'yes', label: 'YES' }, { value: 'no', label: 'NO' }]} error={fieldErrors.freeFromSkinDisease} />
+                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.scars} name="freeFromScars" value={formData.freeFromScars} onChange={handleInputChange} options={[{ value: 'yes', label: 'YES' }, { value: 'no', label: 'NO' }]} error={fieldErrors.freeFromScars} />
                                     </div>
                                 </motion.div>
                             )}
