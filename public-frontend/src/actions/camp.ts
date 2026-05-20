@@ -11,12 +11,12 @@ export async function getActiveCamps() {
     const camps = await Site.find({
       dateTo: { $gte: now }
     })
-    .sort({ dateFrom: 1 })
-    .lean();
+      .sort({ dateFrom: 1 })
+      .lean();
 
-    return { 
-      success: true, 
-      data: JSON.parse(JSON.stringify(camps)) 
+    return {
+      success: true,
+      data: JSON.parse(JSON.stringify(camps))
     };
   } catch (error: any) {
     console.error("Failed to fetch camps:", error);
@@ -31,12 +31,12 @@ export async function getPastCamps() {
     const camps = await Site.find({
       dateTo: { $lt: now }
     })
-    .sort({ dateFrom: -1 })
-    .lean();
+      .sort({ dateFrom: -1 })
+      .lean();
 
-    return { 
-      success: true, 
-      data: JSON.parse(JSON.stringify(camps)) 
+    return {
+      success: true,
+      data: JSON.parse(JSON.stringify(camps))
     };
   } catch (error: any) {
     console.error("Failed to fetch past camps:", error);
