@@ -272,6 +272,37 @@ export type ContentData = {
         registerBtn: string;
         directionsBtn: string;
     };
+    hospitalPortal: {
+        portalTitle: string;
+        emailLabel: string;
+        emailPlaceholder: string;
+        emailDescription: string;
+        proceedBtn: string;
+        verificationTitle: string;
+        verificationText: string;
+        codeExpires: string;
+        codeExpired: string;
+        verifyBtn: string;
+        resendBtn: string;
+        changeEmailBtn: string;
+        invalidEmail: string;
+        unregisteredEmail: string;
+        codeExpiredMessage: string;
+        verifiedSuccess: string;
+        loading: string;
+        connectedPortal: string;
+        updated: string;
+        refresh: string;
+        signOut: string;
+        bloodComponent: string;
+        totals: string;
+        totalAvailable: string;
+        legendTitle: string;
+        criticalSupply: string;
+        lowSupply: string;
+        healthySupply: string;
+        footerNote: string;
+    };
 }
 
 export const content: Record<'en' | 'mr', ContentData> = {
@@ -733,6 +764,37 @@ export const content: Record<'en' | 'mr', ContentData> = {
             confirmed: "Confirmed",
             registerBtn: "Register to Donate",
             directionsBtn: "Get Directions"
+        },
+        hospitalPortal: {
+            portalTitle: "Hospital Portal",
+            emailLabel: "Email Address",
+            emailPlaceholder: "hospital@example.com",
+            emailDescription: "Enter your registered email address to receive a verification code.",
+            proceedBtn: "Proceed",
+            verificationTitle: "Verification",
+            verificationText: "We have sent an authentication code to",
+            codeExpires: "Code expires in",
+            codeExpired: "Code has expired.",
+            verifyBtn: "Verify",
+            resendBtn: "Resend Code",
+            changeEmailBtn: "Change Email",
+            invalidEmail: "Please enter a valid email address.",
+            unregisteredEmail: "This email address is not registered with our blood bank portal.",
+            codeExpiredMessage: "Code expired. Please request a new one.",
+            verifiedSuccess: "Verified Successfully",
+            loading: "Loading...",
+            connectedPortal: "Connected portal — Live Stock Directory",
+            updated: "Updated",
+            refresh: "Refresh",
+            signOut: "Sign Out",
+            bloodComponent: "Blood Component",
+            totals: "Totals",
+            totalAvailable: "Total Available",
+            legendTitle: "Inventory Supply Indicators:",
+            criticalSupply: "Critical Supply (0 Bags)",
+            lowSupply: "Low Supply (1-3 Bags)",
+            healthySupply: "Healthy Supply (4+ Bags)",
+            footerNote: "All values reflect real-time active stock count."
         }
     },
     mr: {
@@ -1193,6 +1255,37 @@ export const content: Record<'en' | 'mr', ContentData> = {
             confirmed: "निश्चित",
             registerBtn: "दानासाठी नोंदणी करा",
             directionsBtn: "दिशा मिळवा"
+        },
+        hospitalPortal: {
+            portalTitle: "रुग्णालय पोर्टल",
+            emailLabel: "ईमेल पत्ता",
+            emailPlaceholder: "hospital@example.com",
+            emailDescription: "पडताळणी कोड मिळवण्यासाठी तुमचा नोंदणीकृत ईमेल प्रविष्ट करा.",
+            proceedBtn: "पुढे जा",
+            verificationTitle: "पडताळणी",
+            verificationText: "आम्ही खालील ईमेलवर पडताळणी कोड पाठवला आहे:",
+            codeExpires: "कोडची मुदत संपेल:",
+            codeExpired: "कोडची मुदत संपली आहे.",
+            verifyBtn: "पडताळणी करा",
+            resendBtn: "कोड पुन्हा पाठवा",
+            changeEmailBtn: "ईमेल बदला",
+            invalidEmail: "कृपया वैध ईमेल पत्ता प्रविष्ट करा.",
+            unregisteredEmail: "हा ईमेल पत्ता आमच्या ब्लड बँक पोर्टलवर नोंदणीकृत नाही.",
+            codeExpiredMessage: "कोडची मुदत संपली आहे. कृपया नवीन कोडसाठी विनंती करा.",
+            verifiedSuccess: "यशस्वीरित्या पडताळणी झाली",
+            connectedPortal: "कनेक्ट केलेले पोर्टल — थेट साठा मार्गदर्शिका",
+            loading: "लोड होत आहे...",
+            updated: "अपडेट केले",
+            refresh: "रिफ्रेश करा",
+            signOut: "बाहेर पडा",
+            bloodComponent: "रक्ताचे घटक",
+            totals: "एकूण",
+            totalAvailable: "एकूण उपलब्ध",
+            legendTitle: "साठा पुरवठा निर्देशक:",
+            criticalSupply: "गंभीर पुरवठा (० पिशव्या)",
+            lowSupply: "कमी पुरवठा (१-३ पिशव्या)",
+            healthySupply: "योग्य पुरवठा (४+ पिशव्या)",
+            footerNote: "सर्व मूल्ये रिअल-टाइम सक्रिय साठा दर्शवतात."
         }
     }
 };

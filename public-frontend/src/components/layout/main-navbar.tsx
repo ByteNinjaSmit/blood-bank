@@ -66,7 +66,7 @@ export default function Navbar() {
             <div className="bg-gray-50/80 border-b border-gray-100/50 py-1.5 overflow-hidden">
                 <div className="max-w-7xl mx-auto px-4 md:px-8 flex justify-end">
                     <Link
-                        href="/hospital-services"
+                        href="/hospital-services/login"
                         className="text-[10px] md:text-[11px] font-semibold text-gray-400 hover:text-gray-900 transition-colors tracking-widest uppercase font-inter"
                     >
                         Hospital Services
@@ -255,7 +255,7 @@ export default function Navbar() {
 
                             <div className="pt-4 mt-2 border-t border-gray-100 flex flex-col gap-4">
                                 <Link
-                                    href="/hospital-services"
+                                    href="/hospital-services/login"
                                     className="text-xs font-bold text-gray-400 hover:text-gray-900 font-inter tracking-widest uppercase py-1"
                                     onClick={() => setMobileOpen(false)}
                                 >
