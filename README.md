@@ -483,6 +483,13 @@ For detailed notes, see `server/README.md`. In summary:
 
 ## Further Reading
 
-- [`server/README.md`](./server/README.md) – deep dive into backend features, environment variables, error handling, logging and troubleshooting.
+- [`DOCUMENTATION.md`](./DOCUMENTATION.md) – full reference: connection architecture, environment matrix, dev-vs-prod setup, security, licensing.
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) – contribution workflow, coding standards, PR checklist.
+- [`LICENSE`](./LICENSE) – proprietary license terms.
+- [`server/README.md`](./server/README.md) – backend features, environment variables, API endpoints, queues, logging, troubleshooting.
+- [`server/PRODUCTION.md`](./server/PRODUCTION.md) – production deployment guide.
+- [`server/EMAIL_QUEUE_SETUP.md`](./server/EMAIL_QUEUE_SETUP.md) – email and queue setup / troubleshooting.
+- [`client/README.md`](./client/README.md) – admin app setup and structure.
+- [`public-frontend/README.md`](./public-frontend/README.md) – public site setup.
 - `client/src/page/` – main functional pages for donors, donations, components, inventory, requests, hospitals, MIS, camps and more.
 - `server/controllers/` and `server/routers/` – domain-specific business logic.

@@ -10,7 +10,8 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "private": true,
+  "license": "UNLICENSED",
   "type": "commonjs",
   "dependencies": {
     "@aws-sdk/client-sns": "^3.879.0",
