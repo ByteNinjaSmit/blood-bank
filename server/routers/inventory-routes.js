@@ -27,6 +27,9 @@ router.route('/reserve/fifo').post(authMiddleware, inventoryController.reserveBy
 // Issue reserved inventory
 router.route('/issue').post(authMiddleware,inventoryController.issueInventory)
 
+// Unreserve reserved inventory
+router.route('/unreserve').post(authMiddleware,inventoryController.unreserveInventory)
+
 // Discard inventory items
 router.post('/discard',authMiddleware,inventoryController.discardInventory);
 

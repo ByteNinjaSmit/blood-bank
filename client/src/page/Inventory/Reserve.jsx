@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Hand } from "lucide-react";
 import { toast } from "sonner";
 import { COMPONENT_TYPES, SEX_TYPES } from "@/page/requisition/constants";
+import CustomModal from "@/components/CustomModal";
 
 const Reserve = () => {
   const { API, authorizationToken, user } = useAuth();
@@ -22,6 +23,8 @@ const Reserve = () => {
   const [sortBy, setSortBy] = useState("createdAt");
 
   const [selected, setSelected] = useState({});
+  const [unreserveModalOpen, setUnreserveModalOpen] = useState(false);
+  const [targetUnreserveId, setTargetUnreserveId] = useState(null);
 
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
@@ -51,6 +54,38 @@ const Reserve = () => {
 
   const toggle = (id) => setSelected((s) => ({ ...s, [id]: !s[id] }));
   const allSelectedIds = Object.keys(selected).filter((id) => selected[id]);
+
+  const triggerUnreserveConfirm = (id) => {
+    setTargetUnreserveId(id);
+    setUnreserveModalOpen(true);
+  };
+
+  const handleUnreserveConfirm = async () => {
+    if (!targetUnreserveId) return;
+    setUnreserveModalOpen(false);
+    setIsLoading(true);
+    try {
+      const res = await axios.post(
+        `${API}/api/inventory/unreserve`,
+        { inventoryIds: [targetUnreserveId], userId: user?._id },
+        {
+          headers: { Authorization: authorizationToken },
+          withCredentials: true,
+        }
+      );
+      if (res.data?.success) {
+        toast.success("Blood bag successfully unreserved and returned to stock.");
+        fetchRows(pagination.page);
+      } else {
+        toast.error(res.data?.message || "Failed to unreserve blood bag.");
+      }
+    } catch (e) {
+      toast.error(e?.response?.data?.message || "Error unreserving blood bag.");
+    } finally {
+      setIsLoading(false);
+      setTargetUnreserveId(null);
+    }
+  };
 
   const handleAdd = () => {
     navigate('/inventory/reserve/new');
@@ -126,13 +161,14 @@ const Reserve = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Age</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Sex</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {isLoading ? (
-                  <tr><td colSpan="10" className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
+                  <tr><td colSpan="11" className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan="10" className="px-4 py-8 text-center text-gray-500">No items found.</td></tr>
+                  <tr><td colSpan="11" className="px-4 py-8 text-center text-gray-500">No items found.</td></tr>
                 ) : (
                   rows.map((r) => (
                     <tr key={r._id} className="hover:bg-gray-50">
@@ -150,6 +186,15 @@ const Reserve = () => {
                         const found = (SEX_TYPES || []).find(s => s.value === sex);
                         return found ? found.label : (sex || '—');
                       })()}</td>
+                      <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                        <button
+                          onClick={() => triggerUnreserveConfirm(r._id)}
+                          disabled={isLoading}
+                          className="px-2.5 py-1 text-xs font-semibold text-red-700 hover:text-white border border-red-200 hover:bg-red-600 rounded transition-all duration-150 disabled:opacity-50"
+                        >
+                          Unreserve
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -200,6 +245,21 @@ const Reserve = () => {
           </div>
         </div>
       </div>
+
+      <CustomModal
+        open={unreserveModalOpen}
+        title="Confirm Unreservation"
+        description="Are you sure you want to unreserve this blood bag? It will be returned to the active inventory stock."
+        confirmText="Yes, Unreserve"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        size="sm"
+        onConfirm={handleUnreserveConfirm}
+        onCancel={() => {
+          setUnreserveModalOpen(false);
+          setTargetUnreserveId(null);
+        }}
+      />
     </div>
   );
 };

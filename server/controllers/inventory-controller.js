@@ -407,11 +407,44 @@ async function discardInventory(req, res, next) {
   }
 }
 
+// POST /inventory/unreserve – Unreserve stock (revert to in-stock)
+async function unreserveInventory(req, res, next) {
+  try {
+    const { inventoryIds = [], userId } = req.body;
+    if (!Array.isArray(inventoryIds) || inventoryIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'No inventory selected' });
+    }
+    const result = await Inventory.updateMany(
+      { _id: { $in: inventoryIds }, status: 'reserved' },
+      { 
+        $set: { 
+          status: 'in-stock', 
+          updatedAt: new Date(), 
+          updatedBy: userId 
+        },
+        $unset: {
+          reservedFor: "",
+          reservedForHospital: "",
+          reservedAt: "",
+          reservedUntil: "",
+          reservedPatientName: "",
+          reservedPatientAge: "",
+          reservedPatientSex: ""
+        }
+      }
+    );
+    return res.status(200).json({ success: true, matched: result.matchedCount, modified: result.modifiedCount });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   listInventory,
   getNearExpiryInventory,
   reserveInventory,
   reserveByCriteriaFIFO,
   issueInventory,
-  discardInventory
+  discardInventory,
+  unreserveInventory
 };

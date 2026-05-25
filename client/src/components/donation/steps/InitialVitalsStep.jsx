@@ -50,7 +50,7 @@ const InitialVitalsStep = ({ formData, fieldErrors, onFieldChange }) => {
             onChange={(e) => onFieldChange("tempC", e.target.value)}
             onWheel={(e) => e.target.blur()}
             className={`w-full px-3 py-2 border rounded-lg ${fieldErrors.tempC ? "border-red-500" : "border-gray-300"}`}
-            placeholder="e.g. 98.6"
+            placeholder="e.g. 37"
           />
           {fieldErrors.tempC && <p className="text-xs text-red-600 mt-1">{fieldErrors.tempC}</p>}
         </div>
