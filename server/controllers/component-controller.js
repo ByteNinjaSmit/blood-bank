@@ -169,9 +169,12 @@ const getBagsToSeparateComponent = async (req, res, next) => {
 
 const separationCompleted = async (req, res, next) => {
   try {
-    const { donationId } = req.body;
+    const { donationId, signature } = req.body;
     if (!donationId) {
       return res.status(400).json({ message: "donationId is required." });
+    }
+    if (!signature || !signature.trim()) {
+      return res.status(400).json({ message: "Verification signature is required." });
     }
     if (!mongoose.isValidObjectId(donationId)) {
       return res.status(400).json({ message: "DonationId is Invalid" });
@@ -184,6 +187,9 @@ const separationCompleted = async (req, res, next) => {
 
     bagExist.status = "component-separated";
     bagExist.componentSeparationComplete = true;
+    bagExist.separationVerifiedBy = req.user?._id;
+    bagExist.separationVerifiedSignature = signature.trim();
+    bagExist.separationVerifiedAt = new Date();
     await bagExist.save();
 
     return res.status(200).json({ message: `${bagExist.bagNo} Component Separation is Completed.` });
@@ -389,12 +395,19 @@ const getComponentDetails = async (req, res, next) => {
     const component = await Component.findById(id)
       .populate({
         path: "donationId",
-        populate: {
-          path: "donor",
-          select: "name.firstName name.middleName name.lastName dob sex phone",
-          model: "Donor"
-        },
-        select: "bagNo bloodGroup rh collectionDate status siteId"
+        populate: [
+          {
+            path: "donor",
+            select: "name.firstName name.middleName name.lastName dob sex phone",
+            model: "Donor"
+          },
+          {
+            path: "separationVerifiedBy",
+            select: "name.first name.last email",
+            model: "User"
+          }
+        ],
+        select: "bagNo bloodGroup rh collectionDate status siteId separationVerifiedBy separationVerifiedSignature separationVerifiedAt"
       })
       .populate({
         path: "siteId",
@@ -440,6 +453,9 @@ const getComponentDetails = async (req, res, next) => {
             status: component.donationId.status,
             site: component.donationId.siteId, // ObjectId or populated Site if needed
             donor: component.donationId.donor || null, // populated donor object
+            separationVerifiedBy: component.donationId.separationVerifiedBy || null,
+            separationVerifiedSignature: component.donationId.separationVerifiedSignature || null,
+            separationVerifiedAt: component.donationId.separationVerifiedAt || null,
           }
           : null,
 

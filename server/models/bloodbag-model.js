@@ -173,6 +173,17 @@ const BloodBagSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  separationVerifiedBy: {
+    type: Types.ObjectId,
+    ref: "User",
+  },
+  separationVerifiedSignature: {
+    type: String,
+    trim: true,
+  },
+  separationVerifiedAt: {
+    type: Date,
+  },
   siteId: {
     type: Types.ObjectId,
     ref: "Site",

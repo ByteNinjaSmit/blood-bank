@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/store/auth';
 import requisitionApi from '@/services/requisitionApi';
 import hospitalApi from '@/services/hospitalApi';
 import { toast } from 'sonner';
 import CustomModal from '@/components/CustomModal';
+import RequisitionPrintTemplate from './components/RequisitionPrintTemplate';
+import RequisitionLabelTemplate from './components/RequisitionLabelTemplate';
+import RequisitionPrintService from '@/services/requisitionPrintService';
 
 const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'rejected'];
 
@@ -33,6 +37,9 @@ export default function RequisitionList() {
   const [viewLoading, setViewLoading] = useState(false);
   const [selected, setSelected] = useState({});
   const [searchInput, setSearchInput] = useState('');
+  const [printDoc, setPrintDoc] = useState(null);
+  const [printLoading, setPrintLoading] = useState(false);
+  const [printType, setPrintType] = useState('report');
 
   const fmt = (d) => (d ? new Date(d).toLocaleString() : '—');
   const statusClass = (s) => (
@@ -206,6 +213,28 @@ export default function RequisitionList() {
     }
   };
   const closeView = () => { setViewOpen(false); setViewDoc(null); };
+
+  const handlePrint = async (row, type = 'report') => {
+    try {
+      setPrintLoading(true);
+      setPrintType(type);
+      toast.info(`Preparing ${type === 'label' ? 'issue label sticker' : 'issue report'}...`);
+      const res = await requisitionApi.getRequest(row._id);
+      if (!res.success) {
+        toast.error(res.error || 'Failed to load requisition');
+        return;
+      }
+      setPrintDoc(res.data);
+      // Wait for React to render the printable HTML to DOM
+      setTimeout(() => {
+        RequisitionPrintService.print(type);
+      }, 100);
+    } catch (e) {
+      toast.error('Network error while preparing print');
+    } finally {
+      setPrintLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -405,6 +434,24 @@ export default function RequisitionList() {
                       <td className="p-3">
                         <div className="flex flex-wrap gap-2">
                           <button onClick={() => openView(row)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">View</button>
+                          {row.status === 'completed' && (
+                            <>
+                              <button 
+                                onClick={() => handlePrint(row, 'report')} 
+                                disabled={printLoading} 
+                                className="px-3 py-1 rounded bg-teal-700 hover:bg-teal-800 text-white font-medium shadow-sm transition-all flex items-center gap-1 text-xs"
+                              >
+                                Issue Report
+                              </button>
+                              <button 
+                                onClick={() => handlePrint(row, 'label')} 
+                                disabled={printLoading} 
+                                className="px-3 py-1 rounded bg-indigo-700 hover:bg-indigo-800 text-white font-medium shadow-sm transition-all flex items-center gap-1 text-xs"
+                              >
+                                Issue Label
+                              </button>
+                            </>
+                          )}
                           {row.status !== 'rejected' && (
                             <>
                               <button onClick={() => navigate(`/requisition/${row._id}`)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">Manage</button>
@@ -432,6 +479,18 @@ export default function RequisitionList() {
           </div>
         </div>
       </div>
+
+      {/* Hidden Print Wrapper (rendered directly under body via React Portal) */}
+      {printDoc && createPortal(
+        <div id="requisition-receipt-print-wrapper" className="hidden print:block">
+          {printType === 'label' ? (
+            <RequisitionLabelTemplate doc={printDoc} />
+          ) : (
+            <RequisitionPrintTemplate doc={printDoc} />
+          )}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
