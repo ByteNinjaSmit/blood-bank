@@ -263,7 +263,8 @@ const getDonationById = async (req, res, next) => {
         const bloodBag = await BloodBag.findById(id)
             .populate("donor", "name.firstName name.lastName bloodGroup rh dob phone")
             .populate("siteId", "name address")
-            .populate("components", "componentId componentType volumeMl status expiryDate");
+            .populate("components", "componentId componentType volumeMl status expiryDate")
+            .populate("separationVerifiedBy", "name.first name.last email");
 
         if (!bloodBag) {
             return res.status(404).json({ message: "Donation not found" });

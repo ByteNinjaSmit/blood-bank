@@ -163,6 +163,39 @@ const DonationDetails = ({ donation }) => {
           </div>
         </div>
       )}
+      {donation.componentSeparationComplete && (
+        <div className="rounded-lg border border-slate-100 bg-white/70 p-4">
+          <p className="font-semibold text-slate-700 mb-2">Component Separation Verification</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-600">
+            <p>
+              <span className="font-medium">Verification Status:</span> <span className="text-green-700 font-semibold">Verified & Completed</span>
+            </p>
+            {donation.separationVerifiedBy && (
+              <p>
+                <span className="font-medium">Verified By:</span> {donation.separationVerifiedBy.name ? `${donation.separationVerifiedBy.name.first} ${donation.separationVerifiedBy.name.last}` : donation.separationVerifiedBy}
+              </p>
+            )}
+            {donation.separationVerifiedAt && (
+              <p>
+                <span className="font-medium">Verified At:</span> {formatDateTime(donation.separationVerifiedAt)}
+              </p>
+            )}
+            {donation.separationVerifiedSignature && (
+              <div className="md:col-span-2">
+                <span className="font-medium text-slate-500 block mb-1">Technician Signature:</span>
+                <div className="border border-dashed border-slate-200 rounded-lg p-2.5 bg-white inline-flex items-center justify-center min-w-[200px] min-h-[40px] shadow-sm">
+                  <span 
+                    className="text-lg text-slate-800 select-none font-medium antialiased"
+                    style={{ fontFamily: "'Dancing Script', 'Brush Script MT', cursive" }}
+                  >
+                    {donation.separationVerifiedSignature}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

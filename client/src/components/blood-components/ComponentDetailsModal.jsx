@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, TestTube, Loader2, Calendar, Package, AlertTriangle, User, MapPin, Droplets } from "lucide-react";
+import { X, TestTube, Loader2, Calendar, Package, AlertTriangle, User, MapPin, Droplets, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import { useAuth } from "@/store/auth";
@@ -312,6 +312,51 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
                 </Card>
               )}
 
+              {/* Verification Details */}
+              {state.component.bloodBag?.separationVerifiedSignature && (
+                <Card className="border-green-100 bg-green-50/10">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-green-800">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      Separation Verification
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Status</label>
+                        <p className="text-sm font-semibold text-green-700">Verified & Completed</p>
+                      </div>
+                      {state.component.bloodBag.separationVerifiedBy && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Verified By</label>
+                          <p className="text-sm font-medium text-gray-900">
+                            {state.component.bloodBag.separationVerifiedBy.name?.first} {state.component.bloodBag.separationVerifiedBy.name?.last}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Verified At</label>
+                        <p className="text-sm text-gray-900">
+                          {formatDateTime(state.component.bloodBag.separationVerifiedAt)}
+                        </p>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-sm font-medium text-gray-500 block mb-1">Technician Signature</label>
+                        <div className="border border-dashed border-green-200 rounded-lg p-3 bg-white flex items-center justify-center min-h-[50px] shadow-sm">
+                          <span 
+                            className="text-xl text-green-800 select-none font-medium antialiased"
+                            style={{ fontFamily: "'Dancing Script', 'Brush Script MT', cursive" }}
+                          >
+                            {state.component.bloodBag.separationVerifiedSignature}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Created By Information */}
               {state.component.createdBy && (
                 <Card>
@@ -331,7 +376,7 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-500">Email</label>
-                        <p className="text-sm text-gray-900">{state.component.createdBy.email}</p>
+                        <p className="text-sm text-gray-900 break-all">{state.component.createdBy.email}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-500">Phone</label>
@@ -361,7 +406,7 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-500">Email</label>
-                        <p className="text-sm text-gray-900">{state.component.updatedBy.email}</p>
+                        <p className="text-sm text-gray-900 break-all">{state.component.updatedBy.email}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-500">Phone</label>
