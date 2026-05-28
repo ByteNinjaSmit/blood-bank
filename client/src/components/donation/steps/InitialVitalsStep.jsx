@@ -162,15 +162,15 @@ const InitialVitalsStep = ({ formData, fieldErrors, onFieldChange }) => {
         {/* Volume gm/ml */}
         <div>
           <label className="block text-sm mb-1">Volume gm/ml</label>
-          <input
-            type="number"
-            step="0.1"
+          <select
             value={formData.volumeGmMl || ""}
             onChange={(e) => onFieldChange("volumeGmMl", e.target.value)}
-            onWheel={(e) => e.target.blur()}
             className="w-full px-3 py-2 border rounded-lg border-gray-300"
-            placeholder="e.g. 350"
-          />
+          >
+            <option value="">Select Volume</option>
+            <option value="350">350</option>
+            <option value="450">450</option>
+          </select>
         </div>
       </div>
 

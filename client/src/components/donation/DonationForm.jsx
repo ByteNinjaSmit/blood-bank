@@ -32,7 +32,6 @@ const DonationForm = ({
       bp: '',
       bloodGroup: '',
       rh: '',
-      atypicalAntibody: '',
     }
   });
 
@@ -93,7 +92,6 @@ const DonationForm = ({
       },
       bloodGroup: data.bloodGroup,
       rh: data.rh,
-      atypicalAntibody: data.atypicalAntibody,
       siteId: campId || null,
       donorId: donor.donorId,
     };
@@ -298,11 +296,6 @@ const DonationForm = ({
                   <option value="Positive">Positive</option>
                   <option value="Negative">Negative</option>
                 </FormField.Select>
-              </FormField>
-              <FormField label="Atypical Antibody" error={errors.atypicalAntibody?.message}>
-                <FormField.Input
-                  {...register('atypicalAntibody')}
-                />
               </FormField>
             </div>
           </div>

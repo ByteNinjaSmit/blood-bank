@@ -81,9 +81,6 @@ const ReviewSubmitStep = ({ donor, formData, getDonorName }) => {
             {formData.emergencyDonationWillingness && (
               <p><strong>Emergency Willingness:</strong> {formData.emergencyDonationWillingness}</p>
             )}
-            {formData.lotNo && (
-              <p><strong>Lot No:</strong> {formData.lotNo}</p>
-            )}
           </div>
         </div>
 
@@ -174,11 +171,6 @@ const ReviewSubmitStep = ({ donor, formData, getDonorName }) => {
           <p className="text-sm text-orange-800">
             <strong>Group:</strong> {formData.bloodGroup} {formData.rh}
           </p>
-          {formData.atypicalAntibody && (
-            <p className="text-sm text-orange-800">
-              <strong>Atypical Antibody:</strong> {formData.atypicalAntibody}
-            </p>
-          )}
         </div>
       </div>
     </div>

@@ -34,10 +34,6 @@ const BloodBagSchema = new Schema({
     type: String,
     enum: ["Yes", "No"],
   },
-  lotNo: {
-    type: String,
-    trim: true,
-  },
 
   donor: {
     type: Types.ObjectId,
@@ -140,10 +136,6 @@ const BloodBagSchema = new Schema({
     type: String,
     enum: ["Positive", "Negative", "Unknown"],
     required: true,
-  },
-  atypicalAntibody: {
-    type: String,
-    trim: true,
   },
   status: {
     type: String,

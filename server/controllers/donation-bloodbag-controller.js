@@ -28,14 +28,12 @@ const newDonation = async (req, res, next) => {
             medicalExamination,
             bloodGroup,
             rh,
-            atypicalAntibody,
             siteId,
             donorId,
             // New fields
             donationType,
             totalDonationCount,
             emergencyDonationWillingness,
-            lotNo,
             bloodCollection,
             donorFitness,
             medicalQuestions,
@@ -107,7 +105,6 @@ const newDonation = async (req, res, next) => {
             donationType: donationType || undefined,
             totalDonationCount: totalDonationCount || undefined,
             emergencyDonationWillingness: emergencyDonationWillingness || undefined,
-            lotNo: lotNo || undefined,
             // Medical examination (new shape)
             medicalExamination: {
                 weightKg: medExam.weightKg,
@@ -140,7 +137,6 @@ const newDonation = async (req, res, next) => {
             medicalQuestions: medicalQuestions || {},
             bloodGroup,
             rh,
-            atypicalAntibody,
             status: 'collected',
             siteId: siteId || null,
             createdBy: userId,

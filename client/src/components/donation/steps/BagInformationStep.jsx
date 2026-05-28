@@ -99,19 +99,6 @@ const BagInformationStep = ({ formData, fieldErrors, onFieldChange }) => {
           </select>
         </div>
 
-        {/* Lot No */}
-        <div>
-          <label className="block text-sm mb-1">
-            Lot No
-          </label>
-          <input
-            type="text"
-            value={formData.lotNo || ""}
-            onChange={(e) => onFieldChange("lotNo", e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg border-gray-300"
-            placeholder="Enter lot number"
-          />
-        </div>
       </div>
     </div>
   );
