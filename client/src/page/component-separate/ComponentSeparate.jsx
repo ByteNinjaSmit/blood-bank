@@ -22,6 +22,7 @@ const ComponentSeparate = () => {
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [signatureBag, setSignatureBag] = useState(null);
   const [signatureText, setSignatureText] = useState("");
+  const [readyToSignBags, setReadyToSignBags] = useState([]);
 
   const getBagVolumeStats = (bag) => {
     if (!bag) return { used: 0, total: 0, remaining: 0 };
@@ -71,22 +72,14 @@ const ComponentSeparate = () => {
   }, []);
 
   const openSeparate = (bag) => {
-    const { remaining } = getBagVolumeStats(bag);
     setActiveBag(bag);
-    // Default to remaining or 250, whichever is smaller
-    setSeparateForm({ componentType: "RBC", volumeMl: Math.min(250, remaining) });
+    setSeparateForm({ componentType: "RBC", volumeMl: 250 });
     setShowSeparateModal(true);
   };
 
   const submitSeparate = async () => {
     if (!activeBag) return;
-    const { remaining } = getBagVolumeStats(activeBag);
     const inputVolume = Number(separateForm.volumeMl);
-
-    if (inputVolume > remaining) {
-      toast.error(`Cannot separate ${inputVolume}mL. Only ${remaining}mL remaining.`);
-      return;
-    }
 
     const donationId = bagIdByBagNo[activeBag.bagNo];
     if (!donationId) {
@@ -110,14 +103,7 @@ const ComponentSeparate = () => {
       toast.success("Component separated successfully");
       setShowSeparateModal(false);
       
-      // Auto-complete separation if volume is now 0
-      if (remaining - inputVolume <= 0) {
-        toast.info("Volume exhausted. Marking separation as completed.");
-        const signature = user ? `${user.name?.first || ""} ${user.name?.last || ""}`.trim() : "System Auto-Exhaust";
-        await markCompleted(activeBag, signature);
-      } else {
-        await fetchBags();
-      }
+      await fetchBags();
       
       setActiveBag(null);
     } catch (err) {
@@ -212,7 +198,6 @@ const ComponentSeparate = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag No</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segment</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Collected</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Components</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
@@ -221,7 +206,7 @@ const ComponentSeparate = () => {
               <tbody className="bg-white divide-y divide-gray-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan="7" className="px-4 py-8 text-center">
+                    <td colSpan="6" className="px-4 py-8 text-center">
                       <div className="inline-flex items-center gap-2 text-gray-500">
                         <Loader2 className="w-5 h-5 animate-spin" /> Loading bags...
                       </div>
@@ -229,7 +214,7 @@ const ComponentSeparate = () => {
                   </tr>
                 ) : bags.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">No collected blood bags found.</td>
+                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500">No collected blood bags found.</td>
                   </tr>
                 ) : (
                   bags.map((bag, idx) => (
@@ -237,22 +222,6 @@ const ComponentSeparate = () => {
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{bag.bagNo}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.segmentNo || "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.bloodGroup} {bag.rh}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700 font-semibold">
-                        {(() => {
-                          const { used, total } = getBagVolumeStats(bag);
-                          return (
-                            <div className="flex flex-col">
-                              <span>{used} / {total} mL</span>
-                              <div className="w-20 h-1 bg-gray-200 rounded-full mt-1 overflow-hidden">
-                                <div 
-                                  className={`h-full ${used >= total ? 'bg-green-500' : 'bg-red-500'}`} 
-                                  style={{ width: `${Math.min(100, (used / total) * 100)}%` }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.collectionDate ? new Date(bag.collectionDate).toLocaleDateString() : "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">
                         {Array.isArray(bag.components) && bag.components.length > 0 ? (
@@ -269,16 +238,28 @@ const ComponentSeparate = () => {
                       </td>
                       <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-2">
-                          {getBagVolumeStats(bag).remaining > 0 ? (
-                            <Button 
-                              size="sm" 
-                              onClick={() => openSeparate(bag)} 
-                              disabled={isActionLoading}
-                              title="Separate Component"
-                            >
-                              <Scissors className="w-4 h-4 mr-1" />
-                              Separate
-                            </Button>
+                          {!readyToSignBags.includes(bag.bagNo) ? (
+                            <>
+                              <Button 
+                                size="sm" 
+                                onClick={() => openSeparate(bag)} 
+                                disabled={isActionLoading}
+                                title="Separate Component"
+                              >
+                                <Scissors className="w-4 h-4 mr-1" />
+                                Separate
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setReadyToSignBags((prev) => [...prev, bag.bagNo])}
+                                disabled={isActionLoading}
+                                title="Mark as Complete"
+                                className="border-green-600 text-green-700 hover:bg-green-50 hover:text-green-800"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </Button>
+                            </>
                           ) : (
                             <Button 
                               size="sm" 
@@ -310,11 +291,6 @@ const ComponentSeparate = () => {
           <div className="space-y-4">
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Bag: <span className="font-medium text-gray-900">{activeBag?.bagNo}</span></span>
-              <span className="text-gray-600">
-                Remaining: <span className={`font-medium ${getBagVolumeStats(activeBag).remaining <= 0 ? 'text-red-500' : 'text-green-600'}`}>
-                  {getBagVolumeStats(activeBag).remaining} mL
-                </span>
-              </span>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Component</label>
@@ -325,32 +301,30 @@ const ComponentSeparate = () => {
               >
                 <option value="RBC">Red Blood Cells</option>
                 <option value="FFP">Fresh Frozen Plasma</option>
-                <option value="Platelet">Platelets</option>
-                <option value="Cryo">Cryoprecipitate</option>
+                {(activeBag?.typeOfBag === "TB" || activeBag?.typeOfBag === "QB") && (
+                  <>
+                    <option value="Platelet">Platelets</option>
+                    <option value="Cryo">Cryoprecipitate</option>
+                  </>
+                )}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Volume (mL)</label>
               <input
                 type="number"
-                className={`w-full px-3 py-2 border rounded-md ${
-                  Number(separateForm.volumeMl) > getBagVolumeStats(activeBag).remaining ? 'border-red-500 focus:ring-red-500' : ''
-                }`}
+                className="w-full px-3 py-2 border rounded-md"
                 value={separateForm.volumeMl}
                 onChange={(e) => setSeparateForm((s) => ({ ...s, volumeMl: e.target.value }))}
                 min={1}
-                max={getBagVolumeStats(activeBag).remaining}
               />
-              {Number(separateForm.volumeMl) > getBagVolumeStats(activeBag).remaining && (
-                <p className="text-xs text-red-500 mt-1">Cannot exceed remaining volume.</p>
-              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowSeparateModal(false)}>Cancel</Button>
             <Button 
               onClick={submitSeparate} 
-              disabled={isActionLoading || Number(separateForm.volumeMl) > getBagVolumeStats(activeBag).remaining || Number(separateForm.volumeMl) <= 0}
+              disabled={isActionLoading || Number(separateForm.volumeMl) <= 0}
             >
               {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Separate"}
             </Button>

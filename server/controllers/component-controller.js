@@ -40,6 +40,11 @@ const separateComponents = async (req, res, next) => {
       return res.status(404).json({ message: "Blood bag not found." });
     }
 
+    // Block Platelet and Cryo for Double Bag (DB)
+    if (bloodBag.typeOfBag === "DB" && (componentType === "Platelet" || componentType === "Cryo")) {
+      return res.status(400).json({ message: "Platelet and Cryo preparation are not allowed for a Double Bag." });
+    }
+
     // Get siteId from blood bag
     const siteId = bloodBag.siteId ? bloodBag.siteId._id : null;
 
@@ -131,7 +136,7 @@ const getBagsToSeparateComponent = async (req, res, next) => {
         select: 'name',  // Only select name field from the Site model
         model: 'Site'
       })
-      .select('bagNo segmentNo collectionDate bloodGroup rh components siteId componentSeparationComplete medicalExamination'); // Fields to return from BloodBag
+      .select('bagNo segmentNo collectionDate bloodGroup rh components siteId componentSeparationComplete medicalExamination typeOfBag'); // Fields to return from BloodBag
 
     // Step 2: Check if there are no bags to separate
     if (!bags || bags.length === 0) {
@@ -139,7 +144,7 @@ const getBagsToSeparateComponent = async (req, res, next) => {
     }
 
     // Step 3: Send the list of collected bags with their component details
-      return res.status(200).json({
+    return res.status(200).json({
       message: "Blood bags ready for component separation.",
       bags: bags.map(bag => ({
         bagNo: bag.bagNo,
@@ -147,6 +152,7 @@ const getBagsToSeparateComponent = async (req, res, next) => {
         collectionDate: bag.collectionDate,
         bloodGroup: bag.bloodGroup,
         rh: bag.rh,
+        typeOfBag: bag.typeOfBag || null,
         volumeGmMl: bag.medicalExamination ? bag.medicalExamination.volumeGmMl : null,
         siteName: bag.siteId ? bag.siteId.name : null,
         componentSeparationComplete: bag.componentSeparationComplete,
@@ -207,29 +213,16 @@ const getComponentsList = async (req, res, next) => {
   try {
     const { type, status, expiryBefore, fromDate, toDate, search, page = 1, limit = 10 } = req.query; // pagination + filters
 
-    // Build filter object
-    const filter = {};
-    if (type) filter.componentType = type;
-    if (status) filter.status = status;
-    if (expiryBefore) filter.expiryDate = { $lte: new Date(expiryBefore) };
-
-    // Add Date Range Filter (CreatedAt)
-    if (fromDate || toDate) {
-      filter.createdAt = {};
-      if (fromDate) filter.createdAt.$gte = new Date(new Date(fromDate).setHours(0, 0, 0, 0));
-      if (toDate) filter.createdAt.$lte = new Date(new Date(toDate).setHours(23, 59, 59, 999));
-    }
-
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Build aggregation pipeline for search functionality
+    // Build aggregation pipeline to query from BloodBag
     let pipeline = [
       {
         $lookup: {
-          from: "bloodbags",
-          localField: "donationId",
+          from: "components",
+          localField: "components",
           foreignField: "_id",
-          as: "donationData"
+          as: "populatedComponents"
         }
       },
       {
@@ -242,98 +235,78 @@ const getComponentsList = async (req, res, next) => {
       },
       {
         $unwind: {
-          path: "$donationData",
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $unwind: {
           path: "$siteData",
           preserveNullAndEmptyArrays: true
         }
       }
     ];
 
-    // Add search filter if provided
+    // Filter by type if provided (only show bags with that component prepared)
+    if (type) {
+      pipeline.push({
+        $match: {
+          "populatedComponents.componentType": type
+        }
+      });
+    }
+
+    // Filter by status if provided (only show bags with a component having this status)
+    if (status) {
+      pipeline.push({
+        $match: {
+          "populatedComponents.status": status
+        }
+      });
+    }
+
+    // Filter by expiryBefore if provided (only show bags with a component expiring before this date)
+    if (expiryBefore) {
+      pipeline.push({
+        $match: {
+          "populatedComponents.expiryDate": { $lte: new Date(expiryBefore) }
+        }
+      });
+    }
+
+    // Search filter (bag number, blood group, etc.)
     if (search) {
       pipeline.push({
         $match: {
           $or: [
-            { componentId: { $regex: search, $options: "i" } },
-            { "donationData.bagNo": { $regex: search, $options: "i" } }
+            { bagNo: { $regex: search, $options: "i" } },
+            { bloodGroup: { $regex: search, $options: "i" } }
           ]
         }
       });
     }
 
-    // Add other filters
-    if (Object.keys(filter).length > 0) {
-      pipeline.push({ $match: filter });
+    // Created range filters
+    if (fromDate || toDate) {
+      const dateFilter = {};
+      if (fromDate) dateFilter.$gte = new Date(new Date(fromDate).setHours(0, 0, 0, 0));
+      if (toDate) dateFilter.$lte = new Date(new Date(toDate).setHours(23, 59, 59, 999));
+      pipeline.push({
+        $match: {
+          createdAt: dateFilter
+        }
+      });
     }
 
-    // Add sorting, pagination, and projection
+    // Execute count pipeline
+    let countPipeline = [...pipeline, { $count: "total" }];
+    const countResult = await BloodBag.aggregate(countPipeline);
+    const total = countResult.length > 0 ? countResult[0].total : 0;
+
+    // Execute pagination
     pipeline.push(
       { $sort: { createdAt: -1 } },
       { $skip: skip },
-      { $limit: parseInt(limit) },
-      {
-        $project: {
-          componentId: 1,
-          componentType: 1,
-          volumeMl: 1,
-          expiryDate: 1,
-          status: 1,
-          createdAt: 1,
-          bagNo: "$donationData.bagNo",
-          bloodGroup: { $concat: ["$donationData.bloodGroup", " ", "$donationData.rh"] },
-          collectionDate: "$donationData.collectionDate",
-          site: "$siteData.name"
-        }
-      }
+      { $limit: parseInt(limit) }
     );
 
-    // Execute aggregation
-    const components = await Component.aggregate(pipeline);
+    const bloodBags = await BloodBag.aggregate(pipeline);
 
-    // Count total for pagination (separate query for search)
-    let countPipeline = [
-      {
-        $lookup: {
-          from: "bloodbags",
-          localField: "donationId",
-          foreignField: "_id",
-          as: "donationData"
-        }
-      },
-      {
-        $unwind: {
-          path: "$donationData",
-          preserveNullAndEmptyArrays: true
-        }
-      }
-    ];
-
-    if (search) {
-      countPipeline.push({
-        $match: {
-          $or: [
-            { componentId: { $regex: search, $options: "i" } },
-            { "donationData.bagNo": { $regex: search, $options: "i" } }
-          ]
-        }
-      });
-    }
-
-    if (Object.keys(filter).length > 0) {
-      countPipeline.push({ $match: filter });
-    }
-
-    countPipeline.push({ $count: "total" });
-
-    const countResult = await Component.aggregate(countPipeline);
-    const total = countResult.length > 0 ? countResult[0].total : 0;
-
-    if (!components || components.length === 0) {
+    if (!bloodBags || bloodBags.length === 0) {
       return res.status(200).json({
         message: "No components found.",
         pagination: {
@@ -346,20 +319,52 @@ const getComponentsList = async (req, res, next) => {
       });
     }
 
-    // Format response for table
-    const tableData = components.map(c => ({
-      id:c._id,
-      componentId: c.componentId,
-      type: c.componentType,
-      volumeMl: c.volumeMl,
-      status: c.status,
-      expiryDate: c.expiryDate,
-      bagNo: c.bagNo || null,
-      bloodGroup: c.bloodGroup || null,
-      collectionDate: c.collectionDate || null,
-      site: c.site || null,
-      createdAt: c.createdAt,
-    }));
+    const tableData = bloodBags.map(bag => {
+      const rbc = bag.populatedComponents.find(c => c.componentType === "RBC");
+      const ffp = bag.populatedComponents.find(c => c.componentType === "FFP");
+      const platelet = bag.populatedComponents.find(c => c.componentType === "Platelet");
+      const cryo = bag.populatedComponents.find(c => c.componentType === "Cryo");
+
+      return {
+        id: bag._id,
+        bagNo: bag.bagNo,
+        bloodGroup: `${bag.bloodGroup} ${bag.rh}`,
+        site: bag.siteData ? bag.siteData.name : "-",
+        createdAt: bag.createdAt,
+        rbc: rbc ? {
+          id: rbc._id,
+          componentId: rbc.componentId,
+          volumeMl: rbc.volumeMl,
+          status: "prepared",
+          componentStatus: rbc.status,
+          expiryDate: rbc.expiryDate
+        } : { status: "unprepared" },
+        ffp: ffp ? {
+          id: ffp._id,
+          componentId: ffp.componentId,
+          volumeMl: ffp.volumeMl,
+          status: "prepared",
+          componentStatus: ffp.status,
+          expiryDate: ffp.expiryDate
+        } : { status: "unprepared" },
+        platelet: platelet ? {
+          id: platelet._id,
+          componentId: platelet.componentId,
+          volumeMl: platelet.volumeMl,
+          status: "prepared",
+          componentStatus: platelet.status,
+          expiryDate: platelet.expiryDate
+        } : { status: "unprepared" },
+        cryo: cryo ? {
+          id: cryo._id,
+          componentId: cryo.componentId,
+          volumeMl: cryo.volumeMl,
+          status: "prepared",
+          componentStatus: cryo.status,
+          expiryDate: cryo.expiryDate
+        } : { status: "unprepared" },
+      };
+    });
 
     return res.status(200).json({
       message: "Components list fetched successfully.",
@@ -388,11 +393,11 @@ const getComponentDetails = async (req, res, next) => {
     const { id } = req.params;
 
     if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ message: "Invalid Component ID." });
+      return res.status(400).json({ message: "Invalid ID." });
     }
 
-    // Find component and populate related data
-    const component = await Component.findById(id)
+    // 1. Try to find a component
+    let component = await Component.findById(id)
       .populate({
         path: "donationId",
         populate: [
@@ -409,62 +414,168 @@ const getComponentDetails = async (req, res, next) => {
         ],
         select: "bagNo bloodGroup rh collectionDate status siteId separationVerifiedBy separationVerifiedSignature separationVerifiedAt"
       })
-      .populate({
-        path: "siteId",
-        select: "name address",
-        model: "Site"
-      })
-      .populate({
-        path: "createdBy",
-        select: "name.first name.last phone email",
-        model: "User"
-      })
-      .populate({
-        path: "updatedBy",
-        select: "name.first name.last phone email",
-        model: "User"
-      });
+      .populate("siteId")
+      .populate("createdBy")
+      .populate("updatedBy");
 
-    if (!component) {
-      return res.status(404).json({ message: "Component not found." });
+    if (component) {
+      // It's a single component
+      const bloodBag = component.donationId;
+      if (bloodBag) {
+        const siblingComponents = await Component.find({ donationId: bloodBag._id });
+
+        const rbc = siblingComponents.find(c => c.componentType === "RBC");
+        const ffp = siblingComponents.find(c => c.componentType === "FFP");
+        const platelet = siblingComponents.find(c => c.componentType === "Platelet");
+        const cryo = siblingComponents.find(c => c.componentType === "Cryo");
+
+        return res.status(200).json({
+          message: "Component details fetched successfully.",
+          component: {
+            isBloodBagGroup: true,
+            bloodBag: {
+              id: bloodBag._id,
+              bagNo: bloodBag.bagNo,
+              bloodGroup: `${bloodBag.bloodGroup} ${bloodBag.rh}`,
+              collectionDate: bloodBag.collectionDate,
+              status: bloodBag.status,
+              site: component.siteId || null,
+              donor: bloodBag.donor || null,
+              separationVerifiedBy: bloodBag.separationVerifiedBy || null,
+              separationVerifiedSignature: bloodBag.separationVerifiedSignature || null,
+              separationVerifiedAt: bloodBag.separationVerifiedAt || null,
+            },
+            rbc: rbc ? {
+              id: rbc._id,
+              componentId: rbc.componentId,
+              volumeMl: rbc.volumeMl,
+              status: rbc.status,
+              expiryDate: rbc.expiryDate,
+              lotNo: rbc.lotNo,
+              storageLocation: rbc.storageLocation,
+              createdAt: rbc.createdAt,
+            } : { status: "unprepared" },
+            ffp: ffp ? {
+              id: ffp._id,
+              componentId: ffp.componentId,
+              volumeMl: ffp.volumeMl,
+              status: ffp.status,
+              expiryDate: ffp.expiryDate,
+              lotNo: ffp.lotNo,
+              storageLocation: ffp.storageLocation,
+              createdAt: ffp.createdAt,
+            } : { status: "unprepared" },
+            platelet: platelet ? {
+              id: platelet._id,
+              componentId: platelet.componentId,
+              volumeMl: platelet.volumeMl,
+              status: platelet.status,
+              expiryDate: platelet.expiryDate,
+              lotNo: platelet.lotNo,
+              storageLocation: platelet.storageLocation,
+              createdAt: platelet.createdAt,
+            } : { status: "unprepared" },
+            cryo: cryo ? {
+              id: cryo._id,
+              componentId: cryo.componentId,
+              volumeMl: cryo.volumeMl,
+              status: cryo.status,
+              expiryDate: cryo.expiryDate,
+              lotNo: cryo.lotNo,
+              storageLocation: cryo.storageLocation,
+              createdAt: cryo.createdAt,
+            } : { status: "unprepared" },
+          }
+        });
+      }
     }
 
-    // Send directly with populated objects
+    // 2. Try to find a BloodBag
+    const bloodBag = await BloodBag.findById(id)
+      .populate({
+        path: "donor",
+        select: "name.firstName name.middleName name.lastName dob sex phone",
+        model: "Donor"
+      })
+      .populate({
+        path: "separationVerifiedBy",
+        select: "name.first name.last email",
+        model: "User"
+      })
+      .populate("siteId")
+      .populate("components");
+
+    if (!bloodBag) {
+      return res.status(404).json({ message: "Details not found." });
+    }
+
+    // Find all components for this blood bag
+    const siblingComponents = await Component.find({ donationId: bloodBag._id });
+
+    const rbc = siblingComponents.find(c => c.componentType === "RBC");
+    const ffp = siblingComponents.find(c => c.componentType === "FFP");
+    const platelet = siblingComponents.find(c => c.componentType === "Platelet");
+    const cryo = siblingComponents.find(c => c.componentType === "Cryo");
+
     return res.status(200).json({
-      message: "Component details fetched successfully.",
+      message: "Blood bag component details fetched successfully.",
       component: {
-        componentId: component.componentId,
-        type: component.componentType,
-        volumeMl: component.volumeMl,
-        status: component.status,
-        expiryDate: component.expiryDate,
-        lotNo: component.lotNo,
-        rSeriesId: component.rSeriesId,
-        storageLocation: component.storageLocation,
-
-        site: component.siteId || null, // populated site object
-
-        bloodBag: component.donationId
-          ? {
-            bagNo: component.donationId.bagNo,
-            bloodGroup: `${component.donationId.bloodGroup} ${component.donationId.rh}`,
-            collectionDate: component.donationId.collectionDate,
-            expiryDate: component.donationId.expiryDate,
-            status: component.donationId.status,
-            site: component.donationId.siteId, // ObjectId or populated Site if needed
-            donor: component.donationId.donor || null, // populated donor object
-            separationVerifiedBy: component.donationId.separationVerifiedBy || null,
-            separationVerifiedSignature: component.donationId.separationVerifiedSignature || null,
-            separationVerifiedAt: component.donationId.separationVerifiedAt || null,
-          }
-          : null,
-
-        createdAt: component.createdAt,
-        createdBy: component.createdBy || null, // populated user object
-        updatedAt: component.updatedAt,
-        updatedBy: component.updatedBy || null, // populated user object
+        isBloodBagGroup: true,
+        bloodBag: {
+          id: bloodBag._id,
+          bagNo: bloodBag.bagNo,
+          bloodGroup: `${bloodBag.bloodGroup} ${bloodBag.rh}`,
+          collectionDate: bloodBag.collectionDate,
+          status: bloodBag.status,
+          site: bloodBag.siteId || null,
+          donor: bloodBag.donor || null,
+          separationVerifiedBy: bloodBag.separationVerifiedBy || null,
+          separationVerifiedSignature: bloodBag.separationVerifiedSignature || null,
+          separationVerifiedAt: bloodBag.separationVerifiedAt || null,
+        },
+        rbc: rbc ? {
+          id: rbc._id,
+          componentId: rbc.componentId,
+          volumeMl: rbc.volumeMl,
+          status: rbc.status,
+          expiryDate: rbc.expiryDate,
+          lotNo: rbc.lotNo,
+          storageLocation: rbc.storageLocation,
+          createdAt: rbc.createdAt,
+        } : { status: "unprepared" },
+        ffp: ffp ? {
+          id: ffp._id,
+          componentId: ffp.componentId,
+          volumeMl: ffp.volumeMl,
+          status: ffp.status,
+          expiryDate: ffp.expiryDate,
+          lotNo: ffp.lotNo,
+          storageLocation: ffp.storageLocation,
+          createdAt: ffp.createdAt,
+        } : { status: "unprepared" },
+        platelet: platelet ? {
+          id: platelet._id,
+          componentId: platelet.componentId,
+          volumeMl: platelet.volumeMl,
+          status: platelet.status,
+          expiryDate: platelet.expiryDate,
+          lotNo: platelet.lotNo,
+          storageLocation: platelet.storageLocation,
+          createdAt: platelet.createdAt,
+        } : { status: "unprepared" },
+        cryo: cryo ? {
+          id: cryo._id,
+          componentId: cryo.componentId,
+          volumeMl: cryo.volumeMl,
+          status: cryo.status,
+          expiryDate: cryo.expiryDate,
+          lotNo: cryo.lotNo,
+          storageLocation: cryo.storageLocation,
+          createdAt: cryo.createdAt,
+        } : { status: "unprepared" },
       }
     });
+
   } catch (error) {
     console.log(`Error in getComponentDetails:`, error);
     next(error);
@@ -587,7 +698,7 @@ const getNearExpiryComponents = async (req, res, next) => {
     const nearExpiryComponents = allComponents
       .map(c => {
         const daysLeft = Math.ceil((c.expiryDate - today) / (1000 * 60 * 60 * 24));
-        
+
         // Use the dynamic days threshold from the request
         const threshold = daysThreshold;
 

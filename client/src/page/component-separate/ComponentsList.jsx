@@ -396,7 +396,7 @@ const ComponentsList = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CardTitle>Components ({state.pagination.total})</CardTitle>
+                <CardTitle>Components Grouped by Blood Bag ({state.pagination.total})</CardTitle>
                 {state.filters.search && (
                   <Badge variant="secondary" className="text-xs">
                     Search: "{state.filters.search}"
@@ -423,34 +423,31 @@ const ComponentsList = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Component ID
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Volume
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Expiry Date
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Bag Number
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Red Blood Cells (RBC)
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Fresh Frozen Plasma (FFP)
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Platelets
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Cryoprecipitate
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Blood Group
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Site
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Created
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -458,68 +455,141 @@ const ComponentsList = () => {
                 <tbody className="bg-white divide-y divide-gray-100">
                   {state.isLoading ? (
                     <tr>
-                      <td colSpan="10" className="px-4 py-8 text-center">
+                      <td colSpan="9" className="px-4 py-8 text-center">
                         <div className="inline-flex items-center gap-2 text-gray-500">
                           <Loader2 className="w-5 h-5 animate-spin" />
-                          Loading components...
+                          Loading components inventory...
                         </div>
                       </td>
                     </tr>
                   ) : state.components.length === 0 ? (
                     <tr>
-                      <td colSpan="10" className="px-4 py-8 text-center text-gray-500">
-                        No components found.
+                      <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
+                        No blood bag groups found.
                       </td>
                     </tr>
                   ) : (
-                    state.components.map((component, idx) => (
-                      <tr key={`${component.componentId}-${idx}`} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                          {component.componentId}
+                    state.components.map((bag, idx) => (
+                      <tr key={`${bag.bagNo}-${idx}`} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                          {bag.bagNo}
+                        </td>
+                        {/* RBC column */}
+                        <td className="px-4 py-3 text-sm">
+                          {bag.rbc.status === "prepared" ? (
+                            <div className="flex flex-col gap-0.5">
+                              <Badge variant={getStatusBadgeVariant(bag.rbc.componentStatus)} className="w-fit text-[9px] font-bold px-1 py-0 uppercase tracking-wider">
+                                Prepared
+                              </Badge>
+                              <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.rbc.volumeMl} mL</span>
+                              {isExpired(bag.rbc.expiryDate) && (
+                                <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
+                                  <AlertTriangle className="w-2.5 h-2.5" /> Expired
+                                </span>
+                              )}
+                              {isNearExpiry(bag.rbc.expiryDate) && !isExpired(bag.rbc.expiryDate) && (
+                                <span className="text-[9px] text-yellow-600 flex items-center gap-0.5 mt-0.5">
+                                  <AlertTriangle className="w-2.5 h-2.5" /> Near Expiry
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="w-fit text-[9px] font-medium text-gray-400 border-gray-200 bg-gray-50/50 uppercase tracking-wider">
+                              Unprepared
+                            </Badge>
+                          )}
+                        </td>
+                        {/* FFP column */}
+                        <td className="px-4 py-3 text-sm">
+                          {bag.ffp.status === "prepared" ? (
+                            <div className="flex flex-col gap-0.5">
+                              <Badge variant={getStatusBadgeVariant(bag.ffp.componentStatus)} className="w-fit text-[9px] font-bold px-1 py-0 uppercase tracking-wider">
+                                Prepared
+                              </Badge>
+                              <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.ffp.volumeMl} mL</span>
+                              {isExpired(bag.ffp.expiryDate) && (
+                                <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
+                                  <AlertTriangle className="w-2.5 h-2.5" /> Expired
+                                </span>
+                              )}
+                              {isNearExpiry(bag.ffp.expiryDate) && !isExpired(bag.ffp.expiryDate) && (
+                                <span className="text-[9px] text-yellow-600 flex items-center gap-0.5 mt-0.5">
+                                  <AlertTriangle className="w-2.5 h-2.5" /> Near Expiry
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="w-fit text-[9px] font-medium text-gray-400 border-gray-200 bg-gray-50/50 uppercase tracking-wider">
+                              Unprepared
+                            </Badge>
+                          )}
+                        </td>
+                        {/* Platelets column */}
+                        <td className="px-4 py-3 text-sm">
+                          {bag.platelet.status === "prepared" ? (
+                            <div className="flex flex-col gap-0.5">
+                              <Badge variant={getStatusBadgeVariant(bag.platelet.componentStatus)} className="w-fit text-[9px] font-bold px-1 py-0 uppercase tracking-wider">
+                                Prepared
+                              </Badge>
+                              <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.platelet.volumeMl} mL</span>
+                              {isExpired(bag.platelet.expiryDate) && (
+                                <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
+                                  <AlertTriangle className="w-2.5 h-2.5" /> Expired
+                                </span>
+                              )}
+                              {isNearExpiry(bag.platelet.expiryDate) && !isExpired(bag.platelet.expiryDate) && (
+                                <span className="text-[9px] text-yellow-600 flex items-center gap-0.5 mt-0.5">
+                                  <AlertTriangle className="w-2.5 h-2.5" /> Near Expiry
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="w-fit text-[9px] font-medium text-gray-400 border-gray-200 bg-gray-50/50 uppercase tracking-wider">
+                              Unprepared
+                            </Badge>
+                          )}
+                        </td>
+                        {/* Cryo column */}
+                        <td className="px-4 py-3 text-sm">
+                          {bag.cryo.status === "prepared" ? (
+                            <div className="flex flex-col gap-0.5">
+                              <Badge variant={getStatusBadgeVariant(bag.cryo.componentStatus)} className="w-fit text-[9px] font-bold px-1 py-0 uppercase tracking-wider">
+                                Prepared
+                              </Badge>
+                              <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.cryo.volumeMl} mL</span>
+                              {isExpired(bag.cryo.expiryDate) && (
+                                <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
+                                  <AlertTriangle className="w-2.5 h-2.5" /> Expired
+                                </span>
+                              )}
+                              {isNearExpiry(bag.cryo.expiryDate) && !isExpired(bag.cryo.expiryDate) && (
+                                <span className="text-[9px] text-yellow-600 flex items-center gap-0.5 mt-0.5">
+                                  <AlertTriangle className="w-2.5 h-2.5" /> Near Expiry
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="w-fit text-[9px] font-medium text-gray-400 border-gray-200 bg-gray-50/50 uppercase tracking-wider">
+                              Unprepared
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-700">
+                          {bag.bloodGroup || "-"}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700">
-                          <Badge variant="outline">{component.type}</Badge>
+                          {bag.site || "-"}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700">
-                          {component.volumeMl} mL
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          <Badge variant={getStatusBadgeVariant(component.status)}>
-                            {component.status}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          <div className="flex items-center gap-2">
-                            {isExpired(component.expiryDate) && (
-                              <AlertTriangle className="w-4 h-4 text-red-500" />
-                            )}
-                            {isNearExpiry(component.expiryDate) && !isExpired(component.expiryDate) && (
-                              <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                            )}
-                            <span className={isExpired(component.expiryDate) ? "text-red-600" : ""}>
-                              {formatDate(component.expiryDate)}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {component.bagNo || "-"}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {component.bloodGroup || "-"}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {component.site || "-"}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {formatDate(component.createdAt)}
+                          {formatDate(bag.createdAt)}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleViewDetails(component.id)}
-                            className="h-8 w-8 p-0"
-                            title="View Component Details"
+                            onClick={() => handleViewDetails(bag.id)}
+                            className="h-8 w-8 p-0 border-red-100 text-red-700 hover:bg-red-50"
+                            title="View Group Details"
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
