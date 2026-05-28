@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import CompatibilityMatrix from '../components/CompatibilityMatrix';
-import { ConfirmModal } from '../../../components/shared';
+import { ConfirmModal, RejectRequestModal } from '../../../components/shared';
 
 // ── Badge helpers ──
 
@@ -96,14 +96,14 @@ export default function MatchReviewStep({
 
   return (
     <div className="p-6 space-y-5">
-      <ConfirmModal
+      <RejectRequestModal
         isOpen={rejectConfirmOpen}
         onClose={() => setRejectConfirmOpen(false)}
-        onConfirm={onReject}
-        title="Reject Requisition"
-        message={`Are you sure you want to reject request ${requestDoc?.requestId}? This will release all matched inventory and cancel the request.`}
-        confirmText="Yes, Reject Request"
-        type="danger"
+        onConfirm={(reason) => {
+          onReject(reason);
+          setRejectConfirmOpen(false);
+        }}
+        requestId={requestDoc?.requestId}
       />
 
       {/* Compatibility Reference (collapsible) */}

@@ -45,6 +45,7 @@ const RequisitionManagement = () => {
     handleIssue,
     handleComplete,
     handleReject,
+    handleCreateAndReject,
     handleCrossmatchUpdate,
     loadRequest,
   } = useRequisition(authorizationToken);
@@ -84,8 +85,13 @@ const RequisitionManagement = () => {
     return requestDoc?.status === 'completed';
   }, [requestDoc]);
 
-  const handleRejectAndExit = async () => {
-    const ok = await handleReject();
+  const handleRejectAndExit = async (rejectionReason) => {
+    let ok;
+    if (requestDoc?._id) {
+      ok = await handleReject(rejectionReason);
+    } else {
+      ok = await handleCreateAndReject(rejectionReason);
+    }
     if (!ok) return;
     navigate('/requisition/list');
   };
@@ -139,6 +145,7 @@ const RequisitionManagement = () => {
                 handleCreate={handleCreate}
                 requestDoc={requestDoc}
                 openAddHospital={() => setAddHospitalOpen(true)}
+                onReject={handleRejectAndExit}
               />
             </Step>
 

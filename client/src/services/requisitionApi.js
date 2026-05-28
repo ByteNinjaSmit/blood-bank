@@ -43,8 +43,8 @@ class RequisitionApiService {
     return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/complete`, {}));
   }
 
-  async reject(id) {
-    return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/reject`, {}));
+  async reject(id, rejectionReason) {
+    return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/reject`, { rejectionReason }));
   }
 
   async updateCrossmatch(requestId, { inventoryId, crossmatchStatus }) {

@@ -152,6 +152,17 @@ const HospitalRequestSchema = new Schema({
   completedAt: Date,
 
   approvedBy: { type: Types.ObjectId, ref: "User" },
+  rejectionReason: {
+    type: String,
+    trim: true
+  },
+  rejectedAt: {
+    type: Date
+  },
+  rejectedBy: {
+    type: Types.ObjectId,
+    ref: 'User'
+  },
   issuedBy: { type: Types.ObjectId, ref: "User" },
   createdAt: {
     type: Date,

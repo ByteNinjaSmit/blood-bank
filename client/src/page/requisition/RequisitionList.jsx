@@ -9,6 +9,7 @@ import CustomModal from '@/components/CustomModal';
 import RequisitionPrintTemplate from './components/RequisitionPrintTemplate';
 import RequisitionLabelTemplate from './components/RequisitionLabelTemplate';
 import RequisitionPrintService from '@/services/requisitionPrintService';
+import { RejectRequestModal } from '@/components/shared';
 
 const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'rejected'];
 
@@ -42,6 +43,11 @@ export default function RequisitionList() {
   const [printType, setPrintType] = useState('report');
   const [multiLabelModalOpen, setMultiLabelModalOpen] = useState(false);
   const [multiLabelDoc, setMultiLabelDoc] = useState(null);
+
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectingDocId, setRejectingDocId] = useState(null);
+  const [rejectingDocReqId, setRejectingDocReqId] = useState('');
+  const [rejectSubmitting, setRejectSubmitting] = useState(false);
 
   const fmt = (d) => (d ? new Date(d).toLocaleString() : '—');
   const statusClass = (s) => (
@@ -216,6 +222,38 @@ export default function RequisitionList() {
   };
   const closeView = () => { setViewOpen(false); setViewDoc(null); };
 
+  const handleOpenReject = (id, reqId) => {
+    setRejectingDocId(id);
+    setRejectingDocReqId(reqId);
+    setRejectModalOpen(true);
+  };
+
+  const handleConfirmReject = async (reason) => {
+    try {
+      setRejectSubmitting(true);
+      const res = await requisitionApi.reject(rejectingDocId, reason);
+      if (!res.success) {
+        toast.error(res.error || 'Rejection failed');
+        return;
+      }
+      toast.success('Request rejected successfully');
+      setRejectModalOpen(false);
+      
+      // If the viewed document is the one rejected, refresh it
+      if (viewDoc && viewDoc._id === rejectingDocId) {
+        const detailRes = await requisitionApi.getRequest(rejectingDocId);
+        if (detailRes.success) {
+          setViewDoc(detailRes.data);
+        }
+      }
+      fetchList();
+    } catch (e) {
+      toast.error('Network error during rejection');
+    } finally {
+      setRejectSubmitting(false);
+    }
+  };
+
   const printSingleLabel = (doc, matchedUnit) => {
     try {
       setPrintLoading(true);
@@ -305,8 +343,32 @@ export default function RequisitionList() {
               </div>
             </div>
             {viewDoc.status === 'rejected' && (
-              <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-red-800 text-sm">
-                This request has been rejected. No further actions (match, approve, issue, complete) are allowed.
+              <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-950 text-sm space-y-2">
+                <div className="font-semibold flex items-center gap-2 text-red-800">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></span>
+                  Requisition Request Rejected
+                </div>
+                <p className="text-red-750">
+                  This request has been rejected. No further actions (match, approve, issue, complete) are allowed.
+                </p>
+                {viewDoc.rejectionReason && (
+                  <div className="mt-3 p-3 bg-white/80 rounded-lg border border-red-150 shadow-sm">
+                    <span className="text-xs font-bold text-red-500 uppercase tracking-wider block mb-1">Reason for Rejection</span>
+                    <p className="font-medium text-red-950 font-serif leading-relaxed italic">
+                      "{viewDoc.rejectionReason}"
+                    </p>
+                    {(viewDoc.rejectedAt || viewDoc.rejectedBy) && (
+                      <div className="mt-2 text-xs text-red-500/80 flex flex-wrap gap-x-3 gap-y-1 border-t border-red-100 pt-1.5 font-medium">
+                        {viewDoc.rejectedBy && (
+                          <span>Rejected By: <strong className="text-red-700">{viewDoc.rejectedBy.name || viewDoc.rejectedBy.username || viewDoc.rejectedBy}</strong></span>
+                        )}
+                        {viewDoc.rejectedAt && (
+                          <span>Rejected At: <strong className="text-red-700">{fmt(viewDoc.rejectedAt)}</strong></span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             <div>
@@ -366,6 +428,30 @@ export default function RequisitionList() {
               ) : (
                 <div className="text-gray-600 text-sm">No matched inventory yet.</div>
               )}
+            </div>
+
+            <div className="flex justify-between items-center pt-4 border-t mt-6">
+              <div>
+                {['pending', 'matched', 'approved'].includes(viewDoc.status) && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenReject(viewDoc._id, viewDoc.requestId)}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-750 active:bg-red-800 text-white font-semibold rounded-xl text-xs shadow-sm hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Reject Requisition Request
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={closeView}
+                className="px-4 py-2 border border-gray-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold rounded-xl text-xs shadow-sm transition-all cursor-pointer"
+              >
+                Close
+              </button>
             </div>
           </div>
         )}
@@ -596,7 +682,7 @@ export default function RequisitionList() {
                               <button disabled={!can(row, 'approve')} onClick={() => callAction(row._id, 'approve')} className={`px-3 py-1 rounded ${can(row,'approve') ? 'bg-blue-700 hover:bg-blue-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Approve</button>
                               <button disabled={!can(row, 'issue')} onClick={() => callAction(row._id, 'issue')} className={`px-3 py-1 rounded ${can(row,'issue') ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Issue</button>
                               <button disabled={!can(row, 'complete')} onClick={() => callAction(row._id, 'complete')} className={`px-3 py-1 rounded ${can(row,'complete') ? 'bg-purple-700 hover:bg-purple-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Complete</button>
-                              <button disabled={!can(row, 'reject')} onClick={() => callAction(row._id, 'reject')} className={`px-3 py-1 rounded ${can(row,'reject') ? 'border border-red-200 text-red-700 hover:bg-red-50' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Reject</button>
+                              <button disabled={!can(row, 'reject')} onClick={() => handleOpenReject(row._id, row.requestId)} className={`px-3 py-1 rounded ${can(row,'reject') ? 'border border-red-200 text-red-700 hover:bg-red-50' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Reject</button>
                             </>
                           )}
                         </div>
@@ -628,6 +714,14 @@ export default function RequisitionList() {
         </div>,
         document.body
       )}
+
+      <RejectRequestModal
+        isOpen={rejectModalOpen}
+        onClose={() => setRejectModalOpen(false)}
+        onConfirm={handleConfirmReject}
+        requestId={rejectingDocReqId}
+        submitting={rejectSubmitting}
+      />
     </div>
   );
 }
