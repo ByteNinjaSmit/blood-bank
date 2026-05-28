@@ -66,9 +66,9 @@ const DonationDetails = ({ donation }) => {
             <p>
               <span className="font-medium">Segment No:</span> {donation.segmentNo}
             </p>
-            {donation.batchNo && (
+            {donation.lotNo && (
               <p>
-                <span className="font-medium">Batch No:</span> {donation.batchNo}
+                <span className="font-medium">Lot No:</span> {donation.lotNo}
               </p>
             )}
             <p>

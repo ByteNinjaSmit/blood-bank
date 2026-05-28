@@ -22,7 +22,7 @@ const DonationForm = ({
     defaultValues: initialData || {
       bagNo: '',
       segmentNo: '',
-      batchNo: '',
+      lotNo: '',
       typeOfBag: '',
       collectionDate: new Date().toISOString().split('T')[0],
       hb: '',
@@ -80,7 +80,7 @@ const DonationForm = ({
     const payload = {
       bagNo: data.bagNo,
       segmentNo: data.segmentNo,
-      batchNo: data.batchNo,
+      lotNo: data.lotNo,
       typeOfBag: data.typeOfBag,
       donor: donor._id,
       initialVitals: {
@@ -203,9 +203,9 @@ const DonationForm = ({
                   {...register('segmentNo', { required: 'Segment number is required' })}
                 />
               </FormField>
-              <FormField label="Batch No" required error={errors.batchNo?.message}>
+              <FormField label="Lot No" required error={errors.lotNo?.message}>
                 <FormField.Input
-                  {...register('batchNo', { required: 'Batch number is required' })}
+                  {...register('lotNo', { required: 'Lot number is required' })}
                 />
               </FormField>
               <FormField label="Type of Bag" required error={errors.typeOfBag?.message}>

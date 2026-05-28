@@ -21,7 +21,7 @@ const INITIAL_FORM_DATA = {
   // Bag info
   bagNo: "",
   segmentNo: "",
-  batchNo: "",
+  lotNo: "",
   typeOfBag: "",
   collectionDate: new Date().toISOString().split("T")[0],
   // New bag-level fields
@@ -248,7 +248,7 @@ const CreateDonation = ({ onCreateDonor }) => {
       return (
         formData.bagNo.trim() &&
         formData.segmentNo.trim() &&
-        formData.batchNo.trim() &&
+        formData.lotNo.trim() &&
         formData.typeOfBag
       )
     }
@@ -295,7 +295,7 @@ const CreateDonation = ({ onCreateDonor }) => {
     const newErrors = {}
     if (!formData.bagNo.trim()) newErrors.bagNo = "Bag number is required."
     if (!formData.segmentNo.trim()) newErrors.segmentNo = "Segment number is required."
-    if (!formData.batchNo.trim()) newErrors.batchNo = "Batch number is required."
+    if (!formData.lotNo.trim()) newErrors.lotNo = "Lot number is required."
     if (!formData.typeOfBag) newErrors.typeOfBag = "Type of bag is required."
     if (!formData.hb) newErrors.hb = "Haemoglobin value is required."
     if (!formData.weightKg) newErrors.weightKg = "Weight is required."
@@ -327,7 +327,7 @@ const CreateDonation = ({ onCreateDonor }) => {
     const payload = {
       bagNo: formData.bagNo,
       segmentNo: formData.segmentNo,
-      batchNo: formData.batchNo,
+      lotNo: formData.lotNo,
       typeOfBag: formData.typeOfBag,
       donor: donor._id,
       // New top-level fields

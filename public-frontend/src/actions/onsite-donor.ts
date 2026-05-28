@@ -26,7 +26,7 @@ interface OnSiteRegistrationData {
     // Donation Fields
     bagNo: string;
     segmentNo: string;
-    batchNo: string;
+    lotNo: string;
     typeOfBag: string;
     hb: string | number;
     pulse: string | number;

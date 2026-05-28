@@ -2,7 +2,7 @@ const BagInformationStep = ({ formData, fieldErrors, onFieldChange }) => {
   const textFields = [
     { key: "bagNo", label: "Bag No" },
     { key: "segmentNo", label: "Segment No" },
-    { key: "batchNo", label: "Batch No" },
+    { key: "lotNo", label: "Lot No" },
   ];
 
   return (

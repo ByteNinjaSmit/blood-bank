@@ -22,7 +22,7 @@ const ComponentSchema = new Schema(
       type: Number,
       required: true,
     },
-    batchNo: {
+    lotNo: {
       type: String,
       trim: true,
     },

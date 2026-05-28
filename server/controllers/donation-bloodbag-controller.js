@@ -20,7 +20,7 @@ const newDonation = async (req, res, next) => {
         const {
             bagNo,
             segmentNo,
-            batchNo,
+            lotNo,
             typeOfBag,
             donor,
             // Legacy support – accept both shapes
@@ -97,7 +97,7 @@ const newDonation = async (req, res, next) => {
         const bloodBag = new BloodBag({
             bagNo,
             segmentNo,
-            batchNo,
+            lotNo,
             typeOfBag,
             donor,
             collectionDate: Date.now(),

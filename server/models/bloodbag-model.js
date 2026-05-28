@@ -12,7 +12,7 @@ const BloodBagSchema = new Schema({
     required: true,
     trim: true,
   },
-  batchNo: {
+  lotNo: {
     type: String,
     trim: true,
   },

@@ -199,8 +199,8 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-500">Batch Number</label>
-                      <p className="text-sm text-gray-900">{state.component.batchNo || "-"}</p>
+                      <label className="text-sm font-medium text-gray-500">Lot Number</label>
+                      <p className="text-sm text-gray-900">{state.component.lotNo || "-"}</p>
                     </div>
                   </div>
                 </CardContent>

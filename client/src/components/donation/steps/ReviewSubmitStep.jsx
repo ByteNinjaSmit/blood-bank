@@ -70,7 +70,7 @@ const ReviewSubmitStep = ({ donor, formData, getDonorName }) => {
           <div className="grid grid-cols-2 gap-2 text-sm text-purple-800">
             <p><strong>Bag No:</strong> {formData.bagNo}</p>
             <p><strong>Segment No:</strong> {formData.segmentNo}</p>
-            <p><strong>Batch No:</strong> {formData.batchNo}</p>
+            <p><strong>Lot No:</strong> {formData.lotNo}</p>
             <p><strong>Type:</strong> {formData.typeOfBag}</p>
             {formData.donationType && (
               <p><strong>Blood Donation:</strong> {donationTypeLabels[formData.donationType] || formData.donationType}</p>
