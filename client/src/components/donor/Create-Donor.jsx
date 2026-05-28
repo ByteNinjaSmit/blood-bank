@@ -15,8 +15,6 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
   const donorIdInputRef = useRef(null)
   const [showPostCreate, setShowPostCreate] = useState(false)
   const [createdDonor, setCreatedDonor] = useState(null)
-  const [dobMode, setDobMode] = useState("dob") // "dob" or "age"
-
   const [formData, setFormData] = useState({
     donorId: prefill?.donorId || "",
     firstName: prefill?.firstName || "",
@@ -49,6 +47,8 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
       return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : prefill.lastDonationDate;
     })() : "",
   })
+
+  const isDeferred = formData.eligibilityStatus === "deferred" || formData.eligibilityStatus === "temp-deferred"
 
   useEffect(() => {
     donorIdInputRef.current?.focus()
@@ -152,8 +152,8 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
     setFormData((prev) => ({
       ...prev,
       dobDisplay: display,
-      dob: isoDob || prev.dob,
-      age: age || prev.age,
+      dob: isoDob,
+      age: age,
       eligibilityStatus: autoStatus || prev.eligibilityStatus
     }))
   }
@@ -195,8 +195,8 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
   }
 
   const validateForm = () => {
-    if (!formData.city || !formData.district || !formData.state || !formData.pincode) {
-      setError("City, District, State and Pincode are required")
+    if (!formData.city || !formData.district || !formData.state) {
+      setError("City, District, and State are required")
       return false
     }
     if (formData.uid && !/^\d{12}$/.test(formData.uid)) {
@@ -212,12 +212,14 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
       return false
     }
 
-    if (dobMode === "dob") {
-      const dobCheck = validateDateString(formData.dobDisplay);
-      if (dobCheck !== true) {
-        setError(`Date of Birth: ${dobCheck}`);
-        return false;
-      }
+    if (!formData.dobDisplay) {
+      setError("Date of Birth is required")
+      return false
+    }
+    const dobCheck = validateDateString(formData.dobDisplay);
+    if (dobCheck !== true) {
+      setError(`Date of Birth: ${dobCheck}`);
+      return false;
     }
 
     if (formData.lastDonationDateDisplay) {
@@ -280,7 +282,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
       dobDisplay: "",
       lastDonationDateDisplay: "",
     })
-    setDobMode("dob")
+
     setError("")
     setSuccess(false)
     donorIdInputRef.current?.focus()
@@ -306,8 +308,9 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
 
     setLoading(true)
     try {
+      const generatedId = isDeferred && !formData.donorId ? `DFR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}` : formData.donorId;
       const donorData = {
-        donorId: formData.donorId,
+        donorId: generatedId,
         firstName: formData.firstName,
         middleName: formData.middleName || undefined,
         lastName: formData.lastName,
@@ -323,7 +326,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
           city: formData.city,
           district: formData.district,
           state: formData.state,
-          pincode: formData.pincode,
+          pincode: formData.pincode || undefined,
         },
         occupation: formData.occupation || undefined,
         weightKg: Number(formData.weightKg),
@@ -451,28 +454,21 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
           {mode === "quick" ? (
             <div className="bg-white rounded-lg border border-orange-200 p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Donor ID *</label>
-                  <div className="flex gap-2">
+                {!isDeferred && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Donor ID *</label>
                     <input
                       ref={donorIdInputRef}
                       type="text"
                       name="donorId"
                       value={formData.donorId}
                       onChange={handleInputChange}
-                      placeholder="DNR-YY-MM-DD-HH-MM"
+                      placeholder="Enter Donor ID manually"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
                       required
                     />
-                    <button
-                      type="button"
-                      onClick={generateDonorId}
-                      className="px-3 py-2 border border-orange-300 text-orange-800 rounded-md hover:bg-orange-50"
-                    >
-                      Generate
-                    </button>
                   </div>
-                </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone (10 digits) *</label>
                   <input
@@ -498,6 +494,17 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Middle Name</label>
+                  <input
+                    type="text"
+                    name="middleName"
+                    value={formData.middleName}
+                    onChange={handleInputChange}
+                    placeholder="Middle Name"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
                   <input
                     type="text"
@@ -509,56 +516,17 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth / Age *</label>
-                  <div className="flex gap-2 mb-2">
-                    <button
-                      type="button"
-                      onClick={() => setDobMode("dob")}
-                      className={`px-3 py-1 text-xs rounded-md border ${dobMode === "dob"
-                          ? "bg-orange-800 text-white border-orange-800"
-                          : "bg-white text-orange-800 border-orange-300 hover:bg-orange-50"
-                        }`}
-                    >
-                      Date of Birth
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDobMode("age")}
-                      className={`px-3 py-1 text-xs rounded-md border ${dobMode === "age"
-                          ? "bg-orange-800 text-white border-orange-800"
-                          : "bg-white text-orange-800 border-orange-300 hover:bg-orange-50"
-                        }`}
-                    >
-                      Age
-                    </button>
-                  </div>
-                  {dobMode === "dob" ? (
-                    <input
-                      type="text"
-                      name="dobDisplay"
-                      value={formData.dobDisplay}
-                      onChange={handleDobChange}
-                      placeholder="DD/MM/YYYY"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                      required={!formData.age}
-                    />
-                  ) : (
-                    <input
-                      type="number"
-                      name="age"
-                      value={formData.age}
-                      onChange={handleAgeChange}
-                      placeholder="Enter age in years"
-                      min="1"
-                      max="120"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                      required={!formData.dob}
-                    />
-                  )}
-                  {dobMode === "age" && formData.dob && (
-                    <p className="text-xs text-gray-500 mt-1">Auto-calculated DOB: {formData.dob}</p>
-                  )}
-                  {dobMode === "dob" && formData.age && (
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
+                  <input
+                    type="text"
+                    name="dobDisplay"
+                    value={formData.dobDisplay}
+                    onChange={handleDobChange}
+                    placeholder="DD/MM/YYYY"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                    required
+                  />
+                  {formData.age && (
                     <p className="text-xs text-gray-500 mt-1">Age: {formData.age} years</p>
                   )}
                 </div>
@@ -686,14 +654,13 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Pincode *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
                   <input
                     type="text"
                     name="pincode"
                     value={formData.pincode}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                    required
                   />
                 </div>
               </div>
@@ -704,27 +671,20 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
               <div className="bg-white rounded-lg border border-orange-200 p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Basic Information</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Donor ID *</label>
-                    <div className="flex gap-2">
+                  {!isDeferred && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Donor ID *</label>
                       <input
                         type="text"
                         name="donorId"
                         value={formData.donorId}
                         onChange={handleInputChange}
-                        placeholder="DNR-YY-MM-DD-HH-MM"
+                        placeholder="Enter Donor ID manually"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
                         required
                       />
-                      <button
-                        type="button"
-                        onClick={generateDonorId}
-                        className="px-3 py-2 border border-orange-300 text-orange-800 rounded-md hover:bg-orange-50"
-                      >
-                        Generate
-                      </button>
                     </div>
-                  </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">UID (12 digits)</label>
                     <input
@@ -779,56 +739,17 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth / Age *</label>
-                    <div className="flex gap-2 mb-2">
-                      <button
-                        type="button"
-                        onClick={() => setDobMode("dob")}
-                        className={`px-3 py-1 text-xs rounded-md border ${dobMode === "dob"
-                            ? "bg-orange-800 text-white border-orange-800"
-                            : "bg-white text-orange-800 border-orange-300 hover:bg-orange-50"
-                          }`}
-                      >
-                        Date of Birth
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDobMode("age")}
-                        className={`px-3 py-1 text-xs rounded-md border ${dobMode === "age"
-                            ? "bg-orange-800 text-white border-orange-800"
-                            : "bg-white text-orange-800 border-orange-300 hover:bg-orange-50"
-                          }`}
-                      >
-                        Age
-                      </button>
-                    </div>
-                    {dobMode === "dob" ? (
-                      <input
-                        type="text"
-                        name="dobDisplay"
-                        value={formData.dobDisplay}
-                        onChange={handleDobChange}
-                        placeholder="DD/MM/YYYY"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                        required={!formData.age}
-                      />
-                    ) : (
-                      <input
-                        type="number"
-                        name="age"
-                        value={formData.age}
-                        onChange={handleAgeChange}
-                        placeholder="Enter age in years"
-                        min="1"
-                        max="120"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                        required={!formData.dob}
-                      />
-                    )}
-                    {dobMode === "age" && formData.dob && (
-                      <p className="text-xs text-gray-500 mt-1">Auto-calculated DOB: {formData.dob}</p>
-                    )}
-                    {dobMode === "dob" && formData.age && (
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
+                    <input
+                      type="text"
+                      name="dobDisplay"
+                      value={formData.dobDisplay}
+                      onChange={handleDobChange}
+                      placeholder="DD/MM/YYYY"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                      required
+                    />
+                    {formData.age && (
                       <p className="text-xs text-gray-500 mt-1">Age: {formData.age} years</p>
                     )}
                   </div>
@@ -953,14 +874,13 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Pincode *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
                     <input
                       type="text"
                       name="pincode"
                       value={formData.pincode}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                      required
                     />
                   </div>
                 </div>

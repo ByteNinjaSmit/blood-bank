@@ -4,7 +4,7 @@ const { Schema, Types } = mongoose;
 const DonorSchema = new Schema({
   donorId: {
     type: String,
-    required: true,
+    required: false,
   },
   name: {
     firstName: {
@@ -81,7 +81,7 @@ const DonorSchema = new Schema({
     },
     pincode: {
       type: String,
-      required: true,
+      required: false,
     },
   },
   occupation: {
