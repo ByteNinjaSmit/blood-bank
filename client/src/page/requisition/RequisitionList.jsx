@@ -40,6 +40,8 @@ export default function RequisitionList() {
   const [printDoc, setPrintDoc] = useState(null);
   const [printLoading, setPrintLoading] = useState(false);
   const [printType, setPrintType] = useState('report');
+  const [multiLabelModalOpen, setMultiLabelModalOpen] = useState(false);
+  const [multiLabelDoc, setMultiLabelDoc] = useState(null);
 
   const fmt = (d) => (d ? new Date(d).toLocaleString() : '—');
   const statusClass = (s) => (
@@ -214,16 +216,46 @@ export default function RequisitionList() {
   };
   const closeView = () => { setViewOpen(false); setViewDoc(null); };
 
+  const printSingleLabel = (doc, matchedUnit) => {
+    try {
+      setPrintLoading(true);
+      setPrintType('label');
+      // Create a temporary clone with ONLY this single matched inventory unit
+      const singleDoc = {
+        ...doc,
+        matchedInventory: [matchedUnit]
+      };
+      setPrintDoc(singleDoc);
+      toast.info(`Preparing issue label sticker for ${matchedUnit?.inventoryId?.componentId?.componentType || 'component'}...`);
+      // Wait for React to render the printable HTML to DOM
+      setTimeout(() => {
+        RequisitionPrintService.print('label');
+      }, 100);
+    } catch (e) {
+      toast.error('Error while preparing print');
+    } finally {
+      setPrintLoading(false);
+    }
+  };
+
   const handlePrint = async (row, type = 'report') => {
     try {
       setPrintLoading(true);
-      setPrintType(type);
       toast.info(`Preparing ${type === 'label' ? 'issue label sticker' : 'issue report'}...`);
       const res = await requisitionApi.getRequest(row._id);
       if (!res.success) {
         toast.error(res.error || 'Failed to load requisition');
         return;
       }
+
+      // If it's a label print and has multiple matched inventory bags, open the pop-up selection modal
+      if (type === 'label' && res.data?.matchedInventory?.length > 1) {
+        setMultiLabelDoc(res.data);
+        setMultiLabelModalOpen(true);
+        return;
+      }
+
+      setPrintType(type);
       setPrintDoc(res.data);
       // Wait for React to render the printable HTML to DOM
       setTimeout(() => {
@@ -334,6 +366,111 @@ export default function RequisitionList() {
               ) : (
                 <div className="text-gray-600 text-sm">No matched inventory yet.</div>
               )}
+            </div>
+          </div>
+        )}
+      </CustomModal>
+
+      <CustomModal 
+        open={multiLabelModalOpen} 
+        onCancel={() => { setMultiLabelModalOpen(false); setMultiLabelDoc(null); }} 
+        title="Select Issue Label to Generate" 
+        size="lg" 
+        hideFooter
+      >
+        {!multiLabelDoc ? (
+          <div className="text-gray-600">Loading…</div>
+        ) : (
+          <div className="space-y-6 text-sm">
+            {/* Patient Header Card */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row justify-between gap-4">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-0.5">Patient Details</span>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  {multiLabelDoc.patient?.name || '—'}
+                </h3>
+                <p className="text-xs text-slate-600 mt-1">
+                  {multiLabelDoc.patient?.age ? `${multiLabelDoc.patient.age} Yrs` : ''} • {multiLabelDoc.patient?.sex || ''} • MRN: {multiLabelDoc.patient?.mrn || '—'}
+                </p>
+              </div>
+              <div className="md:text-right">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-0.5">Requisition Info</span>
+                <p className="text-sm font-bold text-slate-900">
+                  ID: <span className="font-mono">{multiLabelDoc.requestId}</span>
+                </p>
+                <p className="text-xs text-slate-600 mt-1">
+                  {multiLabelDoc.hospitalId?.name || '—'}
+                </p>
+              </div>
+            </div>
+
+            {/* List of components */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-indigo-65"></span>
+                Issued Components ({multiLabelDoc.matchedInventory?.length || 0})
+              </h4>
+              
+              <div className="grid grid-cols-1 gap-4">
+                {multiLabelDoc.matchedInventory?.map((unit, index) => {
+                  const inv = unit.inventoryId || {};
+                  const bag = inv.bagNo || {};
+                  const comp = inv.componentId || {};
+                  
+                  const expiryDateFormatted = comp.expiryDate 
+                    ? new Date(comp.expiryDate).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : '—';
+
+                  const bloodGroupText = bag.bloodGroup 
+                    ? `${bag.bloodGroup} Rh ${bag.rh || ''}`
+                    : '—';
+
+                  return (
+                    <div 
+                      key={index} 
+                      className="border border-slate-200 rounded-xl p-4 bg-white hover:shadow-md transition-all duration-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                    >
+                      <div className="space-y-1 flex-grow">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-slate-950 capitalize">
+                            {comp.componentType || '—'}
+                          </span>
+                          <span className="px-2 py-0.5 text-xs font-extrabold rounded-full bg-rose-50 text-rose-700 border border-rose-100">
+                            {bloodGroupText}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 mt-2 text-xs text-slate-600">
+                          <div>
+                            <span className="text-slate-400 font-medium">Bag No:</span>{' '}
+                            <span className="font-mono font-semibold text-slate-800">{bag.bagNo || '—'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 font-medium">Expiry:</span>{' '}
+                            <span className="font-semibold text-slate-800">{expiryDateFormatted}</span>
+                          </div>
+                          <div className="col-span-2 sm:col-span-1">
+                            <span className="text-slate-400 font-medium">Status:</span>{' '}
+                            <span className="font-semibold text-green-700 capitalize">Issued</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex-shrink-0 pt-2 sm:pt-0">
+                        <button
+                          type="button"
+                          onClick={() => printSingleLabel(multiLabelDoc, unit)}
+                          className="w-full sm:w-auto px-4 py-2 bg-indigo-700 hover:bg-indigo-800 active:bg-indigo-900 text-white font-semibold rounded-lg text-xs shadow-sm hover:shadow transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                          </svg>
+                          Issue Label
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
