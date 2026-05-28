@@ -185,14 +185,14 @@ const updateSerologyResults = async (req, res, next) => {
             bag.updatedAt = now;
             bag.updatedBy = updatedBy;
 
-            const anyPositive = testResults.some(t => t.result === "Positive");
+            const anyReactive = testResults.some(t => t.result === "Reactive");
             const allNegative = testResults.every(t => t.result === "Negative");
 
             let newBagStatus = "testing";
 
-            if (anyPositive) {
+            if (anyReactive) {
                 // =====================================================
-                // ❌ CASE 1 — BAG POSITIVE → DISCARD BAG + ALL COMPONENTS
+                // ❌ CASE 1 — BAG REACTIVE → DISCARD BAG + ALL COMPONENTS
                 // =====================================================
                 newBagStatus = "discarded";
 
@@ -229,7 +229,7 @@ const updateSerologyResults = async (req, res, next) => {
                     itemType: "Bag",
                     bagNo: bagId,
                     componentId: null,
-                    reason: "Serology positive",
+                    reason: "Serology reactive",
                     discardedAt: now,
                     siteId,
                     updatedBy,
@@ -241,7 +241,7 @@ const updateSerologyResults = async (req, res, next) => {
                     itemType: "Component",
                     bagNo: bagId,
                     componentId: c._id,
-                    reason: "Parent bag serology positive",
+                    reason: "Parent bag serology reactive",
                     discardedAt: now,
                     siteId,
                     updatedBy,
@@ -250,7 +250,7 @@ const updateSerologyResults = async (req, res, next) => {
 
                 await DiscardLog.insertMany(childLogs, session ? { session } : {});
 
-                logger.warn(`🩸 Bag ${bagId} discarded due to positive serology.`);
+                logger.warn(`🩸 Bag ${bagId} discarded due to reactive serology.`);
             }
 
             else if (allNegative) {
@@ -296,7 +296,7 @@ const updateSerologyResults = async (req, res, next) => {
 
             else {
                 // =====================================================
-                // ⚠️ CASE 3 — INDETERMINATE → Keep bag under testing
+                // ⚠️ CASE 3 — SHADENESS → Keep bag under testing
                 // =====================================================
                 newBagStatus = "testing";
                 bag.status = "testing";
@@ -306,7 +306,7 @@ const updateSerologyResults = async (req, res, next) => {
                     await bag.save();
                 }
 
-                logger.info(`⚠️ Bag ${bagId} remains in testing due to indeterminate results.`);
+                logger.info(`⚠️ Bag ${bagId} remains in testing due to shadeness results.`);
             }
 
             return { newStatus: newBagStatus };

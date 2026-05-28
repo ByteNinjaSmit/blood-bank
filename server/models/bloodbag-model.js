@@ -202,11 +202,11 @@ const BloodBagSchema = new Schema({
     {
       test: {
         type: String,
-        enum: ["HIV", "HBsAg", "HCV", "VDRL", "MP", "NA"],
+        enum: ["HIV", "HBsAg", "HCV", "VDRL", "MP"],
       },
       result: {
         type: String,
-        enum: ["Positive", "Negative", "Indeterminate"],
+        enum: ["Reactive", "Negative", "Shadeness"],
       },
       testedAt: {
         type: Date,

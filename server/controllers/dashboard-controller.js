@@ -218,7 +218,7 @@ async function getOverview(req, res, next) {
 
     const positivity = positivityAgg.reduce((acc, x) => {
       const key = x._id?.test || "Unknown";
-      acc[key] = acc[key] || { Positive: 0, Negative: 0, Indeterminate: 0 };
+      acc[key] = acc[key] || { Reactive: 0, Negative: 0, Shadeness: 0 };
       const r = x._id?.result || "Unknown";
       if (acc[key][r] !== undefined) acc[key][r] += x.count;
       return acc;
@@ -413,12 +413,11 @@ async function getOverview(req, res, next) {
       },
       testingSerology: {
         testsTotal,
-        hivPos: (positivity.HIV && positivity.HIV.Positive) || 0,
-        hbvPos: (positivity.HBsAg && positivity.HBsAg.Positive) || 0,
-        hcvPos: (positivity.HCV && positivity.HCV.Positive) || 0,
-        vdrlPos: (positivity.VDRL && positivity.VDRL.Positive) || 0,
-        mpPos: (positivity.MP && positivity.MP.Positive) || 0,
-        natPos: (positivity.NA && positivity.NA.Positive) || 0,
+        hivPos: (positivity.HIV && positivity.HIV.Reactive) || 0,
+        hbvPos: (positivity.HBsAg && positivity.HBsAg.Reactive) || 0,
+        hcvPos: (positivity.HCV && positivity.HCV.Reactive) || 0,
+        vdrlPos: (positivity.VDRL && positivity.VDRL.Reactive) || 0,
+        mpPos: (positivity.MP && positivity.MP.Reactive) || 0,
       },
       camps: {
         campsConducted,

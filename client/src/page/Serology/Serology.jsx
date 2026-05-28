@@ -13,7 +13,6 @@ const DEFAULT_TESTS = [
   { key: "HCV", label: "HCV" },
   { key: "VDRL", label: "VDRL" },
   { key: "MP", label: "MP" },
-  { key: "NA", label: "NA" },
 ];
 
 const Serology = () => {
@@ -285,8 +284,8 @@ const Serology = () => {
                   >
                     <option value="">Select</option>
                     <option value="Negative">Negative</option>
-                    <option value="Positive">Positive</option>
-                    <option value="Indeterminate">Indeterminate</option>
+                    <option value="Reactive">Reactive</option>
+                    <option value="Shadeness">Shadeness</option>
                   </select>
                 </div>
               ))}
