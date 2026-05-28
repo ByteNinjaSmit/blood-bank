@@ -30,7 +30,7 @@ const Serology = () => {
   const [activeBag, setActiveBag] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [tests, setTests] = useState(() => DEFAULT_TESTS.map(t => ({ test: t.key, result: "Negative" })));
+  const [tests, setTests] = useState(() => DEFAULT_TESTS.map(t => ({ test: t.key, result: "" })));
 
   const fetchBags = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
@@ -63,7 +63,7 @@ const Serology = () => {
     const existing = Array.isArray(bag.testResults) ? bag.testResults : [];
     const mapped = DEFAULT_TESTS.map(t => {
       const found = existing.find(e => e.test === t.key);
-      return { test: t.key, result: found?.result || "Negative" };
+      return { test: t.key, result: found?.result || "" };
     });
     setTests(mapped);
     setShowModal(true);
@@ -71,6 +71,14 @@ const Serology = () => {
 
   const submitResults = async () => {
     if (!activeBag?._id) return;
+    
+    // Check if any test results are still unselected
+    const unselected = tests.filter(t => !t.result);
+    if (unselected.length > 0) {
+      toast.error(`Please select a result for all tests: ${unselected.map(t => t.test).join(", ")}`);
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       await axios.post(
@@ -271,10 +279,11 @@ const Serology = () => {
                 <div key={idx} className="flex items-center justify-between gap-4 p-3 border rounded-md">
                   <div className="text-sm font-medium text-gray-800">{t.test}</div>
                   <select
-                    className="w-40 px-3 py-2 border rounded-md text-sm"
+                    className="w-40 px-3 py-2 border rounded-md text-sm border-gray-200 focus:border-red-400 focus:ring-red-400"
                     value={t.result}
                     onChange={(e) => setTests(prev => prev.map((x, i) => i === idx ? { ...x, result: e.target.value } : x))}
                   >
+                    <option value="">Select</option>
                     <option value="Negative">Negative</option>
                     <option value="Positive">Positive</option>
                     <option value="Indeterminate">Indeterminate</option>
