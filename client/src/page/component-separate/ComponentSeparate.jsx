@@ -222,7 +222,7 @@ const ComponentSeparate = () => {
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{bag.bagNo}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.segmentNo || "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.bloodGroup} {bag.rh}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{bag.collectionDate ? new Date(bag.collectionDate).toLocaleDateString() : "-"}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{bag.collectionDate ? new Date(bag.collectionDate).toLocaleString() : "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">
                         {Array.isArray(bag.components) && bag.components.length > 0 ? (
                           <div className="flex flex-wrap gap-1">

@@ -255,7 +255,7 @@ const SerologyResults = () => {
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">{bag.bagNo}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{bag.segmentNo || "-"}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{formatBlood(bag.bloodGroup, bag.rh)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{bag.collectionDate ? new Date(bag.collectionDate).toLocaleDateString() : "-"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{bag.collectionDate ? new Date(bag.collectionDate).toLocaleString() : "-"}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{statusBadge(bag.status)}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">
                           {Array.isArray(bag.testResults) && bag.testResults.length > 0 ? (

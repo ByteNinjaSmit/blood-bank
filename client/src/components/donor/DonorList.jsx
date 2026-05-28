@@ -73,8 +73,10 @@ const DonorList = ({
   };
 
   const calculateAge = (dob) => {
+    if (!dob) return null;
     const today = new Date();
     const birthDate = new Date(dob);
+    if (isNaN(birthDate.getTime())) return null;
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
@@ -247,16 +249,18 @@ const DonorList = ({
                   </Table.Cell>
                   <Table.Cell>
                     <div className="flex items-center gap-2">
-                      <span>{new Date(donor.dob).toLocaleDateString()}</span>
-                      <span
-                        className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold ${
-                          calculateAge(donor.dob) < 18 
-                            ? "bg-red-100 text-red-600" 
-                            : "bg-green-100 text-green-600"
-                        }`}
-                      >
-                        {calculateAge(donor.dob)}
-                      </span>
+                      <span>{donor.dob ? new Date(donor.dob).toLocaleDateString() : 'N/A'}</span>
+                      {donor.dob && calculateAge(donor.dob) !== null && (
+                        <span
+                          className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold ${
+                            calculateAge(donor.dob) < 18 
+                              ? "bg-red-100 text-red-600" 
+                              : "bg-green-100 text-green-600"
+                          }`}
+                        >
+                          {calculateAge(donor.dob)}
+                        </span>
+                      )}
                     </div>
                   </Table.Cell>
                   <Table.Cell>{donor.sex}</Table.Cell>

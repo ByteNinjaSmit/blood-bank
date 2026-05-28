@@ -99,6 +99,41 @@ const BagInformationStep = ({ formData, fieldErrors, onFieldChange }) => {
           </select>
         </div>
 
+        {/* Donation Date */}
+        <div>
+          <label className="block text-sm mb-1">
+            Donation Date
+            <span className="text-red-500 ml-1">*</span>
+          </label>
+          <input
+            type="date"
+            value={formData.collectionDate}
+            onChange={(e) => onFieldChange("collectionDate", e.target.value)}
+            className={`w-full px-3 py-2 border rounded-lg ${fieldErrors.collectionDate ? "border-red-500" : "border-gray-300"}`}
+            required
+          />
+          {fieldErrors.collectionDate && (
+            <p className="text-xs text-red-600 mt-1">{fieldErrors.collectionDate}</p>
+          )}
+        </div>
+
+        {/* Donation Time */}
+        <div>
+          <label className="block text-sm mb-1">
+            Donation Time
+            <span className="text-red-500 ml-1">*</span>
+          </label>
+          <input
+            type="time"
+            value={formData.collectionTime}
+            onChange={(e) => onFieldChange("collectionTime", e.target.value)}
+            className={`w-full px-3 py-2 border rounded-lg ${fieldErrors.collectionTime ? "border-red-500" : "border-gray-300"}`}
+            required
+          />
+          {fieldErrors.collectionTime && (
+            <p className="text-xs text-red-600 mt-1">{fieldErrors.collectionTime}</p>
+          )}
+        </div>
       </div>
     </div>
   );

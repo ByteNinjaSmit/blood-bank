@@ -223,7 +223,10 @@ const fastSearchDonors = async (req, res, next) => {
       };
     });
 
-    const donors = await Donor.find({ $and: conditions })
+    const donors = await Donor.find({
+      $and: conditions,
+      eligibilityStatus: { $nin: ['deferred', 'temp-deferred'] },
+    })
       .limit(limit)
       .select('donorId name uid dob sex phone email address bloodGroup rh lastDonationDate eligibilityStatus')
       .lean();

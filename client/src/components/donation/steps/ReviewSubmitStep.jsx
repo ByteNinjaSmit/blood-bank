@@ -72,6 +72,12 @@ const ReviewSubmitStep = ({ donor, formData, getDonorName }) => {
             <p><strong>Segment No:</strong> {formData.segmentNo}</p>
             <p><strong>Lot No:</strong> {formData.lotNo}</p>
             <p><strong>Type:</strong> {formData.typeOfBag}</p>
+            {formData.collectionDate && (
+              <p><strong>Donation Date:</strong> {new Date(formData.collectionDate).toLocaleDateString()}</p>
+            )}
+            {formData.collectionTime && (
+              <p><strong>Donation Time:</strong> {formData.collectionTime}</p>
+            )}
             {formData.donationType && (
               <p><strong>Blood Donation:</strong> {donationTypeLabels[formData.donationType] || formData.donationType}</p>
             )}

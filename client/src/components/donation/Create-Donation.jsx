@@ -24,6 +24,7 @@ const INITIAL_FORM_DATA = {
   lotNo: "",
   typeOfBag: "",
   collectionDate: new Date().toISOString().split("T")[0],
+  collectionTime: new Date().toTimeString().slice(0, 5), // "HH:MM"
   // New bag-level fields
   donationType: "",
   totalDonationCount: "",
@@ -249,7 +250,9 @@ const CreateDonation = ({ onCreateDonor }) => {
         formData.bagNo.trim() &&
         formData.segmentNo.trim() &&
         formData.lotNo.trim() &&
-        formData.typeOfBag
+        formData.typeOfBag &&
+        formData.collectionDate &&
+        formData.collectionTime
       )
     }
 
@@ -330,6 +333,7 @@ const CreateDonation = ({ onCreateDonor }) => {
       lotNo: formData.lotNo,
       typeOfBag: formData.typeOfBag,
       donor: donor._id,
+      collectionDate: new Date(`${formData.collectionDate}T${formData.collectionTime || '00:00'}:00`).toISOString(),
       // New top-level fields
       donationType: formData.donationType || undefined,
       totalDonationCount: formData.totalDonationCount ? Number(formData.totalDonationCount) : undefined,
@@ -396,7 +400,11 @@ const CreateDonation = ({ onCreateDonor }) => {
     setStepperKey((prev) => prev + 1)
 
     setFormData(() => {
-      const base = { ...INITIAL_FORM_DATA, collectionDate: new Date().toISOString().split("T")[0] }
+      const base = {
+        ...INITIAL_FORM_DATA,
+        collectionDate: new Date().toISOString().split("T")[0],
+        collectionTime: new Date().toTimeString().slice(0, 5)
+      }
 
       if (!donor) return base
 

@@ -29,7 +29,7 @@ const DonationDetails = ({ donation }) => {
             Bag {donation.bagNo}
           </h3>
           <p className="text-xs text-slate-500 mt-1">
-            Collected on {formatDate(donation.collectionDate)}
+            Collected on {formatDateTime(donation.collectionDate)}
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
