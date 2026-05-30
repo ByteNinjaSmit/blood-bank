@@ -12,7 +12,7 @@ const BloodBagSchema = new Schema({
     required: true,
     trim: true,
   },
-  batchNo: {
+  lotNo: {
     type: String,
     trim: true,
   },
@@ -33,10 +33,6 @@ const BloodBagSchema = new Schema({
   emergencyDonationWillingness: {
     type: String,
     enum: ["Yes", "No"],
-  },
-  lotNo: {
-    type: String,
-    trim: true,
   },
 
   donor: {
@@ -141,10 +137,6 @@ const BloodBagSchema = new Schema({
     enum: ["Positive", "Negative", "Unknown"],
     required: true,
   },
-  atypicalAntibody: {
-    type: String,
-    trim: true,
-  },
   status: {
     type: String,
     enum: [
@@ -210,11 +202,11 @@ const BloodBagSchema = new Schema({
     {
       test: {
         type: String,
-        enum: ["HIV", "HBsAg", "HCV", "VDRL", "MP", "NA"],
+        enum: ["HIV", "HBsAg", "HCV", "VDRL", "MP"],
       },
       result: {
         type: String,
-        enum: ["Positive", "Negative", "Indeterminate"],
+        enum: ["Reactive", "Negative", "Shadeness"],
       },
       testedAt: {
         type: Date,

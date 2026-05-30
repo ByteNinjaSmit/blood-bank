@@ -50,7 +50,7 @@ const VoluntaryCampDonationSchema = new Schema(
     // Additional fields for bag tracking if needed during on-site registration
     bagNo: { type: String },
     segmentNo: { type: String },
-    batchNo: { type: String },
+    lotNo: { type: String },
     typeOfBag: { type: String },
     
     status: {

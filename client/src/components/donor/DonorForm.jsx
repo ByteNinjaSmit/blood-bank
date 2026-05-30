@@ -74,6 +74,8 @@ const DonorForm = ({
 
   const watchDob = watch('dob');
   const watchWeight = watch('weightKg');
+  const watchEligibilityStatus = watch('eligibilityStatus');
+  const isDeferred = watchEligibilityStatus === 'deferred' || watchEligibilityStatus === 'temp-deferred';
 
   useEffect(() => {
     if (watchDob && watchWeight) {
@@ -212,6 +214,7 @@ const DonorForm = ({
     // Transform data to match API structure
     const transformedData = {
       ...data,
+      donorId: isDeferred && !data.donorId ? `DFR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}` : data.donorId,
       name: {
         firstName: data.firstName,
         middleName: data.middleName,
@@ -237,12 +240,14 @@ const DonorForm = ({
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Basic Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Donor ID" required error={errors.donorId?.message}>
-            <FormField.Input
-              {...register('donorId', { required: 'Donor ID is required' })}
-              placeholder="DNR-YY-MM-DD-HH-MM"
-            />
-          </FormField>
+          {!isDeferred && (
+            <FormField label="Donor ID" required error={errors.donorId?.message}>
+              <FormField.Input
+                {...register('donorId', { required: !isDeferred ? 'Donor ID is required' : false })}
+                placeholder="Enter Donor ID manually"
+              />
+            </FormField>
+          )}
 
           <FormField label="UID (12 digits)" error={errors.uid?.message}>
             <FormField.Input
@@ -391,9 +396,9 @@ const DonorForm = ({
             </FormField.Select>
           </FormField>
 
-          <FormField label="Pincode" required error={errors.pincode?.message}>
+          <FormField label="Pincode" error={errors.pincode?.message}>
             <FormField.Input
-              {...register('pincode', { required: 'Pincode is required' })}
+              {...register('pincode')}
             />
           </FormField>
         </div>

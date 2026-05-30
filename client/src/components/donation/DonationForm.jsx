@@ -19,12 +19,17 @@ const DonationForm = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+      ...initialData,
+      collectionDate: initialData.collectionDate ? new Date(initialData.collectionDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      collectionTime: initialData.collectionDate ? new Date(initialData.collectionDate).toTimeString().slice(0, 5) : new Date().toTimeString().slice(0, 5),
+    } : {
       bagNo: '',
       segmentNo: '',
-      batchNo: '',
+      lotNo: '',
       typeOfBag: '',
       collectionDate: new Date().toISOString().split('T')[0],
+      collectionTime: new Date().toTimeString().slice(0, 5), // "HH:MM" format
       hb: '',
       weightKg: '',
       pulse: '',
@@ -32,7 +37,6 @@ const DonationForm = ({
       bp: '',
       bloodGroup: '',
       rh: '',
-      atypicalAntibody: '',
     }
   });
 
@@ -78,12 +82,14 @@ const DonationForm = ({
       return;
     }
 
+    const combinedCollectionDate = new Date(`${data.collectionDate}T${data.collectionTime || '00:00'}:00`).toISOString();
     const payload = {
       bagNo: data.bagNo,
       segmentNo: data.segmentNo,
-      batchNo: data.batchNo,
+      lotNo: data.lotNo,
       typeOfBag: data.typeOfBag,
       donor: donor._id,
+      collectionDate: combinedCollectionDate,
       initialVitals: {
         hb: parseFloat(data.hb),
         weightKg: parseFloat(data.weightKg),
@@ -93,7 +99,6 @@ const DonationForm = ({
       },
       bloodGroup: data.bloodGroup,
       rh: data.rh,
-      atypicalAntibody: data.atypicalAntibody,
       siteId: campId || null,
       donorId: donor.donorId,
     };
@@ -205,9 +210,9 @@ const DonationForm = ({
                   {...register('segmentNo', { required: 'Segment number is required' })}
                 />
               </FormField>
-              <FormField label="Batch No" required error={errors.batchNo?.message}>
+              <FormField label="Lot No" required error={errors.lotNo?.message}>
                 <FormField.Input
-                  {...register('batchNo', { required: 'Batch number is required' })}
+                  {...register('lotNo', { required: 'Lot number is required' })}
                 />
               </FormField>
               <FormField label="Type of Bag" required error={errors.typeOfBag?.message}>
@@ -219,6 +224,18 @@ const DonationForm = ({
                   <option value="TB">Triple Bag</option>
                   <option value="QB">Quadruple Bag</option>
                 </FormField.Select>
+              </FormField>
+              <FormField label="Donation Date" required error={errors.collectionDate?.message}>
+                <FormField.Input
+                  type="date"
+                  {...register('collectionDate', { required: 'Donation date is required' })}
+                />
+              </FormField>
+              <FormField label="Donation Time" required error={errors.collectionTime?.message}>
+                <FormField.Input
+                  type="time"
+                  {...register('collectionTime', { required: 'Donation time is required' })}
+                />
               </FormField>
             </div>
           </div>
@@ -298,11 +315,6 @@ const DonationForm = ({
                   <option value="Positive">Positive</option>
                   <option value="Negative">Negative</option>
                 </FormField.Select>
-              </FormField>
-              <FormField label="Atypical Antibody" error={errors.atypicalAntibody?.message}>
-                <FormField.Input
-                  {...register('atypicalAntibody')}
-                />
               </FormField>
             </div>
           </div>

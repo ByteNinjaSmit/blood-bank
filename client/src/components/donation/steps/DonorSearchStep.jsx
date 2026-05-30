@@ -57,6 +57,11 @@ const DonorSearchStep = ({
   }, [query, API, authorizationToken]);
 
   const handleSelect = async (d) => {
+    if (d.eligibilityStatus === 'deferred' || d.eligibilityStatus === 'temp-deferred') {
+      toast.error(`${d.fullName} is deferred and cannot donate.`, { duration: 5000 });
+      return;
+    }
+
     if (d.isAvailableToDonate === false) {
       const lastDate = d.lastDonationDate
         ? new Date(d.lastDonationDate).toLocaleDateString()
@@ -277,7 +282,7 @@ const DonorSearchStep = ({
                   </div>
                   <div className="flex flex-col items-center gap-3 shrink-0 ml-2">
                     <div className="flex items-center gap-2">
-                      {d.isAvailableToDonate === false ? (
+                      {d.isAvailableToDonate === false || d.eligibilityStatus === 'deferred' || d.eligibilityStatus === 'temp-deferred' ? (
                         <Lock className="w-3.5 h-3.5 text-red-500" />
                       ) : (
                         <Unlock className="w-3.5 h-3.5 text-green-500" />
@@ -341,6 +346,11 @@ const DonorSearchStep = ({
                   {d.phone && (
                     <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-gray-50 text-gray-600">
                       {d.phone}
+                    </span>
+                  )}
+                  {(d.eligibilityStatus === 'deferred' || d.eligibilityStatus === 'temp-deferred') && (
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-red-100 text-red-800">
+                      Deferred
                     </span>
                   )}
                 </div>

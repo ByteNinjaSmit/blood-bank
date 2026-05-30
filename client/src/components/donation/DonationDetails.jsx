@@ -29,7 +29,7 @@ const DonationDetails = ({ donation }) => {
             Bag {donation.bagNo}
           </h3>
           <p className="text-xs text-slate-500 mt-1">
-            Collected on {formatDate(donation.collectionDate)}
+            Collected on {formatDateTime(donation.collectionDate)}
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
@@ -66,9 +66,9 @@ const DonationDetails = ({ donation }) => {
             <p>
               <span className="font-medium">Segment No:</span> {donation.segmentNo}
             </p>
-            {donation.batchNo && (
+            {donation.lotNo && (
               <p>
-                <span className="font-medium">Batch No:</span> {donation.batchNo}
+                <span className="font-medium">Lot No:</span> {donation.lotNo}
               </p>
             )}
             <p>

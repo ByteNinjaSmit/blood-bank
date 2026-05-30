@@ -37,7 +37,7 @@ export interface IVoluntaryCampDonation extends Document {
     siteId: mongoose.Types.ObjectId;
     bagNo?: string;
     segmentNo?: string;
-    batchNo?: string;
+    lotNo?: string;
     typeOfBag?: string;
     status: string;
     createdAt: Date;
@@ -80,7 +80,7 @@ const VoluntaryCampDonationSchema: Schema<IVoluntaryCampDonation> = new Schema({
     siteId: { type: Schema.Types.ObjectId, ref: "Site", required: true },
     bagNo: { type: String },
     segmentNo: { type: String },
-    batchNo: { type: String },
+    lotNo: { type: String },
     typeOfBag: { type: String },
     status: { type: String, default: "Pending" },
     createdAt: { type: Date, default: Date.now },

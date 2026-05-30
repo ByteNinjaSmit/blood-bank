@@ -93,6 +93,7 @@ async function getRequestById(req, res, next) {
     const { id } = req.params;
     const doc = await HospitalRequest.findById(id)
       .populate('hospitalId')
+      .populate('rejectedBy')
       .populate({
         path: 'matchedInventory.inventoryId',
         populate: [{ path: 'componentId', model: 'Component' }, { path: 'bagNo', model: 'BloodBag' }]
@@ -426,6 +427,12 @@ async function rejectRequest(req, res, next) {
   try {
     return await withOptionalTransaction(async (session) => {
       const { id } = req.params;
+      const { rejectionReason } = req.body;
+
+      if (!rejectionReason || !rejectionReason.trim()) {
+        return res.status(400).json({ success: false, message: 'Rejection reason is required.' });
+      }
+
       const request = session
         ? await HospitalRequest.findById(id).session(session)
         : await HospitalRequest.findById(id);
@@ -443,13 +450,17 @@ async function rejectRequest(req, res, next) {
         session ? { session } : {}
       );
       request.status = 'rejected';
+      request.rejectionReason = rejectionReason.trim();
+      request.rejectedAt = new Date();
+      request.rejectedBy = req.userID || null;
+
       if (session) {
         await request.save({ session });
       } else {
         await request.save();
       }
 
-      return res.status(200).json({ success: true, message: 'Request rejected' });
+      return res.status(200).json({ success: true, message: 'Request rejected successfully', data: request });
     });
   } catch (err) {
     next(err);

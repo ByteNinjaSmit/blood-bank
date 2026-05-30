@@ -21,14 +21,14 @@ const INITIAL_FORM_DATA = {
   // Bag info
   bagNo: "",
   segmentNo: "",
-  batchNo: "",
+  lotNo: "",
   typeOfBag: "",
   collectionDate: new Date().toISOString().split("T")[0],
+  collectionTime: new Date().toTimeString().slice(0, 5), // "HH:MM"
   // New bag-level fields
   donationType: "",
   totalDonationCount: "",
   emergencyDonationWillingness: "",
-  lotNo: "",
   // Medical examination details
   hb: "",
   weightKg: "",
@@ -53,7 +53,6 @@ const INITIAL_FORM_DATA = {
   // Blood group
   bloodGroup: "",
   rh: "",
-  atypicalAntibody: "",
   // Medical questions q1-q36
   q1: "No", q2: "Yes", q3: "Yes", q4: "No", q5: "No", q6: "Yes", q7: "Yes", q8: "No", q9: "No", q10: "No",
   q11: "No", q12: "No", q13: "No", q14: "No", q15: "No", q16: "No", q17: "No", q18: "No", q19: "No", q20: "No",
@@ -108,10 +107,6 @@ const CreateDonation = ({ onCreateDonor }) => {
     if (!isNaN(weight)) {
       if (weight < 45) {
         reasons.push("Weight must be at least 45 kg")
-      } else if (weight < 55) {
-        volume = "350"
-      } else {
-        volume = "450"
       }
     }
 
@@ -119,8 +114,7 @@ const CreateDonation = ({ onCreateDonor }) => {
     const hb = Number.parseFloat(data.hb)
     if (!isNaN(hb) && hb < 12.5) reasons.push("Haemoglobin (Hb) must be at least 12.5 gm%")
 
-    const temp = Number.parseFloat(data.tempC)
-    if (!isNaN(temp) && (temp < 36.5 || temp > 37.5)) reasons.push("Temperature must be between 36.5°C and 37.5°C")
+    // Temperature range check removed: let it handle any entered temperature
 
     const pulse = Number.parseInt(data.pulse)
     if (!isNaN(pulse) && (pulse < 60 || pulse > 100)) reasons.push("Pulse must be between 60 and 100 bpm")
@@ -255,8 +249,10 @@ const CreateDonation = ({ onCreateDonor }) => {
       return (
         formData.bagNo.trim() &&
         formData.segmentNo.trim() &&
-        formData.batchNo.trim() &&
-        formData.typeOfBag
+        formData.lotNo.trim() &&
+        formData.typeOfBag &&
+        formData.collectionDate &&
+        formData.collectionTime
       )
     }
 
@@ -302,7 +298,7 @@ const CreateDonation = ({ onCreateDonor }) => {
     const newErrors = {}
     if (!formData.bagNo.trim()) newErrors.bagNo = "Bag number is required."
     if (!formData.segmentNo.trim()) newErrors.segmentNo = "Segment number is required."
-    if (!formData.batchNo.trim()) newErrors.batchNo = "Batch number is required."
+    if (!formData.lotNo.trim()) newErrors.lotNo = "Lot number is required."
     if (!formData.typeOfBag) newErrors.typeOfBag = "Type of bag is required."
     if (!formData.hb) newErrors.hb = "Haemoglobin value is required."
     if (!formData.weightKg) newErrors.weightKg = "Weight is required."
@@ -334,14 +330,14 @@ const CreateDonation = ({ onCreateDonor }) => {
     const payload = {
       bagNo: formData.bagNo,
       segmentNo: formData.segmentNo,
-      batchNo: formData.batchNo,
+      lotNo: formData.lotNo,
       typeOfBag: formData.typeOfBag,
       donor: donor._id,
+      collectionDate: new Date(`${formData.collectionDate}T${formData.collectionTime || '00:00'}:00`).toISOString(),
       // New top-level fields
       donationType: formData.donationType || undefined,
       totalDonationCount: formData.totalDonationCount ? Number(formData.totalDonationCount) : undefined,
       emergencyDonationWillingness: formData.emergencyDonationWillingness || undefined,
-      lotNo: formData.lotNo || undefined,
       // Medical examination (new shape)
       medicalExamination: {
         hb: Number.parseFloat(formData.hb),
@@ -373,7 +369,6 @@ const CreateDonation = ({ onCreateDonor }) => {
       medicalQuestions,
       bloodGroup: formData.bloodGroup,
       rh: formData.rh,
-      atypicalAntibody: formData.atypicalAntibody,
       siteId: campId || null,
       donorId: donor.donorId,
     }
@@ -405,7 +400,11 @@ const CreateDonation = ({ onCreateDonor }) => {
     setStepperKey((prev) => prev + 1)
 
     setFormData(() => {
-      const base = { ...INITIAL_FORM_DATA, collectionDate: new Date().toISOString().split("T")[0] }
+      const base = {
+        ...INITIAL_FORM_DATA,
+        collectionDate: new Date().toISOString().split("T")[0],
+        collectionTime: new Date().toTimeString().slice(0, 5)
+      }
 
       if (!donor) return base
 

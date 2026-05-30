@@ -276,9 +276,9 @@ export default function useRequisition(authToken) {
     return true;
   };
 
-  const handleReject = async () => {
+  const handleReject = async (rejectionReason) => {
     if (!requestDoc?._id) return false;
-    const res = await requisitionApi.reject(requestDoc._id);
+    const res = await requisitionApi.reject(requestDoc._id, rejectionReason);
     if (!res.success) {
       toast.error(res.error || 'Rejection failed');
       return false;
@@ -286,6 +286,72 @@ export default function useRequisition(authToken) {
     await refreshRequest(requestDoc._id);
     toast.success('Request rejected');
     return true;
+  };
+
+  const handleCreateAndReject = async (rejectionReason) => {
+    try {
+      if (!form.hospitalId) {
+        toast.error('Select hospital first');
+        return false;
+      }
+      if (!form.patient.name || !form.patient.age || !form.patient.sex) {
+        toast.error('Fill patient details first');
+        return false;
+      }
+      if (!form.requestedComponents.length) {
+        toast.error('Add at least one component first');
+        return false;
+      }
+      const payload = {
+        hospitalId: form.hospitalId,
+        doctorName: form.doctorName || undefined,
+        requiredAt: form.requiredAt || undefined,
+        medicalOfficerSignature: form.medicalOfficerSignature || undefined,
+        hospitalSeal: form.hospitalSeal || undefined,
+        patient: {
+          name: form.patient.name,
+          age: Number(form.patient.age),
+          sex: form.patient.sex,
+          mrn: form.patient.mrn || undefined,
+          diagnosis: form.patient.diagnosis || undefined,
+          hb: form.patient.hb ? Number(form.patient.hb) : undefined,
+          indication: form.patient.indication || undefined,
+          history: {
+            previousTransfusions: Number(form.patient.history?.previousTransfusions || 0),
+            approximateDate: form.patient.history?.approximateDate || undefined,
+            presenceOfReaction: form.patient.history?.presenceOfReaction || 'None',
+          },
+          pregnancy: {
+            numPregnancies: Number(form.patient.pregnancy?.numPregnancies || 0),
+            numMiscarriages: Number(form.patient.pregnancy?.numMiscarriages || 0),
+            numChildrenWithHemolyticDisease: Number(form.patient.pregnancy?.numChildrenWithHemolyticDisease || 0),
+          },
+        },
+        requestedComponents: form.requestedComponents.map((r) => ({
+          componentType: r.componentType,
+          units: Number(r.units),
+          bloodGroup: r.bloodGroup,
+          rh: r.rh,
+          urgency: r.urgency,
+        })),
+      };
+      const createRes = await requisitionApi.createRequest(payload);
+      if (!createRes.success) {
+        toast.error(createRes.error || 'Failed to create request');
+        return false;
+      }
+      const createdReq = createRes.data;
+      const rejectRes = await requisitionApi.reject(createdReq._id, rejectionReason);
+      if (!rejectRes.success) {
+        toast.error(rejectRes.error || 'Rejection failed');
+        return false;
+      }
+      toast.success('Request rejected');
+      return true;
+    } catch (e) {
+      toast.error('Failed to create and reject request');
+      return false;
+    }
   };
 
   const handleCrossmatchUpdate = async (inventoryId, status) => {
@@ -342,6 +408,7 @@ export default function useRequisition(authToken) {
     handleIssue,
     handleComplete,
     handleReject,
+    handleCreateAndReject,
     handleCrossmatchUpdate,
     loadRequest,
   };

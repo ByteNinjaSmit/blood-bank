@@ -113,6 +113,71 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
     return [firstName, middleName, lastName].filter(Boolean).join(" ");
   };
 
+  const renderComponentCard = (title, comp) => {
+    const isPrepared = comp && comp.status !== "unprepared";
+
+    return (
+      <Card className={`border shadow-sm transition-all duration-200 ${isPrepared ? 'border-red-100 hover:border-red-200 bg-white' : 'border-gray-200 bg-gray-50/50 opacity-80'}`}>
+        <CardHeader className="pb-2.5 border-b flex flex-row items-center justify-between space-y-0 bg-gray-50/40">
+          <CardTitle className="text-xs font-bold text-gray-900">{title}</CardTitle>
+          {isPrepared ? (
+            <Badge variant={getStatusBadgeVariant(comp.status)} className="text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider">
+              {comp.status}
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-[9px] font-semibold text-gray-400 bg-gray-100 border-gray-200 uppercase tracking-wider">
+              Unprepared
+            </Badge>
+          )}
+        </CardHeader>
+        <CardContent className="pt-3 text-xs space-y-2">
+          {isPrepared ? (
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <span className="block font-medium text-gray-500">Component ID</span>
+                <span className="font-semibold text-gray-900">{comp.componentId}</span>
+              </div>
+              <div>
+                <span className="block font-medium text-gray-500">Volume</span>
+                <span className="font-bold text-red-700 text-xs">{comp.volumeMl} mL</span>
+              </div>
+              <div>
+                <span className="block font-medium text-gray-500">Expiry Date</span>
+                <span className={`font-semibold ${isExpired(comp.expiryDate) ? "text-red-600 font-bold" : "text-gray-900"}`}>
+                  {formatDate(comp.expiryDate)}
+                </span>
+                {isExpired(comp.expiryDate) && (
+                  <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
+                    <AlertTriangle className="w-2.5 h-2.5" /> Expired
+                  </span>
+                )}
+                {isNearExpiry(comp.expiryDate) && !isExpired(comp.expiryDate) && (
+                  <span className="text-[9px] text-yellow-600 flex items-center gap-0.5 mt-0.5">
+                    <AlertTriangle className="w-2.5 h-2.5" /> Near Expiry
+                  </span>
+                )}
+              </div>
+              <div>
+                <span className="block font-medium text-gray-500">Storage Location</span>
+                <span className="font-medium text-gray-900">{comp.storageLocation || "-"}</span>
+              </div>
+              {comp.lotNo && (
+                <div className="col-span-2">
+                  <span className="block font-medium text-gray-500">Lot Number</span>
+                  <span className="font-medium text-gray-900">{comp.lotNo}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="py-4 text-center text-gray-400 font-medium italic">
+              Component not prepared from this bag.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -128,8 +193,8 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center gap-2">
-            <TestTube className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-bold text-gray-900">Component Details</h2>
+            <TestTube className="w-6 h-6 text-red-600" />
+            <h2 className="text-xl font-bold text-gray-900">Component Group Details</h2>
           </div>
           <Button
             variant="ghost"
@@ -153,7 +218,7 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
           ) : state.error ? (
             <div className="text-center py-8">
               <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-red-500" />
-              <h3 className="text-lg font-semibold mb-2 text-red-600">Error Loading Component</h3>
+              <h3 className="text-lg font-semibold mb-2 text-red-600">Error Loading Details</h3>
               <p className="text-gray-600 mb-4">{state.error}</p>
               <Button 
                 onClick={fetchComponentDetails} 
@@ -163,187 +228,116 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Basic Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="w-5 h-5" />
-                    Basic Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Component ID</label>
-                      <p className="text-lg font-semibold text-gray-900">{state.component.componentId}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Type</label>
-                      <div className="mt-1">
-                        <Badge variant="outline" className="text-sm">
-                          {state.component.type}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Volume</label>
-                      <p className="text-lg font-semibold text-gray-900">{state.component.volumeMl} mL</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Status</label>
-                      <div className="mt-1">
-                        <Badge variant={getStatusBadgeVariant(state.component.status)}>
-                          {state.component.status}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Batch Number</label>
-                      <p className="text-sm text-gray-900">{state.component.batchNo || "-"}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Dates & Expiry */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5" />
-                    Dates & Expiry
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Created At</label>
-                      <p className="text-sm text-gray-900">{formatDateTime(state.component.createdAt)}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Expiry Date</label>
-                      <div className="flex items-center gap-2">
-                        {isExpired(state.component.expiryDate) && (
-                          <AlertTriangle className="w-4 h-4 text-red-500" />
-                        )}
-                        {isNearExpiry(state.component.expiryDate) && !isExpired(state.component.expiryDate) && (
-                          <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                        )}
-                        <p className={`text-sm ${isExpired(state.component.expiryDate) ? "text-red-600 font-semibold" : ""}`}>
-                          {formatDate(state.component.expiryDate)}
-                        </p>
-                      </div>
-                    </div>
-                    {state.component.updatedAt && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Last Updated</label>
-                        <p className="text-sm text-gray-900">{formatDateTime(state.component.updatedAt)}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Blood Bag Information */}
-              {state.component.bloodBag && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Droplets className="w-5 h-5" />
+            <div className="space-y-6">
+              {/* Top Section: Bag & Donor Info */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Blood Bag Details */}
+                <Card className="border-red-50 shadow-sm">
+                  <CardHeader className="pb-3 border-b border-red-50 bg-red-50/10">
+                    <CardTitle className="flex items-center gap-2 text-red-950 text-sm font-semibold">
+                      <Droplets className="w-4 h-4 text-red-600" />
                       Blood Bag Information
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="pt-4 space-y-3.5 text-xs">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Bag Number</label>
-                        <p className="text-lg font-semibold text-gray-900">{state.component.bloodBag.bagNo}</p>
+                        <span className="block font-medium text-gray-500">Bag Number</span>
+                        <span className="text-sm font-semibold text-gray-900">{state.component.bloodBag.bagNo}</span>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Blood Group</label>
-                        <p className="text-lg font-semibold text-gray-900">{state.component.bloodBag.bloodGroup}</p>
+                        <span className="block font-medium text-gray-500">Blood Group</span>
+                        <span className="text-sm font-semibold text-red-700">{state.component.bloodBag.bloodGroup}</span>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Collection Date</label>
-                        <p className="text-sm text-gray-900">{formatDate(state.component.bloodBag.collectionDate)}</p>
+                        <span className="block font-medium text-gray-500">Collection Date</span>
+                        <span className="text-gray-900 font-medium">{formatDate(state.component.bloodBag.collectionDate)}</span>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Bag Status</label>
-                        <Badge variant="outline" className="text-sm">
+                        <span className="block font-medium text-gray-500">Bag Status</span>
+                        <Badge variant="outline" className="text-[10px] font-semibold px-2 py-0.5 mt-0.5 capitalize border-gray-300">
                           {state.component.bloodBag.status}
                         </Badge>
                       </div>
+                      {state.component.bloodBag.site && (
+                        <div className="col-span-2">
+                          <span className="block font-medium text-gray-500">Phlebotomy Site</span>
+                          <span className="text-gray-950 font-medium">{state.component.bloodBag.site.name || "-"}</span>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
-              )}
 
-              {/* Donor Information */}
-              {state.component.bloodBag?.donor && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <User className="w-5 h-5" />
+                {/* Donor Details */}
+                <Card className="border-red-50 shadow-sm">
+                  <CardHeader className="pb-3 border-b border-red-50 bg-red-50/10">
+                    <CardTitle className="flex items-center gap-2 text-red-950 text-sm font-semibold">
+                      <User className="w-4 h-4 text-red-600" />
                       Donor Information
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Donor Name</label>
-                        <p className="text-lg font-semibold text-gray-900">
-                          {formatDonorName(state.component.bloodBag.donor.name)}
-                        </p>
+                  <CardContent className="pt-4 space-y-3.5 text-xs">
+                    {state.component.bloodBag.donor ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className="block font-medium text-gray-500">Donor Name</span>
+                          <span className="text-sm font-semibold text-gray-900">
+                            {formatDonorName(state.component.bloodBag.donor.name)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block font-medium text-gray-500">Date of Birth</span>
+                          <span className="text-gray-900 font-medium">{formatDate(state.component.bloodBag.donor.dob)}</span>
+                        </div>
+                        <div>
+                          <span className="block font-medium text-gray-500">Gender</span>
+                          <span className="text-gray-900 font-medium capitalize">{state.component.bloodBag.donor.sex || "-"}</span>
+                        </div>
+                        <div>
+                          <span className="block font-medium text-gray-500">Phone Contact</span>
+                          <span className="text-gray-900 font-medium">{state.component.bloodBag.donor.phone || "-"}</span>
+                        </div>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Date of Birth</label>
-                        <p className="text-sm text-gray-900">{formatDate(state.component.bloodBag.donor.dob)}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Gender</label>
-                        <p className="text-sm text-gray-900">{state.component.bloodBag.donor.sex}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Phone</label>
-                        <p className="text-sm text-gray-900">{state.component.bloodBag.donor.phone}</p>
-                      </div>
-                    </div>
+                    ) : (
+                      <p className="text-gray-500">No donor details linked to this blood bag.</p>
+                    )}
                   </CardContent>
                 </Card>
-              )}
+              </div>
 
-              {/* Verification Details */}
-              {state.component.bloodBag?.separationVerifiedSignature && (
-                <Card className="border-green-100 bg-green-50/10">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-green-800">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      Separation Verification
+              {/* Middle Section: Separation Verification Details */}
+              {state.component.bloodBag.separationVerifiedSignature && (
+                <Card className="border-green-100 bg-green-50/5 shadow-sm">
+                  <CardHeader className="pb-3 border-b border-green-100/50">
+                    <CardTitle className="flex items-center gap-2 text-green-950 text-sm font-semibold">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      Separation Verification Details
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                  <CardContent className="pt-4 text-xs">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Status</label>
-                        <p className="text-sm font-semibold text-green-700">Verified & Completed</p>
+                        <span className="block font-medium text-gray-500">Verification Status</span>
+                        <span className="text-sm font-semibold text-green-700">Verified & Completed</span>
                       </div>
                       {state.component.bloodBag.separationVerifiedBy && (
                         <div>
-                          <label className="text-sm font-medium text-gray-500">Verified By</label>
-                          <p className="text-sm font-medium text-gray-900">
+                          <span className="block font-medium text-gray-500">Verified By</span>
+                          <span className="text-gray-900 font-semibold">
                             {state.component.bloodBag.separationVerifiedBy.name?.first} {state.component.bloodBag.separationVerifiedBy.name?.last}
-                          </p>
+                          </span>
                         </div>
                       )}
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Verified At</label>
-                        <p className="text-sm text-gray-900">
+                        <span className="block font-medium text-gray-500">Verified At</span>
+                        <span className="text-gray-900 font-medium">
                           {formatDateTime(state.component.bloodBag.separationVerifiedAt)}
-                        </p>
+                        </span>
                       </div>
-                      <div className="col-span-2">
-                        <label className="text-sm font-medium text-gray-500 block mb-1">Technician Signature</label>
-                        <div className="border border-dashed border-green-200 rounded-lg p-3 bg-white flex items-center justify-center min-h-[50px] shadow-sm">
+                      <div className="col-span-1 md:col-span-3">
+                        <span className="block font-medium text-gray-500 mb-1">Technician Signature</span>
+                        <div className="border border-dashed border-green-200 rounded-lg p-3 bg-white flex items-center justify-center min-h-[50px] shadow-sm max-w-md">
                           <span 
                             className="text-xl text-green-800 select-none font-medium antialiased"
                             style={{ fontFamily: "'Dancing Script', 'Brush Script MT', cursive" }}
@@ -357,65 +351,23 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
                 </Card>
               )}
 
-              {/* Created By Information */}
-              {state.component.createdBy && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <User className="w-5 h-5" />
-                      Created By
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Name</label>
-                        <p className="text-sm text-gray-900">
-                          {state.component.createdBy.name.first} {state.component.createdBy.name.last}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Email</label>
-                        <p className="text-sm text-gray-900 break-all">{state.component.createdBy.email}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Phone</label>
-                        <p className="text-sm text-gray-900">{state.component.createdBy.phone}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Updated By Information */}
-              {state.component.updatedBy && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <User className="w-5 h-5" />
-                      Updated By
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Name</label>
-                        <p className="text-sm text-gray-900">
-                          {state.component.updatedBy.name.first} {state.component.updatedBy.name.last}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Email</label>
-                        <p className="text-sm text-gray-900 break-all">{state.component.updatedBy.email}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Phone</label>
-                        <p className="text-sm text-gray-900">{state.component.updatedBy.phone}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              {/* Bottom Section: 4 Components Breakdown Grid */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-gray-950 uppercase tracking-widest flex items-center gap-2">
+                  <Package className="w-4 h-4 text-red-600" />
+                  Components Breakdown
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* RBC Component Card */}
+                  {renderComponentCard("Red Blood Cells (RBC)", state.component.rbc)}
+                  {/* FFP Component Card */}
+                  {renderComponentCard("Fresh Frozen Plasma (FFP)", state.component.ffp)}
+                  {/* Platelets Component Card */}
+                  {renderComponentCard("Platelets", state.component.platelet)}
+                  {/* Cryo Component Card */}
+                  {renderComponentCard("Cryoprecipitate", state.component.cryo)}
+                </div>
+              </div>
             </div>
           )}
         </div>

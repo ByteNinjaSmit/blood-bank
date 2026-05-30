@@ -54,6 +54,11 @@ const registerDonor = async (req, res, next) => {
       email = email.toLowerCase();
     }
 
+    // If deferred/temp-deferred and no donorId provided, auto-generate a unique deferred donor ID
+    if ((eligibilityStatus === 'deferred' || eligibilityStatus === 'temp-deferred') && (!donorId || !donorId.trim())) {
+      donorId = `DFR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+
     // Validate required fields
     if (
       !donorId ||
@@ -218,9 +223,12 @@ const fastSearchDonors = async (req, res, next) => {
       };
     });
 
-    const donors = await Donor.find({ $and: conditions })
+    const donors = await Donor.find({
+      $and: conditions,
+      eligibilityStatus: { $nin: ['deferred', 'temp-deferred'] },
+    })
       .limit(limit)
-      .select('donorId name uid dob sex phone email address bloodGroup rh lastDonationDate')
+      .select('donorId name uid dob sex phone email address bloodGroup rh lastDonationDate eligibilityStatus')
       .lean();
 
     const nowYear = new Date().getFullYear();
@@ -248,6 +256,7 @@ const fastSearchDonors = async (req, res, next) => {
         bloodGroup: d.bloodGroup,
         rh: d.rh,
         lastDonationDate: d.lastDonationDate,
+        eligibilityStatus: d.eligibilityStatus,
         isAvailableToDonate: eligibility.isAvailableToDonate,
         nextEligibleDate: eligibility.nextEligibleDate,
         daysUntilEligible: eligibility.daysUntilEligible,

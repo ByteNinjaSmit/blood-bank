@@ -70,8 +70,14 @@ const ReviewSubmitStep = ({ donor, formData, getDonorName }) => {
           <div className="grid grid-cols-2 gap-2 text-sm text-purple-800">
             <p><strong>Bag No:</strong> {formData.bagNo}</p>
             <p><strong>Segment No:</strong> {formData.segmentNo}</p>
-            <p><strong>Batch No:</strong> {formData.batchNo}</p>
+            <p><strong>Lot No:</strong> {formData.lotNo}</p>
             <p><strong>Type:</strong> {formData.typeOfBag}</p>
+            {formData.collectionDate && (
+              <p><strong>Donation Date:</strong> {new Date(formData.collectionDate).toLocaleDateString()}</p>
+            )}
+            {formData.collectionTime && (
+              <p><strong>Donation Time:</strong> {formData.collectionTime}</p>
+            )}
             {formData.donationType && (
               <p><strong>Blood Donation:</strong> {donationTypeLabels[formData.donationType] || formData.donationType}</p>
             )}
@@ -80,9 +86,6 @@ const ReviewSubmitStep = ({ donor, formData, getDonorName }) => {
             )}
             {formData.emergencyDonationWillingness && (
               <p><strong>Emergency Willingness:</strong> {formData.emergencyDonationWillingness}</p>
-            )}
-            {formData.lotNo && (
-              <p><strong>Lot No:</strong> {formData.lotNo}</p>
             )}
           </div>
         </div>
@@ -174,11 +177,6 @@ const ReviewSubmitStep = ({ donor, formData, getDonorName }) => {
           <p className="text-sm text-orange-800">
             <strong>Group:</strong> {formData.bloodGroup} {formData.rh}
           </p>
-          {formData.atypicalAntibody && (
-            <p className="text-sm text-orange-800">
-              <strong>Atypical Antibody:</strong> {formData.atypicalAntibody}
-            </p>
-          )}
         </div>
       </div>
     </div>

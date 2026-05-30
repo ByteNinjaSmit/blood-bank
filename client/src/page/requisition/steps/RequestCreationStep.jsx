@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FileText, User, HeartHandshake, History, FileCheck, ShieldAlert } from 'lucide-react';
 import HospitalSelect from '../components/HospitalSelect';
 import PatientForm from '../components/PatientForm';
 import RequestedComponentsList from '../components/RequestedComponentsList';
+import { RejectRequestModal } from '../../../components/shared';
+import { toast } from 'sonner';
 
 export default function RequestCreationStep({
   hospitals,
@@ -14,8 +16,43 @@ export default function RequestCreationStep({
   handleCreate,
   requestDoc,
   openAddHospital,
+  onReject,
 }) {
   const readOnly = !!requestDoc?._id;
+  const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
+
+  const handleOpenRejectClick = () => {
+    if (!readOnly) {
+      if (!form.hospitalId) {
+        toast.error('Select a hospital before rejecting this requisition.');
+        return;
+      }
+      if (!form.doctorName?.trim()) {
+        toast.error("Enter the doctor's name before rejecting this requisition.");
+        return;
+      }
+      if (!form.patient?.name?.trim()) {
+        toast.error('Enter the patient name before rejecting this requisition.');
+        return;
+      }
+      if (!form.patient?.age) {
+        toast.error('Enter the patient age before rejecting this requisition.');
+        return;
+      }
+      if (!form.requestedComponents || form.requestedComponents.length === 0) {
+        toast.error('Add at least one requested component before rejecting.');
+        return;
+      }
+      const hasIncompleteComponent = form.requestedComponents.some(
+        (c) => !c.componentType || !c.units || !c.bloodGroup || !c.rh
+      );
+      if (hasIncompleteComponent) {
+        toast.error('Fill out all fields for the requested components before rejecting.');
+        return;
+      }
+    }
+    setRejectConfirmOpen(true);
+  };
 
   // Fallback strategy: If we are in read-only mode, render data from requestDoc.
   // Otherwise, render and write to form state.
@@ -305,17 +342,43 @@ export default function RequestCreationStep({
         </div>
       </div>
 
-      {!readOnly && (
-        <div className="pt-4 flex justify-end">
-          <button
-            type="button"
-            onClick={handleCreate}
-            className="px-6 py-2.5 rounded-lg bg-orange-800 text-white font-medium hover:bg-orange-900 transition active:scale-95 shadow cursor-pointer"
-          >
-            Create Request & Auto-Match FIFO
-          </button>
+      <div className="pt-4 border-t border-gray-200 mt-6 flex justify-between items-center">
+        <div>
+          {(!readOnly || ['pending', 'matched', 'approved'].includes(requestDoc?.status)) && (
+            <button
+              type="button"
+              onClick={handleOpenRejectClick}
+              className="px-5 py-2 rounded-lg border border-red-200 hover:bg-red-50 text-red-700 font-semibold shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Reject Request
+            </button>
+          )}
         </div>
-      )}
+        <div>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={handleCreate}
+              className="px-6 py-2.5 rounded-lg bg-orange-800 text-white font-medium hover:bg-orange-900 transition active:scale-95 shadow cursor-pointer"
+            >
+              Create Request & Auto-Match FIFO
+            </button>
+          )}
+        </div>
+      </div>
+
+      <RejectRequestModal
+        isOpen={rejectConfirmOpen}
+        onClose={() => setRejectConfirmOpen(false)}
+        onConfirm={(reason) => {
+          onReject?.(reason);
+          setRejectConfirmOpen(false);
+        }}
+        requestId={requestDoc?.requestId || 'New Requisition'}
+      />
     </div>
   );
 }

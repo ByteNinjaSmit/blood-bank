@@ -33,8 +33,10 @@ const DonorDetails = ({ donor, isOpen, onClose }) => {
   };
 
   const calculateAge = (dob) => {
+    if (!dob) return null;
     const today = new Date();
     const birthDate = new Date(dob);
+    if (isNaN(birthDate.getTime())) return null;
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
@@ -60,14 +62,18 @@ const DonorDetails = ({ donor, isOpen, onClose }) => {
             <h3 className="text-xl font-semibold text-gray-900">
               {donor.name?.firstName} {donor.name?.middleName} {donor.name?.lastName}
             </h3>
-            <p className="text-gray-600">{donor.donorId}</p>
+            {donor.eligibilityStatus !== "deferred" && donor.eligibilityStatus !== "temp-deferred" && (
+              <p className="text-gray-600">{donor.donorId}</p>
+            )}
             <div className="flex items-center gap-2 mt-2">
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(donor.eligibilityStatus)}`}>
                 {getStatusText(donor.eligibilityStatus)}
               </span>
-              <span className="text-sm text-gray-500">
-                Age: {calculateAge(donor.dob)} years
-              </span>
+              {donor.dob && calculateAge(donor.dob) !== null && (
+                <span className="text-sm text-gray-500">
+                  Age: {calculateAge(donor.dob)} years
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -80,7 +86,7 @@ const DonorDetails = ({ donor, isOpen, onClose }) => {
               <Calendar className="w-4 h-4 text-gray-500" />
               <div>
                 <p className="text-sm font-medium text-gray-700">Date of Birth</p>
-                <p className="text-gray-900">{new Date(donor.dob).toLocaleDateString()}</p>
+                <p className="text-gray-900">{donor.dob ? new Date(donor.dob).toLocaleDateString() : 'N/A'}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">

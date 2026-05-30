@@ -53,15 +53,6 @@ const BloodGroupStep = ({ formData, fieldErrors, donor, onFieldChange }) => {
             <p className="text-xs text-red-600 mt-1">{fieldErrors.rh}</p>
           )}
         </div>
-        <div className="md:col-span-2">
-          <label className="block text-sm mb-1">Atypical Antibody</label>
-          <input
-            type="text"
-            value={formData.atypicalAntibody}
-            onChange={(e) => onFieldChange("atypicalAntibody", e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg"
-          />
-        </div>
       </div>
     </div>
   );

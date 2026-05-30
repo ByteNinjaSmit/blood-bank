@@ -240,7 +240,7 @@ const DonationList = ({
                   </span>
                 </Table.Cell>
                 <Table.Cell>
-                  {new Date(donation.collectionDate).toLocaleDateString()}
+                  {new Date(donation.collectionDate).toLocaleString()}
                 </Table.Cell>
                 <Table.Cell>
                   <div className="flex items-center gap-2">

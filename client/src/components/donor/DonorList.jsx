@@ -73,8 +73,10 @@ const DonorList = ({
   };
 
   const calculateAge = (dob) => {
+    if (!dob) return null;
     const today = new Date();
     const birthDate = new Date(dob);
+    if (isNaN(birthDate.getTime())) return null;
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
@@ -237,76 +239,81 @@ const DonorList = ({
             </tr>
           </Table.Header>
           <Table.Body>
-            {filteredDonors.map((donor) => (
-              <Table.Row key={donor._id}>
-                <Table.Cell className="font-medium">{donor.donorId}</Table.Cell>
-                <Table.Cell>
-                  {donor.name?.firstName} {donor.name?.middleName} {donor.name?.lastName}
-                </Table.Cell>
-                <Table.Cell>
-                  <div className="flex items-center gap-2">
-                    <span>{new Date(donor.dob).toLocaleDateString()}</span>
-                    <span
-                      className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold ${
-                        calculateAge(donor.dob) < 18 
-                          ? "bg-red-100 text-red-600" 
-                          : "bg-green-100 text-green-600"
-                      }`}
-                    >
-                      {calculateAge(donor.dob)}
+            {filteredDonors.map((donor) => {
+              const isDeferred = donor.eligibilityStatus === 'deferred' || donor.eligibilityStatus === 'temp-deferred';
+              return (
+                <Table.Row key={donor._id}>
+                  <Table.Cell className="font-medium">{isDeferred ? '-' : donor.donorId}</Table.Cell>
+                  <Table.Cell>
+                    {donor.name?.firstName} {donor.name?.middleName} {donor.name?.lastName}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <div className="flex items-center gap-2">
+                      <span>{donor.dob ? new Date(donor.dob).toLocaleDateString() : 'N/A'}</span>
+                      {donor.dob && calculateAge(donor.dob) !== null && (
+                        <span
+                          className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold ${
+                            calculateAge(donor.dob) < 18 
+                              ? "bg-red-100 text-red-600" 
+                              : "bg-green-100 text-green-600"
+                          }`}
+                        >
+                          {calculateAge(donor.dob)}
+                        </span>
+                      )}
+                    </div>
+                  </Table.Cell>
+                  <Table.Cell>{donor.sex}</Table.Cell>
+                  <Table.Cell>{donor.phone}</Table.Cell>
+                  <Table.Cell>
+                    {donor.bloodGroup} {donor.rh === "Positive" ? "+" : "-"}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {donor.lastDonationDate 
+                      ? new Date(donor.lastDonationDate).toLocaleDateString() 
+                      : "N/A"
+                    }
+                  </Table.Cell>
+                  <Table.Cell>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(donor.eligibilityStatus)}`}>
+                      {getStatusText(donor.eligibilityStatus)}
                     </span>
-                  </div>
-                </Table.Cell>
-                <Table.Cell>{donor.sex}</Table.Cell>
-                <Table.Cell>{donor.phone}</Table.Cell>
-                <Table.Cell>
-                  {donor.bloodGroup} {donor.rh === "Positive" ? "+" : "-"}
-                </Table.Cell>
-                <Table.Cell>
-                  {donor.lastDonationDate 
-                    ? new Date(donor.lastDonationDate).toLocaleDateString() 
-                    : "N/A"
-                  }
-                </Table.Cell>
-                <Table.Cell>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(donor.eligibilityStatus)}`}>
-                    {getStatusText(donor.eligibilityStatus)}
-                  </span>
-                </Table.Cell>
-                <Table.Cell>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onViewDonor && onViewDonor(donor)}
-                      title="View Details"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    {donorAccess.canUpdate && (
+                  </Table.Cell>
+                  <Table.Cell>
+                    <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => onEditDonor && onEditDonor(donor)}
-                        title="Edit"
+                        onClick={() => onViewDonor && onViewDonor(donor)}
+                        title="View Details"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Eye className="w-4 h-4" />
                       </Button>
-                    )}
-                    {donorAccess.canDelete && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(donor)}
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                </Table.Cell>
-              </Table.Row>
-            ))}
+                      {donorAccess.canUpdate && !isDeferred && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onEditDonor && onEditDonor(donor)}
+                          title="Edit"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {donorAccess.canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(donor)}
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </Table.Cell>
+                </Table.Row>
+              );
+            })}
           </Table.Body>
         </Table>
 

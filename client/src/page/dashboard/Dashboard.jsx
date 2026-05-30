@@ -110,9 +110,9 @@ export default function Dashboard() {
   const positivity = payload?.positivity || {};
   const positivitySeries = Object.entries(positivity).map(([test, counts]) => ({
     test,
-    Positive: number(counts.Positive),
+    Reactive: number(counts.Reactive),
     Negative: number(counts.Negative),
-    Indeterminate: number(counts.Indeterminate),
+    Shadeness: number(counts.Shadeness),
   }));
 
   const periodTotals = payload?.periodTotals || {};
@@ -390,12 +390,11 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3">
             <Stat label="Total Tests Performed" value={testingSerology.testsTotal} />
-            <Stat label="HIV Positive" value={testingSerology.hivPos} />
-            <Stat label="HBsAg Positive" value={testingSerology.hbvPos} />
-            <Stat label="HCV Positive" value={testingSerology.hcvPos} />
-            <Stat label="VDRL Positive" value={testingSerology.vdrlPos} />
-            <Stat label="MP Positive" value={testingSerology.mpPos} />
-            <Stat label="NAT Positive" value={testingSerology.natPos} />
+            <Stat label="HIV Reactive" value={testingSerology.hivPos} />
+            <Stat label="HBsAg Reactive" value={testingSerology.hbvPos} />
+            <Stat label="HCV Reactive" value={testingSerology.hcvPos} />
+            <Stat label="VDRL Reactive" value={testingSerology.vdrlPos} />
+            <Stat label="MP Reactive" value={testingSerology.mpPos} />
           </CardContent>
         </Card>
 
@@ -567,16 +566,16 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="h-72">
-                  <ChartContainer config={{ Positive: { label: "Positive", color: "#dc2626" }, Negative: { label: "Negative", color: "#16a34a" }, Indeterminate: { label: "Indeterminate", color: "#64748b" } }}>
+                  <ChartContainer config={{ Reactive: { label: "Reactive", color: "#dc2626" }, Negative: { label: "Negative", color: "#16a34a" }, Shadeness: { label: "Shadeness", color: "#64748b" } }}>
                     <BarChart data={positivitySeries}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="test" />
                       <YAxis allowDecimals={false} />
                       <Tooltip content={<ChartTooltipContent />} />
                       <Legend content={<ChartLegendContent />} />
-                      <Bar dataKey="Positive" isAnimationActive={false} stackId="a" fill="var(--color-Positive)" />
+                      <Bar dataKey="Reactive" isAnimationActive={false} stackId="a" fill="var(--color-Reactive)" />
                       <Bar dataKey="Negative" isAnimationActive={false} stackId="a" fill="var(--color-Negative)" />
-                      <Bar dataKey="Indeterminate" isAnimationActive={false} stackId="a" fill="var(--color-Indeterminate)" />
+                      <Bar dataKey="Shadeness" isAnimationActive={false} stackId="a" fill="var(--color-Shadeness)" />
                     </BarChart>
                   </ChartContainer>
                 </div>
