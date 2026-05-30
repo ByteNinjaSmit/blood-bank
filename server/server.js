@@ -36,6 +36,8 @@ require('./queues/birthday-queue'); // initialize Birthday SMS queue
 
 // Middleware
 const errorMiddleware = require("./middlewares/error-middleware");
+const requestId = require("./middlewares/request-id");
+const httpLogger = require("./middlewares/http-logger");
 
 
 // Import Routes
@@ -67,6 +69,12 @@ app.use(
     })
 );
 app.set("trust proxy", 1); // Trust first proxy (e.g., Nginx, Cloudflare)
+
+// Request correlation id + structured request/response logging.
+// Must come before any other middleware that may log so every line
+// carries the same req.id.
+app.use(requestId);
+app.use(httpLogger);
 
 app.use(cookieParser());
 
@@ -207,22 +215,9 @@ app.use(
 
 
 
-// Defining Routes & API
-app.use((req, res, next) => {
-    logger.info(`Received ${req.method} request to ${req.url}`);
-    let bodyString = "";
-    try {
-        bodyString = JSON.stringify(req.body);
-    } catch (e) {
-        bodyString = "[unserializable]";
-    }
-    logger.info(`Request body: ${bodyString}`);
-    logger.info(`Request IP, ${req.ip}`);
-    // console.log(`Incoming request: ${req.method} ${req.url} from ${req.ip}`);
-
-    next();
-});
-
+// (request/response logging handled by httpLogger above; request bodies
+// are intentionally NOT logged at INFO level to avoid PHI/PII leakage —
+// add an opt-in audit middleware on a per-route basis if needed.)
 
 // ==============================
 // 📊 Health Check
@@ -248,6 +243,24 @@ app.get("/health", (req, res) => {
 app.get("/", (req, res) => {
     res.send("Welcome to the Blood Bank Management System API");
 });
+
+// ---------------------------------------------------------------------
+// New SOLID/TypeScript tree mounted at /api/v2/* (side-by-side rebuild).
+// Built artifacts live under ./dist (produced by `npm run build`).
+// Skipped with a warning if the build is missing so dev can still run
+// the legacy routes without TypeScript installed.
+// ---------------------------------------------------------------------
+try {
+    // eslint-disable-next-line global-require, import/no-unresolved
+    const { buildV2Router } = require("./dist/v2-router");
+    app.use("/api/v2", buildV2Router());
+    logger.info({ mount: "/api/v2" }, "v2 router mounted");
+} catch (err) {
+    logger.warn(
+        { err: err.message },
+        "v2 router not mounted (run `npm run build` to enable /api/v2)",
+    );
+}
 
 // Remaining Routes
 app.use("/api/auth", authRoutes);

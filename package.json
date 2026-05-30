@@ -1,0 +1,25 @@
+{
+  "name": "blood-bank-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tooling-only root for the Blood Bank Management System. Real apps live under server/, client/, and public-frontend/.",
+  "scripts": {
+    "prepare": "husky",
+    "lint:server": "npm --prefix server run lint",
+    "lint:client": "npm --prefix client run lint",
+    "lint": "npm run lint:server && npm run lint:client"
+  },
+  "devDependencies": {
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10"
+  },
+  "lint-staged": {
+    "server/**/*.js": [
+      "npm --prefix server run lint:fix",
+      "npm --prefix server run format"
+    ],
+    "client/**/*.{js,jsx}": [
+      "npm --prefix client run lint -- --fix"
+    ]
+  }
+}

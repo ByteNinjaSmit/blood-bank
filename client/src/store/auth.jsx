@@ -1,6 +1,7 @@
 import axios from "axios";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { setAuthToken, clearAuthToken } from "@/lib/auth-token-store";
 
 // Create context
 export const AuthContext = createContext();
@@ -155,6 +156,13 @@ export const AuthProvider = ({ children }) => {
             setIsLoading(false);
         })();
     }, []);
+
+    // Push token into the standalone api-client store so the new
+    // /api/v2/* axios instance attaches Bearer headers automatically.
+    useEffect(() => {
+        if (token) setAuthToken(token);
+        else clearAuthToken();
+    }, [token]);
 
     // Whenever token changes, fetch the user
     useEffect(() => {

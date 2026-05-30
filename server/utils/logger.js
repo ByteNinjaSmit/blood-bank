@@ -1,129 +1,85 @@
-// ./server/utils/logger.js
-const winston = require('winston');
-const fs = require('fs');
-const path = require('path');
+// server/utils/logger.js
+//
+// pino-based application logger. Kept here (legacy path) for backwards
+// compatibility with existing `require('./utils/logger')` call sites in the
+// old controllers. The new `server/src/` tree imports from
+// `infra/logger` directly.
+//
+// API exposed: info, warn, error, debug, verbose, fatal, trace, child.
+// Same shape the old winston wrapper offered, so no caller needs to change.
+//
+// Output:
+//   - dev (NODE_ENV !== 'production'): pretty-printed colourised stdout
+//   - prod: structured JSON to stdout (Docker json-file driver handles
+//     rotation; ship to Loki/CloudWatch later via a transport).
+//
+// Sensitive paths are redacted regardless of environment.
 
-// Ensure the 'logs' directory exists
-const logDirectory = path.resolve(__dirname, '../logs');
-if (!fs.existsSync(logDirectory)) {
-  try {
-    fs.mkdirSync(logDirectory, { recursive: true });
-    console.log('Log directory created');
-  } catch (err) {
-    console.error('Failed to create log directory:', err);
-  }
-}
+const pino = require('pino');
 
-// Custom format for file logs (without colors)
-const fileFormat = winston.format.combine(
-  winston.format.timestamp({
-    format: 'YYYY-MM-DD HH:mm:ss'
-  }),
-  winston.format.errors({ stack: true }),
-  winston.format.json()
-);
+const isProd = process.env.NODE_ENV === 'production';
+const level = process.env.LOG_LEVEL || (isProd ? 'info' : 'debug');
 
-// Custom format for console logs (with colors)
-const consoleFormat = winston.format.combine(
-  winston.format.colorize(),
-  winston.format.timestamp({
-    format: 'YYYY-MM-DD HH:mm:ss'
-  }),
-  winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
-    // Stringify message if it's an object to prevent [object Object]
-    const msg = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
-    
-    // Format metadata if it exists (excluding internal winston fields)
-    const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
-    
-    if (stack) {
-      return `${timestamp} ${level}: ${msg}${metaStr}\n${stack}`;
-    }
-    return `${timestamp} ${level}: ${msg}${metaStr}`;
-  })
-);
+const redactPaths = [
+  'req.headers.authorization',
+  'req.headers.cookie',
+  'res.headers["set-cookie"]',
+  '*.password',
+  '*.passwordHash',
+  '*.token',
+  '*.accessToken',
+  '*.refreshToken',
+  '*.jwt',
+  '*.secret',
+  '*.apiKey',
+  '*.otp',
+  '*.code',
+  'EMAIL_PASS',
+  'JWT_SECRET',
+  'JWT_SECRET_KEY',
+  'TWILIO_AUTH_TOKEN',
+  'AWS_SECRET_ACCESS_KEY',
+  'MONGODB_URI',
+];
 
-// Create the logger
-const logger = winston.createLogger({
-  level: 'info',
-  format: fileFormat,
-  transports: [
-    // Console transport
-    new winston.transports.Console({
-      format: consoleFormat
-    }),
-    
-    // Combined log file (all levels)
-    new winston.transports.File({
-      filename: path.join(logDirectory, 'app.log'),
-      format: fileFormat,
-      maxsize: 5242880, // 5MB
-      maxFiles: 5
-    }),
-    
-    // Info level log file
-    new winston.transports.File({
-      filename: path.join(logDirectory, 'info.log'),
-      level: 'info',
-      format: fileFormat,
-      maxsize: 5242880, // 5MB
-      maxFiles: 5
-    }),
-    
-    // Error level log file
-    new winston.transports.File({
-      filename: path.join(logDirectory, 'error.log'),
-      level: 'error',
-      format: fileFormat,
-      maxsize: 5242880, // 5MB
-      maxFiles: 5
-    }),
-    
-    // Warn level log file
-    new winston.transports.File({
-      filename: path.join(logDirectory, 'warn.log'),
-      level: 'warn',
-      format: fileFormat,
-      maxsize: 5242880, // 5MB
-      maxFiles: 5
-    })
-  ],
-  
-  // Handle uncaught exceptions and unhandled rejections
-  exceptionHandlers: [
-    new winston.transports.File({
-      filename: path.join(logDirectory, 'exceptions.log'),
-      format: fileFormat
-    })
-  ],
-  
-  rejectionHandlers: [
-    new winston.transports.File({
-      filename: path.join(logDirectory, 'rejections.log'),
-      format: fileFormat
-    })
-  ]
-});
-
-// Create convenience methods for different log levels
-logger.info = (message, meta = {}) => {
-  logger.log('info', message, meta);
+const baseOptions = {
+  level,
+  base: {
+    service: 'blood-bank-api',
+    env: process.env.NODE_ENV || 'development',
+  },
+  timestamp: pino.stdTimeFunctions.isoTime,
+  redact: {
+    paths: redactPaths,
+    censor: '[REDACTED]',
+    remove: false,
+  },
+  formatters: {
+    level: (label) => ({ level: label }),
+  },
+  serializers: {
+    err: pino.stdSerializers.err,
+    error: pino.stdSerializers.err,
+    req: pino.stdSerializers.req,
+    res: pino.stdSerializers.res,
+  },
 };
 
-logger.error = (message, meta = {}) => {
-  logger.log('error', message, meta);
-};
+const transport = isProd
+  ? undefined
+  : pino.transport({
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        translateTime: 'SYS:yyyy-mm-dd HH:MM:ss',
+        ignore: 'pid,hostname,service,env',
+        singleLine: false,
+      },
+    });
 
-logger.warn = (message, meta = {}) => {
-  logger.log('warn', message, meta);
-};
+const logger = transport ? pino(baseOptions, transport) : pino(baseOptions);
 
-logger.debug = (message, meta = {}) => {
-  logger.log('debug', message, meta);
-};
-
-logger.verbose = (message, meta = {}) => {
-  logger.log('verbose', message, meta);
-};
+// Verbose is a winston level; map to debug for callers that still use it.
+logger.verbose = logger.debug.bind(logger);
 
 module.exports = logger;

@@ -1,0 +1,91 @@
+// BloodUnit — the aggregate. One per producible component. Carries its
+// own state machine status, expiry, special-attribute flags, and
+// references to the donation it came from. Inventory is a derived view
+// over { status: { $in: ['RELEASED', 'RESERVED', 'CROSSMATCHED'] } }.
+
+import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
+import {
+  ABO_GROUP,
+  COMPONENT_TYPE,
+  DISCARD_REASON,
+  RH_FACTOR,
+  SPECIAL_NEED,
+  UNIT_STATUS,
+} from '@/shared/enums';
+
+const StatusHistoryEntry = new Schema(
+  {
+    from: { type: String, enum: UNIT_STATUS },
+    to: { type: String, enum: UNIT_STATUS, required: true },
+    event: { type: String, required: true },
+    actor: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    at: { type: Date, default: Date.now, required: true },
+    reason: { type: String, trim: true },
+  },
+  { _id: false },
+);
+
+const BloodUnitSchema = new Schema(
+  {
+    unitId: { type: String, required: true, unique: true, index: true },
+    unitDin: { type: String, index: true, default: null }, // ISBT 128 DIN (Phase 9)
+    productCode: { type: String, default: null }, // ISBT product code
+
+    donationId: { type: String, required: true, index: true },
+    legacyBagId: { type: Schema.Types.ObjectId, index: true },
+
+    componentType: { type: String, enum: COMPONENT_TYPE, required: true, index: true },
+    aboGroup: { type: String, enum: ABO_GROUP, required: true, index: true },
+    rhFactor: { type: String, enum: RH_FACTOR, required: true, index: true },
+
+    volumeMl: { type: Number, required: true },
+    collectedAt: { type: Date, required: true },
+    expiresAt: { type: Date, required: true, index: true },
+
+    status: { type: String, enum: UNIT_STATUS, required: true, default: 'COLLECTED', index: true },
+    statusHistory: { type: [StatusHistoryEntry], default: [] },
+
+    specialAttributes: [{ type: String, enum: SPECIAL_NEED }],
+
+    siteId: { type: Schema.Types.ObjectId, ref: 'Site' },
+
+    quarantineReason: { type: String, trim: true },
+    discardReason: { type: String, enum: DISCARD_REASON },
+
+    reservedFor: { type: Schema.Types.ObjectId, ref: 'Requisition' },
+    reservedAt: Date,
+    reservedUntil: Date,
+
+    issuedTo: { type: Schema.Types.ObjectId, ref: 'Issue' },
+    issuedAt: Date,
+
+    transfusedTo: { type: Schema.Types.ObjectId, ref: 'Transfusion' },
+    transfusedAt: Date,
+
+    deletedAt: { type: Date, default: null, index: true },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  },
+  { timestamps: true },
+);
+
+// Composite index supporting the FEFO selector: filter by component +
+// status + ABO + Rh, sort by expiry.
+BloodUnitSchema.index({
+  componentType: 1,
+  status: 1,
+  aboGroup: 1,
+  rhFactor: 1,
+  expiresAt: 1,
+});
+
+// Lookback support: find every unit derived from a donor.
+BloodUnitSchema.index({ donationId: 1 });
+
+export type BloodUnit = InferSchemaType<typeof BloodUnitSchema>;
+export type BloodUnitModel = Model<BloodUnit>;
+export const BloodUnitModel: BloodUnitModel =
+  (mongoose.models.BloodUnit as BloodUnitModel | undefined) ??
+  mongoose.model<BloodUnit>('BloodUnit', BloodUnitSchema);

@@ -1,155 +1,142 @@
-import { useState, useEffect } from 'react';
-import donorService from '@/services/donorService';
+// useDonor — thin wrapper around TanStack Query hooks in
+// `features/donor/queries.js`. Preserves the existing imperative API
+// (`fetchDonors`, `createDonor`, ...) so consumers don't need to change
+// during the donor cutover. New screens should use the queries
+// directly from `@/features/donor/queries`.
+
+import { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import campService from '@/services/campService';
+import donorService from '@/services/donorService';
 import apiService from '@/services/api';
 import { useAuth } from '@/store/auth';
-import { toast } from 'sonner';
+import {
+  donorKeys,
+  useCreateDonorMutation,
+  useDeleteDonorMutation,
+  useDonorListQuery,
+  useUpdateDonorMutation,
+} from '@/features/donor/queries';
 
-// Custom hook for donor operations - Single Responsibility
+const DEFAULT_FILTERS = { page: 1, pageSize: 100 };
+
 export const useDonor = () => {
+  const qc = useQueryClient();
   const { API, authorizationToken } = useAuth();
-  const [donors, setDonors] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
-  // Initialize API service
+  // Keep the legacy singleton initialised — searchDonor + forceDeleteDonor
+  // still call /api/donor through it. Remove once those paths are
+  // migrated to /api/v2.
   useEffect(() => {
     if (API && authorizationToken) {
       apiService.initialize(API, authorizationToken);
     }
   }, [API, authorizationToken]);
 
-  // Fetch donors with filters
-  const fetchDonors = async (filters = {}) => {
-    setLoading(true);
-    setError(null);
-    
-    const { data, error: apiError } = await donorService.listDonors(filters);
-    
-    if (apiError) {
-      setError(apiError);
-      toast.error(apiError);
-    } else {
-      setDonors(data.donors || []);
-    }
-    
-    setLoading(false);
+  // Two data sources during the cutover:
+  //   listQuery     -> new /api/v2/donor (default path)
+  //   campDonors    -> legacy campService for site-scoped lists
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [campDonors, setCampDonors] = useState(null); // null = use listQuery
+  const [campError, setCampError] = useState(null);
+  const [campLoading, setCampLoading] = useState(false);
+
+  const listQuery = useDonorListQuery(filters, {
+    enabled: campDonors === null,
+  });
+
+  const createMutation = useCreateDonorMutation();
+  const updateMutation = useUpdateDonorMutation();
+  const deleteMutation = useDeleteDonorMutation();
+
+  const donors = useMemo(() => {
+    if (campDonors !== null) return campDonors;
+    return listQuery.data?.items ?? [];
+  }, [campDonors, listQuery.data]);
+
+  const loading =
+    campLoading ||
+    listQuery.isLoading ||
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    deleteMutation.isPending;
+
+  const error =
+    campError ??
+    (listQuery.error?.message ||
+      createMutation.error?.message ||
+      updateMutation.error?.message ||
+      deleteMutation.error?.message ||
+      null);
+
+  // Surface the listQuery error once.
+  useEffect(() => {
+    if (listQuery.error?.message) toast.error(listQuery.error.message);
+  }, [listQuery.error]);
+
+  const fetchDonors = async (nextFilters = {}) => {
+    setCampDonors(null);
+    setFilters({ ...DEFAULT_FILTERS, ...nextFilters });
   };
 
-  // Fetch donors for a specific camp (site)
   const fetchCampDonors = async (siteId) => {
-    setLoading(true);
-    setError(null);
-    
+    setCampLoading(true);
+    setCampError(null);
     const { data, error: apiError } = await campService.getCampDonors(siteId);
-    
     if (apiError) {
-      setError(apiError);
+      setCampError(apiError);
       toast.error(apiError);
+      setCampDonors([]);
     } else {
-      setDonors(data?.donors || []);
+      setCampDonors(data?.donors ?? []);
     }
-    
-    setLoading(false);
+    setCampLoading(false);
   };
 
-  // Create new donor
   const createDonor = async (donorData) => {
-    setLoading(true);
-    setError(null);
-    
-    const { data, error: apiError } = await donorService.createDonor(donorData);
-    
-    if (apiError) {
-      setError(apiError);
-      toast.error(apiError);
-      return { success: false, data: null };
-    } else {
-      setDonors(prev => [data.donor, ...prev]);
-      toast.success('Donor created successfully');
-      return { success: true, data: data.donor };
+    try {
+      const created = await createMutation.mutateAsync(donorData);
+      return { success: true, data: created };
+    } catch (e) {
+      return { success: false, data: null, code: e?.code, message: e?.message };
     }
-    
-    setLoading(false);
   };
 
-  // Search donor
-  const searchDonor = async (searchCriteria) => {
-    setLoading(true);
-    setError(null);
-    
-    const { data, error: apiError } = await donorService.searchDonor(searchCriteria);
-    
-    if (apiError) {
-      setError(apiError);
-      return { success: false, data: null };
-    } else {
-      return { success: true, data: data.donor };
+  const updateDonor = async (id, patch) => {
+    try {
+      const updated = await updateMutation.mutateAsync({ id, patch });
+      return { success: true, data: updated };
+    } catch (e) {
+      return { success: false, code: e?.code, message: e?.message };
     }
-    
-    setLoading(false);
   };
 
-  // Update donor
-  const updateDonor = async (id, updateData) => {
-    setLoading(true);
-    setError(null);
-    
-    const { data, error: apiError } = await donorService.updateDonor(id, updateData);
-    
-    if (apiError) {
-      setError(apiError);
-      toast.error(apiError);
-      return { success: false };
-    } else {
-      setDonors(prev => prev.map(donor => 
-        donor._id === id ? data.donor : donor
-      ));
-      toast.success('Donor updated successfully');
-      return { success: true, data: data.donor };
-    }
-    
-    setLoading(false);
-  };
-
-  // Delete donor
   const deleteDonor = async (id) => {
-    setLoading(true);
-    setError(null);
-    
-    const { error: apiError, errorData } = await donorService.deleteDonor(id);
-    
-    if (apiError) {
-      setError(apiError);
-      toast.error(apiError);
-      return { success: false, code: errorData?.code, message: apiError };
-    } else {
-      setDonors(prev => prev.filter(donor => donor._id !== id));
-      toast.success('Donor deleted successfully');
+    try {
+      await deleteMutation.mutateAsync(id);
       return { success: true };
+    } catch (e) {
+      return { success: false, code: e?.code, message: e?.message };
     }
-    
-    setLoading(false);
   };
 
-  // Force delete donor (cascade)
+  // Legacy paths still on /api/donor — not yet migrated.
+  const searchDonor = async (searchCriteria) => {
+    const { data, error: apiError } = await donorService.searchDonor(searchCriteria);
+    if (apiError) return { success: false, data: null };
+    return { success: true, data: data?.donor ?? null };
+  };
+
   const forceDeleteDonor = async (id) => {
-    setLoading(true);
-    setError(null);
-
     const { error: apiError } = await donorService.forceDeleteDonor(id);
-
     if (apiError) {
-      setError(apiError);
       toast.error(apiError);
       return { success: false };
-    } else {
-      setDonors(prev => prev.filter(donor => donor._id !== id));
-      toast.success('Donor and related data deleted successfully');
-      return { success: true };
     }
-
-    setLoading(false);
+    qc.invalidateQueries({ queryKey: donorKeys.all });
+    toast.success('Donor and related data deleted successfully');
+    return { success: true };
   };
 
   return {
@@ -157,11 +144,11 @@ export const useDonor = () => {
     loading,
     error,
     fetchDonors,
+    fetchCampDonors,
     createDonor,
-    searchDonor,
     updateDonor,
     deleteDonor,
+    searchDonor,
     forceDeleteDonor,
-    fetchCampDonors,
   };
 };

@@ -4,67 +4,46 @@ import App from './App.jsx'
 import './index.css'
 import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from 'sonner'
+import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './store/auth';
+import { queryClient } from './lib/query-client';
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   // <React.StrictMode>
-  <AuthProvider>
-
-    <BrowserRouter>
-      <Toaster
-        position="top-right" // top-right | top-center | bottom-left etc
-        richColors
-        // closeButton
-        expand={true}
-        toastOptions={{
-          style: {
-            fontSize: '14px',
-            borderRadius: '0.75rem',
-            padding: '12px 16px',
-          },
-          success: {
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <BrowserRouter>
+        <Toaster
+          position="top-right"
+          richColors
+          expand={true}
+          toastOptions={{
             style: {
-              background: '#16a34a',
-              color: 'white',
+              fontSize: '14px',
+              borderRadius: '0.75rem',
+              padding: '12px 16px',
             },
-            iconTheme: {
-              primary: 'white',
-              secondary: '#15803d',
+            success: {
+              style: { background: '#16a34a', color: 'white' },
+              iconTheme: { primary: 'white', secondary: '#15803d' },
             },
-          },
-          error: {
-            style: {
-              background: '#dc2626',
-              color: 'white',
+            error: {
+              style: { background: '#dc2626', color: 'white' },
+              iconTheme: { primary: 'white', secondary: '#991b1b' },
             },
-            iconTheme: {
-              primary: 'white',
-              secondary: '#991b1b',
+            info: {
+              style: { background: '#2563eb', color: 'white' },
+              iconTheme: { primary: 'white', secondary: '#1e40af' },
             },
-          },
-          info: {
-            style: {
-              background: '#2563eb',
-              color: 'white',
+            warning: {
+              style: { background: '#f59e0b', color: 'black' },
+              iconTheme: { primary: 'black', secondary: '#b45309' },
             },
-            iconTheme: {
-              primary: 'white',
-              secondary: '#1e40af',
-            },
-          },
-          warning: {
-            style: {
-              background: '#f59e0b',
-              color: 'black',
-            },
-            iconTheme: {
-              primary: 'black',
-              secondary: '#b45309',
-            },
-          },
-        }}
-      />
-      <App />
-    </BrowserRouter>
-  </AuthProvider>
+          }}
+        />
+        <App />
+      </BrowserRouter>
+    </AuthProvider>
+  </QueryClientProvider>
   // </React.StrictMode>,
 )
