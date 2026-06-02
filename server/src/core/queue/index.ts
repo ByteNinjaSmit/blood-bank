@@ -34,6 +34,7 @@ export function getQueue<T = unknown>(name: string): BullQueue<T> {
 
 export const QUEUE_NAMES = {
   EMAIL: 'email',
-  EXPIRY: 'expiry',
-  DISCARD: 'discard',
+  INVENTORY_MAINTENANCE: 'inventory-maintenance',
+  INVENTORY_REPORTS: 'inventory-reports',
+  DONOR_MAINTENANCE: 'donor-maintenance',
 } as const;

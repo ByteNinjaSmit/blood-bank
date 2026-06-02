@@ -6,7 +6,15 @@ import { hospitalController } from './hospital.controller';
 const router = Router();
 
 const MANAGE = ['system-admin', 'bbo'] as const;
-const READ = ['system-admin', 'bbo', 'medical-officer', 'issue-counter', 'store-keeper', 'auditor', 'hospital-user'] as const;
+const READ = [
+  'system-admin',
+  'bbo',
+  'medical-officer',
+  'issue-counter',
+  'store-keeper',
+  'auditor',
+  'hospital-user',
+] as const;
 
 router.post('/', authenticate, requireRole([...MANAGE]), hospitalController.create);
 router.get('/', authenticate, requireRole([...READ]), hospitalController.list);

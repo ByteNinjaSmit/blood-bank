@@ -34,7 +34,7 @@ export interface SendMailInput {
 export async function sendMail(input: SendMailInput): Promise<void> {
   const t = getTransporter();
   await t.sendMail({
-    from: `Sanjivani Blood Bank <${env.EMAIL_USER}>`,
+    from: `${env.EMAIL_FROM_NAME} <${env.EMAIL_USER}>`,
     to: input.to,
     subject: input.subject,
     html: input.html,
