@@ -1,4 +1,5 @@
 import { childLogger } from '@/core/logger';
+import { cached, invalidate } from '@/core/cache';
 import { ConflictError, NotFoundError } from '@/shared/errors';
 import { auditService } from '@/modules/audit/audit.service';
 import { hospitalRepo, type HospitalDto, type ListHospitalsFilter } from './hospital.repository';
@@ -14,6 +15,10 @@ export interface CreateHospitalInput {
 export type UpdateHospitalInput = Partial<CreateHospitalInput>;
 
 const log = childLogger({ module: 'hospital-service' });
+
+const HOSPITAL_ALL_KEY = 'hospital:all';
+const HOSPITAL_TTL = 300; // 5 min — master data changes rarely
+const hospitalKey = (id: string) => `hospital:detail:${id}`;
 
 export const hospitalService = {
   async create(input: CreateHospitalInput, actorId: string): Promise<HospitalDto> {
@@ -37,28 +42,38 @@ export const hospitalService = {
       entityId: created.id,
       after: { name: created.name },
     });
+    await invalidate('hospital:*');
     log.info({ hospitalId: created.id, actorId }, 'hospital created');
     return created;
   },
 
   async list(filter: ListHospitalsFilter) {
-    const { items, total } = await hospitalRepo.list(filter);
-    const totalPages = Math.ceil(total / filter.limit);
-    return {
-      items,
-      pagination: {
-        currentPage: filter.page,
-        totalPages,
-        totalCount: total,
-        pageSize: filter.limit,
-        hasNextPage: filter.page < totalPages,
-        hasPrevPage: filter.page > 1,
-      },
+    // Only cache the default first-page unfiltered view (the catalogue lookup).
+    const isSimpleList =
+      !filter.name && !filter.contactPerson && !filter.phone && filter.page === 1;
+    const key = isSimpleList ? HOSPITAL_ALL_KEY : null;
+
+    const fetch = async () => {
+      const { items, total } = await hospitalRepo.list(filter);
+      const totalPages = Math.ceil(total / filter.limit);
+      return {
+        items,
+        pagination: {
+          currentPage: filter.page,
+          totalPages,
+          totalCount: total,
+          pageSize: filter.limit,
+          hasNextPage: filter.page < totalPages,
+          hasPrevPage: filter.page > 1,
+        },
+      };
     };
+
+    return key ? cached(key, HOSPITAL_TTL, fetch) : fetch();
   },
 
   async get(id: string): Promise<HospitalDto> {
-    const h = await hospitalRepo.findById(id);
+    const h = await cached(hospitalKey(id), HOSPITAL_TTL, () => hospitalRepo.findById(id));
     if (!h) throw new NotFoundError('Hospital', id);
     return h;
   },
@@ -77,6 +92,7 @@ export const hospitalService = {
     const updated = await hospitalRepo.update(id, patch);
     if (!updated) throw new NotFoundError('Hospital', id);
     await auditService.record({ actorId, action: 'UPDATE', entityType: 'Hospital', entityId: id });
+    await invalidate('hospital:*');
     return updated;
   },
 
@@ -84,6 +100,7 @@ export const hospitalService = {
     const ok = await hospitalRepo.remove(id);
     if (!ok) throw new NotFoundError('Hospital', id);
     await auditService.record({ actorId, action: 'DELETE', entityType: 'Hospital', entityId: id });
+    await invalidate('hospital:*');
     log.warn({ hospitalId: id, actorId }, 'hospital deleted');
   },
 };

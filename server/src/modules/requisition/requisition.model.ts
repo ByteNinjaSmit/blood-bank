@@ -41,7 +41,7 @@ const RequisitionSchema = new Schema(
     hospitalId: { type: Schema.Types.ObjectId, ref: 'Hospital', required: true, index: true },
     patientId: { type: Schema.Types.ObjectId, ref: 'Patient', required: true, index: true },
     clinicianName: { type: String, required: true, trim: true },
-    requiredAt: Date,
+    requiredAt: { type: Date, index: true },
     requestedComponents: { type: [RequestedComponent], default: [] },
     matchedUnits: { type: [MatchedUnit], default: [] },
     status: {
@@ -62,6 +62,14 @@ const RequisitionSchema = new Schema(
   },
   { timestamps: true },
 );
+
+// Hospital dashboard: active requisitions fast lookup.
+RequisitionSchema.index({ hospitalId: 1, status: 1 });
+// Patient history view.
+RequisitionSchema.index({ patientId: 1, status: 1 });
+// Urgency queue: sort by requiredAt for PENDING/MATCHED.
+RequisitionSchema.index({ status: 1, requiredAt: 1 });
+RequisitionSchema.index({ createdAt: -1 });
 
 export type Requisition = InferSchemaType<typeof RequisitionSchema>;
 export type RequisitionModel = Model<Requisition>;

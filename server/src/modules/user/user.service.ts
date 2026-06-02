@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { childLogger } from '@/core/logger';
+import { cached, invalidate } from '@/core/cache';
 import { ConflictError, NotFoundError } from '@/shared/errors';
 import { auditService } from '@/modules/audit/audit.service';
 import { userRepo, type ListUsersFilter, type UserDto } from './user.repository';
@@ -29,6 +30,9 @@ export interface UpdateUserInput {
 
 const log = childLogger({ module: 'user-service' });
 
+const USER_TTL = 120; // 2 min — staff roster changes infrequently
+const userDetailKey = (id: string) => `user:detail:${id}`;
+
 export const userService = {
   async create(input: CreateUserInput, actorId: string): Promise<UserDto> {
     if (await userRepo.existsByEmail(input.email)) {
@@ -41,7 +45,7 @@ export const userService = {
       email: input.email.toLowerCase(),
       phone: input.phone,
       role: input.role,
-      password: input.password, // hashed by model pre-save hook
+      password: input.password,
       permissions: input.permissions ?? [],
       campId: input.campId ?? null,
       status: 'active',
@@ -55,25 +59,36 @@ export const userService = {
       entityId: user.id,
       after: { email: user.email, role: user.role },
     });
+    await invalidate('user:*');
     log.info({ userId: user.id, actorId }, 'user created');
     return user;
   },
 
   async list(filter: ListUsersFilter) {
-    const { items, total } = await userRepo.list(filter);
-    return {
-      items,
-      pagination: {
-        total,
-        page: filter.page,
-        limit: filter.limit,
-        pages: Math.ceil(total / filter.limit),
-      },
+    // Cache simple unfiltered first-page staff roster (used by camp + donation forms).
+    const isSimple = !filter.search && !filter.campId && filter.page === 1;
+    const key = isSimple
+      ? `user:list:role=${filter.role ?? 'all'}:status=${filter.status ?? 'all'}`
+      : null;
+
+    const fetch = async () => {
+      const { items, total } = await userRepo.list(filter);
+      return {
+        items,
+        pagination: {
+          total,
+          page: filter.page,
+          limit: filter.limit,
+          pages: Math.ceil(total / filter.limit),
+        },
+      };
     };
+
+    return key ? cached(key, USER_TTL, fetch) : fetch();
   },
 
   async get(id: string): Promise<UserDto> {
-    const user = await userRepo.findByIdOrPublicId(id);
+    const user = await cached(userDetailKey(id), USER_TTL, () => userRepo.findByIdOrPublicId(id));
     if (!user) throw new NotFoundError('User', id);
     return user;
   },
@@ -107,6 +122,7 @@ export const userService = {
       entityType: 'User',
       entityId: updated.id,
     });
+    await invalidate('user:*');
     return updated;
   },
 
@@ -123,6 +139,7 @@ export const userService = {
       entityId: updated.id,
       reason: 'soft delete (deactivate)',
     });
+    await invalidate('user:*');
     log.warn({ userId: updated.id, actorId }, 'user deactivated');
   },
 };

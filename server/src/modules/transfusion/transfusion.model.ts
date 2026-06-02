@@ -1,6 +1,3 @@
-// Transfusion — confirmed administration of an issued unit at the
-// bedside. Closes the unit lifecycle (ISSUED -> TRANSFUSED).
-
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import { TRANSFUSION_OUTCOME } from '@/shared/enums';
 
@@ -23,7 +20,6 @@ const TransfusionSchema = new Schema(
     unitId: { type: String, required: true, index: true },
     patientId: { type: Schema.Types.ObjectId, ref: 'Patient', required: true, index: true },
 
-    // Two-person bedside check (mandatory before starting).
     bedsideCheck: {
       checkedById: { type: Schema.Types.ObjectId, ref: 'User' },
       witnessedById: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -32,17 +28,23 @@ const TransfusionSchema = new Schema(
       compatibilityConfirmed: { type: Boolean, default: false },
     },
 
-    startedAt: Date,
+    startedAt: { type: Date, index: true },
     endedAt: Date,
     vitalsLog: { type: [VitalsEntry], default: [] },
-    outcome: { type: String, enum: TRANSFUSION_OUTCOME },
-    hadReaction: { type: Boolean, default: false },
+    outcome: { type: String, enum: TRANSFUSION_OUTCOME, index: true },
+    hadReaction: { type: Boolean, default: false, index: true },
 
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true },
 );
+
+// Patient transfusion history.
+TransfusionSchema.index({ patientId: 1, startedAt: -1 });
+// Haemovigilance: all reactions or abnormal outcomes.
+TransfusionSchema.index({ hadReaction: 1, outcome: 1 });
+TransfusionSchema.index({ createdAt: -1 });
 
 export type Transfusion = InferSchemaType<typeof TransfusionSchema>;
 export type TransfusionModel = Model<Transfusion>;

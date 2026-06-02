@@ -9,48 +9,51 @@ const repo = createDonorRepo();
 const service = createDonorService({ repo });
 const controllers = createDonorControllers(service);
 
+const READ_ROLES = [
+  'system-admin',
+  'bbo',
+  'medical-officer',
+  'counsellor',
+  'phlebotomist',
+  'lab-tech-component',
+  'lab-tech-serology',
+  'store-keeper',
+  'issue-counter',
+  'apheresis-tech',
+  'qa-manager',
+  'auditor',
+  'camp-organiser',
+] as const;
+
 const router = Router();
+
+// Static paths must come before /:id to avoid route shadowing.
+router.get(
+  '/search',
+  authenticate,
+  requireRole([...READ_ROLES]),
+  requirePermission('donor:read'),
+  controllers.search,
+);
+router.post(
+  '/search/vector',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'medical-officer', 'counsellor']),
+  requirePermission('donor:read'),
+  controllers.vectorSearch,
+);
 
 router.get(
   '/',
   authenticate,
-  requireRole([
-    'system-admin',
-    'bbo',
-    'medical-officer',
-    'counsellor',
-    'phlebotomist',
-    'lab-tech-component',
-    'lab-tech-serology',
-    'store-keeper',
-    'issue-counter',
-    'apheresis-tech',
-    'qa-manager',
-    'auditor',
-    'camp-organiser',
-  ]),
+  requireRole([...READ_ROLES]),
   requirePermission('donor:read'),
   controllers.list,
 );
-
 router.get(
   '/:id',
   authenticate,
-  requireRole([
-    'system-admin',
-    'bbo',
-    'medical-officer',
-    'counsellor',
-    'phlebotomist',
-    'lab-tech-component',
-    'lab-tech-serology',
-    'store-keeper',
-    'issue-counter',
-    'apheresis-tech',
-    'qa-manager',
-    'auditor',
-    'camp-organiser',
-  ]),
+  requireRole([...READ_ROLES]),
   requirePermission('donor:read'),
   controllers.get,
 );
@@ -62,7 +65,6 @@ router.post(
   requirePermission('donor:create'),
   controllers.create,
 );
-
 router.put(
   '/:id',
   authenticate,
@@ -70,7 +72,6 @@ router.put(
   requirePermission('donor:update'),
   controllers.update,
 );
-
 router.delete(
   '/:id',
   authenticate,

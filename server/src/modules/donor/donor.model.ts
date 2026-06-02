@@ -38,6 +38,9 @@ const DonorSchema = new Schema(
       index: true,
     },
     lastDonationDate: { type: Date, index: true },
+    // 768-dim dense vector for Atlas Vector Search (populated by embedding job).
+    // select:false keeps it out of normal queries; sparse avoids wasted index space.
+    embedding: { type: [Number], default: null, select: false },
     deletedAt: { type: Date, default: null, index: true },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },

@@ -9,6 +9,7 @@ import requestId from '@/shared/middlewares/request-id';
 import httpLogger from '@/shared/middlewares/http-logger';
 import { errorMiddleware } from '@/shared/middlewares/error';
 import { registerRoutes } from '@/routes';
+import { getQueuesHealth } from '@/core/queue';
 
 // Connect-style middleware (IncomingMessage signatures) are narrowed to
 // Express RequestHandler here; safe because Express.Request extends
@@ -45,6 +46,12 @@ export function buildApp(opts: BuildAppOptions = {}): Express {
       uptime: process.uptime(),
       service: 'blood-bank-api',
     });
+  });
+
+  app.get('/health/queues', async (_req, res) => {
+    const queues = await getQueuesHealth();
+    const healthy = queues.every((q) => q.failed === 0 && q.dlqWaiting === 0);
+    res.status(healthy ? 200 : 207).json({ status: healthy ? 'healthy' : 'degraded', queues });
   });
 
   app.use('/api/v2', registerRoutes());

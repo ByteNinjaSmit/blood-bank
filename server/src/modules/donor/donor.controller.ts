@@ -2,9 +2,11 @@
 // here flow through the single error middleware.
 
 import type { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { Validate } from '@/modules/donor/donor.validator';
 import type { DonorService } from '@/modules/donor/donor.service';
-import { UnauthorizedError } from '@/shared/errors';
+import { UnauthorizedError, ValidationError } from '@/shared/errors';
+import { searchDonors, searchDonorsByVector } from '@/core/search/vector-search';
 
 export interface DonorControllers {
   create: (req: Request, res: Response, next: NextFunction) => Promise<void>;
@@ -12,7 +14,26 @@ export interface DonorControllers {
   get: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   list: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   remove: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  search: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  vectorSearch: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
+
+const SearchQuery = z.object({
+  q: z.string().trim().min(1).max(200),
+  bloodGroup: z.enum(['O', 'A', 'B', 'AB']).optional(),
+  rh: z.enum(['POSITIVE', 'NEGATIVE']).optional(),
+  eligibilityStatus: z.enum(['eligible', 'deferred', 'temp-deferred']).optional(),
+  onlyEligible: z.coerce.boolean().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  skip: z.coerce.number().int().min(0).default(0),
+});
+
+const VectorSearchBody = z.object({
+  embedding: z.array(z.number()).length(768, 'Embedding must be 768-dimensional'),
+  bloodGroup: z.enum(['O', 'A', 'B', 'AB']).optional(),
+  eligibilityStatus: z.enum(['eligible', 'deferred', 'temp-deferred']).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+});
 
 export function createDonorControllers(service: DonorService): DonorControllers {
   const actorIdOrThrow = (req: Request): string => {
@@ -77,6 +98,47 @@ export function createDonorControllers(service: DonorService): DonorControllers 
         actorIdOrThrow(req);
         await service.remove(id);
         res.status(204).end();
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async search(req, res, next) {
+      try {
+        const parsed = SearchQuery.safeParse(req.query);
+        if (!parsed.success) throw new ValidationError('Invalid search query', parsed.error.issues);
+        const { q, bloodGroup, rh, eligibilityStatus, onlyEligible, limit, skip } = parsed.data;
+        const result = await searchDonors({
+          query: q,
+          bloodGroup,
+          rh,
+          eligibilityStatus,
+          onlyEligible,
+          limit,
+          skip,
+        });
+        res.json({
+          success: true,
+          data: { items: result.items, total: result.total, source: result.source },
+          requestId: req.id,
+        });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async vectorSearch(req, res, next) {
+      try {
+        const parsed = VectorSearchBody.safeParse(req.body);
+        if (!parsed.success)
+          throw new ValidationError('Invalid vector search body', parsed.error.issues);
+        const { embedding, bloodGroup, eligibilityStatus, limit } = parsed.data;
+        const items = await searchDonorsByVector(embedding, {
+          bloodGroup,
+          eligibilityStatus,
+          limit,
+        });
+        res.json({ success: true, data: { items, total: items.length }, requestId: req.id });
       } catch (e) {
         next(e);
       }

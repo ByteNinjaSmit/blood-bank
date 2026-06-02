@@ -34,8 +34,8 @@ const PatientSchema = new Schema(
     sex: { type: String, enum: ['M', 'F', 'O'] },
     medicalRecordNumber: { type: String, index: true },
 
-    aboGroup: { type: String, enum: ABO_GROUP },
-    rhFactor: { type: String, enum: RH_FACTOR },
+    aboGroup: { type: String, enum: ABO_GROUP, index: true },
+    rhFactor: { type: String, enum: RH_FACTOR, index: true },
     // Two independent determinations needed for electronic crossmatch.
     groupConfirmations: { type: [GroupConfirmation], default: [] },
 
@@ -49,6 +49,10 @@ const PatientSchema = new Schema(
   },
   { timestamps: true },
 );
+
+PatientSchema.index({ aboGroup: 1, rhFactor: 1 });
+PatientSchema.index({ name: 'text' });
+PatientSchema.index({ createdAt: -1 });
 
 export type Patient = InferSchemaType<typeof PatientSchema>;
 export type PatientModel = Model<Patient>;

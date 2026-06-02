@@ -1,8 +1,6 @@
-// Donor domain service. Orchestrates repos, applies business rules,
-// emits audit entries. No Express, no Mongoose.
-
 import { ConflictError } from '@/shared/errors';
 import { childLogger } from '@/core/logger';
+import { cached, invalidate } from '@/core/cache';
 import type {
   CreateDonorInput,
   ListDonorsInput,
@@ -13,6 +11,7 @@ import type { DonorDto, DonorRepo } from '@/modules/donor/donor.repository';
 const MINIMUM_DONOR_WEIGHT_KG = 45;
 const MINIMUM_DONOR_AGE_YEARS = 18;
 const MAXIMUM_DONOR_AGE_YEARS = 65;
+const DONOR_DETAIL_TTL = 60; // 60s — profile changes occasionally
 
 export interface DonorService {
   register(input: CreateDonorInput, actorId: string): Promise<DonorDto>;
@@ -37,6 +36,7 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
         });
       }
       const created = await deps.repo.create(input, actorId);
+      await invalidate('donor:detail:*');
       log.info({ donorId: created.id, actorId }, 'donor registered');
       return created;
     },
@@ -51,12 +51,13 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
         assertEligibilityBasics(merged);
       }
       const updated = await deps.repo.update(id, patch, actorId);
+      await invalidate(`donor:detail:${id}`);
       log.info({ donorId: id, actorId }, 'donor updated');
       return updated;
     },
 
     async get(id) {
-      return deps.repo.findById(id);
+      return cached(`donor:detail:${id}`, DONOR_DETAIL_TTL, () => deps.repo.findById(id));
     },
 
     async list(query) {
@@ -66,6 +67,7 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
 
     async remove(id) {
       await deps.repo.delete(id);
+      await invalidate(`donor:detail:${id}`);
       log.warn({ donorId: id }, 'donor deleted');
     },
   };
@@ -86,6 +88,5 @@ function assertEligibilityBasics(input: { weightKg: number; dob: Date }): void {
 }
 
 function yearsBetween(from: Date, to: Date): number {
-  const ms = to.getTime() - from.getTime();
-  return ms / (1000 * 60 * 60 * 24 * 365.25);
+  return (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
 }
