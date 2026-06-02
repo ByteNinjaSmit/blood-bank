@@ -66,6 +66,7 @@ function deps(opts: { candidates?: SelectableUnit[]; pat?: PatientDto; req?: Req
     findNearExpiry: vi.fn(),
   };
   const requisitions: RequisitionRepo = {
+    list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     create: vi.fn().mockResolvedValue(opts.req ?? reqDto()),
     findById: vi.fn().mockResolvedValue(opts.req ?? reqDto()),
     setMatched: vi

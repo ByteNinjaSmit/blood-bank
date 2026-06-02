@@ -7,6 +7,7 @@ import { selectUnits } from '@/shared/compatibility/fefo';
 import { classify, requiresCrossmatch, compatibleAboGroups } from '@/shared/compatibility/abo-rh';
 import type {
   CreateRequisitionInput,
+  ListRequisitionsFilter,
   MatchedUnitDto,
   RequisitionDto,
   RequisitionRepo,
@@ -15,6 +16,9 @@ import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { PatientRepo } from '@/modules/patient/patient.repository';
 
 export interface RequisitionService {
+  list(
+    filter: ListRequisitionsFilter,
+  ): Promise<{ items: RequisitionDto[]; total: number; page: number; pages: number }>;
   create(
     input: Omit<CreateRequisitionInput, 'requisitionId'>,
     actorId: string,
@@ -41,6 +45,11 @@ export function createRequisitionService(deps: {
   const audit = deps.audit ?? defaultAudit;
 
   return {
+    async list(filter) {
+      const { items, total } = await deps.requisitions.list(filter);
+      return { items, total, page: filter.page, pages: Math.ceil(total / filter.limit) };
+    },
+
     async create(input, actorId) {
       await deps.patients.findById(input.patientId);
       const requisitionId = `RQ-${dateStamp()}-${rand()}`;

@@ -30,8 +30,13 @@ router.get(
   requirePermission('unit:read'),
   controllers.summary,
 );
-
-// FEFO selection preview — used by the requisition match step.
+router.get(
+  '/near-expiry',
+  authenticate,
+  requireRole([...READ_ROLES]),
+  requirePermission('unit:read'),
+  controllers.nearExpiry,
+);
 router.get(
   '/select',
   authenticate,

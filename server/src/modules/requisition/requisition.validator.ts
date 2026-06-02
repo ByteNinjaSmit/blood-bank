@@ -46,9 +46,20 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T
   return r.data;
 }
 
+export const ListRequisitionsQuery = z.object({
+  status: z
+    .enum(['PENDING', 'MATCHED', 'CROSSMATCHED', 'APPROVED', 'ISSUED', 'COMPLETED', 'REJECTED'])
+    .optional(),
+  hospitalId: z.string().regex(OBJECT_ID).optional(),
+  patientId: z.string().regex(OBJECT_ID).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 export const ValidateRequisition = {
   createPatient: (req: Request) => parseOrThrow(CreatePatientBody, req.body, 'request body'),
   createBody: (req: Request) => parseOrThrow(CreateRequisitionBody, req.body, 'request body'),
   rejectBody: (req: Request) => parseOrThrow(RejectBody, req.body, 'request body'),
   idParam: (req: Request) => parseOrThrow(RequisitionIdParam, req.params, 'path params'),
+  listQuery: (req: Request) => parseOrThrow(ListRequisitionsQuery, req.query, 'query string'),
 };

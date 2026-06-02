@@ -5,7 +5,7 @@ export const donorKeys = {
   all: ['donor'],
   list: (f) => ['donor', 'list', f ?? {}],
   detail: (id) => ['donor', 'detail', id],
-  eligibility: (id) => ['donor', 'eligibility', id],
+  search: (p) => ['donor', 'search', p ?? {}],
 };
 
 export function useDonorList(filters) {
@@ -13,6 +13,7 @@ export function useDonorList(filters) {
     queryKey: donorKeys.list(filters),
     queryFn: () => donorApi.list(filters),
     staleTime: 30_000,
+    placeholderData: (prev) => prev,
   });
 }
 
@@ -25,12 +26,13 @@ export function useDonorDetail(id) {
   });
 }
 
-export function useDonorEligibility(id) {
+export function useDonorSearch(params) {
   return useQuery({
-    queryKey: donorKeys.eligibility(id),
-    queryFn: () => donorApi.eligibility(id),
-    enabled: Boolean(id),
-    staleTime: 0,
+    queryKey: donorKeys.search(params),
+    queryFn: () => donorApi.search(params),
+    enabled: Boolean(params?.q),
+    staleTime: 15_000,
+    placeholderData: (prev) => prev,
   });
 }
 
@@ -59,4 +61,8 @@ export function useDeleteDonor() {
     mutationFn: donorApi.remove,
     onSuccess: () => qc.invalidateQueries({ queryKey: donorKeys.all }),
   });
+}
+
+export function useVectorSearch() {
+  return useMutation({ mutationFn: donorApi.vectorSearch });
 }

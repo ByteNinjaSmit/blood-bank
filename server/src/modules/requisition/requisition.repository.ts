@@ -75,7 +75,16 @@ export interface CreateRequisitionInput {
   requestedComponents: RequestedComponentDto[];
 }
 
+export interface ListRequisitionsFilter {
+  status?: RequisitionStatus;
+  hospitalId?: string;
+  patientId?: string;
+  page: number;
+  limit: number;
+}
+
 export interface RequisitionRepo {
+  list(filter: ListRequisitionsFilter): Promise<{ items: RequisitionDto[]; total: number }>;
   create(input: CreateRequisitionInput, actorId: string): Promise<RequisitionDto>;
   findById(id: string): Promise<RequisitionDto>;
   setMatched(id: string, matched: MatchedUnitDto[], actorId: string): Promise<RequisitionDto>;
@@ -97,6 +106,23 @@ export function createRequisitionRepo(): RequisitionRepo {
   };
 
   return {
+    async list(f) {
+      const query: Record<string, unknown> = { deletedAt: null };
+      if (f.status) query.status = f.status;
+      if (f.hospitalId) query.hospitalId = new Types.ObjectId(f.hospitalId);
+      if (f.patientId) query.patientId = new Types.ObjectId(f.patientId);
+      const skip = (f.page - 1) * f.limit;
+      const [docs, total] = await Promise.all([
+        RequisitionModel.find(query)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(f.limit)
+          .lean() as Promise<RawReq[]>,
+        RequisitionModel.countDocuments(query),
+      ]);
+      return { items: (docs as RawReq[]).map(toDto), total };
+    },
+
     async create(input, actorId) {
       const actor = new Types.ObjectId(actorId);
       const doc = await RequisitionModel.create({

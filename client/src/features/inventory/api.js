@@ -4,6 +4,7 @@ const BASE = '/api/v2/inventory';
 
 export const inventoryApi = {
   stockSummary: () => apiClient.get(`${BASE}/summary`).then(unwrap),
-  selectFefo: (data) => apiClient.post(`${BASE}/select`, data).then(unwrap),
+  // FEFO selection — pass params as query string (GET)
+  selectFefo: (params) => apiClient.get(`${BASE}/select`, { params }).then(unwrap),
   nearExpiry: (params) => apiClient.get(`${BASE}/near-expiry`, { params }).then(unwrap),
 };

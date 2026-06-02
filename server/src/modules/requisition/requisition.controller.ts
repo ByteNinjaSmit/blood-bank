@@ -9,6 +9,7 @@ import type { IssueService } from '@/modules/issue/issue.service';
 import type { PatientRepo } from '@/modules/patient/patient.repository';
 
 export interface RequisitionControllers {
+  list: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   createPatient: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   create: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   match: (req: Request, res: Response, next: NextFunction) => Promise<void>;
@@ -32,6 +33,16 @@ export function createRequisitionControllers(deps: {
   };
 
   return {
+    async list(req, res, next) {
+      try {
+        const q = ValidateRequisition.listQuery(req);
+        const data = await deps.requisitions.list(q);
+        res.json({ success: true, data, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
     async createPatient(req, res, next) {
       try {
         const body = ValidateRequisition.createPatient(req);

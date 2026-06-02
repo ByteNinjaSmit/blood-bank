@@ -50,6 +50,13 @@ const CLINICAL_READ = [
   'hospital-user',
 ] as const;
 
+router.get(
+  '/',
+  authenticate,
+  requireRole([...CLINICAL_READ]),
+  requirePermission('requisition:read'),
+  controllers.list,
+);
 router.post(
   '/patient',
   authenticate,

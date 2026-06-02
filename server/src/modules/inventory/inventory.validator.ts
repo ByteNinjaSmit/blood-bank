@@ -30,6 +30,11 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T
   return r.data;
 }
 
+export const NearExpiryQuery = z.object({
+  days: z.coerce.number().int().min(1).max(30).default(3),
+});
+
 export const ValidateInventory = {
   selectQuery: (req: Request) => parseOrThrow(SelectQuery, req.query, 'query string'),
+  nearExpiryQuery: (req: Request) => parseOrThrow(NearExpiryQuery, req.query, 'query string'),
 };

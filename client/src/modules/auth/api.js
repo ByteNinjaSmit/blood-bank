@@ -1,8 +1,5 @@
-// Auth API. Dedicated axios instance (withCredentials for the refresh
-// cookie) with NO interceptors — auth calls must never trigger the
-// global 401-refresh loop. Targets the new /api/v2/auth module, which
-// wraps responses in { success, data }.
-
+// Auth API — dedicated axios instance (no interceptors) to avoid 401-refresh loops.
+// URLs match the actual backend routes on /api/v2/auth.
 import axios from 'axios';
 
 const BASE = import.meta.env.VITE_APP_URI_API ?? 'http://localhost:5000';

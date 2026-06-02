@@ -1,7 +1,3 @@
-// Inventory service. Inventory is a DERIVED VIEW over BloodUnits in
-// RELEASED status — not a separate writable collection. Exposes the
-// FEFO selector + stock summary.
-
 import { childLogger } from '@/core/logger';
 import { cached } from '@/core/cache';
 import { selectUnits, type SelectionResult } from '@/shared/compatibility/fefo';
@@ -11,6 +7,7 @@ import type { AboGroup, ComponentType, RhFactor, SpecialNeed } from '@/shared/en
 
 const STOCK_SUMMARY_CACHE_KEY = 'inventory:summary';
 const STOCK_SUMMARY_TTL_SECONDS = 30;
+const NEAR_EXPIRY_TTL_SECONDS = 60;
 
 export interface SelectRequest {
   component: ComponentType;
@@ -20,11 +17,21 @@ export interface SelectRequest {
   unitsRequired: number;
 }
 
+export interface NearExpiryUnit {
+  unitId: string;
+  componentType: string;
+  aboGroup: string;
+  rhFactor: string;
+  expiresAt: string;
+  daysLeft: number;
+}
+
 export interface InventoryService {
   selectFefo(req: SelectRequest): Promise<SelectionResult>;
   stockSummary(): Promise<
     Array<{ componentType: string; aboGroup: string; rhFactor: string; count: number }>
   >;
+  nearExpiry(days: number): Promise<NearExpiryUnit[]>;
 }
 
 export function createInventoryService(deps: { units: UnitRepo }): InventoryService {
@@ -33,10 +40,7 @@ export function createInventoryService(deps: { units: UnitRepo }): InventoryServ
   return {
     async selectFefo(req) {
       const aboGroups = [...compatibleAboGroups(req.aboGroup, req.component)];
-      const candidates = await deps.units.selectable({
-        componentType: req.component,
-        aboGroups,
-      });
+      const candidates = await deps.units.selectable({ componentType: req.component, aboGroups });
       const result = selectUnits(candidates, {
         recipient: { aboGroup: req.aboGroup, rhFactor: req.rhFactor },
         component: req.component,
@@ -53,11 +57,25 @@ export function createInventoryService(deps: { units: UnitRepo }): InventoryServ
     },
 
     async stockSummary() {
-      // Hot read; cache for 30s. Invalidated by unit-repo on any status
-      // change (see unit.repository.applyEvent).
       return cached(STOCK_SUMMARY_CACHE_KEY, STOCK_SUMMARY_TTL_SECONDS, () =>
         deps.units.inStockSummary(),
       );
+    },
+
+    async nearExpiry(days) {
+      const key = `inventory:near-expiry:days=${days}`;
+      return cached(key, NEAR_EXPIRY_TTL_SECONDS, async () => {
+        const raw = await deps.units.findNearExpiry(days);
+        const now = Date.now();
+        return raw.map((u) => ({
+          unitId: u.unitId,
+          componentType: u.componentType,
+          aboGroup: u.aboGroup,
+          rhFactor: u.rhFactor,
+          expiresAt: u.expiresAt,
+          daysLeft: Math.max(0, Math.ceil((new Date(u.expiresAt).getTime() - now) / 86_400_000)),
+        }));
+      });
     },
   };
 }

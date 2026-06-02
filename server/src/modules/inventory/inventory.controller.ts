@@ -5,6 +5,7 @@ import type { InventoryService } from '@/modules/inventory/inventory.service';
 export interface InventoryControllers {
   select: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   summary: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  nearExpiry: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
 export function createInventoryControllers(service: InventoryService): InventoryControllers {
@@ -36,6 +37,16 @@ export function createInventoryControllers(service: InventoryService): Inventory
     async summary(req, res, next) {
       try {
         const data = await service.stockSummary();
+        res.json({ success: true, data, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async nearExpiry(req, res, next) {
+      try {
+        const { days } = ValidateInventory.nearExpiryQuery(req);
+        const data = await service.nearExpiry(days);
         res.json({ success: true, data, requestId: req.id });
       } catch (e) {
         next(e);
