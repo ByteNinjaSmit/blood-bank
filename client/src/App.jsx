@@ -1,162 +1,170 @@
-import React from 'react'
-import { Route, Routes, useLocation, useNavigate } from "react-router-dom"
-import LoginPage from './page/auth-pages/Login-Page'
+import React from 'react';
+import { Route, Routes, useLocation } from 'react-router-dom';
+import { AuthenticatedRoute } from './components/auth/Authentic-Routes';
+import { useAuth } from './store/auth';
+import ScrollToTop from './features/dashboard/pages/layout/ScrollToTop';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
-import NotFound from './page/Error-Page';
-import RegisterPage from './page/auth-pages/Registration-Page';
-import MasterLayout from './page/dashboard/layout/Master-Layout';
+
+// Auth
+import LoginPage from './features/auth/pages/Login-Page';
+import RegisterPage from './features/auth/pages/Registration-Page';
+
+// Dashboard
+import MasterLayout from './features/dashboard/pages/layout/Master-Layout';
 import Home from './page/Home';
-import CampRegistration from './page/camp/Camp-Registration';
-import CampListing from './page/camp/Camp-Listing';
-import CampDetails from './page/camp/CampDetails';
-import CampVolunteerList from './page/camp/CampVolunteerList';
-import { ComponentsList, ComponentSeparate, NearExpiry } from './page/component-separate';
-import Serology from './page/Serology/Serology';
-import SerologyResults from './page/Serology/SerologyResults';
-import ViewDiscarded from './components/discard/View-Discarded';
-import Stock from './page/Inventory/Stock';
-import Reserve from './page/Inventory/Reserve';
-import ReserveWizard from './page/Inventory/ReserveWizard';
-import Issue from './page/Inventory/Issue';
-import InventoryNearExpiry from './page/Inventory/NearExpiry';
-import DonationManagement from './page/donation/DonationManagement';
-import DonorManagement from './page/donor/DonorManagement';
-import { AuthenticatedRoute } from './components/auth/Authentic-Routes';
-import CampDonorManagement from './page/camp/CampDonorManagement';
-import CampDonationManagement from './page/camp/CampDonationManagement';
-import ScrollToTop from './page/dashboard/layout/ScrollToTop';
-import Loader from './components/utils/Spinner';
-import { useAuth } from './store/auth';
-import CreateDonation from './components/donation/Create-Donation';
-import UserManage from './page/user-manage/UserManage';
-import Dashboard from './page/dashboard/Dashboard';
-import CreateDonorPage from './page/donor/CreateDonor';
-import { AddHospital, ListHospital } from './page/hospital';
-import RequisitionManagement from './page/requisition/RequisitionManagement';
-import RequisitionList from './page/requisition/RequisitionList';
-import DonorMIS from './page/mis/DonorMIS';
-import DonationMIS from './page/mis/DonationMIS';
-import CampMIS from './page/mis/CampMIS';
-import CampReports from './page/camp/CampReports';
-import BagMIS from './page/mis/BagMIS';
-import ComponentMIS from './page/mis/ComponentMIS';
-import InventoryMIS from './page/mis/InventoryMIS';
-import IssueMIS from './page/mis/IssueMIS';
-import DiscardMIS from './page/mis/DiscardMIS';
-import TestingMIS from './page/mis/TestingMIS';
-import ExceptionMIS from './page/mis/ExceptionMIS';
-import RegulatoryMIS from './page/mis/RegulatoryMIS';
-import ExecutiveMIS from './page/mis/ExecutiveMIS';
-import AppointmentList from './page/appointment/AppointmentList';
+import Dashboard from './features/dashboard/pages/Dashboard';
+
+// Camp
+import CampRegistration from './features/camp/pages/Camp-Registration';
+import CampListing from './features/camp/pages/Camp-Listing';
+import CampDetails from './features/camp/pages/CampDetails';
+import CampVolunteerList from './features/camp/pages/CampVolunteerList';
+import CampDonorManagement from './features/camp/pages/CampDonorManagement';
+import CampDonationManagement from './features/camp/pages/CampDonationManagement';
+import CampReports from './features/camp/pages/CampReports';
+
+// Component
+import { ComponentsList, ComponentSeparate, NearExpiry } from './features/component/pages';
+import ViewDiscarded from './features/discard/components/View-Discarded';
+
+// Inventory
+import Stock from './features/inventory/pages/Stock';
+import Reserve from './features/inventory/pages/Reserve';
+import ReserveWizard from './features/inventory/pages/ReserveWizard';
+import Issue from './features/inventory/pages/Issue';
+import InventoryNearExpiry from './features/inventory/pages/NearExpiry';
+
+// Serology
+import Serology from './features/serology/pages/Serology';
+import SerologyResults from './features/serology/pages/SerologyResults';
+
+// Donation + Donor
+import CreateDonation from './features/donation/components/Create-Donation';
+import DonationManagement from './features/donation/pages/DonationManagement';
+import DonorManagement from './features/donor/pages/DonorManagement';
+import CreateDonorPage from './features/donor/pages/CreateDonor';
+
+// User + Hospital
+import UserManage from './features/user/pages/UserManage';
+import { AddHospital, ListHospital } from './features/hospital/pages';
+
+// Requisition
+import RequisitionManagement from './features/requisition/pages/RequisitionManagement';
+import RequisitionList from './features/requisition/pages/RequisitionList';
+
+// Appointment
+import AppointmentList from './features/appointment/pages/AppointmentList';
+
+// MIS
+import DonorMIS from './features/mis/pages/DonorMIS';
+import DonationMIS from './features/mis/pages/DonationMIS';
+import CampMIS from './features/mis/pages/CampMIS';
+import BagMIS from './features/mis/pages/BagMIS';
+import ComponentMIS from './features/mis/pages/ComponentMIS';
+import InventoryMIS from './features/mis/pages/InventoryMIS';
+import IssueMIS from './features/mis/pages/IssueMIS';
+import DiscardMIS from './features/mis/pages/DiscardMIS';
+import TestingMIS from './features/mis/pages/TestingMIS';
+import ExceptionMIS from './features/mis/pages/ExceptionMIS';
+import RegulatoryMIS from './features/mis/pages/RegulatoryMIS';
+import ExecutiveMIS from './features/mis/pages/ExecutiveMIS';
+
+// Error
+import NotFound from './page/Error-Page';
+
+const NO_SHELL = ['/login', '/register', '/forgot-password', '/reset-password'];
 
 const App = () => {
   const pathname = useLocation().pathname;
-  const navigate = useNavigate();
-  const { isLoading } = useAuth()
-  // const isLoading = true;
-  // const navigation = useNavigation();
-  const NoNavbarRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
-  const NoFooterRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
+  const { isLoading } = useAuth();
+  const hideShell = NO_SHELL.includes(pathname);
 
   return (
     <div>
-
       <ScrollToTop />
-      {/* Conditional Rendering For Navbar */}
-      {!NoNavbarRoutes.includes(pathname) && <Navbar />}
+      {!hideShell && <Navbar />}
       <Routes>
-        {/* Auth Routes */}
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
-
 
         <Route path="/" element={
           <AuthenticatedRoute>
             <MasterLayout />
           </AuthenticatedRoute>
         }>
-          {/*  Dashboard - Home Route */}
-          <Route path="" element={<Home />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route index element={<Home />} />
+          <Route path="dashboard" element={<Dashboard />} />
 
-          {/*  Dashboard - Camp Routes */}
-          <Route path="/camp-registration" element={<CampRegistration />} />
-          <Route path="/camp-details" element={<CampDetails />} />
-          <Route path="/camp-listing" element={<CampListing />} />
-          <Route path="/camp-donors" element={<CampDonorManagement />} />
-          <Route path="/camp-donation" element={<CampDonationManagement />} />
-          <Route path="/camp-reports" element={<CampReports />} />
+          {/* Camp */}
+          <Route path="camp-registration" element={<CampRegistration />} />
+          <Route path="camp-details" element={<CampDetails />} />
+          <Route path="camp-listing" element={<CampListing />} />
+          <Route path="camp-donors" element={<CampDonorManagement />} />
+          <Route path="camp-donation" element={<CampDonationManagement />} />
+          <Route path="camp-reports" element={<CampReports />} />
+          <Route path="camp-volunteers" element={<CampVolunteerList />} />
 
-          {/*  Dashboard - Component Routes */}
-          <Route path="/component/list" element={<ComponentsList />} />
-          <Route path="/component/separate" element={<ComponentSeparate />} />
-          <Route path="/component/near-expiry" element={<NearExpiry />} />
-          <Route path="/discard" element={<ViewDiscarded />} />
+          {/* Component */}
+          <Route path="component/list" element={<ComponentsList />} />
+          <Route path="component/separate" element={<ComponentSeparate />} />
+          <Route path="component/near-expiry" element={<NearExpiry />} />
+          <Route path="discard" element={<ViewDiscarded />} />
 
-          <Route path="/inventory/stock" element={<Stock />} />
-          <Route path="/inventory/reserve" element={<Reserve />} />
-          <Route path="/inventory/reserve/new" element={<ReserveWizard />} />
-          <Route path="/inventory/issue" element={<Issue />} />
-          <Route path="/inventory/near-expiry" element={<InventoryNearExpiry />} />
+          {/* Inventory */}
+          <Route path="inventory/stock" element={<Stock />} />
+          <Route path="inventory/reserve" element={<Reserve />} />
+          <Route path="inventory/reserve/new" element={<ReserveWizard />} />
+          <Route path="inventory/issue" element={<Issue />} />
+          <Route path="inventory/near-expiry" element={<InventoryNearExpiry />} />
 
-          {/*  Dashboard - Labs Routes */}
-          <Route path="/labs/serology" element={<Serology />} />
-          <Route path="/labs/serology-results" element={<SerologyResults />} />
+          {/* Serology */}
+          <Route path="labs/serology" element={<Serology />} />
+          <Route path="labs/serology-results" element={<SerologyResults />} />
 
-          {/* Donation Module  */}
-          <Route path="/donations/create-donation" element={<CreateDonation />} />
-          <Route path="/donations/view-donation" element={<DonationManagement />} />
+          {/* Donation + Donor */}
+          <Route path="donations/create-donation" element={<CreateDonation />} />
+          <Route path="donations/view-donation" element={<DonationManagement />} />
+          <Route path="donor/create-donor" element={<CreateDonorPage />} />
+          <Route path="donor/view-donor" element={<DonorManagement />} />
 
-          {/* Donor Module */}
-          <Route path="/donor/create-donor" element={<CreateDonorPage />} />
-          <Route path="/donor/view-donor" element={<DonorManagement />} />
+          {/* Appointments */}
+          <Route path="appointments" element={<AppointmentList />} />
 
-          {/* Volunteer Module */}
-          <Route path="/appointments" element={<AppointmentList />} />
-          <Route path="/camp-volunteers" element={<CampVolunteerList />} />
+          {/* Admin */}
+          <Route path="admin/user-manage" element={<UserManage />} />
 
-          {/* Admin Module */}
-          <Route path="/admin/user-manage" element={<UserManage />} />
+          {/* Hospital */}
+          <Route path="hospital/add" element={<AddHospital />} />
+          <Route path="hospital/list" element={<ListHospital />} />
 
-          {/* Hospital Module */}
-          <Route path="/hospital/add" element={<AddHospital />} />
-          <Route path="/hospital/list" element={<ListHospital />} />
+          {/* Requisition */}
+          <Route path="requisition" element={<RequisitionManagement />} />
+          <Route path="requisition/:id" element={<RequisitionManagement />} />
+          <Route path="requisition/list" element={<RequisitionList />} />
 
-          {/* Requisition Module */}
-          <Route path="/requisition" element={<RequisitionManagement />} />
-          <Route path="/requisition/:id" element={<RequisitionManagement />} />
-          <Route path="/requisition/list" element={<RequisitionList />} />
+          {/* MIS */}
+          <Route path="mis/donors" element={<DonorMIS />} />
+          <Route path="mis/donations" element={<DonationMIS />} />
+          <Route path="mis/camps" element={<CampMIS />} />
+          <Route path="mis/bags" element={<BagMIS />} />
+          <Route path="mis/components" element={<ComponentMIS />} />
+          <Route path="mis/inventory" element={<InventoryMIS />} />
+          <Route path="mis/issues" element={<IssueMIS />} />
+          <Route path="mis/discards" element={<DiscardMIS />} />
+          <Route path="mis/testing" element={<TestingMIS />} />
+          <Route path="mis/exceptions" element={<ExceptionMIS />} />
+          <Route path="mis/regulatory" element={<RegulatoryMIS />} />
+          <Route path="mis/executive" element={<ExecutiveMIS />} />
 
-          {/* MIS Module */}
-          <Route path="/mis/donors" element={<DonorMIS />} />
-          <Route path="/mis/donations" element={<DonationMIS />} />
-          <Route path="/mis/camps" element={<CampMIS />} />
-          <Route path="/mis/bags" element={<BagMIS />} />
-          <Route path="/mis/components" element={<ComponentMIS />} />
-          <Route path="/mis/inventory" element={<InventoryMIS />} />
-          <Route path="/mis/issues" element={<IssueMIS />} />
-          <Route path="/mis/discards" element={<DiscardMIS />} />
-          <Route path="/mis/testing" element={<TestingMIS />} />
-          <Route path="/mis/exceptions" element={<ExceptionMIS />} />
-          <Route path="/mis/regulatory" element={<RegulatoryMIS />} />
-          <Route path="/mis/executive" element={<ExecutiveMIS />} />
-
-          {/*For Dashboard - Loading*/}
-
-
-          {/*For Dashboard - Error Routes - 404 NOT FOUND */}
           <Route path="*" element={<NotFound />} />
         </Route>
 
-        {/* Error Routes - 404 NOT FOUND */}
         <Route path="*" element={<NotFound />} />
       </Routes>
-
-      {/* Conditional Rendering For Footer */}
-      {!NoFooterRoutes.includes(pathname) && <Footer />}
+      {!hideShell && <Footer />}
     </div>
-  )
-}
+  );
+};
 
-export default App
+export default App;

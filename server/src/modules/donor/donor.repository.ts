@@ -1,18 +1,10 @@
-// Donor repository. Only data access. Returns plain DTOs.
-//
-// During side-by-side migration this wraps the legacy Mongoose model
-// at server/models/donor-model.js so writes go to the same collection
-// the old controllers see.
-
 import type {
   CreateDonorInput,
   ListDonorsInput,
   UpdateDonorInput,
 } from '@/modules/donor/donor.validator';
 import { NotFoundError } from '@/shared/errors';
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const DonorModel = require('../../../models/donor-model.js');
+import { DonorModel } from './donor.model';
 
 export interface DonorDto {
   id: string;
@@ -100,12 +92,12 @@ export function createDonorRepo(): DonorRepo {
         createdBy: actorId,
         updatedBy: actorId,
       });
-      const raw = doc.toObject() as RawDonor;
+      const raw = doc.toObject() as unknown as RawDonor;
       return toDto(raw);
     },
 
     async findById(id) {
-      const raw = (await DonorModel.findById(id).lean()) as RawDonor | null;
+      const raw = (await DonorModel.findById(id).lean()) as unknown as RawDonor | null;
       return raw ? toDto(raw) : null;
     },
 
@@ -114,7 +106,7 @@ export function createDonorRepo(): DonorRepo {
         id,
         { ...patch, updatedBy: actorId, updatedAt: new Date() },
         { new: true, runValidators: true },
-      ).lean()) as RawDonor | null;
+      ).lean()) as unknown as RawDonor | null;
       if (!updated) throw new NotFoundError('Donor', id);
       return toDto(updated);
     },
@@ -141,7 +133,7 @@ export function createDonorRepo(): DonorRepo {
         DonorModel.countDocuments(filter),
       ]);
       return {
-        items: (docs as RawDonor[]).map(toDto),
+        items: (docs as unknown as RawDonor[]).map(toDto),
         total,
       };
     },
@@ -156,7 +148,7 @@ export function createDonorRepo(): DonorRepo {
     },
 
     async findActiveByPhone(phone) {
-      const raw = (await DonorModel.findOne({ phone }).lean()) as RawDonor | null;
+      const raw = (await DonorModel.findOne({ phone }).lean()) as unknown as RawDonor | null;
       return raw ? toDto(raw) : null;
     },
   };

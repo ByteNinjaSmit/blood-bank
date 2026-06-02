@@ -45,7 +45,7 @@ export const CreateDonationBody = z.object({
   donor: z.string().regex(OBJECT_ID, 'Invalid donor id'),
   donationType: z.enum(DONATION_TYPE),
   collectedAt: z.coerce.date(),
-  siteId: blankToUndef(z.string().regex(OBJECT_ID).optional()),
+  campId: blankToUndef(z.string().regex(OBJECT_ID).optional()),
   phlebotomistId: blankToUndef(z.string().regex(OBJECT_ID).optional()),
   medicalExam: MedicalExamSchema.optional(),
   donorFitness: DonorFitnessSchema,

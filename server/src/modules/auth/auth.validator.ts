@@ -32,7 +32,7 @@ export const StartRegisterBody = z.object({
     .optional(),
   role: z.enum(ROLE),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  siteId: z
+  campId: z
     .string()
     .regex(/^[a-f0-9]{24}$/i)
     .optional(),

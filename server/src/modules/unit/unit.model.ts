@@ -47,7 +47,7 @@ const BloodUnitSchema = new Schema(
 
     specialAttributes: [{ type: String, enum: SPECIAL_NEED }],
 
-    siteId: { type: Schema.Types.ObjectId, ref: 'Site' },
+    campId: { type: Schema.Types.ObjectId, ref: 'Camp', index: true },
 
     quarantineReason: { type: String, trim: true },
     discardReason: { type: String, enum: DISCARD_REASON },

@@ -1,138 +1,77 @@
-import { useState, useEffect } from 'react';
-import campService from '@/services/campService';
-import apiService from '@/services/api';
-import { useAuth } from '@/store/auth';
+import { useState } from 'react';
 import { toast } from 'sonner';
+import {
+  useCampList,
+  useCampDetail,
+  useCreateCamp,
+  useUpdateCamp,
+  useDeleteCamp,
+  useStaffList,
+  useCampDonations,
+  useCampDonors,
+  useVoluntaryDonations,
+} from '@/features/camp/queries';
 
-// Custom hook for camp operations - Single Responsibility
-export const useCamp = () => {
-  const { API, authorizationToken } = useAuth();
-  const [camps, setCamps] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+export {
+  useCampList,
+  useCampDetail,
+  useCreateCamp,
+  useUpdateCamp,
+  useDeleteCamp,
+  useStaffList,
+  useCampDonations,
+  useCampDonors,
+  useVoluntaryDonations,
+};
 
-  // Initialize API service
-  useEffect(() => {
-    if (API && authorizationToken) {
-      apiService.initialize(API, authorizationToken);
-    }
-  }, [API, authorizationToken]);
+// Backward-compatible hook for pages that use the imperative { camps, fetchCamps, ... } API.
+export function useCamp() {
+  const [filters, setFilters] = useState({});
+  const listQuery = useCampList(filters);
+  const createMutation = useCreateCamp();
+  const updateMutation = useUpdateCamp();
+  const deleteMutation = useDeleteCamp();
 
-  // Fetch camps with filters
-  const fetchCamps = async (filters = {}) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const { data, error: apiError } = await campService.listCamps(filters);
-      
-      if (apiError) {
-        setError(apiError);
-        toast.error(apiError);
-      } else {
-        setCamps(data || []);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Get camp by ID
-  const getCampById = async (id) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const { data, error: apiError } = await campService.getCampById(id);
-      
-      if (apiError) {
-        setError(apiError);
-        toast.error(apiError);
-        return { success: false, data: null };
-      } else {
-        return { success: true, data: data.site };
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Create new camp
-  const createCamp = async (campData) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const { data, error: apiError } = await campService.createCamp(campData);
-      
-      if (apiError) {
-        setError(apiError);
-        toast.error(apiError);
-        return { success: false, data: null };
-      } else {
-        setCamps(prev => [data.site, ...prev]);
-        toast.success('Camp created successfully');
-        return { success: true, data: data.site };
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Update camp
-  const updateCamp = async (id, updateData) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const { data, error: apiError } = await campService.updateCamp(id, updateData);
-      
-      if (apiError) {
-        setError(apiError);
-        toast.error(apiError);
-        return { success: false };
-      } else {
-        setCamps(prev => prev.map(camp => 
-          camp._id === id ? data.site : camp
-        ));
-        toast.success('Camp updated successfully');
-        return { success: true, data: data.site };
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Delete camp
-  const deleteCamp = async (id) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const { error: apiError } = await campService.deleteCamp(id);
-      
-      if (apiError) {
-        setError(apiError);
-        toast.error(apiError);
-        return { success: false };
-      } else {
-        setCamps(prev => prev.filter(camp => camp._id !== id));
-        toast.success('Camp deleted successfully');
-        return { success: true };
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loading =
+    listQuery.isLoading ||
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    deleteMutation.isPending;
 
   return {
-    camps,
+    camps: listQuery.data ?? [],
     loading,
-    error,
-    fetchCamps,
-    getCampById,
-    createCamp,
-    updateCamp,
-    deleteCamp,
+    error: listQuery.error?.message ?? null,
+    fetchCamps: (f) => setFilters(f ?? {}),
+    createCamp: async (data) => {
+      try {
+        const result = await createMutation.mutateAsync(data);
+        toast.success('Camp created successfully');
+        return { success: true, data: result };
+      } catch (e) {
+        toast.error(e?.message ?? 'Failed to create camp');
+        return { success: false };
+      }
+    },
+    updateCamp: async (id, data) => {
+      try {
+        await updateMutation.mutateAsync({ id, data });
+        toast.success('Camp updated successfully');
+        return { success: true };
+      } catch (e) {
+        toast.error(e?.message ?? 'Failed to update camp');
+        return { success: false };
+      }
+    },
+    deleteCamp: async (id) => {
+      try {
+        await deleteMutation.mutateAsync(id);
+        toast.success('Camp deleted successfully');
+        return { success: true };
+      } catch (e) {
+        toast.error(e?.message ?? 'Failed to delete camp');
+        return { success: false };
+      }
+    },
   };
-};
+}

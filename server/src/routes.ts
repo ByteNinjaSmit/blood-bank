@@ -25,7 +25,7 @@ import lookbackRouter from '@/modules/lookback/lookback.routes';
 import auditRouter from '@/modules/audit/audit.routes';
 import userRouter from '@/modules/user/user.routes';
 import hospitalRouter from '@/modules/hospital/hospital.routes';
-import siteRouter from '@/modules/site/site.routes';
+import campRouter from '@/modules/camp/camp.routes';
 import { errorMiddleware } from '@/shared/middlewares/error';
 
 interface ModuleRoute {
@@ -47,7 +47,7 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/audit', router: auditRouter },
   { path: '/user', router: userRouter },
   { path: '/hospital', router: hospitalRouter },
-  { path: '/site', router: siteRouter },
+  { path: '/camp', router: campRouter },
 ];
 
 export function registerRoutes(): Router {

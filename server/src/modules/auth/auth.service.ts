@@ -178,7 +178,7 @@ export const authService = {
     phone?: string;
     role: string;
     password: string;
-    siteId?: string;
+    campId?: string;
   }) {
     if (await authRepo.findUserByEmail(input.email)) {
       throw new ConflictError('Email already exists');
@@ -201,7 +201,7 @@ export const authService = {
         phone: input.phone ?? null,
         role: input.role,
         passwordHash: await bcrypt.hash(input.password, 10),
-        siteId: input.siteId ?? null,
+        campId: input.campId ?? null,
       },
     });
     await notificationService.send({
@@ -247,7 +247,7 @@ export const authService = {
       role: payload.role,
       password: payload.passwordHash, // already bcrypt-hashed; model pre-save skips re-hash
       permissions: [],
-      siteId: payload.siteId ?? null,
+      campId: payload.campId ?? null,
       status: 'pending',
     });
     log.info({ userId: user.id }, 'user registered (pending approval)');

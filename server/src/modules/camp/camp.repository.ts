@@ -1,0 +1,119 @@
+import { Types } from 'mongoose';
+import { CampModel } from './camp.model';
+import { CampDonationModel } from './camp-donation.model';
+import { UserModel } from '@/modules/user/user.model';
+
+export interface VoluntaryFilter {
+  search?: string;
+  status?: string;
+  startDate?: Date;
+  endDate?: Date;
+  campId?: string;
+  page: number;
+  limit: number;
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+}
+
+export const campRepo = {
+  async create(doc: Record<string, unknown>) {
+    const created = await CampModel.create(doc);
+    return created.toObject();
+  },
+
+  async findRaw(id: string) {
+    return CampModel.findById(id);
+  },
+
+  async deleteById(id: string) {
+    await CampModel.findByIdAndDelete(id);
+  },
+
+  async detail(id: string) {
+    return CampModel.findById(id)
+      .select(
+        'campId name description address contactInfo dateFrom dateTo createdBy lastUpdatedBy staff createdAt donorData bagsData',
+      )
+      .populate('createdBy', 'name phone email')
+      .populate('lastUpdatedBy', 'name phone email')
+      .populate('staff', 'name phone email role')
+      .lean();
+  },
+
+  async campList() {
+    return CampModel.find()
+      .select(
+        'campId name description address contactInfo dateFrom dateTo createdAt createdBy staff',
+      )
+      .populate('createdBy', 'name')
+      .populate('staff', 'name')
+      .sort({ createdAt: -1 })
+      .lean();
+  },
+
+  async all() {
+    return CampModel.find()
+      .populate('createdBy', 'name phone email')
+      .populate('lastUpdatedBy', 'name phone email')
+      .populate('staff', 'name phone email role')
+      .lean();
+  },
+
+  async staffList() {
+    return UserModel.find({}, { name: 1 }).select('_id name').lean();
+  },
+
+  async campDonations(campId: string) {
+    return CampModel.findById(campId)
+      .select('name campId bagsData')
+      .populate({
+        path: 'bagsData',
+        select: 'bagNo segmentNo typeOfBag bloodGroup rh status collectionDate donor initialVitals',
+        populate: { path: 'donor', select: 'name donorId' },
+      })
+      .lean();
+  },
+
+  async campDonors(campId: string) {
+    return CampModel.findById(campId)
+      .select('name campId donorData')
+      .populate({
+        path: 'donorData',
+        select:
+          'donorId name.firstName name.middleName name.lastName dob uid phone email sex eligibilityStatus lastDonationDate address bloodGroup occupation rh weightKg',
+      })
+      .lean();
+  },
+
+  async voluntary(f: VoluntaryFilter) {
+    const filter: Record<string, unknown> = {};
+    if (f.search) {
+      const rx = new RegExp(f.search, 'i');
+      filter.$or = [{ firstName: rx }, { lastName: rx }, { mobile: rx }, { bloodGroup: rx }];
+    }
+    if (f.status && f.status !== 'all') {
+      filter.status = f.status.toUpperCase();
+    }
+    if (f.startDate || f.endDate) {
+      const range: Record<string, Date> = {};
+      if (f.startDate) range.$gte = f.startDate;
+      if (f.endDate) range.$lte = f.endDate;
+      filter.createdAt = range;
+    }
+    if (f.campId && f.campId !== 'all' && Types.ObjectId.isValid(f.campId)) {
+      filter.campId = new Types.ObjectId(f.campId);
+    }
+    const skip = (f.page - 1) * f.limit;
+    const sort: Record<string, 1 | -1> = { [f.sortBy]: f.sortOrder === 'desc' ? -1 : 1 };
+    const [items, total] = await Promise.all([
+      CampDonationModel.find(filter)
+        .populate('campId', 'name campId')
+        .skip(skip)
+        .limit(f.limit)
+        .sort(sort)
+        .lean(),
+      CampDonationModel.countDocuments(filter),
+    ]);
+    return { items, total };
+  },
+};

@@ -12,7 +12,7 @@ export interface CreateUserInput {
   role: string;
   password: string;
   permissions?: unknown[];
-  siteId?: string;
+  campId?: string;
 }
 
 export interface UpdateUserInput {
@@ -23,7 +23,7 @@ export interface UpdateUserInput {
   role?: string;
   password?: string;
   permissions?: unknown[];
-  siteId?: string;
+  campId?: string;
   status?: string;
 }
 
@@ -43,7 +43,7 @@ export const userService = {
       role: input.role,
       password: input.password, // hashed by model pre-save hook
       permissions: input.permissions ?? [],
-      siteId: input.siteId ?? null,
+      campId: input.campId ?? null,
       status: 'active',
       createdBy: actorId,
       updatedBy: actorId,
@@ -95,7 +95,7 @@ export const userService = {
     if (input.phone) patch.phone = input.phone;
     if (input.role) patch.role = input.role;
     if (input.permissions) patch.permissions = input.permissions;
-    if (input.siteId) patch.siteId = input.siteId;
+    if (input.campId) patch.campId = input.campId;
     if (input.status) patch.status = input.status;
     if (input.password) patch.password = await bcrypt.hash(input.password, 10);
 
@@ -111,7 +111,10 @@ export const userService = {
   },
 
   async deactivate(id: string, actorId: string): Promise<void> {
-    const updated = await userRepo.updateByIdOrPublicId(id, { status: 'inactive', updatedBy: actorId });
+    const updated = await userRepo.updateByIdOrPublicId(id, {
+      status: 'inactive',
+      updatedBy: actorId,
+    });
     if (!updated) throw new NotFoundError('User', id);
     await auditService.record({
       actorId,

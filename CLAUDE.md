@@ -35,7 +35,7 @@ Branches: `main` (prod) ← PRs from feature branches (`smit-dev`, `AtharvaDev`,
 
 ## Hard rules — apply to every change
 
-1. **No secrets in tracked files.** Real values live in a host `.env`, GitHub Secrets, or Vercel env. `*.env` is gitignored; only `*.env.example` is committed.
+
 2. **No `Mongoose.find/aggregate/...` in controllers.** Data access goes through a repository.
 3. **No `axios.*` in React components.** Use `features/<x>/api.js` and TanStack Query hooks.
 4. **Every new route declares `requireRole(...)` and where appropriate `requirePermission(...)`.** Auth without authorisation is not "auth".
@@ -49,13 +49,14 @@ Branches: `main` (prod) ← PRs from feature branches (`smit-dev`, `AtharvaDev`,
 12. **Naming standard:** files `kebab-case`, React components `PascalCase.jsx`, Mongoose models singular `PascalCase`, schema fields `camelCase`, enums `SCREAMING_SNAKE`, env vars `SCREAMING_SNAKE`, route paths `kebab-case`.
 13. **Fix legacy spellings as you touch them:** `Registeration → Registration`, `sernology → serology`, `Seriology → Serology`.
 
-## Side-by-side rebuild contract
+## Migration complete
 
-We are mid-migration. The old code lives where it always did. The new SOLID/TypeScript implementation lives under `server/src/`. Rules:
+Legacy JS monolith deleted. `server/src/` is the only backend. `server/src/server.ts` is the canonical entry.
 
-- **Do not refactor old controllers in place.** If a feature is being rewritten, only add new code under `server/src/`.
-- **Old endpoints stay mounted until the new replacement is proven** (tests pass + manual verification by user).
-- **Migrations are online dual-write.** Write to both old + new collections for 1–2 weeks, verify counts, switch reads, then drop old. No big-bang cutovers.
+- **`site` renamed to `camp` everywhere** — DB model is `Camp` (collection `camps`), field `siteId` → `campId` in all schemas.
+- **DB migration needed**: existing documents in `sites` collection need to be copied to `camps` (run a one-time script before switching traffic).
+- **Frontend features/**: all pages live under `client/src/features/<module>/pages/`; all API calls use `features/<module>/api.js` + `queries.js` (TanStack Query). No new `axios.*` in components.
+- **Remaining axios in pages**: ~25 legacy pages still call axios directly. Migrate per-feature as you touch them; add to `features/<module>/api.js` + `queries.js`.
 
 ## When unsure
 

@@ -58,7 +58,7 @@ export function createDonationRepo(): DonationRepo {
     async createAtomic({ input, donationPublicId, units, actorId }) {
       const actor = new Types.ObjectId(actorId);
       const donorObjId = new Types.ObjectId(input.donor);
-      const siteId = input.siteId ? new Types.ObjectId(input.siteId) : undefined;
+      const campId = input.campId ? new Types.ObjectId(input.campId) : undefined;
       const phlebotomistId = input.phlebotomistId
         ? new Types.ObjectId(input.phlebotomistId)
         : actor;
@@ -78,7 +78,7 @@ export function createDonationRepo(): DonationRepo {
                 donor: donorObjId,
                 donationType: input.donationType,
                 collectedAt: input.collectedAt,
-                siteId,
+                campId,
                 phlebotomistId,
                 medicalExam: input.medicalExam,
                 donorFitness: input.donorFitness,
@@ -113,7 +113,7 @@ export function createDonationRepo(): DonationRepo {
                   at: new Date(),
                 },
               ],
-              siteId,
+              campId,
               createdBy: actor,
               updatedBy: actor,
             })),

@@ -1,7 +1,5 @@
 import { Types } from 'mongoose';
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const HospitalModel = require('../../../models/hospital-model.js');
+import { HospitalModel } from './hospital.model';
 
 export interface HospitalDto {
   id: string;
@@ -74,7 +72,7 @@ export const hospitalRepo = {
   },
   async create(doc: Record<string, unknown>): Promise<HospitalDto> {
     const created = await HospitalModel.create(doc);
-    return toDto(created.toObject() as RawHospital);
+    return toDto(created.toObject() as unknown as RawHospital);
   },
   async list(f: ListHospitalsFilter): Promise<{ items: HospitalDto[]; total: number }> {
     const filter: Record<string, unknown> = {};
@@ -87,17 +85,17 @@ export const hospitalRepo = {
       HospitalModel.find(filter).sort(sort).skip(skip).limit(f.limit).lean(),
       HospitalModel.countDocuments(filter),
     ]);
-    return { items: (docs as RawHospital[]).map(toDto), total };
+    return { items: (docs as unknown as RawHospital[]).map(toDto), total };
   },
   async findById(id: string): Promise<HospitalDto | null> {
-    const raw = (await HospitalModel.findById(id).lean()) as RawHospital | null;
+    const raw = (await HospitalModel.findById(id).lean()) as unknown as RawHospital | null;
     return raw ? toDto(raw) : null;
   },
   async update(id: string, patch: Record<string, unknown>): Promise<HospitalDto | null> {
     const raw = (await HospitalModel.findByIdAndUpdate(id, patch, {
       new: true,
       runValidators: true,
-    }).lean()) as RawHospital | null;
+    }).lean()) as unknown as RawHospital | null;
     return raw ? toDto(raw) : null;
   },
   async remove(id: string): Promise<boolean> {

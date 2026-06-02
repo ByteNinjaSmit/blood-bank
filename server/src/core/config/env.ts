@@ -1,41 +1,40 @@
-// Strongly typed env config. The runtime parse + redaction live in
-// server/config/env.js so both old and new trees share a single
-// validated object. This file re-exports that as the typed interface.
-
 import { z } from 'zod';
 
 const EnvShape = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']),
-  PORT: z.number(),
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']),
-  TIMEZONE: z.string(),
-  MONGODB_URI: z.string(),
-  REDIS_URL: z.string(),
-  CORS_SERVER: z.string(),
-  JWT_SECRET: z.string(),
-  JWT_SECRET_KEY: z.string(),
-  ACCESS_TOKEN_EXPIRY: z.string(),
-  REFRESH_TOKEN_EXPIRY: z.string(),
-  EMAIL_USER: z.string(),
-  EMAIL_PASS: z.string(),
-  EMAIL_HOST: z.string(),
-  EMAIL_PORT: z.number(),
-  EMAIL_SECURE: z.boolean(),
-  ADMIN_EMAIL: z.string(),
-  NEAR_EXPIRY_DAYS: z.number(),
-  REPORTS_DIR: z.string(),
-  AWS_ACCESS_KEY_ID: z.string(),
-  AWS_SECRET_ACCESS_KEY: z.string(),
-  AWS_REGION: z.string(),
-  SNS_PHONE: z.string(),
-  TWILIO_ACCOUNT_SID: z.string(),
-  TWILIO_AUTH_TOKEN: z.string(),
-  TWILIO_PHONE_NUMBER: z.string(),
-  SYSTEM_USER_ID: z.string(),
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: z.coerce.number().default(5000),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  TIMEZONE: z.string().default('Asia/Kolkata'),
+  MONGODB_URI: z.string().min(1),
+  REDIS_URL: z.string().min(1),
+  CORS_SERVER: z.string().default('http://localhost:5173'),
+  JWT_SECRET: z.string().min(1),
+  JWT_SECRET_KEY: z.string().min(1),
+  ACCESS_TOKEN_EXPIRY: z.string().default('15m'),
+  REFRESH_TOKEN_EXPIRY: z.string().default('7d'),
+  EMAIL_USER: z.string().default(''),
+  EMAIL_PASS: z.string().default(''),
+  EMAIL_HOST: z.string().default('smtp.gmail.com'),
+  EMAIL_PORT: z.coerce.number().default(587),
+  EMAIL_SECURE: z.coerce.boolean().default(false),
+  ADMIN_EMAIL: z.string().default(''),
+  NEAR_EXPIRY_DAYS: z.coerce.number().default(3),
+  REPORTS_DIR: z.string().default('./reports'),
+  AWS_ACCESS_KEY_ID: z.string().default(''),
+  AWS_SECRET_ACCESS_KEY: z.string().default(''),
+  AWS_REGION: z.string().default('ap-south-1'),
+  SNS_PHONE: z.string().default(''),
+  TWILIO_ACCOUNT_SID: z.string().default(''),
+  TWILIO_AUTH_TOKEN: z.string().default(''),
+  TWILIO_PHONE_NUMBER: z.string().default(''),
+  SYSTEM_USER_ID: z.string().default('000000000000000000000000'),
 });
 
 export type Env = z.infer<typeof EnvShape>;
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const raw = require('../../../config/env.js') as Env;
-export const env: Env = EnvShape.parse(raw);
+const result = EnvShape.safeParse(process.env);
+if (!result.success) {
+  const missing = result.error.issues.map((i) => i.path.join('.')).join(', ');
+  throw new Error(`Invalid environment variables: ${missing}`);
+}
+export const env: Env = result.data;

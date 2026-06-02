@@ -1,7 +1,3 @@
-// Entry for the new src/ tree. Currently NOT used in production —
-// the legacy server.js continues to run until the first feature is
-// cut over end-to-end. Run locally with `npm run dev:src`.
-
 import http from 'node:http';
 import { env } from '@/core/config/env';
 import { logger } from '@/core/logger';
@@ -16,8 +12,8 @@ async function main(): Promise<void> {
   const app = buildApp();
   const server = http.createServer(app);
 
-  server.listen(env.PORT + 1, () => {
-    logger.info({ port: env.PORT + 1 }, 'new-tree server listening (side-by-side)');
+  server.listen(env.PORT, () => {
+    logger.info({ port: env.PORT }, 'server listening');
   });
 
   const shutdown = (signal: string) => {

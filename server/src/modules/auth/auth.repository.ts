@@ -1,11 +1,6 @@
-// Auth data access. Wraps the legacy User model (so existing accounts
-// work) plus the new refresh-token + OTP collections.
-
 import { Types } from 'mongoose';
 import { RefreshTokenModel, OtpModel } from './auth.model';
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const UserModel = require('../../../models/user-model.js');
+import { UserModel } from '@/modules/user/user.model';
 
 export interface UserRecord {
   id: string;
@@ -48,20 +43,26 @@ function toUser(raw: RawUser): UserRecord {
 export const authRepo = {
   // ---- users ----
   async findUserByEmail(email: string): Promise<UserRecord | null> {
-    const raw = (await UserModel.findOne({ email: email.toLowerCase() }).lean()) as RawUser | null;
+    const raw = (await UserModel.findOne({ email: email.toLowerCase() })
+      .select('+password')
+      .lean()) as unknown as RawUser | null;
     return raw ? toUser(raw) : null;
   },
   async findUserById(id: string): Promise<UserRecord | null> {
-    const raw = (await UserModel.findById(id).lean()) as RawUser | null;
+    const raw = (await UserModel.findById(id)
+      .select('+password')
+      .lean()) as unknown as RawUser | null;
     return raw ? toUser(raw) : null;
   },
   async findUserByPhone(phone: string): Promise<UserRecord | null> {
-    const raw = (await UserModel.findOne({ phone }).lean()) as RawUser | null;
+    const raw = (await UserModel.findOne({ phone })
+      .select('+password')
+      .lean()) as unknown as RawUser | null;
     return raw ? toUser(raw) : null;
   },
   async createUser(doc: Record<string, unknown>): Promise<UserRecord> {
     const created = await UserModel.create(doc);
-    return toUser(created.toObject() as RawUser);
+    return toUser(created.toObject() as unknown as RawUser);
   },
   async touchLastLogin(id: string): Promise<void> {
     await UserModel.updateOne({ _id: new Types.ObjectId(id) }, { lastLoginAt: new Date() });

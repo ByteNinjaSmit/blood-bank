@@ -14,16 +14,9 @@
     "lint-staged": "^15.2.10"
   },
   "lint-staged": {
-    "server/{middlewares,config}/*.js": [
+    "server/src/**/*.ts": [
       "npm --prefix server run lint:fix",
       "npm --prefix server run format"
-    ],
-    "server/server.js": [
-      "npm --prefix server run lint:fix",
-      "npm --prefix server run format"
-    ],
-    "client/src/{core,modules}/**/*.{js,jsx}": [
-      "npm --prefix client run lint -- --fix --no-error-on-unmatched-pattern"
     ]
   }
 }

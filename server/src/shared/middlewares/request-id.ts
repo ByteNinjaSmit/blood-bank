@@ -1,12 +1,14 @@
-// Re-export the JS implementation so middleware paths line up under
-// /src and the legacy server.js can keep using the .js path.
-
 import type { RequestHandler } from 'express';
+import crypto from 'node:crypto';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const requestId = require('../../../middlewares/request-id.js') as RequestHandler & {
-  HEADER: string;
+export const HEADER = 'x-request-id';
+
+const requestId: RequestHandler = (req, res, next) => {
+  const existing = req.headers[HEADER];
+  const id = (Array.isArray(existing) ? existing[0] : existing) ?? crypto.randomUUID();
+  req.id = id;
+  res.setHeader(HEADER, id);
+  next();
 };
 
 export default requestId;
-export const HEADER = requestId.HEADER;

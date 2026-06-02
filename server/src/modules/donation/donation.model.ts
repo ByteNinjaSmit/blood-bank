@@ -42,7 +42,7 @@ const DonationSchema = new Schema(
     donor: { type: Schema.Types.ObjectId, ref: 'Donor', required: true, index: true },
     donationType: { type: String, enum: DONATION_TYPE, required: true },
     collectedAt: { type: Date, required: true, index: true },
-    siteId: { type: Schema.Types.ObjectId, ref: 'Site' },
+    campId: { type: Schema.Types.ObjectId, ref: 'Camp', index: true },
     phlebotomistId: { type: Schema.Types.ObjectId, ref: 'User' },
     medicalExam: MedicalExamSchema,
     donorFitness: DonorFitnessSchema,

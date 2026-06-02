@@ -1,18 +1,10 @@
-// Bridge middleware: validates tokens issued by the legacy /api/auth
-// endpoints, then projects the legacy user.role + permissions[] grid
-// onto the new ROLE + PERMISSION vocabulary used by requireRole /
-// requirePermission. Lets new endpoints accept existing logins without
-// a flag-day cutover of the auth subsystem.
-
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UnauthorizedError } from '@/shared/errors';
 import { env } from '@/core/config/env';
 import { mapLegacyRole, projectPermissions } from '@/shared/role-map';
 import type { AuthenticatedUser } from './rbac';
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const UserModel = require('../../../models/user-model.js');
+import { UserModel } from '@/modules/user/user.model';
 
 interface LegacyJwtPayload {
   userID: string;
@@ -42,7 +34,7 @@ export async function authenticate(
 
   let userDoc: unknown;
   try {
-    userDoc = await UserModel.findById(payload.userID).select('-password').lean();
+    userDoc = await UserModel.findById(payload.userID).lean();
   } catch {
     return next(new UnauthorizedError('User lookup failed'));
   }
