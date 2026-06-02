@@ -1,4 +1,11 @@
+import 'dotenv/config';
+import dns from 'node:dns';
 import http from 'node:http';
+
+// Fix MongoDB Atlas DNS resolution on Windows
+dns.setServers(['8.8.8.8', '1.1.1.1']);
+dns.setDefaultResultOrder('ipv4first');
+
 import { env } from '@/core/config/env';
 import { logger } from '@/core/logger';
 import { buildApp } from '@/app';
