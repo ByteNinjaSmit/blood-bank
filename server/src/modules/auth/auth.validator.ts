@@ -22,7 +22,7 @@ export const ResendOtpBody = z.object({
 });
 
 export const StartRegisterBody = z.object({
-  publicId: z.string().trim().min(1).max(60),
+  // publicId removed — generated server-side to guarantee sequential uniqueness
   firstName: z.string().trim().min(1).max(80),
   lastName: z.string().trim().min(1).max(80),
   email: z.string().email(),
@@ -31,7 +31,11 @@ export const StartRegisterBody = z.object({
     .regex(/^\d{10}$/)
     .optional(),
   role: z.enum(ROLE),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Must contain an uppercase letter')
+    .regex(/[0-9]/, 'Must contain a number'),
   campId: z
     .string()
     .regex(/^[a-f0-9]{24}$/i)

@@ -42,7 +42,6 @@ export default function RegisterPage() {
         lastName: "",
         email: "",
         phone: "",
-        publicId: "",
         role: "",
         password: "",
         confirmPassword: "",
@@ -51,15 +50,6 @@ export default function RegisterPage() {
     const isMobile = useIsMobile()
     useEffect(() => {
         setMounted(true)
-        // Auto-generate public ID when component mounts
-        const generatePublicId = () => {
-            const year = new Date().getFullYear()
-            const randomNum = Math.floor(Math.random() * 9999)
-                .toString()
-                .padStart(4, "0")
-            return `USR-${year}-${randomNum}`
-        }
-        setFormData((prev) => ({ ...prev, publicId: generatePublicId() }))
     }, [])
 
     const checkPasswordStrength = (password) => {
@@ -122,11 +112,10 @@ export default function RegisterPage() {
         }
         try {
             const payload = {
-                publicId: formData.publicId,
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 email: formData.email,
-                phone: formData.phone,
+                phone: formData.phone || undefined,
                 role: formData.role,
                 password: formData.confirmPassword,
             };
@@ -137,7 +126,7 @@ export default function RegisterPage() {
             setCurrentStep(3);
             toast.success("OTP sent to your email");
         } catch (error) {
-            const msg = error?.response?.data?.message || "Failed to start registration";
+            const msg = error?.response?.data?.message || error?.message || "Failed to start registration";
             toast.error(msg);
         }
     }
@@ -212,11 +201,20 @@ export default function RegisterPage() {
     ]
 
     const roles = [
-        { value: "admin", label: "Administrator" },
-        { value: "lab-tech", label: "Lab Technician" },
-        { value: "inventory", label: "Inventory Manager" },
-        { value: "hospital", label: "Hospital Staff" },
-        { value: "viewer", label: "Viewer" },
+        { value: "system-admin", label: "System Administrator" },
+        { value: "bbo", label: "Blood Bank Officer (BBO)" },
+        { value: "medical-officer", label: "Medical Officer" },
+        { value: "counsellor", label: "Counsellor" },
+        { value: "phlebotomist", label: "Phlebotomist" },
+        { value: "lab-tech-component", label: "Lab Tech — Component" },
+        { value: "lab-tech-serology", label: "Lab Tech — Serology" },
+        { value: "store-keeper", label: "Store Keeper" },
+        { value: "issue-counter", label: "Issue Counter" },
+        { value: "apheresis-tech", label: "Apheresis Technician" },
+        { value: "qa-manager", label: "QA Manager" },
+        { value: "auditor", label: "Auditor" },
+        { value: "camp-organiser", label: "Camp Organiser" },
+        { value: "hospital-user", label: "Hospital User" },
     ]
 
     if (isLoggedIn) {
@@ -484,7 +482,7 @@ export default function RegisterPage() {
                                             toast.success("Registration complete. You can now login.");
                                             navigate("/login");
                                         } catch (e) {
-                                            const msg = e?.response?.data?.message || "Invalid OTP";
+                                            const msg = e?.response?.data?.message || e?.message || "Invalid OTP";
                                             toast.error(msg);
                                         } finally {
                                             setVerifying(false);

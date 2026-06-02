@@ -2,11 +2,14 @@ import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UnauthorizedError } from '@/shared/errors';
 import { env } from '@/core/config/env';
+import { ROLE } from '@/shared/enums';
 import { mapLegacyRole, projectPermissions } from '@/shared/role-map';
 import type { AuthenticatedUser } from './rbac';
 import { UserModel } from '@/modules/user/user.model';
 
-interface LegacyJwtPayload {
+const NEW_ROLES = new Set<string>(ROLE);
+
+interface JwtPayload {
   userID: string;
   email: string;
   role: string;
@@ -25,11 +28,11 @@ export async function authenticate(
   const token = header.replace(/^Bearer\s+/i, '').trim();
   if (!token) return next(new UnauthorizedError('Token not provided'));
 
-  let payload: LegacyJwtPayload;
+  let payload: JwtPayload;
   try {
-    payload = jwt.verify(token, env.JWT_SECRET_KEY) as LegacyJwtPayload;
+    payload = jwt.verify(token, env.JWT_SECRET_KEY) as JwtPayload;
   } catch {
-    return next(new UnauthorizedError('Invalid token'));
+    return next(new UnauthorizedError('Invalid or expired token'));
   }
 
   let userDoc: unknown;
@@ -40,7 +43,7 @@ export async function authenticate(
   }
   if (!userDoc) return next(new UnauthorizedError('User not found'));
 
-  const legacyUser = userDoc as {
+  const rawUser = userDoc as {
     _id: { toString(): string };
     role: string;
     permissions?: Array<{
@@ -53,18 +56,19 @@ export async function authenticate(
     status?: string;
   };
 
-  if (legacyUser.status === 'blocked' || legacyUser.status === 'rejected') {
-    return next(new UnauthorizedError('User is not active'));
+  // Only active accounts may proceed. Inactive, pending, blocked, rejected all refused.
+  if (rawUser.status !== 'active') {
+    return next(new UnauthorizedError('Account is not active'));
   }
 
-  const newRole = mapLegacyRole(legacyUser.role);
-  const permissions = projectPermissions(newRole, legacyUser.permissions ?? []);
+  // If role in DB is already a new-vocabulary role, use it directly.
+  // Only run the legacy→new mapping for old 6-role values ('admin', 'staff', etc.).
+  const resolvedRole = NEW_ROLES.has(rawUser.role)
+    ? (rawUser.role as import('@/shared/enums').Role)
+    : mapLegacyRole(rawUser.role);
 
-  const user: AuthenticatedUser = {
-    id: legacyUser._id.toString(),
-    role: newRole,
-    permissions,
-  };
-  req.user = user;
+  const permissions = projectPermissions(resolvedRole, rawUser.permissions ?? []);
+
+  req.user = { id: rawUser._id.toString(), role: resolvedRole, permissions } as AuthenticatedUser;
   next();
 }

@@ -60,13 +60,12 @@ export default function BloodBankDoctorLoginPage() {
         setStep("otp");
         toast.success("OTP sent to your email");
       } catch (error) {
-        const message = error?.response?.data?.message || "Login failed. Please try again.";
+        const message = error?.response?.data?.message || error?.message || "Login failed. Please try again.";
         toast.error(message);
       } finally {
         setIsLoginLoading(false);
       }
     } else if (step === "otp") {
-      // verify OTP
       const code = otp.join("");
       if (code.length !== 6) {
         return toast.error("Enter 6-digit OTP");
@@ -77,7 +76,7 @@ export default function BloodBankDoctorLoginPage() {
         toast.success("Login successful");
         navigate("/");
       } catch (error) {
-        const message = error?.response?.data?.message || "Invalid OTP";
+        const message = error?.response?.data?.message || error?.message || "Invalid OTP";
         toast.error(message);
       } finally {
         setVerifying(false);
@@ -104,7 +103,7 @@ export default function BloodBankDoctorLoginPage() {
       setExpiresIn(res.expiresInSeconds ?? expiresIn);
       toast.success("OTP resent");
     } catch (e) {
-      const msg = e?.response?.data?.message || "Failed to resend OTP";
+      const msg = e?.response?.data?.message || e?.message || "Failed to resend OTP";
       toast.error(msg);
     }
   };

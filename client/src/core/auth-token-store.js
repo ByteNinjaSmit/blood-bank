@@ -1,12 +1,3 @@
-// Module-level token store. The auth provider pushes the current
-// access token into here whenever it changes; the axios instance in
-// `api-client.js` reads from here on every request so the freshest
-// token is always attached.
-//
-// This decouples the axios instance from React context (axios cannot
-// hook), keeps interceptors out of every feature module, and removes
-// the fragile `ApiService.initialize(...)` singleton pattern.
-
 let currentToken = null;
 const listeners = new Set();
 
@@ -27,4 +18,19 @@ export function clearAuthToken() {
 export function subscribeAuthToken(fn) {
   listeners.add(fn);
   return () => listeners.delete(fn);
+}
+
+// ── Refresh callback ─────────────────────────────────────────────────────────
+// The AuthProvider registers a refresh function here at mount so that
+// apiClient's 401 interceptor can trigger a token refresh without a
+// circular dependency on the React context.
+let _refreshFn = null;
+
+export function setRefreshCallback(fn) {
+  _refreshFn = fn;
+}
+
+export function callRefresh() {
+  if (!_refreshFn) return Promise.resolve(null);
+  return _refreshFn();
 }

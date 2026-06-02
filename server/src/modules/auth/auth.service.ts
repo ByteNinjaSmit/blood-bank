@@ -16,6 +16,7 @@ import {
 } from '@/shared/errors';
 import { notificationService } from '@/modules/notification/notification.service';
 import { authRepo, type UserRecord } from './auth.repository';
+import { userRepo } from '@/modules/user/user.repository';
 import {
   signAccessToken,
   signRefreshToken,
@@ -171,7 +172,6 @@ export const authService = {
 
   // ---- Registration via OTP ----
   async startRegister(input: {
-    publicId: string;
     firstName: string;
     lastName: string;
     email: string;
@@ -186,6 +186,7 @@ export const authService = {
     if (input.phone && (await authRepo.findUserByPhone(input.phone))) {
       throw new ConflictError('Phone number already in use');
     }
+    const publicId = await userRepo.nextPublicId();
     const code = sixDigit();
     const txnId = crypto.randomUUID();
     await authRepo.upsertOtp({
@@ -195,7 +196,7 @@ export const authService = {
       purpose: 'REGISTER',
       expiresAt: new Date(Date.now() + OTP_TTL_SECONDS * 1000),
       payload: {
-        publicId: input.publicId,
+        publicId,
         firstName: input.firstName,
         lastName: input.lastName,
         phone: input.phone ?? null,
