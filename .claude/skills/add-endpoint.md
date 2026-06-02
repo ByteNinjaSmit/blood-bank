@@ -19,15 +19,17 @@ Use this when adding a new HTTP endpoint to the backend's `server/src/` tree.
 
 ## Steps
 
-1. **Validator** — create or extend `server/src/http/validators/<feature>.ts`. Export a zod schema and a `parse(req): InputDto` helper.
-2. **Repository** — create or extend `server/src/infra/db/repositories/<feature>-repo.ts`. Add only the data-access method this endpoint needs. Return a plain DTO, never a Mongoose Document.
-3. **Service** — create or extend `server/src/domain/<feature>/<feature>-service.ts`. Orchestrate: load aggregates, call domain rules (state machine, compatibility engine, etc.), write via repo, enqueue jobs, write audit log. No Express imports, no Mongoose imports.
-4. **Controller** — create or extend `server/src/http/controllers/<feature>-controller.ts`. `async function (req, res, next)` — `validator.parse`, call service, `res.json({ success: true, data })` or throw `AppError`.
-5. **Route** — create or extend `server/src/http/routes/<feature>.ts`. `router.<method>('/path', requireRole([...]), requirePermission('...'), controller.method)`. Mount in `app.ts`.
+All files for a feature live in one folder: `server/src/modules/<feature>/`.
+
+1. **Validator** — `server/src/modules/<feature>/<feature>.validator.ts`. Export zod schemas and a `Validate` helper (`createBody`, `idParam`, ...).
+2. **Repository** — `server/src/modules/<feature>/<feature>.repository.ts`. Add only the data-access method this endpoint needs. Return a plain DTO, never a Mongoose Document.
+3. **Service** — `server/src/modules/<feature>/<feature>.service.ts`. Orchestrate: load aggregates, call domain rules (state machine, compatibility engine, etc.), write via repo, enqueue jobs, write audit log. No Express imports, no Mongoose imports.
+4. **Controller** — `server/src/modules/<feature>/<feature>.controller.ts`. `async (req, res, next)` — validate, call service, `res.json({ success: true, data })` or throw `AppError`.
+5. **Route** — `server/src/modules/<feature>/<feature>.routes.ts`. `router.<method>('/path', authenticate, requireRole([...]), requirePermission('...'), controller.method)`. Register it in `server/src/routes.ts` (`MODULE_ROUTES`).
 
 ## Then
 
-- Add an integration test under `server/test/integration/<feature>-<action>.test.ts` covering: RBAC reject, validation reject, happy path, one error path.
+- Add a colocated test `server/src/modules/<feature>/<feature>.service.test.ts` covering: happy path + at least one error/guard path. (RBAC + validation are exercised by integration tests once the supertest harness lands.)
 - Run `cd server && npm run typecheck && npm run lint && npm test`.
 - If this endpoint replaces a legacy one, leave the legacy route mounted until verification. Do **not** delete the old controller yet.
 
@@ -38,5 +40,5 @@ Use this when adding a new HTTP endpoint to the backend's `server/src/` tree.
 - [ ] Validator exists; controller calls it.
 - [ ] No `Model.<anything>` or `mongoose` import in the controller.
 - [ ] No `axios.*` outside infra (this is a backend rule but applies equally if you touch the client).
-- [ ] If the endpoint changes `BloodUnit.status`, it goes through `domain/unit/state-machine.transition`.
+- [ ] If the endpoint changes `BloodUnit.status`, it goes through `modules/unit/unit.state-machine.transition`.
 - [ ] If the endpoint touches a clinical record, an audit log entry is written.

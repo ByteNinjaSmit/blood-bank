@@ -40,7 +40,7 @@ Branches: `main` (prod) ← PRs from feature branches (`smit-dev`, `AtharvaDev`,
 3. **No `axios.*` in React components.** Use `features/<x>/api.js` and TanStack Query hooks.
 4. **Every new route declares `requireRole(...)` and where appropriate `requirePermission(...)`.** Auth without authorisation is not "auth".
 5. **Every request body has a zod validator.** Reject malformed input before it reaches the service.
-6. **`BloodUnit.status` transitions only via `domain/unit/state-machine.transition`.** Invalid transitions throw.
+6. **`BloodUnit.status` transitions only via `modules/unit/unit.state-machine.transition`.** Invalid transitions throw.
 7. **Soft-delete only for clinical records.** All deletes write an audit entry.
 8. **TTI quarantine is non-bypassable.** A unit cannot reach `RELEASED` without a released TTI result.
 9. **RBC issue requires a passing crossmatch.** Medical-officer override is allowed but must be logged.

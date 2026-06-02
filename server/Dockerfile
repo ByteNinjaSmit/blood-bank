@@ -7,7 +7,7 @@ RUN apt-get update && \
     npm ci --quiet
 
 # Build the TypeScript src/ tree into dist/ so the legacy server.js
-# can mount /api/v2 via `require('./dist/v2-router')`.
+# can mount /api/v2 via `require('./dist/routes')`.
 FROM deps AS build
 COPY . .
 RUN npm run build

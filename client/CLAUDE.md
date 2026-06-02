@@ -2,29 +2,28 @@
 
 Frontend rules. Read `../CLAUDE.md` first.
 
-## Layout (target — restructuring in progress)
+## Layout (module-based — mirrors the backend)
 
 ```
 /src
-  /app          router, providers (QueryClient, Auth, Theme)
-  /pages        one folder per route, kebab-case
-  /features
+  /core         app infra: api-client.js (axios), query-client.js (TanStack), auth-token-store.js
+  /modules
     /<feature>
-      api.js          axios calls
-      queries.js      TanStack Query hooks
+      api.js          axios calls (the only place axios is used per feature)
+      queries.js      TanStack Query hooks (useXListQuery, useCreateXMutation, ...)
       schemas.js      zod schemas (form + API DTO)
-      components/
-      steps/          if multi-step
+      components/      feature components
+      steps/           if multi-step
+  /shared       cross-module UI + helpers (eventually: components/ui, hooks, utils)
   /components
-    /ui         radix wrappers (button, card, dialog, ...)
-  /hooks
-  /lib          axios instance, formatters, date utils
+    /ui         radix wrappers (button, card, dialog, ...) — legacy home, migrating to /shared
+  /hooks        custom hooks (useDonor wraps modules/donor/queries during cutover)
+  /lib          legacy utils (cn, formatters) — being absorbed into /core + /shared
   /store        auth context
-  /styles
-  main.jsx
+  main.jsx      providers: QueryClientProvider → AuthProvider → BrowserRouter
 ```
 
-The old layout (`/src/page` singular, mixed casing) is still around. As you touch a page, move it under `/src/pages/<feature>/` and fix the casing. Do not bulk-rename — rename per-feature with its cutover.
+Aliases: `@/core/*`, `@/modules/*`, `@/shared/*` (all resolve via `@ → src`). The legacy tree (`/src/page` singular, `/components`, `/services`) is still live — migrate per-feature into `/modules/<feature>/`, don't bulk-rename.
 
 ## Hard rules
 

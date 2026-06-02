@@ -13,19 +13,22 @@ You scaffold a new feature in `server/src/` following the architecture in `serve
 
 ## Files to create
 
-1. `server/src/http/validators/<feature>.ts` — empty zod schemas keyed by route name.
-2. `server/src/infra/db/repositories/<feature>-repo.ts` — class with constructor accepting Mongoose model; one stub method per route.
-3. `server/src/domain/<feature>/<feature>-service.ts` — class with constructor accepting the repo + logger child; one stub method per route, body throws `new Error('not implemented')`.
-4. `server/src/http/controllers/<feature>-controller.ts` — factory function returning handlers; each handler validates → calls service → responds.
-5. `server/src/http/routes/<feature>.ts` — router with one route per input, RBAC pre-applied.
-6. `server/test/integration/<feature>.test.ts` — vitest + supertest skeleton.
+All in `server/src/modules/<feature>/`:
+
+1. `<feature>.model.ts` — Mongoose schema only (skip if reusing a legacy model via the repo).
+2. `<feature>.validator.ts` — zod schemas + `Validate` helper, keyed by route.
+3. `<feature>.repository.ts` — factory returning data-access methods; returns plain DTOs.
+4. `<feature>.service.ts` — factory accepting repos + logger child; one stub method per route, body throws `new Error('not implemented')`.
+5. `<feature>.controller.ts` — factory returning handlers; each validates → calls service → responds.
+6. `<feature>.routes.ts` — router with one route per input, RBAC pre-applied.
+7. `<feature>.service.test.ts` — vitest skeleton (mocked repos).
 
 ## Mount
 
-Append to `server/src/app.ts`:
+Add to `server/src/routes.ts` `MODULE_ROUTES`:
 
 ```ts
-app.use('/api/<feature>', <feature>Router);
+{ path: '/<feature>', router: <feature>Router },
 ```
 
 ## Conventions to enforce

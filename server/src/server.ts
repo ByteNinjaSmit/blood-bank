@@ -3,11 +3,16 @@
 // cut over end-to-end. Run locally with `npm run dev:src`.
 
 import http from 'node:http';
-import { env } from '@/config/env';
-import { logger } from '@/infra/logger';
+import { env } from '@/core/config/env';
+import { logger } from '@/core/logger';
 import { buildApp } from '@/app';
+import { connectDb, disconnectDb } from '@/core/db';
+import { registerProcessors } from '@/core/queue/register-processors';
 
 async function main(): Promise<void> {
+  await connectDb();
+  registerProcessors();
+
   const app = buildApp();
   const server = http.createServer(app);
 
@@ -17,7 +22,10 @@ async function main(): Promise<void> {
 
   const shutdown = (signal: string) => {
     logger.info({ signal }, 'shutting down');
-    server.close(() => process.exit(0));
+    server.close(async () => {
+      await disconnectDb().catch(() => undefined);
+      process.exit(0);
+    });
     setTimeout(() => process.exit(1), 10_000).unref();
   };
   process.on('SIGINT', () => shutdown('SIGINT'));

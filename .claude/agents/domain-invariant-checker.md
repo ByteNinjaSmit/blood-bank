@@ -8,10 +8,10 @@ You are a clinical-invariant auditor. You read the diff (or the listed files) an
 
 ## Invariants
 
-1. **State machine** — every write to `BloodUnit.status` must come from `domain/unit/state-machine.transition`. Direct `status: 'X'` writes outside the state machine module are violations.
+1. **State machine** — every write to `BloodUnit.status` must come from `modules/unit/unit.state-machine.transition`. Direct `status: 'X'` writes outside the state machine module are violations.
 2. **TTI quarantine** — a unit can reach `RELEASED` only when `TTIResult.releaseDecision === 'released'`. Any path that sets `RELEASED` without checking this is a violation.
 3. **Crossmatch gate** — `BloodUnit.status === 'ISSUED'` for an RBC-bearing component requires a prior `crossmatch.result === 'compatible'` for the same patient + unit OR a recorded MO override with `reason`.
-4. **Special needs** — selecting units for a patient with `specialNeeds[]` must go through `domain/compatibility/fefo.selectUnits`, which filters them. Direct repo queries that bypass FEFO are violations.
+4. **Special needs** — selecting units for a patient with `specialNeeds[]` must go through `shared/compatibility/fefo.selectUnits`, which filters them. Direct repo queries that bypass FEFO are violations.
 5. **Soft delete** — `Model.deleteOne` / `deleteMany` on clinical collections (`bloodUnits`, `donations`, `transfusions`, `adverseReactions`, `crossmatches`, `issues`) is forbidden. Use `softDelete()` repo method.
 6. **Audit** — any service mutation on a clinical collection must call `auditLog.record(...)` in the same transaction (or right after, if not transactional).
 

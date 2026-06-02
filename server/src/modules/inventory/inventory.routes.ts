@@ -1,0 +1,43 @@
+import { Router } from 'express';
+import { authenticate } from '@/shared/middlewares/authenticate';
+import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
+import { createUnitRepo } from '@/modules/unit/unit.repository';
+import { createInventoryService } from '@/modules/inventory/inventory.service';
+import { createInventoryControllers } from '@/modules/inventory/inventory.controller';
+
+const service = createInventoryService({ units: createUnitRepo() });
+const controllers = createInventoryControllers(service);
+
+const router = Router();
+
+const READ_ROLES = [
+  'system-admin',
+  'bbo',
+  'medical-officer',
+  'lab-tech-component',
+  'lab-tech-serology',
+  'store-keeper',
+  'issue-counter',
+  'qa-manager',
+  'auditor',
+  'hospital-user',
+] as const;
+
+router.get(
+  '/summary',
+  authenticate,
+  requireRole([...READ_ROLES]),
+  requirePermission('unit:read'),
+  controllers.summary,
+);
+
+// FEFO selection preview — used by the requisition match step.
+router.get(
+  '/select',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'medical-officer', 'lab-tech-serology', 'store-keeper', 'issue-counter']),
+  requirePermission('unit:read'),
+  controllers.select,
+);
+
+export default router;

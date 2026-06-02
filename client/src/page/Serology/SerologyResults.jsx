@@ -31,7 +31,7 @@ const SerologyResults = () => {
   const fetchBags = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`${API}/api/sernology/results`, {
+      const res = await axios.get(`${API}/api/serology/results`, {
         params: { 
           page, 
           limit, 

@@ -6,46 +6,46 @@ Backend rules. Read `../CLAUDE.md` first.
 
 ```
 /server
-  /server.js                 entry (legacy)
+  /server.js                 entry (legacy) — also mounts dist/routes at /api/v2
   /routers, /controllers,    legacy code — KEEP RUNNING, do not refactor in place
    /models, /middlewares,
    /services, /queues, /utils
   /config/env.js             zod env validator (BOTH trees use this)
   /utils/logger.js           pino logger (BOTH trees use this)
-  /src                       new SOLID/TypeScript tree — all new work goes here
-    /app.ts                  builds the Express app (no listen)
-    /server.ts               listen + graceful shutdown
-    /config                  env, db, redis, mail, twilio
-    /domain
-      /<feature>             pure domain logic, no Express/Mongoose imports
-      /unit/state-machine.ts BloodUnit transitions (invariant guard)
-      /compatibility         component-aware ABO/Rh engine + FEFO selector
-    /infra
-      /db/models             Mongoose schemas only (no methods, no domain hooks)
-      /db/repositories       data access only; return plain DTOs
-      /queues                Bull processors
-      /email, /sms, /storage
+  /src                       new SOLID/TypeScript tree (MODULE-BASED) — all new work here
+    /app.ts                  Express app factory (no listen)
+    /server.ts               standalone bootstrap (PORT+1, side-by-side dev)
+    /routes.ts               central registry — registerRoutes() mounts every module
+    /core
+      /config/env.ts         zod env (wraps legacy ../config/env.js)
       /logger                pino child loggers
-    /http
-      /middlewares           auth, rbac, error, request-id, rate-limit
-      /validators            zod schemas, one per route
-      /controllers           parse → call service → format response
-      /routes                router wiring; rbac applied here
-    /jobs                    cron/schedule registrations
-    /shared                  errors, result types, enums, helpers
-  /test
-    /unit, /integration, /fixtures
+      /db                    mongoose connect (to add)
+    /modules/<feature>       EVERYTHING for one feature, colocated:
+      <f>.model.ts           Mongoose schema only (no methods, no domain hooks)
+      <f>.repository.ts      data access only; return plain DTOs
+      <f>.service.ts         orchestration; no Express/Mongoose
+      <f>.<rule>.ts          pure domain rule (donor.eligibility, issue.gate, ...)
+      <f>.controller.ts      parse → call service → format response
+      <f>.validator.ts       zod schemas, one per route
+      <f>.routes.ts          router wiring; rbac applied here
+      <f>.service.test.ts    colocated tests
+    /shared
+      /middlewares           authenticate, rbac, error, request-id, http-logger
+      /compatibility         component-aware ABO/Rh engine + FEFO selector
+      enums.ts, errors.ts, result.ts, role-map.ts
 ```
 
-## How to add a new endpoint (the 5-step recipe)
+Modules present: donor, donation, unit, tti, inventory, deferral, patient, requisition, crossmatch, issue. The `unit` module owns `unit.state-machine.ts` — the invariant guard.
 
-1. **Validator** in `src/http/validators/<feature>.ts` — `z.object(...)` for body, params, query. Export a `validate(req)` helper.
-2. **Repository** method in `src/infra/db/repositories/<feature>-repo.ts` — only the Mongoose call(s) you need. Return a plain DTO, never a Mongoose Document.
-3. **Service** method in `src/domain/<feature>/<feature>-service.ts` — orchestrates: load aggregates, call domain rules, write via repo, enqueue jobs, emit audit. No Express, no Mongoose.
-4. **Controller** in `src/http/controllers/<feature>-controller.ts` — `async function (req, res, next)` — validate, call service, format response with `Result.ok` or throw `AppError`.
-5. **Route** in `src/http/routes/<feature>.ts` — `router.post('/x', requireRole(['lab-tech-serology']), requirePermission('tti:edit'), controller.x)`.
+## How to add a new endpoint (the 5-step recipe, within a module folder)
 
-Then add an integration test under `test/integration/<feature>.test.ts`.
+1. **Validator** in `modules/<feature>/<feature>.validator.ts` — `z.object(...)` for body/params/query; export a `Validate` helper.
+2. **Repository** in `modules/<feature>/<feature>.repository.ts` — only the Mongoose call(s) you need. Return a plain DTO, never a Mongoose Document.
+3. **Service** in `modules/<feature>/<feature>.service.ts` — orchestrates: load aggregates, call domain rules, write via repo, enqueue jobs, emit audit. No Express, no Mongoose.
+4. **Controller** in `modules/<feature>/<feature>.controller.ts` — `async (req, res, next)` — validate, call service, respond `{success,data}` or throw `AppError`.
+5. **Route** in `modules/<feature>/<feature>.routes.ts` — `router.post('/x', authenticate, requireRole([...]), requirePermission('...'), controller.x)`, then register it in `src/routes.ts`.
+
+Then add a colocated `<feature>.service.test.ts` (vitest).
 
 ## Hard invariants (must not break)
 
@@ -53,7 +53,7 @@ Then add an integration test under `test/integration/<feature>.test.ts`.
 - No business logic in Mongoose `pre`/`post` hooks (timestamps and slug generation OK; status decisions not OK).
 - Every route under `/api` has `requireRole(...)`. If multiple roles can call it, list them all. Public health checks are the only exception.
 - Every request body and query string has a zod validator. Coercion happens in the validator, not in the service.
-- Every `BloodUnit.status` write goes through `domain/unit/state-machine.transition(currentStatus, event)`. Invalid transitions throw `InvalidUnitTransition`.
+- Every `BloodUnit.status` write goes through `modules/unit/unit.state-machine.transition(currentStatus, event)`. Invalid transitions throw `InvalidUnitTransition`.
 - Every clinical delete is soft (`deletedAt`, `deletedBy`) + writes an audit log entry.
 - TTI quarantine: a unit can only reach `RELEASED` if `TTIResult.releaseDecision === 'released'`. Enforce in service, not UI.
 - RBC issue requires a passing crossmatch (`crossmatch.result === 'compatible'`) or an MO override with a recorded reason.

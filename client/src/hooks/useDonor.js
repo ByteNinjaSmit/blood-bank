@@ -2,7 +2,7 @@
 // `features/donor/queries.js`. Preserves the existing imperative API
 // (`fetchDonors`, `createDonor`, ...) so consumers don't need to change
 // during the donor cutover. New screens should use the queries
-// directly from `@/features/donor/queries`.
+// directly from `@/modules/donor/queries`.
 
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -17,7 +17,7 @@ import {
   useDeleteDonorMutation,
   useDonorListQuery,
   useUpdateDonorMutation,
-} from '@/features/donor/queries';
+} from '@/modules/donor/queries';
 
 const DEFAULT_FILTERS = { page: 1, pageSize: 100 };
 

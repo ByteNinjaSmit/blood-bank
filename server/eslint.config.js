@@ -12,12 +12,39 @@ const globals = require('globals');
 
 module.exports = [
   {
+    // Legacy CommonJS tree is lint-exempt during the side-by-side
+    // migration (do not refactor in place — see CLAUDE.md). New code
+    // lives under src/ (type-checked by tsc) plus a few new .js entry
+    // files (server.js, the new middlewares, config/env.js) which ARE
+    // linted. The new src/**/*.ts is excluded here because this flat
+    // config has no TS parser — tsc + vitest cover those.
     ignores: [
       'node_modules/**',
       'logs/**',
       'uploads/**',
       'reports/**',
+      'dist/**',
       'src/**/*.ts',
+      'controllers/**',
+      'routers/**',
+      'models/**',
+      'services/**',
+      'jobs/**',
+      'queues/**',
+      'lib/**',
+      'validators/**',
+      'utils/**',
+      'config/db.js',
+      'config/redis.js',
+      'config/twilio.js',
+      'config/mailConfig.js',
+      'start.js',
+      'scripts/**',
+      'middlewares/admin-middleware.js',
+      'middlewares/auth-middleware.js',
+      'middlewares/error-middleware.js',
+      'middlewares/role-middleware.js',
+      'middlewares/upload-middleware.js',
     ],
   },
   js.configs.recommended,

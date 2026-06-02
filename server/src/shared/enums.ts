@@ -137,6 +137,64 @@ export type TtiTest = (typeof TTI_TEST)[number];
 export const TTI_RESULT = ['NEGATIVE', 'REACTIVE', 'INDETERMINATE'] as const;
 export type TtiResult = (typeof TTI_RESULT)[number];
 
+export const ADVERSE_REACTION_CATEGORY = [
+  'FNHTR',              // febrile non-haemolytic
+  'ALLERGIC',
+  'ANAPHYLACTIC',
+  'AHTR',               // acute haemolytic
+  'DHTR',               // delayed haemolytic
+  'TRALI',              // transfusion-related acute lung injury
+  'TACO',               // transfusion-associated circulatory overload
+  'BACTERIAL',          // bacterial contamination / sepsis
+  'PTP',                // post-transfusion purpura
+  'TA_GVHD',            // graft-versus-host disease
+  'HYPOTENSIVE',
+  'OTHER',
+] as const;
+export type AdverseReactionCategory = (typeof ADVERSE_REACTION_CATEGORY)[number];
+
+export const ADVERSE_REACTION_SEVERITY = [
+  'GRADE_1',            // mild
+  'GRADE_2',            // moderate
+  'GRADE_3',            // severe / life-threatening
+  'GRADE_4',            // death
+] as const;
+export type AdverseReactionSeverity = (typeof ADVERSE_REACTION_SEVERITY)[number];
+
+export const TRANSFUSION_OUTCOME = [
+  'COMPLETED',
+  'STOPPED_REACTION',
+  'STOPPED_OTHER',
+] as const;
+export type TransfusionOutcome = (typeof TRANSFUSION_OUTCOME)[number];
+
+export const AUDIT_ACTION = [
+  'CREATE',
+  'UPDATE',
+  'DELETE',
+  'STATE_TRANSITION',
+  'RELEASE',
+  'RESERVE',
+  'ISSUE',
+  'DISCARD',
+  'OVERRIDE',
+  'LOGIN',
+] as const;
+export type AuditAction = (typeof AUDIT_ACTION)[number];
+
+export const NOTIFICATION_TYPE = [
+  'DONOR_WELCOME',
+  'DONATION_THANK_YOU',
+  'TTI_REACTIVE_ALERT',
+  'NEAR_EXPIRY_ALERT',
+  'REQUISITION_ISSUED',
+  'ADVERSE_REACTION_ACK',
+  'LOOKBACK_RECALL',
+  'LOGIN_OTP',
+  'REGISTER_OTP',
+] as const;
+export type NotificationType = (typeof NOTIFICATION_TYPE)[number];
+
 // Compile-time exhaustiveness helper.
 export function assertNever(value: never): never {
   throw new Error(`Unhandled case: ${JSON.stringify(value)}`);

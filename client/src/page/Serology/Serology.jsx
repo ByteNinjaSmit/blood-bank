@@ -34,7 +34,7 @@ const Serology = () => {
   const fetchBags = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`${API}/api/sernology/bags`, {
+      const res = await axios.get(`${API}/api/serology/bags`, {
         params: { page, limit, search: search || undefined, sortBy, order },
         headers: { Authorization: authorizationToken },
         withCredentials: true,
@@ -81,7 +81,7 @@ const Serology = () => {
     try {
       setIsSubmitting(true);
       await axios.post(
-        `${API}/api/sernology/results/${activeBag._id}`,
+        `${API}/api/serology/results/${activeBag._id}`,
         {
           testResults: tests,
           technicianId: user?._id || user?.id,

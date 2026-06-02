@@ -1,196 +1,145 @@
 import axios from "axios";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { setAuthToken, clearAuthToken } from "@/lib/auth-token-store";
+import { setAuthToken, clearAuthToken } from "@/core/auth-token-store";
+import { authApi } from "@/modules/auth/api";
 
 // Create context
 export const AuthContext = createContext();
 
-// Helper function to get token from cookies
-const getTokenFromCookies = () => {
-    const cookieValue = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("authToken="));
-    return cookieValue ? cookieValue.split("=")[1] : null;
-};
-
 export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(null);
-    const [user, setUser] = useState("");
+    const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
     const [isDeveloper, setIsDeveloper] = useState(false);
-    const isRefreshingRef = useRef(false);
     const isLoggingOutRef = useRef(false);
 
     const authorizationToken = token ? `Bearer ${token}` : "";
-
-    const storeTokenInCookies = (serverToken) => {
-        // Deprecated cookie storage for access token. Keep function name for backward compatibility.
-        setToken(serverToken);
-    };
-
     const API = import.meta.env.VITE_APP_URI_API;
+    const isLoggedIn = !!token;
 
-    let isLoggedIn = !!token;
+    // Deprecated name kept for callers that still import it.
+    const storeTokenInCookies = (serverToken) => setToken(serverToken);
 
-    // Logout functionality
+    // ---- Logout ----
     const LogoutUser = async () => {
         isLoggingOutRef.current = true;
         try {
-            await axios.post(`${API}/api/auth/logout`, {}, { withCredentials: true });
-        } catch (e) {
-            // ignore
+            await authApi.logout();
+        } catch {
+            /* ignore network errors on logout */
         }
         setToken(null);
         setUser(null);
         setIsAdmin(false);
         setIsDeveloper(false);
-        // Clear Authorization header on axios defaults to avoid lingering tokens
+        clearAuthToken();
         if (axios.defaults.headers?.common) {
             delete axios.defaults.headers.common.Authorization;
         }
-        toast.success(`Logout Successfully`);
+        toast.success("Logged out");
         setTimeout(() => {
             window.location.href = "/login";
         }, 400);
     };
 
-    // JWT Authentication - fetch current logged-in user data
-    const userAuthentication = async () => {
-        if(!token) return;
+    // ---- Current user ----
+    const userAuthentication = async (forToken = token) => {
+        if (!forToken) return;
         try {
             setIsLoading(true);
-            const response = await axios.get(`${API}/api/auth/current`, {
-                headers: {
-                    Authorization: authorizationToken,
-                },
-                withCredentials: true,
-            });
-            if (response.status === 200) {
-                const data = response.data;
-                setUser(data.user);
-                setUser(data.user);
-            }
+            const data = await authApi.current(forToken);
+            if (data?.user) setUser(data.user);
         } catch (error) {
-            // 401 is handled by the axios interceptor (refresh + retry or logout)
-            if (error?.response?.status === 401) {
-                return;
-            }
-            // Ignore cancellations silently
-            if (axios.isCancel?.(error)) {
-                return;
-            }
-            // Log and optionally notify for non-auth errors
+            if (error?.response?.status === 401) return; // refresh flow handles it
+            if (axios.isCancel?.(error)) return;
             console.error("Failed to fetch current user:", error);
-            toast.error("Failed to load user. Please try again.");
         } finally {
             setIsLoading(false);
         }
     };
 
+    // ---- Password login ----
     const login = async (email, password) => {
-        const res = await axios.post(`${API}/api/auth/login`, { email, password }, { withCredentials: true });
-        setToken(res.data.accessToken);
-        setUser(res.data.user);
-        try { userAuthentication(); } catch (_) { }
-        return res.data;
+        const data = await authApi.login(email, password);
+        setToken(data.accessToken);
+        setUser(data.user);
+        return data;
     };
 
-    // OTP Login (2-step): start -> verify -> (optional) resend
-    const loginStartOtp = async (email, password) => {
-        const res = await axios.post(`${API}/api/auth/login/start-otp`, { email, password }, { withCredentials: true });
-        return res.data; // { success, txnId, email, expiresInSeconds, resendCooldownSeconds }
-    };
-
+    // ---- OTP login (2-step) ----
+    const loginStartOtp = async (email, password) => authApi.startOtpLogin(email, password);
     const verifyOtpLogin = async (email, txnId, code) => {
-        const res = await axios.post(`${API}/api/auth/login/verify-otp`, { email, txnId, code }, { withCredentials: true });
-        setToken(res.data.accessToken);
-        setUser(res.data.user);
-        try { userAuthentication(); } catch (_) { }
-        return res.data;
+        const data = await authApi.verifyOtpLogin(email, txnId, code);
+        setToken(data.accessToken);
+        setUser(data.user);
+        return data;
     };
+    const resendOtpLogin = async (email, txnId) => authApi.resendOtpLogin(email, txnId);
 
-    const resendOtpLogin = async (email, txnId) => {
-        const res = await axios.post(`${API}/api/auth/login/resend-otp`, { email, txnId }, { withCredentials: true });
-        return res.data; // { success, ... }
-    };
+    // ---- Registration OTP flow ----
+    const registerStartOtp = async (payload) => authApi.startRegister(payload);
+    const verifyRegisterOtp = async (email, txnId, code) =>
+        authApi.verifyRegister(email, txnId, code);
+    const resendRegisterOtp = async (email, txnId) => authApi.resendRegister(email, txnId);
 
-    // Registration OTP flow: start -> verify -> resend
-    const registerStartOtp = async (payload) => {
-        const res = await axios.post(`${API}/api/auth/register/start-otp`, payload, { withCredentials: true });
-        return res.data; // { success, txnId, email, expiresInSeconds, resendCooldownSeconds }
-    };
-
-    const verifyRegisterOtp = async (email, txnId, code) => {
-        const res = await axios.post(`${API}/api/auth/register/verify-otp`, { email, txnId, code }, { withCredentials: true });
-        return res.data; // { success, user }
-    };
-
-    const resendRegisterOtp = async (email, txnId) => {
-        const res = await axios.post(`${API}/api/auth/register/resend-otp`, { email, txnId }, { withCredentials: true });
-        return res.data;
-    };
-
+    // ---- Refresh ---- returns the new access token, or null on failure.
     const refreshAccessToken = async () => {
         try {
-            const res = await axios.post(`${API}/api/auth/refresh`, {}, { withCredentials: true });
-            setToken(res.data.accessToken);
-            return true;
-        } catch (e) {
-            return false;
+            const data = await authApi.refresh();
+            setToken(data.accessToken);
+            if (data.user) setUser(data.user);
+            return data.accessToken;
+        } catch {
+            return null;
         }
     };
 
-    // Effect to handle initial user authentication if token exists
+    // On mount: try a silent refresh (unless on the login route).
     useEffect(() => {
         (async () => {
             const onLoginRoute =
                 typeof window !== "undefined" &&
                 window.location?.pathname?.startsWith("/login");
-
             if (!onLoginRoute && !isLoggingOutRef.current) {
                 await refreshAccessToken();
             }
-
             setIsLoading(false);
         })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Push token into the standalone api-client store so the new
-    // /api/v2/* axios instance attaches Bearer headers automatically.
+    // Keep the module-level token store (used by the api-client for
+    // /api/v2 feature calls) in sync.
     useEffect(() => {
-        if (token) setAuthToken(token);
-        else clearAuthToken();
+        if (token) {
+            setAuthToken(token);
+            userAuthentication(token);
+        } else {
+            clearAuthToken();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token]);
 
-    // Whenever token changes, fetch the user
-    useEffect(() => {
-        if (token) userAuthentication();
-    }, [token]);
-
-
+    // Derive role flags.
     useEffect(() => {
         setIsAdmin(false);
-
         setIsDeveloper(false);
-
         if (user) {
-            const { isDeveloper, isAdmin } = user;
-            // console.log('User: ',user)
-            setIsAdmin(isAdmin); // Admin if any of the roles is true
-            // setisUser(isUser || false);
-            setIsDeveloper(isDeveloper || false);
-            if (isDeveloper) {
-                console.log(`This is Developer`);
-            }
+            setIsAdmin(
+                user.isAdmin === true || user.role === "admin" || user.role === "system-admin",
+            );
+            setIsDeveloper(user.isDeveloper === true);
         }
     }, [user]);
 
-    // Axios interceptors: attach token, auto refresh on 401 and retry
+    // Global axios interceptors: attach token to legacy /api/* calls and
+    // auto-refresh on 401. The /api/v2/auth/* endpoints use their own
+    // interceptor-free instance, so they never recurse here.
     useEffect(() => {
         const reqId = axios.interceptors.request.use((config) => {
-            const isAuthEndpoint = config.url?.includes('/api/auth/');
+            const isAuthEndpoint = config.url?.includes("/auth/");
             if (token && !isAuthEndpoint) {
                 config.headers = config.headers || {};
                 config.headers.Authorization = `Bearer ${token}`;
@@ -201,12 +150,8 @@ export const AuthProvider = ({ children }) => {
 
         let isRefreshing = false;
         let pending = [];
-        const notifyPending = (newToken) => {
-            pending.forEach((p) => p.resolve(newToken));
-            pending = [];
-        };
-        const failPending = (err) => {
-            pending.forEach((p) => p.reject(err));
+        const flush = (err, newToken) => {
+            pending.forEach((p) => (err ? p.reject(err) : p.resolve(newToken)));
             pending = [];
         };
 
@@ -214,12 +159,10 @@ export const AuthProvider = ({ children }) => {
             (res) => res,
             async (error) => {
                 const original = error.config;
-                const isAuthEndpoint = original?.url?.includes('/api/auth/');
-                if (isLoggingOutRef.current || isAuthEndpoint) {
-                    // If we're logging out, do not attempt refresh at all
-                    return Promise.reject(error);
-                }
-                if (error.response && error.response.status === 401 && !original._retry) {
+                const isAuthEndpoint = original?.url?.includes("/auth/");
+                if (isLoggingOutRef.current || isAuthEndpoint) return Promise.reject(error);
+
+                if (error.response?.status === 401 && !original._retry) {
                     if (isRefreshing) {
                         return new Promise((resolve, reject) => {
                             pending.push({ resolve, reject });
@@ -231,32 +174,29 @@ export const AuthProvider = ({ children }) => {
                     original._retry = true;
                     isRefreshing = true;
                     try {
-                        const ok = await refreshAccessToken();
-                        if (!ok) throw new Error("refresh_failed");
-                        const newToken = axios.defaults.headers.common.Authorization?.replace("Bearer ", "") || token;
-                        notifyPending(newToken);
+                        const newToken = await refreshAccessToken();
+                        if (!newToken) throw new Error("refresh_failed");
                         isRefreshing = false;
-                        // Refresh succeeded: refresh current user in background
-                        try { userAuthentication(); } catch (_) { }
+                        flush(null, newToken);
                         original.headers.Authorization = `Bearer ${newToken}`;
                         return axios(original);
                     } catch (e) {
                         isRefreshing = false;
-                        failPending(e);
-                        // Prevent recursion: set flag and avoid refresh loop
+                        flush(e);
                         isLoggingOutRef.current = true;
                         await LogoutUser();
                         return Promise.reject(e);
                     }
                 }
                 return Promise.reject(error);
-            }
+            },
         );
 
         return () => {
             axios.interceptors.request.eject(reqId);
             axios.interceptors.response.eject(resId);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token]);
 
     return (
@@ -288,9 +228,7 @@ export const AuthProvider = ({ children }) => {
 
 // Custom hook to use AuthContext
 export const useAuth = () => {
-    const authContextValue = useContext(AuthContext);
-    if (!authContextValue) {
-        throw new Error("useAuth must be used within the AuthProvider");
-    }
-    return authContextValue;
+    const ctx = useContext(AuthContext);
+    if (!ctx) throw new Error("useAuth must be used within the AuthProvider");
+    return ctx;
 };

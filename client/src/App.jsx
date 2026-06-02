@@ -4,10 +4,10 @@ import LoginPage from './page/auth-pages/Login-Page'
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import NotFound from './page/Error-Page';
-import RegisterPage from './page/auth-pages/Registeration-Page';
+import RegisterPage from './page/auth-pages/Registration-Page';
 import MasterLayout from './page/dashboard/layout/Master-Layout';
 import Home from './page/Home';
-import CampRegisteration from './page/camp/Camp-Registeration';
+import CampRegistration from './page/camp/Camp-Registration';
 import CampListing from './page/camp/Camp-Listing';
 import CampDetails from './page/camp/CampDetails';
 import CampVolunteerList from './page/camp/CampVolunteerList';
@@ -81,7 +81,7 @@ const App = () => {
           <Route path="/dashboard" element={<Dashboard />} />
 
           {/*  Dashboard - Camp Routes */}
-          <Route path="/camp-registration" element={<CampRegisteration />} />
+          <Route path="/camp-registration" element={<CampRegistration />} />
           <Route path="/camp-details" element={<CampDetails />} />
           <Route path="/camp-listing" element={<CampListing />} />
           <Route path="/camp-donors" element={<CampDonorManagement />} />

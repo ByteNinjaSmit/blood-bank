@@ -27,10 +27,13 @@ const redisClient = new Redis(process.env.REDIS_URL);
 const connectToDatabase = require("./config/db");
 const logger = require('./utils/logger'); // Import the logger
 
-// Import and initialize queues
-require('./queues/expiry-queue'); // This will start the expiry queue scheduler
-require('./queues/discard-queue'); // ensures auto initialization
-require('./queues/email-otp-queue'); // initialize Email OTP queue
+// Import and initialize legacy queues.
+// NOTE: email-otp queue retired — OTP email now flows through the new
+// notification queue (src/modules/notification). Expiry/discard legacy
+// queues remain for the legacy BloodBag collection; the new
+// bloodUnits collection is handled by src/modules/inventory jobs.
+require('./queues/expiry-queue');
+require('./queues/discard-queue');
 require('./queues/birthday-queue'); // initialize Birthday SMS queue
 
 
@@ -41,7 +44,9 @@ const httpLogger = require("./middlewares/http-logger");
 
 
 // Import Routes
-const authRoutes = require("./routers/auth-routes");
+// NOTE: legacy /api/auth retired — auth now served by /api/v2/auth
+// (see src/modules/auth). The old router file remains on disk but is
+// no longer mounted.
 const siteRoutes = require("./routers/site-routes");
 const donorRoutes = require("./routers/donor-routes");
 const donationRoute = require('./routers/donation-routes');
@@ -251,19 +256,29 @@ app.get("/", (req, res) => {
 // the legacy routes without TypeScript installed.
 // ---------------------------------------------------------------------
 try {
-    // eslint-disable-next-line global-require, import/no-unresolved
-    const { buildV2Router } = require("./dist/v2-router");
-    app.use("/api/v2", buildV2Router());
-    logger.info({ mount: "/api/v2" }, "v2 router mounted");
+    const { registerRoutes } = require("./dist/routes");
+    app.use("/api/v2", registerRoutes());
+    logger.info({ mount: "/api/v2" }, "v2 module routes mounted");
+
+    // Wire the new tree's Bull processors (email queue, etc.) onto the
+    // legacy process. DB is shared (same mongoose singleton already
+    // connected by connectToDatabase below).
+    try {
+        const { registerProcessors } = require("./dist/core/queue/register-processors");
+        registerProcessors();
+        logger.info("v2 queue processors registered");
+    } catch (procErr) {
+        logger.warn({ err: procErr.message }, "v2 processors not registered");
+    }
 } catch (err) {
     logger.warn(
         { err: err.message },
-        "v2 router not mounted (run `npm run build` to enable /api/v2)",
+        "v2 routes not mounted (run `npm run build` to enable /api/v2)",
     );
 }
 
 // Remaining Routes
-app.use("/api/auth", authRoutes);
+// (legacy /api/auth retired — now /api/v2/auth)
 app.use("/api/site", siteRoutes);
 app.use("/api/donor", donorRoutes);
 app.use('/api/donation', donationRoute);
@@ -273,7 +288,7 @@ app.use("/api/requests", requestRoutes);
 app.use("/api/component", componentRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/discard", discardRoutes);
-app.use('/api/sernology', labRoutes);
+app.use('/api/serology', labRoutes);
 app.use("/api/test", testRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
