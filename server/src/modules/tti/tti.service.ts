@@ -5,13 +5,14 @@
 
 import { childLogger } from '@/core/logger';
 import { TtiQuarantineViolation, NotFoundError } from '@/shared/errors';
+import type { INotificationService } from '@/shared/interfaces';
+import { notificationService as defaultNotify } from '@/modules/notification/notification.service';
 import { evaluateRelease, type PanelEntry } from './tti.release-rules';
 import type { TtiRepo, TtiResultDto, TtiTestEntryInput } from '@/modules/tti/tti.repository';
 import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { DeferralRepo } from '@/modules/deferral/deferral.repository';
 import type { DonationRepo } from '@/modules/donation/donation.repository';
 import type { LookbackService } from '@/modules/lookback/lookback.service';
-import { notificationService } from '@/modules/notification/notification.service';
 import type { TtiTest, TtiResult } from '@/shared/enums';
 
 export interface TtiService {
@@ -37,12 +38,12 @@ export function createTtiService(deps: {
   units: UnitRepo;
   deferrals: DeferralRepo;
   donations: DonationRepo;
-  // Optional: when provided, a reactive result auto-triggers lookback +
-  // counsellor alert. Omitted in unit tests that only assert the gate.
   lookback?: LookbackService;
   counsellorEmail?: string;
+  notify?: INotificationService;
 }): TtiService {
   const log = childLogger({ module: 'tti-service' });
+  const notify = deps.notify ?? defaultNotify;
 
   return {
     async recordTests(donationId, tests, actorId) {
@@ -116,7 +117,7 @@ export function createTtiService(deps: {
             );
         }
         if (deps.counsellorEmail) {
-          await notificationService
+          await notify
             .send({
               type: 'TTI_REACTIVE_ALERT',
               to: deps.counsellorEmail,

@@ -1,10 +1,8 @@
-// Adverse-reaction service. Records the reaction, marks the
-// transfusion, audits, and emails an acknowledgement to the MO.
-
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
-import { auditService } from '@/modules/audit/audit.service';
-import { notificationService } from '@/modules/notification/notification.service';
+import type { IAuditService, INotificationService } from '@/shared/interfaces';
+import { auditService as defaultAudit } from '@/modules/audit/audit.service';
+import { notificationService as defaultNotify } from '@/modules/notification/notification.service';
 import type {
   AdverseReactionDto,
   AdverseReactionRepo,
@@ -24,18 +22,21 @@ export interface AdverseReactionService {
 export function createAdverseReactionService(deps: {
   reactions: AdverseReactionRepo;
   transfusions: TransfusionRepo;
+  audit?: IAuditService;
+  notify?: INotificationService;
 }): AdverseReactionService {
   const log = childLogger({ module: 'adverse-reaction-service' });
+  const audit = deps.audit ?? defaultAudit;
+  const notify = deps.notify ?? defaultNotify;
 
   return {
     async report(input, actorId) {
       const reactionId = `AR-${dateStamp()}-${rand()}`;
       const created = await deps.reactions.create({ ...input, reactionId }, actorId);
 
-      // Flag the transfusion so reporting/registers reflect the reaction.
       await deps.transfusions.markReaction(input.transfusionId, actorId).catch(() => undefined);
 
-      await auditService.record({
+      await audit.record({
         actorId,
         action: 'CREATE',
         entityType: 'AdverseReaction',
@@ -44,16 +45,20 @@ export function createAdverseReactionService(deps: {
       });
 
       if (input.notifyEmail) {
-        await notificationService.send({
-          type: 'ADVERSE_REACTION_ACK',
-          to: input.notifyEmail,
-          payload: {
-            reactionId,
-            category: input.category,
-            severity: input.severity,
-            transfusionId: input.transfusionId,
-          },
-        });
+        await notify
+          .send({
+            type: 'ADVERSE_REACTION_ACK',
+            to: input.notifyEmail,
+            payload: {
+              reactionId,
+              category: input.category,
+              severity: input.severity,
+              transfusionId: input.transfusionId,
+            },
+          })
+          .catch((err: Error) =>
+            log.error({ reactionId, err: err.message }, 'adverse reaction notification failed'),
+          );
       }
 
       log.warn(

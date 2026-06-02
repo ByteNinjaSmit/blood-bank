@@ -23,9 +23,12 @@ const CampSchema = new Schema(
     },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     lastUpdatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    // Staff assigned to run this camp (refs validated to max 50 at app layer).
     staff: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    // Donors registered at this camp.
     donorData: [{ type: Schema.Types.ObjectId, ref: 'Donor' }],
-    bagsData: [{ type: Schema.Types.ObjectId, ref: 'BloodBag' }],
+    // Blood units collected at this camp (refs BloodUnit, not legacy BloodBag).
+    unitData: [{ type: Schema.Types.ObjectId, ref: 'BloodUnit' }],
   },
   { timestamps: true },
 );

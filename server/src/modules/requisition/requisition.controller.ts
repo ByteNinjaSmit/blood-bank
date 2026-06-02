@@ -12,6 +12,8 @@ export interface RequisitionControllers {
   createPatient: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   create: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   match: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  approve: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  complete: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   get: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   reject: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   crossmatch: (req: Request, res: Response, next: NextFunction) => Promise<void>;
@@ -55,6 +57,26 @@ export function createRequisitionControllers(deps: {
         const { id } = ValidateRequisition.idParam(req);
         const result = await deps.requisitions.match(id, actor(req));
         res.json({ success: true, data: result, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async approve(req, res, next) {
+      try {
+        const { id } = ValidateRequisition.idParam(req);
+        const data = await deps.requisitions.approve(id, actor(req));
+        res.json({ success: true, data, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async complete(req, res, next) {
+      try {
+        const { id } = ValidateRequisition.idParam(req);
+        const data = await deps.requisitions.complete(id, actor(req));
+        res.json({ success: true, data, requestId: req.id });
       } catch (e) {
         next(e);
       }

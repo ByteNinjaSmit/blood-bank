@@ -12,7 +12,6 @@ import { createCrossmatchService } from '@/modules/crossmatch/crossmatch.service
 import { createIssueService } from '@/modules/issue/issue.service';
 import { createRequisitionControllers } from '@/modules/requisition/requisition.controller';
 
-// Shared repo instances.
 const requisitions = createRequisitionRepo();
 const patients = createPatientRepo();
 const units = createUnitRepo();
@@ -51,7 +50,6 @@ const CLINICAL_READ = [
   'hospital-user',
 ] as const;
 
-// --- Patient registration (needed before a requisition) ---
 router.post(
   '/patient',
   authenticate,
@@ -66,8 +64,6 @@ router.post(
   requirePermission('requisition:create'),
   controllers.createPatient,
 );
-
-// --- Requisition lifecycle ---
 router.post(
   '/',
   authenticate,
@@ -75,7 +71,6 @@ router.post(
   requirePermission('requisition:create'),
   controllers.create,
 );
-
 router.get(
   '/:id',
   authenticate,
@@ -84,7 +79,6 @@ router.get(
   controllers.get,
 );
 
-// Match = reserve compatible units (FEFO). Bank staff only.
 router.post(
   '/:id/match',
   authenticate,
@@ -92,7 +86,20 @@ router.post(
   requirePermission('unit:reserve'),
   controllers.match,
 );
-
+router.post(
+  '/:id/approve',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'medical-officer']),
+  requirePermission('requisition:approve'),
+  controllers.approve,
+);
+router.post(
+  '/:id/complete',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'issue-counter']),
+  requirePermission('requisition:approve'),
+  controllers.complete,
+);
 router.post(
   '/:id/reject',
   authenticate,
@@ -101,7 +108,7 @@ router.post(
   controllers.reject,
 );
 
-// --- Crossmatch (serology) ---
+// Static paths before /:id-dependent sub-paths to avoid Express shadowing.
 router.post(
   '/crossmatch',
   authenticate,
@@ -109,9 +116,6 @@ router.post(
   requirePermission('crossmatch:perform'),
   controllers.crossmatch,
 );
-
-// --- Issue (final gate). Override path is gated to MO/BBO via the
-//     crossmatch:override permission; the gate logic enforces the rest. ---
 router.post(
   '/issue',
   authenticate,

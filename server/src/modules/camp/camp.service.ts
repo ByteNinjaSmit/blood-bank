@@ -95,12 +95,12 @@ export const campService = {
   async detail(id: string) {
     const camp = await campRepo.detail(id);
     if (!camp) throw new NotFoundError('Camp', id);
-    const c = camp as Record<string, unknown> & { donorData?: unknown[]; bagsData?: unknown[] };
+    const c = camp as Record<string, unknown> & { donorData?: unknown[]; unitData?: unknown[] };
     const donorCount = c.donorData?.length ?? 0;
-    const bagsCount = c.bagsData?.length ?? 0;
+    const unitCount = c.unitData?.length ?? 0;
     delete c.donorData;
-    delete c.bagsData;
-    return { ...c, donorCount, bagsCount };
+    delete c.unitData;
+    return { ...c, donorCount, unitCount };
   },
 
   campList: () => cached(CAMP_LIST_KEY, CAMP_LIST_TTL, () => campRepo.campList()),
@@ -112,10 +112,10 @@ export const campService = {
     const camp = (await campRepo.campDonations(campId)) as {
       name: string;
       campId: string;
-      bagsData: unknown[];
+      unitData: unknown[];
     } | null;
     if (!camp) throw new NotFoundError('Camp', campId);
-    return { campName: camp.name, campId: camp.campId, donations: camp.bagsData };
+    return { campName: camp.name, campId: camp.campId, units: camp.unitData };
   },
 
   async campDonors(campId: string) {

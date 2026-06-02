@@ -175,27 +175,38 @@ export function createUnitRepo(): UnitRepo {
     },
 
     async applyEventToDonation(donationId, event, actorId, fromStatuses) {
-      const units = (await BloodUnitModel.find({
-        donationId,
-        status: { $in: fromStatuses },
-        deletedAt: null,
-      })) as Array<RawUnit & { status: UnitStatus }>;
       const actor = new Types.ObjectId(actorId);
+      const session = await BloodUnitModel.startSession();
       let changed = 0;
-      for (const u of units) {
-        const next = transition(u.status, event, u.unitId);
-        await BloodUnitModel.updateOne(
-          { _id: u._id },
-          {
-            status: next,
-            updatedBy: actor,
-            $push: {
-              statusHistory: { from: u.status, to: next, event, actor, at: new Date() },
-            },
-          },
-        );
-        changed++;
+
+      try {
+        await session.withTransaction(async () => {
+          const units = (await BloodUnitModel.find(
+            { donationId, status: { $in: fromStatuses }, deletedAt: null },
+            null,
+            { session },
+          )) as Array<RawUnit & { status: UnitStatus }>;
+
+          for (const u of units) {
+            const next = transition(u.status, event, u.unitId);
+            await BloodUnitModel.updateOne(
+              { _id: u._id, status: u.status }, // optimistic check: status must still match
+              {
+                status: next,
+                updatedBy: actor,
+                $push: {
+                  statusHistory: { from: u.status, to: next, event, actor, at: new Date() },
+                },
+              },
+              { session },
+            );
+            changed++;
+          }
+        });
+      } finally {
+        await session.endSession();
       }
+
       if (changed > 0) void invalidate('inventory:*');
       return changed;
     },

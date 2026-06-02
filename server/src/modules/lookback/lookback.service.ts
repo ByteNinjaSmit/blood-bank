@@ -1,11 +1,7 @@
-// Lookback service. When a donor turns reactive: trace recipients,
-// recall in-stock units (DISCARD via state machine), audit, and email
-// the recall to the bank officer. Triggered automatically by the TTI
-// service on a reactive finalize, or manually by a BBO.
-
 import { childLogger } from '@/core/logger';
-import { auditService } from '@/modules/audit/audit.service';
-import { notificationService } from '@/modules/notification/notification.service';
+import type { IAuditService, INotificationService } from '@/shared/interfaces';
+import { auditService as defaultAudit } from '@/modules/audit/audit.service';
+import { notificationService as defaultNotify } from '@/modules/notification/notification.service';
 import type { LookbackRepo, LookbackTrace } from './lookback.repository';
 import type { UnitRepo } from '@/modules/unit/unit.repository';
 
@@ -25,8 +21,12 @@ export interface LookbackService {
 export function createLookbackService(deps: {
   lookback: LookbackRepo;
   units: UnitRepo;
+  audit?: IAuditService;
+  notify?: INotificationService;
 }): LookbackService {
   const log = childLogger({ module: 'lookback-service' });
+  const audit = deps.audit ?? defaultAudit;
+  const notify = deps.notify ?? defaultNotify;
 
   async function execute(
     trace: LookbackTrace,
@@ -34,7 +34,6 @@ export function createLookbackService(deps: {
     notifyEmail: string | undefined,
     sourceDonationId: string,
   ): Promise<LookbackResult> {
-    // Recall (discard) every still-in-stock unit from this donor.
     const recalledUnitIds: string[] = [];
     for (const unitId of trace.inStockUnitIds) {
       try {
@@ -51,7 +50,7 @@ export function createLookbackService(deps: {
       }
     }
 
-    await auditService.record({
+    await audit.record({
       actorId,
       action: 'OVERRIDE',
       entityType: 'Lookback',
@@ -65,15 +64,19 @@ export function createLookbackService(deps: {
     });
 
     if (notifyEmail) {
-      await notificationService.send({
-        type: 'LOOKBACK_RECALL',
-        to: notifyEmail,
-        payload: {
-          donationId: sourceDonationId,
-          affectedUnitIds: recalledUnitIds,
-          recipientCount: trace.recipients.length,
-        },
-      });
+      await notify
+        .send({
+          type: 'LOOKBACK_RECALL',
+          to: notifyEmail,
+          payload: {
+            donationId: sourceDonationId,
+            affectedUnitIds: recalledUnitIds,
+            recipientCount: trace.recipients.length,
+          },
+        })
+        .catch((err: Error) =>
+          log.error({ sourceDonationId, err: err.message }, 'lookback recall notification failed'),
+        );
     }
 
     log.warn(

@@ -1,11 +1,8 @@
-// Issue service. The final clinical gate before a unit leaves the
-// bank. Runs checkIssueGate against TTI release state + crossmatch
-// result + patient special needs, then transitions the unit to ISSUED.
-
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
 import { ForbiddenError, NotFoundError } from '@/shared/errors';
-import { auditService } from '@/modules/audit/audit.service';
+import type { IAuditService } from '@/shared/interfaces';
+import { auditService as defaultAudit } from '@/modules/audit/audit.service';
 import { checkIssueGate } from './issue.gate';
 import type { IssueRepo } from '@/modules/issue/issue.repository';
 import type { RequisitionRepo } from '@/modules/requisition/requisition.repository';
@@ -33,8 +30,10 @@ export function createIssueService(deps: {
   patients: PatientRepo;
   crossmatches: CrossmatchRepo;
   tti: TtiRepo;
+  audit?: IAuditService;
 }): IssueService {
   const log = childLogger({ module: 'issue-service' });
+  const audit = deps.audit ?? defaultAudit;
 
   return {
     async issue(input, actorId) {
@@ -46,12 +45,8 @@ export function createIssueService(deps: {
       if (!unit) throw new NotFoundError('BloodUnit', input.unitId);
 
       const patient = await deps.patients.findById(req.patientId);
-
-      // TTI gate keyed by the unit's donation.
       const tti = await deps.tti.findByDonation(unit.donationId);
       const ttiDecision = tti?.releaseDecision ?? 'pending';
-
-      // Latest crossmatch for this requisition + unit.
       const xm = await deps.crossmatches.findLatestForUnit(req.id, input.unitId);
 
       const gate = checkIssueGate({
@@ -66,12 +61,10 @@ export function createIssueService(deps: {
           : undefined,
       });
 
-      if (!gate.allowed) {
-        throw new ForbiddenError(`Issue blocked: ${gate.blockers.join('; ')}`);
-      }
+      if (!gate.allowed) throw new ForbiddenError(`Issue blocked: ${gate.blockers.join('; ')}`);
 
-      // CROSSMATCHED -> ISSUED via state machine.
       const issueId = `IS-${dateStamp()}-${rand()}`;
+
       await deps.units.applyEvent({
         unitId: input.unitId,
         event: 'ISSUE',
@@ -94,7 +87,7 @@ export function createIssueService(deps: {
         actorId,
       );
 
-      await auditService.record({
+      await audit.record({
         actorId,
         action: gate.usedOverride ? 'OVERRIDE' : 'ISSUE',
         entityType: 'BloodUnit',

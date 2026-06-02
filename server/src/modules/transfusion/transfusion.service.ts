@@ -1,11 +1,8 @@
-// Transfusion service. Records bedside administration, transitions the
-// unit ISSUED -> TRANSFUSED (or RETURNED_UNUSED), audits, and if a
-// reaction occurred flags it for the adverse-reaction workflow.
-
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
 import { ConflictError } from '@/shared/errors';
-import { auditService } from '@/modules/audit/audit.service';
+import type { IAuditService } from '@/shared/interfaces';
+import { auditService as defaultAudit } from '@/modules/audit/audit.service';
 import type { TransfusionDto, TransfusionRepo } from './transfusion.repository';
 import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { TransfusionOutcome } from '@/shared/enums';
@@ -35,12 +32,13 @@ export interface TransfusionService {
 export function createTransfusionService(deps: {
   transfusions: TransfusionRepo;
   units: UnitRepo;
+  audit?: IAuditService;
 }): TransfusionService {
   const log = childLogger({ module: 'transfusion-service' });
+  const audit = deps.audit ?? defaultAudit;
 
   return {
     async record(input, actorId) {
-      // Two-person bedside check is mandatory and cannot be skipped.
       const c = input.bedsideCheck;
       if (
         !c.patientIdConfirmed ||
@@ -54,10 +52,8 @@ export function createTransfusionService(deps: {
       }
 
       const transfusionId = `TF-${dateStamp()}-${rand()}`;
-
-      // Unit lifecycle: completed transfusion -> TRANSFUSED;
-      // stopped/unused -> RETURNED_UNUSED.
       const event = input.outcome === 'COMPLETED' ? 'CONFIRM_TRANSFUSION' : 'RETURN_UNUSED';
+
       await deps.units.applyEvent({
         unitId: input.unitId,
         event,
@@ -68,7 +64,7 @@ export function createTransfusionService(deps: {
 
       const created = await deps.transfusions.create({ ...input, transfusionId }, actorId);
 
-      await auditService.record({
+      await audit.record({
         actorId,
         action: 'STATE_TRANSITION',
         entityType: 'BloodUnit',

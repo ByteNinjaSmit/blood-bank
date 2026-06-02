@@ -32,7 +32,7 @@ export const campRepo = {
   async detail(id: string) {
     return CampModel.findById(id)
       .select(
-        'campId name description address contactInfo dateFrom dateTo createdBy lastUpdatedBy staff createdAt donorData bagsData',
+        'campId name description address contactInfo dateFrom dateTo createdBy lastUpdatedBy staff createdAt donorData unitData',
       )
       .populate('createdBy', 'name phone email')
       .populate('lastUpdatedBy', 'name phone email')
@@ -65,11 +65,11 @@ export const campRepo = {
 
   async campDonations(campId: string) {
     return CampModel.findById(campId)
-      .select('name campId bagsData')
+      .select('name campId unitData')
       .populate({
-        path: 'bagsData',
-        select: 'bagNo segmentNo typeOfBag bloodGroup rh status collectionDate donor initialVitals',
-        populate: { path: 'donor', select: 'name donorId' },
+        path: 'unitData',
+        select:
+          'unitId componentType aboGroup rhFactor status collectedAt expiresAt donationId campId',
       })
       .lean();
   },

@@ -36,8 +36,18 @@ const PatientSchema = new Schema(
 
     aboGroup: { type: String, enum: ABO_GROUP, index: true },
     rhFactor: { type: String, enum: RH_FACTOR, index: true },
-    // Two independent determinations needed for electronic crossmatch.
-    groupConfirmations: { type: [GroupConfirmation], default: [] },
+    // Two independent determinations required for electronic crossmatch (two-record rule).
+    // Max 2 enforced here; a third is a new sample requiring a new patient record.
+    groupConfirmations: {
+      type: [GroupConfirmation],
+      default: [],
+      validate: {
+        validator(v: unknown[]) {
+          return v.length <= 2;
+        },
+        message: 'Maximum 2 ABO/Rh group confirmations per patient record.',
+      },
+    },
 
     antibodyHistory: { type: [AntibodyEntry], default: [] },
     specialNeeds: [{ type: String, enum: SPECIAL_NEED }],
