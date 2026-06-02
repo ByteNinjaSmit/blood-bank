@@ -23,6 +23,9 @@ import transfusionRouter from '@/modules/transfusion/transfusion.routes';
 import adverseReactionRouter from '@/modules/adverse-reaction/adverse-reaction.routes';
 import lookbackRouter from '@/modules/lookback/lookback.routes';
 import auditRouter from '@/modules/audit/audit.routes';
+import userRouter from '@/modules/user/user.routes';
+import hospitalRouter from '@/modules/hospital/hospital.routes';
+import siteRouter from '@/modules/site/site.routes';
 import { errorMiddleware } from '@/shared/middlewares/error';
 
 interface ModuleRoute {
@@ -42,6 +45,9 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/adverse-reaction', router: adverseReactionRouter },
   { path: '/lookback', router: lookbackRouter },
   { path: '/audit', router: auditRouter },
+  { path: '/user', router: userRouter },
+  { path: '/hospital', router: hospitalRouter },
+  { path: '/site', router: siteRouter },
 ];
 
 export function registerRoutes(): Router {
