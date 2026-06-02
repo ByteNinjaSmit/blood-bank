@@ -1,18 +1,21 @@
 # Email and Queue System Setup Guide
 
 ## Overview
+
 This guide helps you set up and troubleshoot the email and queue system for the Blood Bank Management System.
 
 ## Issues Fixed
 
 ### 1. Redis Connection Issues
+
 - **Problem**: `MaxRetriesPerRequestError` due to Redis connection failures
-- **Solution**: 
+- **Solution**:
   - Added proper Redis connection configuration with retry limits
   - Implemented lazy connection to prevent startup failures
   - Added comprehensive error handling for Redis operations
 
 ### 2. Missing Process Handler Errors
+
 - **Problem**: `Missing process handler for job type` errors
 - **Solution**:
   - Fixed queue job type registration
@@ -20,6 +23,7 @@ This guide helps you set up and troubleshoot the email and queue system for the 
   - Implemented job cleanup to prevent duplicate scheduled jobs
 
 ### 3. Email Service Issues
+
 - **Problem**: Email service initialization failures and poor error handling
 - **Solution**:
   - Added proper initialization state management
@@ -27,6 +31,7 @@ This guide helps you set up and troubleshoot the email and queue system for the 
   - Fixed transporter initialization logic
 
 ### 4. PDF Generation Issues
+
 - **Problem**: Missing reports directory and file system errors
 - **Solution**:
   - Added automatic reports directory creation
@@ -71,6 +76,7 @@ TIMEZONE=Asia/Kolkata
 ## Redis Setup
 
 ### Option 1: Local Redis (Development)
+
 ```bash
 # Install Redis (Windows)
 # Download from https://github.com/microsoftarchive/redis/releases
@@ -84,6 +90,7 @@ redis-server
 ```
 
 ### Option 2: Docker Redis (Recommended)
+
 ```bash
 # Start Redis with Docker
 docker run -d --name redis -p 6379:6379 redis:alpine
@@ -95,17 +102,20 @@ docker-compose up redis
 ## Testing the System
 
 ### 1. Test Email Service
+
 ```bash
 node test-email-queue.js
 ```
 
 ### 2. Test Queue Manually
+
 ```bash
 # Using the API endpoint
 curl -X POST http://localhost:5000/api/test/expiry/report/trigger
 ```
 
 ### 3. Check Logs
+
 ```bash
 # Monitor logs in real-time
 tail -f logs/error.log
@@ -115,13 +125,16 @@ tail -f logs/info.log
 ## Troubleshooting
 
 ### Redis Connection Issues
+
 1. **Check Redis is running**:
+
    ```bash
    redis-cli ping
    # Should return: PONG
    ```
 
 2. **Verify REDIS_URL**:
+
    ```bash
    echo $REDIS_URL
    # Should be: redis://localhost:6379
@@ -133,7 +146,9 @@ tail -f logs/info.log
    ```
 
 ### Email Issues
+
 1. **Check environment variables**:
+
    ```bash
    echo $EMAIL_USER
    echo $EMAIL_PASS
@@ -158,7 +173,9 @@ tail -f logs/info.log
    ```
 
 ### Queue Issues
+
 1. **Check queue status**:
+
    ```bash
    # Monitor queue jobs
    redis-cli
@@ -166,6 +183,7 @@ tail -f logs/info.log
    ```
 
 2. **Clear failed jobs**:
+
    ```bash
    # In Redis CLI
    > DEL bull:expiry-report:failed
@@ -181,21 +199,25 @@ tail -f logs/info.log
 ## Production Deployment
 
 ### 1. Environment Variables
+
 - Set `NODE_ENV=production`
 - Use production Redis URL
 - Configure production email settings
 - Set proper timezone
 
 ### 2. Schedule Configuration
+
 - Change cron schedule from `*/2 * * * *` (every 2 minutes) to `0 8 * * *` (daily at 8 AM)
 - Update in `queues/expiry-queue.js`
 
 ### 3. Monitoring
+
 - Set up log monitoring
 - Configure email alerts for queue failures
 - Monitor Redis memory usage
 
 ## File Structure
+
 ```
 server/
 ├── config/
@@ -218,6 +240,7 @@ server/
 ## Support
 
 If you encounter issues:
+
 1. Check the logs in `server/logs/`
 2. Verify all environment variables are set
 3. Test individual components using the test script

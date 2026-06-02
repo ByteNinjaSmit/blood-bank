@@ -42,10 +42,7 @@ describe('TTI release evaluation', () => {
   });
 
   it('reactive wins even if also has negatives', () => {
-    const panel = [
-      ...allNegative,
-      { testName: MANDATORY_PANEL[4]!, result: 'REACTIVE' as const },
-    ];
+    const panel = [...allNegative, { testName: MANDATORY_PANEL[4]!, result: 'REACTIVE' as const }];
     expect(evaluateRelease(panel).decision).toBe('reactive');
   });
 });

@@ -4,7 +4,11 @@
 // at server/models/donor-model.js so writes go to the same collection
 // the old controllers see.
 
-import type { CreateDonorInput, ListDonorsInput, UpdateDonorInput } from '@/modules/donor/donor.validator';
+import type {
+  CreateDonorInput,
+  ListDonorsInput,
+  UpdateDonorInput,
+} from '@/modules/donor/donor.validator';
 import { NotFoundError } from '@/shared/errors';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -133,11 +137,7 @@ export function createDonorRepo(): DonorRepo {
       }
       const skip = (input.page - 1) * input.pageSize;
       const [docs, total] = await Promise.all([
-        DonorModel.find(filter)
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(input.pageSize)
-          .lean(),
+        DonorModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(input.pageSize).lean(),
         DonorModel.countDocuments(filter),
       ]);
       return {

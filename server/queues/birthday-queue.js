@@ -25,7 +25,9 @@ birthdayQueue.on('completed', (job, result) => {
 });
 
 birthdayQueue.on('failed', (job, err) => {
-  logger.error(`[Queue:Birthday] Job failed: ${job && job.id} (${job && job.name}) - ${err.message}`);
+  logger.error(
+    `[Queue:Birthday] Job failed: ${job && job.id} (${job && job.name}) - ${err.message}`,
+  );
 });
 
 birthdayQueue.on('error', (error) => {
@@ -52,7 +54,7 @@ async function scheduleBirthdayJob() {
         },
         removeOnComplete: true,
         removeOnFail: false,
-      }
+      },
     );
 
     logger.info('[Queue:Birthday] Daily birthday SMS job scheduled successfully (09:00 IST)');
@@ -89,4 +91,3 @@ process.on('SIGINT', async () => {
 });
 
 module.exports = birthdayQueue;
-

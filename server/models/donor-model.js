@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const { Schema, Types } = mongoose;
 
 const DonorSchema = new Schema({
@@ -28,7 +28,7 @@ const DonorSchema = new Schema({
     trim: true,
     validate: {
       validator: function (v) {
-        if (v === undefined || v === null || v === "") return true; // optional
+        if (v === undefined || v === null || v === '') return true; // optional
         return /^\d{12}$/.test(v); // 12 digit UID when provided
       },
       message: (props) => `${props.value} is not a valid phone number!`,
@@ -40,7 +40,7 @@ const DonorSchema = new Schema({
   },
   sex: {
     type: String,
-    enum: ["M", "F", "O"],
+    enum: ['M', 'F', 'O'],
     required: true,
   },
   phone: {
@@ -93,12 +93,12 @@ const DonorSchema = new Schema({
   },
   bloodGroup: {
     type: String,
-    enum: ["A", "B", "AB", "O"],
+    enum: ['A', 'B', 'AB', 'O'],
     required: true,
   },
   rh: {
     type: String,
-    enum: ["Positive", "Negative"],
+    enum: ['Positive', 'Negative'],
     required: true,
   },
   donationHistory: [
@@ -109,7 +109,7 @@ const DonorSchema = new Schema({
       },
       donationId: {
         type: Types.ObjectId,
-        ref: "BloodBag",
+        ref: 'BloodBag',
         // required: true
       },
       date: {
@@ -124,7 +124,7 @@ const DonorSchema = new Schema({
   ],
   eligibilityStatus: {
     type: String,
-    enum: ["eligible", "deferred", "temp-deferred"],
+    enum: ['eligible', 'deferred', 'temp-deferred'],
     // required: true,
   },
   lastDonationDate: {
@@ -136,7 +136,7 @@ const DonorSchema = new Schema({
   },
   createdBy: {
     type: Types.ObjectId,
-    ref: "User",
+    ref: 'User',
     required: true,
   },
   updatedAt: {
@@ -145,13 +145,13 @@ const DonorSchema = new Schema({
   },
   updatedBy: {
     type: Types.ObjectId,
-    ref: "User",
+    ref: 'User',
     required: true,
   },
 });
 
 // Auto-update updatedAt before save
-DonorSchema.pre("save", function (next) {
+DonorSchema.pre('save', function (next) {
   this.updatedAt = new Date();
   next();
 });
@@ -167,8 +167,14 @@ DonorSchema.index({ email: 1 });
 DonorSchema.index({ 'address.city': 1 });
 DonorSchema.index({ bloodGroup: 1 });
 // Optional text index for generic full-text search (not used by regex but helpful for $text queries)
-DonorSchema.index({ 'name.firstName': 'text', 'name.lastName': 'text', donorId: 'text', phone: 'text', email: 'text' });
+DonorSchema.index({
+  'name.firstName': 'text',
+  'name.lastName': 'text',
+  donorId: 'text',
+  phone: 'text',
+  email: 'text',
+});
 
-const Donor = mongoose.model("Donor", DonorSchema);
+const Donor = mongoose.model('Donor', DonorSchema);
 
 module.exports = Donor;

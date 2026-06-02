@@ -97,14 +97,24 @@ export interface UnitRepo {
     componentType: ComponentType;
     aboGroups: AboGroup[];
   }): Promise<SelectableUnit[]>;
-  inStockSummary(): Promise<Array<{ componentType: string; aboGroup: string; rhFactor: string; count: number }>>;
+  inStockSummary(): Promise<
+    Array<{ componentType: string; aboGroup: string; rhFactor: string; count: number }>
+  >;
   /** Non-terminal units already past expiry — candidates for auto-EXPIRE. */
   findExpiredUnitIds(now?: Date): Promise<string[]>;
   /** RELEASED units expiring within `days` — for the near-expiry alert. */
   findNearExpiry(
     days: number,
     now?: Date,
-  ): Promise<Array<{ unitId: string; componentType: string; aboGroup: string; rhFactor: string; expiresAt: string }>>;
+  ): Promise<
+    Array<{
+      unitId: string;
+      componentType: string;
+      aboGroup: string;
+      rhFactor: string;
+      expiresAt: string;
+    }>
+  >;
 }
 
 export function createUnitRepo(): UnitRepo {
@@ -213,7 +223,9 @@ export function createUnitRepo(): UnitRepo {
 
     async findExpiredUnitIds(now = new Date()) {
       const raws = (await BloodUnitModel.find({
-        status: { $in: ['COLLECTED', 'IN_TESTING', 'QUARANTINE', 'RELEASED', 'RESERVED', 'CROSSMATCHED'] },
+        status: {
+          $in: ['COLLECTED', 'IN_TESTING', 'QUARANTINE', 'RELEASED', 'RESERVED', 'CROSSMATCHED'],
+        },
         deletedAt: null,
         expiresAt: { $lte: now },
       })

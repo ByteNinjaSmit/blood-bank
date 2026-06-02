@@ -104,7 +104,12 @@ export function createIssueService(deps: {
       });
 
       log.info(
-        { issueId, unitId: input.unitId, requisitionId: req.requisitionId, usedOverride: gate.usedOverride },
+        {
+          issueId,
+          unitId: input.unitId,
+          requisitionId: req.requisitionId,
+          usedOverride: gate.usedOverride,
+        },
         gate.usedOverride ? 'unit ISSUED with override' : 'unit issued',
       );
       return { issueId: issue.issueId, unitId: input.unitId };

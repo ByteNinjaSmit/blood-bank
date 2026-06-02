@@ -36,10 +36,7 @@ export const auditService = {
       });
     } catch (err) {
       // Audit must be durable, but must not break the clinical action.
-      log.error(
-        { err: (err as Error).message, entry },
-        'AUDIT WRITE FAILED — investigate',
-      );
+      log.error({ err: (err as Error).message, entry }, 'AUDIT WRITE FAILED — investigate');
     }
   },
 

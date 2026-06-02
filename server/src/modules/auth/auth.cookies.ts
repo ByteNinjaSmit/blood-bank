@@ -25,7 +25,12 @@ export function setRefreshCookie(res: Response, token: string): void {
 }
 
 export function clearRefreshCookie(res: Response): void {
-  res.clearCookie(COOKIE, { path: '/', httpOnly: true, secure: isProd, sameSite: isProd ? 'none' : 'lax' });
+  res.clearCookie(COOKIE, {
+    path: '/',
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+  });
 }
 
 export const REFRESH_COOKIE_NAME = COOKIE;

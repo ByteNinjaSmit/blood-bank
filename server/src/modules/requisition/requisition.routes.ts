@@ -41,15 +41,28 @@ const controllers = createRequisitionControllers({
 const router = Router();
 
 const CLINICAL_READ = [
-  'system-admin', 'bbo', 'medical-officer', 'lab-tech-serology',
-  'store-keeper', 'issue-counter', 'auditor', 'hospital-user',
+  'system-admin',
+  'bbo',
+  'medical-officer',
+  'lab-tech-serology',
+  'store-keeper',
+  'issue-counter',
+  'auditor',
+  'hospital-user',
 ] as const;
 
 // --- Patient registration (needed before a requisition) ---
 router.post(
   '/patient',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer', 'lab-tech-serology', 'issue-counter', 'hospital-user']),
+  requireRole([
+    'system-admin',
+    'bbo',
+    'medical-officer',
+    'lab-tech-serology',
+    'issue-counter',
+    'hospital-user',
+  ]),
   requirePermission('requisition:create'),
   controllers.createPatient,
 );

@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const AppointmentSchema = new Schema({
@@ -52,12 +52,12 @@ const AppointmentSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ["pending", "confirmed", "cancelled"],
-    default: "pending",
+    enum: ['pending', 'confirmed', 'cancelled'],
+    default: 'pending',
   },
-    source: {
+  source: {
     type: String,
-    default: "public-frontend-nextjs",
+    default: 'public-frontend-nextjs',
   },
   createdAt: {
     type: Date,
@@ -65,23 +65,23 @@ const AppointmentSchema = new Schema({
   },
   recentIllness: {
     type: String,
-    default: "no",
+    default: 'no',
   },
   surgery: {
     type: String,
-    default: "no",
+    default: 'no',
   },
   medication: {
     type: String,
-    default: "no",
+    default: 'no',
   },
   lastDonation: {
     type: Date,
   },
   donationFrequency: {
     type: String,
-    enum: ["1", "2", "3", "4"],
-    default: "1",
+    enum: ['1', '2', '3', '4'],
+    default: '1',
   },
   wantReminder: {
     type: Boolean,
@@ -96,6 +96,6 @@ const AppointmentSchema = new Schema({
 AppointmentSchema.index({ appointmentDate: 1 });
 AppointmentSchema.index({ mobileNo: 1 });
 
-const Appointment = mongoose.model("Appointment", AppointmentSchema);
+const Appointment = mongoose.model('Appointment', AppointmentSchema);
 
 module.exports = Appointment;

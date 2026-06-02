@@ -162,7 +162,11 @@ describe('donation-service.register', () => {
       collectedAt: new Date('2026-04-01T00:00:00Z'),
       donationType: 'WHOLE_BLOOD',
     });
-    const svc = createDonationService({ donations, donors: mockDonors(), deferrals: mockDeferrals() });
+    const svc = createDonationService({
+      donations,
+      donors: mockDonors(),
+      deferrals: mockDeferrals(),
+    });
     await expect(svc.register(baseInput(), 'actor-id')).rejects.toBeInstanceOf(ConflictError);
   });
 

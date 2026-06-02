@@ -78,7 +78,12 @@ export function createTransfusionService(deps: {
       });
 
       log.info(
-        { transfusionId, unitId: input.unitId, outcome: input.outcome, hadReaction: input.hadReaction },
+        {
+          transfusionId,
+          unitId: input.unitId,
+          outcome: input.outcome,
+          hadReaction: input.hadReaction,
+        },
         'transfusion recorded',
       );
       return created;

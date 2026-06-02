@@ -1,7 +1,7 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const { Schema, Types } = mongoose;
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const UserSchema = new Schema({
   publicId: {
@@ -42,7 +42,7 @@ const UserSchema = new Schema({
 
   role: {
     type: String,
-    enum: ["admin", "lab-tech", "inventory", "hospital", "viewer","staff"],
+    enum: ['admin', 'lab-tech', 'inventory', 'hospital', 'viewer', 'staff'],
     required: true,
   },
   password: {
@@ -51,8 +51,8 @@ const UserSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ["active", "inactive", "pending", "blocked", "rejected"],
-    default: "active",
+    enum: ['active', 'inactive', 'pending', 'blocked', 'rejected'],
+    default: 'active',
   },
   permissions: [
     {
@@ -65,7 +65,7 @@ const UserSchema = new Schema({
   ],
   siteId: {
     type: Types.ObjectId,
-    ref: "Site",
+    ref: 'Site',
     // required: true,
   },
   lastLoginAt: {
@@ -78,7 +78,7 @@ const UserSchema = new Schema({
   },
   createdBy: {
     type: Types.ObjectId,
-    ref: "User",
+    ref: 'User',
     // required: true,
   },
   updatedAt: {
@@ -87,7 +87,7 @@ const UserSchema = new Schema({
   },
   updatedBy: {
     type: Types.ObjectId,
-    ref: "User",
+    ref: 'User',
     // required: true,
   },
 });
@@ -100,20 +100,21 @@ const UserSchema = new Schema({
 
 // secure the password
 
-UserSchema.pre("save", async function (next) {
+UserSchema.pre('save', async function (next) {
   const user = this;
   if (this.isModified()) {
     this.updatedAt = new Date();
   }
 
-  if (!user.isModified("password")) {
+  if (!user.isModified('password')) {
     return next();
   }
 
   // If password already appears to be a bcrypt hash, skip re-hashing
   // This handles flows where a hashed password is assigned before save (e.g., OTP registration payload)
   const looksHashed =
-    typeof user.password === "string" && /^(\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53})$/.test(user.password);
+    typeof user.password === 'string' &&
+    /^(\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53})$/.test(user.password);
   if (looksHashed) {
     return next();
   }
@@ -145,16 +146,15 @@ UserSchema.methods.generateToken = async function () {
       },
       process.env.JWT_SECRET_KEY,
       {
-        expiresIn: "1h",
-      }
+        expiresIn: '1h',
+      },
     );
   } catch (error) {
     console.error(error);
-    throw new Error("Error generating JWT token");
+    throw new Error('Error generating JWT token');
   }
 };
 
-
-const User = mongoose.model("User", UserSchema);
+const User = mongoose.model('User', UserSchema);
 
 module.exports = User;

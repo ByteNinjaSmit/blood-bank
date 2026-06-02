@@ -7,13 +7,13 @@ DELETE /donors/:id – Soft delete donor
 
 */
 
-const Donor = require("../models/donor-model");
-const BloodBag = require("../models/bloodbag-model");
-const Component = require("../models/component-model");
-const Inventory = require("../models/inventory-model");
-const DiscardLog = require("../models/discard-model");
-const Site = require("../models/site-model");
-const mongoose = require("mongoose");
+const Donor = require('../models/donor-model');
+const BloodBag = require('../models/bloodbag-model');
+const Component = require('../models/component-model');
+const Inventory = require('../models/inventory-model');
+const DiscardLog = require('../models/discard-model');
+const Site = require('../models/site-model');
+const mongoose = require('mongoose');
 
 const registerDonor = async (req, res, next) => {
   try {
@@ -55,7 +55,10 @@ const registerDonor = async (req, res, next) => {
     }
 
     // If deferred/temp-deferred and no donorId provided, auto-generate a unique deferred donor ID
-    if ((eligibilityStatus === 'deferred' || eligibilityStatus === 'temp-deferred') && (!donorId || !donorId.trim())) {
+    if (
+      (eligibilityStatus === 'deferred' || eligibilityStatus === 'temp-deferred') &&
+      (!donorId || !donorId.trim())
+    ) {
       donorId = `DFR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
@@ -72,30 +75,26 @@ const registerDonor = async (req, res, next) => {
       !rh ||
       !eligibilityStatus
     ) {
-      return res
-        .status(400)
-        .json({ message: "Please fill in all required fields." });
+      return res.status(400).json({ message: 'Please fill in all required fields.' });
     }
 
     // Check for duplicate donor by name and DOB
     const existingDonor = await Donor.findOne({
-      "name.firstName": firstName,
-      "name.lastName": lastName,
+      'name.firstName': firstName,
+      'name.lastName': lastName,
       dob: dob,
-      ...(middleName ? { "name.middleName": middleName } : {}),
+      ...(middleName ? { 'name.middleName': middleName } : {}),
     });
 
     if (existingDonor) {
-      return res.status(400).json({ message: "Donor already exists." });
+      return res.status(400).json({ message: 'Donor already exists.' });
     }
 
     // Validate UID (e.g., 12-digit Aadhaar number)
     if (uid) {
       const uidValid = /^\d{12}$/.test(uid);
       if (!uidValid) {
-        return res
-          .status(400)
-          .json({ message: "Invalid UID. It must be a 12-digit number." });
+        return res.status(400).json({ message: 'Invalid UID. It must be a 12-digit number.' });
       }
     }
 
@@ -103,26 +102,26 @@ const registerDonor = async (req, res, next) => {
     const phoneValid = /\d{10}/.test(phone);
     if (!phoneValid) {
       return res.status(400).json({
-        message: "Invalid phone number. It must be a 10-digit number.",
+        message: 'Invalid phone number. It must be a 10-digit number.',
       });
     }
 
     // Validate DOB (check if it's a valid date and the donor is at least 18 years old)
     const dobDate = new Date(dob);
     if (isNaN(dobDate)) {
-      return res.status(400).json({ message: "Invalid date of birth." });
+      return res.status(400).json({ message: 'Invalid date of birth.' });
     }
 
     // Optional: validate siteId if provided
     let resolvedSiteId = null;
     if (siteId) {
       if (!mongoose.isValidObjectId(siteId)) {
-        return res.status(400).json({ message: "Invalid Site ID provided for donor." });
+        return res.status(400).json({ message: 'Invalid Site ID provided for donor.' });
       }
 
-      const site = await Site.findById(siteId).select("_id");
+      const site = await Site.findById(siteId).select('_id');
       if (!site) {
-        return res.status(404).json({ message: "Site not found for provided siteId." });
+        return res.status(404).json({ message: 'Site not found for provided siteId.' });
       }
       resolvedSiteId = site._id;
     }
@@ -163,7 +162,7 @@ const registerDonor = async (req, res, next) => {
 
     // Return success response
     return res.status(201).json({
-      message: "Donor registered successfully.",
+      message: 'Donor registered successfully.',
       donor: newDonor,
     });
   } catch (error) {
@@ -187,7 +186,9 @@ const checkDonationEligibility = (sex, lastDonationDate) => {
 
   const now = new Date();
   const isAvailableToDonate = now >= nextEligibleDate;
-  const daysUntilEligible = isAvailableToDonate ? 0 : Math.ceil((nextEligibleDate - now) / (1000 * 60 * 60 * 24));
+  const daysUntilEligible = isAvailableToDonate
+    ? 0
+    : Math.ceil((nextEligibleDate - now) / (1000 * 60 * 60 * 24));
 
   return { isAvailableToDonate, nextEligibleDate, daysUntilEligible };
 };
@@ -205,7 +206,7 @@ const fastSearchDonors = async (req, res, next) => {
 
     // Split query into words and escape special chars
     const words = raw.split(/\s+/).filter(Boolean);
-    const conditions = words.map(word => {
+    const conditions = words.map((word) => {
       const esc = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const rx = new RegExp(esc, 'i');
       return {
@@ -228,7 +229,9 @@ const fastSearchDonors = async (req, res, next) => {
       eligibilityStatus: { $nin: ['deferred', 'temp-deferred'] },
     })
       .limit(limit)
-      .select('donorId name uid dob sex phone email address bloodGroup rh lastDonationDate eligibilityStatus')
+      .select(
+        'donorId name uid dob sex phone email address bloodGroup rh lastDonationDate eligibilityStatus',
+      )
       .lean();
 
     const nowYear = new Date().getFullYear();
@@ -237,7 +240,7 @@ const fastSearchDonors = async (req, res, next) => {
       const m = d?.name?.middleName || '';
       const l = d?.name?.lastName || '';
       const fullName = [f, m, l].filter(Boolean).join(' ');
-      const age = d?.dob ? (nowYear - new Date(d.dob).getFullYear()) : null;
+      const age = d?.dob ? nowYear - new Date(d.dob).getFullYear() : null;
 
       // Check donation eligibility
       const eligibility = checkDonationEligibility(d.sex, d.lastDonationDate);
@@ -293,13 +296,13 @@ const updateDonor = async (req, res, next) => {
     } = req.body;
 
     if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ message: "Donor ID Invalid." });
+      return res.status(400).json({ message: 'Donor ID Invalid.' });
     }
 
     // Find the donor by ID
     const donor = await Donor.findById(id);
     if (!donor) {
-      return res.status(404).json({ message: "Donor not found." });
+      return res.status(404).json({ message: 'Donor not found.' });
     }
     // Convert email to lowercase if it's provided
     email = email ? email.toLowerCase() : undefined;
@@ -307,14 +310,14 @@ const updateDonor = async (req, res, next) => {
     if (donor.donorId !== donorId) {
       const existingDonor = await Donor.findOne({ donorId });
       if (existingDonor) {
-        return res.status(400).json({ message: "Donor ID already exists." });
+        return res.status(400).json({ message: 'Donor ID already exists.' });
       }
     }
 
     if (donor.uid !== uid) {
       const existingUID = await Donor.findOne({ uid });
       if (existingUID) {
-        return res.status(400).json({ message: "UID already exists." });
+        return res.status(400).json({ message: 'UID already exists.' });
       }
     }
 
@@ -343,7 +346,7 @@ const updateDonor = async (req, res, next) => {
 
     // Return the updated donor details
     return res.status(200).json({
-      message: "Donor updated successfully.",
+      message: 'Donor updated successfully.',
       donor,
     });
   } catch (error) {
@@ -359,25 +362,25 @@ const deleteDonor = async (req, res, next) => {
     const { id } = req.params;
 
     if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ message: "Donor ID Invalid." });
+      return res.status(400).json({ message: 'Donor ID Invalid.' });
     }
 
-    const donor = await Donor.findById(id).select("donationHistory");
+    const donor = await Donor.findById(id).select('donationHistory');
     if (!donor) {
-      return res.status(404).json({ message: "Donor not found." });
+      return res.status(404).json({ message: 'Donor not found.' });
     }
 
     if (Array.isArray(donor.donationHistory) && donor.donationHistory.length > 0) {
       return res.status(409).json({
-        code: "DONOR_HAS_DONATIONS",
+        code: 'DONOR_HAS_DONATIONS',
         message:
-          "Donor has donation history and cannot be deleted. Contact an administrator to force delete if necessary.",
+          'Donor has donation history and cannot be deleted. Contact an administrator to force delete if necessary.',
       });
     }
 
     await Donor.findByIdAndDelete(id);
 
-    return res.status(200).json({ message: "Donor deleted successfully." });
+    return res.status(200).json({ message: 'Donor deleted successfully.' });
   } catch (error) {
     next(error);
   }
@@ -389,19 +392,19 @@ const getDonorDetails = async (req, res, next) => {
 
     // Check if the provided ID is a valid MongoDB ObjectId
     if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ message: "Invalid donor ID format." });
+      return res.status(400).json({ message: 'Invalid donor ID format.' });
     }
 
     // Fetch the donor from the database
     const donor = await Donor.findById(id)
-      .populate("createdBy", "name phone") // Populate the creator's details
-      .populate("updatedBy", "name phone") // Populate the last updater's details
-      .populate("donationHistory.donationId") // Populate donation history with related donation details (if any)
+      .populate('createdBy', 'name phone') // Populate the creator's details
+      .populate('updatedBy', 'name phone') // Populate the last updater's details
+      .populate('donationHistory.donationId') // Populate donation history with related donation details (if any)
       .exec();
 
     // If no donor found, return 404
     if (!donor) {
-      return res.status(404).json({ message: "Donor not found." });
+      return res.status(404).json({ message: 'Donor not found.' });
     }
 
     // Return the donor details
@@ -423,8 +426,8 @@ const listDonors = async (req, res, next) => {
       endDate,
       page = 1, // Default to page 1 if not provided
       limit = 10, // Default to 10 results per page
-      sortBy = "createdAt", // Default sorting by creation date
-      sortOrder = "desc", // Default to descending order
+      sortBy = 'createdAt', // Default sorting by creation date
+      sortOrder = 'desc', // Default to descending order
     } = req.query;
 
     // Construct the filter query
@@ -451,15 +454,15 @@ const listDonors = async (req, res, next) => {
 
     // Sorting
     const sort = {};
-    sort[sortBy] = sortOrder === "desc" ? -1 : 1; // -1 for descending, 1 for ascending
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1; // -1 for descending, 1 for ascending
 
     // Fetch the donors with the constructed filter, pagination, and sorting
     const donors = await Donor.find(filter)
       .skip(skip)
       .limit(limitResults)
       .sort(sort)
-      .populate("createdBy", "name phone") // Optionally populate creator's details
-      .populate("updatedBy", "name phone") // Optionally populate last updater's details
+      .populate('createdBy', 'name phone') // Optionally populate creator's details
+      .populate('updatedBy', 'name phone') // Optionally populate last updater's details
       .exec();
 
     // Count the total number of donors matching the filter
@@ -476,9 +479,6 @@ const listDonors = async (req, res, next) => {
     next(error); // Pass any errors to the error handling middleware
   }
 };
-
-
-
 
 // ---------------------
 // SEARCH Donor by flexible criteria and get Latest Donation
@@ -497,25 +497,25 @@ const searchDonorLatestDonation = async (req, res, next) => {
     if (!hasNameDob && !hasStrongIdentifier) {
       return res.status(400).json({
         message:
-          "Provide either firstName, lastName and dob, or at least one of phone, uid, donorId to search donor.",
+          'Provide either firstName, lastName and dob, or at least one of phone, uid, donorId to search donor.',
       });
     }
 
     // Build dynamic search query using any provided fields
     const searchQuery = {};
     if (firstName) {
-      searchQuery["name.firstName"] = { $regex: `^${firstName.trim()}`, $options: "i" };
+      searchQuery['name.firstName'] = { $regex: `^${firstName.trim()}`, $options: 'i' };
     }
     if (middleName) {
-      searchQuery["name.middleName"] = { $regex: `^${middleName.trim()}`, $options: "i" };
+      searchQuery['name.middleName'] = { $regex: `^${middleName.trim()}`, $options: 'i' };
     }
     if (lastName) {
-      searchQuery["name.lastName"] = { $regex: `^${lastName.trim()}`, $options: "i" };
+      searchQuery['name.lastName'] = { $regex: `^${lastName.trim()}`, $options: 'i' };
     }
     if (dob) {
       const dobDate = new Date(dob);
       if (isNaN(dobDate)) {
-        return res.status(400).json({ message: "Invalid dob format." });
+        return res.status(400).json({ message: 'Invalid dob format.' });
       }
       searchQuery.dob = dobDate;
     }
@@ -531,33 +531,37 @@ const searchDonorLatestDonation = async (req, res, next) => {
 
     const donor = await Donor.findOne(searchQuery)
       .populate({
-        path: "donationHistory.donationId",
-        select: "bagNo segmentNo typeOfBag bloodGroup rh collectionDate expiryDate status",
-        model: "BloodBag",
+        path: 'donationHistory.donationId',
+        select: 'bagNo segmentNo typeOfBag bloodGroup rh collectionDate expiryDate status',
+        model: 'BloodBag',
       })
       .populate({
-        path: "createdBy updatedBy",
-        select: "name.first name.last phone",
-        model: "User",
+        path: 'createdBy updatedBy',
+        select: 'name.first name.last phone',
+        model: 'User',
       })
-      .select("-__v");
+      .select('-__v');
 
     if (!donor) {
-      return res.status(404).json({ message: "Donor not found." });
+      return res.status(404).json({ message: 'Donor not found.' });
     }
 
     // Get latest donation by comparing date or populated collectionDate
     let latestDonation = null;
     if (Array.isArray(donor.donationHistory) && donor.donationHistory.length > 0) {
       latestDonation = donor.donationHistory.reduce((latest, current) => {
-        const latestTime = new Date(latest?.date || latest?.donationId?.collectionDate || 0).getTime();
-        const currentTime = new Date(current?.date || current?.donationId?.collectionDate || 0).getTime();
+        const latestTime = new Date(
+          latest?.date || latest?.donationId?.collectionDate || 0,
+        ).getTime();
+        const currentTime = new Date(
+          current?.date || current?.donationId?.collectionDate || 0,
+        ).getTime();
         return currentTime >= latestTime ? current : latest;
       }, null);
     }
 
     return res.status(200).json({
-      message: "Donor details with latest donation fetched successfully.",
+      message: 'Donor details with latest donation fetched successfully.',
       donor: {
         _id: donor._id,
         donorId: donor.donorId,
@@ -580,16 +584,16 @@ const searchDonorLatestDonation = async (req, res, next) => {
         updatedBy: donor.updatedBy,
         latestDonation: latestDonation
           ? {
-            donorId: latestDonation.donorId,
-            bagNo: latestDonation.bagNo,
-            date: latestDonation.date,
-            donationId: latestDonation.donationId,
-          }
+              donorId: latestDonation.donorId,
+              bagNo: latestDonation.bagNo,
+              date: latestDonation.date,
+              donationId: latestDonation.donationId,
+            }
           : null,
       },
     });
   } catch (error) {
-    console.error("Error in searchDonorLatestDonation:", error);
+    console.error('Error in searchDonorLatestDonation:', error);
     next(error);
   }
 };
@@ -602,31 +606,36 @@ const forceDeleteDonor = async (req, res, next) => {
     const { id } = req.params;
 
     if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ message: "Donor ID Invalid." });
+      return res.status(400).json({ message: 'Donor ID Invalid.' });
     }
 
     const donor = await Donor.findById(id);
     if (!donor) {
-      return res.status(404).json({ message: "Donor not found." });
+      return res.status(404).json({ message: 'Donor not found.' });
     }
 
     const user = req.user;
-    const isAdmin = user?.role === "admin";
+    const isAdmin = user?.role === 'admin';
     const perms = user?.permissions || [];
-    const canDeleteModule = perms.some((p) =>
-      ["donor", "donors", "donor management"].includes(String(p.moduleName || "").toLowerCase()) && p.delete
+    const canDeleteModule = perms.some(
+      (p) =>
+        ['donor', 'donors', 'donor management'].includes(
+          String(p.moduleName || '').toLowerCase(),
+        ) && p.delete,
     );
 
     if (!isAdmin && !canDeleteModule) {
-      return res.status(403).json({ message: "You do not have permission to force delete donors." });
+      return res
+        .status(403)
+        .json({ message: 'You do not have permission to force delete donors.' });
     }
 
     // Find all blood bags linked to this donor
-    const bags = await BloodBag.find({ donor: id }).select("_id");
+    const bags = await BloodBag.find({ donor: id }).select('_id');
     const bagIds = bags.map((b) => b._id);
 
     // Find all components derived from those bags
-    const components = await Component.find({ donationId: { $in: bagIds } }).select("_id");
+    const components = await Component.find({ donationId: { $in: bagIds } }).select('_id');
     const componentIds = components.map((c) => c._id);
 
     // Delete discard logs related to these bags or components
@@ -651,15 +660,15 @@ const forceDeleteDonor = async (req, res, next) => {
           bagsData: { $in: bagIds },
           donorData: donor._id,
         },
-      }
+      },
     );
 
     // Finally delete donor
     await Donor.findByIdAndDelete(id);
 
-    return res.status(200).json({ message: "Donor and all related data deleted successfully." });
+    return res.status(200).json({ message: 'Donor and all related data deleted successfully.' });
   } catch (error) {
-    console.error("Error in forceDeleteDonor:", error);
+    console.error('Error in forceDeleteDonor:', error);
     next(error);
   }
 };

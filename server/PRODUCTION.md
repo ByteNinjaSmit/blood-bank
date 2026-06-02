@@ -3,6 +3,7 @@
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Docker and Docker Compose installed
 - Node.js 18+ (for local development)
 - MongoDB (for local development)
@@ -53,22 +54,26 @@ SESSION_SECRET=your-session-secret-change-this-in-production
 ### Using Docker Compose (Recommended)
 
 1. **Clone the repository and navigate to server directory:**
+
    ```bash
    cd server
    ```
 
 2. **Create environment file:**
+
    ```bash
    cp .env.example .env
    # Edit .env with your production values
    ```
 
 3. **Start all services:**
+
    ```bash
    docker-compose up -d
    ```
 
 4. **Check service status:**
+
    ```bash
    docker-compose ps
    ```
@@ -81,6 +86,7 @@ SESSION_SECRET=your-session-secret-change-this-in-production
 ### Manual Docker Build
 
 1. **Build the image:**
+
    ```bash
    docker build -t blood-bank-api .
    ```
@@ -97,21 +103,25 @@ SESSION_SECRET=your-session-secret-change-this-in-production
 ## 🔧 Local Development
 
 ### Install Dependencies
+
 ```bash
 npm install
 ```
 
 ### Development Mode
+
 ```bash
 npm run dev
 ```
 
 ### Production Mode
+
 ```bash
 npm run prod
 ```
 
 ### Cluster Mode (Production)
+
 ```bash
 npm run prod:cluster
 ```
@@ -119,11 +129,13 @@ npm run prod:cluster
 ## 📊 Health Checks
 
 ### API Health Check
+
 ```bash
 curl http://localhost:5000/health
 ```
 
 ### Docker Health Check
+
 ```bash
 docker-compose exec blood-bank-api npm run health
 ```
@@ -131,16 +143,19 @@ docker-compose exec blood-bank-api npm run health
 ## 🔒 Security Configuration
 
 ### JWT Secrets
+
 - Generate strong random strings for JWT_SECRET and JWT_REFRESH_SECRET
 - Use at least 32 characters
 - Example: `openssl rand -base64 32`
 
 ### Email Security
+
 - Use Gmail App Passwords instead of regular passwords
 - Enable 2FA on your Gmail account
 - Generate app-specific password
 
 ### Database Security
+
 - Use strong passwords for MongoDB
 - Enable authentication
 - Use SSL/TLS connections in production
@@ -148,11 +163,13 @@ docker-compose exec blood-bank-api npm run health
 ## 📈 Monitoring and Logging
 
 ### Log Files
+
 - Application logs: `./logs/app.log`
 - Error logs: `./logs/error.log`
 - Info logs: `./logs/info.log`
 
 ### Health Monitoring
+
 - Health endpoint: `GET /health`
 - Returns service status and uptime
 - Monitor database, Redis, email, and PDF services
@@ -160,6 +177,7 @@ docker-compose exec blood-bank-api npm run health
 ## 🔄 Backup and Recovery
 
 ### Database Backup
+
 ```bash
 # MongoDB backup
 docker-compose exec mongo mongodump --out /backup
@@ -169,6 +187,7 @@ docker-compose exec redis redis-cli BGSAVE
 ```
 
 ### File Backup
+
 - Reports directory: `./reports`
 - Uploads directory: `./uploads`
 - Logs directory: `./logs`
@@ -198,6 +217,7 @@ docker-compose exec redis redis-cli BGSAVE
    - Ensure database is accessible
 
 ### Debug Mode
+
 ```bash
 # Enable debug logging
 LOG_LEVEL=debug npm run dev
@@ -225,6 +245,7 @@ LOG_LEVEL=debug npm run dev
 ## 🔄 Updates and Maintenance
 
 ### Updating the Application
+
 ```bash
 # Pull latest changes
 git pull origin main
@@ -237,10 +258,12 @@ docker-compose up -d
 ```
 
 ### Database Migrations
+
 - MongoDB schema changes are handled automatically
 - No manual migration scripts required
 
 ### Log Rotation
+
 - Logs are automatically rotated
 - Old logs are compressed and archived
 - Monitor disk space usage
@@ -248,6 +271,7 @@ docker-compose up -d
 ## 📞 Support
 
 For issues and support:
+
 1. Check the logs: `docker-compose logs blood-bank-api`
 2. Verify health status: `curl http://localhost:5000/health`
 3. Check environment variables
@@ -256,6 +280,7 @@ For issues and support:
 ## 🎯 Performance Optimization
 
 ### Production Settings
+
 - Use cluster mode for multiple CPU cores
 - Configure Redis for caching
 - Optimize database queries
@@ -264,6 +289,7 @@ For issues and support:
 - Configure proper timeouts
 
 ### Monitoring
+
 - Monitor CPU and memory usage
 - Track response times
 - Monitor error rates

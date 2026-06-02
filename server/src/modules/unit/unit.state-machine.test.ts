@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  transition,
-  canTransition,
-  allowedEvents,
-  isTerminal,
-} from './unit.state-machine';
+import { transition, canTransition, allowedEvents, isTerminal } from './unit.state-machine';
 import { InvalidUnitTransition } from '@/shared/errors';
 
 describe('BloodUnit state machine', () => {

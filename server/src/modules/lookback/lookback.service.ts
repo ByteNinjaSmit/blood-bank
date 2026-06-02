@@ -14,7 +14,11 @@ export interface LookbackResult extends LookbackTrace {
 }
 
 export interface LookbackService {
-  runForDonation(donationId: string, actorId: string, notifyEmail?: string): Promise<LookbackResult>;
+  runForDonation(
+    donationId: string,
+    actorId: string,
+    notifyEmail?: string,
+  ): Promise<LookbackResult>;
   runForDonor(donorId: string, actorId: string, notifyEmail?: string): Promise<LookbackResult>;
 }
 

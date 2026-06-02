@@ -13,7 +13,7 @@ const EXPIRY_THRESHOLDS = {
   Platelet: 2,
   RBC: 7,
   FFP: 30,
-  Cryo: 30
+  Cryo: 30,
 };
 
 // Ensure reports directory exists
@@ -31,13 +31,13 @@ function ensureReportsDirectory() {
 
 function startOfDay(d = new Date()) {
   const x = new Date(d);
-  x.setHours(0,0,0,0);
+  x.setHours(0, 0, 0, 0);
   return x;
 }
 
 function endOfDay(d = new Date()) {
   const x = new Date(d);
-  x.setHours(23,59,59,999);
+  x.setHours(23, 59, 59, 999);
   return x;
 }
 
@@ -49,42 +49,40 @@ async function findNearExpiryComponents() {
     const today = startOfDay();
 
     const filter = {
-      status: "in-stock", // only in-stock components
-      $or: []
+      status: 'in-stock', // only in-stock components
+      $or: [],
     };
 
     Object.entries(EXPIRY_THRESHOLDS).forEach(([componentType, days]) => {
       const from = today;
       const to = endOfDay(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
-      
+
       filter.$or.push({
         componentType: componentType,
-        expiryDate: { $gte: from, $lte: to }
+        expiryDate: { $gte: from, $lte: to },
       });
     });
 
     const components = await Component.find(filter)
       .populate({
-        path: "donationId",
-        select: "bagNo bloodGroup rh collectionDate",
-        model: "BloodBag"
+        path: 'donationId',
+        select: 'bagNo bloodGroup rh collectionDate',
+        model: 'BloodBag',
       })
       .populate({
-        path: "siteId",
-        select: "name",
-        model: "Site"
+        path: 'siteId',
+        select: 'name',
+        model: 'Site',
       })
       .sort({ expiryDate: 1 }); // soonest expiry first
 
     logger.info('[Expiry] Found near expiry in-stock components', { count: components.length });
     return components;
-
   } catch (error) {
     logger.error('[Expiry] Failed to find near expiry components', { error: error.message });
     throw error;
   }
 }
-
 
 function buildSummary(rows) {
   const map = new Map();
@@ -97,16 +95,18 @@ function buildSummary(rows) {
     map.set(key, (map.get(key) || 0) + 1);
   }
 
-  return [...map.entries()].map(([k, count]) => {
-    const [componentType, bloodGroup, rh] = k.split('||');
-    return { componentType, bloodGroup, rh, count };
-  }).sort((a, b) => 
-    a.componentType.localeCompare(b.componentType) || 
-    a.bloodGroup.localeCompare(b.bloodGroup) || 
-    a.rh.localeCompare(b.rh)
-  );
+  return [...map.entries()]
+    .map(([k, count]) => {
+      const [componentType, bloodGroup, rh] = k.split('||');
+      return { componentType, bloodGroup, rh, count };
+    })
+    .sort(
+      (a, b) =>
+        a.componentType.localeCompare(b.componentType) ||
+        a.bloodGroup.localeCompare(b.bloodGroup) ||
+        a.rh.localeCompare(b.rh),
+    );
 }
-
 
 /**
  * Generates the PDF and returns { filePath, count }
@@ -115,13 +115,13 @@ async function generateExpiryReportPDF(providedData = null) {
   try {
     // Ensure reports directory exists
     ensureReportsDirectory();
-    
-    const data = providedData || await findNearExpiryComponents();
+
+    const data = providedData || (await findNearExpiryComponents());
     const summary = buildSummary(data);
-    const todayLabel = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+    const todayLabel = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
     // Transform data for PDF generation
-    const transformedData = data.map(component => ({
+    const transformedData = data.map((component) => ({
       componentId: component.componentId,
       componentType: component.componentType,
       bloodGroup: component.donationId?.bloodGroup || 'Unknown',
@@ -132,7 +132,7 @@ async function generateExpiryReportPDF(providedData = null) {
       storageLocation: component.storageLocation || 'Not specified',
       siteName: component.siteId?.name || 'Unknown',
       collectionDate: component.donationId?.collectionDate,
-      bagNo: component.donationId?.bagNo || 'Unknown'
+      bagNo: component.donationId?.bagNo || 'Unknown',
     }));
 
     const filePath = await generateNearExpiryPDF({
@@ -141,7 +141,7 @@ async function generateExpiryReportPDF(providedData = null) {
       reportDir: path.resolve(REPORTS_DIR),
       dateLabel: todayLabel,
       summaryRows: summary,
-      detailRows: transformedData
+      detailRows: transformedData,
     });
 
     logger.info('[Expiry] PDF generated successfully', { count: data.length, filePath });
@@ -155,5 +155,5 @@ async function generateExpiryReportPDF(providedData = null) {
 module.exports = {
   findNearExpiryComponents,
   generateExpiryReportPDF,
-  EXPIRY_THRESHOLDS
+  EXPIRY_THRESHOLDS,
 };

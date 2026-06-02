@@ -133,7 +133,10 @@ export function createRequisitionRepo(): RequisitionRepo {
       const updated = (await RequisitionModel.findOneAndUpdate(
         { _id: id, 'matchedUnits.unitId': unitId },
         {
-          $set: { 'matchedUnits.$.crossmatchStatus': status, updatedBy: new Types.ObjectId(actorId) },
+          $set: {
+            'matchedUnits.$.crossmatchStatus': status,
+            updatedBy: new Types.ObjectId(actorId),
+          },
         },
         { new: true },
       ).lean()) as RawReq | null;

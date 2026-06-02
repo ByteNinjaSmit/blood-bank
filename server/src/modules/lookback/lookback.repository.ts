@@ -89,7 +89,10 @@ export function createLookbackRepo(): LookbackRepo {
         const donations = await DonationModel.find({ donor: donation!.donor })
           .select('donationId')
           .lean();
-        return buildTrace(donorId, donations.map((d) => d.donationId));
+        return buildTrace(
+          donorId,
+          donations.map((d) => d.donationId),
+        );
       }
       return buildTrace(donorId, [donationId]);
     },

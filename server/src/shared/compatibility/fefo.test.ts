@@ -4,9 +4,7 @@ import type { SpecialNeed } from '@/shared/enums';
 
 const NOW = new Date('2026-05-30T00:00:00Z');
 
-function unit(
-  partial: Partial<SelectableUnit> & Pick<SelectableUnit, 'unitId'>,
-): SelectableUnit {
+function unit(partial: Partial<SelectableUnit> & Pick<SelectableUnit, 'unitId'>): SelectableUnit {
   return {
     componentType: 'PRBC',
     aboGroup: 'A',

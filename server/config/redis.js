@@ -12,14 +12,14 @@ function createQueue(name, redisUrl) {
       port: parseInt(url.port) || 6379,
       maxRetriesPerRequest: 3,
       retryDelayOnFailover: 100,
-      enableReadyCheck: false
+      enableReadyCheck: false,
     };
   } else {
     redisConfig = {
       url: redisUrl,
       maxRetriesPerRequest: 3,
       retryDelayOnFailover: 100,
-      enableReadyCheck: false
+      enableReadyCheck: false,
     };
   }
 
@@ -29,31 +29,31 @@ function createQueue(name, redisUrl) {
       attempts: 3,
       backoff: { type: 'exponential', delay: 60_000 },
       removeOnComplete: true,
-      removeOnFail: false
+      removeOnFail: false,
     },
-    settings: { 
+    settings: {
       lockDuration: 300_000,
       stalledInterval: 60_000,
-      maxStalledCount: 2
-    }
+      maxStalledCount: 2,
+    },
   };
 
   try {
     const queue = new Queue(name, opts);
-    
+
     // Add error handling for Redis connection
     queue.on('error', (error) => {
       logger.error({ error: error.message }, `[Queue:${name}] Redis connection error`);
     });
-    
+
     queue.on('failed', (job, err) => {
       logger.error({ jobId: job.id, error: err.message }, `[Queue:${name}] Job failed`);
     });
-    
+
     queue.on('completed', (job, result) => {
       logger.info({ jobId: job.id }, `[Queue:${name}] Job completed successfully`);
     });
-    
+
     return queue;
   } catch (error) {
     logger.error({ error: error.message }, `[Queue:${name}] Failed to create queue`);

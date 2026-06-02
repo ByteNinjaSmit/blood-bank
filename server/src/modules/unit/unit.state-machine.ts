@@ -16,8 +16,8 @@ import type { UnitStatus } from '@/shared/enums';
 
 export const UNIT_EVENT = [
   'BEGIN_TESTING',
-  'AWAIT_TTI',          // testing finished, results recorded but not yet released
-  'RELEASE',            // TTI cleared + grouping confirmed
+  'AWAIT_TTI', // testing finished, results recorded but not yet released
+  'RELEASE', // TTI cleared + grouping confirmed
   'RESERVE',
   'UNRESERVE',
   'CROSSMATCH_PASS',
@@ -72,11 +72,7 @@ const INDEX: ReadonlyMap<string, UnitStatus> = (() => {
   return m;
 })();
 
-export function transition(
-  from: UnitStatus,
-  event: UnitEvent,
-  unitId?: string,
-): UnitStatus {
+export function transition(from: UnitStatus, event: UnitEvent, unitId?: string): UnitStatus {
   const to = INDEX.get(`${from}|${event}`);
   if (!to) throw new InvalidUnitTransition(from, event, unitId);
   return to;

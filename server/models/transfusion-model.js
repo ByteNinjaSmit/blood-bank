@@ -6,73 +6,73 @@ const TransfusionSchema = new Schema({
     type: String,
     required: true,
     unique: true,
-    trim: true
+    trim: true,
   },
   hospitalRequestId: {
     type: Types.ObjectId,
     ref: 'HospitalRequest',
-    required: true
+    required: true,
   },
   componentId: {
     type: Types.ObjectId,
     ref: 'Component',
-    required: true
+    required: true,
   },
   bagNo: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
   donorId: {
     type: Types.ObjectId,
     ref: 'Donor',
-    required: true
+    required: true,
   },
   crossmatch: {
     result: {
       type: String,
       enum: ['compatible', 'incompatible'],
-      required: true
+      required: true,
     },
     details: {
       type: String,
-      trim: true
+      trim: true,
     },
     testedAt: {
       type: Date,
-      required: true
+      required: true,
     },
     technicianId: {
       type: Types.ObjectId,
       ref: 'User',
-      required: true
-    }
+      required: true,
+    },
   },
   transfusionStart: {
     type: Date,
-    required: true
+    required: true,
   },
   transfusionEnd: {
     type: Date,
-    required: true
+    required: true,
   },
   outcome: {
     type: String,
-    trim: true
+    trim: true,
   },
   siteId: {
     type: Types.ObjectId,
     ref: 'Site',
-    required: true
+    required: true,
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   updatedAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
 // Auto-update `updatedAt`

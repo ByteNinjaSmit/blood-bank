@@ -35,7 +35,14 @@ router.get(
 router.get(
   '/select',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer', 'lab-tech-serology', 'store-keeper', 'issue-counter']),
+  requireRole([
+    'system-admin',
+    'bbo',
+    'medical-officer',
+    'lab-tech-serology',
+    'store-keeper',
+    'issue-counter',
+  ]),
   requirePermission('unit:read'),
   controllers.select,
 );

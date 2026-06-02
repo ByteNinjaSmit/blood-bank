@@ -15,7 +15,7 @@ const { sendEmail } = require('../services/email-service');
 const fs = require('fs');
 
 const ADMIN_EMAILS = process.env.DISCARD_REPORT_EMAILS
-  ? process.env.DISCARD_REPORT_EMAILS.split(',').map(e => e.trim())
+  ? process.env.DISCARD_REPORT_EMAILS.split(',').map((e) => e.trim())
   : [process.env.ADMIN_EMAIL || process.env.EMAIL_USER];
 
 /**
@@ -37,9 +37,11 @@ async function processDiscardReportJob(job) {
       logger.info(`[Job:${jobName}] ✅ No expired components found today. Nothing to discard.`);
       return { success: true, count: 0, message: 'No expired components found today.' };
     }
-    
+
     if (!filePath) {
-      logger.warn(`[Job:${jobName}] Report PDF not generated; sending notification without attachment.`);
+      logger.warn(
+        `[Job:${jobName}] Report PDF not generated; sending notification without attachment.`,
+      );
     }
 
     // STEP 2️⃣: Prepare email content
@@ -79,12 +81,11 @@ async function processDiscardReportJob(job) {
       }
     }
 
-
     // STEP 4️⃣: Log success
     const finishedAt = new Date();
     const durationSec = ((finishedAt - startedAt) / 1000).toFixed(2);
     logger.info(
-      `[Job:${jobName}] ✅ Completed successfully — ${count} components discarded, took ${durationSec}s`
+      `[Job:${jobName}] ✅ Completed successfully — ${count} components discarded, took ${durationSec}s`,
     );
 
     return {
@@ -94,7 +95,6 @@ async function processDiscardReportJob(job) {
       durationSec,
       message: 'Auto discard process completed successfully.',
     };
-
   } catch (error) {
     const failedAt = new Date();
     const durationSec = ((failedAt - startedAt) / 1000).toFixed(2);
@@ -105,8 +105,8 @@ async function processDiscardReportJob(job) {
     //   duration: `${durationSec}s`,
     //   stack: error.stack,
     // }, `[Job:${jobName}] ❌ Failed during auto-discard process`);
-logger.error(`[Job:${jobName}] ❌ Failed during auto-discard process: ${error.message}`);
-logger.error(error.stack);
+    logger.error(`[Job:${jobName}] ❌ Failed during auto-discard process: ${error.message}`);
+    logger.error(error.stack);
     throw error; // Bull will automatically retry as per queue settings
   }
 }

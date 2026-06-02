@@ -11,7 +11,9 @@ export const CreateDeferralBody = z
     type: z.enum(DEFERRAL_TYPE),
     reason: z.string().trim().min(1).max(300),
     untilDate: z.coerce.date().optional(),
-    source: z.enum(['QUESTIONNAIRE', 'VITALS', 'TTI_REACTIVE', 'LOOKBACK', 'MANUAL']).default('MANUAL'),
+    source: z
+      .enum(['QUESTIONNAIRE', 'VITALS', 'TTI_REACTIVE', 'LOOKBACK', 'MANUAL'])
+      .default('MANUAL'),
     relatedDonationId: z.string().trim().max(80).optional(),
   })
   .refine((d) => d.type === 'PERMANENT' || d.untilDate !== undefined, {

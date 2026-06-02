@@ -73,7 +73,9 @@ function deps(opts: {
   const issues: IssueRepo = {
     create: vi.fn().mockResolvedValue({ issueId: 'IS-1', unitId: 'U1' }),
   };
-  const requisitions = { findById: vi.fn().mockResolvedValue(reqDto()) } as unknown as RequisitionRepo;
+  const requisitions = {
+    findById: vi.fn().mockResolvedValue(reqDto()),
+  } as unknown as RequisitionRepo;
   const units: UnitRepo = {
     findByUnitId: vi.fn().mockResolvedValue(opts.unit ?? unitDto()),
     findReleasableByDonation: vi.fn(),
@@ -93,18 +95,14 @@ function deps(opts: {
     findLatestForUnit: vi
       .fn()
       .mockResolvedValue(
-        opts.xm === undefined
-          ? ({ result: 'COMPATIBLE' } as CrossmatchDto)
-          : opts.xm,
+        opts.xm === undefined ? ({ result: 'COMPATIBLE' } as CrossmatchDto) : opts.xm,
       ),
   } as unknown as CrossmatchRepo;
   const tti = {
     findByDonation: vi
       .fn()
       .mockResolvedValue(
-        opts.tti === undefined
-          ? ({ releaseDecision: 'released' } as TtiResultDto)
-          : opts.tti,
+        opts.tti === undefined ? ({ releaseDecision: 'released' } as TtiResultDto) : opts.tti,
       ),
     recordTests: vi.fn(),
     setDecision: vi.fn(),
@@ -126,22 +124,44 @@ describe('issue-service.issue', () => {
   it('blocks issue when TTI not released', async () => {
     const d = deps({ tti: { id: 't', donationId: 'DN-1', tests: [], releaseDecision: 'pending' } });
     const svc = createIssueService(d);
-    await expect(svc.issue({ requisitionId: REQ_ID, unitId: 'U1' }, 'actor')).rejects.toBeInstanceOf(
-      ForbiddenError,
-    );
+    await expect(
+      svc.issue({ requisitionId: REQ_ID, unitId: 'U1' }, 'actor'),
+    ).rejects.toBeInstanceOf(ForbiddenError);
     expect(d.units.applyEvent).not.toHaveBeenCalled();
   });
 
   it('blocks issue when crossmatch incompatible and no override', async () => {
-    const d = deps({ xm: { id: 'x', crossmatchId: 'XM', requisitionId: REQ_ID, unitId: 'U1', patientId: 'pat-1', method: 'AHG', result: 'INCOMPATIBLE', performedAt: '2026-05-30T00:00:00Z' } });
+    const d = deps({
+      xm: {
+        id: 'x',
+        crossmatchId: 'XM',
+        requisitionId: REQ_ID,
+        unitId: 'U1',
+        patientId: 'pat-1',
+        method: 'AHG',
+        result: 'INCOMPATIBLE',
+        performedAt: '2026-05-30T00:00:00Z',
+      },
+    });
     const svc = createIssueService(d);
-    await expect(svc.issue({ requisitionId: REQ_ID, unitId: 'U1' }, 'actor')).rejects.toBeInstanceOf(
-      ForbiddenError,
-    );
+    await expect(
+      svc.issue({ requisitionId: REQ_ID, unitId: 'U1' }, 'actor'),
+    ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   it('allows incompatible crossmatch WITH override reason', async () => {
-    const d = deps({ xm: { id: 'x', crossmatchId: 'XM', requisitionId: REQ_ID, unitId: 'U1', patientId: 'pat-1', method: 'AHG', result: 'INCOMPATIBLE', performedAt: '2026-05-30T00:00:00Z' } });
+    const d = deps({
+      xm: {
+        id: 'x',
+        crossmatchId: 'XM',
+        requisitionId: REQ_ID,
+        unitId: 'U1',
+        patientId: 'pat-1',
+        method: 'AHG',
+        result: 'INCOMPATIBLE',
+        performedAt: '2026-05-30T00:00:00Z',
+      },
+    });
     const svc = createIssueService(d);
     const r = await svc.issue(
       { requisitionId: REQ_ID, unitId: 'U1', override: { reason: 'massive haemorrhage' } },
@@ -154,7 +174,16 @@ describe('issue-service.issue', () => {
     const d = deps({
       patient: patientDto({ specialNeeds: ['IRRADIATED'] }),
       unit: unitDto({ specialAttributes: [] }),
-      xm: { id: 'x', crossmatchId: 'XM', requisitionId: REQ_ID, unitId: 'U1', patientId: 'pat-1', method: 'AHG', result: 'INCOMPATIBLE', performedAt: '2026-05-30T00:00:00Z' },
+      xm: {
+        id: 'x',
+        crossmatchId: 'XM',
+        requisitionId: REQ_ID,
+        unitId: 'U1',
+        patientId: 'pat-1',
+        method: 'AHG',
+        result: 'INCOMPATIBLE',
+        performedAt: '2026-05-30T00:00:00Z',
+      },
     });
     const svc = createIssueService(d);
     await expect(

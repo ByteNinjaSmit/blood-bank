@@ -6,11 +6,7 @@
 import { childLogger } from '@/core/logger';
 import { TtiQuarantineViolation, NotFoundError } from '@/shared/errors';
 import { evaluateRelease, type PanelEntry } from './tti.release-rules';
-import type {
-  TtiRepo,
-  TtiResultDto,
-  TtiTestEntryInput,
-} from '@/modules/tti/tti.repository';
+import type { TtiRepo, TtiResultDto, TtiTestEntryInput } from '@/modules/tti/tti.repository';
 import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { DeferralRepo } from '@/modules/deferral/deferral.repository';
 import type { DonationRepo } from '@/modules/donation/donation.repository';
@@ -25,7 +21,10 @@ export interface TtiService {
     actorId: string,
   ): Promise<TtiResultDto>;
   /** Evaluate panel + apply the decision: release / discard units + deferral. */
-  finalize(donationId: string, actorId: string): Promise<{
+  finalize(
+    donationId: string,
+    actorId: string,
+  ): Promise<{
     decision: string;
     unitsAffected: number;
     reasons: string[];
@@ -62,7 +61,12 @@ export function createTtiService(deps: {
       }));
       const evaluation = evaluateRelease(panel);
 
-      await deps.tti.setDecision(donationId, evaluation.decision, actorId, evaluation.reasons.join('; '));
+      await deps.tti.setDecision(
+        donationId,
+        evaluation.decision,
+        actorId,
+        evaluation.reasons.join('; '),
+      );
 
       let unitsAffected = 0;
 
@@ -72,22 +76,21 @@ export function createTtiService(deps: {
         // through the legal chain.
         await deps.units.applyEventToDonation(donationId, 'BEGIN_TESTING', actorId, ['COLLECTED']);
         await deps.units.applyEventToDonation(donationId, 'AWAIT_TTI', actorId, ['IN_TESTING']);
-        unitsAffected = await deps.units.applyEventToDonation(
-          donationId,
-          'RELEASE',
-          actorId,
-          ['QUARANTINE'],
-        );
+        unitsAffected = await deps.units.applyEventToDonation(donationId, 'RELEASE', actorId, [
+          'QUARANTINE',
+        ]);
         log.info({ donationId, unitsAffected }, 'TTI released units');
       } else if (evaluation.decision === 'reactive') {
         // Discard every unit of this donation, raise a permanent
         // deferral, and flag for lookback.
-        unitsAffected = await deps.units.applyEventToDonation(
-          donationId,
-          'DISCARD',
-          actorId,
-          ['COLLECTED', 'IN_TESTING', 'QUARANTINE', 'RELEASED', 'RESERVED', 'CROSSMATCHED'],
-        );
+        unitsAffected = await deps.units.applyEventToDonation(donationId, 'DISCARD', actorId, [
+          'COLLECTED',
+          'IN_TESTING',
+          'QUARANTINE',
+          'RELEASED',
+          'RESERVED',
+          'CROSSMATCHED',
+        ]);
         const donation = await deps.donations.findById(donationId).catch(() => null);
         const donorId = donation?.donor;
         if (donorId) {

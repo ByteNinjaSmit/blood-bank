@@ -30,7 +30,14 @@ const router = Router();
 router.get(
   '/:donationId',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer', 'lab-tech-serology', 'auditor', 'qa-manager']),
+  requireRole([
+    'system-admin',
+    'bbo',
+    'medical-officer',
+    'lab-tech-serology',
+    'auditor',
+    'qa-manager',
+  ]),
   requirePermission('tti:read'),
   controllers.get,
 );

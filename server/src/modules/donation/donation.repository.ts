@@ -7,7 +7,10 @@ import { Types } from 'mongoose';
 import { DonationModel } from '@/modules/donation/donation.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
-import type { CreateDonationInput, ListDonationsInput } from '@/modules/donation/donation.validator';
+import type {
+  CreateDonationInput,
+  ListDonationsInput,
+} from '@/modules/donation/donation.validator';
 import type { DerivedUnit } from '@/modules/donation/donation.unit-derivation';
 import { NotFoundError } from '@/shared/errors';
 
@@ -167,9 +170,7 @@ export function createDonationRepo(): DonationRepo {
         BloodUnitModel.find({ donationId: doc.donationId })
           .select('unitId componentType volumeMl expiresAt status')
           .lean(),
-        TtiResultModel.findOne({ donationId: doc.donationId })
-          .select('_id releaseDecision')
-          .lean(),
+        TtiResultModel.findOne({ donationId: doc.donationId }).select('_id releaseDecision').lean(),
       ]);
       return {
         id: doc._id.toString(),
@@ -205,11 +206,7 @@ export function createDonationRepo(): DonationRepo {
       }
       const skip = (q.page - 1) * q.pageSize;
       const [docs, total] = await Promise.all([
-        DonationModel.find(filter)
-          .sort({ collectedAt: -1 })
-          .skip(skip)
-          .limit(q.pageSize)
-          .lean(),
+        DonationModel.find(filter).sort({ collectedAt: -1 }).skip(skip).limit(q.pageSize).lean(),
         DonationModel.countDocuments(filter),
       ]);
       const unitCounts = await BloodUnitModel.aggregate<{

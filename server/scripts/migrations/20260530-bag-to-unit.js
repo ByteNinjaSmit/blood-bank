@@ -111,55 +111,73 @@ async function main() {
   // back to a direct schema.compile here. To keep the script self-
   // contained, we declare the minimum schemas inline:
   const { Schema } = mongoose;
-  const Donation = mongoose.model('Donation', new Schema({
-    donationId: { type: String, required: true, unique: true },
-    legacyBagId: { type: Schema.Types.ObjectId, index: true },
-    donor: { type: Schema.Types.ObjectId, ref: 'Donor', required: true },
-    donationType: String,
-    collectedAt: Date,
-    siteId: Schema.Types.ObjectId,
-    phlebotomistId: Schema.Types.ObjectId,
-    medicalExam: Schema.Types.Mixed,
-    donorFitness: Schema.Types.Mixed,
-    questionnaireFlags: Schema.Types.Mixed,
-    notes: String,
-    createdBy: Schema.Types.ObjectId,
-    updatedBy: Schema.Types.ObjectId,
-  }, { timestamps: true }));
+  const Donation = mongoose.model(
+    'Donation',
+    new Schema(
+      {
+        donationId: { type: String, required: true, unique: true },
+        legacyBagId: { type: Schema.Types.ObjectId, index: true },
+        donor: { type: Schema.Types.ObjectId, ref: 'Donor', required: true },
+        donationType: String,
+        collectedAt: Date,
+        siteId: Schema.Types.ObjectId,
+        phlebotomistId: Schema.Types.ObjectId,
+        medicalExam: Schema.Types.Mixed,
+        donorFitness: Schema.Types.Mixed,
+        questionnaireFlags: Schema.Types.Mixed,
+        notes: String,
+        createdBy: Schema.Types.ObjectId,
+        updatedBy: Schema.Types.ObjectId,
+      },
+      { timestamps: true },
+    ),
+  );
 
-  const BloodUnit = mongoose.model('BloodUnit', new Schema({
-    unitId: { type: String, required: true, unique: true },
-    unitDin: { type: String, default: null },
-    productCode: String,
-    donationId: { type: String, required: true, index: true },
-    legacyBagId: { type: Schema.Types.ObjectId, index: true },
-    componentType: { type: String, required: true },
-    aboGroup: String,
-    rhFactor: String,
-    volumeMl: Number,
-    collectedAt: Date,
-    expiresAt: Date,
-    status: { type: String, required: true, default: 'COLLECTED' },
-    specialAttributes: [String],
-    siteId: Schema.Types.ObjectId,
-    quarantineReason: String,
-    discardReason: String,
-    createdBy: Schema.Types.ObjectId,
-    updatedBy: Schema.Types.ObjectId,
-  }, { timestamps: true }));
+  const BloodUnit = mongoose.model(
+    'BloodUnit',
+    new Schema(
+      {
+        unitId: { type: String, required: true, unique: true },
+        unitDin: { type: String, default: null },
+        productCode: String,
+        donationId: { type: String, required: true, index: true },
+        legacyBagId: { type: Schema.Types.ObjectId, index: true },
+        componentType: { type: String, required: true },
+        aboGroup: String,
+        rhFactor: String,
+        volumeMl: Number,
+        collectedAt: Date,
+        expiresAt: Date,
+        status: { type: String, required: true, default: 'COLLECTED' },
+        specialAttributes: [String],
+        siteId: Schema.Types.ObjectId,
+        quarantineReason: String,
+        discardReason: String,
+        createdBy: Schema.Types.ObjectId,
+        updatedBy: Schema.Types.ObjectId,
+      },
+      { timestamps: true },
+    ),
+  );
 
-  const TtiResult = mongoose.model('TtiResult', new Schema({
-    donationId: { type: String, required: true, unique: true },
-    legacyBagId: { type: Schema.Types.ObjectId, index: true },
-    aboGroupConfirmed: String,
-    rhFactorConfirmed: String,
-    tests: [Schema.Types.Mixed],
-    releaseDecision: { type: String, default: 'pending' },
-    decidedBy: Schema.Types.ObjectId,
-    decidedAt: Date,
-    createdBy: Schema.Types.ObjectId,
-    updatedBy: Schema.Types.ObjectId,
-  }, { timestamps: true }));
+  const TtiResult = mongoose.model(
+    'TtiResult',
+    new Schema(
+      {
+        donationId: { type: String, required: true, unique: true },
+        legacyBagId: { type: Schema.Types.ObjectId, index: true },
+        aboGroupConfirmed: String,
+        rhFactorConfirmed: String,
+        tests: [Schema.Types.Mixed],
+        releaseDecision: { type: String, default: 'pending' },
+        decidedBy: Schema.Types.ObjectId,
+        decidedAt: Date,
+        createdBy: Schema.Types.ObjectId,
+        updatedBy: Schema.Types.ObjectId,
+      },
+      { timestamps: true },
+    ),
+  );
 
   await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 8_000 });
   console.log(`[migration] connected. dryRun=${DRY_RUN} batch=${BATCH_SIZE}`);
@@ -255,9 +273,10 @@ async function main() {
       const abo = ABO_LEGACY_TO_NEW[bag.bloodGroup] ?? 'O';
       const rh = RH_LEGACY_TO_NEW[bag.rh] ?? 'POSITIVE';
 
-      const components = Array.isArray(bag.components) && bag.components.length > 0
-        ? bag.components
-        : [{ inferredType: 'WHOLE_BLOOD' }];
+      const components =
+        Array.isArray(bag.components) && bag.components.length > 0
+          ? bag.components
+          : [{ inferredType: 'WHOLE_BLOOD' }];
 
       for (const comp of components) {
         const componentType = comp.componentType ?? comp.inferredType ?? 'WHOLE_BLOOD';
@@ -330,15 +349,21 @@ async function main() {
   await flush();
 
   console.log('[migration] done');
-  console.log(JSON.stringify({
-    dryRun: DRY_RUN,
-    read,
-    donationsWritten,
-    unitsWritten,
-    ttiWritten,
-    skipped,
-    errored,
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        dryRun: DRY_RUN,
+        read,
+        donationsWritten,
+        unitsWritten,
+        ttiWritten,
+        skipped,
+        errored,
+      },
+      null,
+      2,
+    ),
+  );
 
   await mongoose.disconnect();
 }

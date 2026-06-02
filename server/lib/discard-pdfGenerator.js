@@ -20,7 +20,12 @@ function formatDate(date) {
 
 /** Draw a horizontal separator line */
 function drawLine(doc, y) {
-  doc.moveTo(40, y).lineTo(doc.page.width - 40, y).strokeColor('#aaa').lineWidth(0.5).stroke();
+  doc
+    .moveTo(40, y)
+    .lineTo(doc.page.width - 40, y)
+    .strokeColor('#aaa')
+    .lineWidth(0.5)
+    .stroke();
 }
 
 /** Add page footer with page numbers */
@@ -31,7 +36,9 @@ function addFooter(doc) {
     const bottom = doc.page.height - 40;
     drawLine(doc, bottom - 10);
     doc.font('Helvetica-Oblique').fontSize(8).fillColor('#555');
-    doc.text(`Generated automatically on ${new Date().toLocaleString('en-IN')}`, 40, bottom, { align: 'left' });
+    doc.text(`Generated automatically on ${new Date().toLocaleString('en-IN')}`, 40, bottom, {
+      align: 'left',
+    });
     doc.text(`Page ${i + 1} of ${pageNumber}`, -40, bottom, { align: 'right' });
   }
 }
@@ -39,7 +46,13 @@ function addFooter(doc) {
 /**
  * Generate Auto Discard Report PDF (Improved version)
  */
-async function generateDiscardPDF({ reportDir, title, subtitle, summaryRows = [], detailRows = [] }) {
+async function generateDiscardPDF({
+  reportDir,
+  title,
+  subtitle,
+  summaryRows = [],
+  detailRows = [],
+}) {
   ensureDir(reportDir);
 
   const dateLabel = new Date().toISOString().slice(0, 10);
@@ -63,7 +76,10 @@ async function generateDiscardPDF({ reportDir, title, subtitle, summaryRows = []
   doc.pipe(stream);
 
   // ================= HEADER =================
-  doc.font('Helvetica-Bold').fontSize(20).fillColor('black')
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(20)
+    .fillColor('black')
     .text('BLOOD BANK MANAGEMENT SYSTEM', { align: 'center' });
   doc.moveDown(0.3);
   doc.fontSize(14).text(title, { align: 'center' });
@@ -75,7 +91,11 @@ async function generateDiscardPDF({ reportDir, title, subtitle, summaryRows = []
 
   // ================= SUMMARY SECTION =================
   doc.moveDown(0.5);
-  doc.font('Helvetica-Bold').fontSize(13).fillColor('black').text('SUMMARY BY COMPONENT TYPE AND BLOOD GROUP');
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(13)
+    .fillColor('black')
+    .text('SUMMARY BY COMPONENT TYPE AND BLOOD GROUP');
   doc.moveDown(0.5);
 
   let startX = 50;
@@ -100,7 +120,7 @@ async function generateDiscardPDF({ reportDir, title, subtitle, summaryRows = []
     doc.text('No components discarded today.', startX, y);
     y += rowHeight;
   } else {
-    summaryRows.forEach(row => {
+    summaryRows.forEach((row) => {
       const vals = [row.componentType, row.bloodGroup, row.rh, String(row.count)];
       vals.forEach((val, i) => {
         const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
@@ -110,12 +130,16 @@ async function generateDiscardPDF({ reportDir, title, subtitle, summaryRows = []
     });
   }
 
-  doc.moveTo(40, y).lineTo(doc.page.width - 40, y).stroke();
+  doc
+    .moveTo(40, y)
+    .lineTo(doc.page.width - 40, y)
+    .stroke();
   doc.moveDown(1.5);
 
   // ================= DETAILED SECTION =================
   doc.moveDown(1); // was 0.5 before — adds more space from previous table
-  doc.font('Helvetica-Bold')
+  doc
+    .font('Helvetica-Bold')
     .fontSize(13)
     .fillColor('black')
     .text('DETAILED COMPONENT LIST', { align: 'center' }); // center-align properly
@@ -159,7 +183,7 @@ async function generateDiscardPDF({ reportDir, title, subtitle, summaryRows = []
       const vals = [
         idx + 1,
         d.bagNo || '-',
-        d.componentId || '-',  
+        d.componentId || '-',
         d.componentType || '-',
         d.bloodGroup || '-',
         d.rh || '-',
@@ -220,7 +244,6 @@ async function generateDiscardPDF({ reportDir, title, subtitle, summaryRows = []
   });
 
   return filePath;
-
 }
 
 module.exports = { generateDiscardPDF };

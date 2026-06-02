@@ -2,7 +2,7 @@
 /**
  * Discard Queue – Auto discard expired blood components daily.
  * Runs via Bull with Redis backend.
- * 
+ *
  * Schedule: Every day at 08:00 AM IST
  */
 
@@ -46,7 +46,10 @@ discardQueue.on('completed', (job, result) => {
 });
 
 discardQueue.on('failed', (job, err) => {
-  logger.error({ jobId: job.id, name: job.name, error: err.message }, '[Queue:Discard] ❌ Job failed');
+  logger.error(
+    { jobId: job.id, name: job.name, error: err.message },
+    '[Queue:Discard] ❌ Job failed',
+  );
 });
 
 discardQueue.on('error', (error) => {
@@ -64,23 +67,27 @@ async function scheduleDiscardJob() {
     const existing = await discardQueue.getRepeatableJobs();
 
     // Prevent duplicate scheduling
-    const oldJob = existing.find(j => j.name === JOB_NAME);
+    const oldJob = existing.find((j) => j.name === JOB_NAME);
     if (oldJob) {
       await discardQueue.removeRepeatableByKey(oldJob.key);
       logger.info('[Queue:Discard] Removed old scheduled job to prevent duplication');
     }
 
     // Add new repeatable job
-    await discardQueue.add(JOB_NAME, {}, {
-      jobId: JOB_NAME,
-      repeat: {
-        // cron: '*/2 * * * *',
-        cron: '0 8 * * *', // 08:00 AM every day
-        tz: process.env.TIMEZONE || 'Asia/Kolkata'
+    await discardQueue.add(
+      JOB_NAME,
+      {},
+      {
+        jobId: JOB_NAME,
+        repeat: {
+          // cron: '*/2 * * * *',
+          cron: '0 8 * * *', // 08:00 AM every day
+          tz: process.env.TIMEZONE || 'Asia/Kolkata',
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
       },
-      removeOnComplete: true,
-      removeOnFail: false,
-    });
+    );
 
     logger.info('[Queue:Discard] ✅ Daily auto-discard job scheduled successfully (08:00 IST)');
   } catch (error) {
@@ -94,7 +101,10 @@ async function scheduleDiscardJob() {
     await scheduleDiscardJob();
     logger.info('[Queue:Discard] 🚀 Discard queue initialized successfully');
   } catch (error) {
-    logger.error({ error: error.message }, '[Queue:Discard] ❌ Failed to initialize auto-discard queue schedule');
+    logger.error(
+      { error: error.message },
+      '[Queue:Discard] ❌ Failed to initialize auto-discard queue schedule',
+    );
   }
 })();
 

@@ -72,20 +72,20 @@ cp .env.example .env
 `.env.example` documents every variable with `[DEV]` / `[PROD]` markers. Key
 variables:
 
-| Variable | Required | Dev | Prod |
-|----------|----------|-----|------|
-| `MONGODB_URI` | yes | `mongodb://localhost:27017/` | authenticated remote URI |
-| `REDIS_URL` | yes | `redis://localhost:6379` | `redis://redis:6379` (Docker) |
-| `PORT` | yes | `5000` | `5000` |
-| `NODE_ENV` | yes | `development` | `production` |
-| `JWT_SECRET`, `JWT_SECRET_KEY` | yes | dev placeholders | strong random, unique |
-| `ACCESS_TOKEN_EXPIRY` / `REFRESH_TOKEN_EXPIRY` | yes | `15m` / `7d` | `15m` / `7d` |
-| `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_SECURE` | for email | Gmail App Password; `465`+`true` or `587`+`false` | same |
-| `ADMIN_EMAIL` | for email | test inbox | admin inbox |
-| `REPORTS_DIR`, `NEAR_EXPIRY_DAYS`, `TIMEZONE` | yes | `./reports`, `2`, `Asia/Kolkata` | same |
-| `AWS_*`, `SNS_PHONE` | optional | — | set if SMS used |
-| `TWILIO_*` | optional | — | set if SMS used |
-| `SYSTEM_USER_ID` | yes | valid Mongo ObjectId | valid Mongo ObjectId |
+| Variable                                                               | Required  | Dev                                               | Prod                          |
+| ---------------------------------------------------------------------- | --------- | ------------------------------------------------- | ----------------------------- |
+| `MONGODB_URI`                                                          | yes       | `mongodb://localhost:27017/`                      | authenticated remote URI      |
+| `REDIS_URL`                                                            | yes       | `redis://localhost:6379`                          | `redis://redis:6379` (Docker) |
+| `PORT`                                                                 | yes       | `5000`                                            | `5000`                        |
+| `NODE_ENV`                                                             | yes       | `development`                                     | `production`                  |
+| `JWT_SECRET`, `JWT_SECRET_KEY`                                         | yes       | dev placeholders                                  | strong random, unique         |
+| `ACCESS_TOKEN_EXPIRY` / `REFRESH_TOKEN_EXPIRY`                         | yes       | `15m` / `7d`                                      | `15m` / `7d`                  |
+| `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_SECURE` | for email | Gmail App Password; `465`+`true` or `587`+`false` | same                          |
+| `ADMIN_EMAIL`                                                          | for email | test inbox                                        | admin inbox                   |
+| `REPORTS_DIR`, `NEAR_EXPIRY_DAYS`, `TIMEZONE`                          | yes       | `./reports`, `2`, `Asia/Kolkata`                  | same                          |
+| `AWS_*`, `SNS_PHONE`                                                   | optional  | —                                                 | set if SMS used               |
+| `TWILIO_*`                                                             | optional  | —                                                 | set if SMS used               |
+| `SYSTEM_USER_ID`                                                       | yes       | valid Mongo ObjectId                              | valid Mongo ObjectId          |
 
 > Full table, dev-vs-prod comment matrix, and connection details:
 > [`../DOCUMENTATION.md`](../DOCUMENTATION.md) §5–§7.
@@ -99,11 +99,11 @@ cp .env.example .env          # edit with your values
 npm start                     # nodemon server.js (auto-reload)
 ```
 
-| Command | Use |
-|---------|-----|
-| `npm start` / `npm run dev` | development — `nodemon server.js`, auto-reload |
-| `node server.js` | single-process run |
-| `node start.js` | production cluster — one worker per CPU, auto-restart |
+| Command                     | Use                                                   |
+| --------------------------- | ----------------------------------------------------- |
+| `npm start` / `npm run dev` | development — `nodemon server.js`, auto-reload        |
+| `node server.js`            | single-process run                                    |
+| `node start.js`             | production cluster — one worker per CPU, auto-restart |
 
 API: `http://localhost:5000` · Health: `http://localhost:5000/health`
 
@@ -111,33 +111,33 @@ API: `http://localhost:5000` · Health: `http://localhost:5000/health`
 
 Base path `/api`. Route prefixes mounted in `server.js`:
 
-| Prefix | Router | Domain |
-|--------|--------|--------|
-| `/api/auth` | `auth-routes` | login, OTP, register, logout, refresh |
-| `/api/site` | `site-routes` | site / branch management |
-| `/api/donor` | `donor-routes` | donor registration & management |
-| `/api/donation` | `donation-routes` | blood bag collection |
-| `/api/hospitals` | `hospital-routes` | hospital master data |
-| `/api/inventory` | `inventory-routes` | component inventory |
-| `/api/requests` | `request-routes` | requisitions, matching, issue |
-| `/api/component` | `component-routes` | component separation |
-| `/api/users` | `user-routes` | users & roles |
-| `/api/discard` | `discard-routes` | discard management |
-| `/api/sernology` | `lab-routes` | serology / lab results |
-| `/api/admin` | `admin-routes` | admin operations |
-| `/api/dashboard` | `dashboard-routes` | dashboard data |
-| `/api/mis` | `mis-routes` | MIS reports & KPIs |
-| `/api/appointments` | `appointment-routes` | donor appointments |
-| `/api/test` | `test-routes` | dev/test utilities (e.g. trigger expiry report) |
+| Prefix              | Router               | Domain                                          |
+| ------------------- | -------------------- | ----------------------------------------------- |
+| `/api/auth`         | `auth-routes`        | login, OTP, register, logout, refresh           |
+| `/api/site`         | `site-routes`        | site / branch management                        |
+| `/api/donor`        | `donor-routes`       | donor registration & management                 |
+| `/api/donation`     | `donation-routes`    | blood bag collection                            |
+| `/api/hospitals`    | `hospital-routes`    | hospital master data                            |
+| `/api/inventory`    | `inventory-routes`   | component inventory                             |
+| `/api/requests`     | `request-routes`     | requisitions, matching, issue                   |
+| `/api/component`    | `component-routes`   | component separation                            |
+| `/api/users`        | `user-routes`        | users & roles                                   |
+| `/api/discard`      | `discard-routes`     | discard management                              |
+| `/api/sernology`    | `lab-routes`         | serology / lab results                          |
+| `/api/admin`        | `admin-routes`       | admin operations                                |
+| `/api/dashboard`    | `dashboard-routes`   | dashboard data                                  |
+| `/api/mis`          | `mis-routes`         | MIS reports & KPIs                              |
+| `/api/appointments` | `appointment-routes` | donor appointments                              |
+| `/api/test`         | `test-routes`        | dev/test utilities (e.g. trigger expiry report) |
 
 Non-API routes:
 
-| Route | Purpose |
-|-------|---------|
-| `GET /` | API welcome message |
-| `GET /health` | health check (status, uptime, env, service flags) |
-| `/socket.io/` | Socket.IO realtime endpoint |
-| `/database/uploads/*` | static uploaded files |
+| Route                 | Purpose                                           |
+| --------------------- | ------------------------------------------------- |
+| `GET /`               | API welcome message                               |
+| `GET /health`         | health check (status, uptime, env, service flags) |
+| `/socket.io/`         | Socket.IO realtime endpoint                       |
+| `/database/uploads/*` | static uploaded files                             |
 
 > Additional router files exist (`audit-routes`, `import-routes`,
 > `report-routes`, `transfusion-routes`). Mount them in `server.js` before use
@@ -145,13 +145,13 @@ Non-API routes:
 
 ## Connections
 
-| Connection | Configured in | Variable |
-|------------|---------------|----------|
-| MongoDB | `config/db.js` (`connectToDatabase`) | `MONGODB_URI` |
-| Redis (rate limit / Socket.IO adapter) | `server.js` | `REDIS_URL` |
-| Redis (Bull queues) | `config/redis.js` (`createQueue`) | `REDIS_URL` |
-| SMTP | `config/mailConfig.js` | `EMAIL_*` |
-| Twilio | `config/twilio.js` (lazy init) | `TWILIO_*` |
+| Connection                             | Configured in                        | Variable      |
+| -------------------------------------- | ------------------------------------ | ------------- |
+| MongoDB                                | `config/db.js` (`connectToDatabase`) | `MONGODB_URI` |
+| Redis (rate limit / Socket.IO adapter) | `server.js`                          | `REDIS_URL`   |
+| Redis (Bull queues)                    | `config/redis.js` (`createQueue`)    | `REDIS_URL`   |
+| SMTP                                   | `config/mailConfig.js`               | `EMAIL_*`     |
+| Twilio                                 | `config/twilio.js` (lazy init)       | `TWILIO_*`    |
 
 Notes:
 
@@ -168,12 +168,12 @@ Notes:
 
 Bull queues, initialized on boot in `server.js`:
 
-| Queue | File | Purpose |
-|-------|------|---------|
-| Expiry report | `queues/expiry-queue.js` | daily near-expiry PDF report + email |
-| Discard | `queues/discard-queue.js` | discard processing |
-| Email OTP | `queues/email-otp-queue.js` | OTP email delivery |
-| Birthday SMS | `queues/birthday-queue.js` | birthday SMS notifications |
+| Queue         | File                        | Purpose                              |
+| ------------- | --------------------------- | ------------------------------------ |
+| Expiry report | `queues/expiry-queue.js`    | daily near-expiry PDF report + email |
+| Discard       | `queues/discard-queue.js`   | discard processing                   |
+| Email OTP     | `queues/email-otp-queue.js` | OTP email delivery                   |
+| Birthday SMS  | `queues/birthday-queue.js`  | birthday SMS notifications           |
 
 Queue defaults (`config/redis.js`): 3 attempts, exponential backoff,
 `removeOnComplete`, lock duration 5 min.
@@ -218,15 +218,15 @@ FFP 30 days, Cryo 30 days.
 
 ## Troubleshooting
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| `MongoServerSelectionError` | bad `MONGODB_URI`, DB down, IP not whitelisted, unencoded password | verify URI; encode `@`→`%40`, `#`→`%23` |
-| Redis `MaxRetriesPerRequestError` | `REDIS_URL` wrong / unset / Redis down | `redis-cli ping`; set `REDIS_URL` |
-| Queues idle in Docker | `REDIS_URL` not set in container → ioredis hits localhost | set `REDIS_URL=redis://redis:6379` |
-| CORS error in browser | origin missing from allow-list | add domain to `allowedOrigins` in `server.js` |
-| Email not sending | bad app password, 2FA off, wrong port/secure pair | use Gmail App Password; `465`+`true` or `587`+`false` |
-| PDF generation fails | `REPORTS_DIR` missing / not writable | ensure `./reports` exists and is writable |
-| `429 Too Many Requests` | rate limiter triggered | expected under load; tune limits in `server.js` |
+| Symptom                           | Cause                                                              | Fix                                                   |
+| --------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------- |
+| `MongoServerSelectionError`       | bad `MONGODB_URI`, DB down, IP not whitelisted, unencoded password | verify URI; encode `@`→`%40`, `#`→`%23`               |
+| Redis `MaxRetriesPerRequestError` | `REDIS_URL` wrong / unset / Redis down                             | `redis-cli ping`; set `REDIS_URL`                     |
+| Queues idle in Docker             | `REDIS_URL` not set in container → ioredis hits localhost          | set `REDIS_URL=redis://redis:6379`                    |
+| CORS error in browser             | origin missing from allow-list                                     | add domain to `allowedOrigins` in `server.js`         |
+| Email not sending                 | bad app password, 2FA off, wrong port/secure pair                  | use Gmail App Password; `465`+`true` or `587`+`false` |
+| PDF generation fails              | `REPORTS_DIR` missing / not writable                               | ensure `./reports` exists and is writable             |
+| `429 Too Many Requests`           | rate limiter triggered                                             | expected under load; tune limits in `server.js`       |
 
 More: [`PRODUCTION.md`](./PRODUCTION.md), [`EMAIL_QUEUE_SETUP.md`](./EMAIL_QUEUE_SETUP.md),
 [`../DOCUMENTATION.md`](../DOCUMENTATION.md).

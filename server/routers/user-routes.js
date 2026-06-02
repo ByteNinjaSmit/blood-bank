@@ -9,44 +9,22 @@ DELETE /users/:id                → Soft delete / deactivate user
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user-controller');
-const  authMiddleware  = require('../middlewares/auth-middleware');
+const authMiddleware = require('../middlewares/auth-middleware');
 const { roleMiddleware } = require('../middlewares/role-middleware');
 
 // Create user (admin only)
-router.post(
-  '/',
-  authMiddleware,
-  roleMiddleware(['admin']),
-  userController.createUser
-);
+router.post('/', authMiddleware, roleMiddleware(['admin']), userController.createUser);
 
 // List users (with filters)
-router.get(
-  '/',
-  authMiddleware,
-  userController.listUsers
-);
+router.get('/', authMiddleware, userController.listUsers);
 
 // Get user details
-router.get(
-  '/:id',
-  authMiddleware,
-  userController.getUserById
-);
+router.get('/:id', authMiddleware, userController.getUserById);
 
 // Update user profile/role/permissions
-router.put(
-  '/:id',
-  authMiddleware,
-  userController.updateUser
-);
+router.put('/:id', authMiddleware, userController.updateUser);
 
 // Soft delete / deactivate user (admin only)
-router.delete(
-  '/:id',
-  authMiddleware,
-  roleMiddleware(['admin']),
-  userController.deleteUser
-);
+router.delete('/:id', authMiddleware, roleMiddleware(['admin']), userController.deleteUser);
 
 module.exports = router;

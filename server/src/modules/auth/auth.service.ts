@@ -115,7 +115,12 @@ export const authService = {
   },
 
   // ---- OTP login: step 2 (verify code, issue tokens) ----
-  async verifyOtpLogin(email: string, txnId: string, code: string, ip?: string): Promise<TokenPair> {
+  async verifyOtpLogin(
+    email: string,
+    txnId: string,
+    code: string,
+    ip?: string,
+  ): Promise<TokenPair> {
     const otp = await authRepo.findOtp(email, txnId, 'LOGIN');
     if (!otp) throw new NotFoundError('OTP session');
     if (otp.expiresAt < new Date()) {
@@ -145,7 +150,9 @@ export const authService = {
     if (otp.expiresAt < new Date()) throw new ValidationError('OTP expired. Start again.');
     const since = (Date.now() - new Date(otp.lastSentAt).getTime()) / 1000;
     if (since < RESEND_COOLDOWN_SECONDS) {
-      throw new ValidationError(`Wait ${Math.ceil(RESEND_COOLDOWN_SECONDS - since)}s before resending`);
+      throw new ValidationError(
+        `Wait ${Math.ceil(RESEND_COOLDOWN_SECONDS - since)}s before resending`,
+      );
     }
     const code = sixDigit();
     otp.codeHash = await bcrypt.hash(code, 10);
@@ -202,7 +209,12 @@ export const authService = {
       to: input.email,
       payload: { code, expiresInSeconds: OTP_TTL_SECONDS },
     });
-    return { txnId, email: input.email, expiresInSeconds: OTP_TTL_SECONDS, resendCooldownSeconds: RESEND_COOLDOWN_SECONDS };
+    return {
+      txnId,
+      email: input.email,
+      expiresInSeconds: OTP_TTL_SECONDS,
+      resendCooldownSeconds: RESEND_COOLDOWN_SECONDS,
+    };
   },
 
   async verifyRegister(email: string, txnId: string, code: string): Promise<PublicUser> {

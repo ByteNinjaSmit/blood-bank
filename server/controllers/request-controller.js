@@ -25,8 +25,21 @@ function toInt(v, d) {
 
 async function createRequest(req, res, next) {
   try {
-    const { hospitalId, patient, requestedComponents, doctorName, requiredAt, medicalOfficerSignature, hospitalSeal } = req.body;
-    if (!hospitalId || !patient || !Array.isArray(requestedComponents) || requestedComponents.length === 0) {
+    const {
+      hospitalId,
+      patient,
+      requestedComponents,
+      doctorName,
+      requiredAt,
+      medicalOfficerSignature,
+      hospitalSeal,
+    } = req.body;
+    if (
+      !hospitalId ||
+      !patient ||
+      !Array.isArray(requestedComponents) ||
+      requestedComponents.length === 0
+    ) {
       return res.status(400).json({ success: false, message: 'Invalid payload' });
     }
     const hospital = await Hospital.findById(hospitalId);
@@ -52,7 +65,9 @@ async function createRequest(req, res, next) {
       requestedAt: new Date(),
     });
     return res.status(201).json({ success: true, message: 'Request created', data: created });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 }
 
 async function listRequests(req, res, next) {
@@ -60,7 +75,15 @@ async function listRequests(req, res, next) {
     const page = toInt(req.query.page, 1);
     const limit = toInt(req.query.limit, 10);
     const skip = (page - 1) * limit;
-    const { status, hospitalId, from, to, sortBy = 'updatedAt', order = 'desc', search } = req.query;
+    const {
+      status,
+      hospitalId,
+      from,
+      to,
+      sortBy = 'updatedAt',
+      order = 'desc',
+      search,
+    } = req.query;
     const filter = {};
     if (status) filter.status = status;
     if (hospitalId) filter.hospitalId = hospitalId;
@@ -77,15 +100,19 @@ async function listRequests(req, res, next) {
     }
     const sort = { [sortBy]: order === 'asc' ? 1 : -1 };
     const [items, total] = await Promise.all([
-      HospitalRequest.find(filter)
-        .populate('hospitalId')
-        .sort(sort)
-        .skip(skip)
-        .limit(limit),
-      HospitalRequest.countDocuments(filter)
+      HospitalRequest.find(filter).populate('hospitalId').sort(sort).skip(skip).limit(limit),
+      HospitalRequest.countDocuments(filter),
     ]);
-    return res.status(200).json({ success: true, data: items, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } });
-  } catch (err) { next(err); }
+    return res
+      .status(200)
+      .json({
+        success: true,
+        data: items,
+        pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      });
+  } catch (err) {
+    next(err);
+  }
 }
 
 async function getRequestById(req, res, next) {
@@ -96,11 +123,16 @@ async function getRequestById(req, res, next) {
       .populate('rejectedBy')
       .populate({
         path: 'matchedInventory.inventoryId',
-        populate: [{ path: 'componentId', model: 'Component' }, { path: 'bagNo', model: 'BloodBag' }]
+        populate: [
+          { path: 'componentId', model: 'Component' },
+          { path: 'bagNo', model: 'BloodBag' },
+        ],
       });
     if (!doc) return res.status(404).json({ success: false, message: 'Request not found' });
     return res.status(200).json({ success: true, data: doc });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 }
 
 async function matchRequest(req, res, next) {
@@ -116,7 +148,9 @@ async function matchRequest(req, res, next) {
         return res.status(404).json({ success: false, message: 'Request not found' });
       }
       if (request.status !== 'pending') {
-        return res.status(400).json({ success: false, message: 'Only pending requests can be matched' });
+        return res
+          .status(400)
+          .json({ success: false, message: 'Only pending requests can be matched' });
       }
 
       const selections = [];
@@ -124,8 +158,14 @@ async function matchRequest(req, res, next) {
 
       for (const rc of request.requestedComponents) {
         // ── Get compatible donor groups using the compatibility engine ──
-        const compatibleGroups = compatibility.getCompatibleDonorGroups(rc.bloodGroup, rc.componentType);
-        const preferredGroups = compatibility.getPreferredDonorGroups(rc.bloodGroup, rc.componentType);
+        const compatibleGroups = compatibility.getCompatibleDonorGroups(
+          rc.bloodGroup,
+          rc.componentType,
+        );
+        const preferredGroups = compatibility.getPreferredDonorGroups(
+          rc.bloodGroup,
+          rc.componentType,
+        );
         const xmRequired = compatibility.requiresCrossmatch(rc.componentType);
 
         if (!compatibleGroups.length) {
@@ -160,7 +200,14 @@ async function matchRequest(req, res, next) {
           { $match: { status: 'in-stock' } },
 
           // Join component
-          { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+          {
+            $lookup: {
+              from: 'components',
+              localField: 'componentId',
+              foreignField: '_id',
+              as: 'component',
+            },
+          },
           { $unwind: '$component' },
 
           // Join blood bag
@@ -260,11 +307,11 @@ async function matchRequest(req, res, next) {
       }
 
       // ── Reserve inventory ──
-      const invIds = selections.map(s => s.id);
+      const invIds = selections.map((s) => s.id);
       const upd = await Inventory.updateMany(
         { _id: { $in: invIds }, status: 'in-stock' },
         { $set: { status: 'reserved', reservedFor: request._id, reservedAt: now } },
-        session ? { session } : {}
+        session ? { session } : {},
       );
 
       if (upd.modifiedCount !== invIds.length) {
@@ -272,14 +319,16 @@ async function matchRequest(req, res, next) {
         if (!session) {
           await Inventory.updateMany(
             { _id: { $in: invIds }, status: 'reserved', reservedFor: request._id, reservedAt: now },
-            { $set: { status: 'in-stock', reservedFor: null, reservedAt: null } }
+            { $set: { status: 'in-stock', reservedFor: null, reservedAt: null } },
           );
         }
-        return res.status(409).json({ success: false, message: 'Concurrent update detected while reserving stock' });
+        return res
+          .status(409)
+          .json({ success: false, message: 'Concurrent update detected while reserving stock' });
       }
 
       // ── Save matched inventory with compatibility metadata ──
-      const matched = selections.map(s => ({
+      const matched = selections.map((s) => ({
         inventoryId: s.id,
         reservedAt: s.reservedAt,
         compatibilityType: s.compatibilityType,
@@ -310,13 +359,18 @@ async function approveRequest(req, res, next) {
     const { id } = req.params;
     const request = await HospitalRequest.findById(id);
     if (!request) return res.status(404).json({ success: false, message: 'Request not found' });
-    if (request.status !== 'matched') return res.status(400).json({ success: false, message: 'Only matched requests can be approved' });
+    if (request.status !== 'matched')
+      return res
+        .status(400)
+        .json({ success: false, message: 'Only matched requests can be approved' });
     request.status = 'approved';
     request.approvedAt = new Date();
     request.approvedBy = req.userID || null;
     await request.save();
     return res.status(200).json({ success: true, message: 'Request approved', data: request });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 }
 
 async function issueRequest(req, res, next) {
@@ -332,15 +386,17 @@ async function issueRequest(req, res, next) {
         return res.status(404).json({ success: false, message: 'Request not found' });
       }
       if (!['approved', 'matched'].includes(request.status)) {
-        return res.status(400).json({ success: false, message: 'Only approved or matched requests can be issued' });
+        return res
+          .status(400)
+          .json({ success: false, message: 'Only approved or matched requests can be issued' });
       }
 
       // ── Server-side crossmatch safety check ──
       const pendingXM = (request.matchedInventory || []).filter(
-        (mi) => mi.crossmatchRequired && mi.crossmatchStatus === 'pending'
+        (mi) => mi.crossmatchRequired && mi.crossmatchStatus === 'pending',
       );
       const incompatXM = (request.matchedInventory || []).filter(
-        (mi) => mi.crossmatchRequired && mi.crossmatchStatus === 'incompatible'
+        (mi) => mi.crossmatchRequired && mi.crossmatchStatus === 'incompatible',
       );
       if (pendingXM.length > 0) {
         return res.status(400).json({
@@ -357,38 +413,49 @@ async function issueRequest(req, res, next) {
 
       const reservedAgg = Inventory.aggregate([
         { $match: { status: 'reserved', reservedFor: request._id } },
-        { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+        {
+          $lookup: {
+            from: 'components',
+            localField: 'componentId',
+            foreignField: '_id',
+            as: 'component',
+          },
+        },
         { $unwind: '$component' },
         { $match: { 'component.expiryDate': { $gte: now } } },
-        { $project: { _id: 1 } }
+        { $project: { _id: 1 } },
       ]);
 
       const reserved = session ? await reservedAgg.session(session) : await reservedAgg;
-      const invIds = reserved.map(r => r._id);
+      const invIds = reserved.map((r) => r._id);
       if (invIds.length === 0) {
-        return res.status(400).json({ success: false, message: 'No eligible reserved units to issue' });
+        return res
+          .status(400)
+          .json({ success: false, message: 'No eligible reserved units to issue' });
       }
 
       const upd = await Inventory.updateMany(
         { _id: { $in: invIds }, status: 'reserved', reservedFor: request._id },
         { $set: { status: 'issued', issuedAt: now, issuedBy: req.userID || null } },
-        session ? { session } : {}
+        session ? { session } : {},
       );
 
       if (upd.modifiedCount === 0) {
-        return res.status(409).json({ success: false, message: 'Concurrent update detected while issuing' });
+        return res
+          .status(409)
+          .json({ success: false, message: 'Concurrent update detected while issuing' });
       }
 
       // Sync Component status to 'issued' for traceability
       const affectedInv = session
         ? await Inventory.find({ _id: { $in: invIds } }, { componentId: 1 }).session(session)
         : await Inventory.find({ _id: { $in: invIds } }, { componentId: 1 });
-      const compIds = affectedInv.map(d => d.componentId).filter(Boolean);
+      const compIds = affectedInv.map((d) => d.componentId).filter(Boolean);
       if (compIds.length) {
         await Component.updateMany(
           { _id: { $in: compIds } },
           { $set: { status: 'issued' } },
-          session ? { session } : {}
+          session ? { session } : {},
         );
       }
 
@@ -401,7 +468,13 @@ async function issueRequest(req, res, next) {
         await request.save();
       }
 
-      return res.status(200).json({ success: true, message: 'Units issued', data: { issuedCount: upd.modifiedCount, inventoryIds: invIds } });
+      return res
+        .status(200)
+        .json({
+          success: true,
+          message: 'Units issued',
+          data: { issuedCount: upd.modifiedCount, inventoryIds: invIds },
+        });
     });
   } catch (err) {
     next(err);
@@ -413,14 +486,23 @@ async function completeRequest(req, res, next) {
     const { id } = req.params;
     const request = await HospitalRequest.findById(id);
     if (!request) return res.status(404).json({ success: false, message: 'Request not found' });
-    if (request.status !== 'issued') return res.status(400).json({ success: false, message: 'Only issued requests can be completed' });
-    const outstanding = await Inventory.countDocuments({ reservedFor: request._id, status: 'reserved' });
-    if (outstanding > 0) return res.status(400).json({ success: false, message: 'Some units are still reserved' });
+    if (request.status !== 'issued')
+      return res
+        .status(400)
+        .json({ success: false, message: 'Only issued requests can be completed' });
+    const outstanding = await Inventory.countDocuments({
+      reservedFor: request._id,
+      status: 'reserved',
+    });
+    if (outstanding > 0)
+      return res.status(400).json({ success: false, message: 'Some units are still reserved' });
     request.status = 'completed';
     request.completedAt = new Date();
     await request.save();
     return res.status(200).json({ success: true, message: 'Request completed', data: request });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 }
 
 async function rejectRequest(req, res, next) {
@@ -441,13 +523,18 @@ async function rejectRequest(req, res, next) {
         return res.status(404).json({ success: false, message: 'Request not found' });
       }
       if (!['pending', 'matched', 'approved'].includes(request.status)) {
-        return res.status(400).json({ success: false, message: 'Only pending, matched, or approved requests can be rejected' });
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: 'Only pending, matched, or approved requests can be rejected',
+          });
       }
 
       await Inventory.updateMany(
         { reservedFor: request._id, status: 'reserved' },
         { $set: { status: 'in-stock', reservedFor: null, reservedAt: null } },
-        session ? { session } : {}
+        session ? { session } : {},
       );
       request.status = 'rejected';
       request.rejectionReason = rejectionReason.trim();
@@ -460,7 +547,9 @@ async function rejectRequest(req, res, next) {
         await request.save();
       }
 
-      return res.status(200).json({ success: true, message: 'Request rejected successfully', data: request });
+      return res
+        .status(200)
+        .json({ success: true, message: 'Request rejected successfully', data: request });
     });
   } catch (err) {
     next(err);
@@ -477,7 +566,10 @@ async function updateCrossmatch(req, res, next) {
       const { id } = req.params;
       const { inventoryId, crossmatchStatus } = req.body;
 
-      console.log(`[crossmatch] PATCH /requests/${id}/crossmatch body:`, { inventoryId, crossmatchStatus });
+      console.log(`[crossmatch] PATCH /requests/${id}/crossmatch body:`, {
+        inventoryId,
+        crossmatchStatus,
+      });
 
       if (!inventoryId || !['compatible', 'incompatible'].includes(crossmatchStatus)) {
         return res.status(400).json({
@@ -503,12 +595,12 @@ async function updateCrossmatch(req, res, next) {
 
       // Find the matched inventory entry
       const miEntry = request.matchedInventory.find(
-        (mi) => mi.inventoryId.toString() === inventoryId.toString()
+        (mi) => mi.inventoryId.toString() === inventoryId.toString(),
       );
       if (!miEntry) {
         return res.status(404).json({
           success: false,
-          message: 'Inventory item not found in this request\'s matched inventory',
+          message: "Inventory item not found in this request's matched inventory",
         });
       }
       if (!miEntry.crossmatchRequired) {
@@ -528,19 +620,22 @@ async function updateCrossmatch(req, res, next) {
         await Inventory.updateOne(
           { _id: miEntry.inventoryId },
           { $set: { status: 'in-stock', reservedFor: null, reservedAt: null } },
-          session ? { session } : {}
+          session ? { session } : {},
         );
 
         // Remove from matchedInventory
         request.matchedInventory = request.matchedInventory.filter(
-          (mi) => mi.inventoryId.toString() !== inventoryId.toString()
+          (mi) => mi.inventoryId.toString() !== inventoryId.toString(),
         );
 
         // Try to find a replacement using the same component's request info
         // We need to know the original requested component to apply correct compatibility rules
         // Lookup the inventory to get component type and blood bag info
         const releasedInv = session
-          ? await Inventory.findById(inventoryId).populate('componentId').populate('bagNo').session(session)
+          ? await Inventory.findById(inventoryId)
+              .populate('componentId')
+              .populate('bagNo')
+              .session(session)
           : await Inventory.findById(inventoryId).populate('componentId').populate('bagNo');
 
         if (releasedInv && releasedInv.componentId) {
@@ -548,13 +643,13 @@ async function updateCrossmatch(req, res, next) {
 
           // Find the original requested component to get recipient blood group/Rh
           const originalRC = request.requestedComponents.find(
-            (rc) => rc.componentType === compType
+            (rc) => rc.componentType === compType,
           );
 
           if (originalRC) {
             const compatibleGroups = compatibility.getCompatibleDonorGroups(
               originalRC.bloodGroup,
-              compType
+              compType,
             );
 
             let rhFilter;
@@ -565,9 +660,7 @@ async function updateCrossmatch(req, res, next) {
             }
 
             // Exclude already-matched inventory IDs
-            const alreadyMatchedIds = request.matchedInventory.map(
-              (mi) => mi.inventoryId
-            );
+            const alreadyMatchedIds = request.matchedInventory.map((mi) => mi.inventoryId);
 
             const replacementPipeline = [
               {
@@ -576,9 +669,18 @@ async function updateCrossmatch(req, res, next) {
                   _id: { $nin: alreadyMatchedIds },
                 },
               },
-              { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+              {
+                $lookup: {
+                  from: 'components',
+                  localField: 'componentId',
+                  foreignField: '_id',
+                  as: 'component',
+                },
+              },
               { $unwind: '$component' },
-              { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
+              {
+                $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' },
+              },
               { $unwind: '$bag' },
               {
                 $match: {
@@ -616,14 +718,13 @@ async function updateCrossmatch(req, res, next) {
             if (replacements.length > 0) {
               const rep = replacements[0];
               const isExact =
-                rep.bag.bloodGroup === originalRC.bloodGroup &&
-                rep.bag.rh === originalRC.rh;
+                rep.bag.bloodGroup === originalRC.bloodGroup && rep.bag.rh === originalRC.rh;
 
               // Reserve the replacement
               const repUpd = await Inventory.updateOne(
                 { _id: rep._id, status: 'in-stock' },
                 { $set: { status: 'reserved', reservedFor: request._id, reservedAt: now } },
-                session ? { session } : {}
+                session ? { session } : {},
               );
 
               if (repUpd.modifiedCount === 1) {
@@ -648,9 +749,10 @@ async function updateCrossmatch(req, res, next) {
 
       return res.status(200).json({
         success: true,
-        message: crossmatchStatus === 'compatible'
-          ? 'Crossmatch marked as compatible'
-          : 'Crossmatch incompatible — unit released, replacement attempted',
+        message:
+          crossmatchStatus === 'compatible'
+            ? 'Crossmatch marked as compatible'
+            : 'Crossmatch incompatible — unit released, replacement attempted',
         data: request,
       });
     });
@@ -675,7 +777,7 @@ async function getCompatibilityInfo(req, res, next) {
     const info = compatibility.getFullCompatibilityInfo(
       componentType,
       bloodGroup || null,
-      rh || null
+      rh || null,
     );
     return res.status(200).json({ success: true, data: info });
   } catch (err) {

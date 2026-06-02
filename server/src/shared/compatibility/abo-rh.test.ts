@@ -19,17 +19,13 @@ describe('ABO compatibility — RBC', () => {
     expect([...compatibleAboGroups('B', 'PRBC')]).toEqual(['B', 'O']);
   });
   it('AB accepts all four', () => {
-    expect(new Set(compatibleAboGroups('AB', 'PRBC'))).toEqual(
-      new Set(['O', 'A', 'B', 'AB']),
-    );
+    expect(new Set(compatibleAboGroups('AB', 'PRBC'))).toEqual(new Set(['O', 'A', 'B', 'AB']));
   });
 });
 
 describe('ABO compatibility — Plasma (inverse table)', () => {
   it('O recipient accepts plasma from all four', () => {
-    expect(new Set(compatibleAboGroups('O', 'FFP'))).toEqual(
-      new Set(['O', 'A', 'B', 'AB']),
-    );
+    expect(new Set(compatibleAboGroups('O', 'FFP'))).toEqual(new Set(['O', 'A', 'B', 'AB']));
   });
   it('AB recipient accepts only AB plasma', () => {
     expect([...compatibleAboGroups('AB', 'FFP')]).toEqual(['AB']);

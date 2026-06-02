@@ -33,9 +33,7 @@ export function createAdverseReactionService(deps: {
       const created = await deps.reactions.create({ ...input, reactionId }, actorId);
 
       // Flag the transfusion so reporting/registers reflect the reaction.
-      await deps.transfusions
-        .markReaction(input.transfusionId, actorId)
-        .catch(() => undefined);
+      await deps.transfusions.markReaction(input.transfusionId, actorId).catch(() => undefined);
 
       await auditService.record({
         actorId,

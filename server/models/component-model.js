@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const { Schema, Types } = mongoose;
 
 const ComponentSchema = new Schema(
@@ -10,12 +10,12 @@ const ComponentSchema = new Schema(
     },
     donationId: {
       type: Types.ObjectId,
-      ref: "BloodBag",
+      ref: 'BloodBag',
       required: true,
     },
     componentType: {
       type: String,
-      enum: ["RBC", "FFP", "Platelet", "Cryo"],
+      enum: ['RBC', 'FFP', 'Platelet', 'Cryo'],
       required: true,
     },
     volumeMl: {
@@ -41,12 +41,12 @@ const ComponentSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["lab-testing","in-stock", "reserved", "issued", "discarded"],
+      enum: ['lab-testing', 'in-stock', 'reserved', 'issued', 'discarded'],
       required: true,
     },
     siteId: {
       type: Types.ObjectId,
-      ref: "Site",
+      ref: 'Site',
       // required: true
     },
     createdAt: {
@@ -55,7 +55,7 @@ const ComponentSchema = new Schema(
     },
     createdBy: {
       type: Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     updatedAt: {
@@ -64,21 +64,21 @@ const ComponentSchema = new Schema(
     },
     updatedBy: {
       type: Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Auto-update updatedAt before save
-ComponentSchema.pre("save", function (next) {
+ComponentSchema.pre('save', function (next) {
   this.updatedAt = new Date();
   next();
 });
 
-const Component = mongoose.model("Component", ComponentSchema);
+const Component = mongoose.model('Component', ComponentSchema);
 
 module.exports = Component;

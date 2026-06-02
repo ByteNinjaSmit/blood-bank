@@ -1,6 +1,10 @@
 // jobs/expiry-report-job.js
 const logger = require('../utils/logger');
-const { generateExpiryReportPDF, findNearExpiryComponents, EXPIRY_THRESHOLDS } = require('../services/blood-expiry-service');
+const {
+  generateExpiryReportPDF,
+  findNearExpiryComponents,
+  EXPIRY_THRESHOLDS,
+} = require('../services/blood-expiry-service');
 const { sendEmail } = require('../services/email-service');
 const fs = require('fs');
 
@@ -54,7 +58,7 @@ async function processExpiryReportJob(job) {
       ``,
       `Best regards,`,
       `Blood Bank Management System`,
-      `Automated Report Generator`
+      `Automated Report Generator`,
     ].join('\n');
 
     // Send email with attachment
@@ -63,7 +67,11 @@ async function processExpiryReportJob(job) {
     logger.info('[Expiry] Email sent successfully', { jobId: job.id, filePath, count });
     return { filePath, count };
   } catch (error) {
-    logger.error('[Expiry] Job failed', { jobId: job.id, error: error.message, stack: error.stack });
+    logger.error('[Expiry] Job failed', {
+      jobId: job.id,
+      error: error.message,
+      stack: error.stack,
+    });
     throw error; // Re-throw to mark job as failed
   }
 }

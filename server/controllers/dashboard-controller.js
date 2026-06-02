@@ -1,14 +1,15 @@
-const mongoose = require("mongoose");
-const Donor = require("../models/donor-model");
-const BloodBag = require("../models/bloodbag-model");
-const Component = require("../models/component-model");
-const Inventory = require("../models/inventory-model");
-const HospitalRequest = require("../models/hospital-request-model");
-const Transfusion = require("../models/transfusion-model");
-const DiscardLog = require("../models/discard-model");
-const Site = require("../models/site-model");
+const mongoose = require('mongoose');
+const Donor = require('../models/donor-model');
+const BloodBag = require('../models/bloodbag-model');
+const Component = require('../models/component-model');
+const Inventory = require('../models/inventory-model');
+const HospitalRequest = require('../models/hospital-request-model');
+const Transfusion = require('../models/transfusion-model');
+const DiscardLog = require('../models/discard-model');
+const Site = require('../models/site-model');
 
-const toObjectId = (v) => (mongoose.Types.ObjectId.isValid(v) ? new mongoose.Types.ObjectId(v) : null);
+const toObjectId = (v) =>
+  mongoose.Types.ObjectId.isValid(v) ? new mongoose.Types.ObjectId(v) : null;
 
 async function getOverview(req, res, next) {
   try {
@@ -27,7 +28,7 @@ async function getOverview(req, res, next) {
     } else if (typeof rangeDays !== 'undefined' && !Number.isNaN(parseInt(rangeDays, 10))) {
       const days = Math.max(1, parseInt(rangeDays, 10));
       fromDate = new Date(toDate.getTime() - days * 24 * 60 * 60 * 1000);
-    } else if (range && ['1d','2d','7d','30d'].includes(String(range).toLowerCase())) {
+    } else if (range && ['1d', '2d', '7d', '30d'].includes(String(range).toLowerCase())) {
       const map = { '1d': 1, '2d': 2, '7d': 7, '30d': 30 };
       const days = map[String(range).toLowerCase()] || 30;
       fromDate = new Date(toDate.getTime() - days * 24 * 60 * 60 * 1000);
@@ -43,74 +44,124 @@ async function getOverview(req, res, next) {
     const siteMatchTransfusion = siteId ? { siteId } : {};
     const siteMatchDiscard = siteId ? { siteId } : {};
 
-    const [donorsTotal, donationsTotal, compInStock, compReserved, compDiscarded, issuedCountAgg] = await Promise.all([
-      Donor.countDocuments({}),
-      BloodBag.countDocuments(siteMatchBag),
-      Component.countDocuments({ status: "in-stock", ...siteMatchComponent }),
-      Component.countDocuments({ status: "reserved", ...siteMatchComponent }),
-      Component.countDocuments({ status: "discarded", ...siteMatchComponent }),
-      Inventory.aggregate([
-        { $match: { status: "issued" } },
-        { $lookup: { from: "components", localField: "componentId", foreignField: "_id", as: "component" } },
-        { $unwind: "$component" },
-        ...(siteId ? [{ $match: { "component.siteId": siteId } }] : []),
-        { $count: "count" },
-      ]),
-    ]);
+    const [donorsTotal, donationsTotal, compInStock, compReserved, compDiscarded, issuedCountAgg] =
+      await Promise.all([
+        Donor.countDocuments({}),
+        BloodBag.countDocuments(siteMatchBag),
+        Component.countDocuments({ status: 'in-stock', ...siteMatchComponent }),
+        Component.countDocuments({ status: 'reserved', ...siteMatchComponent }),
+        Component.countDocuments({ status: 'discarded', ...siteMatchComponent }),
+        Inventory.aggregate([
+          { $match: { status: 'issued' } },
+          {
+            $lookup: {
+              from: 'components',
+              localField: 'componentId',
+              foreignField: '_id',
+              as: 'component',
+            },
+          },
+          { $unwind: '$component' },
+          ...(siteId ? [{ $match: { 'component.siteId': siteId } }] : []),
+          { $count: 'count' },
+        ]),
+      ]);
 
     const issuedTotal = issuedCountAgg?.[0]?.count || 0;
 
     const matchDate = (field) => (fromDate ? { [field]: { $gte: fromDate, $lte: toDate } } : {});
 
-    const [stockByGroupAgg, stockByComponentAgg, donationsTrendAgg, issuedTrendAgg, discardedTrendAgg] = await Promise.all([
+    const [
+      stockByGroupAgg,
+      stockByComponentAgg,
+      donationsTrendAgg,
+      issuedTrendAgg,
+      discardedTrendAgg,
+    ] = await Promise.all([
       // Stock by ABO/Rh within selected period: use Inventory (inStockDate)
       Inventory.aggregate([
-        { $match: { status: "in-stock", ...matchDate('inStockDate') } },
-        { $lookup: { from: "components", localField: "componentId", foreignField: "_id", as: "component" } },
-        { $unwind: "$component" },
-        ...(siteId ? [{ $match: { "component.siteId": siteId } }] : []),
-        { $lookup: { from: "bloodbags", localField: "bagNo", foreignField: "_id", as: "bag" } },
-        { $unwind: "$bag" },
-        { $group: { _id: { bloodGroup: "$bag.bloodGroup", rh: "$bag.rh" }, count: { $sum: 1 } } },
+        { $match: { status: 'in-stock', ...matchDate('inStockDate') } },
+        {
+          $lookup: {
+            from: 'components',
+            localField: 'componentId',
+            foreignField: '_id',
+            as: 'component',
+          },
+        },
+        { $unwind: '$component' },
+        ...(siteId ? [{ $match: { 'component.siteId': siteId } }] : []),
+        { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
+        { $unwind: '$bag' },
+        { $group: { _id: { bloodGroup: '$bag.bloodGroup', rh: '$bag.rh' }, count: { $sum: 1 } } },
       ]),
       // Stock by component type within period: use Inventory (inStockDate)
       Inventory.aggregate([
-        { $match: { status: "in-stock", ...matchDate('inStockDate') } },
-        { $lookup: { from: "components", localField: "componentId", foreignField: "_id", as: "component" } },
-        { $unwind: "$component" },
-        ...(siteId ? [{ $match: { "component.siteId": siteId } }] : []),
-        { $group: { _id: "$component.componentType", count: { $sum: 1 } } },
+        { $match: { status: 'in-stock', ...matchDate('inStockDate') } },
+        {
+          $lookup: {
+            from: 'components',
+            localField: 'componentId',
+            foreignField: '_id',
+            as: 'component',
+          },
+        },
+        { $unwind: '$component' },
+        ...(siteId ? [{ $match: { 'component.siteId': siteId } }] : []),
+        { $group: { _id: '$component.componentType', count: { $sum: 1 } } },
       ]),
       BloodBag.aggregate([
         { $match: { ...matchDate('collectionDate'), ...siteMatchBag } },
-        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$collectionDate" } }, value: { $sum: 1 } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$collectionDate' } },
+            value: { $sum: 1 },
+          },
+        },
       ]),
       Inventory.aggregate([
-        { $match: { status: "issued", ...matchDate('updatedAt') } },
-        { $lookup: { from: "components", localField: "componentId", foreignField: "_id", as: "component" } },
-        { $unwind: "$component" },
-        ...(siteId ? [{ $match: { "component.siteId": siteId } }] : []),
-        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$updatedAt" } }, value: { $sum: 1 } } },
+        { $match: { status: 'issued', ...matchDate('updatedAt') } },
+        {
+          $lookup: {
+            from: 'components',
+            localField: 'componentId',
+            foreignField: '_id',
+            as: 'component',
+          },
+        },
+        { $unwind: '$component' },
+        ...(siteId ? [{ $match: { 'component.siteId': siteId } }] : []),
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' } },
+            value: { $sum: 1 },
+          },
+        },
       ]),
       Component.aggregate([
-        { $match: { status: "discarded", ...matchDate('updatedAt'), ...siteMatchComponent } },
-        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$updatedAt" } }, value: { $sum: 1 } } },
+        { $match: { status: 'discarded', ...matchDate('updatedAt'), ...siteMatchComponent } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' } },
+            value: { $sum: 1 },
+          },
+        },
       ]),
     ]);
 
     const thresholdsDays = { Platelet: 1, RBC: 7, FFP: 30, Cryo: 30 };
     const nearExpiryAgg = await Component.aggregate([
-      { $match: { status: "in-stock", expiryDate: { $ne: null }, ...siteMatchComponent } },
+      { $match: { status: 'in-stock', expiryDate: { $ne: null }, ...siteMatchComponent } },
       {
         $addFields: {
-          daysToExpiry: { $ceil: { $divide: [{ $subtract: ["$expiryDate", now] }, 86400000] } },
+          daysToExpiry: { $ceil: { $divide: [{ $subtract: ['$expiryDate', now] }, 86400000] } },
           threshold: {
             $switch: {
               branches: [
-                { case: { $eq: ["$componentType", "Platelet"] }, then: thresholdsDays.Platelet },
-                { case: { $eq: ["$componentType", "RBC"] }, then: thresholdsDays.RBC },
-                { case: { $eq: ["$componentType", "FFP"] }, then: thresholdsDays.FFP },
-                { case: { $eq: ["$componentType", "Cryo"] }, then: thresholdsDays.Cryo },
+                { case: { $eq: ['$componentType', 'Platelet'] }, then: thresholdsDays.Platelet },
+                { case: { $eq: ['$componentType', 'RBC'] }, then: thresholdsDays.RBC },
+                { case: { $eq: ['$componentType', 'FFP'] }, then: thresholdsDays.FFP },
+                { case: { $eq: ['$componentType', 'Cryo'] }, then: thresholdsDays.Cryo },
               ],
               default: 7,
             },
@@ -120,43 +171,57 @@ async function getOverview(req, res, next) {
       {
         $match: {
           $expr: {
-            $and: [
-              { $gte: ["$daysToExpiry", 0] },
-              { $lte: ["$daysToExpiry", "$threshold"] },
-            ],
+            $and: [{ $gte: ['$daysToExpiry', 0] }, { $lte: ['$daysToExpiry', '$threshold'] }],
           },
         },
       },
-      { $group: { _id: "$componentType", count: { $sum: 1 } } },
+      { $group: { _id: '$componentType', count: { $sum: 1 } } },
     ]);
 
     const [requestsByStatusAgg, totalUnitsRequestedAgg] = await Promise.all([
       HospitalRequest.aggregate([
         { $match: { ...siteMatchHR, ...matchDate('createdAt') } },
-        { $group: { _id: "$status", count: { $sum: 1 } } },
+        { $group: { _id: '$status', count: { $sum: 1 } } },
       ]),
       HospitalRequest.aggregate([
         { $match: { ...siteMatchHR, ...matchDate('createdAt') } },
-        { $unwind: "$requestedComponents" },
-        { $group: { _id: null, units: { $sum: "$requestedComponents.units" } } },
+        { $unwind: '$requestedComponents' },
+        { $group: { _id: null, units: { $sum: '$requestedComponents.units' } } },
       ]),
     ]);
 
-    const [transfusionsInRange, discardsAgg, positivityAgg, bloodbagStatusPieAgg, donationsInRangeAgg, issuedInRangeAgg, discardedInRangeAgg, inStockInRangeAgg, reservedInRangeAgg] = await Promise.all([
+    const [
+      transfusionsInRange,
+      discardsAgg,
+      positivityAgg,
+      bloodbagStatusPieAgg,
+      donationsInRangeAgg,
+      issuedInRangeAgg,
+      discardedInRangeAgg,
+      inStockInRangeAgg,
+      reservedInRangeAgg,
+    ] = await Promise.all([
       Transfusion.countDocuments({ ...matchDate('createdAt'), ...siteMatchTransfusion }),
       DiscardLog.aggregate([
         { $match: { ...matchDate('discardedAt'), ...siteMatchDiscard } },
-        { $group: { _id: "$reason", count: { $sum: 1 } } },
+        { $group: { _id: '$reason', count: { $sum: 1 } } },
       ]),
       BloodBag.aggregate([
         { $match: { ...siteMatchBag } },
-        { $unwind: { path: "$testResults", preserveNullAndEmptyArrays: false } },
-        ...(fromDate ? [{ $match: { "testResults.testedAt": { $gte: fromDate, $lte: toDate } } }] : []),
-        { $group: { _id: { test: "$testResults.test", result: "$testResults.result" }, count: { $sum: 1 } } },
+        { $unwind: { path: '$testResults', preserveNullAndEmptyArrays: false } },
+        ...(fromDate
+          ? [{ $match: { 'testResults.testedAt': { $gte: fromDate, $lte: toDate } } }]
+          : []),
+        {
+          $group: {
+            _id: { test: '$testResults.test', result: '$testResults.result' },
+            count: { $sum: 1 },
+          },
+        },
       ]),
       BloodBag.aggregate([
         { $match: { ...siteMatchBag, ...(fromDate ? matchDate('collectionDate') : {}) } },
-        { $group: { _id: "$status", count: { $sum: 1 } } },
+        { $group: { _id: '$status', count: { $sum: 1 } } },
       ]),
       BloodBag.aggregate([
         { $match: { ...siteMatchBag, ...(fromDate ? matchDate('collectionDate') : {}) } },
@@ -164,7 +229,14 @@ async function getOverview(req, res, next) {
       ]),
       Inventory.aggregate([
         { $match: { status: 'issued', ...matchDate('updatedAt') } },
-        { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+        {
+          $lookup: {
+            from: 'components',
+            localField: 'componentId',
+            foreignField: '_id',
+            as: 'component',
+          },
+        },
         { $unwind: '$component' },
         ...(siteId ? [{ $match: { 'component.siteId': siteId } }] : []),
         { $count: 'count' },
@@ -176,7 +248,14 @@ async function getOverview(req, res, next) {
       // In-stock added within period
       Inventory.aggregate([
         { $match: { status: 'in-stock', ...matchDate('inStockDate') } },
-        { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+        {
+          $lookup: {
+            from: 'components',
+            localField: 'componentId',
+            foreignField: '_id',
+            as: 'component',
+          },
+        },
         { $unwind: '$component' },
         ...(siteId ? [{ $match: { 'component.siteId': siteId } }] : []),
         { $count: 'count' },
@@ -184,7 +263,14 @@ async function getOverview(req, res, next) {
       // Reserved within period (status updated)
       Inventory.aggregate([
         { $match: { status: 'reserved', ...matchDate('updatedAt') } },
-        { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+        {
+          $lookup: {
+            from: 'components',
+            localField: 'componentId',
+            foreignField: '_id',
+            as: 'component',
+          },
+        },
         { $unwind: '$component' },
         ...(siteId ? [{ $match: { 'component.siteId': siteId } }] : []),
         { $count: 'count' },
@@ -196,8 +282,8 @@ async function getOverview(req, res, next) {
     const dateRange = Array.from({ length: daysBetween }, (_, i) => {
       const d = new Date(startForSeries.getTime() + i * 86400000);
       const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
       return `${yyyy}-${mm}-${dd}`;
     });
 
@@ -210,21 +296,34 @@ async function getOverview(req, res, next) {
     const issuedTrend = toSeries(issuedTrendAgg);
     const discardedTrend = toSeries(discardedTrendAgg);
 
-    const stockByGroup = stockByGroupAgg.map((x) => ({ bloodGroup: x._id?.bloodGroup || "Unknown", rh: x._id?.rh || "Unknown", value: x.count }));
-    const stockByComponent = stockByComponentAgg.map((x) => ({ componentType: x._id, value: x.count }));
-    const nearExpiryByComponent = nearExpiryAgg.map((x) => ({ componentType: x._id, value: x.count }));
+    const stockByGroup = stockByGroupAgg.map((x) => ({
+      bloodGroup: x._id?.bloodGroup || 'Unknown',
+      rh: x._id?.rh || 'Unknown',
+      value: x.count,
+    }));
+    const stockByComponent = stockByComponentAgg.map((x) => ({
+      componentType: x._id,
+      value: x.count,
+    }));
+    const nearExpiryByComponent = nearExpiryAgg.map((x) => ({
+      componentType: x._id,
+      value: x.count,
+    }));
     const requestsByStatus = requestsByStatusAgg.map((x) => ({ status: x._id, value: x.count }));
     const totalUnitsRequested = totalUnitsRequestedAgg?.[0]?.units || 0;
 
     const positivity = positivityAgg.reduce((acc, x) => {
-      const key = x._id?.test || "Unknown";
+      const key = x._id?.test || 'Unknown';
       acc[key] = acc[key] || { Reactive: 0, Negative: 0, Shadeness: 0 };
-      const r = x._id?.result || "Unknown";
+      const r = x._id?.result || 'Unknown';
       if (acc[key][r] !== undefined) acc[key][r] += x.count;
       return acc;
     }, {});
 
-    const bloodbagStatusPie = bloodbagStatusPieAgg.map((x) => ({ status: x._id || 'unknown', value: x.count }));
+    const bloodbagStatusPie = bloodbagStatusPieAgg.map((x) => ({
+      status: x._id || 'unknown',
+      value: x.count,
+    }));
     const donationsInRange = donationsInRangeAgg?.[0]?.count || 0; // number of donations in range
     const issuedInRange = issuedInRangeAgg?.[0]?.count || 0;
     const discardedInRange = discardedInRangeAgg?.[0]?.count || 0;
@@ -233,7 +332,9 @@ async function getOverview(req, res, next) {
     const nearExpiryTotal = nearExpiryAgg.reduce((s, x) => s + (x.count || 0), 0);
 
     // Donors created within period (no site field on Donor)
-    const donorsFiltered = await Donor.countDocuments({ ...(fromDate ? matchDate('createdAt') : {}) });
+    const donorsFiltered = await Donor.countDocuments({
+      ...(fromDate ? matchDate('createdAt') : {}),
+    });
 
     // ==============================
     // Rich KPI Overview Computations
@@ -259,14 +360,17 @@ async function getOverview(req, res, next) {
       missingExpiry,
       inactiveDonors,
     ] = await Promise.all([
-      Donor.countDocuments({ sex: "M" }),
-      Donor.countDocuments({ sex: "F" }),
-      Donor.countDocuments({ sex: "O" }),
-      Donor.countDocuments({ "donationHistory.0": { $exists: true }, "donationHistory.1": { $exists: false } }),
-      Donor.countDocuments({ "donationHistory.1": { $exists: true } }),
+      Donor.countDocuments({ sex: 'M' }),
+      Donor.countDocuments({ sex: 'F' }),
+      Donor.countDocuments({ sex: 'O' }),
+      Donor.countDocuments({
+        'donationHistory.0': { $exists: true },
+        'donationHistory.1': { $exists: false },
+      }),
+      Donor.countDocuments({ 'donationHistory.1': { $exists: true } }),
       Component.aggregate([
-        { $match: { ...siteMatchComponent, ...(fromDate ? matchDate("createdAt") : {}) } },
-        { $group: { _id: "$componentType", count: { $sum: 1 } } },
+        { $match: { ...siteMatchComponent, ...(fromDate ? matchDate('createdAt') : {}) } },
+        { $group: { _id: '$componentType', count: { $sum: 1 } } },
       ]),
       Site.countDocuments(fromDate ? { dateFrom: { $gte: fromDate, $lte: toDate } } : {}),
       BloodBag.aggregate([
@@ -274,35 +378,32 @@ async function getOverview(req, res, next) {
           $match: {
             ...siteMatchBag,
             siteId: { $ne: null },
-            ...(fromDate ? matchDate("collectionDate") : {}),
+            ...(fromDate ? matchDate('collectionDate') : {}),
           },
         },
         {
           $facet: {
-            donors: [
-              { $group: { _id: "$donor" } },
-              { $count: "count" },
-            ],
-            collections: [{ $count: "count" }],
+            donors: [{ $group: { _id: '$donor' } }, { $count: 'count' }],
+            collections: [{ $count: 'count' }],
             failures: [
-              { $unwind: "$testResults" },
-              { $match: { "testResults.result": "Positive" } },
-              { $count: "count" },
+              { $unwind: '$testResults' },
+              { $match: { 'testResults.result': 'Positive' } },
+              { $count: 'count' },
             ],
           },
         },
       ]),
       Component.countDocuments({
-        status: "in-stock",
+        status: 'in-stock',
         expiryDate: { $gte: startOfToday, $lt: startOfTomorrow },
         ...siteMatchComponent,
       }),
       BloodBag.countDocuments({
-        status: "testing",
+        status: 'testing',
         ...siteMatchBag,
       }),
       BloodBag.countDocuments({
-        status: "testing",
+        status: 'testing',
         collectionDate: { $lte: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
         ...siteMatchBag,
       }),
@@ -318,7 +419,10 @@ async function getOverview(req, res, next) {
       }),
     ]);
 
-    const componentsProducedTotal = (componentsProducedAgg || []).reduce((sum, x) => sum + (x.count || 0), 0);
+    const componentsProducedTotal = (componentsProducedAgg || []).reduce(
+      (sum, x) => sum + (x.count || 0),
+      0,
+    );
     const componentProducedMap = (componentsProducedAgg || []).reduce((acc, x) => {
       acc[x._id] = x.count || 0;
       return acc;
@@ -330,7 +434,7 @@ async function getOverview(req, res, next) {
     const campFailures = campFacet.failures?.[0]?.count || 0;
 
     const stockByGroupMap = stockByGroup.reduce((acc, x) => {
-      const key = `${x.bloodGroup || "Unknown"}|${x.rh || "Unknown"}`;
+      const key = `${x.bloodGroup || 'Unknown'}|${x.rh || 'Unknown'}`;
       acc[key] = x.value || 0;
       return acc;
     }, {});
@@ -365,10 +469,10 @@ async function getOverview(req, res, next) {
       bloodBags: {
         bagsCollected: donationsInRange,
         bagsTested: testsTotal,
-        bagsPassed: bloodbagStatusPie.find((x) => x.status === "passed")?.value || 0,
-        bagsFailed: bloodbagStatusPie.find((x) => x.status === "failed")?.value || 0,
-        bagsPending: bloodbagStatusPie.find((x) => x.status === "testing")?.value || 0,
-        bagsQuarantined: bloodbagStatusPie.find((x) => x.status === "quarantined")?.value || 0,
+        bagsPassed: bloodbagStatusPie.find((x) => x.status === 'passed')?.value || 0,
+        bagsFailed: bloodbagStatusPie.find((x) => x.status === 'failed')?.value || 0,
+        bagsPending: bloodbagStatusPie.find((x) => x.status === 'testing')?.value || 0,
+        bagsQuarantined: bloodbagStatusPie.find((x) => x.status === 'quarantined')?.value || 0,
       },
       components: {
         componentsProduced: componentsProducedTotal,
@@ -378,7 +482,11 @@ async function getOverview(req, res, next) {
         cryoProduced: componentProducedMap.Cryo || 0,
       },
       inventory: {
-        inStock: (componentStockMap.RBC || 0) + (componentStockMap.FFP || 0) + (componentStockMap.Platelet || 0) + (componentStockMap.Cryo || 0),
+        inStock:
+          (componentStockMap.RBC || 0) +
+          (componentStockMap.FFP || 0) +
+          (componentStockMap.Platelet || 0) +
+          (componentStockMap.Cryo || 0),
         reserved: reservedInRange,
         issued: issuedInRange,
         discarded: discardedInRange,
@@ -386,14 +494,14 @@ async function getOverview(req, res, next) {
         expiredUnits: 0,
       },
       bloodGroups: {
-        Opos: stockFor("O", "Positive"),
-        Oneg: stockFor("O", "Negative"),
-        Apos: stockFor("A", "Positive"),
-        Aneg: stockFor("A", "Negative"),
-        Bpos: stockFor("B", "Positive"),
-        Bneg: stockFor("B", "Negative"),
-        ABpos: stockFor("AB", "Positive"),
-        ABneg: stockFor("AB", "Negative"),
+        Opos: stockFor('O', 'Positive'),
+        Oneg: stockFor('O', 'Negative'),
+        Apos: stockFor('A', 'Positive'),
+        Aneg: stockFor('A', 'Negative'),
+        Bpos: stockFor('B', 'Positive'),
+        Bneg: stockFor('B', 'Negative'),
+        ABpos: stockFor('AB', 'Positive'),
+        ABneg: stockFor('AB', 'Negative'),
       },
       componentAvailability: {
         rbcStock: componentStockMap.RBC || 0,

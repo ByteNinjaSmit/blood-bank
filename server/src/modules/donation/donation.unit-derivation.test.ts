@@ -10,11 +10,7 @@ describe('unit derivation defaults', () => {
       donationType: 'WHOLE_BLOOD',
       collectedAt: COLLECTED,
     });
-    expect(units.map((u) => u.componentType)).toEqual([
-      'PRBC',
-      'FFP',
-      'PLATELET_CONCENTRATE',
-    ]);
+    expect(units.map((u) => u.componentType)).toEqual(['PRBC', 'FFP', 'PLATELET_CONCENTRATE']);
     expect(units.every((u) => u.unitId.startsWith('D-001-'))).toBe(true);
   });
 
@@ -24,8 +20,7 @@ describe('unit derivation defaults', () => {
       donationType: 'WHOLE_BLOOD',
       collectedAt: COLLECTED,
     });
-    const diffDays =
-      (prbc!.expiresAt.getTime() - COLLECTED.getTime()) / (1000 * 60 * 60 * 24);
+    const diffDays = (prbc!.expiresAt.getTime() - COLLECTED.getTime()) / (1000 * 60 * 60 * 24);
     expect(diffDays).toBe(42);
   });
 
@@ -55,9 +50,7 @@ describe('unit derivation defaults', () => {
       donationId: 'D-002',
       donationType: 'WHOLE_BLOOD',
       collectedAt: COLLECTED,
-      overrideTemplates: [
-        { componentType: 'PRBC', volumeMl: 280, shelfLifeDays: 35 },
-      ],
+      overrideTemplates: [{ componentType: 'PRBC', volumeMl: 280, shelfLifeDays: 35 }],
     });
     expect(units).toHaveLength(1);
     expect(units[0]!.volumeMl).toBe(280);

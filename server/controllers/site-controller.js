@@ -5,62 +5,39 @@ Delete Site
 Get Details Of Site (View)
 */
 
-const Site = require("../models/site-model");
-const User = require("../models/user-model");
-const VoluntaryCampDonation = require("../models/voluntary-camp-donation-model");
-const mongoose = require("mongoose");
+const Site = require('../models/site-model');
+const User = require('../models/user-model');
+const VoluntaryCampDonation = require('../models/voluntary-camp-donation-model');
+const mongoose = require('mongoose');
 
 const createSite = async (req, res, next) => {
   try {
     // Extracting data from the request body
-    const {
-      siteId,
-      name,
-      description,
-      address,
-      phone,
-      email,
-      staff,
-      dateFrom,
-      dateTo,
-    } = req.body;
+    const { siteId, name, description, address, phone, email, staff, dateFrom, dateTo } = req.body;
 
     // Basic validation
-    if (
-      !siteId ||
-      !name ||
-      !description ||
-      !address ||
-      !email ||
-      !phone ||
-      !dateFrom ||
-      !dateTo
-    ) {
-      return res.status(400).json({ message: "Please fill in all fields" });
+    if (!siteId || !name || !description || !address || !email || !phone || !dateFrom || !dateTo) {
+      return res.status(400).json({ message: 'Please fill in all fields' });
     }
 
     // Ensure that we have a user logged in
     if (!req.user || !req.user._id) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized, user not logged in." });
+      return res.status(401).json({ message: 'Unauthorized, user not logged in.' });
     }
 
     // Validate staff
     if (!staff || staff.length === 0) {
-      return res.status(400).json({ message: "Staff list cannot be empty." });
+      return res.status(400).json({ message: 'Staff list cannot be empty.' });
     }
     for (let i = 0; i < staff.length; i++) {
       if (!mongoose.isValidObjectId(staff[i])) {
-        return res.status(400).json({ message: "Invalid staff ID" });
+        return res.status(400).json({ message: 'Invalid staff ID' });
       }
     }
 
     // Validate dates (camp cannot end before it starts)
     if (new Date(dateTo) < new Date(dateFrom)) {
-      return res
-        .status(400)
-        .json({ message: "End date cannot be earlier than start date." });
+      return res.status(400).json({ message: 'End date cannot be earlier than start date.' });
     }
 
     // Create the new site object
@@ -84,11 +61,11 @@ const createSite = async (req, res, next) => {
     const savedSite = await newSite.save();
 
     return res.status(201).json({
-      message: "Site or Camp created successfully",
+      message: 'Site or Camp created successfully',
       site: savedSite,
     });
   } catch (error) {
-    console.error("Error creating site:", error);
+    console.error('Error creating site:', error);
     next(error);
   }
 };
@@ -100,18 +77,18 @@ const updateSite = async (req, res, next) => {
 
     // Validate site id
     if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ message: "Invalid Site ID" });
+      return res.status(400).json({ message: 'Invalid Site ID' });
     }
 
     // Ensure the user is logged in
     if (!req.user || !req.user._id) {
-      return res.status(401).json({ message: "Unauthorized, user not logged in." });
+      return res.status(401).json({ message: 'Unauthorized, user not logged in.' });
     }
 
     // Find the site
     const site = await Site.findById(id);
     if (!site) {
-      return res.status(404).json({ message: "Site not found" });
+      return res.status(404).json({ message: 'Site not found' });
     }
 
     // Update only the fields provided
@@ -123,7 +100,7 @@ const updateSite = async (req, res, next) => {
 
     if (staff) {
       if (!Array.isArray(staff)) {
-        return res.status(400).json({ message: "Staff must be an array" });
+        return res.status(400).json({ message: 'Staff must be an array' });
       }
 
       for (let memberId of staff) {
@@ -140,7 +117,7 @@ const updateSite = async (req, res, next) => {
 
     // Validate dates
     if (site.dateFrom && site.dateTo && new Date(site.dateTo) < new Date(site.dateFrom)) {
-      return res.status(400).json({ message: "End date cannot be earlier than start date." });
+      return res.status(400).json({ message: 'End date cannot be earlier than start date.' });
     }
 
     // Set lastUpdatedBy to the current user
@@ -150,15 +127,14 @@ const updateSite = async (req, res, next) => {
     const updatedSite = await site.save();
 
     return res.status(200).json({
-      message: "Site updated successfully",
+      message: 'Site updated successfully',
       site: updatedSite,
     });
   } catch (error) {
-    console.error("Error updating site:", error);
+    console.error('Error updating site:', error);
     next(error);
   }
 };
-
 
 const deleteSite = async (req, res, next) => {
   try {
@@ -166,14 +142,12 @@ const deleteSite = async (req, res, next) => {
 
     // Validate the site ID
     if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ message: "Invalid Site ID" });
+      return res.status(400).json({ message: 'Invalid Site ID' });
     }
 
     // Ensure the user is authenticated
     if (!req.user || !req.user._id) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized, user not logged in." });
+      return res.status(401).json({ message: 'Unauthorized, user not logged in.' });
     }
 
     // Find the site by ID
@@ -181,21 +155,19 @@ const deleteSite = async (req, res, next) => {
 
     // If the site doesn't exist, return an error
     if (!site) {
-      return res.status(404).json({ message: "Site not found" });
+      return res.status(404).json({ message: 'Site not found' });
     }
 
     // Only the creator of the site can delete it
     if (site.createdBy.toString() !== req.user._id.toString()) {
-      return res
-        .status(403)
-        .json({ message: "You are not authorized to delete this site." });
+      return res.status(403).json({ message: 'You are not authorized to delete this site.' });
     }
 
     // Proceed with deletion
     await Site.findByIdAndDelete(id);
 
     // Return success message
-    return res.status(200).json({ message: "Site deleted successfully." });
+    return res.status(200).json({ message: 'Site deleted successfully.' });
   } catch (error) {
     next(error);
   }
@@ -207,19 +179,21 @@ const getSiteDetails = async (req, res, next) => {
 
     // Validate the Site ID
     if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ message: "Invalid Site ID" });
+      return res.status(400).json({ message: 'Invalid Site ID' });
     }
 
     // Find the site by its ID and populate necessary fields
     const site = await Site.findById(id)
-      .select("siteId name description address contactInfo dateFrom dateTo createdBy lastUpdatedBy staff createdAt donorData bagsData")
-      .populate("createdBy", "name phone email")
-      .populate("lastUpdatedBy", "name phone email")
-      .populate("staff", "name phone email role")
+      .select(
+        'siteId name description address contactInfo dateFrom dateTo createdBy lastUpdatedBy staff createdAt donorData bagsData',
+      )
+      .populate('createdBy', 'name phone email')
+      .populate('lastUpdatedBy', 'name phone email')
+      .populate('staff', 'name phone email role')
       .exec();
 
     if (!site) {
-      return res.status(404).json({ message: "Site not found" });
+      return res.status(404).json({ message: 'Site not found' });
     }
 
     // Convert to plain object and remove arrays
@@ -229,7 +203,7 @@ const getSiteDetails = async (req, res, next) => {
 
     // Return only counts instead of full arrays
     return res.status(200).json({
-      message: "Site details retrieved successfully",
+      message: 'Site details retrieved successfully',
       site: {
         ...siteObj,
         donorCount: site?.donorData?.length || 0,
@@ -241,7 +215,6 @@ const getSiteDetails = async (req, res, next) => {
   }
 };
 
-
 // ------------
 // GET CAMP LIST
 // --------------
@@ -249,14 +222,14 @@ const getCampList = async (req, res, next) => {
   try {
     const sites = await Site.find()
       .select(
-        "siteId name description address contactInfo dateFrom dateTo createdAt createdBy staff"
+        'siteId name description address contactInfo dateFrom dateTo createdAt createdBy staff',
       ) // pick fields
-      .populate("createdBy", "name") // only name of creator
-      .populate("staff", "name") // only staff names
-      .sort({createdAt:-1})
+      .populate('createdBy', 'name') // only name of creator
+      .populate('staff', 'name') // only staff names
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
-      message: "Site list retrieved successfully",
+      message: 'Site list retrieved successfully',
       data: sites,
     });
   } catch (error) {
@@ -269,19 +242,19 @@ const getAllSites = async (req, res, next) => {
   try {
     // Find all sites and populate the necessary fields
     const sites = await Site.find()
-      .populate("createdBy", "name phone email") // Populate creator's details (name, email)
-      .populate("lastUpdatedBy", "name phone email") // Populate last updater's details
-      .populate("staff", "name phone email role") // Populate staff details (name, email, role)
+      .populate('createdBy', 'name phone email') // Populate creator's details (name, email)
+      .populate('lastUpdatedBy', 'name phone email') // Populate last updater's details
+      .populate('staff', 'name phone email role') // Populate staff details (name, email, role)
       .exec();
 
     // If no sites are found, return an error
     if (sites.length === 0) {
-      return res.status(404).json({ message: "No sites found" });
+      return res.status(404).json({ message: 'No sites found' });
     }
 
     // Return the list of all sites
     return res.status(200).json({
-      message: "All sites retrieved successfully",
+      message: 'All sites retrieved successfully',
       sites,
     });
   } catch (error) {
@@ -295,10 +268,10 @@ const getAllSites = async (req, res, next) => {
 
 const getStaffList = async (req, res, next) => {
   try {
-    const staffList = await User.find({}, { name: 1 }).select("_id name");
+    const staffList = await User.find({}, { name: 1 }).select('_id name');
     return res.status(200).json({ success: true, data: staffList });
   } catch (error) {
-    console.error("Error fetching staff list:", error);
+    console.error('Error fetching staff list:', error);
     next(error);
   }
 };
@@ -312,29 +285,28 @@ const campDonationList = async (req, res, next) => {
     const { siteId } = req.params;
 
     if (!mongoose.isValidObjectId(siteId)) {
-      return res.status(404).json({ message: "Invalid Site Id" });
+      return res.status(404).json({ message: 'Invalid Site Id' });
     }
 
     // Step 1: Find the site by its siteId field
     const site = await Site.findById(siteId)
-      .select("name siteId bagsData")
+      .select('name siteId bagsData')
       .populate({
-        path: "bagsData",
-        select:
-          "bagNo segmentNo typeOfBag bloodGroup rh status collectionDate donor initialVitals",
+        path: 'bagsData',
+        select: 'bagNo segmentNo typeOfBag bloodGroup rh status collectionDate donor initialVitals',
         populate: {
-          path: "donor",
-          select: "name donorId", // Adjust based on actual donor model fields
+          path: 'donor',
+          select: 'name donorId', // Adjust based on actual donor model fields
         },
       });
 
     // Handle if site is not found
     if (!site) {
-      return res.status(404).json({ message: "Site not found" });
+      return res.status(404).json({ message: 'Site not found' });
     }
 
     return res.status(200).json({
-      message: "Camp donation data fetched successfully.",
+      message: 'Camp donation data fetched successfully.',
       data: {
         siteName: site.name,
         siteId: site.siteId,
@@ -342,7 +314,7 @@ const campDonationList = async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error("Error in campDonationList:", error);
+    console.error('Error in campDonationList:', error);
     next(error);
   }
 };
@@ -355,23 +327,21 @@ const campDonorList = async (req, res, next) => {
   try {
     const { siteId } = req.params;
     if (!mongoose.isValidObjectId(siteId)) {
-      return res.status(404).json({ message: "Invalid Site Id" });
+      return res.status(404).json({ message: 'Invalid Site Id' });
     }
     // Step 1: Find the site by custom siteId
-    const site = await Site.findById(siteId)
-      .select("name siteId donorData")
-      .populate({
-        path: "donorData",
-        select:
-          "donorId name.firstName name.middleName name.lastName dob uid phone email sex eligibilityStatus lastDonationDate address bloodGroup occupation rh weightKg",
-      });
+    const site = await Site.findById(siteId).select('name siteId donorData').populate({
+      path: 'donorData',
+      select:
+        'donorId name.firstName name.middleName name.lastName dob uid phone email sex eligibilityStatus lastDonationDate address bloodGroup occupation rh weightKg',
+    });
 
     if (!site) {
-      return res.status(404).json({ message: "Site not found" });
+      return res.status(404).json({ message: 'Site not found' });
     }
 
     return res.status(200).json({
-      message: "Camp donor list fetched successfully.",
+      message: 'Camp donor list fetched successfully.',
       data: {
         siteName: site.name,
         siteId: site.siteId,
@@ -379,7 +349,7 @@ const campDonorList = async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error("Error in campDonorList:", error);
+    console.error('Error in campDonorList:', error);
     next(error);
   }
 };
@@ -394,20 +364,20 @@ const getVoluntaryCampDonations = async (req, res, next) => {
       siteId,
       page = 1,
       limit = 10,
-      sortBy = "createdAt",
-      sortOrder = "desc"
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
     } = req.query;
 
     let filter = {};
 
     // Search filter
     if (search) {
-      const searchRegex = new RegExp(search, "i");
+      const searchRegex = new RegExp(search, 'i');
       filter.$or = [
         { firstName: searchRegex },
         { lastName: searchRegex },
         { mobile: searchRegex },
-        { bloodGroup: searchRegex }
+        { bloodGroup: searchRegex },
       ];
     }
 
@@ -438,10 +408,10 @@ const getVoluntaryCampDonations = async (req, res, next) => {
     const limitResults = parseInt(limit);
 
     const sort = {};
-    sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     const donations = await VoluntaryCampDonation.find(filter)
-      .populate("siteId", "name siteId")
+      .populate('siteId', 'name siteId')
       .skip(skip)
       .limit(limitResults)
       .sort(sort);
@@ -450,17 +420,17 @@ const getVoluntaryCampDonations = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      message: "Voluntary camp donations fetched successfully",
+      message: 'Voluntary camp donations fetched successfully',
       data: donations,
       pagination: {
         totalCount,
         totalPages: Math.ceil(totalCount / limitResults),
         currentPage: parseInt(page),
-        pageSize: limitResults
-      }
+        pageSize: limitResults,
+      },
     });
   } catch (error) {
-    console.error("Error in getVoluntaryCampDonations:", error);
+    console.error('Error in getVoluntaryCampDonations:', error);
     next(error);
   }
 };

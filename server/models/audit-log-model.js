@@ -5,36 +5,36 @@ const AuditLogSchema = new Schema({
   entityType: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
     // e.g., 'Donation', 'Component', 'Request', etc.
   },
   entityId: {
     type: Types.ObjectId,
-    required: true
+    required: true,
   },
   action: {
     type: String,
     enum: ['created', 'updated', 'deleted', 'status-change'],
-    required: true
+    required: true,
   },
   changes: {
     type: Schema.Types.Mixed, // Stores any arbitrary object structure
-    required: true
+    required: true,
   },
   performedBy: {
     type: Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
   },
   timestamp: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   siteId: {
     type: Types.ObjectId,
     ref: 'Site',
-    required: true
-  }
+    required: true,
+  },
 });
 
 const AuditLog = mongoose.model('AuditLog', AuditLogSchema);

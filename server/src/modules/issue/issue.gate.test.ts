@@ -33,7 +33,11 @@ describe('issue gate — RBC', () => {
     const r = checkIssueGate(
       base({
         crossmatchResult: 'INCOMPATIBLE',
-        override: { isOverride: true, reason: 'Life-threatening haemorrhage', authorizedBy: 'mo-1' },
+        override: {
+          isOverride: true,
+          reason: 'Life-threatening haemorrhage',
+          authorizedBy: 'mo-1',
+        },
       }),
     );
     expect(r.allowed).toBe(true);

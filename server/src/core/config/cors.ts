@@ -16,7 +16,9 @@ const STATIC_ORIGINS = [
 
 const allowlist = new Set<string>([
   ...STATIC_ORIGINS,
-  ...env.CORS_SERVER.split(',').map((o) => o.trim()).filter(Boolean),
+  ...env.CORS_SERVER.split(',')
+    .map((o) => o.trim())
+    .filter(Boolean),
 ]);
 
 export const corsOptions: CorsOptions = {

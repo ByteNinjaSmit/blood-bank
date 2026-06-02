@@ -50,7 +50,9 @@ const RawEnv = z
     TWILIO_AUTH_TOKEN: z.string().optional().default(''),
     TWILIO_PHONE_NUMBER: z.string().optional().default(''),
 
-    SYSTEM_USER_ID: z.string().regex(/^[a-f0-9]{24}$/i, 'SYSTEM_USER_ID must be a 24-char hex ObjectId'),
+    SYSTEM_USER_ID: z
+      .string()
+      .regex(/^[a-f0-9]{24}$/i, 'SYSTEM_USER_ID must be a 24-char hex ObjectId'),
   })
   .passthrough();
 

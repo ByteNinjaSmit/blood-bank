@@ -18,7 +18,9 @@ export interface DonorService {
   register(input: CreateDonorInput, actorId: string): Promise<DonorDto>;
   update(id: string, patch: UpdateDonorInput, actorId: string): Promise<DonorDto>;
   get(id: string): Promise<DonorDto | null>;
-  list(query: ListDonorsInput): Promise<{ items: DonorDto[]; total: number; page: number; pageSize: number }>;
+  list(
+    query: ListDonorsInput,
+  ): Promise<{ items: DonorDto[]; total: number; page: number; pageSize: number }>;
   remove(id: string): Promise<void>;
 }
 
@@ -71,7 +73,9 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
 
 function assertEligibilityBasics(input: { weightKg: number; dob: Date }): void {
   if (input.weightKg < MINIMUM_DONOR_WEIGHT_KG) {
-    throw new ConflictError(`Donor weight ${input.weightKg}kg below ${MINIMUM_DONOR_WEIGHT_KG}kg minimum`);
+    throw new ConflictError(
+      `Donor weight ${input.weightKg}kg below ${MINIMUM_DONOR_WEIGHT_KG}kg minimum`,
+    );
   }
   const age = yearsBetween(input.dob, new Date());
   if (age < MINIMUM_DONOR_AGE_YEARS || age > MAXIMUM_DONOR_AGE_YEARS) {

@@ -53,7 +53,11 @@ function toDto(raw: RawTti): TtiResultDto {
 
 export interface TtiRepo {
   findByDonation(donationId: string): Promise<TtiResultDto | null>;
-  recordTests(donationId: string, tests: TtiTestEntryInput[], actorId: string): Promise<TtiResultDto>;
+  recordTests(
+    donationId: string,
+    tests: TtiTestEntryInput[],
+    actorId: string,
+  ): Promise<TtiResultDto>;
   setDecision(
     donationId: string,
     decision: ReleaseDecision,

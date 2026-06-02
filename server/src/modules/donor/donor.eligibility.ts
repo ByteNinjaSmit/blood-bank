@@ -103,7 +103,9 @@ export function checkEligibility(input: EligibilityCheckInput): EligibilityResul
     input.proposedDonationType === 'DOUBLE_RED_CELL';
   const minWeight = isApheresis ? MIN_WEIGHT_KG_APHERESIS : MIN_WEIGHT_KG_WB;
   if (d.weightKg < minWeight) {
-    reasons.push(`Weight ${d.weightKg}kg below ${minWeight}kg minimum for ${input.proposedDonationType}`);
+    reasons.push(
+      `Weight ${d.weightKg}kg below ${minWeight}kg minimum for ${input.proposedDonationType}`,
+    );
   }
 
   if (d.hbGdl !== undefined) {
@@ -158,7 +160,9 @@ export function checkEligibility(input: EligibilityCheckInput): EligibilityResul
         ? rule.minDaysSinceSameType
         : rule.minDaysSinceAnyDonation;
     if (daysSince < need) {
-      reasons.push(`Only ${daysSince} day(s) since last donation; need ${need} for ${input.proposedDonationType}`);
+      reasons.push(
+        `Only ${daysSince} day(s) since last donation; need ${need} for ${input.proposedDonationType}`,
+      );
     }
   }
 

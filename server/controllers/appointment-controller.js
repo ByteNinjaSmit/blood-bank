@@ -1,4 +1,4 @@
-const Appointment = require("../models/appointment-model");
+const Appointment = require('../models/appointment-model');
 
 const createPublicAppointment = async (req, res, next) => {
   try {
@@ -22,11 +22,13 @@ const createPublicAppointment = async (req, res, next) => {
     } = req.body;
 
     if (!mobileNo) {
-      return res.status(400).json({ message: "Mobile number is required." });
+      return res.status(400).json({ message: 'Mobile number is required.' });
     }
 
     if (!/^\d{10}$/.test(mobileNo)) {
-      return res.status(400).json({ message: "Invalid mobile number. It must be a 10-digit number." });
+      return res
+        .status(400)
+        .json({ message: 'Invalid mobile number. It must be a 10-digit number.' });
     }
 
     if (email) {
@@ -35,19 +37,19 @@ const createPublicAppointment = async (req, res, next) => {
 
     const birthDateObj = birthDate ? new Date(birthDate) : null;
     if (birthDateObj && isNaN(birthDateObj)) {
-      return res.status(400).json({ message: "Invalid birth date format." });
+      return res.status(400).json({ message: 'Invalid birth date format.' });
     }
 
     const appointmentDateObj = appointmentDate ? new Date(appointmentDate) : null;
     if (appointmentDateObj && isNaN(appointmentDateObj)) {
-      return res.status(400).json({ message: "Invalid appointment date format." });
+      return res.status(400).json({ message: 'Invalid appointment date format.' });
     }
 
     if (appointmentDateObj) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (appointmentDateObj < today) {
-        return res.status(400).json({ message: "Appointment date cannot be in the past." });
+        return res.status(400).json({ message: 'Appointment date cannot be in the past.' });
       }
     }
 
@@ -66,15 +68,15 @@ const createPublicAppointment = async (req, res, next) => {
       medication,
       lastDonation: lastDonation ? new Date(lastDonation) : undefined,
       donationFrequency,
-      wantReminder: wantReminder === true || wantReminder === "true",
+      wantReminder: wantReminder === true || wantReminder === 'true',
       reminderDays: parseInt(reminderDays) || 0,
-      source: "public-frontend-nextjs",
+      source: 'public-frontend-nextjs',
     });
 
     await appointment.save();
 
     return res.status(201).json({
-      message: "Appointment booked successfully.",
+      message: 'Appointment booked successfully.',
       appointmentId: appointment._id,
     });
   } catch (error) {
@@ -89,8 +91,8 @@ const listAppointments = async (req, res, next) => {
     const {
       page = 1,
       limit = 10,
-      sortBy = "appointmentDate",
-      sortOrder = "desc",
+      sortBy = 'appointmentDate',
+      sortOrder = 'desc',
       status,
       fromDate,
       toDate,
@@ -127,14 +129,9 @@ const listAppointments = async (req, res, next) => {
     if (search) {
       const raw = String(search).trim();
       if (raw) {
-        const esc = raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const rx = new RegExp(esc, "i");
-        filter.$or = [
-          { fullName: rx },
-          { mobileNo: rx },
-          { email: rx },
-          { bloodGroup: rx },
-        ];
+        const esc = raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const rx = new RegExp(esc, 'i');
+        filter.$or = [{ fullName: rx }, { mobileNo: rx }, { email: rx }, { bloodGroup: rx }];
       }
     }
 
@@ -142,9 +139,9 @@ const listAppointments = async (req, res, next) => {
     const pageSize = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
     const skip = (pageNumber - 1) * pageSize;
 
-    const validSortFields = ["appointmentDate", "createdAt", "fullName", "status"];
-    const sortField = validSortFields.includes(sortBy) ? sortBy : "appointmentDate";
-    const sortOptions = { [sortField]: sortOrder === "asc" ? 1 : -1 };
+    const validSortFields = ['appointmentDate', 'createdAt', 'fullName', 'status'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'appointmentDate';
+    const sortOptions = { [sortField]: sortOrder === 'asc' ? 1 : -1 };
 
     const totalCount = await Appointment.countDocuments(filter);
     const totalPages = Math.ceil(totalCount / pageSize) || 0;

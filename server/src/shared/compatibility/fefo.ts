@@ -6,12 +6,7 @@
 // compatibility + special-needs filters.
 
 import type { AboGroup, ComponentType, RhFactor, SpecialNeed } from '@/shared/enums';
-import {
-  compatibleAboGroups,
-  isRhAcceptable,
-  classify,
-  type CompatibilityType,
-} from './abo-rh';
+import { compatibleAboGroups, isRhAcceptable, classify, type CompatibilityType } from './abo-rh';
 
 export interface SelectableUnit {
   unitId: string;

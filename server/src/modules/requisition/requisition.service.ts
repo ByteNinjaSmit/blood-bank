@@ -18,8 +18,14 @@ import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { PatientRepo } from '@/modules/patient/patient.repository';
 
 export interface RequisitionService {
-  create(input: Omit<CreateRequisitionInput, 'requisitionId'>, actorId: string): Promise<RequisitionDto>;
-  match(id: string, actorId: string): Promise<{ requisition: RequisitionDto; shortages: Record<string, number> }>;
+  create(
+    input: Omit<CreateRequisitionInput, 'requisitionId'>,
+    actorId: string,
+  ): Promise<RequisitionDto>;
+  match(
+    id: string,
+    actorId: string,
+  ): Promise<{ requisition: RequisitionDto; shortages: Record<string, number> }>;
   get(id: string): Promise<RequisitionDto>;
   reject(id: string, reason: string, actorId: string): Promise<RequisitionDto>;
 }

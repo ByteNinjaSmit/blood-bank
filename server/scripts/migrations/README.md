@@ -26,8 +26,8 @@ Requires `MONGODB_URI` in the env (read via `dotenv` from `server/.env`).
 
 ## Available migrations
 
-| Date | Script | Purpose |
-|------|--------|---------|
+| Date       | Script                    | Purpose                                                                     |
+| ---------- | ------------------------- | --------------------------------------------------------------------------- |
 | 2026-05-30 | `20260530-bag-to-unit.js` | Split each `BloodBag` into one `Donation` + N `BloodUnit` + one `TtiResult` |
 
 ## Adding a new one

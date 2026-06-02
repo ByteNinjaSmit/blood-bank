@@ -11,7 +11,7 @@ const roleMiddleware = (allowedRoles) => {
     if (!req.user || !req.user.role) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied: User role information missing'
+        message: 'Access denied: User role information missing',
       });
     }
 
@@ -19,7 +19,7 @@ const roleMiddleware = (allowedRoles) => {
     if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: `Access denied: ${req.user.role} role is not authorized for this action`
+        message: `Access denied: ${req.user.role} role is not authorized for this action`,
       });
     }
 
@@ -35,19 +35,19 @@ const permissionMiddleware = (requiredPermissions) => {
     if (!req.user || !req.user.permissions || !Array.isArray(req.user.permissions)) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied: User permission information missing'
+        message: 'Access denied: User permission information missing',
       });
     }
 
     // Check if user has all required permissions
-    const hasAllPermissions = requiredPermissions.every(permission =>
-      req.user.permissions.includes(permission)
+    const hasAllPermissions = requiredPermissions.every((permission) =>
+      req.user.permissions.includes(permission),
     );
 
     if (!hasAllPermissions) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied: Insufficient permissions for this action'
+        message: 'Access denied: Insufficient permissions for this action',
       });
     }
 
@@ -58,6 +58,5 @@ const permissionMiddleware = (requiredPermissions) => {
 
 module.exports = {
   roleMiddleware,
-  permissionMiddleware
+  permissionMiddleware,
 };
-

@@ -30,7 +30,6 @@ if (cluster.isMaster && isProduction) {
     }
     process.exit(0);
   });
-
 } else {
   // Worker process
   require('./server.js');

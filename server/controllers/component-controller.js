@@ -13,36 +13,32 @@ const Inventory = require('../models/inventory-model');
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 
-
-
 const separateComponents = async (req, res, next) => {
   try {
-    const {
-      donationId,
-      componentType,
-      volumeMl,
-    } = req.body;
+    const { donationId, componentType, volumeMl } = req.body;
 
     const userId = req?.user?._id;
 
     // Step 1: Validate input
     if (!donationId || !componentType || !volumeMl) {
-      return res.status(400).json({ message: "All fields are required." });
+      return res.status(400).json({ message: 'All fields are required.' });
     }
 
     if (!mongoose.isValidObjectId(donationId)) {
-      return res.status(400).json({ message: "Invalid Donation ID." });
+      return res.status(400).json({ message: 'Invalid Donation ID.' });
     }
 
     // Step 2: Retrieve the blood bag and its associated siteId
     const bloodBag = await BloodBag.findById(donationId).populate('siteId');
     if (!bloodBag) {
-      return res.status(404).json({ message: "Blood bag not found." });
+      return res.status(404).json({ message: 'Blood bag not found.' });
     }
 
     // Block Platelet and Cryo for Double Bag (DB)
-    if (bloodBag.typeOfBag === "DB" && (componentType === "Platelet" || componentType === "Cryo")) {
-      return res.status(400).json({ message: "Platelet and Cryo preparation are not allowed for a Double Bag." });
+    if (bloodBag.typeOfBag === 'DB' && (componentType === 'Platelet' || componentType === 'Cryo')) {
+      return res
+        .status(400)
+        .json({ message: 'Platelet and Cryo preparation are not allowed for a Double Bag.' });
     }
 
     // Get siteId from blood bag
@@ -55,7 +51,9 @@ const separateComponents = async (req, res, next) => {
     });
 
     if (existingComponent) {
-      return res.status(400).json({ message: `${componentType} already separated for this donation.` });
+      return res
+        .status(400)
+        .json({ message: `${componentType} already separated for this donation.` });
     }
 
     // Step 3: Generate a unique component ID based on componentType and bagNo
@@ -81,7 +79,7 @@ const separateComponents = async (req, res, next) => {
         expiryDate.setDate(expiryDate.getDate() + 365); // Cryo expiry is 1 year (365 days)
         break;
       default:
-        return res.status(400).json({ message: "Invalid component type." });
+        return res.status(400).json({ message: 'Invalid component type.' });
     }
 
     // Step 5: Create the new component
@@ -106,10 +104,9 @@ const separateComponents = async (req, res, next) => {
 
     // Step 7: Return success response
     return res.status(201).json({
-      message: "Component separated successfully.",
+      message: 'Component separated successfully.',
       component: newComponent,
     });
-
   } catch (error) {
     next(error);
   }
@@ -124,29 +121,31 @@ const getBagsToSeparateComponent = async (req, res, next) => {
     // Step 1: Fetch blood bags with "collected" status
     const bags = await BloodBag.find({
       status: 'collected',
-      componentSeparationComplete: false
+      componentSeparationComplete: false,
     })
       .populate({
         path: 'components',
-        select: 'componentType volumeMl',  // Only populate componentType and volumeMl
-        model: 'Component'
+        select: 'componentType volumeMl', // Only populate componentType and volumeMl
+        model: 'Component',
       })
       .populate({
-        path: 'siteId',  // Populate siteId with site name
-        select: 'name',  // Only select name field from the Site model
-        model: 'Site'
+        path: 'siteId', // Populate siteId with site name
+        select: 'name', // Only select name field from the Site model
+        model: 'Site',
       })
-      .select('bagNo segmentNo collectionDate bloodGroup rh components siteId componentSeparationComplete medicalExamination typeOfBag'); // Fields to return from BloodBag
+      .select(
+        'bagNo segmentNo collectionDate bloodGroup rh components siteId componentSeparationComplete medicalExamination typeOfBag',
+      ); // Fields to return from BloodBag
 
     // Step 2: Check if there are no bags to separate
     if (!bags || bags.length === 0) {
-      return res.status(404).json({ message: "No collected blood bags found." });
+      return res.status(404).json({ message: 'No collected blood bags found.' });
     }
 
     // Step 3: Send the list of collected bags with their component details
     return res.status(200).json({
-      message: "Blood bags ready for component separation.",
-      bags: bags.map(bag => ({
+      message: 'Blood bags ready for component separation.',
+      bags: bags.map((bag) => ({
         bagNo: bag.bagNo,
         segmentNo: bag.segmentNo,
         collectionDate: bag.collectionDate,
@@ -156,13 +155,12 @@ const getBagsToSeparateComponent = async (req, res, next) => {
         volumeGmMl: bag.medicalExamination ? bag.medicalExamination.volumeGmMl : null,
         siteName: bag.siteId ? bag.siteId.name : null,
         componentSeparationComplete: bag.componentSeparationComplete,
-        components: bag.components.map(component => ({
+        components: bag.components.map((component) => ({
           componentType: component.componentType,
-          volumeMl: component.volumeMl
-        }))
-      }))
+          volumeMl: component.volumeMl,
+        })),
+      })),
     });
-
   } catch (error) {
     next(error);
   }
@@ -172,38 +170,39 @@ const getBagsToSeparateComponent = async (req, res, next) => {
 // Set Status to As Components Separation Completed
 // ---------------------
 
-
 const separationCompleted = async (req, res, next) => {
   try {
     const { donationId, signature } = req.body;
     if (!donationId) {
-      return res.status(400).json({ message: "donationId is required." });
+      return res.status(400).json({ message: 'donationId is required.' });
     }
     if (!signature || !signature.trim()) {
-      return res.status(400).json({ message: "Verification signature is required." });
+      return res.status(400).json({ message: 'Verification signature is required.' });
     }
     if (!mongoose.isValidObjectId(donationId)) {
-      return res.status(400).json({ message: "DonationId is Invalid" });
+      return res.status(400).json({ message: 'DonationId is Invalid' });
     }
 
     const bagExist = await BloodBag.findById(donationId);
     if (!bagExist) {
-      return res.status(400).json({ message: "Bag Not Found." });
+      return res.status(400).json({ message: 'Bag Not Found.' });
     }
 
-    bagExist.status = "component-separated";
+    bagExist.status = 'component-separated';
     bagExist.componentSeparationComplete = true;
     bagExist.separationVerifiedBy = req.user?._id;
     bagExist.separationVerifiedSignature = signature.trim();
     bagExist.separationVerifiedAt = new Date();
     await bagExist.save();
 
-    return res.status(200).json({ message: `${bagExist.bagNo} Component Separation is Completed.` });
+    return res
+      .status(200)
+      .json({ message: `${bagExist.bagNo} Component Separation is Completed.` });
   } catch (error) {
     console.log(`Error in Stop Separation`);
-    next(error)
+    next(error);
   }
-}
+};
 
 // -------------------------
 // GET COMPONENTS LIST WITH PAGINATION
@@ -211,7 +210,16 @@ const separationCompleted = async (req, res, next) => {
 
 const getComponentsList = async (req, res, next) => {
   try {
-    const { type, status, expiryBefore, fromDate, toDate, search, page = 1, limit = 10 } = req.query; // pagination + filters
+    const {
+      type,
+      status,
+      expiryBefore,
+      fromDate,
+      toDate,
+      search,
+      page = 1,
+      limit = 10,
+    } = req.query; // pagination + filters
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -219,34 +227,34 @@ const getComponentsList = async (req, res, next) => {
     let pipeline = [
       {
         $lookup: {
-          from: "components",
-          localField: "components",
-          foreignField: "_id",
-          as: "populatedComponents"
-        }
+          from: 'components',
+          localField: 'components',
+          foreignField: '_id',
+          as: 'populatedComponents',
+        },
       },
       {
         $lookup: {
-          from: "sites",
-          localField: "siteId",
-          foreignField: "_id",
-          as: "siteData"
-        }
+          from: 'sites',
+          localField: 'siteId',
+          foreignField: '_id',
+          as: 'siteData',
+        },
       },
       {
         $unwind: {
-          path: "$siteData",
-          preserveNullAndEmptyArrays: true
-        }
-      }
+          path: '$siteData',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
     ];
 
     // Filter by type if provided (only show bags with that component prepared)
     if (type) {
       pipeline.push({
         $match: {
-          "populatedComponents.componentType": type
-        }
+          'populatedComponents.componentType': type,
+        },
       });
     }
 
@@ -254,8 +262,8 @@ const getComponentsList = async (req, res, next) => {
     if (status) {
       pipeline.push({
         $match: {
-          "populatedComponents.status": status
-        }
+          'populatedComponents.status': status,
+        },
       });
     }
 
@@ -263,8 +271,8 @@ const getComponentsList = async (req, res, next) => {
     if (expiryBefore) {
       pipeline.push({
         $match: {
-          "populatedComponents.expiryDate": { $lte: new Date(expiryBefore) }
-        }
+          'populatedComponents.expiryDate': { $lte: new Date(expiryBefore) },
+        },
       });
     }
 
@@ -273,10 +281,10 @@ const getComponentsList = async (req, res, next) => {
       pipeline.push({
         $match: {
           $or: [
-            { bagNo: { $regex: search, $options: "i" } },
-            { bloodGroup: { $regex: search, $options: "i" } }
-          ]
-        }
+            { bagNo: { $regex: search, $options: 'i' } },
+            { bloodGroup: { $regex: search, $options: 'i' } },
+          ],
+        },
       });
     }
 
@@ -287,102 +295,104 @@ const getComponentsList = async (req, res, next) => {
       if (toDate) dateFilter.$lte = new Date(new Date(toDate).setHours(23, 59, 59, 999));
       pipeline.push({
         $match: {
-          createdAt: dateFilter
-        }
+          createdAt: dateFilter,
+        },
       });
     }
 
     // Execute count pipeline
-    let countPipeline = [...pipeline, { $count: "total" }];
+    let countPipeline = [...pipeline, { $count: 'total' }];
     const countResult = await BloodBag.aggregate(countPipeline);
     const total = countResult.length > 0 ? countResult[0].total : 0;
 
     // Execute pagination
-    pipeline.push(
-      { $sort: { createdAt: -1 } },
-      { $skip: skip },
-      { $limit: parseInt(limit) }
-    );
+    pipeline.push({ $sort: { createdAt: -1 } }, { $skip: skip }, { $limit: parseInt(limit) });
 
     const bloodBags = await BloodBag.aggregate(pipeline);
 
     if (!bloodBags || bloodBags.length === 0) {
       return res.status(200).json({
-        message: "No components found.",
+        message: 'No components found.',
         pagination: {
           total: 0,
           page: parseInt(page),
           limit: parseInt(limit),
           totalPages: 0,
         },
-        components: []
+        components: [],
       });
     }
 
-    const tableData = bloodBags.map(bag => {
-      const rbc = bag.populatedComponents.find(c => c.componentType === "RBC");
-      const ffp = bag.populatedComponents.find(c => c.componentType === "FFP");
-      const platelet = bag.populatedComponents.find(c => c.componentType === "Platelet");
-      const cryo = bag.populatedComponents.find(c => c.componentType === "Cryo");
+    const tableData = bloodBags.map((bag) => {
+      const rbc = bag.populatedComponents.find((c) => c.componentType === 'RBC');
+      const ffp = bag.populatedComponents.find((c) => c.componentType === 'FFP');
+      const platelet = bag.populatedComponents.find((c) => c.componentType === 'Platelet');
+      const cryo = bag.populatedComponents.find((c) => c.componentType === 'Cryo');
 
       return {
         id: bag._id,
         bagNo: bag.bagNo,
         bloodGroup: `${bag.bloodGroup} ${bag.rh}`,
-        site: bag.siteData ? bag.siteData.name : "-",
+        site: bag.siteData ? bag.siteData.name : '-',
         createdAt: bag.createdAt,
-        rbc: rbc ? {
-          id: rbc._id,
-          componentId: rbc.componentId,
-          volumeMl: rbc.volumeMl,
-          status: "prepared",
-          componentStatus: rbc.status,
-          expiryDate: rbc.expiryDate
-        } : { status: "unprepared" },
-        ffp: ffp ? {
-          id: ffp._id,
-          componentId: ffp.componentId,
-          volumeMl: ffp.volumeMl,
-          status: "prepared",
-          componentStatus: ffp.status,
-          expiryDate: ffp.expiryDate
-        } : { status: "unprepared" },
-        platelet: platelet ? {
-          id: platelet._id,
-          componentId: platelet.componentId,
-          volumeMl: platelet.volumeMl,
-          status: "prepared",
-          componentStatus: platelet.status,
-          expiryDate: platelet.expiryDate
-        } : { status: "unprepared" },
-        cryo: cryo ? {
-          id: cryo._id,
-          componentId: cryo.componentId,
-          volumeMl: cryo.volumeMl,
-          status: "prepared",
-          componentStatus: cryo.status,
-          expiryDate: cryo.expiryDate
-        } : { status: "unprepared" },
+        rbc: rbc
+          ? {
+              id: rbc._id,
+              componentId: rbc.componentId,
+              volumeMl: rbc.volumeMl,
+              status: 'prepared',
+              componentStatus: rbc.status,
+              expiryDate: rbc.expiryDate,
+            }
+          : { status: 'unprepared' },
+        ffp: ffp
+          ? {
+              id: ffp._id,
+              componentId: ffp.componentId,
+              volumeMl: ffp.volumeMl,
+              status: 'prepared',
+              componentStatus: ffp.status,
+              expiryDate: ffp.expiryDate,
+            }
+          : { status: 'unprepared' },
+        platelet: platelet
+          ? {
+              id: platelet._id,
+              componentId: platelet.componentId,
+              volumeMl: platelet.volumeMl,
+              status: 'prepared',
+              componentStatus: platelet.status,
+              expiryDate: platelet.expiryDate,
+            }
+          : { status: 'unprepared' },
+        cryo: cryo
+          ? {
+              id: cryo._id,
+              componentId: cryo.componentId,
+              volumeMl: cryo.volumeMl,
+              status: 'prepared',
+              componentStatus: cryo.status,
+              expiryDate: cryo.expiryDate,
+            }
+          : { status: 'unprepared' },
       };
     });
 
     return res.status(200).json({
-      message: "Components list fetched successfully.",
+      message: 'Components list fetched successfully.',
       pagination: {
         total,
         page: parseInt(page),
         limit: parseInt(limit),
         totalPages: Math.ceil(total / limit),
       },
-      components: tableData
+      components: tableData,
     });
   } catch (error) {
     console.log(`Error in getComponentsList:`, error);
     next(error);
   }
 };
-
-
 
 // -------------------------
 // GET COMPONENT DETAILS (with populated objects)
@@ -393,30 +403,31 @@ const getComponentDetails = async (req, res, next) => {
     const { id } = req.params;
 
     if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ message: "Invalid ID." });
+      return res.status(400).json({ message: 'Invalid ID.' });
     }
 
     // 1. Try to find a component
     let component = await Component.findById(id)
       .populate({
-        path: "donationId",
+        path: 'donationId',
         populate: [
           {
-            path: "donor",
-            select: "name.firstName name.middleName name.lastName dob sex phone",
-            model: "Donor"
+            path: 'donor',
+            select: 'name.firstName name.middleName name.lastName dob sex phone',
+            model: 'Donor',
           },
           {
-            path: "separationVerifiedBy",
-            select: "name.first name.last email",
-            model: "User"
-          }
+            path: 'separationVerifiedBy',
+            select: 'name.first name.last email',
+            model: 'User',
+          },
         ],
-        select: "bagNo bloodGroup rh collectionDate status siteId separationVerifiedBy separationVerifiedSignature separationVerifiedAt"
+        select:
+          'bagNo bloodGroup rh collectionDate status siteId separationVerifiedBy separationVerifiedSignature separationVerifiedAt',
       })
-      .populate("siteId")
-      .populate("createdBy")
-      .populate("updatedBy");
+      .populate('siteId')
+      .populate('createdBy')
+      .populate('updatedBy');
 
     if (component) {
       // It's a single component
@@ -424,13 +435,13 @@ const getComponentDetails = async (req, res, next) => {
       if (bloodBag) {
         const siblingComponents = await Component.find({ donationId: bloodBag._id });
 
-        const rbc = siblingComponents.find(c => c.componentType === "RBC");
-        const ffp = siblingComponents.find(c => c.componentType === "FFP");
-        const platelet = siblingComponents.find(c => c.componentType === "Platelet");
-        const cryo = siblingComponents.find(c => c.componentType === "Cryo");
+        const rbc = siblingComponents.find((c) => c.componentType === 'RBC');
+        const ffp = siblingComponents.find((c) => c.componentType === 'FFP');
+        const platelet = siblingComponents.find((c) => c.componentType === 'Platelet');
+        const cryo = siblingComponents.find((c) => c.componentType === 'Cryo');
 
         return res.status(200).json({
-          message: "Component details fetched successfully.",
+          message: 'Component details fetched successfully.',
           component: {
             isBloodBagGroup: true,
             bloodBag: {
@@ -445,47 +456,55 @@ const getComponentDetails = async (req, res, next) => {
               separationVerifiedSignature: bloodBag.separationVerifiedSignature || null,
               separationVerifiedAt: bloodBag.separationVerifiedAt || null,
             },
-            rbc: rbc ? {
-              id: rbc._id,
-              componentId: rbc.componentId,
-              volumeMl: rbc.volumeMl,
-              status: rbc.status,
-              expiryDate: rbc.expiryDate,
-              lotNo: rbc.lotNo,
-              storageLocation: rbc.storageLocation,
-              createdAt: rbc.createdAt,
-            } : { status: "unprepared" },
-            ffp: ffp ? {
-              id: ffp._id,
-              componentId: ffp.componentId,
-              volumeMl: ffp.volumeMl,
-              status: ffp.status,
-              expiryDate: ffp.expiryDate,
-              lotNo: ffp.lotNo,
-              storageLocation: ffp.storageLocation,
-              createdAt: ffp.createdAt,
-            } : { status: "unprepared" },
-            platelet: platelet ? {
-              id: platelet._id,
-              componentId: platelet.componentId,
-              volumeMl: platelet.volumeMl,
-              status: platelet.status,
-              expiryDate: platelet.expiryDate,
-              lotNo: platelet.lotNo,
-              storageLocation: platelet.storageLocation,
-              createdAt: platelet.createdAt,
-            } : { status: "unprepared" },
-            cryo: cryo ? {
-              id: cryo._id,
-              componentId: cryo.componentId,
-              volumeMl: cryo.volumeMl,
-              status: cryo.status,
-              expiryDate: cryo.expiryDate,
-              lotNo: cryo.lotNo,
-              storageLocation: cryo.storageLocation,
-              createdAt: cryo.createdAt,
-            } : { status: "unprepared" },
-          }
+            rbc: rbc
+              ? {
+                  id: rbc._id,
+                  componentId: rbc.componentId,
+                  volumeMl: rbc.volumeMl,
+                  status: rbc.status,
+                  expiryDate: rbc.expiryDate,
+                  lotNo: rbc.lotNo,
+                  storageLocation: rbc.storageLocation,
+                  createdAt: rbc.createdAt,
+                }
+              : { status: 'unprepared' },
+            ffp: ffp
+              ? {
+                  id: ffp._id,
+                  componentId: ffp.componentId,
+                  volumeMl: ffp.volumeMl,
+                  status: ffp.status,
+                  expiryDate: ffp.expiryDate,
+                  lotNo: ffp.lotNo,
+                  storageLocation: ffp.storageLocation,
+                  createdAt: ffp.createdAt,
+                }
+              : { status: 'unprepared' },
+            platelet: platelet
+              ? {
+                  id: platelet._id,
+                  componentId: platelet.componentId,
+                  volumeMl: platelet.volumeMl,
+                  status: platelet.status,
+                  expiryDate: platelet.expiryDate,
+                  lotNo: platelet.lotNo,
+                  storageLocation: platelet.storageLocation,
+                  createdAt: platelet.createdAt,
+                }
+              : { status: 'unprepared' },
+            cryo: cryo
+              ? {
+                  id: cryo._id,
+                  componentId: cryo.componentId,
+                  volumeMl: cryo.volumeMl,
+                  status: cryo.status,
+                  expiryDate: cryo.expiryDate,
+                  lotNo: cryo.lotNo,
+                  storageLocation: cryo.storageLocation,
+                  createdAt: cryo.createdAt,
+                }
+              : { status: 'unprepared' },
+          },
         });
       }
     }
@@ -493,32 +512,32 @@ const getComponentDetails = async (req, res, next) => {
     // 2. Try to find a BloodBag
     const bloodBag = await BloodBag.findById(id)
       .populate({
-        path: "donor",
-        select: "name.firstName name.middleName name.lastName dob sex phone",
-        model: "Donor"
+        path: 'donor',
+        select: 'name.firstName name.middleName name.lastName dob sex phone',
+        model: 'Donor',
       })
       .populate({
-        path: "separationVerifiedBy",
-        select: "name.first name.last email",
-        model: "User"
+        path: 'separationVerifiedBy',
+        select: 'name.first name.last email',
+        model: 'User',
       })
-      .populate("siteId")
-      .populate("components");
+      .populate('siteId')
+      .populate('components');
 
     if (!bloodBag) {
-      return res.status(404).json({ message: "Details not found." });
+      return res.status(404).json({ message: 'Details not found.' });
     }
 
     // Find all components for this blood bag
     const siblingComponents = await Component.find({ donationId: bloodBag._id });
 
-    const rbc = siblingComponents.find(c => c.componentType === "RBC");
-    const ffp = siblingComponents.find(c => c.componentType === "FFP");
-    const platelet = siblingComponents.find(c => c.componentType === "Platelet");
-    const cryo = siblingComponents.find(c => c.componentType === "Cryo");
+    const rbc = siblingComponents.find((c) => c.componentType === 'RBC');
+    const ffp = siblingComponents.find((c) => c.componentType === 'FFP');
+    const platelet = siblingComponents.find((c) => c.componentType === 'Platelet');
+    const cryo = siblingComponents.find((c) => c.componentType === 'Cryo');
 
     return res.status(200).json({
-      message: "Blood bag component details fetched successfully.",
+      message: 'Blood bag component details fetched successfully.',
       component: {
         isBloodBagGroup: true,
         bloodBag: {
@@ -533,55 +552,61 @@ const getComponentDetails = async (req, res, next) => {
           separationVerifiedSignature: bloodBag.separationVerifiedSignature || null,
           separationVerifiedAt: bloodBag.separationVerifiedAt || null,
         },
-        rbc: rbc ? {
-          id: rbc._id,
-          componentId: rbc.componentId,
-          volumeMl: rbc.volumeMl,
-          status: rbc.status,
-          expiryDate: rbc.expiryDate,
-          lotNo: rbc.lotNo,
-          storageLocation: rbc.storageLocation,
-          createdAt: rbc.createdAt,
-        } : { status: "unprepared" },
-        ffp: ffp ? {
-          id: ffp._id,
-          componentId: ffp.componentId,
-          volumeMl: ffp.volumeMl,
-          status: ffp.status,
-          expiryDate: ffp.expiryDate,
-          lotNo: ffp.lotNo,
-          storageLocation: ffp.storageLocation,
-          createdAt: ffp.createdAt,
-        } : { status: "unprepared" },
-        platelet: platelet ? {
-          id: platelet._id,
-          componentId: platelet.componentId,
-          volumeMl: platelet.volumeMl,
-          status: platelet.status,
-          expiryDate: platelet.expiryDate,
-          lotNo: platelet.lotNo,
-          storageLocation: platelet.storageLocation,
-          createdAt: platelet.createdAt,
-        } : { status: "unprepared" },
-        cryo: cryo ? {
-          id: cryo._id,
-          componentId: cryo.componentId,
-          volumeMl: cryo.volumeMl,
-          status: cryo.status,
-          expiryDate: cryo.expiryDate,
-          lotNo: cryo.lotNo,
-          storageLocation: cryo.storageLocation,
-          createdAt: cryo.createdAt,
-        } : { status: "unprepared" },
-      }
+        rbc: rbc
+          ? {
+              id: rbc._id,
+              componentId: rbc.componentId,
+              volumeMl: rbc.volumeMl,
+              status: rbc.status,
+              expiryDate: rbc.expiryDate,
+              lotNo: rbc.lotNo,
+              storageLocation: rbc.storageLocation,
+              createdAt: rbc.createdAt,
+            }
+          : { status: 'unprepared' },
+        ffp: ffp
+          ? {
+              id: ffp._id,
+              componentId: ffp.componentId,
+              volumeMl: ffp.volumeMl,
+              status: ffp.status,
+              expiryDate: ffp.expiryDate,
+              lotNo: ffp.lotNo,
+              storageLocation: ffp.storageLocation,
+              createdAt: ffp.createdAt,
+            }
+          : { status: 'unprepared' },
+        platelet: platelet
+          ? {
+              id: platelet._id,
+              componentId: platelet.componentId,
+              volumeMl: platelet.volumeMl,
+              status: platelet.status,
+              expiryDate: platelet.expiryDate,
+              lotNo: platelet.lotNo,
+              storageLocation: platelet.storageLocation,
+              createdAt: platelet.createdAt,
+            }
+          : { status: 'unprepared' },
+        cryo: cryo
+          ? {
+              id: cryo._id,
+              componentId: cryo.componentId,
+              volumeMl: cryo.volumeMl,
+              status: cryo.status,
+              expiryDate: cryo.expiryDate,
+              lotNo: cryo.lotNo,
+              storageLocation: cryo.storageLocation,
+              createdAt: cryo.createdAt,
+            }
+          : { status: 'unprepared' },
+      },
     });
-
   } catch (error) {
     console.log(`Error in getComponentDetails:`, error);
     next(error);
   }
 };
-
 
 // -------------------------
 // GET NEAR EXPIRY COMPONENTS (type-aware thresholds + riskLevel + dynamic filters)
@@ -593,14 +618,14 @@ const getNearExpiryComponents = async (req, res, next) => {
 
     // Type-specific thresholds (days left)
     const thresholds = {
-      Platelet: 1,   // Platelets expire fast → critical if ≤ 1 day left
-      RBC: 7,        // RBCs near expiry if ≤ 7 days
-      FFP: 30,       // Frozen Plasma → 30 days threshold
-      Cryo: 30       // Cryoprecipitate → 30 days threshold
+      Platelet: 1, // Platelets expire fast → critical if ≤ 1 day left
+      RBC: 7, // RBCs near expiry if ≤ 7 days
+      FFP: 30, // Frozen Plasma → 30 days threshold
+      Cryo: 30, // Cryoprecipitate → 30 days threshold
     };
 
     // Dynamic filters from request (optional)
-    const { type, status = "in-stock", site, page = 1, limit = 10, search, days = 7 } = req.query;
+    const { type, status = 'in-stock', site, page = 1, limit = 10, search, days = 7 } = req.query;
     const filter = {};
     if (type) filter.componentType = type;
     if (status) filter.status = status;
@@ -617,32 +642,32 @@ const getNearExpiryComponents = async (req, res, next) => {
     let pipeline = [
       {
         $lookup: {
-          from: "bloodbags",
-          localField: "donationId",
-          foreignField: "_id",
-          as: "donationData"
-        }
+          from: 'bloodbags',
+          localField: 'donationId',
+          foreignField: '_id',
+          as: 'donationData',
+        },
       },
       {
         $lookup: {
-          from: "sites",
-          localField: "siteId",
-          foreignField: "_id",
-          as: "siteData"
-        }
+          from: 'sites',
+          localField: 'siteId',
+          foreignField: '_id',
+          as: 'siteData',
+        },
       },
       {
         $unwind: {
-          path: "$donationData",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$donationData',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $unwind: {
-          path: "$siteData",
-          preserveNullAndEmptyArrays: true
-        }
-      }
+          path: '$siteData',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
     ];
 
     // Add search filter if provided
@@ -650,10 +675,10 @@ const getNearExpiryComponents = async (req, res, next) => {
       pipeline.push({
         $match: {
           $or: [
-            { componentId: { $regex: search, $options: "i" } },
-            { "donationData.bagNo": { $regex: search, $options: "i" } }
-          ]
-        }
+            { componentId: { $regex: search, $options: 'i' } },
+            { 'donationData.bagNo': { $regex: search, $options: 'i' } },
+          ],
+        },
       });
     }
 
@@ -667,9 +692,9 @@ const getNearExpiryComponents = async (req, res, next) => {
       $match: {
         expiryDate: {
           $gte: today, // Not expired
-          $lte: expiryThreshold // Within the specified days threshold
-        }
-      }
+          $lte: expiryThreshold, // Within the specified days threshold
+        },
+      },
     });
 
     // Add sorting and projection
@@ -683,12 +708,12 @@ const getNearExpiryComponents = async (req, res, next) => {
           volumeMl: 1,
           expiryDate: 1,
           status: 1,
-          bagNo: "$donationData.bagNo",
-          bloodGroup: { $concat: ["$donationData.bloodGroup", " ", "$donationData.rh"] },
-          collectionDate: "$donationData.collectionDate",
-          site: "$siteData.name"
-        }
-      }
+          bagNo: '$donationData.bagNo',
+          bloodGroup: { $concat: ['$donationData.bloodGroup', ' ', '$donationData.rh'] },
+          collectionDate: '$donationData.collectionDate',
+          site: '$siteData.name',
+        },
+      },
     );
 
     // Execute aggregation
@@ -696,7 +721,7 @@ const getNearExpiryComponents = async (req, res, next) => {
 
     // Filter dynamically and add riskLevel
     const nearExpiryComponents = allComponents
-      .map(c => {
+      .map((c) => {
         const daysLeft = Math.ceil((c.expiryDate - today) / (1000 * 60 * 60 * 24));
 
         // Use the dynamic days threshold from the request
@@ -706,11 +731,11 @@ const getNearExpiryComponents = async (req, res, next) => {
         if (daysLeft > threshold || daysLeft < 0) return null;
 
         // Assign risk levels based on days left
-        let riskLevel = "warning";
+        let riskLevel = 'warning';
         if (daysLeft <= 1) {
-          riskLevel = "critical";
+          riskLevel = 'critical';
         } else if (daysLeft <= 3) {
-          riskLevel = "high";
+          riskLevel = 'high';
         }
 
         return {
@@ -736,34 +761,32 @@ const getNearExpiryComponents = async (req, res, next) => {
 
     if (!paginatedComponents || paginatedComponents.length === 0) {
       return res.status(200).json({
-        message: "No near-expiry components found.",
+        message: 'No near-expiry components found.',
         pagination: {
           total: 0,
           page: parseInt(page),
           limit: parseInt(limit),
           totalPages: 0,
         },
-        components: []
+        components: [],
       });
     }
 
     return res.status(200).json({
-      message: "Near-expiry components fetched successfully.",
+      message: 'Near-expiry components fetched successfully.',
       pagination: {
         total,
         page: parseInt(page),
         limit: parseInt(limit),
         totalPages: Math.ceil(total / limit),
       },
-      components: paginatedComponents
+      components: paginatedComponents,
     });
   } catch (error) {
     console.log(`Error in getNearExpiryComponents:`, error);
     next(error);
   }
 };
-
-
 
 module.exports = {
   separateComponents,
@@ -773,4 +796,3 @@ module.exports = {
   getComponentDetails,
   getNearExpiryComponents,
 };
-

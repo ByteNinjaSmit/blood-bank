@@ -6,8 +6,6 @@ PUT    /donors/:id               → Update donor info
 DELETE /donors/:id               → Soft delete donor
  */
 
-
-
 const express = require('express');
 const router = express.Router();
 const donorController = require('../controllers/donor-controller');

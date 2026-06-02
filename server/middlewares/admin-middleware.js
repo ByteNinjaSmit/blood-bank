@@ -8,4 +8,4 @@ module.exports = function adminMiddleware(req, res, next) {
   } catch (e) {
     return res.status(403).json({ success: false, message: 'Admin access required' });
   }
-}
+};

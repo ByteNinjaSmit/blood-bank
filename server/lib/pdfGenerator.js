@@ -23,9 +23,10 @@ function ensureDir(dir) {
 }
 
 function drawLine(doc) {
-  doc.moveTo(doc.page.margins.left, doc.y)
-     .lineTo(doc.page.width - doc.page.margins.right, doc.y)
-     .stroke();
+  doc
+    .moveTo(doc.page.margins.left, doc.y)
+    .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+    .stroke();
   doc.moveDown(0.5);
 }
 
@@ -50,7 +51,10 @@ function drawTable(doc, headers, rows, columnWidths, startX, startY) {
   currentX = startX;
   for (let i = 1; i < headers.length; i++) {
     currentX += columnWidths[i - 1];
-    doc.moveTo(currentX, startY).lineTo(currentX, startY + headerHeight).stroke();
+    doc
+      .moveTo(currentX, startY)
+      .lineTo(currentX, startY + headerHeight)
+      .stroke();
   }
 
   let currentY = startY + headerHeight;
@@ -76,7 +80,10 @@ function drawTable(doc, headers, rows, columnWidths, startX, startY) {
     currentX = startX;
     for (let i = 1; i < row.length; i++) {
       currentX += columnWidths[i - 1];
-      doc.moveTo(currentX, currentY).lineTo(currentX, currentY + rowHeight).stroke();
+      doc
+        .moveTo(currentX, currentY)
+        .lineTo(currentX, currentY + rowHeight)
+        .stroke();
     }
 
     currentY += rowHeight;
@@ -101,7 +108,7 @@ function addSummarySection(doc, summaryRows) {
   const headers = ['Component Type', 'Blood Group', 'Rh', 'Count'];
   const columnWidths = [200, 100, 50, 100];
 
-  const rows = (summaryRows || []).map(r => [r.componentType, r.bloodGroup, r.rh, r.count]);
+  const rows = (summaryRows || []).map((r) => [r.componentType, r.bloodGroup, r.rh, r.count]);
   drawTable(doc, headers, rows, columnWidths, doc.page.margins.left, doc.y);
 
   doc.moveDown(1);
@@ -112,10 +119,20 @@ function addDetailsSection(doc, detailRows) {
   doc.fontSize(12).font('Helvetica-Bold').text('DETAILED COMPONENT LISTING');
   doc.moveDown(0.5);
 
-  const headers = ['Component ID', 'Bag No', 'Component Type', 'Blood Group', 'Rh', 'Volume (ml)', 'Expiry Date', 'Status', 'Location'];
-  const columnWidths = [100, 60, 100, 80,50, 80, 80, 80, 150]; // Adjusted for landscape
+  const headers = [
+    'Component ID',
+    'Bag No',
+    'Component Type',
+    'Blood Group',
+    'Rh',
+    'Volume (ml)',
+    'Expiry Date',
+    'Status',
+    'Location',
+  ];
+  const columnWidths = [100, 60, 100, 80, 50, 80, 80, 80, 150]; // Adjusted for landscape
 
-  const rows = (detailRows || []).map(d => [
+  const rows = (detailRows || []).map((d) => [
     d.componentId || '',
     d.bagNo || '',
     d.componentType || '',
@@ -124,7 +141,7 @@ function addDetailsSection(doc, detailRows) {
     d.volumeMl ?? '',
     d.expiryDate ? new Date(d.expiryDate).toLocaleDateString() : '',
     d.status || '',
-    d.storageLocation || ''
+    d.storageLocation || '',
   ]);
 
   drawTable(doc, headers, rows, columnWidths, doc.page.margins.left, doc.y);
@@ -138,10 +155,19 @@ function addFooter(doc, totalComponents) {
   doc.text(`Report generated on: ${new Date().toLocaleString()}`, { align: 'left' });
   doc.text(`Total components: ${totalComponents}`, { align: 'right' });
   doc.moveDown(0.5);
-  doc.text('This is an automated report. Please verify all information before taking action.', { align: 'center' });
+  doc.text('This is an automated report. Please verify all information before taking action.', {
+    align: 'center',
+  });
 }
 
-async function generateNearExpiryPDF({ title, subtitle, reportDir, dateLabel, summaryRows, detailRows }) {
+async function generateNearExpiryPDF({
+  title,
+  subtitle,
+  reportDir,
+  dateLabel,
+  summaryRows,
+  detailRows,
+}) {
   if (!pdfkitAvailable) throw new Error('PDFKit is not available - PDF generation disabled');
 
   ensureDir(reportDir);
@@ -157,8 +183,8 @@ async function generateNearExpiryPDF({ title, subtitle, reportDir, dateLabel, su
       Author: 'Blood Bank Management System',
       Subject: 'Blood Component Expiry Report',
       Keywords: 'blood bank, expiry, components',
-      CreationDate: new Date()
-    }
+      CreationDate: new Date(),
+    },
   });
 
   const writeStream = fs.createWriteStream(filePath);

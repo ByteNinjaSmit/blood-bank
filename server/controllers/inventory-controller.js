@@ -54,16 +54,44 @@ async function listInventory(req, res, next) {
     // Use aggregation to join Component and BloodBag
     const pipeline = [
       { $match: invFilter },
-      { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+      {
+        $lookup: {
+          from: 'components',
+          localField: 'componentId',
+          foreignField: '_id',
+          as: 'component',
+        },
+      },
       { $unwind: '$component' },
       { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
       { $unwind: '$bag' },
-      { $lookup: { from: 'hospitals', localField: 'reservedForHospital', foreignField: '_id', as: 'hospital' } },
+      {
+        $lookup: {
+          from: 'hospitals',
+          localField: 'reservedForHospital',
+          foreignField: '_id',
+          as: 'hospital',
+        },
+      },
       { $unwind: { path: '$hospital', preserveNullAndEmptyArrays: true } },
       // Also join requisition to get hospital and patient when reserved via request
-      { $lookup: { from: 'hospitalrequests', localField: 'reservedFor', foreignField: '_id', as: 'request' } },
+      {
+        $lookup: {
+          from: 'hospitalrequests',
+          localField: 'reservedFor',
+          foreignField: '_id',
+          as: 'request',
+        },
+      },
       { $unwind: { path: '$request', preserveNullAndEmptyArrays: true } },
-      { $lookup: { from: 'hospitals', localField: 'request.hospitalId', foreignField: '_id', as: 'reqHospital' } },
+      {
+        $lookup: {
+          from: 'hospitals',
+          localField: 'request.hospitalId',
+          foreignField: '_id',
+          as: 'reqHospital',
+        },
+      },
       { $unwind: { path: '$reqHospital', preserveNullAndEmptyArrays: true } },
       { $addFields: { hospital: { $ifNull: ['$hospital', '$reqHospital'] } } },
       { $match: compFilter },
@@ -108,7 +136,14 @@ async function listInventory(req, res, next) {
       Inventory.aggregate(pipeline),
       Inventory.aggregate([
         { $match: invFilter },
-        { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+        {
+          $lookup: {
+            from: 'components',
+            localField: 'componentId',
+            foreignField: '_id',
+            as: 'component',
+          },
+        },
         { $unwind: '$component' },
         { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
         { $unwind: '$bag' },
@@ -133,7 +168,6 @@ async function listInventory(req, res, next) {
   } catch (err) {
     next(err);
   }
-
 }
 
 async function reserveByCriteriaFIFO(req, res, next) {
@@ -148,12 +182,24 @@ async function reserveByCriteriaFIFO(req, res, next) {
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: 'No items to reserve' });
     }
-    if (!patient || !patient.name || patient.sex == null || (patient.age == null || Number.isNaN(Number(patient.age)))) {
-      return res.status(400).json({ success: false, message: 'Patient name, age and sex are required for reservation' });
+    if (
+      !patient ||
+      !patient.name ||
+      patient.sex == null ||
+      patient.age == null ||
+      Number.isNaN(Number(patient.age))
+    ) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: 'Patient name, age and sex are required for reservation',
+        });
     }
     const until = reservedUntil ? new Date(reservedUntil) : null;
     const pn = patient?.name || null;
-    const pa = typeof patient?.age === 'number' ? patient.age : (patient?.age ? Number(patient.age) : null);
+    const pa =
+      typeof patient?.age === 'number' ? patient.age : patient?.age ? Number(patient.age) : null;
     const ps = patient?.sex || null;
     const selections = [];
     const shortages = [];
@@ -165,48 +211,109 @@ async function reserveByCriteriaFIFO(req, res, next) {
       if (siteId) compFilter['component.siteId'] = siteId;
       const pipeline = [
         { $match: { status: 'in-stock' } },
-        { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+        {
+          $lookup: {
+            from: 'components',
+            localField: 'componentId',
+            foreignField: '_id',
+            as: 'component',
+          },
+        },
         { $unwind: '$component' },
         { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
         { $unwind: '$bag' },
-        { $match: { ...compFilter, 'bag.bloodGroup': rc.bloodGroup, 'bag.rh': rc.rh, 'component.expiryDate': { $gte: now } } },
+        {
+          $match: {
+            ...compFilter,
+            'bag.bloodGroup': rc.bloodGroup,
+            'bag.rh': rc.rh,
+            'component.expiryDate': { $gte: now },
+          },
+        },
         { $sort: { inStockDate: 1, 'component.expiryDate': 1 } },
         { $limit: rc.units },
         { $project: { _id: 1 } },
       ];
       const docs = await Inventory.aggregate(pipeline);
-      const ids = docs.map(d => d._id);
+      const ids = docs.map((d) => d._id);
       if (ids.length < rc.units) {
-        shortages.push({ componentType: rc.componentType, required: rc.units, available: ids.length });
+        shortages.push({
+          componentType: rc.componentType,
+          required: rc.units,
+          available: ids.length,
+        });
       }
       selections.push(...ids);
     }
     if (shortages.length) {
-      return res.status(409).json({ success: false, message: 'Insufficient stock to reserve', data: { shortages } });
+      return res
+        .status(409)
+        .json({ success: false, message: 'Insufficient stock to reserve', data: { shortages } });
     }
     const upd = await Inventory.updateMany(
       { _id: { $in: selections }, status: 'in-stock' },
-      { $set: { status: 'reserved', reservedForHospital: hospitalId, reservedAt: now, reservedUntil: until, reservedPatientName: pn, reservedPatientAge: pa, reservedPatientSex: ps } }
+      {
+        $set: {
+          status: 'reserved',
+          reservedForHospital: hospitalId,
+          reservedAt: now,
+          reservedUntil: until,
+          reservedPatientName: pn,
+          reservedPatientAge: pa,
+          reservedPatientSex: ps,
+        },
+      },
     );
     if (upd.modifiedCount !== selections.length) {
-      return res.status(409).json({ success: false, message: 'Concurrent update detected while reserving' });
+      return res
+        .status(409)
+        .json({ success: false, message: 'Concurrent update detected while reserving' });
     }
     const details = await Inventory.aggregate([
       { $match: { _id: { $in: selections } } },
-      { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+      {
+        $lookup: {
+          from: 'components',
+          localField: 'componentId',
+          foreignField: '_id',
+          as: 'component',
+        },
+      },
       { $unwind: '$component' },
       { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
       { $unwind: '$bag' },
-      { $project: {
-          _id: 1, status: 1, inStockDate: 1, createdAt: 1,
-          reservedFor: 1, reservedForHospital: 1, reservedAt: 1, reservedUntil: 1,
-          reservedPatientName: 1, reservedPatientAge: 1, reservedPatientSex: 1,
-          componentId: 1, bagNo: 1,
-          'component.componentType': 1, 'component.volumeMl': 1, 'component.expiryDate': 1, 'component.siteId': 1,
-          'bag.bagNo': 1, 'bag.segmentNo': 1, 'bag.bloodGroup': 1, 'bag.rh': 1,
-      }},
+      {
+        $project: {
+          _id: 1,
+          status: 1,
+          inStockDate: 1,
+          createdAt: 1,
+          reservedFor: 1,
+          reservedForHospital: 1,
+          reservedAt: 1,
+          reservedUntil: 1,
+          reservedPatientName: 1,
+          reservedPatientAge: 1,
+          reservedPatientSex: 1,
+          componentId: 1,
+          bagNo: 1,
+          'component.componentType': 1,
+          'component.volumeMl': 1,
+          'component.expiryDate': 1,
+          'component.siteId': 1,
+          'bag.bagNo': 1,
+          'bag.segmentNo': 1,
+          'bag.bloodGroup': 1,
+          'bag.rh': 1,
+        },
+      },
     ]);
-    return res.status(200).json({ success: true, data: { matchedCount: selections.length, inventoryIds: selections, items: details } });
+    return res
+      .status(200)
+      .json({
+        success: true,
+        data: { matchedCount: selections.length, inventoryIds: selections, items: details },
+      });
   } catch (err) {
     next(err);
   }
@@ -232,7 +339,14 @@ async function getNearExpiryInventory(req, res, next) {
     // Join Inventory->Component and filter by component expiry proximity
     const pipeline = [
       { $match: { status: 'in-stock' } },
-      { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+      {
+        $lookup: {
+          from: 'components',
+          localField: 'componentId',
+          foreignField: '_id',
+          as: 'component',
+        },
+      },
       { $unwind: '$component' },
       { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
       { $unwind: '$bag' },
@@ -246,26 +360,36 @@ async function getNearExpiryInventory(req, res, next) {
           },
           threshold: {
             $cond: [
-              { $eq: ['$component.componentType', 'Platelet'] }, thresholdsDays.Platelet,
-              { $cond: [
-                { $eq: ['$component.componentType', 'RBC'] }, thresholdsDays.RBC,
-                { $cond: [
-                  { $eq: ['$component.componentType', 'FFP'] }, thresholdsDays.FFP,
-                  { $cond: [ { $eq: ['$component.componentType', 'Cryo'] }, thresholdsDays.Cryo, 7 ] }
-                ] }
-              ] }
-            ]
-          }
+              { $eq: ['$component.componentType', 'Platelet'] },
+              thresholdsDays.Platelet,
+              {
+                $cond: [
+                  { $eq: ['$component.componentType', 'RBC'] },
+                  thresholdsDays.RBC,
+                  {
+                    $cond: [
+                      { $eq: ['$component.componentType', 'FFP'] },
+                      thresholdsDays.FFP,
+                      {
+                        $cond: [
+                          { $eq: ['$component.componentType', 'Cryo'] },
+                          thresholdsDays.Cryo,
+                          7,
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
         },
       },
       {
         $match: {
           $expr: {
-            $and: [
-              { $gte: [ '$daysToExpiry', 0 ] },
-              { $lte: [ '$daysToExpiry', '$threshold' ] },
-            ],
-          }
+            $and: [{ $gte: ['$daysToExpiry', 0] }, { $lte: ['$daysToExpiry', '$threshold'] }],
+          },
         },
       },
       { $sort: sort },
@@ -298,7 +422,14 @@ async function getNearExpiryInventory(req, res, next) {
       Inventory.aggregate(pipeline),
       Inventory.aggregate([
         { $match: { status: 'in-stock' } },
-        { $lookup: { from: 'components', localField: 'componentId', foreignField: '_id', as: 'component' } },
+        {
+          $lookup: {
+            from: 'components',
+            localField: 'componentId',
+            foreignField: '_id',
+            as: 'component',
+          },
+        },
         { $unwind: '$component' },
         { $lookup: { from: 'bloodbags', localField: 'bagNo', foreignField: '_id', as: 'bag' } },
         { $unwind: '$bag' },
@@ -312,26 +443,36 @@ async function getNearExpiryInventory(req, res, next) {
             },
             threshold: {
               $cond: [
-                { $eq: ['$component.componentType', 'Platelet'] }, thresholdsDays.Platelet,
-                { $cond: [
-                  { $eq: ['$component.componentType', 'RBC'] }, thresholdsDays.RBC,
-                  { $cond: [
-                    { $eq: ['$component.componentType', 'FFP'] }, thresholdsDays.FFP,
-                    { $cond: [ { $eq: ['$component.componentType', 'Cryo'] }, thresholdsDays.Cryo, 7 ] }
-                  ] }
-                ] }
-              ]
-            }
+                { $eq: ['$component.componentType', 'Platelet'] },
+                thresholdsDays.Platelet,
+                {
+                  $cond: [
+                    { $eq: ['$component.componentType', 'RBC'] },
+                    thresholdsDays.RBC,
+                    {
+                      $cond: [
+                        { $eq: ['$component.componentType', 'FFP'] },
+                        thresholdsDays.FFP,
+                        {
+                          $cond: [
+                            { $eq: ['$component.componentType', 'Cryo'] },
+                            thresholdsDays.Cryo,
+                            7,
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
           },
         },
         {
           $match: {
             $expr: {
-              $and: [
-                { $gte: [ '$daysToExpiry', 0 ] },
-                { $lte: [ '$daysToExpiry', '$threshold' ] },
-              ],
-            }
+              $and: [{ $gte: ['$daysToExpiry', 0] }, { $lte: ['$daysToExpiry', '$threshold'] }],
+            },
           },
         },
         { $count: 'count' },
@@ -364,9 +505,18 @@ async function reserveInventory(req, res, next) {
     }
     const result = await Inventory.updateMany(
       { _id: { $in: inventoryIds }, status: 'in-stock' },
-      { $set: { status: 'reserved', reservedFor: requestId || null, updatedAt: new Date(), updatedBy: userId } }
+      {
+        $set: {
+          status: 'reserved',
+          reservedFor: requestId || null,
+          updatedAt: new Date(),
+          updatedBy: userId,
+        },
+      },
     );
-    return res.status(200).json({ success: true, matched: result.matchedCount, modified: result.modifiedCount });
+    return res
+      .status(200)
+      .json({ success: true, matched: result.matchedCount, modified: result.modifiedCount });
   } catch (err) {
     next(err);
   }
@@ -382,9 +532,11 @@ async function issueInventory(req, res, next) {
     const now = new Date();
     const result = await Inventory.updateMany(
       { _id: { $in: inventoryIds }, status: 'reserved' },
-      { $set: { status: 'issued', issuedAt: now, issuedBy: userId, updatedAt: now } }
+      { $set: { status: 'issued', issuedAt: now, issuedBy: userId, updatedAt: now } },
     );
-    return res.status(200).json({ success: true, matched: result.matchedCount, modified: result.modifiedCount });
+    return res
+      .status(200)
+      .json({ success: true, matched: result.matchedCount, modified: result.modifiedCount });
   } catch (err) {
     next(err);
   }
@@ -399,9 +551,11 @@ async function discardInventory(req, res, next) {
     }
     const result = await Inventory.updateMany(
       { _id: { $in: inventoryIds }, status: { $in: ['in-stock', 'reserved'] } },
-      { $set: { status: 'discarded', updatedAt: new Date(), updatedBy: userId } }
+      { $set: { status: 'discarded', updatedAt: new Date(), updatedBy: userId } },
     );
-    return res.status(200).json({ success: true, matched: result.matchedCount, modified: result.modifiedCount });
+    return res
+      .status(200)
+      .json({ success: true, matched: result.matchedCount, modified: result.modifiedCount });
   } catch (err) {
     next(err);
   }
@@ -416,24 +570,26 @@ async function unreserveInventory(req, res, next) {
     }
     const result = await Inventory.updateMany(
       { _id: { $in: inventoryIds }, status: 'reserved' },
-      { 
-        $set: { 
-          status: 'in-stock', 
-          updatedAt: new Date(), 
-          updatedBy: userId 
+      {
+        $set: {
+          status: 'in-stock',
+          updatedAt: new Date(),
+          updatedBy: userId,
         },
         $unset: {
-          reservedFor: "",
-          reservedForHospital: "",
-          reservedAt: "",
-          reservedUntil: "",
-          reservedPatientName: "",
-          reservedPatientAge: "",
-          reservedPatientSex: ""
-        }
-      }
+          reservedFor: '',
+          reservedForHospital: '',
+          reservedAt: '',
+          reservedUntil: '',
+          reservedPatientName: '',
+          reservedPatientAge: '',
+          reservedPatientSex: '',
+        },
+      },
     );
-    return res.status(200).json({ success: true, matched: result.matchedCount, modified: result.modifiedCount });
+    return res
+      .status(200)
+      .json({ success: true, matched: result.matchedCount, modified: result.modifiedCount });
   } catch (err) {
     next(err);
   }
@@ -446,5 +602,5 @@ module.exports = {
   reserveByCriteriaFIFO,
   issueInventory,
   discardInventory,
-  unreserveInventory
+  unreserveInventory,
 };

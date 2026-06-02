@@ -1,5 +1,8 @@
 const logger = require('../utils/logger');
-const { getTodayBirthdayRecipients, buildBirthdayMessage } = require('../services/birthday-service');
+const {
+  getTodayBirthdayRecipients,
+  buildBirthdayMessage,
+} = require('../services/birthday-service');
 const { sendSms } = require('../services/sms-service');
 
 async function processBirthdayJob(job) {
@@ -26,9 +29,7 @@ async function processBirthdayJob(job) {
         successCount += 1;
       } catch (error) {
         failureCount += 1;
-        logger.error(
-          `[BirthdayJob] Failed to send SMS to ${recipient.phone}: ${error.message}`
-        );
+        logger.error(`[BirthdayJob] Failed to send SMS to ${recipient.phone}: ${error.message}`);
       }
     }
 
@@ -36,7 +37,7 @@ async function processBirthdayJob(job) {
     const durationSec = ((finishedAt - startedAt) / 1000).toFixed(2);
 
     logger.info(
-      `[BirthdayJob] Completed job ${jobName} — total: ${recipients.length}, success: ${successCount}, failed: ${failureCount}, duration: ${durationSec}s`
+      `[BirthdayJob] Completed job ${jobName} — total: ${recipients.length}, success: ${successCount}, failed: ${failureCount}, duration: ${durationSec}s`,
     );
 
     return {

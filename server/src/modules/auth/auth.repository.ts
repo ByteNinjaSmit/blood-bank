@@ -82,7 +82,12 @@ export const authRepo = {
   async revokeRefresh(token: string, ip?: string, replacedBy?: string) {
     await RefreshTokenModel.updateOne(
       { token },
-      { revoked: true, revokedAt: new Date(), revokedByIp: ip, replacedByToken: replacedBy ?? null },
+      {
+        revoked: true,
+        revokedAt: new Date(),
+        revokedByIp: ip,
+        replacedByToken: replacedBy ?? null,
+      },
     );
   },
   async revokeAllForUser(userId: string) {

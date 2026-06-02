@@ -6,36 +6,36 @@ const HospitalSchema = new Schema({
     type: String,
     required: true,
     unique: true,
-    trim: true
+    trim: true,
   },
   name: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
   address: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
   contactPerson: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
   phone: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   updatedAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
 // Auto-update updatedAt on save

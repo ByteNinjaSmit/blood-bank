@@ -58,19 +58,23 @@ async function schedule() {
   try {
     // Remove existing repeatable job if it exists
     const repeatableJobs = await queue.getRepeatableJobs();
-    const existingJob = repeatableJobs.find(job => job.name === 'daily-expiry-report');
+    const existingJob = repeatableJobs.find((job) => job.name === 'daily-expiry-report');
 
     if (existingJob) {
       await queue.removeRepeatableByKey(existingJob.key);
       logger.info('[Queue] Removed existing repeatable job');
     }
 
-    await queue.add('daily-expiry-report', {}, {
-      jobId: 'daily-expiry-report',
-      // repeat: { cron: '* * * * *', tz: process.env.TIMEZONE || 'Asia/Kolkata' },
-      // repeat: { cron: '*/2 * * * *', tz: process.env.TIMEZONE || 'Asia/Kolkata' },
-      repeat: { cron: '0 8 * * *', tz: process.env.TIMEZONE || 'Asia/Kolkata' }, // Production schedule
-    });
+    await queue.add(
+      'daily-expiry-report',
+      {},
+      {
+        jobId: 'daily-expiry-report',
+        // repeat: { cron: '* * * * *', tz: process.env.TIMEZONE || 'Asia/Kolkata' },
+        // repeat: { cron: '*/2 * * * *', tz: process.env.TIMEZONE || 'Asia/Kolkata' },
+        repeat: { cron: '0 8 * * *', tz: process.env.TIMEZONE || 'Asia/Kolkata' }, // Production schedule
+      },
+    );
     logger.info('[Queue] Daily expiry report scheduled successfully');
   } catch (error) {
     logger.error({ error: error.message }, '[Queue] Failed to schedule daily expiry report');

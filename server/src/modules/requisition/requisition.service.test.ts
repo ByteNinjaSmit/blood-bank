@@ -21,7 +21,11 @@ function patient(over: Partial<PatientDto> = {}): PatientDto {
   };
 }
 
-function releasedUnit(id: string, abo: 'A' | 'O' = 'A', expiresAt = new Date('2026-08-01')): SelectableUnit {
+function releasedUnit(
+  id: string,
+  abo: 'A' | 'O' = 'A',
+  expiresAt = new Date('2026-08-01'),
+): SelectableUnit {
   return {
     unitId: id,
     componentType: 'PRBC',
@@ -50,11 +54,7 @@ function reqDto(over: Partial<RequisitionDto> = {}): RequisitionDto {
   };
 }
 
-function deps(opts: {
-  candidates?: SelectableUnit[];
-  pat?: PatientDto;
-  req?: RequisitionDto;
-}) {
+function deps(opts: { candidates?: SelectableUnit[]; pat?: PatientDto; req?: RequisitionDto }) {
   const units: UnitRepo = {
     findByUnitId: vi.fn(),
     findReleasableByDonation: vi.fn(),
@@ -68,7 +68,11 @@ function deps(opts: {
   const requisitions: RequisitionRepo = {
     create: vi.fn().mockResolvedValue(opts.req ?? reqDto()),
     findById: vi.fn().mockResolvedValue(opts.req ?? reqDto()),
-    setMatched: vi.fn().mockImplementation(async (_id, matched) => reqDto({ matchedUnits: matched, status: 'MATCHED' })),
+    setMatched: vi
+      .fn()
+      .mockImplementation(async (_id, matched) =>
+        reqDto({ matchedUnits: matched, status: 'MATCHED' }),
+      ),
     setCrossmatchStatus: vi.fn(),
     setStatus: vi.fn(),
     reject: vi.fn().mockResolvedValue(reqDto({ status: 'REJECTED' })),

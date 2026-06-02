@@ -20,7 +20,10 @@ export interface PerformCrossmatchInput {
 }
 
 export interface CrossmatchService {
-  perform(input: PerformCrossmatchInput, actorId: string): Promise<{
+  perform(
+    input: PerformCrossmatchInput,
+    actorId: string,
+  ): Promise<{
     crossmatchId: string;
     unitId: string;
     result: 'COMPATIBLE' | 'INCOMPATIBLE';

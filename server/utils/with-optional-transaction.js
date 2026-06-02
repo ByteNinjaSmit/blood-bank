@@ -1,5 +1,5 @@
-const mongoose = require("mongoose");
-const { supportsTransactions } = require("./mongo-transactions");
+const mongoose = require('mongoose');
+const { supportsTransactions } = require('./mongo-transactions');
 
 async function withOptionalTransaction(work) {
   const canUseTransactions = await supportsTransactions();

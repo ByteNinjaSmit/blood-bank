@@ -16,17 +16,14 @@ async function getTodayBirthdayRecipients() {
     {
       dob: { $ne: null },
       $expr: {
-        $and: [
-          { $eq: [{ $dayOfMonth: '$dob' }, day] },
-          { $eq: [{ $month: '$dob' }, month] },
-        ],
+        $and: [{ $eq: [{ $dayOfMonth: '$dob' }, day] }, { $eq: [{ $month: '$dob' }, month] }],
       },
     },
     {
       'name.firstName': 1,
       'name.lastName': 1,
       phone: 1,
-    }
+    },
   );
 
   const appointments = await Appointment.find(
@@ -42,7 +39,7 @@ async function getTodayBirthdayRecipients() {
     {
       fullName: 1,
       mobileNo: 1,
-    }
+    },
   );
 
   const donorRecipients = donors
@@ -83,7 +80,7 @@ async function getTodayBirthdayRecipients() {
 
   const uniqueRecipients = Array.from(map.values());
   logger.info(
-    `[BirthdayService] Found ${uniqueRecipients.length} unique recipients for today (donors: ${donorRecipients.length}, appointments: ${appointmentRecipients.length})`
+    `[BirthdayService] Found ${uniqueRecipients.length} unique recipients for today (donors: ${donorRecipients.length}, appointments: ${appointmentRecipients.length})`,
   );
 
   return uniqueRecipients;

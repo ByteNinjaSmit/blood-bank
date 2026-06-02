@@ -25,5 +25,4 @@ const IssueSchema = new Schema(
 export type Issue = InferSchemaType<typeof IssueSchema>;
 export type IssueModel = Model<Issue>;
 export const IssueModel: IssueModel =
-  (mongoose.models.Issue as IssueModel | undefined) ??
-  mongoose.model<Issue>('Issue', IssueSchema);
+  (mongoose.models.Issue as IssueModel | undefined) ?? mongoose.model<Issue>('Issue', IssueSchema);

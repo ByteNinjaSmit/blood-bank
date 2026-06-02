@@ -49,7 +49,7 @@ async function autoDiscardAndReport() {
   // find components expired up to today that are still active
   const expiredComponents = await Component.find({
     expiryDate: { $lte: end },
-    status: { $in: ['in-stock', 'testing', 'available', 'ready'] }
+    status: { $in: ['in-stock', 'testing', 'available', 'ready'] },
   })
     .populate('donationId', 'bagNo bloodGroup rh status')
     .populate('siteId', 'name')
@@ -60,12 +60,14 @@ async function autoDiscardAndReport() {
     return { filePath: null, count: 0, expiredComponents: [] };
   }
 
-  logger.info(`[Discard] Found ${expiredComponents.length} expired components requiring auto-discard.`);
+  logger.info(
+    `[Discard] Found ${expiredComponents.length} expired components requiring auto-discard.`,
+  );
 
   let filePath = null;
 
   try {
-    const compIds = expiredComponents.map(c => c._id);
+    const compIds = expiredComponents.map((c) => c._id);
     const now = new Date();
 
     await withOptionalTransaction(async (session) => {
@@ -78,26 +80,28 @@ async function autoDiscardAndReport() {
             discardReason: 'Auto Expired',
             discardedAt: now,
             inventoryStatus: 'not-available',
-            updatedAt: now
-          }
+            updatedAt: now,
+          },
         },
-        session ? { session } : {}
+        session ? { session } : {},
       );
 
       // 2) update inventories (mark discarded)
       await Inventory.updateMany(
         { componentId: { $in: compIds } },
         { $set: { status: 'discarded', available: false, updatedAt: now } },
-        session ? { session } : {}
+        session ? { session } : {},
       );
 
       // 3) create DiscardLog records that match schema
       // Ensure SYSTEM_USER_ID exists (fallback to null will fail schema if required — prefer setting env)
       if (!SYSTEM_USER_ID) {
-        logger.warn('[Discard] SYSTEM_USER_ID not set. Please set process.env.SYSTEM_USER_ID to a valid User ObjectId for audit logs.');
+        logger.warn(
+          '[Discard] SYSTEM_USER_ID not set. Please set process.env.SYSTEM_USER_ID to a valid User ObjectId for audit logs.',
+        );
       }
 
-      const discardRecords = expiredComponents.map(c => ({
+      const discardRecords = expiredComponents.map((c) => ({
         itemType: 'Component',
         bagNo: c.donationId?._id || null,
         componentId: c._id,
@@ -108,43 +112,57 @@ async function autoDiscardAndReport() {
           ? new mongoose.Types.ObjectId(SYSTEM_USER_ID)
           : new mongoose.Types.ObjectId('68acce6acb0096e64764d7d6'),
         isAutoDiscarded: true,
-        createdAt: now
+        createdAt: now,
       }));
 
       // If your schema marks some fields required, ensure they are present. Optionally filter invalid entries:
-      const validDiscardRecords = discardRecords.filter(r => r.bagNo && r.discardedAt && r.updatedBy);
+      const validDiscardRecords = discardRecords.filter(
+        (r) => r.bagNo && r.discardedAt && r.updatedBy,
+      );
       if (validDiscardRecords.length !== discardRecords.length) {
-        logger.warn(`[Discard] Some discard records missing required fields and will be skipped. expected:${discardRecords.length} valid:${validDiscardRecords.length}`);
+        logger.warn(
+          `[Discard] Some discard records missing required fields and will be skipped. expected:${discardRecords.length} valid:${validDiscardRecords.length}`,
+        );
       }
 
       // insertMany ordered:false so single invalid doc doesn't stop all (but here we filtered invalids)
       if (validDiscardRecords.length) {
-        await DiscardLog.insertMany(validDiscardRecords, session ? { session, ordered: false } : { ordered: false });
+        await DiscardLog.insertMany(
+          validDiscardRecords,
+          session ? { session, ordered: false } : { ordered: false },
+        );
         logger.info(`[Discard] Logged ${validDiscardRecords.length} auto-discard entries.`);
       }
 
       // 4) Update bag statuses if all components are discarded
-      const affectedBagIds = [...new Set(expiredComponents.map(c => c.donationId?._id).filter(Boolean))];
+      const affectedBagIds = [
+        ...new Set(expiredComponents.map((c) => c.donationId?._id).filter(Boolean)),
+      ];
       for (const bagId of affectedBagIds) {
-        const remainingQuery = Component.countDocuments({ donationId: bagId, status: { $nin: ['discarded'] } });
+        const remainingQuery = Component.countDocuments({
+          donationId: bagId,
+          status: { $nin: ['discarded'] },
+        });
         const remaining = session ? await remainingQuery.session(session) : await remainingQuery;
         if (remaining === 0) {
           await BloodBag.updateOne(
             { _id: bagId },
             { $set: { status: 'discarded', updatedAt: now } },
-            session ? { session } : {}
+            session ? { session } : {},
           );
           logger.info(`[Discard] Bag ${bagId} marked as discarded (all components expired).`);
         }
       }
     });
 
-    logger.info(`[Discard] 🩸 Successfully discarded ${expiredComponents.length} expired components.`);
+    logger.info(
+      `[Discard] 🩸 Successfully discarded ${expiredComponents.length} expired components.`,
+    );
 
     // generate PDF outside any transaction (so failures here don't require aborting DB changes)
     try {
       const summary = buildSummary(expiredComponents);
-      const detailRows = expiredComponents.map(e => ({
+      const detailRows = expiredComponents.map((e) => ({
         bagNo: e.donationId?.bagNo || 'Unknown',
         componentId: e.componentId || '-',
         componentType: e.componentType,
@@ -152,7 +170,7 @@ async function autoDiscardAndReport() {
         rh: e.donationId?.rh || 'Unknown',
         expiryDate: e.expiryDate,
         siteName: e.siteId?.name || 'Unknown',
-        reason: 'Auto Expired'
+        reason: 'Auto Expired',
       }));
 
       filePath = await generateDiscardPDF({
@@ -160,7 +178,7 @@ async function autoDiscardAndReport() {
         title: 'Auto Discard Report',
         subtitle: `Expired Components (up to ${new Date().toLocaleDateString()})`,
         summaryRows: summary,
-        detailRows
+        detailRows,
       });
 
       logger.info(`[Discard] 🧾 Auto discard report generated: ${filePath}`);

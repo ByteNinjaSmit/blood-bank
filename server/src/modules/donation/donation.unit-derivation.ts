@@ -38,12 +38,8 @@ const DEFAULT_TEMPLATES: Readonly<Record<DonationType, ReadonlyArray<UnitTemplat
       shelfLifeDays: SHELF_DAYS.PLATELET_CONCENTRATE,
     },
   ],
-  PLATELETPHERESIS: [
-    { componentType: 'SDP', volumeMl: 250, shelfLifeDays: SHELF_DAYS.SDP },
-  ],
-  PLASMAPHERESIS: [
-    { componentType: 'FFP', volumeMl: 600, shelfLifeDays: SHELF_DAYS.FFP },
-  ],
+  PLATELETPHERESIS: [{ componentType: 'SDP', volumeMl: 250, shelfLifeDays: SHELF_DAYS.SDP }],
+  PLASMAPHERESIS: [{ componentType: 'FFP', volumeMl: 600, shelfLifeDays: SHELF_DAYS.FFP }],
   DOUBLE_RED_CELL: [
     { componentType: 'PRBC', volumeMl: 250, shelfLifeDays: SHELF_DAYS.PRBC },
     { componentType: 'PRBC', volumeMl: 250, shelfLifeDays: SHELF_DAYS.PRBC },

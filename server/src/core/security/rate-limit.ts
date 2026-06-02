@@ -9,7 +9,12 @@ import { childLogger } from '@/core/logger';
 
 const log = childLogger({ module: 'core/rate-limit' });
 
-function build(keyPrefix: string, points: number, durationSec: number, blockSec: number): RequestHandler {
+function build(
+  keyPrefix: string,
+  points: number,
+  durationSec: number,
+  blockSec: number,
+): RequestHandler {
   const limiter = new RateLimiterRedis({
     storeClient: getRedis(),
     keyPrefix,

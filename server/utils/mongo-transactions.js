@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 let cached = null;
 
@@ -10,7 +10,7 @@ async function supportsTransactions() {
     }
     const admin = mongoose.connection.db.admin();
     const res = await admin.command({ hello: 1 });
-    cached = Boolean(res && res.setName) || res?.msg === "isdbgrid";
+    cached = Boolean(res && res.setName) || res?.msg === 'isdbgrid';
     return cached;
   } catch (err) {
     try {
@@ -19,7 +19,7 @@ async function supportsTransactions() {
         return false;
       }
       const res = await admin.command({ isMaster: 1 });
-      cached = Boolean(res && res.setName) || res?.msg === "isdbgrid";
+      cached = Boolean(res && res.setName) || res?.msg === 'isdbgrid';
       return cached;
     } catch (_) {
       cached = false;

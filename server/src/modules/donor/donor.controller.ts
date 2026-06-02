@@ -47,7 +47,14 @@ export function createDonorControllers(service: DonorService): DonorControllers 
         const { id } = Validate.idParam(req);
         const donor = await service.get(id);
         if (!donor) {
-          res.status(404).json({ success: false, code: 'NOT_FOUND', message: 'Donor not found', requestId: req.id });
+          res
+            .status(404)
+            .json({
+              success: false,
+              code: 'NOT_FOUND',
+              message: 'Donor not found',
+              requestId: req.id,
+            });
           return;
         }
         res.json({ success: true, data: donor, requestId: req.id });

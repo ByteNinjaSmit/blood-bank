@@ -95,7 +95,11 @@ export function createDeferralRepo(): DeferralRepo {
     async lift(id, actorId) {
       await DeferralModel.updateOne(
         { _id: id },
-        { liftedAt: new Date(), liftedBy: new Types.ObjectId(actorId), updatedBy: new Types.ObjectId(actorId) },
+        {
+          liftedAt: new Date(),
+          liftedBy: new Types.ObjectId(actorId),
+          updatedBy: new Types.ObjectId(actorId),
+        },
       );
     },
   };

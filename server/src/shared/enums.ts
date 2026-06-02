@@ -4,7 +4,7 @@
 
 export const ROLE = [
   'system-admin',
-  'bbo',                    // Blood Bank Officer (licence holder, release authority)
+  'bbo', // Blood Bank Officer (licence holder, release authority)
   'medical-officer',
   'counsellor',
   'phlebotomist',
@@ -22,26 +22,50 @@ export type Role = (typeof ROLE)[number];
 
 export const PERMISSION = [
   // Donor
-  'donor:read', 'donor:create', 'donor:update', 'donor:delete',
+  'donor:read',
+  'donor:create',
+  'donor:update',
+  'donor:delete',
   // Donation
-  'donation:read', 'donation:create', 'donation:update', 'donation:delete',
+  'donation:read',
+  'donation:create',
+  'donation:update',
+  'donation:delete',
   // BloodUnit
-  'unit:read', 'unit:create', 'unit:release', 'unit:reserve', 'unit:issue', 'unit:return', 'unit:discard',
+  'unit:read',
+  'unit:create',
+  'unit:release',
+  'unit:reserve',
+  'unit:issue',
+  'unit:return',
+  'unit:discard',
   // TTI
-  'tti:read', 'tti:edit', 'tti:release',
+  'tti:read',
+  'tti:edit',
+  'tti:release',
   // Component separation
   'component:separate',
   // Requisition + crossmatch + issue
-  'requisition:read', 'requisition:create', 'requisition:approve', 'requisition:reject',
-  'crossmatch:perform', 'crossmatch:override',
+  'requisition:read',
+  'requisition:create',
+  'requisition:approve',
+  'requisition:reject',
+  'crossmatch:perform',
+  'crossmatch:override',
   // Transfusion + adverse reaction
-  'transfusion:record', 'adverse-reaction:record',
+  'transfusion:record',
+  'adverse-reaction:record',
   // Lookback + audit
-  'lookback:run', 'audit:read',
+  'lookback:run',
+  'audit:read',
   // Reports + MIS
-  'report:read', 'report:generate',
+  'report:read',
+  'report:generate',
   // Users + roles
-  'user:read', 'user:create', 'user:update', 'user:deactivate',
+  'user:read',
+  'user:create',
+  'user:update',
+  'user:deactivate',
 ] as const;
 export type Permission = (typeof PERMISSION)[number];
 
@@ -53,10 +77,10 @@ export type RhFactor = (typeof RH_FACTOR)[number];
 
 export const COMPONENT_TYPE = [
   'WHOLE_BLOOD',
-  'PRBC',                 // packed red blood cells
-  'FFP',                  // fresh frozen plasma
+  'PRBC', // packed red blood cells
+  'FFP', // fresh frozen plasma
   'PLATELET_CONCENTRATE', // PRP-derived or buffy-coat-derived
-  'SDP',                  // single-donor platelets (apheresis)
+  'SDP', // single-donor platelets (apheresis)
   'CRYOPRECIPITATE',
   'IRRADIATED_PRBC',
   'WASHED_PRBC',
@@ -138,34 +162,30 @@ export const TTI_RESULT = ['NEGATIVE', 'REACTIVE', 'INDETERMINATE'] as const;
 export type TtiResult = (typeof TTI_RESULT)[number];
 
 export const ADVERSE_REACTION_CATEGORY = [
-  'FNHTR',              // febrile non-haemolytic
+  'FNHTR', // febrile non-haemolytic
   'ALLERGIC',
   'ANAPHYLACTIC',
-  'AHTR',               // acute haemolytic
-  'DHTR',               // delayed haemolytic
-  'TRALI',              // transfusion-related acute lung injury
-  'TACO',               // transfusion-associated circulatory overload
-  'BACTERIAL',          // bacterial contamination / sepsis
-  'PTP',                // post-transfusion purpura
-  'TA_GVHD',            // graft-versus-host disease
+  'AHTR', // acute haemolytic
+  'DHTR', // delayed haemolytic
+  'TRALI', // transfusion-related acute lung injury
+  'TACO', // transfusion-associated circulatory overload
+  'BACTERIAL', // bacterial contamination / sepsis
+  'PTP', // post-transfusion purpura
+  'TA_GVHD', // graft-versus-host disease
   'HYPOTENSIVE',
   'OTHER',
 ] as const;
 export type AdverseReactionCategory = (typeof ADVERSE_REACTION_CATEGORY)[number];
 
 export const ADVERSE_REACTION_SEVERITY = [
-  'GRADE_1',            // mild
-  'GRADE_2',            // moderate
-  'GRADE_3',            // severe / life-threatening
-  'GRADE_4',            // death
+  'GRADE_1', // mild
+  'GRADE_2', // moderate
+  'GRADE_3', // severe / life-threatening
+  'GRADE_4', // death
 ] as const;
 export type AdverseReactionSeverity = (typeof ADVERSE_REACTION_SEVERITY)[number];
 
-export const TRANSFUSION_OUTCOME = [
-  'COMPLETED',
-  'STOPPED_REACTION',
-  'STOPPED_OTHER',
-] as const;
+export const TRANSFUSION_OUTCOME = ['COMPLETED', 'STOPPED_REACTION', 'STOPPED_OTHER'] as const;
 export type TransfusionOutcome = (typeof TRANSFUSION_OUTCOME)[number];
 
 export const AUDIT_ACTION = [

@@ -55,7 +55,10 @@ export async function runExpiryScan(): Promise<{ expired: number; nearExpiry: nu
   const near = await units.findNearExpiry(env.NEAR_EXPIRY_DAYS);
   if (near.length > 0) {
     const details = near
-      .map((u) => `${u.unitId}  ${u.componentType} ${u.aboGroup}${u.rhFactor}  exp ${u.expiresAt.slice(0, 10)}`)
+      .map(
+        (u) =>
+          `${u.unitId}  ${u.componentType} ${u.aboGroup}${u.rhFactor}  exp ${u.expiresAt.slice(0, 10)}`,
+      )
       .join('\n');
     await notificationService.send({
       type: 'NEAR_EXPIRY_ALERT',

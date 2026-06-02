@@ -1,11 +1,14 @@
-const mongoose = require("mongoose");
-const User = require("../models/user-model");
+const mongoose = require('mongoose');
+const User = require('../models/user-model');
 
 // -----------------------------
 // Helpers
 // -----------------------------
 const isValidObjectId = (id) => mongoose.isValidObjectId(id);
-const normalizeEmail = (e) => String(e || "").trim().toLowerCase();
+const normalizeEmail = (e) =>
+  String(e || '')
+    .trim()
+    .toLowerCase();
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // -----------------------------
@@ -13,7 +16,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // -----------------------------
 const listUsers = async (req, res, next) => {
   try {
-    const users = await User.find({}).select("-password");
+    const users = await User.find({}).select('-password');
     return res.status(200).json({ success: true, data: users });
   } catch (err) {
     next(err);
@@ -25,26 +28,37 @@ const listUsers = async (req, res, next) => {
 // -----------------------------
 const createUser = async (req, res, next) => {
   try {
-    const { publicId, firstName, lastName, email, phone, role, password, permissions, siteId, status } = req.body;
+    const {
+      publicId,
+      firstName,
+      lastName,
+      email,
+      phone,
+      role,
+      password,
+      permissions,
+      siteId,
+      status,
+    } = req.body;
 
     // Required fields validation
     if (!publicId || !firstName || !lastName || !email || !role || !password) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
     // Email format + duplicate (case-insensitive)
     const normEmail = normalizeEmail(email);
     if (!EMAIL_REGEX.test(normEmail)) {
-      return res.status(400).json({ success: false, message: "Invalid email format" });
+      return res.status(400).json({ success: false, message: 'Invalid email format' });
     }
     const emailExists = await User.findOne({ email: { $regex: `^${normEmail}$`, $options: 'i' } });
     if (emailExists) {
-      return res.status(400).json({ success: false, message: "Email already exists" });
+      return res.status(400).json({ success: false, message: 'Email already exists' });
     }
 
     // Phone duplicate (optional)
-    if (phone && await User.findOne({ phone })) {
-      return res.status(400).json({ success: false, message: "Phone number already exists" });
+    if (phone && (await User.findOne({ phone }))) {
+      return res.status(400).json({ success: false, message: 'Phone number already exists' });
     }
 
     const user = new User({
@@ -56,7 +70,7 @@ const createUser = async (req, res, next) => {
       password,
       permissions: Array.isArray(permissions) ? permissions : [],
       siteId: siteId || null,
-      status: status || "active",
+      status: status || 'active',
       createdBy: req.user?._id || null,
       updatedBy: req.user?._id || null,
     });
@@ -80,24 +94,25 @@ const updateUser = async (req, res, next) => {
 
     // Validate ObjectId
     if (!isValidObjectId(id)) {
-      return res.status(400).json({ success: false, message: "Invalid user ID format" });
+      return res.status(400).json({ success: false, message: 'Invalid user ID format' });
     }
 
-    const { firstName, lastName, email, phone, role, password, permissions, siteId, status } = req.body;
+    const { firstName, lastName, email, phone, role, password, permissions, siteId, status } =
+      req.body;
 
     const user = await User.findById(id);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     // Email already taken by another user (case-insensitive)
     if (typeof email === 'string' && email.trim()) {
       const normEmail = normalizeEmail(email);
       if (!EMAIL_REGEX.test(normEmail)) {
-        return res.status(400).json({ success: false, message: "Invalid email format" });
+        return res.status(400).json({ success: false, message: 'Invalid email format' });
       }
       if (normEmail !== user.email) {
         const other = await User.findOne({ email: { $regex: `^${normEmail}$`, $options: 'i' } });
         if (other && String(other._id) !== String(user._id)) {
-          return res.status(400).json({ success: false, message: "Email already in use" });
+          return res.status(400).json({ success: false, message: 'Email already in use' });
         }
         user.email = normEmail;
       }
@@ -106,20 +121,20 @@ const updateUser = async (req, res, next) => {
     // Phone check (optional)
     if (phone && phone !== user.phone) {
       if (await User.findOne({ phone })) {
-        return res.status(400).json({ success: false, message: "Phone number already in use" });
+        return res.status(400).json({ success: false, message: 'Phone number already in use' });
       }
       user.phone = phone;
     }
 
-    if (typeof firstName === "string") user.name.first = firstName;
-    if (typeof lastName === "string") user.name.last = lastName;
-    if (typeof role === "string") user.role = role;
+    if (typeof firstName === 'string') user.name.first = firstName;
+    if (typeof lastName === 'string') user.name.last = lastName;
+    if (typeof role === 'string') user.role = role;
     if (Array.isArray(permissions)) user.permissions = permissions;
-    if (typeof status === "string") user.status = status;
+    if (typeof status === 'string') user.status = status;
 
     if (siteId && isValidObjectId(siteId)) user.siteId = siteId;
 
-    if (typeof password === "string" && password.trim()) user.password = password;
+    if (typeof password === 'string' && password.trim()) user.password = password;
 
     user.updatedBy = req.user?._id || user.updatedBy;
 
@@ -142,14 +157,14 @@ const deleteUser = async (req, res, next) => {
     const { id } = req.params;
 
     if (!isValidObjectId(id)) {
-      return res.status(400).json({ success: false, message: "Invalid user ID format" });
+      return res.status(400).json({ success: false, message: 'Invalid user ID format' });
     }
 
     const user = await User.findById(id);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     await user.deleteOne();
-    return res.status(200).json({ success: true, message: "User deleted" });
+    return res.status(200).json({ success: true, message: 'User deleted' });
   } catch (err) {
     next(err);
   }
@@ -169,10 +184,10 @@ const setStatus = async (req, res, next, status) => {
   try {
     const { id } = req.params;
     if (!isValidObjectId(id)) {
-      return res.status(400).json({ success: false, message: "Invalid user ID format" });
+      return res.status(400).json({ success: false, message: 'Invalid user ID format' });
     }
     const user = await User.findById(id);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     user.status = status;
     user.updatedBy = req.user?._id || user.updatedBy;

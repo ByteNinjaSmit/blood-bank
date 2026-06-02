@@ -10,9 +10,7 @@ const HEADER = 'x-request-id';
 
 function requestId(req, res, next) {
   const inbound = req.headers[HEADER];
-  const id = typeof inbound === 'string' && inbound.length > 0
-    ? inbound
-    : crypto.randomUUID();
+  const id = typeof inbound === 'string' && inbound.length > 0 ? inbound : crypto.randomUUID();
   req.id = id;
   res.setHeader('X-Request-Id', id);
   next();

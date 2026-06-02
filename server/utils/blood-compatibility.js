@@ -29,9 +29,9 @@
  *   AB → A, B, AB, O
  */
 const ABO_RBC = {
-  O:  ['O'],
-  A:  ['A', 'O'],
-  B:  ['B', 'O'],
+  O: ['O'],
+  A: ['A', 'O'],
+  B: ['B', 'O'],
   AB: ['A', 'B', 'AB', 'O'],
 };
 
@@ -45,9 +45,9 @@ const ABO_RBC = {
  *   AB → AB
  */
 const ABO_FFP = {
-  O:  ['O', 'A', 'B', 'AB'],
-  A:  ['A', 'AB'],
-  B:  ['B', 'AB'],
+  O: ['O', 'A', 'B', 'AB'],
+  A: ['A', 'AB'],
+  B: ['B', 'AB'],
   AB: ['AB'],
 };
 
@@ -61,9 +61,9 @@ const ABO_FFP = {
  *   AB → AB (preferred)   fallback: any
  */
 const ABO_PLATELET_PREFERRED = {
-  O:  ['O'],
-  A:  ['A'],
-  B:  ['B'],
+  O: ['O'],
+  A: ['A'],
+  B: ['B'],
   AB: ['AB'],
 };
 const ABO_PLATELET_ALL = ['A', 'B', 'AB', 'O'];
@@ -75,9 +75,9 @@ const ABO_PLATELET_ALL = ['A', 'B', 'AB', 'O'];
  *   Allowed:   A, B, AB, O (all)
  */
 const ABO_CRYO_PREFERRED = {
-  O:  ['O'],
-  A:  ['A'],
-  B:  ['B'],
+  O: ['O'],
+  A: ['A'],
+  B: ['B'],
   AB: ['AB'],
 };
 const ABO_CRYO_ALL = ['A', 'B', 'AB', 'O'];
@@ -97,10 +97,10 @@ const ABO_CRYO_ALL = ['A', 'B', 'AB', 'O'];
  *   Cryo:     IGNORE — Rh factor is irrelevant for cryo
  */
 const RH_RULE = {
-  RBC:      'strict',
-  FFP:      'ignore',
+  RBC: 'strict',
+  FFP: 'ignore',
   Platelet: 'optional',
-  Cryo:     'ignore',
+  Cryo: 'ignore',
 };
 
 // ──────────────────────────────────────────────
@@ -108,10 +108,10 @@ const RH_RULE = {
 // ──────────────────────────────────────────────
 
 const CROSSMATCH_REQUIRED = {
-  RBC:      true,
-  FFP:      false,
+  RBC: true,
+  FFP: false,
   Platelet: false,
-  Cryo:     false,
+  Cryo: false,
 };
 
 // ──────────────────────────────────────────────
@@ -119,10 +119,10 @@ const CROSSMATCH_REQUIRED = {
 // ──────────────────────────────────────────────
 
 const STRICTNESS = {
-  RBC:      'high',
-  FFP:      'medium',
+  RBC: 'high',
+  FFP: 'medium',
   Platelet: 'low',
-  Cryo:     'very-low',
+  Cryo: 'very-low',
 };
 
 // ──────────────────────────────────────────────
