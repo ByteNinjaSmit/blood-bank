@@ -66,8 +66,67 @@ export const PERMISSION = [
   'user:create',
   'user:update',
   'user:deactivate',
+  // ── Blood Bag Procurement & Stock Management ──
+  'vendor:read',
+  'vendor:create',
+  'vendor:update',
+  'vendor:delete',
+  'po:read',
+  'po:create',
+  'po:approve',
+  'grn:read',
+  'grn:create',
+  'bag-stock:read',
+  'bag-stock:update',
+  'bag-inspection:read',
+  'bag-inspection:create',
+  'bag-issue:read',
+  'bag-issue:create',
+  'bag-discard:read',
+  'bag-discard:create',
+  'bag-discard:approve',
 ] as const;
 export type Permission = (typeof PERMISSION)[number];
+
+// ── Blood Bag Procurement ────────────────────────────────────────────────────
+
+export const BAG_TYPE = ['SINGLE', 'DOUBLE', 'TRIPLE', 'QUADRUPLE'] as const;
+export type BagType = (typeof BAG_TYPE)[number];
+
+export const BAG_CAPACITY_ML = [350, 450] as const;
+export type BagCapacityMl = (typeof BAG_CAPACITY_ML)[number];
+
+export const ANTICOAGULANT = ['CPDA_1', 'CPD', 'ACD', 'SAG_MANNITOL'] as const;
+export type Anticoagulant = (typeof ANTICOAGULANT)[number];
+
+export const VENDOR_STATUS = ['PENDING', 'APPROVED', 'SUSPENDED', 'BLACKLISTED'] as const;
+export type VendorStatus = (typeof VENDOR_STATUS)[number];
+
+export const PO_STATUS = [
+  'DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'FULFILLED', 'CANCELLED',
+] as const;
+export type PoStatus = (typeof PO_STATUS)[number];
+
+export const GRN_STATUS = ['PENDING', 'ACCEPTED', 'PARTIALLY_ACCEPTED', 'REJECTED'] as const;
+export type GrnStatus = (typeof GRN_STATUS)[number];
+
+export const INSPECTION_DECISION = ['ACCEPTED', 'REJECTED', 'QUARANTINE'] as const;
+export type InspectionDecision = (typeof INSPECTION_DECISION)[number];
+
+export const BAG_STOCK_STATUS = ['AVAILABLE', 'LOW', 'OUT_OF_STOCK', 'EXPIRED'] as const;
+export type BagStockStatus = (typeof BAG_STOCK_STATUS)[number];
+
+export const BAG_ISSUE_STATUS = ['ISSUED', 'USED', 'RETURNED', 'DAMAGED'] as const;
+export type BagIssueStatus = (typeof BAG_ISSUE_STATUS)[number];
+
+export const BAG_DISCARD_REASON = [
+  'EXPIRED', 'LEAKAGE', 'STERILITY_FAILURE', 'DAMAGED_NEEDLE',
+  'BROKEN_SEAL', 'MANUFACTURING_DEFECT', 'PHYSICAL_DAMAGE',
+  'TEMPERATURE_EXCURSION', 'QC_FAILURE',
+] as const;
+export type BagDiscardReason = (typeof BAG_DISCARD_REASON)[number];
+
+// ── ABO / Rh ─────────────────────────────────────────────────────────────────
 
 export const ABO_GROUP = ['O', 'A', 'B', 'AB'] as const;
 export type AboGroup = (typeof ABO_GROUP)[number];

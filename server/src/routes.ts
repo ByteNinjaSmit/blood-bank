@@ -26,6 +26,13 @@ import auditRouter from '@/modules/audit/audit.routes';
 import userRouter from '@/modules/user/user.routes';
 import hospitalRouter from '@/modules/hospital/hospital.routes';
 import campRouter from '@/modules/camp/camp.routes';
+import vendorRouter from '@/modules/vendor/vendor.routes';
+import purchaseOrderRouter from '@/modules/purchase-order/purchase-order.routes';
+import goodsReceiptRouter from '@/modules/goods-receipt/goods-receipt.routes';
+import bagStockRouter from '@/modules/bag-stock/bag-stock.routes';
+import bagInspectionRouter from '@/modules/bag-inspection/bag-inspection.routes';
+import bagIssueRouter from '@/modules/bag-issue/bag-issue.routes';
+import bagDiscardRouter from '@/modules/bag-discard/bag-discard.routes';
 import { errorMiddleware } from '@/shared/middlewares/error';
 
 interface ModuleRoute {
@@ -48,6 +55,13 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/user', router: userRouter },
   { path: '/hospital', router: hospitalRouter },
   { path: '/camp', router: campRouter },
+  { path: '/vendor', router: vendorRouter },
+  { path: '/purchase-order', router: purchaseOrderRouter },
+  { path: '/goods-receipt', router: goodsReceiptRouter },
+  { path: '/bag-stock', router: bagStockRouter },
+  { path: '/bag-inspection', router: bagInspectionRouter },
+  { path: '/bag-issue', router: bagIssueRouter },
+  { path: '/bag-discard', router: bagDiscardRouter },
 ];
 
 export function registerRoutes(): Router {

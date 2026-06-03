@@ -1,0 +1,73 @@
+import { Router } from 'express';
+import { authenticate } from '@/shared/middlewares/authenticate';
+import { requireRole, requirePermission } from '@/shared/middlewares/rbac';
+import { createVendorRepo } from '@/modules/vendor/vendor.repository';
+import { createPORepo } from '@/modules/purchase-order/purchase-order.repository';
+import { createPOService } from '@/modules/purchase-order/purchase-order.service';
+import { createPOControllers } from '@/modules/purchase-order/purchase-order.controller';
+
+const service = createPOService({
+  pos: createPORepo(),
+  vendors: createVendorRepo(),
+});
+const controllers = createPOControllers(service);
+
+const router = Router();
+
+router.get(
+  '/',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'store-keeper']),
+  requirePermission('po:read'),
+  controllers.list,
+);
+
+router.get(
+  '/:id',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'store-keeper']),
+  requirePermission('po:read'),
+  controllers.get,
+);
+
+router.post(
+  '/',
+  authenticate,
+  requireRole(['system-admin', 'bbo']),
+  requirePermission('po:create'),
+  controllers.create,
+);
+
+router.patch(
+  '/:id',
+  authenticate,
+  requireRole(['system-admin', 'bbo']),
+  requirePermission('po:create'),
+  controllers.update,
+);
+
+router.patch(
+  '/:id/submit',
+  authenticate,
+  requireRole(['system-admin', 'bbo']),
+  requirePermission('po:create'),
+  controllers.submit,
+);
+
+router.patch(
+  '/:id/approve',
+  authenticate,
+  requireRole(['system-admin', 'bbo']),
+  requirePermission('po:approve'),
+  controllers.approve,
+);
+
+router.patch(
+  '/:id/reject',
+  authenticate,
+  requireRole(['system-admin', 'bbo']),
+  requirePermission('po:approve'),
+  controllers.reject,
+);
+
+export default router;
