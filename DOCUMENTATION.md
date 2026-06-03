@@ -26,14 +26,89 @@ This document covers **how to run, connect, secure, and deploy** the system.
 
 ## 1. System Overview
 
-A full-stack Blood Bank Management System (monorepo):
+A full-stack Blood Bank Management System (monorepo) for internal hospital staff at Sanjivani Blood Bank, built to NBTC/CDSCO/NABH guidelines.
 
-- **client/** — React + Vite admin/staff single-page app.
-- **server/** — Node.js + Express REST API, Socket.IO, Bull queues, jobs.
-- **public-frontend/** — Next.js public marketing site.
+- **client/** — React + Vite admin/staff single-page app (Vercel).
+- **server/** — Node.js + Express REST API, Socket.IO, Bull queues, TypeScript SOLID rewrite.
+- **public-frontend/** — Next.js public marketing site (out of scope for redesign).
 
-Backing services: **MongoDB** (data), **Redis** (cache, rate limiting, queues,
-Socket.IO adapter), **Nginx** (reverse proxy in production).
+Backing services: **MongoDB** (data), **Redis** (cache, rate limiting, queues, Socket.IO adapter), **Nginx** (reverse proxy in production).
+
+### Complete operational lifecycle
+
+```
+PROCUREMENT (Blood Bag Procurement & Stock Management)
+────────────────────────────────────────────────────
+Vendor Registration
+        ↓
+Purchase Order (DRAFT → PENDING_APPROVAL → APPROVED)
+        ↓
+Goods Receipt Note — Invoice + Batch registration
+        ↓
+Quality Inspection (7 physical checks per batch)
+        ↓
+Bag Stock Acceptance → Empty Bag Inventory
+
+COLLECTION
+────────────────────────────────────────────────────
+Bag Issue for Collection (bag serial assigned)
+        ↓
+Donor Registration & Screening (eligibility + vitals)
+        ↓
+Donation Created → Blood Unit(s) at COLLECTED status
+
+LABORATORY
+────────────────────────────────────────────────────
+TTI Testing (HIV / HBsAg / HCV / Syphilis / Malaria)
+        ↓
+   ┌────┴────┐
+RELEASED   QUARANTINE/DISCARDED
+   ↓
+Component Separation (PRBC / FFP / Platelets / Cryo)
+        ↓
+Blood Unit in Inventory (FEFO, special-needs filtered)
+
+TRANSFUSION
+────────────────────────────────────────────────────
+Hospital Requisition → Crossmatch → Issue
+        ↓
+Transfusion Record → Outcome
+        ↓
+Adverse Reaction (if any) → Lookback (if TTI reactive)
+
+TRACEABILITY
+────────────────────────────────────────────────────
+Vendor → PO → GRN Batch → Bag Serial → Donor
+        → Donation → Blood Unit → Blood Component
+        → Crossmatch → Patient Transfusion
+```
+
+### API modules (`/api/v2/`)
+
+| Module | Route | Key operations |
+|---|---|---|
+| auth | `/auth` | Login, refresh, OTP, registration |
+| vendor | `/vendor` | Vendor CRUD, approval workflow, contract tracking |
+| purchase-order | `/purchase-order` | PO lifecycle, GST line-item totals, state machine |
+| goods-receipt | `/goods-receipt` | GRN + invoice, batch lines, financial fields, stock upsert |
+| bag-stock | `/bag-stock` | Stock register, closingStock virtual, summary by type |
+| bag-inspection | `/bag-inspection` | QC per batch, 7 checks, ACCEPTED/REJECTED/QUARANTINE |
+| bag-issue | `/bag-issue` | Issue to collection, ISSUED→USED/RETURNED/DAMAGED |
+| bag-discard | `/bag-discard` | Discard register, 9 reasons, BMW manifest |
+| donor | `/donor` | Registration, eligibility, deferral, lookup |
+| donation | `/donation` | Collection event, source=inhouse\|camp, timeline detail |
+| unit | `/unit` | Blood unit state machine (11 statuses), FEFO, special needs |
+| tti | `/tti` | TTI results, quarantine gate, release decision |
+| inventory | `/inventory` | Stock view, reserve, near-expiry alerts |
+| deferral | `/deferral` | Temporary/permanent deferral records |
+| requisition | `/requisition` | Hospital request, FIFO matching, approval |
+| transfusion | `/transfusion` | Transfusion record + outcome |
+| adverse-reaction | `/adverse-reaction` | Reaction categories + severity grades |
+| camp | `/camp` | Donation camp registration + donor/donation management |
+| lookback | `/lookback` | TTI-reactive lookback, recall notifications |
+| audit | `/audit` | Immutable audit trail (all modules) |
+| user | `/user` | Staff user management (14 roles) |
+| hospital | `/hospital` | Hospital / consignee registry |
 
 ---
 
@@ -41,27 +116,75 @@ Socket.IO adapter), **Nginx** (reverse proxy in production).
 
 ```
 blood-bank/
-├── client/              React + Vite admin app
-│   ├── .env             local (gitignored — see warning below)
-│   ├── .env.example     template
-│   ├── vite.config.js   path aliases (@, @/components, ...)
-│   └── vercel.json      SPA rewrite (all routes -> /)
-├── server/              Express REST API
-│   ├── .env             local (gitignored — see warning below)
-│   ├── .env.example     template
-│   ├── server.js        app entrypoint (single process)
-│   ├── start.js         cluster entrypoint (forks per CPU in production)
-│   ├── Dockerfile       node:20-bookworm-slim, runs as non-root `node`
-│   ├── config/          db.js, redis.js, mailConfig.js, twilio.js
-│   ├── controllers/ routers/ models/ middlewares/
-│   ├── queues/ jobs/ services/ lib/ utils/ validators/
-│   ├── reports/         generated PDF reports
-│   └── uploads/         uploaded files
-├── public-frontend/     Next.js public site
-├── docker-compose.yml   api + redis + nginx stack
-├── nginx.conf           reverse proxy config
-├── README.md            feature / architecture overview
-└── DOCUMENTATION.md     this file
+├── client/                   React 19 + Vite 7 admin/staff SPA (Vercel)
+│   ├── src/
+│   │   ├── core/             api-client.js, auth-token-store.js, query-client.js
+│   │   ├── features/
+│   │   │   ├── bag-procurement/  Vendor, PO, GRN, BagStock, BagInspection,
+│   │   │   │                     BagIssuance, BagDiscard (api.js + queries.js + 7 pages)
+│   │   │   ├── donation/     DonationManagement (central view: Inhouse/Camp tabs + timeline)
+│   │   │   ├── camp/         Camp listing, details, donation & donor management
+│   │   │   ├── donor/        DonorManagement
+│   │   │   ├── inventory/    ReserveWizard, NearExpiry
+│   │   │   ├── component/    ComponentSeparate, NearExpiry
+│   │   │   ├── serology/     TTI (Serology page)
+│   │   │   ├── requisition/  RequisitionManagement
+│   │   │   ├── mis/          7 MIS report pages
+│   │   │   ├── auth/         Login, Registration
+│   │   │   └── hospital/     AddHospital
+│   │   ├── components/       Shared UI (PageHeader, Button, Modal, Table, ...)
+│   │   ├── store/            AuthContext
+│   │   └── lib/              Utilities (cn, formatters)
+│   ├── .env / .env.example
+│   ├── vite.config.js        path alias @ → src
+│   └── vercel.json           SPA rewrite (all routes → /)
+│
+├── server/                   Node 20 + Express 5 TypeScript SOLID backend
+│   ├── src/
+│   │   ├── server.ts         canonical entry (listens on PORT)
+│   │   ├── app.ts            Express app factory
+│   │   ├── routes.ts         central router registry (/api/v2/*)
+│   │   ├── core/             env, logger, db, cache, redis, queue, security, mail, search
+│   │   ├── modules/
+│   │   │   ├── vendor/           vendor.{model,repo,validator,service,controller,routes}.ts
+│   │   │   ├── purchase-order/   purchase-order.*.ts
+│   │   │   ├── goods-receipt/    goods-receipt.*.ts
+│   │   │   ├── bag-stock/        bag-stock.*.ts
+│   │   │   ├── bag-inspection/   bag-inspection.*.ts
+│   │   │   ├── bag-issue/        bag-issue.*.ts
+│   │   │   ├── bag-discard/      bag-discard.*.ts
+│   │   │   ├── auth/             auth.*.ts
+│   │   │   ├── donor/            donor.*.ts + donor.eligibility.ts
+│   │   │   ├── donation/         donation.*.ts + donation.unit-derivation.ts
+│   │   │   ├── unit/             unit.*.ts + unit.state-machine.ts
+│   │   │   ├── tti/              tti.*.ts
+│   │   │   ├── inventory/        inventory.*.ts
+│   │   │   ├── deferral/         deferral.*.ts
+│   │   │   ├── requisition/      requisition.*.ts
+│   │   │   ├── transfusion/      transfusion.*.ts
+│   │   │   ├── adverse-reaction/ adverse-reaction.*.ts
+│   │   │   ├── camp/             camp.*.ts + camp-donation.model.ts
+│   │   │   ├── lookback/         lookback.*.ts
+│   │   │   ├── audit/            audit.*.ts
+│   │   │   ├── user/             user.*.ts
+│   │   │   └── hospital/         hospital.*.ts
+│   │   └── shared/
+│   │       ├── enums.ts          All enums (BAG_TYPE, UNIT_STATUS, PERMISSION, ROLE, ...)
+│   │       ├── role-map.ts       Role → Permission mapping (14 roles)
+│   │       ├── errors.ts         AppError subclasses
+│   │       ├── result.ts         Result<T, E> type
+│   │       └── middlewares/      authenticate, rbac, error, request-id, http-logger
+│   ├── .env / .env.example
+│   ├── Dockerfile                node:20-bookworm-slim, non-root `node`
+│   └── tsconfig.json
+│
+├── public-frontend/          Next.js 16 public marketing site (out of scope)
+├── docker-compose.yml        api + redis + nginx production stack
+├── nginx.conf                reverse proxy + WebSocket upgrade
+├── .github/workflows/        CI/CD: build → Trivy scan → Docker Hub → SSH deploy
+├── Blood Compatibility…md    ABO/Rh compatibility rules (authoritative domain ref)
+├── CLAUDE.md                 AI coding instructions (this project)
+└── DOCUMENTATION.md          Infrastructure, env vars, deployment (this file)
 ```
 
 ---

@@ -36,8 +36,19 @@ Backend rules. Read `../CLAUDE.md` first.
       enums.ts, errors.ts, result.ts, role-map.ts
 ```
 
-Modules: auth, donor, donation, unit, tti, inventory, deferral, patient, requisition,
-crossmatch, issue, transfusion, adverse-reaction, lookback, audit, user, hospital, camp.
+Modules:
+
+**Procurement & Stock (Blood Bag Procurement)**
+vendor, purchase-order, goods-receipt, bag-stock, bag-inspection, bag-issue, bag-discard
+
+**Clinical — Donation & Lab**
+auth, donor, donation, unit, tti, deferral
+
+**Inventory & Issue**
+inventory, requisition, transfusion, adverse-reaction
+
+**Camp & Operations**
+camp, lookback, audit, user, hospital
 
 ## Dev
 
@@ -63,10 +74,15 @@ npm test             # vitest run
 - Every route has `requireRole(...)`. Public health check is the only exception.
 - Every body/query has a zod validator.
 - Every `BloodUnit.status` write goes through `modules/unit/unit.state-machine.transition`.
+- **BagStock quantity mutations use atomic `$inc` only.** Never read-modify-write stock counts — use `findOneAndUpdate({ $inc: { issuedQty: n } })`. Cross-module stock mutations (GRN accept, bag-issue, bag-return, bag-damage, bag-discard) all go through `BagStockRepo`.
 - Clinical deletes are soft (`deletedAt`, `deletedBy`) + audit log entry.
 - TTI quarantine: unit can only reach `RELEASED` if `TTIResult.releaseDecision === 'released'`.
 - RBC issue requires passing crossmatch or MO override with logged reason.
 - Patient special-needs flags filter units at the service layer.
+- Vendor must be `APPROVED` before a Purchase Order can reference it.
+- Goods Receipt can only be created against an `APPROVED` Purchase Order.
+- Bag Issue guards against zero closing stock (openingStock + receivedQty - issuedQty - damagedQty - discardedQty ≤ 0 → reject).
+- Bag Discard quantity is validated against current closing stock before incrementing `discardedQty`.
 
 ## Logging
 

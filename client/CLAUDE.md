@@ -7,23 +7,36 @@ Frontend rules. Read `../CLAUDE.md` first.
 ```
 /src
   /core         app infra: api-client.js (axios), query-client.js (TanStack), auth-token-store.js
-  /modules
-    /<feature>
-      api.js          axios calls (the only place axios is used per feature)
-      queries.js      TanStack Query hooks (useXListQuery, useCreateXMutation, ...)
-      schemas.js      zod schemas (form + API DTO)
-      components/      feature components
-      steps/           if multi-step
-  /shared       cross-module UI + helpers (eventually: components/ui, hooks, utils)
+  /features
+    /bag-procurement    Vendor, PO, GRN, BagStock, BagInspection, BagIssuance, BagDiscard
+    /donation           DonationManagement (central view: Inhouse/Camp tabs + timeline drawer)
+    /camp               Camp listing, CampDetails, CampDonationManagement, CampDonorManagement
+    /donor              DonorManagement
+    /inventory          ReserveWizard, NearExpiry
+    /component          ComponentSeparate, NearExpiry
+    /serology           Serology (TTI)
+    /requisition        RequisitionManagement
+    /mis                DonationMIS, InventoryMIS, IssueMIS, DiscardMIS, ExecutiveMIS, DonorMIS, ExceptionMIS
+    /appointment        AppointmentList
+    /auth               Login-Page, Registration-Page
+    /hospital           AddHospital
+    /<feature>/
+      api.js            axios calls — ONLY place axios is used per feature
+      queries.js        TanStack Query hooks (useXList, useXDetail, useCreateX, ...)
+      schemas.js        zod schemas (form + API DTO) — if forms exist
+      components/       feature-local components
+      pages/            page-level components (route targets)
   /components
-    /ui         radix wrappers (button, card, dialog, ...) — legacy home, migrating to /shared
-  /hooks        custom hooks (useDonor wraps modules/donor/queries during cutover)
-  /lib          legacy utils (cn, formatters) — being absorbed into /core + /shared
+    /ui                 radix wrappers (button, card, dialog, ...) — legacy home
+    /shared             cross-module UI + helpers
+    PageHeader          shared header component (no back button)
+  /hooks        compatibility shims (useDonor → features/donor/queries)
+  /lib          legacy utils (cn, formatters)
   /store        auth context
   main.jsx      providers: QueryClientProvider → AuthProvider → BrowserRouter
 ```
 
-Aliases: `@/core/*`, `@/modules/*`, `@/shared/*` (all resolve via `@ → src`). The legacy tree (`/src/page` singular, `/components`, `/services`) is still live — migrate per-feature into `/modules/<feature>/`, don't bulk-rename.
+Aliases: `@/core/*`, `@/features/*`, `@/shared/*` (all resolve via `@ → src`). Legacy tree (`/src/page`, `/components`, `/services`) still live — migrate per-feature, don't bulk-rename.
 
 ## Hard rules
 
