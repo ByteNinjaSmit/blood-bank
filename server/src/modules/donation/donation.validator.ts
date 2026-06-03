@@ -60,6 +60,7 @@ export type CreateDonationInput = z.infer<typeof CreateDonationBody>;
 export const ListDonationsQuery = z.object({
   donorId: blankToUndef(z.string().regex(OBJECT_ID).optional()),
   donationType: z.enum(DONATION_TYPE).optional(),
+  source: z.enum(['inhouse', 'camp']).optional(),
   fromDate: z.coerce.date().optional(),
   toDate: z.coerce.date().optional(),
   page: z.coerce.number().int().min(1).default(1),

@@ -18,16 +18,21 @@ export interface DonationDto {
   id: string;
   donationId: string;
   donor: string;
+  donorName?: string;
   donationType: string;
   collectedAt: string;
   bloodGroup: string;
   rhFactor: string;
   unitCount: number;
+  campId?: string;
+  isFit?: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface DonationWithUnitsDto extends DonationDto {
+  donorFitness?: { isFit: boolean; rejectionReason?: string; rejectedAtStep?: string };
+  medicalExam?: Record<string, unknown>;
   units: Array<{
     unitId: string;
     componentType: string;
@@ -164,23 +169,33 @@ export function createDonationRepo(): DonationRepo {
     },
 
     async findById(id) {
-      const doc = await DonationModel.findById(id).lean();
+      const doc = await DonationModel.findById(id)
+        .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; lastName?: string } } }>('donor', 'name')
+        .lean();
       if (!doc) return null;
+      const donorDoc = doc.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; lastName?: string } };
       const [units, tti] = await Promise.all([
         BloodUnitModel.find({ donationId: doc.donationId })
           .select('unitId componentType volumeMl expiresAt status')
           .lean(),
-        TtiResultModel.findOne({ donationId: doc.donationId }).select('_id releaseDecision').lean(),
+        TtiResultModel.findOne({ donationId: doc.donationId }).select('_id releaseDecision aboGroupConfirmed rhFactorConfirmed').lean(),
       ]);
       return {
         id: doc._id.toString(),
         donationId: doc.donationId,
-        donor: doc.donor.toString(),
+        donor: donorDoc?._id?.toString() ?? doc.donor.toString(),
+        donorName: donorDoc?.name
+          ? `${donorDoc.name.firstName ?? ''} ${donorDoc.name.lastName ?? ''}`.trim()
+          : undefined,
         donationType: doc.donationType,
         collectedAt: doc.collectedAt.toISOString(),
         bloodGroup: tti?.aboGroupConfirmed ?? '',
         rhFactor: tti?.rhFactorConfirmed ?? '',
         unitCount: units.length,
+        campId: doc.campId?.toString(),
+        donorFitness: doc.donorFitness as { isFit: boolean; rejectionReason?: string; rejectedAtStep?: string } | undefined,
+        medicalExam: doc.medicalExam as Record<string, unknown> | undefined,
+        isFit: doc.donorFitness?.isFit,
         createdAt: (doc as unknown as { createdAt: Date }).createdAt.toISOString(),
         updatedAt: (doc as unknown as { updatedAt: Date }).updatedAt.toISOString(),
         units: units.map((u) => ({
@@ -199,6 +214,8 @@ export function createDonationRepo(): DonationRepo {
       const filter: Record<string, unknown> = { deletedAt: null };
       if (q.donorId) filter.donor = new Types.ObjectId(q.donorId);
       if (q.donationType) filter.donationType = q.donationType;
+      if (q.source === 'inhouse') filter.campId = null;
+      if (q.source === 'camp') filter.campId = { $exists: true, $ne: null };
       if (q.fromDate || q.toDate) {
         filter.collectedAt = {} as Record<string, Date>;
         if (q.fromDate) (filter.collectedAt as Record<string, Date>).$gte = q.fromDate;
@@ -206,7 +223,12 @@ export function createDonationRepo(): DonationRepo {
       }
       const skip = (q.page - 1) * q.pageSize;
       const [docs, total] = await Promise.all([
-        DonationModel.find(filter).sort({ collectedAt: -1 }).skip(skip).limit(q.pageSize).lean(),
+        DonationModel.find(filter)
+          .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; lastName?: string } } }>('donor', 'name')
+          .sort({ collectedAt: -1 })
+          .skip(skip)
+          .limit(q.pageSize)
+          .lean(),
         DonationModel.countDocuments(filter),
       ]);
       const unitCounts = await BloodUnitModel.aggregate<{
@@ -218,18 +240,26 @@ export function createDonationRepo(): DonationRepo {
       ]);
       const countMap = new Map(unitCounts.map((u) => [u._id, u.count]));
       return {
-        items: docs.map((d) => ({
-          id: d._id.toString(),
-          donationId: d.donationId,
-          donor: d.donor.toString(),
-          donationType: d.donationType,
-          collectedAt: d.collectedAt.toISOString(),
-          bloodGroup: '',
-          rhFactor: '',
-          unitCount: countMap.get(d.donationId) ?? 0,
-          createdAt: (d as unknown as { createdAt: Date }).createdAt.toISOString(),
-          updatedAt: (d as unknown as { updatedAt: Date }).updatedAt.toISOString(),
-        })),
+        items: docs.map((d) => {
+          const donorDoc = d.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; lastName?: string } };
+          return {
+            id: d._id.toString(),
+            donationId: d.donationId,
+            donor: donorDoc?._id?.toString() ?? d.donor.toString(),
+            donorName: donorDoc?.name
+              ? `${donorDoc.name.firstName ?? ''} ${donorDoc.name.lastName ?? ''}`.trim()
+              : undefined,
+            donationType: d.donationType,
+            collectedAt: d.collectedAt.toISOString(),
+            bloodGroup: '',
+            rhFactor: '',
+            unitCount: countMap.get(d.donationId) ?? 0,
+            campId: d.campId?.toString(),
+            isFit: d.donorFitness?.isFit,
+            createdAt: (d as unknown as { createdAt: Date }).createdAt.toISOString(),
+            updatedAt: (d as unknown as { updatedAt: Date }).updatedAt.toISOString(),
+          };
+        }),
         total,
       };
     },
