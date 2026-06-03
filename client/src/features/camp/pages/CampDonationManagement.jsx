@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Droplets } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
-import DonationList from '@/components/donation/DonationList';
-import DonationForm from '@/components/donation/DonationForm';
+import DonationList from '@/features/donation/components/DonationList';
+import DonationForm from '@/features/donation/components/DonationForm';
 import Modal from '@/components/shared/Modal';
 import { useDonation } from '@/hooks/useDonation';
 

@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/shared/Button';
-import DonorList from '@/components/donor/DonorList';
-import DonorForm from '@/components/donor/DonorForm';
-import DonorDetails from '@/components/donor/DonorDetails';
+import DonorList from '@/features/donor/components/DonorList';
+import DonorForm from '@/features/donor/components/DonorForm';
+import DonorDetails from '@/features/donor/components/DonorDetails';
 import Modal from '@/components/shared/Modal';
 import { useDonor } from '@/hooks/useDonor';
 

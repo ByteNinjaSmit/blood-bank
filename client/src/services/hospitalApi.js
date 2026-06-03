@@ -2,6 +2,7 @@
 import { hospitalApi } from '@/features/hospital/api';
 
 export default {
+  initialize: () => {}, // no-op shim for compatibility
   getHospitals: hospitalApi.list,
   getHospitalById: hospitalApi.detail,
   createHospital: hospitalApi.create,

@@ -5,7 +5,7 @@ import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Loader2, Hand } from "lucide-react";
 import { toast } from "sonner";
-import { COMPONENT_TYPES, SEX_TYPES } from "@/page/requisition/constants";
+import { COMPONENT_TYPES, SEX_TYPES } from "@/features/requisition/pages/constants";
 import CustomModal from "@/components/CustomModal";
 
 const Reserve = () => {

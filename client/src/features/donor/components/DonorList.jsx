@@ -6,8 +6,8 @@ import CustomModal from '@/components/CustomModal';
 import { toast } from 'sonner';
 import { useDonor } from '@/hooks/useDonor';
 import { useAuth } from '@/store/auth';
-import { checkAccess } from '@/page/user-manage/utils/access';
-import EnhancedLoader from '../utils/Spinner';
+import { checkAccess } from '@/features/user/pages/utils/access';
+import EnhancedLoader from '@/components/utils/Spinner';
 
 const DonorList = ({ 
   onAddDonor, 
@@ -239,10 +239,10 @@ const DonorList = ({
             </tr>
           </Table.Header>
           <Table.Body>
-            {filteredDonors.map((donor) => {
+            {filteredDonors.map((donor, index) => {
               const isDeferred = donor.eligibilityStatus === 'deferred' || donor.eligibilityStatus === 'temp-deferred';
               return (
-                <Table.Row key={donor._id}>
+                <Table.Row key={donor._id || donor.id || index}>
                   <Table.Cell className="font-medium">{isDeferred ? '-' : donor.donorId}</Table.Cell>
                   <Table.Cell>
                     {donor.name?.firstName} {donor.name?.middleName} {donor.name?.lastName}

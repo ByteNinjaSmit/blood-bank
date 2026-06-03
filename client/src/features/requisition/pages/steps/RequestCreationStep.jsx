@@ -3,7 +3,7 @@ import { FileText, User, HeartHandshake, History, FileCheck, ShieldAlert } from 
 import HospitalSelect from '../components/HospitalSelect';
 import PatientForm from '../components/PatientForm';
 import RequestedComponentsList from '../components/RequestedComponentsList';
-import { RejectRequestModal } from '../../../components/shared';
+import { RejectRequestModal } from '@/components/shared';
 import { toast } from 'sonner';
 
 export default function RequestCreationStep({

@@ -42,8 +42,8 @@ const ComponentSeparate = () => {
           headers: { Authorization: authorizationToken },
           withCredentials: true,
         }),
-        axios.get(`${API}/api/donation/list`, {
-          params: { status: "collected", page: 1, limit: 1000 },
+        axios.get(`${API}/api/v2/donation`, {
+          params: { page: 1, limit: 1000 },
           headers: { Authorization: authorizationToken },
           withCredentials: true,
         }),
@@ -53,10 +53,10 @@ const ComponentSeparate = () => {
       const bagsData = Array.isArray(bagsRes.data?.bags) ? bagsRes.data.bags : [];
       setBags(bagsData);
 
-      const donationList = Array.isArray(donationRes.data?.data) ? donationRes.data.data : [];
+      const donationList = Array.isArray(donationRes.data?.data?.items) ? donationRes.data.data.items : [];
       const map = {};
       donationList.forEach((d) => {
-        if (d?.bagNo && d?._id) map[d.bagNo] = d._id;
+        if (d?.donationId && d?.id) map[d.donationId] = d.id;
       });
       setBagIdByBagNo(map);
     } catch (error) {

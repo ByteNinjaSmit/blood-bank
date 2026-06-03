@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import CreateDonor from '@/components/donor/Create-Donor'
+import CreateDonor from '@/features/donor/components/Create-Donor'
 
 const CreateDonorPage = () => {
   const navigate = useNavigate()
