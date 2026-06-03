@@ -299,7 +299,6 @@ export default function ReserveWizard() {
               <p className="text-sm text-gray-700">Your reservation has been recorded. You can view all reserved units any time.</p>
               <div className="flex gap-2">
                 <button className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50" onClick={()=>navigate('/inventory/reserve')}>View Reserved List</button>
-                <button className="px-4 py-2 rounded-lg bg-red-800 hover:bg-red-900 text-white" onClick={()=>navigate(-1)}>Back</button>
               </div>
             </div>
           </Step>

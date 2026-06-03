@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import DonorList from '@/components/donor/DonorList';
@@ -80,14 +80,6 @@ const CampDonorManagement = () => {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/camp-details?id=${campId}`)}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Camp
-          </Button>
           <div className="flex items-center gap-3">
             <Users className="w-8 h-8 text-orange-800" />
             <div>

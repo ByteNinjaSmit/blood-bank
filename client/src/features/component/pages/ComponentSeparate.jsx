@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, TestTube, Loader2, Scissors, CheckCircle } from "lucide-react";
+import { TestTube, Loader2, Scissors, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import { useAuth } from "@/store/auth";
@@ -163,13 +163,6 @@ const ComponentSeparate = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-red-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center cursor-pointer gap-3 text-red-800 border border-red-200 hover:bg-red-50 bg-white shadow-sm hover:shadow-md transition-all duration-300 rounded-xl px-6 py-3 mb-6 h-11"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back
-          </button>
           <div className="flex items-center gap-4 mb-6">
             <div className="p-3 bg-gradient-to-br from-red-800 to-red-900 rounded-xl">
               <TestTube className="w-8 h-8 text-white" />

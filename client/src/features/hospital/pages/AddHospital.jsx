@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Save, ArrowLeft, Building2 } from 'lucide-react';
+import { Loader2, Save, Building2 } from 'lucide-react';
 import { useAuth } from '@/store/auth';
 import hospitalApi from '@/services/hospitalApi';
 
@@ -153,18 +153,6 @@ const AddHospital = () => {
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-6">
-        <div className="flex items-center gap-4 mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/hospital/list')}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to List
-          </Button>
-        </div>
-        
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-100 rounded-lg">
             <Building2 className="w-6 h-6 text-blue-600" />

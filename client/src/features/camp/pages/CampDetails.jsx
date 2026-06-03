@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, MapPin, Phone, Mail, Users, Calendar, Droplets, Plus, Activity, Clock } from 'lucide-react';
+import { MapPin, Phone, Mail, Users, Calendar, Droplets, Plus, Activity, Clock } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
@@ -144,14 +144,6 @@ const CampDetails = () => {
       {/* Header */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/camp-listing')}
-            className="flex items-center gap-3 mb-6"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back to Camp List
-          </Button>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg border border-gray-200">

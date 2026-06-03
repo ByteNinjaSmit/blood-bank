@@ -1,6 +1,6 @@
 import React from "react"
 import { useState, useEffect, useRef } from "react"
-import { ArrowLeft, User, Save, Loader2, CheckCircle } from "lucide-react"
+import { User, Save, Loader2, CheckCircle } from "lucide-react"
 import axios from "axios"
 import { useAuth } from "@/store/auth"
 import { useNavigate } from "react-router-dom"
@@ -395,13 +395,6 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
     <div className="min-h-screen bg-white">
       <div className="bg-white border-b border-orange-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-3 text-orange-800 hover:text-orange-700 transition-colors mb-6 bg-orange-50 hover:bg-orange-100 px-4 py-2 rounded-lg"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            {backText}
-          </button>
           <div className="flex items-center gap-4">
             <div className="p-3 bg-gradient-to-br bg-orange-800 rounded-xl">
               <User className="w-8 h-8 text-white" />

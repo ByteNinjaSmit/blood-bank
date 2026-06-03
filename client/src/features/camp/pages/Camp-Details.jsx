@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react"
 import {
-  ArrowLeft,
   Eye,
   Edit,
   Trash2,
@@ -193,13 +192,6 @@ const CampDonations = () => {
       <div className="min-h-screen bg-white">
         <div className="bg-white border-b border-orange-100 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <button
-              onClick={onBack}
-              className="flex items-center cursor-pointer gap-3 text-orange-800 border border-orange-200 hover:bg-orange-50 bg-white shadow-sm hover:shadow-md transition-all duration-300 rounded-xl px-6 py-3 mb-6 h-11"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Back to Home
-            </button>
             <div className="flex items-center gap-4 mb-6">
               <div className="p-3 bg-gradient-to-br from-orange-800 to-orange-900 rounded-xl">
                 <Droplets className="w-8 h-8 text-white" />

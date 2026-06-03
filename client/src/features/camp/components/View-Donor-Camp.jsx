@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react"
 import {
-  ArrowLeft,
   Search,
   Plus,
   Droplets,
@@ -145,13 +144,6 @@ const ViewDonorCamp = () => {
       {/* Header */}
       <div className="bg-white border-b border-orange-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-3 text-orange-800 border border-orange-300 hover:bg-orange-50 bg-white shadow rounded-xl px-6 py-3 mb-6"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back to Donations
-          </button>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-4 mb-6 sm:mb-0">
               <div className="p-3 bg-gradient-to-br from-orange-800 to-orange-900 rounded-xl">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react"
-import { ArrowLeft, Eye, X, Users, Search, Plus, Droplets, Download } from "lucide-react"
+import { Eye, X, Users, Search, Plus, Droplets, Download } from "lucide-react"
 // import * as XLSX from "xlsx"
 
 
@@ -140,13 +140,6 @@ const ViewDonor = ({ onBack }) => {
     <div className="min-h-screen bg-white">
       <div className="bg-white border-b border-orange-200 text-gray-900 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <button
-            onClick={onBack}
-            className="flex items-center cursor-pointer gap-3 text-orange-800 border border-orange-300 hover:bg-orange-50 bg-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl px-6 py-3 mb-6"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back to Donations
-          </button>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-4 mb-6">
               <div className="p-3 bg-gradient-to-br from-orange-800 to-orange-900 rounded-xl">
