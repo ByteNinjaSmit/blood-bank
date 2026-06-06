@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import CompatibilityMatrix from '../components/CompatibilityMatrix';
-import { ConfirmModal, RejectRequestModal } from '../../../components/shared';
+import { ConfirmModal, RejectRequestModal } from '@/components/shared';
 
 // ── Badge helpers ──
 

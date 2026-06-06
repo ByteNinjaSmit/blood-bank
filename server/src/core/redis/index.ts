@@ -24,5 +24,10 @@ export function getRedis(): RedisClient {
 
 export function newRedisConnection(): RedisClient {
   // Bull needs separate connections for blocking commands.
-  return new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
+  // Both maxRetriesPerRequest must be null and enableReadyCheck must be false for subscriber/bclient.
+  return new Redis(env.REDIS_URL, {
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+  });
 }
+

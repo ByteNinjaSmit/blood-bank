@@ -1,9 +1,88 @@
-// Compatibility shim. New code: import from @/features/donor/queries.
+import { useState } from 'react';
+import { toast } from 'sonner';
+import {
+  donorKeys,
+  useDonorList,
+  useDonorDetail,
+  useCreateDonor,
+  useUpdateDonor,
+  useDeleteDonor,
+  useDonorSearch,
+} from '@/features/donor/queries';
+
 export {
   donorKeys,
-  useDonorList as useDonorListQuery,
-  useDonorDetail as useDonorQuery,
-  useCreateDonor as useCreateDonorMutation,
-  useUpdateDonor as useUpdateDonorMutation,
-  useDeleteDonor as useDeleteDonorMutation,
-} from '@/features/donor/queries';
+  useDonorList,
+  useDonorDetail,
+  useCreateDonor,
+  useUpdateDonor,
+  useDeleteDonor,
+  useDonorSearch,
+};
+
+// Backward-compatible hook for pages that use the imperative { donors, fetchDonors, ... } API.
+export function useDonor() {
+  const [filters, setFilters] = useState({});
+  const listQuery = useDonorList(filters);
+  const createMutation = useCreateDonor();
+  const updateMutation = useUpdateDonor();
+  const deleteMutation = useDeleteDonor();
+
+  const loading =
+    listQuery.isLoading ||
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    deleteMutation.isPending;
+
+  return {
+    donors: listQuery.data?.items ?? (Array.isArray(listQuery.data) ? listQuery.data : []),
+    loading,
+    error: listQuery.error?.message ?? null,
+    fetchDonors: (f) => setFilters(f ?? {}),
+    fetchCampDonors: (campId) => setFilters({ campId }),
+    createDonor: async (data) => {
+      try {
+        const result = await createMutation.mutateAsync(data);
+        toast.success('Donor created successfully');
+        return { success: true, data: result };
+      } catch (e) {
+        toast.error(e?.message ?? 'Failed to create donor');
+        return { success: false };
+      }
+    },
+    updateDonor: async (id, data) => {
+      try {
+        const result = await updateMutation.mutateAsync({ id, data });
+        toast.success('Donor updated successfully');
+        return { success: true, data: result };
+      } catch (e) {
+        toast.error(e?.message ?? 'Failed to update donor');
+        return { success: false };
+      }
+    },
+    deleteDonor: async (id) => {
+      try {
+        await deleteMutation.mutateAsync(id);
+        toast.success('Donor deleted successfully');
+        return { success: true };
+      } catch (e) {
+        // Return structured error code if backend complains (e.g. donor has donations)
+        if (e && e.code) {
+          return { success: false, code: e.code, message: e.message };
+        }
+        toast.error(e?.message ?? 'Failed to delete donor');
+        return { success: false };
+      }
+    },
+    forceDeleteDonor: async (id) => {
+      try {
+        await deleteMutation.mutateAsync(id);
+        toast.success('Donor force deleted successfully');
+        return { success: true };
+      } catch (e) {
+        toast.error(e?.message ?? 'Failed to force delete donor');
+        return { success: false };
+      }
+    },
+  };
+}

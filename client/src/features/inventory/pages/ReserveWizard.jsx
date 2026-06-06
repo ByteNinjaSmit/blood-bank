@@ -4,11 +4,11 @@ import Stepper, { Step } from '@/components/Stepper';
 import { useAuth } from '@/store/auth';
 import hospitalApi from '@/services/hospitalApi';
 import inventoryApi from '@/services/inventoryApi';
-import HospitalSelect from '@/page/requisition/components/HospitalSelect';
-import AddHospitalModal from '@/page/requisition/components/AddHospitalModal';
-import RequestedComponentsList from '@/page/requisition/components/RequestedComponentsList';
-import { defaultRequestedComponent, defaultPatient } from '@/page/requisition/hooks/useRequisition';
-import { SEX_TYPES } from '@/page/requisition/constants';
+import HospitalSelect from '@/features/requisition/pages/components/HospitalSelect';
+import AddHospitalModal from '@/features/requisition/pages/components/AddHospitalModal';
+import RequestedComponentsList from '@/features/requisition/pages/components/RequestedComponentsList';
+import { defaultRequestedComponent, defaultPatient } from '@/features/requisition/pages/hooks/useRequisition';
+import { SEX_TYPES } from '@/features/requisition/pages/constants';
 import { toast } from 'sonner';
 
 export default function ReserveWizard() {

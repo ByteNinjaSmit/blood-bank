@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ConfirmModal } from '../../../components/shared';
+import { ConfirmModal } from '@/components/shared';
 
 function CompatBadge({ type }) {
   if (type === 'exact') {

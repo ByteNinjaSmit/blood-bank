@@ -3,8 +3,8 @@ import axios from "axios";
 import { Search, Plus, X, Check, Loader2, Lock, Unlock, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
-import CreateDonor from "../../donor/Create-Donor";
-import DonorForm from "../../donor/DonorForm";
+import CreateDonor from "@/features/donor/components/Create-Donor";
+import DonorForm from "@/features/donor/components/DonorForm";
 
 const DonorSearchStep = ({
   loading,
