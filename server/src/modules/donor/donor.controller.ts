@@ -7,6 +7,7 @@ import { Validate } from '@/modules/donor/donor.validator';
 import type { DonorService } from '@/modules/donor/donor.service';
 import { UnauthorizedError, ValidationError } from '@/shared/errors';
 import { searchDonors, searchDonorsByVector } from '@/core/search/vector-search';
+import { toDto } from './donor.repository';
 
 export interface DonorControllers {
   create: (req: Request, res: Response, next: NextFunction) => Promise<void>;
@@ -117,9 +118,10 @@ export function createDonorControllers(service: DonorService): DonorControllers 
           limit,
           skip,
         });
+        const mappedItems = (result.items || []).map((item) => toDto(item));
         res.json({
           success: true,
-          data: { items: result.items, total: result.total, source: result.source },
+          data: { items: mappedItems, total: result.total, source: result.source },
           requestId: req.id,
         });
       } catch (e) {
@@ -138,7 +140,8 @@ export function createDonorControllers(service: DonorService): DonorControllers 
           eligibilityStatus,
           limit,
         });
-        res.json({ success: true, data: { items, total: items.length }, requestId: req.id });
+        const mappedItems = (items || []).map((item) => toDto(item));
+        res.json({ success: true, data: { items: mappedItems, total: items.length }, requestId: req.id });
       } catch (e) {
         next(e);
       }

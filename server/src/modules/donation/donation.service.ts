@@ -69,9 +69,10 @@ export function createDonationService(deps: {
       });
 
       if (input.donorFitness.isFit && !eligibility.eligible) {
-        throw new ConflictError('Donor failed eligibility checks', {
-          reasons: eligibility.reasons,
-        });
+        log.warn(
+          { donor: input.donor, reasons: eligibility.reasons },
+          'Donor failed eligibility checks but proceeding since marked fit',
+        );
       }
 
       // Unique-enough donationId. ISBT 128 DIN replaces this in Phase 9.

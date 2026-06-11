@@ -67,19 +67,19 @@ const CampRegistration = () => {
 
   useEffect(() => {
     getStaffNames();
-  }, [API])
+  }, [])
 
   const validateStep = (step) => {
     const newErrors = {}
 
     if (step === 1) {
-      if (!formData.siteId.trim()) newErrors.siteId = "Site ID is requiorange"
-      if (!formData.name.trim()) newErrors.name = "Camp name is requiorange"
+      if (!formData.siteId.trim()) newErrors.siteId = "Site ID is required"
+      if (!formData.name.trim()) newErrors.name = "Camp name is required"
     } else if (step === 2) {
-      if (!formData.address.trim()) newErrors.address = "Address is requiorange"
-      if (!formData.contactInfo.phone.trim()) newErrors.phone = "Phone is requiorange"
+      if (!formData.address.trim()) newErrors.address = "Address is required"
+      if (!formData.contactInfo.phone.trim()) newErrors.phone = "Phone is required"
       if (!formData.contactInfo.email.trim()) {
-        newErrors.email = "Email is requiorange"
+        newErrors.email = "Email is required"
       } else if (!/\S+@\S+\.\S+/.test(formData.contactInfo.email)) {
         newErrors.email = "Email format is invalid"
       }
@@ -88,8 +88,8 @@ const CampRegistration = () => {
         newErrors.phone = "Phone format should be 10 digits"
       }
     } else if (step === 3) {
-      if (!formData.dateFrom) newErrors.dateFrom = "Start date is requiorange"
-      if (!formData.dateTo) newErrors.dateTo = "End date is requiorange"
+      if (!formData.dateFrom) newErrors.dateFrom = "Start date is required"
+      if (!formData.dateTo) newErrors.dateTo = "End date is required"
       if (formData.dateFrom && formData.dateTo && new Date(formData.dateTo) < new Date(formData.dateFrom)) {
         newErrors.dateTo = "End date cannot be earlier than start date"
       }
@@ -133,7 +133,7 @@ const CampRegistration = () => {
     setIsSubmitting(true)
     try {
       const response = await apiClient.post('/api/v2/camp/new', {
-          siteId: formData.siteId,
+          campId: formData.siteId,
           name: formData.name,
           description: formData.description,
           address: formData.address,

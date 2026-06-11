@@ -79,6 +79,18 @@ export async function textSearch(
   const { query, filter = {}, limit = 20, skip = 0, indexName = 'default' } = opts;
   const coll = mongoose.connection.collection(collection);
 
+  // Helper: safely merge a search filter with the caller's filter without
+  // letting a $or in `filter` clobber a $or produced by the search clause.
+  const mergeFilters = (searchClause: Record<string, unknown>): Record<string, unknown> => {
+    if (!filter || Object.keys(filter).length === 0) return searchClause;
+    // If neither clause has a top-level $or we can just spread.
+    if (!('$or' in filter) && !('$and' in filter)) {
+      return { ...searchClause, ...filter };
+    }
+    // Wrap both in $and to avoid clobbering.
+    return { $and: [searchClause, filter] };
+  };
+
   // Tier 1: Atlas $search
   try {
     const pipeline: object[] = [
@@ -113,15 +125,15 @@ export async function textSearch(
 
   // Tier 2: $text index
   try {
-    const textFilter = { $text: { $search: query }, ...filter };
+    const textClause = mergeFilters({ $text: { $search: query } });
     const [items, total] = await Promise.all([
       coll
-        .find(textFilter, { projection: { score: { $meta: 'textScore' } } })
+        .find(textClause, { projection: { score: { $meta: 'textScore' } } })
         .sort({ score: { $meta: 'textScore' } })
         .skip(skip)
         .limit(limit)
         .toArray(),
-      coll.countDocuments(textFilter),
+      coll.countDocuments(textClause),
     ]);
     return { items, total, source: 'text-index' };
   } catch {
@@ -131,10 +143,10 @@ export async function textSearch(
   // Tier 3: Regex fallback
   const fields = opts.searchFields ?? ['name', 'email', 'phone'];
   const rx = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-  const rxFilter = { $or: fields.map((f) => ({ [f]: rx })), ...filter };
+  const rxClause = mergeFilters({ $or: fields.map((f) => ({ [f]: rx })) });
   const [items, total] = await Promise.all([
-    coll.find(rxFilter).skip(skip).limit(limit).toArray(),
-    coll.countDocuments(rxFilter),
+    coll.find(rxClause).skip(skip).limit(limit).toArray(),
+    coll.countDocuments(rxClause),
   ]);
   return { items, total, source: 'regex' };
 }
@@ -142,7 +154,11 @@ export async function textSearch(
 // ─── Donor-specific search ────────────────────────────────────────────────────
 
 export async function searchDonors(opts: DonorSearchOptions): Promise<SearchResult> {
-  const filter: Record<string, unknown> = { deletedAt: null };
+  // Use $or to catch documents where deletedAt is null OR where the field doesn't exist yet
+  // (older documents created before the soft-delete field was added).
+  const filter: Record<string, unknown> = {
+    $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+  };
   if (opts.bloodGroup) filter.bloodGroup = opts.bloodGroup;
   if (opts.rh) filter.rh = opts.rh;
   if (opts.eligibilityStatus) filter.eligibilityStatus = opts.eligibilityStatus;

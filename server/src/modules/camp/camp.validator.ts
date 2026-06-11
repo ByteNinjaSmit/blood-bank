@@ -9,11 +9,11 @@ const blank = <T extends z.ZodTypeAny>(s: T) =>
 export const CreateCampBody = z.object({
   campId: z.string().trim().min(1).max(60),
   name: z.string().trim().min(1).max(200),
-  description: z.string().trim().min(1).max(2000),
+  description: blank(z.string().trim().max(2000).optional()),
   address: z.string().trim().min(1).max(500),
   phone: z.string().trim().min(6).max(20),
   email: z.string().email(),
-  staff: z.array(z.string().regex(OBJECT_ID)).min(1, 'Staff list cannot be empty'),
+  staff: z.array(z.string().regex(OBJECT_ID)).default([]),
   dateFrom: z.coerce.date(),
   dateTo: z.coerce.date(),
 });

@@ -69,7 +69,7 @@ const NearExpiry = () => {
 
       console.log("Fetching near-expiry components with params:", params);
 
-      const response = await axios.get(`${API}/api/component/near-expiry`, {
+      const response = await axios.get(`${API}/api/v2/component/near-expiry`, {
         params,
         headers: { Authorization: authorizationToken },
         withCredentials: true,

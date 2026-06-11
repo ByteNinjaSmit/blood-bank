@@ -64,7 +64,7 @@ export default function RequisitionList() {
     requisitionApi.initialize(authorizationToken);
 
     (async () => {
-      const resp = await hospitalApi.getHospitals({ limit: 200 });
+      const resp = await hospitalApi.getHospitals({ limit: 100 });
       const list = Array.isArray(resp?.data?.data)
         ? resp.data.data
         : Array.isArray(resp?.data)

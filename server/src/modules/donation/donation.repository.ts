@@ -72,10 +72,103 @@ export function createDonationRepo(): DonationRepo {
       // The donation/unit/tti collections are NEW; nothing dual-writes
       // to bloodbags. The legacy /api/donation continues to write
       // bloodbags directly. The migration script reconciles.
-      const session = await DonationModel.startSession();
       try {
-        let result!: DonationWithUnitsDto;
-        await session.withTransaction(async () => {
+        const session = await DonationModel.startSession();
+        try {
+          let result!: DonationWithUnitsDto;
+          await session.withTransaction(async () => {
+            const [donation] = await DonationModel.create(
+              [
+                {
+                  donationId: donationPublicId,
+                  donor: donorObjId,
+                  donationType: input.donationType,
+                  collectedAt: input.collectedAt,
+                  campId,
+                  phlebotomistId,
+                  medicalExam: input.medicalExam,
+                  donorFitness: input.donorFitness,
+                  questionnaireFlags: input.questionnaireFlags
+                    ? new Map(Object.entries(input.questionnaireFlags))
+                    : undefined,
+                  notes: input.notes,
+                  createdBy: actor,
+                  updatedBy: actor,
+                },
+              ],
+              { session },
+            );
+
+            const unitDocs = await BloodUnitModel.insertMany(
+              units.map((u) => ({
+                unitId: u.unitId,
+                productCode: u.productCode,
+                donationId: donationPublicId,
+                componentType: u.componentType,
+                aboGroup: input.bloodGroup,
+                rhFactor: input.rhFactor,
+                volumeMl: u.volumeMl,
+                collectedAt: u.collectedAt,
+                expiresAt: u.expiresAt,
+                status: 'COLLECTED',
+                statusHistory: [
+                  {
+                    to: 'COLLECTED',
+                    event: 'CREATE',
+                    actor,
+                    at: new Date(),
+                  },
+                ],
+                campId,
+                createdBy: actor,
+                updatedBy: actor,
+              })),
+              { session },
+            );
+
+            const [tti] = await TtiResultModel.create(
+              [
+                {
+                  donationId: donationPublicId,
+                  aboGroupConfirmed: input.bloodGroup,
+                  rhFactorConfirmed: input.rhFactor,
+                  tests: [],
+                  releaseDecision: 'pending',
+                  createdBy: actor,
+                  updatedBy: actor,
+                },
+              ],
+              { session },
+            );
+
+            result = {
+              id: donation!._id.toString(),
+              donationId: donationPublicId,
+              donor: input.donor,
+              donationType: input.donationType,
+              collectedAt: input.collectedAt.toISOString(),
+              bloodGroup: input.bloodGroup,
+              rhFactor: input.rhFactor,
+              unitCount: unitDocs.length,
+              createdAt: (donation as unknown as { createdAt: Date }).createdAt.toISOString(),
+              updatedAt: (donation as unknown as { updatedAt: Date }).updatedAt.toISOString(),
+              units: unitDocs.map((u) => ({
+                unitId: u.unitId,
+                componentType: u.componentType,
+                volumeMl: u.volumeMl,
+                expiresAt: u.expiresAt.toISOString(),
+                status: u.status,
+              })),
+              ttiResultId: tti!._id.toString(),
+              ttiReleaseDecision: 'pending',
+            };
+          });
+          return result;
+        } finally {
+          await session.endSession();
+        }
+      } catch (err: any) {
+        if (err.code === 20 || err.message?.includes('replica set member') || err.message?.includes('transactions')) {
           const [donation] = await DonationModel.create(
             [
               {
@@ -94,8 +187,7 @@ export function createDonationRepo(): DonationRepo {
                 createdBy: actor,
                 updatedBy: actor,
               },
-            ],
-            { session },
+            ]
           );
 
           const unitDocs = await BloodUnitModel.insertMany(
@@ -122,7 +214,6 @@ export function createDonationRepo(): DonationRepo {
               createdBy: actor,
               updatedBy: actor,
             })),
-            { session },
           );
 
           const [tti] = await TtiResultModel.create(
@@ -136,11 +227,10 @@ export function createDonationRepo(): DonationRepo {
                 createdBy: actor,
                 updatedBy: actor,
               },
-            ],
-            { session },
+            ]
           );
 
-          result = {
+          return {
             id: donation!._id.toString(),
             donationId: donationPublicId,
             donor: input.donor,
@@ -161,10 +251,8 @@ export function createDonationRepo(): DonationRepo {
             ttiResultId: tti!._id.toString(),
             ttiReleaseDecision: 'pending',
           };
-        });
-        return result;
-      } finally {
-        await session.endSession();
+        }
+        throw err;
       }
     },
 
@@ -211,10 +299,19 @@ export function createDonationRepo(): DonationRepo {
     },
 
     async list(q) {
-      const filter: Record<string, unknown> = { deletedAt: null };
+      const filter: Record<string, unknown> = {
+        $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+      };
       if (q.donorId) filter.donor = new Types.ObjectId(q.donorId);
       if (q.donationType) filter.donationType = q.donationType;
-      if (q.source === 'inhouse') filter.campId = null;
+      if (q.source === 'inhouse') {
+        // Match donations with no camp: campId is null, undefined, or the field doesn't exist.
+        const inhouse$or = [{ campId: null }, { campId: { $exists: false } }];
+        // We already have a top-level $or for deletedAt — wrap both in $and.
+        const existing$or = filter.$or;
+        delete filter.$or;
+        filter.$and = [{ $or: existing$or }, { $or: inhouse$or }];
+      }
       if (q.source === 'camp') filter.campId = { $exists: true, $ne: null };
       if (q.fromDate || q.toDate) {
         filter.collectedAt = {} as Record<string, Date>;
@@ -231,17 +328,24 @@ export function createDonationRepo(): DonationRepo {
           .lean(),
         DonationModel.countDocuments(filter),
       ]);
-      const unitCounts = await BloodUnitModel.aggregate<{
-        _id: string;
-        count: number;
-      }>([
-        { $match: { donationId: { $in: docs.map((d) => d.donationId) } } },
-        { $group: { _id: '$donationId', count: { $sum: 1 } } },
+      const [unitCounts, ttiResults] = await Promise.all([
+        BloodUnitModel.aggregate<{
+          _id: string;
+          count: number;
+        }>([
+          { $match: { donationId: { $in: docs.map((d) => d.donationId) } } },
+          { $group: { _id: '$donationId', count: { $sum: 1 } } },
+        ]),
+        TtiResultModel.find({
+          donationId: { $in: docs.map((d) => d.donationId) }
+        }).select('donationId aboGroupConfirmed rhFactorConfirmed').lean()
       ]);
       const countMap = new Map(unitCounts.map((u) => [u._id, u.count]));
+      const ttiMap = new Map(ttiResults.map((t) => [t.donationId, t]));
       return {
         items: docs.map((d) => {
           const donorDoc = d.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; lastName?: string } };
+          const tti = ttiMap.get(d.donationId);
           return {
             id: d._id.toString(),
             donationId: d.donationId,
@@ -251,8 +355,8 @@ export function createDonationRepo(): DonationRepo {
               : undefined,
             donationType: d.donationType,
             collectedAt: d.collectedAt.toISOString(),
-            bloodGroup: '',
-            rhFactor: '',
+            bloodGroup: tti?.aboGroupConfirmed ?? '',
+            rhFactor: tti?.rhFactorConfirmed ?? '',
             unitCount: countMap.get(d.donationId) ?? 0,
             campId: d.campId?.toString(),
             isFit: d.donorFitness?.isFit,
@@ -267,7 +371,7 @@ export function createDonationRepo(): DonationRepo {
     async findLatestByDonor(donorId) {
       const doc = await DonationModel.findOne({
         donor: new Types.ObjectId(donorId),
-        deletedAt: null,
+        $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
       })
         .sort({ collectedAt: -1 })
         .select('collectedAt donationType')

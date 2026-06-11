@@ -3,11 +3,12 @@ import { cached, invalidate } from '@/core/cache';
 import { ConflictError, ForbiddenError, NotFoundError } from '@/shared/errors';
 import { auditService } from '@/modules/audit/audit.service';
 import { campRepo, type VoluntaryFilter } from './camp.repository';
+import { toDto as donorToDto } from '@/modules/donor/donor.repository';
 
 export interface CreateCampInput {
   campId: string;
   name: string;
-  description: string;
+  description?: string;
   address: string;
   phone: string;
   email: string;
@@ -125,7 +126,8 @@ export const campService = {
       donorData: unknown[];
     } | null;
     if (!camp) throw new NotFoundError('Camp', campId);
-    return { campName: camp.name, campId: camp.campId, donors: camp.donorData };
+    const mappedDonors = (camp.donorData || []).map((d) => donorToDto(d));
+    return { campName: camp.name, campId: camp.campId, donors: mappedDonors };
   },
 
   async voluntary(f: VoluntaryFilter) {

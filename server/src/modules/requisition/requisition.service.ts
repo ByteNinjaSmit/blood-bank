@@ -33,6 +33,7 @@ export interface RequisitionService {
   complete(id: string, actorId: string): Promise<RequisitionDto>;
   get(id: string): Promise<RequisitionDto>;
   reject(id: string, reason: string, actorId: string): Promise<RequisitionDto>;
+  setStatus(id: string, status: any, actorId: string): Promise<RequisitionDto>;
 }
 
 export function createRequisitionService(deps: {
@@ -183,6 +184,9 @@ export function createRequisitionService(deps: {
         after: { status: 'REJECTED', reason },
       });
       return updated;
+    },
+    async setStatus(id, status, actorId) {
+      return deps.requisitions.setStatus(id, status, actorId);
     },
   };
 }

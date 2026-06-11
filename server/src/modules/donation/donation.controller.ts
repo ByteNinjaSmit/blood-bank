@@ -18,8 +18,100 @@ export function createDonationControllers(service: DonationService): DonationCon
   return {
     async create(req, res, next) {
       try {
-        const body = ValidateDonation.createBody(req);
-        const created = await service.register(body, actorIdOrThrow(req));
+        let body = req.body;
+        if (body.collectionDate || body.medicalExamination || body.rh) {
+          const legacy = body;
+          let bloodPressure: { systolic: number; diastolic: number } | undefined = undefined;
+          if (legacy.medicalExamination?.bp) {
+            const parts = String(legacy.medicalExamination.bp).split('/');
+            if (parts.length === 2 && parts[0] && parts[1]) {
+              const systolic = parseInt(parts[0], 10);
+              const diastolic = parseInt(parts[1], 10);
+              if (!isNaN(systolic) && !isNaN(diastolic)) {
+                bloodPressure = { systolic, diastolic };
+              }
+            }
+          }
+
+          const mapYesNo = (val: unknown): boolean | undefined => {
+            if (val === 'Yes') return true;
+            if (val === 'No') return false;
+            return undefined;
+          };
+
+          const medicalExam = legacy.medicalExamination ? {
+            weightKg: legacy.medicalExamination.weightKg !== undefined ? Number(legacy.medicalExamination.weightKg) : undefined,
+            hbGdl: legacy.medicalExamination.hb !== undefined ? Number(legacy.medicalExamination.hb) : undefined,
+            temperatureCelsius: legacy.medicalExamination.tempC !== undefined ? Number(legacy.medicalExamination.tempC) : undefined,
+            pulseBpm: legacy.medicalExamination.pulse !== undefined ? Number(legacy.medicalExamination.pulse) : undefined,
+            bloodPressure,
+            hasPedalOedema: mapYesNo(legacy.medicalExamination.pedalOedema),
+            oxygenSaturationPercent: legacy.medicalExamination.o2Level !== undefined ? Number(legacy.medicalExamination.o2Level) : undefined,
+            hasLymphadenopathy: mapYesNo(legacy.medicalExamination.lymphadenopathy),
+            hasCyanosis: mapYesNo(legacy.medicalExamination.cyanosis),
+            systemicExamNotes: legacy.medicalExamination.systematicExam,
+            skinClearAtPhlebotomy: mapYesNo(legacy.medicalExamination.skinDiseaseFreeAtPhlebotomy),
+            armsFreeOfPunctureScars: mapYesNo(legacy.medicalExamination.armsFreeFromPunctureScars),
+            volumeMl: legacy.medicalExamination.volumeGmMl !== undefined ? Number(legacy.medicalExamination.volumeGmMl) : undefined,
+          } : undefined;
+
+          const questionnaireFlags: Record<string, boolean> = {};
+          if (legacy.medicalQuestions) {
+            for (const [key, val] of Object.entries(legacy.medicalQuestions)) {
+              questionnaireFlags[key] = val === 'Yes';
+            }
+          }
+
+          const rhFactor = legacy.rh === 'Positive' || legacy.rh === 'POSITIVE' ? 'POSITIVE' : 'NEGATIVE';
+          const VALID_DONATION_TYPES = ['WHOLE_BLOOD', 'PLATELETPHERESIS', 'PLASMAPHERESIS', 'DOUBLE_RED_CELL', 'AUTOLOGOUS', 'DIRECTED', 'REPLACEMENT'];
+          const donationType = VALID_DONATION_TYPES.includes(legacy.donationType) ? legacy.donationType : 'WHOLE_BLOOD';
+
+          let unitTemplates: Array<{ componentType: any; volumeMl: number }> | undefined = undefined;
+          const typeOfBag = legacy.typeOfBag;
+          if (typeOfBag === 'SB') {
+            unitTemplates = [{ componentType: 'WHOLE_BLOOD', volumeMl: 350 }];
+          } else if (typeOfBag === 'DB') {
+            unitTemplates = [
+              { componentType: 'PRBC', volumeMl: 250 },
+              { componentType: 'FFP', volumeMl: 150 },
+            ];
+          } else if (typeOfBag === 'TB') {
+            unitTemplates = [
+              { componentType: 'PRBC', volumeMl: 250 },
+              { componentType: 'FFP', volumeMl: 150 },
+              { componentType: 'PLATELET_CONCENTRATE', volumeMl: 50 },
+            ];
+          } else if (typeOfBag === 'QB') {
+            unitTemplates = [
+              { componentType: 'PRBC', volumeMl: 250 },
+              { componentType: 'FFP', volumeMl: 150 },
+              { componentType: 'PLATELET_CONCENTRATE', volumeMl: 50 },
+              { componentType: 'CRYOPRECIPITATE', volumeMl: 15 },
+            ];
+          }
+
+          const campId = (legacy.siteId && legacy.siteId !== 'null') ? legacy.siteId : undefined;
+
+          req.body = {
+            donor: legacy.donor,
+            donationType,
+            collectedAt: legacy.collectionDate ? new Date(legacy.collectionDate) : new Date(),
+            campId,
+            medicalExam,
+            donorFitness: legacy.donorFitness ? {
+              isFit: Boolean(legacy.donorFitness.isFit),
+              rejectionReason: legacy.donorFitness.rejectionReason || undefined,
+            } : { isFit: true },
+            questionnaireFlags,
+            bloodGroup: legacy.bloodGroup,
+            rhFactor,
+            unitTemplates,
+            notes: legacy.notes,
+          };
+        }
+
+        const validatedBody = ValidateDonation.createBody(req);
+        const created = await service.register(validatedBody, actorIdOrThrow(req));
         res.status(201).json({ success: true, data: created, requestId: req.id });
       } catch (e) {
         next(e);

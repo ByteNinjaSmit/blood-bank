@@ -51,7 +51,7 @@ export default function UserManage() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/api/admin/users`, {
+      const res = await axios.get(`${API}/api/v2/user`, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       });
@@ -65,15 +65,22 @@ export default function UserManage() {
   };
 
   const setStatus = async (id, action) => {
+    const actionMap = {
+      approve: 'active',
+      reject: 'rejected',
+      block: 'blocked',
+      deactivate: 'inactive',
+    };
+    const mappedStatus = actionMap[action] || action;
     try {
-      await axios.post(`${API}/api/admin/users/${id}/${action}` , {}, {
+      await axios.put(`${API}/api/v2/user/${id}`, { status: mappedStatus }, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       });
-      toast.success(`User ${action}d`);
+      toast.success(`User status updated to ${mappedStatus}`);
       loadUsers();
     } catch (e) {
-      toast.error(e?.response?.data?.message || `Failed to ${action}`);
+      toast.error(e?.response?.data?.message || `Failed to update status`);
     }
   };
 
@@ -174,24 +181,23 @@ export default function UserManage() {
     try {
       setLoading(true);
       const payload = {
-        publicId: form.publicId,
         firstName: form.firstName,
         lastName: form.lastName,
         email: form.email,
         phone: form.phone,
         role: form.role,
-        password: form.password,
+        password: form.password || undefined,
         status: form.status,
         permissions: form.permissions,
       };
       if (editingId) {
-        await axios.patch(`${API}/api/admin/users/${editingId}`, payload, {
+        await axios.put(`${API}/api/v2/user/${editingId}`, payload, {
           headers: { Authorization: authorizationToken },
           withCredentials: true,
         });
         toast.success("User updated");
       } else {
-        await axios.post(`${API}/api/admin/users`, payload, {
+        await axios.post(`${API}/api/v2/user`, { ...payload, password: form.password || "default123" }, {
           headers: { Authorization: authorizationToken },
           withCredentials: true,
         });
@@ -210,7 +216,7 @@ export default function UserManage() {
 
   const onDelete = async (id) => {
     try {
-      await axios.delete(`${API}/api/admin/users/${id}`, {
+      await axios.delete(`${API}/api/v2/user/${id}`, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       });
@@ -224,10 +230,17 @@ export default function UserManage() {
   const bulkSetStatus = async (action) => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) { toast.error('No users selected'); return; }
+    const actionMap = {
+      approve: 'active',
+      reject: 'rejected',
+      block: 'blocked',
+      deactivate: 'inactive',
+    };
+    const mappedStatus = actionMap[action] || action;
     let ok = 0, fail = 0;
     for (const id of ids) {
       try {
-        await axios.post(`${API}/api/admin/users/${id}/${action}`, {}, {
+        await axios.put(`${API}/api/v2/user/${id}`, { status: mappedStatus }, {
           headers: { Authorization: authorizationToken },
           withCredentials: true,
         });
@@ -236,8 +249,8 @@ export default function UserManage() {
         fail++;
       }
     }
-    if (ok) toast.success(`${action} successful for ${ok}`);
-    if (fail) toast.error(`${action} failed for ${fail}`);
+    if (ok) toast.success(`Status updated for ${ok} user(s)`);
+    if (fail) toast.error(`Failed to update status for ${fail} user(s)`);
     loadUsers();
   };
 

@@ -65,9 +65,9 @@ const CampList = ({ OnBack }) => {
   const filteredCamps = useMemo(() => {
     return camps.filter((camp) => {
       const matchesSearch =
-        camp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        camp.siteId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        camp.description.toLowerCase().includes(searchTerm.toLowerCase())
+        (camp.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (camp.campId || camp.siteId || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (camp.description || "").toLowerCase().includes(searchTerm.toLowerCase())
 
       const status = getProgressStatus(camp)
       const matchesStatus = statusFilter === "all" || status === statusFilter
@@ -319,7 +319,7 @@ const CampList = ({ OnBack }) => {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-50 text-orange-700 border border-red-200">
-                        {camp.siteId}
+                        {camp.campId || camp.siteId || "N/A"}
                       </span>
                       {getStatusBadge(getProgressStatus(camp))}
                     </div>
@@ -361,7 +361,7 @@ const CampList = ({ OnBack }) => {
                               key={member._id || index}
                               className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-200"
                             >
-                              {member.name.first}
+                              {member.name?.first || (typeof member.name === 'string' ? member.name : "Staff")}
                             </span>
                           ))}
                           {camp.staff.length > 3 && (
@@ -380,7 +380,7 @@ const CampList = ({ OnBack }) => {
                     <MapPin className="w-5 h-5 text-orange-700 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Site</p>
-                      <p className="text-sm font-medium text-slate-900 mt-1">{camp.siteId}</p>
+                      <p className="text-sm font-medium text-slate-900 mt-1">{camp.campId || camp.siteId || "N/A"}</p>
                     </div>
                   </div>
                 </div>

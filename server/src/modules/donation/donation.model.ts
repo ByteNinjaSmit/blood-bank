@@ -10,7 +10,10 @@ const MedicalExamSchema = new Schema(
     hbGdl: Number,
     temperatureCelsius: Number,
     pulseBpm: Number,
-    bloodPressure: String,
+    bloodPressure: {
+      systolic: Number,
+      diastolic: Number,
+    },
     hasPedalOedema: Boolean,
     oxygenSaturationPercent: Number,
     hasLymphadenopathy: Boolean,

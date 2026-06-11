@@ -177,11 +177,11 @@ const CreateDonation = ({ onCreateDonor }) => {
   const handleDonorSelected = async (d) => {
     try {
       setLoading(true)
-      const res = await axios.get(`${API}/api/donor/${d._id}`, {
+      const res = await axios.get(`${API}/api/v2/donor/${d._id}`, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       })
-      const full = res?.data?.donor || d
+      const full = res?.data?.donor || res?.data?.data || d
       setDonor(full)
       setShowPopup(false)
       toast.success(`Selected donor ${getDonorName(full) || full.fullName || full.donorId}`)
@@ -375,18 +375,25 @@ const CreateDonation = ({ onCreateDonor }) => {
 
     try {
       setLoading(true)
-      const response = await axios.post(`${API}/api/donation/new`, payload, {
+      const response = await axios.post(`${API}/api/v2/donation`, payload, {
         headers: {
           Authorization: authorizationToken,
         },
         withCredentials: true,
       })
-      if (response.status === 201) {
+      if (response.status === 201 || response.status === 200) {
         setSavedDonation(response.data.data)
         setShowSuccess(true)
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Error creating donation")
+      const data = error.response?.data
+      const details = data?.details
+      if (details && Array.isArray(details) && details.length > 0) {
+        const fieldErrors = details.map(d => `${d.path?.join('.') || 'field'}: ${d.message}`).join(' | ')
+        toast.error(`Validation error — ${fieldErrors}`, { duration: 8000 })
+      } else {
+        toast.error(data?.message || error.message || "Error creating donation", { duration: 5000 })
+      }
     } finally {
       setLoading(false)
     }

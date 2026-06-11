@@ -23,7 +23,7 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      const response = await axios.get(`${API}/api/component/${componentId}`, {
+      const response = await axios.get(`${API}/api/v2/component/${componentId}`, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       });

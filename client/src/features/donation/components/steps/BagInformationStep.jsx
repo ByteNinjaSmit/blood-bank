@@ -41,6 +41,7 @@ const BagInformationStep = ({ formData, fieldErrors, onFieldChange }) => {
               }`}
           >
             <option value="">Select type</option>
+            <option value="SB">Single Bag</option>
             <option value="DB">Double Bag</option>
             <option value="TB">Triple Bag</option>
             <option value="QB">Quadruple Bag</option>
@@ -53,7 +54,7 @@ const BagInformationStep = ({ formData, fieldErrors, onFieldChange }) => {
         {/* Blood Donation Type */}
         <div>
           <label className="block text-sm mb-1">
-            Blood Donation
+            Donation Type
           </label>
           <select
             value={formData.donationType || ""}
@@ -61,9 +62,13 @@ const BagInformationStep = ({ formData, fieldErrors, onFieldChange }) => {
             className="w-full px-3 py-2 border rounded-lg border-gray-300"
           >
             <option value="">Select</option>
-            <option value="first_time">First Time</option>
-            <option value="repeated">Repeated Donation</option>
-            <option value="last_donation">Last Donation</option>
+            <option value="WHOLE_BLOOD">Whole Blood (Voluntary)</option>
+            <option value="AUTOLOGOUS">Autologous</option>
+            <option value="DIRECTED">Directed</option>
+            <option value="REPLACEMENT">Replacement</option>
+            <option value="PLATELETPHERESIS">Plateletpheresis</option>
+            <option value="PLASMAPHERESIS">Plasmapheresis</option>
+            <option value="DOUBLE_RED_CELL">Double Red Cell</option>
           </select>
         </div>
 

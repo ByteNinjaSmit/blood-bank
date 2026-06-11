@@ -130,5 +130,12 @@ router.post(
   requirePermission('unit:issue'),
   controllers.issue,
 );
+router.post(
+  '/:id/issue',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'medical-officer', 'issue-counter']),
+  requirePermission('unit:issue'),
+  controllers.issueAll,
+);
 
 export default router;

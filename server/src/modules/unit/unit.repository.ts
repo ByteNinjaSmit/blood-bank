@@ -176,21 +176,47 @@ export function createUnitRepo(): UnitRepo {
 
     async applyEventToDonation(donationId, event, actorId, fromStatuses) {
       const actor = new Types.ObjectId(actorId);
-      const session = await BloodUnitModel.startSession();
       let changed = 0;
 
       try {
-        await session.withTransaction(async () => {
+        const session = await BloodUnitModel.startSession();
+        try {
+          await session.withTransaction(async () => {
+            const units = (await BloodUnitModel.find(
+              { donationId, status: { $in: fromStatuses }, deletedAt: null },
+              null,
+              { session },
+            )) as Array<RawUnit & { status: UnitStatus }>;
+
+            for (const u of units) {
+              const next = transition(u.status, event, u.unitId);
+              await BloodUnitModel.updateOne(
+                { _id: u._id, status: u.status }, // optimistic check: status must still match
+                {
+                  status: next,
+                  updatedBy: actor,
+                  $push: {
+                    statusHistory: { from: u.status, to: next, event, actor, at: new Date() },
+                  },
+                },
+                { session },
+              );
+              changed++;
+            }
+          });
+        } finally {
+          await session.endSession();
+        }
+      } catch (err: any) {
+        if (err.code === 20 || err.message?.includes('replica set member') || err.message?.includes('transactions')) {
           const units = (await BloodUnitModel.find(
             { donationId, status: { $in: fromStatuses }, deletedAt: null },
-            null,
-            { session },
           )) as Array<RawUnit & { status: UnitStatus }>;
 
           for (const u of units) {
             const next = transition(u.status, event, u.unitId);
             await BloodUnitModel.updateOne(
-              { _id: u._id, status: u.status }, // optimistic check: status must still match
+              { _id: u._id, status: u.status },
               {
                 status: next,
                 updatedBy: actor,
@@ -198,13 +224,12 @@ export function createUnitRepo(): UnitRepo {
                   statusHistory: { from: u.status, to: next, event, actor, at: new Date() },
                 },
               },
-              { session },
             );
             changed++;
           }
-        });
-      } finally {
-        await session.endSession();
+        } else {
+          throw err;
+        }
       }
 
       if (changed > 0) void invalidate('inventory:*');

@@ -53,13 +53,33 @@ interface RawDonor {
   updatedAt: Date;
 }
 
-function toDto(raw: RawDonor): DonorDto {
+export function toDto(raw: any): any {
+  const firstName = raw.name?.firstName || '';
+  const middleName = raw.name?.middleName || '';
+  const lastName = raw.name?.lastName || '';
+  const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ');
+
+  let age = 0;
+  if (raw.dob) {
+    const dobDate = new Date(raw.dob);
+    const today = new Date();
+    age = today.getFullYear() - dobDate.getFullYear();
+    const m = today.getMonth() - dobDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
+      age--;
+    }
+  }
+
   return {
-    id: raw._id.toString(),
+    id: raw._id?.toString() || raw.id,
+    _id: raw._id?.toString() || raw.id,
     donorId: raw.donorId,
     name: raw.name,
+    fullName,
+    age,
+    city: raw.address?.city,
     uid: raw.uid,
-    dob: raw.dob.toISOString(),
+    dob: raw.dob instanceof Date ? raw.dob.toISOString() : new Date(raw.dob).toISOString(),
     sex: raw.sex,
     phone: raw.phone,
     email: raw.email,
@@ -67,11 +87,11 @@ function toDto(raw: RawDonor): DonorDto {
     occupation: raw.occupation,
     weightKg: raw.weightKg,
     bloodGroup: raw.bloodGroup,
-    rh: raw.rh,
+    rh: raw.rh === 'POSITIVE' ? 'Positive' : raw.rh === 'NEGATIVE' ? 'Negative' : raw.rh,
     eligibilityStatus: raw.eligibilityStatus,
-    lastDonationDate: raw.lastDonationDate?.toISOString(),
-    createdAt: raw.createdAt.toISOString(),
-    updatedAt: raw.updatedAt.toISOString(),
+    lastDonationDate: raw.lastDonationDate ? (raw.lastDonationDate instanceof Date ? raw.lastDonationDate.toISOString() : new Date(raw.lastDonationDate).toISOString()) : undefined,
+    createdAt: raw.createdAt ? (raw.createdAt instanceof Date ? raw.createdAt.toISOString() : new Date(raw.createdAt).toISOString()) : new Date().toISOString(),
+    updatedAt: raw.updatedAt ? (raw.updatedAt instanceof Date ? raw.updatedAt.toISOString() : new Date(raw.updatedAt).toISOString()) : new Date().toISOString(),
   };
 }
 
@@ -87,8 +107,10 @@ export interface DonorRepo {
 export function createDonorRepo(): DonorRepo {
   return {
     async create(input, actorId) {
+      const dbRh = input.rh === 'Positive' ? 'POSITIVE' : input.rh === 'Negative' ? 'NEGATIVE' : input.rh;
       const doc = await DonorModel.create({
         ...input,
+        rh: dbRh,
         createdBy: actorId,
         updatedBy: actorId,
       });
@@ -102,9 +124,13 @@ export function createDonorRepo(): DonorRepo {
     },
 
     async update(id, patch, actorId) {
+      const dbPatch = { ...patch } as any;
+      if (patch.rh) {
+        dbPatch.rh = patch.rh === 'Positive' ? 'POSITIVE' : patch.rh === 'Negative' ? 'NEGATIVE' : patch.rh;
+      }
       const updated = (await DonorModel.findByIdAndUpdate(
         id,
-        { ...patch, updatedBy: actorId, updatedAt: new Date() },
+        { ...dbPatch, updatedBy: actorId, updatedAt: new Date() },
         { new: true, runValidators: true },
       ).lean()) as unknown as RawDonor | null;
       if (!updated) throw new NotFoundError('Donor', id);
@@ -114,7 +140,7 @@ export function createDonorRepo(): DonorRepo {
     async list(input) {
       const filter: Record<string, unknown> = {};
       if (input.bloodGroup) filter.bloodGroup = input.bloodGroup;
-      if (input.rh) filter.rh = input.rh;
+      if (input.rh) filter.rh = input.rh === 'Positive' ? 'POSITIVE' : input.rh === 'Negative' ? 'NEGATIVE' : input.rh;
       if (input.city) filter['address.city'] = input.city;
       if (input.search) {
         const term = input.search.trim();

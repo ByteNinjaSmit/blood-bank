@@ -311,9 +311,11 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
       const generatedId = isDeferred && !formData.donorId ? `DFR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}` : formData.donorId;
       const donorData = {
         donorId: generatedId,
-        firstName: formData.firstName,
-        middleName: formData.middleName || undefined,
-        lastName: formData.lastName,
+        name: {
+          firstName: formData.firstName,
+          middleName: formData.middleName || undefined,
+          lastName: formData.lastName,
+        },
         uid: formData.uid || undefined,
         dob: formData.dob || undefined,
         age: formData.age ? Number(formData.age) : undefined,
@@ -337,16 +339,16 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
         siteId: originCampId || undefined,
       }
       const response = await axios.post(
-        `${API}/api/donor/new`,
+        `${API}/api/v2/donor`,
         donorData,
         {
           headers: { Authorization: authorizationToken },
           withCredentials: true,
         }
       )
-      if (response.status === 201) {
+      if (response.status === 201 || response.status === 200) {
         setSuccess(true)
-        const newDonor = response.data.donor
+        const newDonor = response.data.donor || response.data.data
         onCreated && onCreated(newDonor)
 
         if (showPostCreateActions) {
@@ -370,9 +372,10 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
       }
     } catch (err) {
       const apiMessage = err?.response?.data?.message
-      const extraDetails = err?.response?.data?.extraDetails
-      if (extraDetails) {
-        setError(`${apiMessage || "Validation error"}: ${extraDetails}`)
+      const details = err?.response?.data?.details
+      if (details && Array.isArray(details)) {
+        const detailStr = details.map(d => `${d.path.join('.')}: ${d.message}`).join(', ')
+        setError(`${apiMessage || "Validation error"}: ${detailStr}`)
       } else {
         setError(apiMessage || "Failed to create donor. Please try again.")
       }

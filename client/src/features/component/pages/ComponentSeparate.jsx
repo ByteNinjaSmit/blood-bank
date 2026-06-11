@@ -38,7 +38,7 @@ const ComponentSeparate = () => {
     setIsLoading(true);
     try {
       const [bagsRes, donationRes] = await Promise.all([
-        axios.get(`${API}/api/component/bags-to-separate`, {
+        axios.get(`${API}/api/v2/component/bags-to-separate`, {
           headers: { Authorization: authorizationToken },
           withCredentials: true,
         }),
@@ -89,7 +89,7 @@ const ComponentSeparate = () => {
     try {
       setIsActionLoading(true);
       await axios.post(
-        `${API}/api/component/separate`,
+        `${API}/api/v2/component/separate`,
         {
           donationId,
           componentType: separateForm.componentType,
@@ -123,7 +123,7 @@ const ComponentSeparate = () => {
     try {
       setIsActionLoading(true);
       await axios.post(
-        `${API}/api/component/separation-completed`,
+        `${API}/api/v2/component/separation-completed`,
         { donationId, signature },
         {
           headers: { Authorization: authorizationToken },

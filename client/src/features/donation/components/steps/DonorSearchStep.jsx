@@ -39,12 +39,12 @@ const DonorSearchStep = ({
       try {
         setQLoading(true);
         setQError("");
-        const res = await axios.get(`${API}/api/donor/search/fast`, {
+        const res = await axios.get(`${API}/api/v2/donor/search`, {
           params: { q: query, limit: 20 },
           headers: { Authorization: authorizationToken },
           withCredentials: true,
         });
-        const list = res?.data?.data;
+        const list = res?.data?.data?.items || res?.data?.data;
         setResults(Array.isArray(list) ? list : []);
       } catch (e) {
         setQError(e?.response?.data?.message || "Search failed");
@@ -64,7 +64,7 @@ const DonorSearchStep = ({
 
     if (d.isAvailableToDonate === false) {
       const lastDate = d.lastDonationDate
-        ? new Date(d.lastDonationDate).toLocaleDateString()
+         ? new Date(d.lastDonationDate).toLocaleDateString()
         : "N/A";
       const waitingPeriod =
         d.sex === "F" ? "120 days (4 months)" : "90 days (3 months)";
@@ -88,14 +88,14 @@ const DonorSearchStep = ({
     if (!editingDonor) return;
     try {
       setULoading(true);
-      const res = await axios.put(`${API}/api/donor/update/${editingDonor._id}`, data, {
+      const res = await axios.put(`${API}/api/v2/donor/${editingDonor._id}`, data, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       });
 
-      if (res.status === 200) {
+      if (res.status === 200 || res.status === 201) {
         toast.success("Donor updated successfully");
-        const updated = res.data.donor;
+        const updated = res.data.donor || res.data.data;
         
         // Update local results
         setResults(prev => prev.map(item => item._id === updated._id ? {
@@ -303,12 +303,13 @@ const DonorSearchStep = ({
                         try {
                           setSelectingId(d._id);
                           setULoading(true);
-                          const res = await axios.get(`${API}/api/donor/${d._id}`, {
+                          const res = await axios.get(`${API}/api/v2/donor/${d._id}`, {
                             headers: { Authorization: authorizationToken },
                             withCredentials: true,
                           });
-                          if (res.data.donor) {
-                            setEditingDonor(res.data.donor);
+                          const donorData = res.data.donor || res.data.data;
+                          if (donorData) {
+                            setEditingDonor(donorData);
                           }
                         } catch (err) {
                           toast.error("Failed to fetch donor details");

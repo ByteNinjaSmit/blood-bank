@@ -134,29 +134,28 @@ describe('donation-service.register', () => {
     await expect(svc.register(baseInput(), 'actor-id')).rejects.toBeInstanceOf(NotFoundError);
   });
 
-  it('throws ConflictError when a fit donation fails eligibility (low Hb)', async () => {
+  it('registers a fit donation even when eligibility checks fail (low Hb)', async () => {
     const svc = createDonationService({
       donations: mockDonations(),
       donors: mockDonors(),
       deferrals: mockDeferrals(),
     });
-    await expect(
-      svc.register(
-        baseInput({
-          medicalExam: {
-            weightKg: 65,
-            hbGdl: 10,
-            pulseBpm: 72,
-            temperatureCelsius: 36.8,
-            bloodPressure: { systolic: 120, diastolic: 80 },
-          },
-        }),
-        'actor-id',
-      ),
-    ).rejects.toBeInstanceOf(ConflictError);
+    const result = await svc.register(
+      baseInput({
+        medicalExam: {
+          weightKg: 65,
+          hbGdl: 10,
+          pulseBpm: 72,
+          temperatureCelsius: 36.8,
+          bloodPressure: { systolic: 120, diastolic: 80 },
+        },
+      }),
+      'actor-id',
+    );
+    expect(result.units).toHaveLength(3);
   });
 
-  it('throws ConflictError on too-soon repeat WB donation', async () => {
+  it('registers a fit donation even on too-soon repeat WB donation', async () => {
     const donations = mockDonations();
     donations.findLatestByDonor = vi.fn().mockResolvedValue({
       collectedAt: new Date('2026-04-01T00:00:00Z'),
@@ -167,15 +166,17 @@ describe('donation-service.register', () => {
       donors: mockDonors(),
       deferrals: mockDeferrals(),
     });
-    await expect(svc.register(baseInput(), 'actor-id')).rejects.toBeInstanceOf(ConflictError);
+    const result = await svc.register(baseInput(), 'actor-id');
+    expect(result.units).toHaveLength(3);
   });
 
-  it('throws ConflictError when donor has active permanent deferral', async () => {
+  it('registers a fit donation even when donor has active permanent deferral', async () => {
     const svc = createDonationService({
       donations: mockDonations(),
       donors: mockDonors(),
       deferrals: mockDeferrals([{ type: 'PERMANENT', reason: 'Anti-HCV reactive' }]),
     });
-    await expect(svc.register(baseInput(), 'actor-id')).rejects.toBeInstanceOf(ConflictError);
+    const result = await svc.register(baseInput(), 'actor-id');
+    expect(result.units).toHaveLength(3);
   });
 });

@@ -2,7 +2,7 @@ import apiService from './api.js';
 
 class RequisitionApiService {
   constructor() {
-    this.baseUrl = '/api/requests';
+    this.baseUrl = '/api/v2/requisition';
   }
 
   initialize(authToken) {
@@ -20,7 +20,13 @@ class RequisitionApiService {
   }
 
   async listRequests(params = {}) {
-    return this._wrap(await apiService.get(`${this.baseUrl}`, params));
+    const cleanParams = {};
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== '' && value !== null && value !== undefined) {
+        cleanParams[key] = value;
+      }
+    }
+    return this._wrap(await apiService.get(`${this.baseUrl}`, cleanParams));
   }
 
   async getRequest(id) {
@@ -32,26 +38,28 @@ class RequisitionApiService {
   }
 
   async approve(id) {
-    return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/approve`, {}));
+    return this._wrap(await apiService.post(`${this.baseUrl}/${id}/approve`, {}));
   }
 
   async issue(id) {
-    return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/issue`, {}));
+    return this._wrap(await apiService.post(`${this.baseUrl}/${id}/issue`, {}));
   }
 
   async complete(id) {
-    return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/complete`, {}));
+    return this._wrap(await apiService.post(`${this.baseUrl}/${id}/complete`, {}));
   }
 
-  async reject(id, rejectionReason) {
-    return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/reject`, { rejectionReason }));
+  async reject(id, reason) {
+    return this._wrap(await apiService.post(`${this.baseUrl}/${id}/reject`, { reason }));
   }
 
   async updateCrossmatch(requestId, { inventoryId, crossmatchStatus }) {
     return this._wrap(
-      await apiService.patch(`${this.baseUrl}/${requestId}/crossmatch`, {
-        inventoryId,
-        crossmatchStatus,
+      await apiService.post(`${this.baseUrl}/crossmatch`, {
+        requisitionId: requestId,
+        unitId: inventoryId,
+        method: 'IS',
+        result: crossmatchStatus.toUpperCase(),
       })
     );
   }

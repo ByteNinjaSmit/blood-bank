@@ -73,7 +73,7 @@ const ComponentsList = () => {
 
       console.log("Fetching components with params:", params);
 
-      const response = await axios.get(`${API}/api/component/list`, {
+      const response = await axios.get(`${API}/api/v2/component/list`, {
         params,
         headers: { Authorization: authorizationToken },
         withCredentials: true,
