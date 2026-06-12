@@ -66,29 +66,9 @@ export function createDonationControllers(service: DonationService): DonationCon
           const VALID_DONATION_TYPES = ['WHOLE_BLOOD', 'PLATELETPHERESIS', 'PLASMAPHERESIS', 'DOUBLE_RED_CELL', 'AUTOLOGOUS', 'DIRECTED', 'REPLACEMENT'];
           const donationType = VALID_DONATION_TYPES.includes(legacy.donationType) ? legacy.donationType : 'WHOLE_BLOOD';
 
-          let unitTemplates: Array<{ componentType: any; volumeMl: number }> | undefined = undefined;
-          const typeOfBag = legacy.typeOfBag;
-          if (typeOfBag === 'SB') {
-            unitTemplates = [{ componentType: 'WHOLE_BLOOD', volumeMl: 350 }];
-          } else if (typeOfBag === 'DB') {
-            unitTemplates = [
-              { componentType: 'PRBC', volumeMl: 250 },
-              { componentType: 'FFP', volumeMl: 150 },
-            ];
-          } else if (typeOfBag === 'TB') {
-            unitTemplates = [
-              { componentType: 'PRBC', volumeMl: 250 },
-              { componentType: 'FFP', volumeMl: 150 },
-              { componentType: 'PLATELET_CONCENTRATE', volumeMl: 50 },
-            ];
-          } else if (typeOfBag === 'QB') {
-            unitTemplates = [
-              { componentType: 'PRBC', volumeMl: 250 },
-              { componentType: 'FFP', volumeMl: 150 },
-              { componentType: 'PLATELET_CONCENTRATE', volumeMl: 50 },
-              { componentType: 'CRYOPRECIPITATE', volumeMl: 15 },
-            ];
-          }
+          const typeOfBag = legacy.typeOfBag || 'SB';
+          const volume = legacy.medicalExamination?.volumeGmMl ? Number(legacy.medicalExamination.volumeGmMl) : (typeOfBag === 'SB' ? 350 : 450);
+          const unitTemplates = [{ componentType: 'WHOLE_BLOOD', volumeMl: volume }];
 
           const campId = (legacy.siteId && legacy.siteId !== 'null') ? legacy.siteId : undefined;
 
@@ -106,6 +86,7 @@ export function createDonationControllers(service: DonationService): DonationCon
             bloodGroup: legacy.bloodGroup,
             rhFactor,
             unitTemplates,
+            typeOfBag,
             notes: legacy.notes,
           };
         }

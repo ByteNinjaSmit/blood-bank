@@ -1,5 +1,6 @@
 import { Warehouse, AlertTriangle } from 'lucide-react';
 import { useBagStockList, useBagStockSummary } from '../queries';
+import { formatBloodBagQty } from '../utils/qtyHelper';
 
 const STATUS_BADGE = {
   AVAILABLE:    'bg-green-50 text-green-700 border-green-200',
@@ -30,7 +31,7 @@ function SummaryCard({ bagType, count }) {
     <div className={`rounded-xl border p-4 ${colorClass}`}>
       <div className="text-2xl font-bold">{count ?? 0}</div>
       <div className="text-xs font-semibold uppercase tracking-wide mt-0.5">{bagType}</div>
-      <div className="text-xs opacity-75 mt-0.5">Available bags</div>
+      <div className="text-xs opacity-75 mt-0.5">{formatBloodBagQty(count)}</div>
     </div>
   );
 }
@@ -45,7 +46,7 @@ export default function BagInventory() {
   const { data, isLoading } = useBagStockList({});
   const { data: summaryData } = useBagStockSummary();
 
-  const stocks   = data?.bagStocks ?? data ?? [];
+  const stocks   = data?.items ?? data?.bagStocks ?? (Array.isArray(data) ? data : []);
   const summary  = summaryData ?? {};
 
   const fmtDate = (d) => d
@@ -130,13 +131,13 @@ export default function BagInventory() {
                           {nearExpiry && <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 text-right">{s.openingStock ?? 0}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700 text-right">{s.quantityReceived ?? 0}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700 text-right">{s.quantityIssued ?? 0}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700 text-right">{s.quantityDamaged ?? 0}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700 text-right">{s.quantityDiscarded ?? 0}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-right">
-                        <span className={zeroStock ? 'text-red-600' : 'text-gray-900'}>{closing}</span>
+                      <td className="px-4 py-3 text-xs text-gray-700">{formatBloodBagQty(s.openingStock)}</td>
+                      <td className="px-4 py-3 text-xs text-gray-700">{formatBloodBagQty(s.quantityReceived)}</td>
+                      <td className="px-4 py-3 text-xs text-gray-700">{formatBloodBagQty(s.quantityIssued)}</td>
+                      <td className="px-4 py-3 text-xs text-gray-700">{formatBloodBagQty(s.quantityDamaged)}</td>
+                      <td className="px-4 py-3 text-xs text-gray-700">{formatBloodBagQty(s.quantityDiscarded)}</td>
+                      <td className="px-4 py-3 text-xs font-bold">
+                        <span className={zeroStock ? 'text-red-600' : 'text-gray-900'}>{formatBloodBagQty(closing)}</span>
                       </td>
                       <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
                     </tr>

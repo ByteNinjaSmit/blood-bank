@@ -20,6 +20,7 @@ export interface DonationDto {
   donor: string;
   donorName?: string;
   donationType: string;
+  typeOfBag?: string;
   collectedAt: string;
   bloodGroup: string;
   rhFactor: string;
@@ -91,6 +92,7 @@ export function createDonationRepo(): DonationRepo {
                   questionnaireFlags: input.questionnaireFlags
                     ? new Map(Object.entries(input.questionnaireFlags))
                     : undefined,
+                  typeOfBag: input.typeOfBag || 'SB',
                   notes: input.notes,
                   createdBy: actor,
                   updatedBy: actor,
@@ -168,91 +170,89 @@ export function createDonationRepo(): DonationRepo {
           await session.endSession();
         }
       } catch (err: any) {
-        if (err.code === 20 || err.message?.includes('replica set member') || err.message?.includes('transactions')) {
-          const [donation] = await DonationModel.create(
-            [
-              {
-                donationId: donationPublicId,
-                donor: donorObjId,
-                donationType: input.donationType,
-                collectedAt: input.collectedAt,
-                campId,
-                phlebotomistId,
-                medicalExam: input.medicalExam,
-                donorFitness: input.donorFitness,
-                questionnaireFlags: input.questionnaireFlags
-                  ? new Map(Object.entries(input.questionnaireFlags))
-                  : undefined,
-                notes: input.notes,
-                createdBy: actor,
-                updatedBy: actor,
-              },
-            ]
-          );
-
-          const unitDocs = await BloodUnitModel.insertMany(
-            units.map((u) => ({
-              unitId: u.unitId,
-              productCode: u.productCode,
+        const [donation] = await DonationModel.create(
+          [
+            {
               donationId: donationPublicId,
-              componentType: u.componentType,
-              aboGroup: input.bloodGroup,
-              rhFactor: input.rhFactor,
-              volumeMl: u.volumeMl,
-              collectedAt: u.collectedAt,
-              expiresAt: u.expiresAt,
-              status: 'COLLECTED',
-              statusHistory: [
-                {
-                  to: 'COLLECTED',
-                  event: 'CREATE',
-                  actor,
-                  at: new Date(),
-                },
-              ],
+              donor: donorObjId,
+              donationType: input.donationType,
+              collectedAt: input.collectedAt,
               campId,
+              phlebotomistId,
+              medicalExam: input.medicalExam,
+              donorFitness: input.donorFitness,
+              questionnaireFlags: input.questionnaireFlags
+                ? new Map(Object.entries(input.questionnaireFlags))
+                : undefined,
+              typeOfBag: input.typeOfBag || 'SB',
+              notes: input.notes,
               createdBy: actor,
               updatedBy: actor,
-            })),
-          );
+            },
+          ]
+        );
 
-          const [tti] = await TtiResultModel.create(
-            [
-              {
-                donationId: donationPublicId,
-                aboGroupConfirmed: input.bloodGroup,
-                rhFactorConfirmed: input.rhFactor,
-                tests: [],
-                releaseDecision: 'pending',
-                createdBy: actor,
-                updatedBy: actor,
-              },
-            ]
-          );
-
-          return {
-            id: donation!._id.toString(),
+        const unitDocs = await BloodUnitModel.insertMany(
+          units.map((u) => ({
+            unitId: u.unitId,
+            productCode: u.productCode,
             donationId: donationPublicId,
-            donor: input.donor,
-            donationType: input.donationType,
-            collectedAt: input.collectedAt.toISOString(),
-            bloodGroup: input.bloodGroup,
+            componentType: u.componentType,
+            aboGroup: input.bloodGroup,
             rhFactor: input.rhFactor,
-            unitCount: unitDocs.length,
-            createdAt: (donation as unknown as { createdAt: Date }).createdAt.toISOString(),
-            updatedAt: (donation as unknown as { updatedAt: Date }).updatedAt.toISOString(),
-            units: unitDocs.map((u) => ({
-              unitId: u.unitId,
-              componentType: u.componentType,
-              volumeMl: u.volumeMl,
-              expiresAt: u.expiresAt.toISOString(),
-              status: u.status,
-            })),
-            ttiResultId: tti!._id.toString(),
-            ttiReleaseDecision: 'pending',
-          };
-        }
-        throw err;
+            volumeMl: u.volumeMl,
+            collectedAt: u.collectedAt,
+            expiresAt: u.expiresAt,
+            status: 'COLLECTED',
+            statusHistory: [
+              {
+                to: 'COLLECTED',
+                event: 'CREATE',
+                actor,
+                at: new Date(),
+              },
+            ],
+            campId,
+            createdBy: actor,
+            updatedBy: actor,
+          })),
+        );
+
+        const [tti] = await TtiResultModel.create(
+          [
+            {
+              donationId: donationPublicId,
+              aboGroupConfirmed: input.bloodGroup,
+              rhFactorConfirmed: input.rhFactor,
+              tests: [],
+              releaseDecision: 'pending',
+              createdBy: actor,
+              updatedBy: actor,
+            },
+          ]
+        );
+
+        return {
+          id: donation!._id.toString(),
+          donationId: donationPublicId,
+          donor: input.donor,
+          donationType: input.donationType,
+          collectedAt: input.collectedAt.toISOString(),
+          bloodGroup: input.bloodGroup,
+          rhFactor: input.rhFactor,
+          unitCount: unitDocs.length,
+          createdAt: (donation as unknown as { createdAt: Date }).createdAt.toISOString(),
+          updatedAt: (donation as unknown as { updatedAt: Date }).updatedAt.toISOString(),
+          units: unitDocs.map((u) => ({
+            unitId: u.unitId,
+            componentType: u.componentType,
+            volumeMl: u.volumeMl,
+            expiresAt: u.expiresAt.toISOString(),
+            status: u.status,
+          })),
+          ttiResultId: tti!._id.toString(),
+          ttiReleaseDecision: 'pending',
+        };
       }
     },
 
@@ -276,6 +276,7 @@ export function createDonationRepo(): DonationRepo {
           ? `${donorDoc.name.firstName ?? ''} ${donorDoc.name.lastName ?? ''}`.trim()
           : undefined,
         donationType: doc.donationType,
+        typeOfBag: doc.typeOfBag,
         collectedAt: doc.collectedAt.toISOString(),
         bloodGroup: tti?.aboGroupConfirmed ?? '',
         rhFactor: tti?.rhFactorConfirmed ?? '',
@@ -354,6 +355,7 @@ export function createDonationRepo(): DonationRepo {
               ? `${donorDoc.name.firstName ?? ''} ${donorDoc.name.lastName ?? ''}`.trim()
               : undefined,
             donationType: d.donationType,
+            typeOfBag: d.typeOfBag,
             collectedAt: d.collectedAt.toISOString(),
             bloodGroup: tti?.aboGroupConfirmed ?? '',
             rhFactor: tti?.rhFactorConfirmed ?? '',

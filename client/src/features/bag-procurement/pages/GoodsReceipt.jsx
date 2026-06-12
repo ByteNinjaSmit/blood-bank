@@ -29,7 +29,7 @@ function StatusBadge({ status }) {
 function GRNDrawer({ onClose, pos }) {
   const [poId, setPoId] = useState('');
   const [invoiceNo, setInvoiceNo] = useState('');
-  const [invoiceDate, setInvoiceDate] = useState('');
+  const [billDate, setBillDate] = useState('');
   const [receivedDate, setReceivedDate] = useState('');
   const [taxableAmount, setTaxableAmount] = useState('');
   const [cgst, setCgst] = useState('');
@@ -44,12 +44,28 @@ function GRNDrawer({ onClose, pos }) {
 
   const netAmount = Number(taxableAmount || 0) + Number(cgst || 0) + Number(sgst || 0) + Number(igst || 0);
 
+  const handlePoChange = (e) => {
+    const selectedPoId = e.target.value;
+    setPoId(selectedPoId);
+    if (!selectedPoId) {
+      setInvoiceNo('');
+      setBillDate('');
+      return;
+    }
+    const selectedPo = pos.find((p) => p._id === selectedPoId || p.id === selectedPoId);
+    if (selectedPo) {
+      if (selectedPo.invoiceNo) setInvoiceNo(selectedPo.invoiceNo);
+      if (selectedPo.billDate) setBillDate(selectedPo.billDate.split('T')[0]);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     createGRN.mutateAsync({
-      purchaseOrderId: poId,
+      poId,
+      vendorName: pos.find(p => p._id === poId || p.id === poId)?.vendorName,
       invoiceNo,
-      invoiceDate,
+      billDate,
       receivedDate,
       taxableAmount: Number(taxableAmount),
       cgst: Number(cgst),
@@ -83,10 +99,10 @@ function GRNDrawer({ onClose, pos }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Purchase Order *</label>
-              <select required value={poId} onChange={(e) => setPoId(e.target.value)} className={`${fieldClass} bg-white`}>
+              <select required value={poId} onChange={handlePoChange} className={`${fieldClass} bg-white`}>
                 <option value="">Select PO...</option>
-                {(pos ?? []).filter((p) => p.status === 'APPROVED').map((p) => (
-                  <option key={p._id} value={p._id}>{p.poNumber} — {p.vendor?.vendorName}</option>
+                {(pos ?? []).filter((p) => p.status !== 'CANCELLED' && p.status !== 'REJECTED').map((p) => (
+                  <option key={p._id} value={p._id}>{p.poNumber} — {p.vendorName ?? 'No Vendor'}</option>
                 ))}
               </select>
             </div>
@@ -95,8 +111,8 @@ function GRNDrawer({ onClose, pos }) {
               <input required value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className={fieldClass} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Invoice Date</label>
-              <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} className={fieldClass} />
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bill Date</label>
+              <input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} className={fieldClass} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Received Date</label>
@@ -209,8 +225,8 @@ export default function GoodsReceipt() {
   const { data: poData } = usePOList({});
   const acceptGRN = useAcceptGRN();
 
-  const grns = data?.goodsReceipts ?? data ?? [];
-  const pos  = poData?.purchaseOrders ?? poData ?? [];
+  const grns = data?.items ?? data?.goodsReceipts ?? (Array.isArray(data) ? data : []);
+  const pos = poData?.items ?? poData?.purchaseOrders ?? (Array.isArray(poData) ? poData : []);
 
   const fmtDate  = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   const fmtMoney = (n) => n != null ? `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
@@ -255,7 +271,7 @@ export default function GoodsReceipt() {
                   <tr key={g._id} className="hover:bg-orange-50/30 transition-colors">
                     <td className="px-4 py-3 text-sm font-mono font-medium text-gray-900">{g.grnNumber}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{g.invoiceNo}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{g.purchaseOrder?.vendor?.vendorName ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{g.vendorName ?? g.purchaseOrder?.vendorName ?? '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(g.receivedDate)}</td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-800">{fmtMoney(g.netAmount)}</td>
                     <td className="px-4 py-3"><StatusBadge status={g.status} /></td>

@@ -15,7 +15,8 @@ export const ModuleArray = [
   "Site",
   "Hospital",
   "MIS",
-  "Volunteer"
+  "Volunteer",
+  "Bag Procurement"
 ];
 
 export const RoleArray = [
@@ -32,6 +33,8 @@ export const checkAccess = (user, name, access) => {
 
   const valid = ["view", "create", "update", "delete"];
   if (!valid.includes(access)) return false;
+
+  if (user.role === 'admin' || user.role === 'system-admin' || user.role === 'bbo') return true;
 
   const perms = Array.isArray(user.permissions) ? user.permissions : [];
   const target = String(name).trim().toLowerCase();

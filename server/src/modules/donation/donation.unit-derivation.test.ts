@@ -1,27 +1,28 @@
+
 import { describe, it, expect } from 'vitest';
 import { deriveUnits } from './donation.unit-derivation';
 
 const COLLECTED = new Date('2026-05-30T00:00:00Z');
 
 describe('unit derivation defaults', () => {
-  it('whole blood produces PRBC + FFP + platelet concentrate', () => {
+  it('whole blood produces WHOLE_BLOOD', () => {
     const units = deriveUnits({
       donationId: 'D-001',
       donationType: 'WHOLE_BLOOD',
       collectedAt: COLLECTED,
     });
-    expect(units.map((u) => u.componentType)).toEqual(['PRBC', 'FFP', 'PLATELET_CONCENTRATE']);
+    expect(units.map((u) => u.componentType)).toEqual(['WHOLE_BLOOD']);
     expect(units.every((u) => u.unitId.startsWith('D-001-'))).toBe(true);
   });
 
-  it('PRBC expires 42 days after collection', () => {
-    const [prbc] = deriveUnits({
+  it('WHOLE_BLOOD expires 35 days after collection', () => {
+    const [wb] = deriveUnits({
       donationId: 'D-001',
       donationType: 'WHOLE_BLOOD',
       collectedAt: COLLECTED,
     });
-    const diffDays = (prbc!.expiresAt.getTime() - COLLECTED.getTime()) / (1000 * 60 * 60 * 24);
-    expect(diffDays).toBe(42);
+    const diffDays = (wb!.expiresAt.getTime() - COLLECTED.getTime()) / (1000 * 60 * 60 * 24);
+    expect(diffDays).toBe(35);
   });
 
   it('plateletpheresis produces 1 SDP unit', () => {

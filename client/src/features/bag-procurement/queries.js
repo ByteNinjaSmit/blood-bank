@@ -214,6 +214,14 @@ export function useCreateBagInspection() {
   });
 }
 
+export function useUpdateBagInspectionReport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => bagProcurementApi.bagInspection.updateReport(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bag-inspection', 'list'] }),
+  });
+}
+
 // ─── Bag Issue ────────────────────────────────────────────────────────────────
 export function useBagIssueList(filters) {
   return useQuery({

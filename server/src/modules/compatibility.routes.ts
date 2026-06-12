@@ -9,6 +9,7 @@ import { createUnitRepo } from '@/modules/unit/unit.repository';
 import { createDeferralRepo } from '@/modules/deferral/deferral.repository';
 import { createDonationRepo } from '@/modules/donation/donation.repository';
 import { createTtiService } from '@/modules/tti/tti.service';
+import { invalidate } from '@/core/cache';
 
 const router = Router();
 
@@ -63,6 +64,13 @@ router.get('/inventory', authenticate, async (req, res, next) => {
 
     const total = await BloodUnitModel.countDocuments(unitFilter);
     const units = await BloodUnitModel.find(unitFilter)
+      .populate({
+        path: 'reservedFor',
+        populate: [
+          { path: 'hospitalId', select: 'name' },
+          { path: 'patientId', select: 'name dob sex' }
+        ]
+      })
       .sort({ [sortField]: sortDir })
       .skip(skipNum)
       .limit(limitNum)
@@ -79,6 +87,33 @@ router.get('/inventory', authenticate, async (req, res, next) => {
       else if (u.componentType === 'PLATELET_CONCENTRATE') legacyType = 'Platelet';
       else if (u.componentType === 'CRYOPRECIPITATE') legacyType = 'Cryo';
 
+      let hospitalName = '—';
+      let patientName = '—';
+      let patientAge = '';
+      let patientSex = '—';
+
+      if (u.reservedFor && typeof u.reservedFor === 'object') {
+        const reqDoc = u.reservedFor as any;
+        if (reqDoc.hospitalId && typeof reqDoc.hospitalId === 'object') {
+          hospitalName = reqDoc.hospitalId.name || '—';
+        }
+        if (reqDoc.patientId && typeof reqDoc.patientId === 'object') {
+          const patientDoc = reqDoc.patientId;
+          patientName = patientDoc.name || '—';
+          patientSex = patientDoc.sex || '—';
+          if (patientDoc.dob) {
+            const birthDate = new Date(patientDoc.dob);
+            const today = new Date();
+            let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+              calculatedAge--;
+            }
+            patientAge = String(calculatedAge);
+          }
+        }
+      }
+
       return {
         _id: u._id.toString(),
         bagNo: u.donationId,
@@ -93,6 +128,13 @@ router.get('/inventory', authenticate, async (req, res, next) => {
           expiryDate: u.expiresAt ? u.expiresAt.toISOString() : '',
         },
         status: legacyStatus,
+        reservedUntil: u.reservedUntil ? u.reservedUntil.toISOString() : undefined,
+        hospital: {
+          name: hospitalName,
+        },
+        reservedPatientName: patientName,
+        reservedPatientAge: patientAge,
+        reservedPatientSex: patientSex,
       };
     });
 
@@ -106,6 +148,45 @@ router.get('/inventory', authenticate, async (req, res, next) => {
         limit: limitNum,
       }
     });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// POST /inventory/unreserve
+router.post('/inventory/unreserve', authenticate, async (req, res, next) => {
+  try {
+    const { inventoryIds, userId } = req.body;
+    const actorId = (req.user as any)?.id || userId;
+
+    if (!Array.isArray(inventoryIds) || inventoryIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'inventoryIds must be a non-empty array' });
+    }
+
+    const unitRepo = createUnitRepo();
+
+    for (const id of inventoryIds) {
+      let unit = await BloodUnitModel.findById(id);
+      if (!unit) {
+        unit = await BloodUnitModel.findOne({ unitId: id });
+      }
+
+      if (unit) {
+        await unitRepo.applyEvent({
+          unitId: unit.unitId,
+          event: 'UNRESERVE',
+          actorId,
+          reason: 'Manual unreserve from inventory screen',
+          set: {
+            reservedFor: null,
+            reservedUntil: null,
+            reservedAt: null,
+          } as any,
+        });
+      }
+    }
+
+    res.json({ success: true, message: 'Blood units successfully unreserved.' });
   } catch (e) {
     next(e);
   }
@@ -242,9 +323,17 @@ router.get('/serology/bags', authenticate, async (req, res, next) => {
   try {
     const { page, limit, search, order } = req.query as any;
 
-    const ttiFilter: any = { releaseDecision: 'pending' };
+    const separatedDonationIds = await BloodUnitModel.distinct('donationId', {
+      status: 'QUARANTINE',
+      $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }]
+    });
+
+    const ttiFilter: any = { 
+      releaseDecision: 'pending',
+      donationId: { $in: separatedDonationIds }
+    };
     if (search) {
-      ttiFilter.donationId = new RegExp(search, 'i');
+      ttiFilter.donationId = { $in: separatedDonationIds, $regex: new RegExp(search, 'i') };
     }
 
     const pageNum = parseInt(page) || 1;

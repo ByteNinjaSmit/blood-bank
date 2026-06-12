@@ -51,5 +51,19 @@ router.get(
   requirePermission('unit:read'),
   controllers.select,
 );
+router.post(
+  '/reserve',
+  authenticate,
+  requireRole([
+    'system-admin',
+    'bbo',
+    'medical-officer',
+    'lab-tech-serology',
+    'store-keeper',
+    'issue-counter',
+  ]),
+  requirePermission('unit:reserve'),
+  controllers.reserve,
+);
 
 export default router;

@@ -30,13 +30,7 @@ const SHELF_DAYS: Readonly<Record<ComponentType, number>> = {
  */
 const DEFAULT_TEMPLATES: Readonly<Record<DonationType, ReadonlyArray<UnitTemplate>>> = {
   WHOLE_BLOOD: [
-    { componentType: 'PRBC', volumeMl: 250, shelfLifeDays: SHELF_DAYS.PRBC },
-    { componentType: 'FFP', volumeMl: 200, shelfLifeDays: SHELF_DAYS.FFP },
-    {
-      componentType: 'PLATELET_CONCENTRATE',
-      volumeMl: 50,
-      shelfLifeDays: SHELF_DAYS.PLATELET_CONCENTRATE,
-    },
+    { componentType: 'WHOLE_BLOOD', volumeMl: 350, shelfLifeDays: SHELF_DAYS.WHOLE_BLOOD },
   ],
   PLATELETPHERESIS: [{ componentType: 'SDP', volumeMl: 250, shelfLifeDays: SHELF_DAYS.SDP }],
   PLASMAPHERESIS: [{ componentType: 'FFP', volumeMl: 600, shelfLifeDays: SHELF_DAYS.FFP }],
@@ -49,14 +43,13 @@ const DEFAULT_TEMPLATES: Readonly<Record<DonationType, ReadonlyArray<UnitTemplat
   ],
   DIRECTED: [
     {
-      componentType: 'IRRADIATED_PRBC',
-      volumeMl: 250,
-      shelfLifeDays: SHELF_DAYS.IRRADIATED_PRBC,
+      componentType: 'WHOLE_BLOOD',
+      volumeMl: 350,
+      shelfLifeDays: SHELF_DAYS.WHOLE_BLOOD,
     },
   ],
   REPLACEMENT: [
-    { componentType: 'PRBC', volumeMl: 250, shelfLifeDays: SHELF_DAYS.PRBC },
-    { componentType: 'FFP', volumeMl: 200, shelfLifeDays: SHELF_DAYS.FFP },
+    { componentType: 'WHOLE_BLOOD', volumeMl: 350, shelfLifeDays: SHELF_DAYS.WHOLE_BLOOD },
   ],
 };
 

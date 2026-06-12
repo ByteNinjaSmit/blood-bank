@@ -11,7 +11,7 @@ router.get('/list', authenticate, async (req, res, next) => {
   try {
     const { page, limit, type, status, expiryBefore, fromDate, toDate, search } = req.query as any;
 
-    const unitFilter: any = { deletedAt: null };
+    const unitFilter: any = { deletedAt: null, status: { $ne: 'COLLECTED' } };
     if (type) {
       if (type === 'RBC') unitFilter.componentType = 'PRBC';
       else if (type === 'Platelet') unitFilter.componentType = 'PLATELET_CONCENTRATE';
@@ -68,7 +68,11 @@ router.get('/list', authenticate, async (req, res, next) => {
       .lean();
 
     const donationIds = donations.map(d => d.donationId);
-    const allUnits = await BloodUnitModel.find({ donationId: { $in: donationIds }, deletedAt: null }).lean();
+    const allUnits = await BloodUnitModel.find({ 
+      donationId: { $in: donationIds }, 
+      deletedAt: null,
+      status: { $ne: 'COLLECTED' }
+    }).lean();
     const ttiResults = await TtiResultModel.find({ donationId: { $in: donationIds } }).lean();
     
     const unitsMap: Record<string, typeof allUnits> = {};
@@ -164,8 +168,8 @@ router.get('/bags-to-separate', authenticate, async (req, res, next) => {
       const units = unitsMap[d.donationId] || [];
       const tti = ttiMap.get(d.donationId);
       
-      const wbUnit = units.find(u => u.componentType === 'WHOLE_BLOOD');
-      if (!wbUnit && units.length > 0) {
+      const hasCollectedUnits = units.some(u => u.status === 'COLLECTED');
+      if (!hasCollectedUnits) {
         return null;
       }
 
@@ -178,7 +182,7 @@ router.get('/bags-to-separate', authenticate, async (req, res, next) => {
         bloodGroup: abo,
         rh: rh === 'POSITIVE' ? 'Positive' : 'Negative',
         collectionDate: d.collectedAt.toISOString(),
-        typeOfBag: 'SINGLE',
+        typeOfBag: (d as any).typeOfBag || 'SB',
         volumeGmMl: d.medicalExam?.volumeMl || 350,
         components: units.map(u => ({
           componentType: u.componentType,
@@ -204,10 +208,14 @@ router.post('/separate', authenticate, async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
     
-    const donation = await DonationModel.findOne({ donationId, deletedAt: null }).lean();
+    let donation = await DonationModel.findOne({ donationId, deletedAt: null }).lean();
+    if (!donation && Types.ObjectId.isValid(donationId)) {
+      donation = await DonationModel.findOne({ _id: donationId, deletedAt: null }).lean();
+    }
     if (!donation) {
       return res.status(404).json({ success: false, message: 'Donation not found' });
     }
+    const resolvedDonationId = donation.donationId;
 
     let mappedType: any = componentType;
     if (componentType === 'RBC') mappedType = 'PRBC';
@@ -224,7 +232,7 @@ router.post('/separate', authenticate, async (req, res, next) => {
     };
     const productCode = codes[mappedType] || mappedType;
 
-    const existing = await BloodUnitModel.findOne({ donationId, componentType: mappedType, deletedAt: null });
+    const existing = await BloodUnitModel.findOne({ donationId: resolvedDonationId, componentType: mappedType, deletedAt: null });
     if (existing) {
       return res.status(400).json({ success: false, message: 'Component already separated' });
     }
@@ -241,21 +249,21 @@ router.post('/separate', authenticate, async (req, res, next) => {
     expiresAt.setDate(expiresAt.getDate() + shelfDays);
 
     await BloodUnitModel.updateOne(
-      { donationId, componentType: 'WHOLE_BLOOD', deletedAt: null },
+      { donationId: resolvedDonationId, componentType: 'WHOLE_BLOOD', deletedAt: null },
       { deletedAt: new Date(), deletedBy: new Types.ObjectId(actorId) }
     );
 
-    const refUnit = await BloodUnitModel.findOne({ donationId, deletedAt: null }).lean();
+    const refUnit = await BloodUnitModel.findOne({ donationId: resolvedDonationId, deletedAt: null }).lean();
     const aboGroup = refUnit?.aboGroup || 'O';
     const rhFactor = refUnit?.rhFactor || 'POSITIVE';
 
-    const unitCount = await BloodUnitModel.countDocuments({ donationId });
-    const unitId = `${donationId}-${productCode}-${unitCount + 1}`;
+    const unitCount = await BloodUnitModel.countDocuments({ donationId: resolvedDonationId });
+    const unitId = `${resolvedDonationId}-${productCode}-${unitCount + 1}`;
 
     const newUnit = await BloodUnitModel.create({
       unitId,
       productCode,
-      donationId,
+      donationId: resolvedDonationId,
       componentType: mappedType as any,
       aboGroup: aboGroup as any,
       rhFactor: rhFactor as any,
@@ -290,9 +298,18 @@ router.post('/separation-completed', authenticate, async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
     const actor = new Types.ObjectId(actorId);
+
+    let donation = await DonationModel.findOne({ donationId, deletedAt: null }).lean();
+    if (!donation && Types.ObjectId.isValid(donationId)) {
+      donation = await DonationModel.findOne({ _id: donationId, deletedAt: null }).lean();
+    }
+    if (!donation) {
+      return res.status(404).json({ success: false, message: 'Donation not found' });
+    }
+    const resolvedDonationId = donation.donationId;
     
     await BloodUnitModel.updateMany(
-      { donationId, status: 'COLLECTED', deletedAt: null },
+      { donationId: resolvedDonationId, status: 'COLLECTED', deletedAt: null },
       {
         status: 'QUARANTINE',
         updatedBy: actor,

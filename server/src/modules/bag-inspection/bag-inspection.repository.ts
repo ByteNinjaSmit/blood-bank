@@ -27,6 +27,17 @@ export interface BagInspectionDto {
   observation?: string;
   decision: string;
   rejectionReason?: string;
+  testingType?: 'EMPTY' | 'PCV' | 'OTHER';
+  testingStatus?: 'SENT' | 'REPORT_RECEIVED';
+  sentDate?: string;
+  reportDate?: string;
+  testingLab?: string;
+  bagNo?: string;
+  segmentNo?: string;
+  bloodGroup?: string;
+  testResult?: string;
+  factorVIII?: number;
+  fibrinogen?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -47,6 +58,17 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     observation: doc.observation as string | undefined,
     decision: doc.decision as string,
     rejectionReason: doc.rejectionReason as string | undefined,
+    testingType: doc.testingType as 'EMPTY' | 'PCV' | 'OTHER' | undefined,
+    testingStatus: doc.testingStatus as 'SENT' | 'REPORT_RECEIVED' | undefined,
+    sentDate: doc.sentDate ? (doc.sentDate as Date).toISOString() : undefined,
+    reportDate: doc.reportDate ? (doc.reportDate as Date).toISOString() : undefined,
+    testingLab: doc.testingLab as string | undefined,
+    bagNo: doc.bagNo as string | undefined,
+    segmentNo: doc.segmentNo as string | undefined,
+    bloodGroup: doc.bloodGroup as string | undefined,
+    testResult: doc.testResult as string | undefined,
+    factorVIII: doc.factorVIII as number | undefined,
+    fibrinogen: doc.fibrinogen as number | undefined,
     createdAt: doc.createdAt ? doc.createdAt.toISOString() : '',
     updatedAt: doc.updatedAt ? doc.updatedAt.toISOString() : '',
   };
@@ -69,8 +91,22 @@ export interface BagInspectionRepo {
     observation?: string;
     decision: string;
     rejectionReason?: string;
+    testingType?: 'EMPTY' | 'PCV' | 'OTHER';
+    testingStatus?: 'SENT' | 'REPORT_RECEIVED';
+    sentDate?: Date;
+    testingLab?: string;
     actorId: string;
   }): Promise<BagInspectionDto>;
+  update(id: string, patch: Partial<{
+    testingStatus: string;
+    reportDate: Date;
+    bagNo: string;
+    segmentNo: string;
+    bloodGroup: string;
+    testResult: string;
+    factorVIII: number;
+    fibrinogen: number;
+  }>, actorId: string): Promise<BagInspectionDto | null>;
 }
 
 export function createBagInspectionRepo(): BagInspectionRepo {
@@ -112,10 +148,25 @@ export function createBagInspectionRepo(): BagInspectionRepo {
         observation: input.observation,
         decision: input.decision,
         rejectionReason: input.rejectionReason,
+        testingType: input.testingType,
+        testingStatus: input.testingStatus,
+        sentDate: input.sentDate,
+        testingLab: input.testingLab,
         createdBy: actor,
         updatedBy: actor,
       });
       return toDto(doc.toObject() as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+    },
+
+    async update(id, patch, actorId) {
+      const actor = new Types.ObjectId(actorId);
+      const doc = await BagInspectionModel.findOneAndUpdate(
+        { _id: new Types.ObjectId(id), deletedAt: null },
+        { $set: { ...patch, updatedBy: actor } },
+        { new: true },
+      ).lean();
+      if (!doc) return null;
+      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
     },
   };
 }

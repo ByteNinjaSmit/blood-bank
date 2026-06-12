@@ -52,9 +52,6 @@ export function createPOService(deps: { pos: PORepo; vendors: VendorRepo }): POS
     async create(input, actorId) {
       const vendor = await deps.vendors.findById(input.vendorId);
       if (!vendor) throw new NotFoundError('Vendor', input.vendorId);
-      if (vendor.approvalStatus !== 'APPROVED') {
-        throw new ConflictError(`Vendor is not approved (status: ${vendor.approvalStatus})`);
-      }
 
       const poNumber = generatePONumber();
       const totalAmountRs = calcTotal(input.lineItems);
@@ -65,6 +62,9 @@ export function createPOService(deps: { pos: PORepo; vendors: VendorRepo }): POS
         lineItems: input.lineItems,
         totalAmountRs,
         expectedDelivery: input.expectedDelivery,
+        manufacturer: input.manufacturer,
+        invoiceNo: input.invoiceNo,
+        billDate: input.billDate,
         purchaseOfficerId: input.purchaseOfficerId,
         notes: input.notes,
         actorId,
@@ -79,12 +79,15 @@ export function createPOService(deps: { pos: PORepo; vendors: VendorRepo }): POS
       if (po.approvalStatus !== 'DRAFT') {
         throw new ConflictError(`PO can only be edited in DRAFT status (current: ${po.approvalStatus})`);
       }
-      const patch: Partial<{ lineItems: LineItemDto[]; totalAmountRs: number; expectedDelivery: Date; notes: string }> = {};
+      const patch: Partial<{ lineItems: LineItemDto[]; totalAmountRs: number; expectedDelivery: Date; manufacturer: string; invoiceNo: string; billDate: Date; notes: string }> = {};
       if (input.lineItems) {
         patch.lineItems = input.lineItems;
         patch.totalAmountRs = calcTotal(input.lineItems);
       }
       if (input.expectedDelivery) patch.expectedDelivery = input.expectedDelivery;
+      if (input.manufacturer !== undefined) patch.manufacturer = input.manufacturer;
+      if (input.invoiceNo !== undefined) patch.invoiceNo = input.invoiceNo;
+      if (input.billDate !== undefined) patch.billDate = input.billDate;
       if (input.notes !== undefined) patch.notes = input.notes;
       const updated = await deps.pos.update(id, patch, actorId);
       if (!updated) throw new NotFoundError('PurchaseOrder', id);

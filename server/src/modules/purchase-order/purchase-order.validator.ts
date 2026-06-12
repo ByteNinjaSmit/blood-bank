@@ -26,6 +26,9 @@ export const CreatePOBody = z.object({
   vendorId: z.string().regex(OBJECT_ID, 'Invalid vendorId'),
   lineItems: z.array(LineItemSchema).min(1, 'At least one line item required'),
   expectedDelivery: z.coerce.date().optional(),
+  manufacturer: z.string().trim().max(200).optional(),
+  invoiceNo: z.string().trim().max(100).optional(),
+  billDate: z.coerce.date().optional(),
   purchaseOfficerId: z.string().regex(OBJECT_ID, 'Invalid purchaseOfficerId'),
   notes: z.string().trim().max(2000).optional(),
 });
@@ -33,6 +36,9 @@ export const CreatePOBody = z.object({
 export const UpdatePOBody = z.object({
   lineItems: z.array(LineItemSchema).min(1).optional(),
   expectedDelivery: z.coerce.date().optional(),
+  manufacturer: z.string().trim().max(200).optional(),
+  invoiceNo: z.string().trim().max(100).optional(),
+  billDate: z.coerce.date().optional(),
   notes: z.string().trim().max(2000).optional(),
 });
 

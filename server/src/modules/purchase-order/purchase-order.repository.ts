@@ -20,6 +20,9 @@ export interface PODto {
   lineItems: LineItemDto[];
   totalAmountRs?: number;
   expectedDelivery?: string;
+  manufacturer?: string;
+  invoiceNo?: string;
+  billDate?: string;
   purchaseOfficerId: string;
   approvalStatus: string;
   approvedById?: string;
@@ -39,6 +42,9 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     lineItems: (doc.lineItems as LineItemDto[]) ?? [],
     totalAmountRs: doc.totalAmountRs as number | undefined,
     expectedDelivery: doc.expectedDelivery ? (doc.expectedDelivery as Date).toISOString() : undefined,
+    manufacturer: doc.manufacturer as string | undefined,
+    invoiceNo: doc.invoiceNo as string | undefined,
+    billDate: doc.billDate ? (doc.billDate as Date).toISOString() : undefined,
     purchaseOfficerId: (doc.purchaseOfficerId as Types.ObjectId).toString(),
     approvalStatus: doc.approvalStatus as string,
     approvedById: doc.approvedById ? (doc.approvedById as Types.ObjectId).toString() : undefined,
@@ -60,6 +66,9 @@ export interface PORepo {
     lineItems: LineItemDto[];
     totalAmountRs: number;
     expectedDelivery?: Date;
+    manufacturer?: string;
+    invoiceNo?: string;
+    billDate?: Date;
     purchaseOfficerId: string;
     notes?: string;
     actorId: string;
@@ -68,6 +77,9 @@ export interface PORepo {
     lineItems: LineItemDto[];
     totalAmountRs: number;
     expectedDelivery: Date;
+    manufacturer: string;
+    invoiceNo: string;
+    billDate: Date;
     notes: string;
   }>, actorId: string): Promise<PODto | null>;
   updateStatus(id: string, patch: {
@@ -109,6 +121,9 @@ export function createPORepo(): PORepo {
         lineItems: input.lineItems,
         totalAmountRs: input.totalAmountRs,
         expectedDelivery: input.expectedDelivery,
+        manufacturer: input.manufacturer,
+        invoiceNo: input.invoiceNo,
+        billDate: input.billDate,
         purchaseOfficerId: new Types.ObjectId(input.purchaseOfficerId),
         approvalStatus: 'DRAFT',
         notes: input.notes,

@@ -69,9 +69,9 @@ export function createGRNService(deps: {
       const created = await deps.grns.create({
         grnNumber,
         poId: input.poId,
-        vendorId: input.vendorId,
-        invoiceNumber: input.invoiceNumber,
-        invoiceDate: input.invoiceDate,
+        vendorName: input.vendorName,
+        invoiceNo: input.invoiceNo,
+        billDate: input.billDate,
         transportDetails: input.transportDetails,
         receivedDate: input.receivedDate,
         receivedById: input.receivedById,
@@ -94,7 +94,7 @@ export function createGRNService(deps: {
 
       // Determine the vendor's manufacturer from the PO → vendor chain (best effort)
       const po = await deps.pos.findById(grn.poId);
-      const manufacturer = po?.vendorId ?? grn.vendorId;
+      const manufacturer = po?.vendorName ?? grn.vendorName;
 
       // Upsert BagStock records for each accepted batch line
       for (const line of grn.batchLines) {

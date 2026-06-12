@@ -50,6 +50,7 @@ const DonationSchema = new Schema(
     medicalExam: MedicalExamSchema,
     donorFitness: DonorFitnessSchema,
     questionnaireFlags: { type: Map, of: Boolean },
+    typeOfBag: { type: String, enum: ['SB', 'DB', 'TB', 'QB'], default: 'SB' },
     notes: { type: String, trim: true },
     deletedAt: { type: Date, default: null, index: true },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },

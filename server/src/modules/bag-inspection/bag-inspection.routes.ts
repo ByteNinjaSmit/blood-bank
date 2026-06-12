@@ -34,4 +34,12 @@ router.post(
   controllers.create,
 );
 
+router.patch(
+  '/:id/report',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'store-keeper', 'qa-manager']),
+  requirePermission('bag-inspection:create'),
+  controllers.updateReport,
+);
+
 export default router;

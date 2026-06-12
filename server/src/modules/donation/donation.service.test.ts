@@ -93,18 +93,16 @@ function mockDonations(): DonationRepo {
 }
 
 describe('donation-service.register', () => {
-  it('registers a fit whole-blood donation and derives 3 units (PRBC+FFP+PC)', async () => {
+  it('registers a fit whole-blood donation and derives 1 WHOLE_BLOOD unit', async () => {
     const svc = createDonationService({
       donations: mockDonations(),
       donors: mockDonors(),
       deferrals: mockDeferrals(),
     });
     const result = await svc.register(baseInput(), 'actor-id');
-    expect(result.units).toHaveLength(3);
+    expect(result.units).toHaveLength(1);
     expect(result.units.map((u) => u.componentType).sort()).toEqual([
-      'FFP',
-      'PLATELET_CONCENTRATE',
-      'PRBC',
+      'WHOLE_BLOOD',
     ]);
     expect(result.ttiReleaseDecision).toBe('pending');
   });
@@ -152,7 +150,7 @@ describe('donation-service.register', () => {
       }),
       'actor-id',
     );
-    expect(result.units).toHaveLength(3);
+    expect(result.units).toHaveLength(1);
   });
 
   it('registers a fit donation even on too-soon repeat WB donation', async () => {
@@ -167,7 +165,7 @@ describe('donation-service.register', () => {
       deferrals: mockDeferrals(),
     });
     const result = await svc.register(baseInput(), 'actor-id');
-    expect(result.units).toHaveLength(3);
+    expect(result.units).toHaveLength(1);
   });
 
   it('registers a fit donation even when donor has active permanent deferral', async () => {
@@ -177,6 +175,6 @@ describe('donation-service.register', () => {
       deferrals: mockDeferrals([{ type: 'PERMANENT', reason: 'Anti-HCV reactive' }]),
     });
     const result = await svc.register(baseInput(), 'actor-id');
-    expect(result.units).toHaveLength(3);
+    expect(result.units).toHaveLength(1);
   });
 });

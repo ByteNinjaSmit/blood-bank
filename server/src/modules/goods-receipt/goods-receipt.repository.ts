@@ -27,9 +27,9 @@ export interface GRNDto {
   id: string;
   grnNumber: string;
   poId: string;
-  vendorId: string;
-  invoiceNumber: string;
-  invoiceDate: string;
+  vendorName?: string;
+  invoiceNo: string;
+  billDate: string;
   transportDetails?: string;
   receivedDate: string;
   receivedById: string;
@@ -58,9 +58,9 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     id: doc._id.toString(),
     grnNumber: doc.grnNumber as string,
     poId: (doc.poId as Types.ObjectId).toString(),
-    vendorId: (doc.vendorId as Types.ObjectId).toString(),
-    invoiceNumber: doc.invoiceNumber as string,
-    invoiceDate: (doc.invoiceDate as Date).toISOString(),
+    vendorName: doc.vendorName as string | undefined,
+    invoiceNo: doc.invoiceNo as string,
+    billDate: (doc.billDate as Date).toISOString(),
     transportDetails: doc.transportDetails as string | undefined,
     receivedDate: (doc.receivedDate as Date).toISOString(),
     receivedById: (doc.receivedById as Types.ObjectId).toString(),
@@ -86,9 +86,9 @@ export interface GRNRepo {
   create(doc: {
     grnNumber: string;
     poId: string;
-    vendorId: string;
-    invoiceNumber: string;
-    invoiceDate: Date;
+    vendorName?: string;
+    invoiceNo: string;
+    billDate: Date;
     transportDetails?: string;
     receivedDate: Date;
     receivedById: string;
@@ -105,7 +105,7 @@ export function createGRNRepo(): GRNRepo {
     async list(q) {
       const filter: Record<string, unknown> = { deletedAt: null };
       if (q.poId) filter.poId = new Types.ObjectId(q.poId);
-      if (q.vendorId) filter.vendorId = new Types.ObjectId(q.vendorId);
+      if (q.vendorName) filter.vendorName = new RegExp(q.vendorName, 'i');
       if (q.status) filter.status = q.status;
       if (q.fromDate || q.toDate) {
         const range: Record<string, Date> = {};
@@ -134,9 +134,9 @@ export function createGRNRepo(): GRNRepo {
       const doc = await GoodsReceiptModel.create({
         grnNumber: input.grnNumber,
         poId: new Types.ObjectId(input.poId),
-        vendorId: new Types.ObjectId(input.vendorId),
-        invoiceNumber: input.invoiceNumber,
-        invoiceDate: input.invoiceDate,
+        vendorName: input.vendorName,
+        invoiceNo: input.invoiceNo,
+        billDate: input.billDate,
         transportDetails: input.transportDetails,
         receivedDate: input.receivedDate,
         receivedById: new Types.ObjectId(input.receivedById),

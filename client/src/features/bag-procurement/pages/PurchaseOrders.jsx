@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   usePOList,
@@ -6,22 +6,25 @@ import {
   useSubmitPO,
   useApprovePO,
   useRejectPO,
+  useVendorList,
+  useCreateVendor,
 } from '../queries';
-import { useVendorList } from '../queries';
+import { useAuth } from '@/store/auth';
+import { formatBloodBagQty, calcTotalBags } from '../utils/qtyHelper';
 
 const STATUS_BADGE = {
-  DRAFT:            'bg-gray-100 text-gray-600 border-gray-200',
+  DRAFT: 'bg-gray-100 text-gray-600 border-gray-200',
   PENDING_APPROVAL: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  APPROVED:         'bg-green-50 text-green-700 border-green-200',
-  REJECTED:         'bg-red-50 text-red-700 border-red-200',
-  FULFILLED:        'bg-blue-50 text-blue-700 border-blue-200',
-  CANCELLED:        'bg-gray-100 text-gray-500 border-gray-200',
+  APPROVED: 'bg-green-50 text-green-700 border-green-200',
+  REJECTED: 'bg-red-50 text-red-700 border-red-200',
+  FULFILLED: 'bg-blue-50 text-blue-700 border-blue-200',
+  CANCELLED: 'bg-gray-100 text-gray-500 border-gray-200',
 };
 
 const BAG_TYPES = ['SINGLE', 'DOUBLE', 'TRIPLE', 'QUADRUPLE'];
 const ANTICOAGULANTS = ['CPDA-1', 'CPD', 'ACD', 'SAG-M'];
 
-const EMPTY_LINE = { bagType: 'SINGLE', capacity: '', anticoagulant: 'CPDA-1', quantity: '', unitPrice: '', gstPercent: '' };
+const EMPTY_LINE = { bagType: 'SINGLE', capacity: '', anticoagulant: 'CPDA-1', boxes: '', packets: '', bags: '', unitPrice: '', gstPercent: '' };
 
 function StatusBadge({ status }) {
   return (
@@ -41,59 +44,142 @@ function StatCard({ label, value, color }) {
 }
 
 function PODrawer({ onClose, vendors }) {
-  const [vendorId, setVendorId] = useState('');
+  const { user } = useAuth();
+  const [vendorSearchText, setVendorSearchText] = useState('');
   const [expectedDelivery, setExpectedDelivery] = useState('');
-  const [terms, setTerms] = useState('');
+  const [manufacturer, setManufacturer] = useState('');
+  const [invoiceNo, setInvoiceNo] = useState('');
+  const [billDate, setBillDate] = useState('');
   const [lines, setLines] = useState([{ ...EMPTY_LINE }]);
+
   const createPO = useCreatePO();
+  const createVendor = useCreateVendor();
+  const [previousVendors, setPreviousVendors] = useState([]);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('previous_vendors') || '[]');
+      setPreviousVendors(saved);
+      if (saved.length > 0) {
+        setVendorSearchText(saved[0]);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   const updateLine = (i, k, v) => setLines((ls) => ls.map((l, idx) => idx === i ? { ...l, [k]: v } : l));
   const addLine = () => setLines((ls) => [...ls, { ...EMPTY_LINE }]);
   const removeLine = (i) => setLines((ls) => ls.filter((_, idx) => idx !== i));
 
   const lineTotal = (l) => {
-    const base = Number(l.quantity || 0) * Number(l.unitPrice || 0);
-    const gst  = base * (Number(l.gstPercent || 0) / 100);
+    const totalQty = calcTotalBags(l.boxes, l.packets, l.bags);
+    const base = totalQty * Number(l.unitPrice || 0);
+    const gst = base * (Number(l.gstPercent || 0) / 100);
     return base + gst;
   };
   const grandTotal = lines.reduce((s, l) => s + lineTotal(l), 0);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    createPO.mutateAsync({
-      vendorId,
-      expectedDeliveryDate: expectedDelivery,
-      termsAndConditions: terms,
-      items: lines.map((l) => ({
-        bagType: l.bagType,
-        capacity: Number(l.capacity),
-        anticoagulant: l.anticoagulant,
-        quantityOrdered: Number(l.quantity),
-        unitPrice: Number(l.unitPrice),
-        gstPercent: Number(l.gstPercent),
-      })),
-    }).then(onClose).catch(() => {});
+  const ANTICOAGULANT_MAP = {
+    'CPDA-1': 'CPDA_1',
+    'CPD': 'CPD',
+    'ACD': 'ACD',
+    'SAG-M': 'SAG_MANNITOL',
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const text = vendorSearchText.trim();
+      let matchedVendor = (vendors ?? []).find(
+        (v) => (v.vendorName ?? v.name ?? '').trim().toLowerCase() === text.toLowerCase()
+      );
+
+      let finalVendorId = matchedVendor?._id;
+
+      if (!finalVendorId && text) {
+        const newVendor = await createVendor.mutateAsync({
+          name: text,
+          manufacturer: manufacturer || text,
+          drugLicenseNo: `DL-AUTO-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+          gstNo: `GST-AUTO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+          address: 'Auto-generated for typed vendor',
+          contactPerson: 'N/A',
+          contactPhone: '0000000000',
+          approvalStatus: 'APPROVED'
+        });
+        finalVendorId = newVendor._id ?? newVendor.id;
+      }
+
+      if (text) {
+        const updatedPrev = [text, ...previousVendors.filter(v => v !== text)].slice(0, 10);
+        localStorage.setItem('previous_vendors', JSON.stringify(updatedPrev));
+      }
+
+      await createPO.mutateAsync({
+        poDate: new Date().toISOString(),
+        vendorId: finalVendorId,
+        expectedDelivery: expectedDelivery || undefined,
+        manufacturer: manufacturer || undefined,
+        invoiceNo: invoiceNo || undefined,
+        billDate: billDate || undefined,
+        purchaseOfficerId: user?.id ?? user?._id ?? '000000000000000000000000',
+        lineItems: lines.map((l) => ({
+          bagType: l.bagType,
+          capacityMl: Number(l.capacity) || 350,
+          anticoagulant: ANTICOAGULANT_MAP[l.anticoagulant] ?? l.anticoagulant,
+          quantityOrdered: calcTotalBags(l.boxes, l.packets, l.bags) || Number(l.bags) || 1,
+          unitPriceRs: Number(l.unitPrice) || 0,
+          gstPercent: Number(l.gstPercent) || 0,
+        })),
+      });
+      onClose();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const allVendorNames = Array.from(new Set([
+    ...(vendors ?? []).map(v => v.vendorName ?? v.name).filter(Boolean),
+    ...previousVendors
+  ]));
 
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-white z-50 shadow-2xl flex flex-col">
+      <div className="fixed right-0 top-0 h-full w-full max-w-3xl bg-white z-50 shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b bg-orange-800">
           <h2 className="text-base font-semibold text-white">New Purchase Order</h2>
           <button onClick={onClose} className="text-orange-200 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-3">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Vendor *</label>
-              <select required value={vendorId} onChange={(e) => setVendorId(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
-                <option value="">Select vendor...</option>
-                {(vendors ?? []).map((v) => (
-                  <option key={v._id} value={v._id}>{v.vendorName}</option>
+              <input required type="text" list="vendors-datalist" value={vendorSearchText} onChange={(e) => setVendorSearchText(e.target.value)}
+                placeholder="Type or select vendor..."
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white" />
+              <datalist id="vendors-datalist">
+                {allVendorNames.map((name) => (
+                  <option key={name} value={name} />
                 ))}
-              </select>
+              </datalist>
+              {previousVendors.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1 items-center">
+                  <span className="text-[10px] text-gray-400 font-semibold uppercase">Recommendations:</span>
+                  {previousVendors.slice(0, 3).map((v) => (
+                    <button key={v} type="button" onClick={() => setVendorSearchText(v)}
+                      className="px-2 py-0.5 bg-orange-50 hover:bg-orange-100 text-orange-800 text-[10px] rounded-full border border-orange-200 transition-colors">
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Manufacturer</label>
+              <input value={manufacturer} onChange={(e) => setManufacturer(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="e.g. Terumo Penpol" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Expected Delivery</label>
@@ -101,8 +187,13 @@ function PODrawer({ onClose, vendors }) {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Terms &amp; Conditions</label>
-              <input value={terms} onChange={(e) => setTerms(e.target.value)}
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Invoice No</label>
+              <input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="INV-1234" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bill Date</label>
+              <input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
           </div>
@@ -110,7 +201,7 @@ function PODrawer({ onClose, vendors }) {
           {/* Line Items */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Line Items</span>
+              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Line Items <span className="normal-case font-normal text-gray-400 text-[10px]">(1 Box = 9 Pkts = 45 bags, 1 Pkt = 5 bags)</span></span>
               <button type="button" onClick={addLine}
                 className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 hover:text-orange-900">
                 <Plus className="w-3.5 h-3.5" /> Add Row
@@ -120,8 +211,8 @@ function PODrawer({ onClose, vendors }) {
               <table className="min-w-full text-xs">
                 <thead className="bg-gray-50">
                   <tr>
-                    {['Bag Type', 'Cap (mL)', 'Anticoag.', 'Qty', 'Unit Price (₹)', 'GST %', 'Total', ''].map((h) => (
-                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    {['Bag Type', 'Cap (mL)', 'Anticoag.', 'Boxes', 'Pkts', 'Bags', 'Total Bags', 'Unit Price (₹)', 'GST %', 'Total', ''].map((h) => (
+                      <th key={h} className="px-2 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -130,33 +221,44 @@ function PODrawer({ onClose, vendors }) {
                     <tr key={i}>
                       <td className="px-2 py-1.5">
                         <select value={l.bagType} onChange={(e) => updateLine(i, 'bagType', e.target.value)}
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs bg-white w-24">
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs bg-white w-20">
                           {BAG_TYPES.map((t) => <option key={t}>{t}</option>)}
                         </select>
                       </td>
                       <td className="px-2 py-1.5">
                         <input value={l.capacity} onChange={(e) => updateLine(i, 'capacity', e.target.value)} type="number"
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-16" placeholder="450" />
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-14" placeholder="450" />
                       </td>
                       <td className="px-2 py-1.5">
                         <select value={l.anticoagulant} onChange={(e) => updateLine(i, 'anticoagulant', e.target.value)}
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs bg-white w-24">
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs bg-white w-20">
                           {ANTICOAGULANTS.map((a) => <option key={a}>{a}</option>)}
                         </select>
                       </td>
-                      <td className="px-2 py-1.5">
-                        <input value={l.quantity} onChange={(e) => updateLine(i, 'quantity', e.target.value)} type="number"
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-14" />
+                      <td className="px-1 py-1.5">
+                        <input value={l.boxes} onChange={(e) => updateLine(i, 'boxes', e.target.value)} type="number" min="0"
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-10 text-center font-medium" placeholder="0" />
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <input value={l.packets} onChange={(e) => updateLine(i, 'packets', e.target.value)} type="number" min="0"
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-10 text-center font-medium" placeholder="0" />
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <input value={l.bags} onChange={(e) => updateLine(i, 'bags', e.target.value)} type="number" min="0"
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-10 text-center font-medium" placeholder="0" />
+                      </td>
+                      <td className="px-2 py-1.5 font-bold text-gray-700 text-center bg-gray-50/50">
+                        {calcTotalBags(l.boxes, l.packets, l.bags)}
                       </td>
                       <td className="px-2 py-1.5">
                         <input value={l.unitPrice} onChange={(e) => updateLine(i, 'unitPrice', e.target.value)} type="number"
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-20" />
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-16" />
                       </td>
                       <td className="px-2 py-1.5">
                         <input value={l.gstPercent} onChange={(e) => updateLine(i, 'gstPercent', e.target.value)} type="number"
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-12" placeholder="18" />
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-10" placeholder="18" />
                       </td>
-                      <td className="px-2 py-1.5 font-medium text-gray-700">
+                      <td className="px-2 py-1.5 font-semibold text-gray-700">
                         ₹{lineTotal(l).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                       </td>
                       <td className="px-2 py-1.5">
@@ -197,21 +299,21 @@ export default function PurchaseOrders() {
   const [expandedId, setExpandedId] = useState(null);
   const { data, isLoading } = usePOList({});
   const { data: vendorData } = useVendorList({});
-  const submitPO   = useSubmitPO();
-  const approvePO  = useApprovePO();
-  const rejectPO   = useRejectPO();
+  const submitPO = useSubmitPO();
+  const approvePO = useApprovePO();
+  const rejectPO = useRejectPO();
 
-  const orders  = data?.purchaseOrders ?? data ?? [];
-  const vendors = vendorData?.vendors ?? vendorData ?? [];
+  const orders = data?.items ?? data?.purchaseOrders ?? (Array.isArray(data) ? data : []);
+  const vendors = vendorData?.items ?? vendorData?.vendors ?? (Array.isArray(vendorData) ? vendorData : []);
 
   const stats = {
-    total:    orders.length,
-    draft:    orders.filter((o) => o.status === 'DRAFT').length,
-    pending:  orders.filter((o) => o.status === 'PENDING_APPROVAL').length,
+    total: orders.length,
+    draft: orders.filter((o) => o.status === 'DRAFT').length,
+    pending: orders.filter((o) => o.status === 'PENDING_APPROVAL').length,
     approved: orders.filter((o) => o.status === 'APPROVED').length,
   };
 
-  const fmtDate  = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   const fmtMoney = (n) => n != null ? `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
 
   const toggleExpand = (id) => setExpandedId((prev) => (prev === id ? null : id));
@@ -238,10 +340,10 @@ export default function PurchaseOrders() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label="Total POs"        value={stats.total}    color="text-gray-900" />
-          <StatCard label="Draft"            value={stats.draft}    color="text-gray-600" />
-          <StatCard label="Pending Approval" value={stats.pending}  color="text-yellow-600" />
-          <StatCard label="Approved"         value={stats.approved} color="text-green-700" />
+          <StatCard label="Total POs" value={stats.total} color="text-gray-900" />
+          <StatCard label="Draft" value={stats.draft} color="text-gray-600" />
+          <StatCard label="Pending Approval" value={stats.pending} color="text-yellow-600" />
+          <StatCard label="Approved" value={stats.approved} color="text-green-700" />
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -299,6 +401,12 @@ export default function PurchaseOrders() {
                     {expandedId === o._id && (
                       <tr key={`${o._id}-expand`} className="bg-orange-50/20">
                         <td colSpan={8} className="px-8 py-4">
+                          <div className="grid grid-cols-4 gap-4 mb-4 text-xs bg-white p-3 rounded-lg border border-gray-150 shadow-sm max-w-2xl">
+                            <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Manufacturer:</span> <span className="font-medium text-gray-800 ml-1">{o.manufacturer || '—'}</span></div>
+                            <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Invoice No:</span> <span className="font-medium text-gray-800 ml-1">{o.invoiceNo || '—'}</span></div>
+                            <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Bill Date:</span> <span className="font-medium text-gray-800 ml-1">{fmtDate(o.billDate)}</span></div>
+                            <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Officer:</span> <span className="font-medium text-gray-800 ml-1">{o.purchaseOfficer?.name ?? '—'}</span></div>
+                          </div>
                           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Line Items</div>
                           <table className="min-w-full text-xs border border-gray-100 rounded-lg overflow-hidden">
                             <thead className="bg-gray-100">
@@ -314,7 +422,7 @@ export default function PurchaseOrders() {
                                   <td className="px-3 py-2 font-medium">{it.bagType}</td>
                                   <td className="px-3 py-2">{it.capacity} mL</td>
                                   <td className="px-3 py-2">{it.anticoagulant}</td>
-                                  <td className="px-3 py-2">{it.quantityOrdered}</td>
+                                  <td className="px-3 py-2 font-medium">{formatBloodBagQty(it.quantityOrdered)}</td>
                                   <td className="px-3 py-2">{fmtMoney(it.unitPrice)}</td>
                                   <td className="px-3 py-2">{it.gstPercent}%</td>
                                   <td className="px-3 py-2 font-semibold">{fmtMoney(it.lineTotal)}</td>

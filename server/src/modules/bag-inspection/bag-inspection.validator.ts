@@ -34,6 +34,20 @@ export const CreateBagInspectionBody = z.object({
   observation: z.string().trim().max(2000).optional(),
   decision: z.enum(INSPECTION_DECISION),
   rejectionReason: z.string().trim().max(1000).optional(),
+  testingType: z.enum(['EMPTY', 'PCV', 'OTHER']).optional(),
+  testingStatus: z.enum(['SENT', 'REPORT_RECEIVED']).optional(),
+  sentDate: z.coerce.date().optional(),
+  testingLab: z.string().trim().max(200).optional(),
+});
+
+export const UpdateBagInspectionReportBody = z.object({
+  reportDate: z.coerce.date(),
+  bagNo: z.string().trim().min(1).max(100),
+  segmentNo: z.string().trim().min(1).max(100),
+  bloodGroup: z.string().trim().max(20).optional(),
+  testResult: z.string().trim().max(1000).optional(),
+  factorVIII: z.number().optional(),
+  fibrinogen: z.number().optional(),
 });
 
 export const ListBagInspectionQuery = z.object({
@@ -47,10 +61,12 @@ export const ListBagInspectionQuery = z.object({
 export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid id') });
 
 export type CreateBagInspectionInput = z.infer<typeof CreateBagInspectionBody>;
+export type UpdateBagInspectionReportInput = z.infer<typeof UpdateBagInspectionReportBody>;
 export type ListBagInspectionInput = z.infer<typeof ListBagInspectionQuery>;
 
 export const ValidateBagInspection = {
   createBody: (req: Request) => parseOrThrow(CreateBagInspectionBody, req.body, 'request body'),
+  updateReportBody: (req: Request) => parseOrThrow(UpdateBagInspectionReportBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListBagInspectionQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
 };

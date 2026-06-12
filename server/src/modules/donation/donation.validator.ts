@@ -54,6 +54,7 @@ export const CreateDonationBody = z.object({
   bloodGroup: z.enum(ABO_GROUP),
   rhFactor: z.enum(RH_FACTOR),
   unitTemplates: z.array(UnitTemplateSchema).optional(),
+  typeOfBag: z.enum(['SB', 'DB', 'TB', 'QB']).optional(),
 });
 export type CreateDonationInput = z.infer<typeof CreateDonationBody>;
 

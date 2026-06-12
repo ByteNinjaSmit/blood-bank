@@ -32,9 +32,9 @@ const GoodsReceiptSchema = new Schema(
   {
     grnNumber: { type: String, required: true, unique: true },
     poId: { type: Schema.Types.ObjectId, ref: 'PurchaseOrder', required: true, index: true },
-    vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true, index: true },
-    invoiceNumber: { type: String, required: true, trim: true },
-    invoiceDate: { type: Date, required: true },
+    vendorName: { type: String, trim: true },
+    invoiceNo: { type: String, required: true, trim: true },
+    billDate: { type: Date, required: true },
     transportDetails: { type: String, trim: true },
     receivedDate: { type: Date, required: true },
     receivedById: { type: Schema.Types.ObjectId, ref: 'User', required: true },
@@ -51,7 +51,7 @@ const GoodsReceiptSchema = new Schema(
 );
 
 GoodsReceiptSchema.index({ receivedDate: -1 });
-GoodsReceiptSchema.index({ vendorId: 1, status: 1 });
+GoodsReceiptSchema.index({ vendorName: 1, status: 1 });
 
 export type GoodsReceipt = InferSchemaType<typeof GoodsReceiptSchema>;
 export type GoodsReceiptModel = Model<GoodsReceipt>;

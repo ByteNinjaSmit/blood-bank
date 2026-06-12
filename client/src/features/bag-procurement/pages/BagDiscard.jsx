@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Trash2, Plus, X, CheckCircle } from 'lucide-react';
 import { useBagDiscardList, useCreateBagDiscard, useApproveBagDiscard } from '../queries';
 import { useBagStockList } from '../queries';
+import { formatBloodBagQty, calcTotalBags } from '../utils/qtyHelper';
 
 const STATUS_BADGE = {
   PENDING_APPROVAL: 'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -39,7 +40,9 @@ function StatusBadge({ status }) {
 function DiscardDrawer({ onClose, stockItems }) {
   const [stockId, setStockId]         = useState('');
   const [bagType, setBagType]         = useState('');
-  const [quantity, setQuantity]       = useState('');
+  const [boxes, setBoxes]             = useState('');
+  const [packets, setPackets]         = useState('');
+  const [bags, setBags]               = useState('');
   const [reason, setReason]           = useState('');
   const [reasonDetail, setReasonDetail] = useState('');
   const createDiscard = useCreateBagDiscard();
@@ -50,12 +53,14 @@ function DiscardDrawer({ onClose, stockItems }) {
     if (s) setBagType(s.bagType);
   };
 
+  const totalQty = calcTotalBags(boxes, packets, bags);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     createDiscard.mutateAsync({
       stockId,
       bagType,
-      quantity: Number(quantity),
+      quantity: totalQty,
       reason,
       reasonDetail,
     }).then(onClose).catch(() => {});
@@ -78,7 +83,7 @@ function DiscardDrawer({ onClose, stockItems }) {
               <option value="">Select stock...</option>
               {stockItems.map((s) => (
                 <option key={s._id} value={s._id}>
-                  {s.bagType} — Batch {s.batchNo}
+                  {s.bagType} — Batch {s.batchNo} (Avail: {formatBloodBagQty(s.closingStock ?? s.quantityAvailable ?? 0)})
                 </option>
               ))}
             </select>
@@ -88,8 +93,22 @@ function DiscardDrawer({ onClose, stockItems }) {
             <input readOnly value={bagType} className={`${fieldClass} bg-gray-50 cursor-not-allowed`} />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Quantity *</label>
-            <input required type="number" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} className={fieldClass} />
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Quantity to Discard *</label>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-0.5">Boxes</label>
+                <input type="number" min="0" value={boxes} onChange={(e) => setBoxes(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded px-2 py-1 text-xs text-center" />
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-0.5">Packets</label>
+                <input type="number" min="0" value={packets} onChange={(e) => setPackets(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded px-2 py-1 text-xs text-center" />
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-0.5">Loose Bags</label>
+                <input type="number" min="0" value={bags} onChange={(e) => setBags(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded px-2 py-1 text-xs text-center" />
+              </div>
+            </div>
+            <span className="text-[11px] text-gray-500 mt-1 block">Total Bags to Discard: <strong>{totalQty}</strong> bags</span>
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Reason *</label>
@@ -111,7 +130,7 @@ function DiscardDrawer({ onClose, stockItems }) {
               className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
               Cancel
             </button>
-            <button type="submit" disabled={createDiscard.isPending}
+            <button type="submit" disabled={createDiscard.isPending || totalQty <= 0}
               className="px-5 py-2 text-sm font-semibold text-white bg-orange-800 rounded-lg hover:bg-orange-900 disabled:opacity-60">
               {createDiscard.isPending ? 'Saving…' : 'Create Discard'}
             </button>
@@ -158,7 +177,7 @@ function ApproveDrawer({ discard, onClose }) {
             </div>
             <div className="flex justify-between text-gray-600">
               <span className="font-medium">Quantity</span>
-              <span>{discard.quantity}</span>
+              <span className="font-bold">{formatBloodBagQty(discard.quantity)}</span>
             </div>
             <div className="flex justify-between text-gray-600">
               <span className="font-medium">Reason</span>
@@ -205,8 +224,8 @@ export default function BagDiscard() {
   const { data, isLoading } = useBagDiscardList({});
   const { data: stockData } = useBagStockList({});
 
-  const discards   = data?.bagDiscards ?? data ?? [];
-  const stockItems = stockData?.bagStocks ?? stockData ?? [];
+  const discards   = data?.items ?? data?.bagDiscards ?? (Array.isArray(data) ? data : []);
+  const stockItems = stockData?.items ?? stockData?.bagStocks ?? (Array.isArray(stockData) ? stockData : []);
 
   const fmtDate = (d) => d
     ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -253,7 +272,7 @@ export default function BagDiscard() {
                     <td className="px-4 py-3 text-sm font-mono font-medium text-gray-900">{d.discardId ?? d._id?.slice(-8).toUpperCase()}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{d.bagType}</td>
                     <td className="px-4 py-3 text-sm font-mono text-gray-600">{d.stock?.batchNo ?? d.batchNo ?? '—'}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-800 text-center">{d.quantity}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-800">{formatBloodBagQty(d.quantity)}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       <span className="px-1.5 py-0.5 bg-red-50 text-red-700 rounded text-xs font-medium">
                         {d.reason?.replace(/_/g, ' ')}

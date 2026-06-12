@@ -160,7 +160,7 @@ export default function VendorManagement() {
   const updateStatus = useUpdateVendorStatus();
   const deleteVendor = useDeleteVendor();
 
-  const vendors = data?.vendors ?? data ?? [];
+  const vendors = data?.items ?? data?.vendors ?? (Array.isArray(data) ? data : []);
 
   const stats = {
     total:      vendors.length,

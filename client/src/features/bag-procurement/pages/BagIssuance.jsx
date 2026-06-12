@@ -8,6 +8,7 @@ import {
   useMarkBagDamaged,
 } from '../queries';
 import { useBagStockList } from '../queries';
+import { formatBloodBagQty } from '../utils/qtyHelper';
 
 const STATUS_BADGE = {
   ISSUED:   'bg-blue-50 text-blue-700 border-blue-200',
@@ -68,7 +69,7 @@ function IssueDrawer({ onClose, stockItems }) {
               <option value="">Select stock item...</option>
               {stockItems.map((s) => (
                 <option key={s._id} value={s._id}>
-                  {s.bagType} — Batch {s.batchNo} (Avail: {s.closingStock ?? s.quantityAvailable ?? 0})
+                  {s.bagType} — Batch {s.batchNo} (Avail: {formatBloodBagQty(s.closingStock ?? s.quantityAvailable ?? 0)})
                 </option>
               ))}
             </select>
@@ -129,8 +130,8 @@ export default function BagIssuance() {
   const returnBag   = useReturnBag();
   const markDamaged = useMarkBagDamaged();
 
-  const issues    = data?.bagIssues ?? data ?? [];
-  const stockItems = stockData?.bagStocks ?? stockData ?? [];
+  const issues    = data?.items ?? data?.bagIssues ?? (Array.isArray(data) ? data : []);
+  const stockItems = stockData?.items ?? stockData?.bagStocks ?? (Array.isArray(stockData) ? stockData : []);
 
   const stats = {
     total:    issues.length,

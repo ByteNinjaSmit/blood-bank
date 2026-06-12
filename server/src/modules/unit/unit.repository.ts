@@ -208,27 +208,23 @@ export function createUnitRepo(): UnitRepo {
           await session.endSession();
         }
       } catch (err: any) {
-        if (err.code === 20 || err.message?.includes('replica set member') || err.message?.includes('transactions')) {
-          const units = (await BloodUnitModel.find(
-            { donationId, status: { $in: fromStatuses }, deletedAt: null },
-          )) as Array<RawUnit & { status: UnitStatus }>;
+        const units = (await BloodUnitModel.find(
+          { donationId, status: { $in: fromStatuses }, deletedAt: null },
+        )) as Array<RawUnit & { status: UnitStatus }>;
 
-          for (const u of units) {
-            const next = transition(u.status, event, u.unitId);
-            await BloodUnitModel.updateOne(
-              { _id: u._id, status: u.status },
-              {
-                status: next,
-                updatedBy: actor,
-                $push: {
-                  statusHistory: { from: u.status, to: next, event, actor, at: new Date() },
-                },
+        for (const u of units) {
+          const next = transition(u.status, event, u.unitId);
+          await BloodUnitModel.updateOne(
+            { _id: u._id, status: u.status },
+            {
+              status: next,
+              updatedBy: actor,
+              $push: {
+                statusHistory: { from: u.status, to: next, event, actor, at: new Date() },
               },
-            );
-            changed++;
-          }
-        } else {
-          throw err;
+            },
+          );
+          changed++;
         }
       }
 

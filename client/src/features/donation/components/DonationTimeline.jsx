@@ -196,11 +196,13 @@ export default function DonationTimeline({ donation }) {
       </div>
 
       {/* Unit status grid */}
-      {donation.units && donation.units.length > 0 && (
+      {donation.units && donation.units.filter(u => u.componentType === 'WHOLE_BLOOD' || u.status !== 'COLLECTED').length > 0 && (
         <div className="mt-5 pt-5 border-t border-gray-200">
           <p className="text-xs font-semibold text-gray-600 mb-3 uppercase tracking-wide">Blood Units</p>
           <div className="space-y-2">
-            {donation.units.map((u, i) => (
+            {donation.units
+              .filter(u => u.componentType === 'WHOLE_BLOOD' || u.status !== 'COLLECTED')
+              .map((u, i) => (
               <div key={u.unitId ?? i} className="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-white">
                 <div>
                   <p className="text-xs font-semibold text-gray-800">{u.componentType}</p>

@@ -49,6 +49,14 @@ import CreateDonorPage from './features/donor/pages/CreateDonor';
 import UserManage from './features/user/pages/UserManage';
 import { AddHospital, ListHospital } from './features/hospital/pages';
 
+// Bag Procurement
+import PurchaseOrders from './features/bag-procurement/pages/PurchaseOrders';
+import GoodsReceipt from './features/bag-procurement/pages/GoodsReceipt';
+import BagInventory from './features/bag-procurement/pages/BagInventory';
+import BagInspection from './features/bag-procurement/pages/BagInspection';
+import BagIssuance from './features/bag-procurement/pages/BagIssuance';
+import BagDiscard from './features/bag-procurement/pages/BagDiscard';
+
 // Requisition
 import RequisitionManagement from './features/requisition/pages/RequisitionManagement';
 import RequisitionList from './features/requisition/pages/RequisitionList';
@@ -117,6 +125,13 @@ const App = () => {
           <Route path="inventory/reserve/new" element={<ReserveWizard />} />
           <Route path="inventory/issue" element={<Issue />} />
           <Route path="inventory/near-expiry" element={<InventoryNearExpiry />} />
+
+          <Route path="procurement/po" element={<PurchaseOrders />} />
+          <Route path="procurement/grn" element={<GoodsReceipt />} />
+          <Route path="procurement/inspection" element={<BagInspection />} />
+          <Route path="procurement/issue" element={<BagIssuance />} />
+          <Route path="procurement/discard" element={<BagDiscard />} />
+          <Route path="procurement/inventory" element={<BagInventory />} />
 
           {/* Serology */}
           <Route path="labs/serology" element={<Serology />} />

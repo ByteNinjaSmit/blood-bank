@@ -378,7 +378,7 @@ const ComponentSeparate = () => {
             </Button>
             <Button
               onClick={handleConfirmSignature}
-              disabled={isActionLoading || !signatureText.trim() || (user && signatureText.trim().toLowerCase() !== `${user.name?.first || ""} ${user.name?.last || ""}`.trim().toLowerCase())}
+              disabled={isActionLoading || !signatureText.trim()}
               className="bg-green-600 hover:bg-green-700 text-white rounded-xl px-6 h-11 transition-all duration-300 font-medium flex items-center justify-center shadow-md hover:shadow-lg disabled:opacity-50 disabled:shadow-none"
             >
               {isActionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirm & Complete"}

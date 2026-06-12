@@ -4,6 +4,7 @@ import { NotFoundError } from '@/shared/errors';
 import type { BagInspectionRepo, BagInspectionDto } from '@/modules/bag-inspection/bag-inspection.repository';
 import type {
   CreateBagInspectionInput,
+  UpdateBagInspectionReportInput,
   ListBagInspectionInput,
 } from '@/modules/bag-inspection/bag-inspection.validator';
 
@@ -11,6 +12,7 @@ export interface BagInspectionService {
   list(q: ListBagInspectionInput): Promise<{ items: BagInspectionDto[]; total: number; page: number; pageSize: number }>;
   get(id: string): Promise<BagInspectionDto>;
   create(input: CreateBagInspectionInput, actorId: string): Promise<BagInspectionDto>;
+  updateReport(id: string, input: UpdateBagInspectionReportInput, actorId: string): Promise<BagInspectionDto>;
 }
 
 function generateInspectionId(): string {
@@ -51,10 +53,34 @@ export function createBagInspectionService(deps: { inspections: BagInspectionRep
         observation: input.observation,
         decision: input.decision,
         rejectionReason: input.rejectionReason,
+        testingType: input.testingType,
+        testingStatus: input.testingType ? 'SENT' : undefined,
+        sentDate: input.sentDate,
+        testingLab: input.testingLab,
         actorId,
       });
       log.info({ inspectionId, grnId: input.grnId, decision: input.decision, actorId }, 'bag inspection recorded');
       return created;
+    },
+
+    async updateReport(id, input, actorId) {
+      const inspection = await deps.inspections.findById(id);
+      if (!inspection) throw new NotFoundError('BagInspection', id);
+      
+      const updated = await deps.inspections.update(id, {
+        testingStatus: 'REPORT_RECEIVED',
+        reportDate: input.reportDate,
+        bagNo: input.bagNo,
+        segmentNo: input.segmentNo,
+        bloodGroup: input.bloodGroup,
+        testResult: input.testResult,
+        factorVIII: input.factorVIII,
+        fibrinogen: input.fibrinogen,
+      }, actorId);
+      
+      if (!updated) throw new NotFoundError('BagInspection', id);
+      log.info({ inspectionId: updated.inspectionId, actorId }, 'bag inspection report updated');
+      return updated;
     },
   };
 }

@@ -37,9 +37,10 @@ export const bagProcurementApi = {
   },
 
   bagInspection: {
-    list:   (params)   => apiClient.get(`${V}/bag-inspection`, { params }).then(unwrap),
-    get:    (id)       => apiClient.get(`${V}/bag-inspection/${id}`).then(unwrap),
-    create: (data)     => apiClient.post(`${V}/bag-inspection`, data).then(unwrap),
+    list:         (params)   => apiClient.get(`${V}/bag-inspection`, { params }).then(unwrap),
+    get:          (id)       => apiClient.get(`${V}/bag-inspection/${id}`).then(unwrap),
+    create:       (data)     => apiClient.post(`${V}/bag-inspection`, data).then(unwrap),
+    updateReport: (id, data) => apiClient.patch(`${V}/bag-inspection/${id}/report`, data).then(unwrap),
   },
 
   bagIssue: {

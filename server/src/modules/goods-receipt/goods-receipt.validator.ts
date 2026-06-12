@@ -34,9 +34,9 @@ const FinancialsSchema = z.object({
 
 export const CreateGRNBody = z.object({
   poId: z.string().regex(OBJECT_ID, 'Invalid poId'),
-  vendorId: z.string().regex(OBJECT_ID, 'Invalid vendorId'),
-  invoiceNumber: z.string().trim().min(1).max(100),
-  invoiceDate: z.coerce.date(),
+  vendorName: z.string().trim().min(1).optional(),
+  invoiceNo: z.string().trim().min(1).max(100),
+  billDate: z.coerce.date(),
   transportDetails: z.string().trim().max(500).optional(),
   receivedDate: z.coerce.date(),
   receivedById: z.string().regex(OBJECT_ID, 'Invalid receivedById'),
@@ -47,7 +47,7 @@ export const CreateGRNBody = z.object({
 
 export const ListGRNQuery = z.object({
   poId: z.string().regex(OBJECT_ID).optional(),
-  vendorId: z.string().regex(OBJECT_ID).optional(),
+  vendorName: z.string().optional(),
   status: z.enum(GRN_STATUS).optional(),
   fromDate: z.coerce.date().optional(),
   toDate: z.coerce.date().optional(),
