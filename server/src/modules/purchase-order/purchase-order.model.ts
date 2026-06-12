@@ -23,13 +23,8 @@ const PurchaseOrderSchema = new Schema(
     totalAmountRs: { type: Number, min: 0 },
     expectedDelivery: { type: Date },
     manufacturer: { type: String, trim: true },
-    invoiceNo: { type: String, trim: true },
+    billNo: { type: String, trim: true },
     billDate: { type: Date },
-    purchaseOfficerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    approvalStatus: { type: String, enum: PO_STATUS, default: 'DRAFT', index: true },
-    approvedById: { type: Schema.Types.ObjectId, ref: 'User' },
-    approvedAt: { type: Date },
-    rejectionReason: { type: String, trim: true },
     notes: { type: String, trim: true },
     deletedAt: { type: Date, default: null, index: true },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -40,7 +35,7 @@ const PurchaseOrderSchema = new Schema(
 );
 
 PurchaseOrderSchema.index({ poDate: -1 });
-PurchaseOrderSchema.index({ vendorId: 1, approvalStatus: 1 });
+PurchaseOrderSchema.index({ vendorId: 1 });
 
 export type PurchaseOrder = InferSchemaType<typeof PurchaseOrderSchema>;
 export type PurchaseOrderModel = Model<PurchaseOrder>;

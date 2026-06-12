@@ -28,7 +28,7 @@ export interface GRNDto {
   grnNumber: string;
   poId: string;
   vendorName?: string;
-  invoiceNo: string;
+  billNo: string;
   billDate: string;
   transportDetails?: string;
   receivedDate: string;
@@ -59,7 +59,7 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     grnNumber: doc.grnNumber as string,
     poId: (doc.poId as Types.ObjectId).toString(),
     vendorName: doc.vendorName as string | undefined,
-    invoiceNo: doc.invoiceNo as string,
+    billNo: doc.billNo as string,
     billDate: (doc.billDate as Date).toISOString(),
     transportDetails: doc.transportDetails as string | undefined,
     receivedDate: (doc.receivedDate as Date).toISOString(),
@@ -87,7 +87,7 @@ export interface GRNRepo {
     grnNumber: string;
     poId: string;
     vendorName?: string;
-    invoiceNo: string;
+    billNo: string;
     billDate: Date;
     transportDetails?: string;
     receivedDate: Date;
@@ -135,7 +135,7 @@ export function createGRNRepo(): GRNRepo {
         grnNumber: input.grnNumber,
         poId: new Types.ObjectId(input.poId),
         vendorName: input.vendorName,
-        invoiceNo: input.invoiceNo,
+        billNo: input.billNo,
         billDate: input.billDate,
         transportDetails: input.transportDetails,
         receivedDate: input.receivedDate,

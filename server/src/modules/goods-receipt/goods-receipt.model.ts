@@ -33,7 +33,7 @@ const GoodsReceiptSchema = new Schema(
     grnNumber: { type: String, required: true, unique: true },
     poId: { type: Schema.Types.ObjectId, ref: 'PurchaseOrder', required: true, index: true },
     vendorName: { type: String, trim: true },
-    invoiceNo: { type: String, required: true, trim: true },
+    billNo: { type: String, required: true, trim: true },
     billDate: { type: Date, required: true },
     transportDetails: { type: String, trim: true },
     receivedDate: { type: Date, required: true },

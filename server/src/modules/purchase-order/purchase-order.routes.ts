@@ -46,28 +46,4 @@ router.patch(
   controllers.update,
 );
 
-router.patch(
-  '/:id/submit',
-  authenticate,
-  requireRole(['system-admin', 'bbo']),
-  requirePermission('po:create'),
-  controllers.submit,
-);
-
-router.patch(
-  '/:id/approve',
-  authenticate,
-  requireRole(['system-admin', 'bbo']),
-  requirePermission('po:approve'),
-  controllers.approve,
-);
-
-router.patch(
-  '/:id/reject',
-  authenticate,
-  requireRole(['system-admin', 'bbo']),
-  requirePermission('po:approve'),
-  controllers.reject,
-);
-
 export default router;

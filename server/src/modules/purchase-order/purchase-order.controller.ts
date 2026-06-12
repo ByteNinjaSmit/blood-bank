@@ -8,9 +8,6 @@ export interface POControllers {
   get(req: Request, res: Response, next: NextFunction): Promise<void>;
   create(req: Request, res: Response, next: NextFunction): Promise<void>;
   update(req: Request, res: Response, next: NextFunction): Promise<void>;
-  submit(req: Request, res: Response, next: NextFunction): Promise<void>;
-  approve(req: Request, res: Response, next: NextFunction): Promise<void>;
-  reject(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export function createPOControllers(service: POService): POControllers {
@@ -49,31 +46,6 @@ export function createPOControllers(service: POService): POControllers {
         const { id } = ValidatePO.idParam(req);
         const body = ValidatePO.updateBody(req);
         const data = await service.update(id, body, actorId(req));
-        res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
-    },
-
-    async submit(req, res, next) {
-      try {
-        const { id } = ValidatePO.idParam(req);
-        const data = await service.submit(id, actorId(req));
-        res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
-    },
-
-    async approve(req, res, next) {
-      try {
-        const { id } = ValidatePO.idParam(req);
-        const data = await service.approve(id, actorId(req));
-        res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
-    },
-
-    async reject(req, res, next) {
-      try {
-        const { id } = ValidatePO.idParam(req);
-        const body = ValidatePO.rejectBody(req);
-        const data = await service.reject(id, body.rejectionReason, actorId(req));
         res.json({ success: true, data, requestId: req.id });
       } catch (e) { next(e); }
     },

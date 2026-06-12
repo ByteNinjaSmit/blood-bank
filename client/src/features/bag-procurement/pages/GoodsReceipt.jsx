@@ -28,7 +28,7 @@ function StatusBadge({ status }) {
 
 function GRNDrawer({ onClose, pos }) {
   const [poId, setPoId] = useState('');
-  const [invoiceNo, setInvoiceNo] = useState('');
+  const [billNo, setBillNo] = useState('');
   const [billDate, setBillDate] = useState('');
   const [receivedDate, setReceivedDate] = useState('');
   const [taxableAmount, setTaxableAmount] = useState('');
@@ -54,7 +54,7 @@ function GRNDrawer({ onClose, pos }) {
     }
     const selectedPo = pos.find((p) => p._id === selectedPoId || p.id === selectedPoId);
     if (selectedPo) {
-      if (selectedPo.invoiceNo) setInvoiceNo(selectedPo.invoiceNo);
+      if (selectedPo.billNo) setBillNo(selectedPo.billNo);
       if (selectedPo.billDate) setBillDate(selectedPo.billDate.split('T')[0]);
     }
   };
@@ -64,7 +64,7 @@ function GRNDrawer({ onClose, pos }) {
     createGRN.mutateAsync({
       poId,
       vendorName: pos.find(p => p._id === poId || p.id === poId)?.vendorName,
-      invoiceNo,
+      billNo,
       billDate,
       receivedDate,
       taxableAmount: Number(taxableAmount),
@@ -107,8 +107,8 @@ function GRNDrawer({ onClose, pos }) {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Invoice No *</label>
-              <input required value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className={fieldClass} />
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bill No *</label>
+              <input required value={billNo} onChange={(e) => setBillNo(e.target.value)} className={fieldClass} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bill Date</label>
@@ -257,7 +257,7 @@ export default function GoodsReceipt() {
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
-                  {['GRN Number', 'Invoice No', 'Vendor', 'Received Date', 'Net Amount', 'Status', 'Actions'].map((h) => (
+                  {['GRN Number', 'Bill No', 'Vendor', 'Received Date', 'Net Amount', 'Status', 'Actions'].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -270,7 +270,7 @@ export default function GoodsReceipt() {
                 ) : grns.map((g) => (
                   <tr key={g._id} className="hover:bg-orange-50/30 transition-colors">
                     <td className="px-4 py-3 text-sm font-mono font-medium text-gray-900">{g.grnNumber}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{g.invoiceNo}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{g.billNo}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{g.vendorName ?? g.purchaseOrder?.vendorName ?? '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(g.receivedDate)}</td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-800">{fmtMoney(g.netAmount)}</td>

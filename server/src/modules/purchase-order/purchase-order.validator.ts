@@ -27,9 +27,8 @@ export const CreatePOBody = z.object({
   lineItems: z.array(LineItemSchema).min(1, 'At least one line item required'),
   expectedDelivery: z.coerce.date().optional(),
   manufacturer: z.string().trim().max(200).optional(),
-  invoiceNo: z.string().trim().max(100).optional(),
+  billNo: z.string().trim().max(100).optional(),
   billDate: z.coerce.date().optional(),
-  purchaseOfficerId: z.string().regex(OBJECT_ID, 'Invalid purchaseOfficerId'),
   notes: z.string().trim().max(2000).optional(),
 });
 
@@ -37,17 +36,12 @@ export const UpdatePOBody = z.object({
   lineItems: z.array(LineItemSchema).min(1).optional(),
   expectedDelivery: z.coerce.date().optional(),
   manufacturer: z.string().trim().max(200).optional(),
-  invoiceNo: z.string().trim().max(100).optional(),
+  billNo: z.string().trim().max(100).optional(),
   billDate: z.coerce.date().optional(),
   notes: z.string().trim().max(2000).optional(),
 });
 
-export const RejectPOBody = z.object({
-  rejectionReason: z.string().trim().min(1).max(500),
-});
-
 export const ListPOQuery = z.object({
-  approvalStatus: z.enum(PO_STATUS).optional(),
   vendorId: z.string().regex(OBJECT_ID).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(20),
@@ -57,13 +51,11 @@ export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid id') 
 
 export type CreatePOInput = z.infer<typeof CreatePOBody>;
 export type UpdatePOInput = z.infer<typeof UpdatePOBody>;
-export type RejectPOInput = z.infer<typeof RejectPOBody>;
 export type ListPOInput = z.infer<typeof ListPOQuery>;
 
 export const ValidatePO = {
   createBody: (req: Request) => parseOrThrow(CreatePOBody, req.body, 'request body'),
   updateBody: (req: Request) => parseOrThrow(UpdatePOBody, req.body, 'request body'),
-  rejectBody: (req: Request) => parseOrThrow(RejectPOBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListPOQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
 };

@@ -21,13 +21,8 @@ export interface PODto {
   totalAmountRs?: number;
   expectedDelivery?: string;
   manufacturer?: string;
-  invoiceNo?: string;
+  billNo?: string;
   billDate?: string;
-  purchaseOfficerId: string;
-  approvalStatus: string;
-  approvedById?: string;
-  approvedAt?: string;
-  rejectionReason?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -43,13 +38,8 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     totalAmountRs: doc.totalAmountRs as number | undefined,
     expectedDelivery: doc.expectedDelivery ? (doc.expectedDelivery as Date).toISOString() : undefined,
     manufacturer: doc.manufacturer as string | undefined,
-    invoiceNo: doc.invoiceNo as string | undefined,
+    billNo: doc.billNo as string | undefined,
     billDate: doc.billDate ? (doc.billDate as Date).toISOString() : undefined,
-    purchaseOfficerId: (doc.purchaseOfficerId as Types.ObjectId).toString(),
-    approvalStatus: doc.approvalStatus as string,
-    approvedById: doc.approvedById ? (doc.approvedById as Types.ObjectId).toString() : undefined,
-    approvedAt: doc.approvedAt ? (doc.approvedAt as Date).toISOString() : undefined,
-    rejectionReason: doc.rejectionReason as string | undefined,
     notes: doc.notes as string | undefined,
     createdAt: doc.createdAt ? doc.createdAt.toISOString() : '',
     updatedAt: doc.updatedAt ? doc.updatedAt.toISOString() : '',
@@ -67,9 +57,8 @@ export interface PORepo {
     totalAmountRs: number;
     expectedDelivery?: Date;
     manufacturer?: string;
-    invoiceNo?: string;
+    billNo?: string;
     billDate?: Date;
-    purchaseOfficerId: string;
     notes?: string;
     actorId: string;
   }): Promise<PODto>;
@@ -78,23 +67,16 @@ export interface PORepo {
     totalAmountRs: number;
     expectedDelivery: Date;
     manufacturer: string;
-    invoiceNo: string;
+    billNo: string;
     billDate: Date;
     notes: string;
   }>, actorId: string): Promise<PODto | null>;
-  updateStatus(id: string, patch: {
-    approvalStatus: string;
-    approvedById?: string;
-    approvedAt?: Date;
-    rejectionReason?: string;
-  }, actorId: string): Promise<PODto | null>;
 }
 
 export function createPORepo(): PORepo {
   return {
     async list(q) {
       const filter: Record<string, unknown> = { deletedAt: null };
-      if (q.approvalStatus) filter.approvalStatus = q.approvalStatus;
       if (q.vendorId) filter.vendorId = new Types.ObjectId(q.vendorId);
       const page = q.page ?? 1;
       const pageSize = q.pageSize ?? 20;
@@ -122,10 +104,8 @@ export function createPORepo(): PORepo {
         totalAmountRs: input.totalAmountRs,
         expectedDelivery: input.expectedDelivery,
         manufacturer: input.manufacturer,
-        invoiceNo: input.invoiceNo,
+        billNo: input.billNo,
         billDate: input.billDate,
-        purchaseOfficerId: new Types.ObjectId(input.purchaseOfficerId),
-        approvalStatus: 'DRAFT',
         notes: input.notes,
         createdBy: actor,
         updatedBy: actor,
@@ -138,21 +118,6 @@ export function createPORepo(): PORepo {
       const doc = await PurchaseOrderModel.findOneAndUpdate(
         { _id: new Types.ObjectId(id), deletedAt: null },
         { $set: { ...patch, updatedBy: actor } },
-        { new: true },
-      ).lean();
-      if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
-    },
-
-    async updateStatus(id, patch, actorId) {
-      const actor = new Types.ObjectId(actorId);
-      const update: Record<string, unknown> = { approvalStatus: patch.approvalStatus, updatedBy: actor };
-      if (patch.approvedById) update.approvedById = new Types.ObjectId(patch.approvedById);
-      if (patch.approvedAt) update.approvedAt = patch.approvedAt;
-      if (patch.rejectionReason) update.rejectionReason = patch.rejectionReason;
-      const doc = await PurchaseOrderModel.findOneAndUpdate(
-        { _id: new Types.ObjectId(id), deletedAt: null },
-        { $set: update },
         { new: true },
       ).lean();
       if (!doc) return null;

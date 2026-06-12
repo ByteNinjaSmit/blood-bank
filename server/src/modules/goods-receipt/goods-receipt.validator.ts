@@ -35,7 +35,7 @@ const FinancialsSchema = z.object({
 export const CreateGRNBody = z.object({
   poId: z.string().regex(OBJECT_ID, 'Invalid poId'),
   vendorName: z.string().trim().min(1).optional(),
-  invoiceNo: z.string().trim().min(1).max(100),
+  billNo: z.string().trim().min(1).max(100),
   billDate: z.coerce.date(),
   transportDetails: z.string().trim().max(500).optional(),
   receivedDate: z.coerce.date(),

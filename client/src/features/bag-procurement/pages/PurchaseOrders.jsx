@@ -3,36 +3,21 @@ import { FileText, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   usePOList,
   useCreatePO,
-  useSubmitPO,
-  useApprovePO,
-  useRejectPO,
+  useUpdatePO,
   useVendorList,
   useCreateVendor,
 } from '../queries';
 import { useAuth } from '@/store/auth';
 import { formatBloodBagQty, calcTotalBags } from '../utils/qtyHelper';
 
-const STATUS_BADGE = {
-  DRAFT: 'bg-gray-100 text-gray-600 border-gray-200',
-  PENDING_APPROVAL: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  APPROVED: 'bg-green-50 text-green-700 border-green-200',
-  REJECTED: 'bg-red-50 text-red-700 border-red-200',
-  FULFILLED: 'bg-blue-50 text-blue-700 border-blue-200',
-  CANCELLED: 'bg-gray-100 text-gray-500 border-gray-200',
-};
+
 
 const BAG_TYPES = ['SINGLE', 'DOUBLE', 'TRIPLE', 'QUADRUPLE'];
 const ANTICOAGULANTS = ['CPDA-1', 'CPD', 'ACD', 'SAG-M'];
 
 const EMPTY_LINE = { bagType: 'SINGLE', capacity: '', anticoagulant: 'CPDA-1', boxes: '', packets: '', bags: '', unitPrice: '', gstPercent: '' };
 
-function StatusBadge({ status }) {
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-xs border font-medium ${STATUS_BADGE[status] ?? 'bg-gray-100 text-gray-500 border-gray-200'}`}>
-      {status?.replace('_', ' ')}
-    </span>
-  );
-}
+
 
 function StatCard({ label, value, color }) {
   return (
@@ -43,16 +28,19 @@ function StatCard({ label, value, color }) {
   );
 }
 
-function PODrawer({ onClose, vendors }) {
+function PODrawer({ onClose, vendors, poToEdit }) {
   const { user } = useAuth();
   const [vendorSearchText, setVendorSearchText] = useState('');
   const [expectedDelivery, setExpectedDelivery] = useState('');
-  const [manufacturer, setManufacturer] = useState('');
-  const [invoiceNo, setInvoiceNo] = useState('');
-  const [billDate, setBillDate] = useState('');
-  const [lines, setLines] = useState([{ ...EMPTY_LINE }]);
+  const [manufacturer, setManufacturer] = useState(poToEdit?.manufacturer || '');
+  const [billNo, setBillNo] = useState(poToEdit?.billNo || '');
+  const [billDate, setBillDate] = useState(poToEdit?.billDate ? new Date(poToEdit.billDate).toISOString().split('T')[0] : '');
+  const [lines, setLines] = useState(poToEdit?.lineItems?.length > 0 ? poToEdit.lineItems.map(l => ({
+    ...EMPTY_LINE, bagType: l.bagType, capacity: l.capacityMl, anticoagulant: l.anticoagulant, bags: l.quantityOrdered, unitPrice: l.unitPriceRs, gstPercent: l.gstPercent
+  })) : [{ ...EMPTY_LINE }]);
 
   const createPO = useCreatePO();
+  const updatePO = useUpdatePO();
   const createVendor = useCreateVendor();
   const [previousVendors, setPreviousVendors] = useState([]);
 
@@ -116,14 +104,13 @@ function PODrawer({ onClose, vendors }) {
         localStorage.setItem('previous_vendors', JSON.stringify(updatedPrev));
       }
 
-      await createPO.mutateAsync({
-        poDate: new Date().toISOString(),
+      const payload = {
+        poDate: poToEdit ? poToEdit.poDate : new Date().toISOString(),
         vendorId: finalVendorId,
         expectedDelivery: expectedDelivery || undefined,
         manufacturer: manufacturer || undefined,
-        invoiceNo: invoiceNo || undefined,
+        billNo: billNo || undefined,
         billDate: billDate || undefined,
-        purchaseOfficerId: user?.id ?? user?._id ?? '000000000000000000000000',
         lineItems: lines.map((l) => ({
           bagType: l.bagType,
           capacityMl: Number(l.capacity) || 350,
@@ -132,7 +119,13 @@ function PODrawer({ onClose, vendors }) {
           unitPriceRs: Number(l.unitPrice) || 0,
           gstPercent: Number(l.gstPercent) || 0,
         })),
-      });
+      };
+
+      if (poToEdit) {
+        await updatePO.mutateAsync({ id: poToEdit.id ?? poToEdit._id, data: payload });
+      } else {
+        await createPO.mutateAsync(payload);
+      }
       onClose();
     } catch (err) {
       console.error(err);
@@ -149,7 +142,7 @@ function PODrawer({ onClose, vendors }) {
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
       <div className="fixed right-0 top-0 h-full w-full max-w-3xl bg-white z-50 shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b bg-orange-800">
-          <h2 className="text-base font-semibold text-white">New Purchase Order</h2>
+          <h2 className="text-base font-semibold text-white">{poToEdit ? "Edit Purchase Order" : "New Purchase Order"}</h2>
           <button onClick={onClose} className="text-orange-200 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
@@ -187,9 +180,9 @@ function PODrawer({ onClose, vendors }) {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Invoice No</label>
-              <input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="INV-1234" />
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bill No</label>
+              <input value={billNo} onChange={(e) => setBillNo(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="BILL-1234" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bill Date</label>
@@ -285,7 +278,7 @@ function PODrawer({ onClose, vendors }) {
             </button>
             <button type="submit" disabled={createPO.isPending}
               className="px-5 py-2 text-sm font-semibold text-white bg-orange-800 rounded-lg hover:bg-orange-900 disabled:opacity-60">
-              {createPO.isPending ? 'Creating…' : 'Create PO'}
+              {poToEdit ? (updatePO.isPending ? 'Updating...' : 'Update PO') : (createPO.isPending ? 'Creating...' : 'Create PO')}
             </button>
           </div>
         </form>
@@ -297,20 +290,15 @@ function PODrawer({ onClose, vendors }) {
 export default function PurchaseOrders() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+  const [editPO, setEditPO] = useState(null);
   const { data, isLoading } = usePOList({});
   const { data: vendorData } = useVendorList({});
-  const submitPO = useSubmitPO();
-  const approvePO = useApprovePO();
-  const rejectPO = useRejectPO();
 
   const orders = data?.items ?? data?.purchaseOrders ?? (Array.isArray(data) ? data : []);
   const vendors = vendorData?.items ?? vendorData?.vendors ?? (Array.isArray(vendorData) ? vendorData : []);
 
   const stats = {
     total: orders.length,
-    draft: orders.filter((o) => o.status === 'DRAFT').length,
-    pending: orders.filter((o) => o.status === 'PENDING_APPROVAL').length,
-    approved: orders.filter((o) => o.status === 'APPROVED').length,
   };
 
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -331,7 +319,7 @@ export default function PurchaseOrders() {
               <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Blood Bag Procurement</p>
             </div>
           </div>
-          <button onClick={() => setShowDrawer(true)}
+          <button onClick={() => { setEditPO(null); setShowDrawer(true); }}
             className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">
             <Plus className="w-4 h-4" /> New PO
           </button>
@@ -339,11 +327,8 @@ export default function PurchaseOrders() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <StatCard label="Total POs" value={stats.total} color="text-gray-900" />
-          <StatCard label="Draft" value={stats.draft} color="text-gray-600" />
-          <StatCard label="Pending Approval" value={stats.pending} color="text-yellow-600" />
-          <StatCard label="Approved" value={stats.approved} color="text-green-700" />
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -351,7 +336,7 @@ export default function PurchaseOrders() {
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
-                  {['', 'PO Number', 'PO Date', 'Vendor', 'Total Amount', 'Expected Delivery', 'Status', 'Actions'].map((h) => (
+                  {['', 'PO Number', 'PO Date', 'Vendor', 'Total Amount', 'Expected Delivery', 'Actions'].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -370,31 +355,16 @@ export default function PurchaseOrders() {
                         </button>
                       </td>
                       <td className="px-4 py-3 text-sm font-mono font-medium text-gray-900">{o.poNumber}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(o.poDate ?? o.createdAt)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{o.vendor?.vendorName ?? o.vendorId}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-800">{fmtMoney(o.totalAmount)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(o.expectedDeliveryDate)}</td>
-                      <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(o.poDate)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{(vendors.find(v => v._id === o.vendorId || v.id === o.vendorId)?.name ?? o.vendorId)}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-800">{fmtMoney(o.totalAmountRs)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(o.expectedDelivery)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
-                          {o.status === 'DRAFT' && (
-                            <button onClick={() => submitPO.mutate(o._id)}
-                              className="px-2.5 py-1 text-xs font-medium text-yellow-700 border border-yellow-200 rounded-md hover:bg-yellow-50">
-                              Submit
-                            </button>
-                          )}
-                          {o.status === 'PENDING_APPROVAL' && (
-                            <>
-                              <button onClick={() => approvePO.mutate(o._id)}
-                                className="px-2.5 py-1 text-xs font-medium text-green-700 border border-green-200 rounded-md hover:bg-green-50">
-                                Approve
-                              </button>
-                              <button onClick={() => rejectPO.mutate({ id: o._id, data: { reason: 'Rejected by manager' } })}
-                                className="px-2.5 py-1 text-xs font-medium text-red-600 border border-red-200 rounded-md hover:bg-red-50">
-                                Reject
-                              </button>
-                            </>
-                          )}
+                          <button onClick={() => { setEditPO(o); setShowDrawer(true); }}
+                            className="px-2.5 py-1 text-xs font-medium text-blue-700 border border-blue-200 rounded-md hover:bg-blue-50">
+                            Edit
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -403,9 +373,8 @@ export default function PurchaseOrders() {
                         <td colSpan={8} className="px-8 py-4">
                           <div className="grid grid-cols-4 gap-4 mb-4 text-xs bg-white p-3 rounded-lg border border-gray-150 shadow-sm max-w-2xl">
                             <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Manufacturer:</span> <span className="font-medium text-gray-800 ml-1">{o.manufacturer || '—'}</span></div>
-                            <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Invoice No:</span> <span className="font-medium text-gray-800 ml-1">{o.invoiceNo || '—'}</span></div>
+                            <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Bill No:</span> <span className="font-medium text-gray-800 ml-1">{o.billNo || '—'}</span></div>
                             <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Bill Date:</span> <span className="font-medium text-gray-800 ml-1">{fmtDate(o.billDate)}</span></div>
-                            <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Officer:</span> <span className="font-medium text-gray-800 ml-1">{o.purchaseOfficer?.name ?? '—'}</span></div>
                           </div>
                           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Line Items</div>
                           <table className="min-w-full text-xs border border-gray-100 rounded-lg overflow-hidden">
@@ -417,15 +386,15 @@ export default function PurchaseOrders() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 bg-white">
-                              {(o.items ?? []).map((it, idx) => (
+                              {(o.lineItems ?? []).map((it, idx) => (
                                 <tr key={idx}>
                                   <td className="px-3 py-2 font-medium">{it.bagType}</td>
-                                  <td className="px-3 py-2">{it.capacity} mL</td>
+                                  <td className="px-3 py-2">{it.capacityMl} mL</td>
                                   <td className="px-3 py-2">{it.anticoagulant}</td>
-                                  <td className="px-3 py-2 font-medium">{formatBloodBagQty(it.quantityOrdered)}</td>
-                                  <td className="px-3 py-2">{fmtMoney(it.unitPrice)}</td>
+                                  <td className="px-3 py-2 font-medium">{formatBloodBagQty((it.quantityOrdered))}</td>
+                                  <td className="px-3 py-2">{fmtMoney(it.unitPriceRs)}</td>
                                   <td className="px-3 py-2">{it.gstPercent}%</td>
-                                  <td className="px-3 py-2 font-semibold">{fmtMoney(it.lineTotal)}</td>
+                                  <td className="px-3 py-2 font-semibold">{fmtMoney((it.quantityOrdered || 0) * (it.unitPriceRs || 0) * (1 + (it.gstPercent || 0)/100))}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -441,7 +410,7 @@ export default function PurchaseOrders() {
         </div>
       </div>
 
-      {showDrawer && <PODrawer onClose={() => setShowDrawer(false)} vendors={vendors} />}
+      {showDrawer && <PODrawer onClose={() => { setShowDrawer(false); setEditPO(null); }} vendors={vendors} poToEdit={editPO} />}
     </div>
   );
 }

@@ -96,29 +96,7 @@ export function useUpdatePO() {
   });
 }
 
-export function useSubmitPO() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id) => bagProcurementApi.purchaseOrder.submit(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-order', 'list'] }),
-  });
-}
 
-export function useApprovePO() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id) => bagProcurementApi.purchaseOrder.approve(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-order', 'list'] }),
-  });
-}
-
-export function useRejectPO() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }) => bagProcurementApi.purchaseOrder.reject(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-order', 'list'] }),
-  });
-}
 
 // ─── Goods Receipt ────────────────────────────────────────────────────────────
 export function useGRNList(filters) {

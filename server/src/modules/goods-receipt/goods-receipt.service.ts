@@ -49,9 +49,6 @@ export function createGRNService(deps: {
     async create(input, actorId) {
       const po = await deps.pos.findById(input.poId);
       if (!po) throw new NotFoundError('PurchaseOrder', input.poId);
-      if (po.approvalStatus !== 'APPROVED') {
-        throw new ConflictError(`PO must be APPROVED before creating a GRN (current: ${po.approvalStatus})`);
-      }
 
       const grnNumber = generateGRNNumber();
       const batchLines: BatchLineDto[] = input.batchLines.map((b) => ({
@@ -70,7 +67,7 @@ export function createGRNService(deps: {
         grnNumber,
         poId: input.poId,
         vendorName: input.vendorName,
-        invoiceNo: input.invoiceNo,
+        billNo: input.billNo,
         billDate: input.billDate,
         transportDetails: input.transportDetails,
         receivedDate: input.receivedDate,
