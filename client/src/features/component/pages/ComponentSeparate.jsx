@@ -326,8 +326,8 @@ const ComponentSeparate = () => {
       </Dialog>
 
       <Dialog open={showSignatureModal} onOpenChange={setShowSignatureModal}>
-        <DialogContent className="sm:max-w-[425px] rounded-xl">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[425px] rounded-xl p-6">
+          <DialogHeader className="mb-2">
             <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <CheckCircle className="w-6 h-6 text-green-600 animate-pulse" />
               Technician Verification
@@ -372,16 +372,27 @@ const ComponentSeparate = () => {
               </div>
             )}
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowSignatureModal(false)} className="rounded-xl px-5 h-11 border-gray-200 hover:bg-gray-50 text-gray-700">
-              Cancel
+          <DialogFooter className="flex flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-gray-100">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => {
+                if (signatureBag) {
+                  setReadyToSignBags((prev) => prev.filter((b) => b !== signatureBag.bagNo));
+                }
+                setShowSignatureModal(false);
+              }}
+              className="rounded-xl px-5 h-11 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 text-xs sm:text-sm font-semibold"
+            >
+              Edit Separation
             </Button>
             <Button
               onClick={handleConfirmSignature}
               disabled={isActionLoading || !signatureText.trim()}
-              className="bg-green-600 hover:bg-green-700 text-white rounded-xl px-6 h-11 transition-all duration-300 font-medium flex items-center justify-center shadow-md hover:shadow-lg disabled:opacity-50 disabled:shadow-none"
+              className="bg-green-600 hover:bg-green-700 text-white rounded-xl px-6 h-11 transition-all duration-300 font-semibold flex items-center justify-center shadow-md hover:shadow-lg disabled:opacity-50 disabled:shadow-none text-xs sm:text-sm"
             >
-              {isActionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirm & Complete"}
+              {isActionLoading ? <Loader2 className="w-5 h-5 animate-spin mr-1.5" /> : null}
+              Confirm & Complete
             </Button>
           </DialogFooter>
         </DialogContent>
