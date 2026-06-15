@@ -60,7 +60,7 @@ export function createPOService(deps: { pos: PORepo; vendors: VendorRepo }): POS
         totalAmountRs,
         expectedDelivery: input.expectedDelivery,
         manufacturer: input.manufacturer,
-        billNo: input.billNo,
+        invoiceNo: input.invoiceNo,
         billDate: input.billDate,
         notes: input.notes,
         actorId,
@@ -73,14 +73,14 @@ export function createPOService(deps: { pos: PORepo; vendors: VendorRepo }): POS
       const po = await deps.pos.findById(id);
       if (!po) throw new NotFoundError('PurchaseOrder', id);
       
-      const patch: Partial<{ lineItems: LineItemDto[]; totalAmountRs: number; expectedDelivery: Date; manufacturer: string; billNo: string; billDate: Date; notes: string }> = {};
+      const patch: Partial<{ lineItems: LineItemDto[]; totalAmountRs: number; expectedDelivery: Date; manufacturer: string; invoiceNo: string; billDate: Date; notes: string }> = {};
       if (input.lineItems) {
         patch.lineItems = input.lineItems;
         patch.totalAmountRs = calcTotal(input.lineItems);
       }
       if (input.expectedDelivery) patch.expectedDelivery = input.expectedDelivery;
       if (input.manufacturer !== undefined) patch.manufacturer = input.manufacturer;
-      if (input.billNo !== undefined) patch.billNo = input.billNo;
+      if (input.invoiceNo !== undefined) patch.invoiceNo = input.invoiceNo;
       if (input.billDate !== undefined) patch.billDate = input.billDate;
       if (input.notes !== undefined) patch.notes = input.notes;
       const updated = await deps.pos.update(id, patch, actorId);

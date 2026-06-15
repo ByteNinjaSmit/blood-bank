@@ -14,6 +14,7 @@ export interface LineItemDto {
 
 export interface PODto {
   id: string;
+  _id: string;
   poNumber: string;
   poDate: string;
   vendorId: string;
@@ -21,7 +22,7 @@ export interface PODto {
   totalAmountRs?: number;
   expectedDelivery?: string;
   manufacturer?: string;
-  billNo?: string;
+  invoiceNo?: string;
   billDate?: string;
   notes?: string;
   createdAt: string;
@@ -31,6 +32,7 @@ export interface PODto {
 function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date }): PODto {
   return {
     id: doc._id.toString(),
+    _id: doc._id.toString(),
     poNumber: doc.poNumber as string,
     poDate: (doc.poDate as Date).toISOString(),
     vendorId: (doc.vendorId as Types.ObjectId).toString(),
@@ -38,7 +40,7 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     totalAmountRs: doc.totalAmountRs as number | undefined,
     expectedDelivery: doc.expectedDelivery ? (doc.expectedDelivery as Date).toISOString() : undefined,
     manufacturer: doc.manufacturer as string | undefined,
-    billNo: doc.billNo as string | undefined,
+    invoiceNo: doc.invoiceNo as string | undefined,
     billDate: doc.billDate ? (doc.billDate as Date).toISOString() : undefined,
     notes: doc.notes as string | undefined,
     createdAt: doc.createdAt ? doc.createdAt.toISOString() : '',
@@ -57,7 +59,7 @@ export interface PORepo {
     totalAmountRs: number;
     expectedDelivery?: Date;
     manufacturer?: string;
-    billNo?: string;
+    invoiceNo?: string;
     billDate?: Date;
     notes?: string;
     actorId: string;
@@ -67,7 +69,7 @@ export interface PORepo {
     totalAmountRs: number;
     expectedDelivery: Date;
     manufacturer: string;
-    billNo: string;
+    invoiceNo: string;
     billDate: Date;
     notes: string;
   }>, actorId: string): Promise<PODto | null>;
@@ -104,7 +106,7 @@ export function createPORepo(): PORepo {
         totalAmountRs: input.totalAmountRs,
         expectedDelivery: input.expectedDelivery,
         manufacturer: input.manufacturer,
-        billNo: input.billNo,
+        invoiceNo: input.invoiceNo,
         billDate: input.billDate,
         notes: input.notes,
         createdBy: actor,

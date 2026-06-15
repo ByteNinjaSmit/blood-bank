@@ -33,7 +33,7 @@ function PODrawer({ onClose, vendors, poToEdit }) {
   const [vendorSearchText, setVendorSearchText] = useState('');
   const [expectedDelivery, setExpectedDelivery] = useState('');
   const [manufacturer, setManufacturer] = useState(poToEdit?.manufacturer || '');
-  const [billNo, setBillNo] = useState(poToEdit?.billNo || '');
+  const [invoiceNo, setInvoiceNo] = useState(poToEdit?.invoiceNo || '');
   const [billDate, setBillDate] = useState(poToEdit?.billDate ? new Date(poToEdit.billDate).toISOString().split('T')[0] : '');
   const [lines, setLines] = useState(poToEdit?.lineItems?.length > 0 ? poToEdit.lineItems.map(l => ({
     ...EMPTY_LINE, bagType: l.bagType, capacity: l.capacityMl, anticoagulant: l.anticoagulant, bags: l.quantityOrdered, unitPrice: l.unitPriceRs, gstPercent: l.gstPercent
@@ -109,7 +109,7 @@ function PODrawer({ onClose, vendors, poToEdit }) {
         vendorId: finalVendorId,
         expectedDelivery: expectedDelivery || undefined,
         manufacturer: manufacturer || undefined,
-        billNo: billNo || undefined,
+        invoiceNo: invoiceNo || undefined,
         billDate: billDate || undefined,
         lineItems: lines.map((l) => ({
           bagType: l.bagType,
@@ -180,8 +180,8 @@ function PODrawer({ onClose, vendors, poToEdit }) {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bill No</label>
-              <input value={billNo} onChange={(e) => setBillNo(e.target.value)}
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Invoice No</label>
+              <input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="BILL-1234" />
             </div>
             <div>
@@ -373,7 +373,7 @@ export default function PurchaseOrders() {
                         <td colSpan={8} className="px-8 py-4">
                           <div className="grid grid-cols-4 gap-4 mb-4 text-xs bg-white p-3 rounded-lg border border-gray-150 shadow-sm max-w-2xl">
                             <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Manufacturer:</span> <span className="font-medium text-gray-800 ml-1">{o.manufacturer || '—'}</span></div>
-                            <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Bill No:</span> <span className="font-medium text-gray-800 ml-1">{o.billNo || '—'}</span></div>
+                            <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Invoice No:</span> <span className="font-medium text-gray-800 ml-1">{o.invoiceNo || '—'}</span></div>
                             <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Bill Date:</span> <span className="font-medium text-gray-800 ml-1">{fmtDate(o.billDate)}</span></div>
                           </div>
                           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Line Items</div>

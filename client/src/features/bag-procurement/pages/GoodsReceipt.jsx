@@ -3,7 +3,8 @@ import { PackageCheck, Plus, X } from 'lucide-react';
 import {
   useGRNList,
   useCreateGRN,
-  useAcceptGRN,
+  useUpdateGRN,
+  useVendorList,
 } from '../queries';
 import { usePOList } from '../queries';
 
@@ -15,7 +16,7 @@ const STATUS_BADGE = {
 
 const EMPTY_BATCH = {
   bagType: 'SINGLE', batchNo: '', mfgDate: '', expiryDate: '',
-  quantityReceived: '', quantityAccepted: '', quantityRejected: '',
+  quantityReceived: '',
 };
 
 function StatusBadge({ status }) {
@@ -26,17 +27,28 @@ function StatusBadge({ status }) {
   );
 }
 
-function GRNDrawer({ onClose, pos }) {
-  const [poId, setPoId] = useState('');
-  const [billNo, setBillNo] = useState('');
-  const [billDate, setBillDate] = useState('');
-  const [receivedDate, setReceivedDate] = useState('');
-  const [taxableAmount, setTaxableAmount] = useState('');
-  const [cgst, setCgst] = useState('');
-  const [sgst, setSgst] = useState('');
-  const [igst, setIgst] = useState('');
-  const [batches, setBatches] = useState([{ ...EMPTY_BATCH }]);
+function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
+  const [poId, setPoId] = useState(grnToEdit?.poId || '');
+  const [invoiceNo, setInvoiceNo] = useState(grnToEdit?.invoiceNo || '');
+  const [billDate, setBillDate] = useState(grnToEdit?.billDate ? new Date(grnToEdit.billDate).toISOString().split('T')[0] : '');
+  const [receivedDate, setReceivedDate] = useState(grnToEdit?.receivedDate ? new Date(grnToEdit.receivedDate).toISOString().split('T')[0] : '');
+  const [taxableAmount, setTaxableAmount] = useState(grnToEdit?.financials?.basicAmountRs || '');
+  const [cgst, setCgst] = useState(grnToEdit?.financials?.cgstRs || '');
+  const [sgst, setSgst] = useState(grnToEdit?.financials?.sgstRs || '');
+  const [igst, setIgst] = useState(grnToEdit?.financials?.igstRs || '');
+  const [batches, setBatches] = useState(
+    grnToEdit?.batchLines?.length > 0
+      ? grnToEdit.batchLines.map((b) => ({
+          bagType: b.bagType,
+          batchNo: b.batchNumber,
+          mfgDate: b.manufacturingDate ? new Date(b.manufacturingDate).toISOString().split('T')[0] : '',
+          expiryDate: b.expiryDate ? new Date(b.expiryDate).toISOString().split('T')[0] : '',
+          quantityReceived: b.quantityReceived,
+        }))
+      : [{ ...EMPTY_BATCH }]
+  );
   const createGRN = useCreateGRN();
+  const updateGRN = useUpdateGRN();
 
   const updateBatch = (i, k, v) => setBatches((bs) => bs.map((b, idx) => idx === i ? { ...b, [k]: v } : b));
   const addBatch    = () => setBatches((bs) => [...bs, { ...EMPTY_BATCH }]);
@@ -52,36 +64,47 @@ function GRNDrawer({ onClose, pos }) {
       setBillDate('');
       return;
     }
-    const selectedPo = pos.find((p) => p._id === selectedPoId || p.id === selectedPoId);
+    const selectedPo = pos.find((p) => (p._id ?? p.id) === selectedPoId);
     if (selectedPo) {
-      if (selectedPo.billNo) setBillNo(selectedPo.billNo);
+      if (selectedPo.invoiceNo) setInvoiceNo(selectedPo.invoiceNo);
       if (selectedPo.billDate) setBillDate(selectedPo.billDate.split('T')[0]);
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    createGRN.mutateAsync({
+    const payload = {
       poId,
-      vendorName: pos.find(p => p._id === poId || p.id === poId)?.vendorName,
-      billNo,
-      billDate,
-      receivedDate,
-      taxableAmount: Number(taxableAmount),
-      cgst: Number(cgst),
-      sgst: Number(sgst),
-      igst: Number(igst),
-      netAmount,
+      vendorName: vendors.find(v => (v._id ?? v.id) === pos.find(p => (p._id ?? p.id) === poId)?.vendorId)?.name || 'Unknown Vendor',
+      invoiceNo,
+      billDate: billDate || undefined,
+      receivedDate: receivedDate || undefined,
+      financials: {
+        basicAmountRs: Number(taxableAmount) || 0,
+        cgstRs: Number(cgst) || 0,
+        sgstRs: Number(sgst) || 0,
+        igstRs: Number(igst) || 0,
+        netAmountRs: netAmount || 0,
+      },
       batchLines: batches.map((b) => ({
         bagType: b.bagType,
-        batchNo: b.batchNo,
-        mfgDate: b.mfgDate,
+        batchNumber: b.batchNo,
+        manufacturingDate: b.mfgDate || undefined,
         expiryDate: b.expiryDate,
         quantityReceived: Number(b.quantityReceived),
-        quantityAccepted: Number(b.quantityAccepted),
-        quantityRejected: Number(b.quantityRejected),
       })),
-    }).then(onClose).catch(() => {});
+    };
+
+    const promise = grnToEdit
+      ? updateGRN.mutateAsync({ id: grnToEdit.id ?? grnToEdit._id, data: payload })
+      : createGRN.mutateAsync(payload);
+
+    promise.then(onClose).catch((err) => {
+      console.error('GRN SAVE ERROR:', err.message);
+      if (err.details) {
+        console.error('GRN SAVE DETAILS:', err.details);
+      }
+    });
   };
 
   const fieldClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400';
@@ -91,7 +114,7 @@ function GRNDrawer({ onClose, pos }) {
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
       <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-white z-50 shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b bg-orange-800">
-          <h2 className="text-base font-semibold text-white">Create Goods Receipt (GRN)</h2>
+          <h2 className="text-base font-semibold text-white">{grnToEdit ? 'Edit Goods Receipt (GRN)' : 'Create Goods Receipt (GRN)'}</h2>
           <button onClick={onClose} className="text-orange-200 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
@@ -99,16 +122,16 @@ function GRNDrawer({ onClose, pos }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Purchase Order *</label>
-              <select required value={poId} onChange={handlePoChange} className={`${fieldClass} bg-white`}>
+              <select required disabled={Boolean(grnToEdit)} value={poId} onChange={handlePoChange} className={`${fieldClass} bg-white disabled:opacity-75`}>
                 <option value="">Select PO...</option>
                 {(pos ?? []).filter((p) => p.status !== 'CANCELLED' && p.status !== 'REJECTED').map((p) => (
-                  <option key={p._id} value={p._id}>{p.poNumber} — {p.vendorName ?? 'No Vendor'}</option>
+                  <option key={p._id ?? p.id} value={p._id ?? p.id}>{p.poNumber} — {vendors.find(v => (v._id ?? v.id) === p.vendorId)?.name || 'Unknown Vendor'}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bill No *</label>
-              <input required value={billNo} onChange={(e) => setBillNo(e.target.value)} className={fieldClass} />
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Invoice No *</label>
+              <input required value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className={fieldClass} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bill Date</label>
@@ -178,25 +201,16 @@ function GRNDrawer({ onClose, pos }) {
                         className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-400" />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Expiry Date</label>
-                      <input type="date" value={b.expiryDate} onChange={(e) => updateBatch(i, 'expiryDate', e.target.value)}
+                      <label className="block text-xs text-gray-500 mb-1">Expiry Date *</label>
+                      <input required type="date" value={b.expiryDate} onChange={(e) => updateBatch(i, 'expiryDate', e.target.value)}
                         className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-400" />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Qty Received</label>
-                      <input type="number" value={b.quantityReceived} onChange={(e) => updateBatch(i, 'quantityReceived', e.target.value)}
+                      <label className="block text-xs text-gray-500 mb-1">Qty Received *</label>
+                      <input required type="number" value={b.quantityReceived} onChange={(e) => updateBatch(i, 'quantityReceived', e.target.value)}
                         className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-400" />
                     </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Qty Accepted</label>
-                      <input type="number" value={b.quantityAccepted} onChange={(e) => updateBatch(i, 'quantityAccepted', e.target.value)}
-                        className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-400" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Qty Rejected</label>
-                      <input type="number" value={b.quantityRejected} onChange={(e) => updateBatch(i, 'quantityRejected', e.target.value)}
-                        className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-400" />
-                    </div>
+
                   </div>
                 </div>
               ))}
@@ -208,9 +222,9 @@ function GRNDrawer({ onClose, pos }) {
               className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
               Cancel
             </button>
-            <button type="submit" disabled={createGRN.isPending}
+            <button type="submit" disabled={createGRN.isPending || updateGRN.isPending}
               className="px-5 py-2 text-sm font-semibold text-white bg-orange-800 rounded-lg hover:bg-orange-900 disabled:opacity-60">
-              {createGRN.isPending ? 'Saving…' : 'Create GRN'}
+              {createGRN.isPending || updateGRN.isPending ? 'Saving…' : grnToEdit ? 'Update GRN' : 'Create GRN'}
             </button>
           </div>
         </form>
@@ -221,12 +235,14 @@ function GRNDrawer({ onClose, pos }) {
 
 export default function GoodsReceipt() {
   const [showDrawer, setShowDrawer] = useState(false);
+  const [editGrn, setEditGrn] = useState(null);
   const { data, isLoading } = useGRNList({});
   const { data: poData } = usePOList({});
-  const acceptGRN = useAcceptGRN();
+  const { data: vendorData } = useVendorList({});
 
   const grns = data?.items ?? data?.goodsReceipts ?? (Array.isArray(data) ? data : []);
   const pos = poData?.items ?? poData?.purchaseOrders ?? (Array.isArray(poData) ? poData : []);
+  const vendors = vendorData?.items ?? vendorData?.vendors ?? (Array.isArray(vendorData) ? vendorData : []);
 
   const fmtDate  = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   const fmtMoney = (n) => n != null ? `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
@@ -244,7 +260,7 @@ export default function GoodsReceipt() {
               <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Inward Stock Register</p>
             </div>
           </div>
-          <button onClick={() => setShowDrawer(true)}
+          <button onClick={() => { setEditGrn(null); setShowDrawer(true); }}
             className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">
             <Plus className="w-4 h-4" /> Create GRN
           </button>
@@ -257,7 +273,7 @@ export default function GoodsReceipt() {
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
-                  {['GRN Number', 'Bill No', 'Vendor', 'Received Date', 'Net Amount', 'Status', 'Actions'].map((h) => (
+                  {['GRN Number', 'Invoice No', 'Vendor', 'Received Date', 'Net Amount', 'Actions'].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -270,18 +286,15 @@ export default function GoodsReceipt() {
                 ) : grns.map((g) => (
                   <tr key={g._id} className="hover:bg-orange-50/30 transition-colors">
                     <td className="px-4 py-3 text-sm font-mono font-medium text-gray-900">{g.grnNumber}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{g.billNo}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{g.vendorName ?? g.purchaseOrder?.vendorName ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{g.invoiceNo}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{g.vendorName ?? vendors.find(v => (v._id ?? v.id) === g.purchaseOrder?.vendorId)?.name ?? '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(g.receivedDate)}</td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-800">{fmtMoney(g.netAmount)}</td>
-                    <td className="px-4 py-3"><StatusBadge status={g.status} /></td>
                     <td className="px-4 py-3">
-                      {g.status === 'PENDING' && (
-                        <button onClick={() => acceptGRN.mutate(g._id)}
-                          className="px-2.5 py-1 text-xs font-medium text-green-700 border border-green-200 rounded-md hover:bg-green-50">
-                          Accept
-                        </button>
-                      )}
+                      <button onClick={() => { setEditGrn(g); setShowDrawer(true); }}
+                        className="px-2.5 py-1 text-xs font-medium text-blue-700 border border-blue-200 rounded-md hover:bg-blue-50">
+                        Edit
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -291,7 +304,7 @@ export default function GoodsReceipt() {
         </div>
       </div>
 
-      {showDrawer && <GRNDrawer onClose={() => setShowDrawer(false)} pos={pos} />}
+      {showDrawer && <GRNDrawer onClose={() => { setShowDrawer(false); setEditGrn(null); }} pos={pos} vendors={vendors} grnToEdit={editGrn} />}
     </div>
   );
 }

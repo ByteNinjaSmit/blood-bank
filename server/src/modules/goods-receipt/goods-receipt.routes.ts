@@ -41,11 +41,11 @@ router.post(
 );
 
 router.patch(
-  '/:id/accept',
+  '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo']),
+  requireRole(['system-admin', 'bbo', 'store-keeper']),
   requirePermission('grn:create'),
-  controllers.accept,
+  controllers.update,
 );
 
 export default router;

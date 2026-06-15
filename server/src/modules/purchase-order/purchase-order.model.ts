@@ -23,7 +23,7 @@ const PurchaseOrderSchema = new Schema(
     totalAmountRs: { type: Number, min: 0 },
     expectedDelivery: { type: Date },
     manufacturer: { type: String, trim: true },
-    billNo: { type: String, trim: true },
+    invoiceNo: { type: String, trim: true },
     billDate: { type: Date },
     notes: { type: String, trim: true },
     deletedAt: { type: Date, default: null, index: true },

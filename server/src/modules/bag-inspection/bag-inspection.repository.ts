@@ -27,7 +27,7 @@ export interface BagInspectionDto {
   observation?: string;
   decision: string;
   rejectionReason?: string;
-  testingType?: 'EMPTY' | 'PCV' | 'OTHER';
+  testingType?: 'EMPTY' | 'WB' | 'PRBC' | 'FFP' | 'PC' | 'CRYO' | 'OTHER';
   testingStatus?: 'SENT' | 'REPORT_RECEIVED';
   sentDate?: string;
   reportDate?: string;
@@ -58,7 +58,7 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     observation: doc.observation as string | undefined,
     decision: doc.decision as string,
     rejectionReason: doc.rejectionReason as string | undefined,
-    testingType: doc.testingType as 'EMPTY' | 'PCV' | 'OTHER' | undefined,
+    testingType: doc.testingType as 'EMPTY' | 'WB' | 'PRBC' | 'FFP' | 'PC' | 'CRYO' | 'OTHER' | undefined,
     testingStatus: doc.testingStatus as 'SENT' | 'REPORT_RECEIVED' | undefined,
     sentDate: doc.sentDate ? (doc.sentDate as Date).toISOString() : undefined,
     reportDate: doc.reportDate ? (doc.reportDate as Date).toISOString() : undefined,
@@ -91,10 +91,12 @@ export interface BagInspectionRepo {
     observation?: string;
     decision: string;
     rejectionReason?: string;
-    testingType?: 'EMPTY' | 'PCV' | 'OTHER';
+    testingType?: 'EMPTY' | 'WB' | 'PRBC' | 'FFP' | 'PC' | 'CRYO' | 'OTHER';
     testingStatus?: 'SENT' | 'REPORT_RECEIVED';
     sentDate?: Date;
     testingLab?: string;
+    bagNo?: string;
+    segmentNo?: string;
     actorId: string;
   }): Promise<BagInspectionDto>;
   update(id: string, patch: Partial<{
@@ -152,6 +154,8 @@ export function createBagInspectionRepo(): BagInspectionRepo {
         testingStatus: input.testingStatus,
         sentDate: input.sentDate,
         testingLab: input.testingLab,
+        bagNo: input.bagNo,
+        segmentNo: input.segmentNo,
         createdBy: actor,
         updatedBy: actor,
       });

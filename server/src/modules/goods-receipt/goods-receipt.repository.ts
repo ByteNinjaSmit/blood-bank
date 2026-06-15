@@ -10,8 +10,6 @@ export interface BatchLineDto {
   manufacturingDate?: string;
   expiryDate: string;
   quantityReceived: number;
-  quantityAccepted: number;
-  quantityRejected: number;
 }
 
 export interface FinancialsDto {
@@ -25,14 +23,15 @@ export interface FinancialsDto {
 
 export interface GRNDto {
   id: string;
+  _id: string;
   grnNumber: string;
   poId: string;
   vendorName?: string;
-  billNo: string;
-  billDate: string;
+  invoiceNo: string;
+  billDate?: string;
   transportDetails?: string;
-  receivedDate: string;
-  receivedById: string;
+  receivedDate?: string;
+  receivedById?: string;
   batchLines: BatchLineDto[];
   financials?: FinancialsDto;
   status: string;
@@ -50,20 +49,19 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     manufacturingDate: b.manufacturingDate ? (b.manufacturingDate as Date).toISOString() : undefined,
     expiryDate: (b.expiryDate as Date).toISOString(),
     quantityReceived: b.quantityReceived as number,
-    quantityAccepted: (b.quantityAccepted as number) ?? 0,
-    quantityRejected: (b.quantityRejected as number) ?? 0,
   }));
   const fin = doc.financials as Record<string, unknown> | undefined;
   return {
     id: doc._id.toString(),
+    _id: doc._id.toString(),
     grnNumber: doc.grnNumber as string,
     poId: (doc.poId as Types.ObjectId).toString(),
     vendorName: doc.vendorName as string | undefined,
-    billNo: doc.billNo as string,
-    billDate: (doc.billDate as Date).toISOString(),
+    invoiceNo: doc.invoiceNo as string,
+    billDate: doc.billDate ? (doc.billDate as Date).toISOString() : undefined,
     transportDetails: doc.transportDetails as string | undefined,
-    receivedDate: (doc.receivedDate as Date).toISOString(),
-    receivedById: (doc.receivedById as Types.ObjectId).toString(),
+    receivedDate: doc.receivedDate ? (doc.receivedDate as Date).toISOString() : undefined,
+    receivedById: doc.receivedById ? (doc.receivedById as Types.ObjectId).toString() : undefined,
     batchLines,
     financials: fin ? {
       basicAmountRs: fin.basicAmountRs as number | undefined,
@@ -87,17 +85,25 @@ export interface GRNRepo {
     grnNumber: string;
     poId: string;
     vendorName?: string;
-    billNo: string;
-    billDate: Date;
+    invoiceNo: string;
+    billDate?: Date;
     transportDetails?: string;
-    receivedDate: Date;
-    receivedById: string;
+    receivedDate?: Date;
+    receivedById?: string;
     batchLines: BatchLineDto[];
     financials?: FinancialsDto;
     notes?: string;
     actorId: string;
   }): Promise<GRNDto>;
-  updateStatus(id: string, status: string, actorId: string): Promise<GRNDto | null>;
+  update(id: string, patch: Partial<{
+    invoiceNo: string;
+    billDate: Date;
+    transportDetails: string;
+    receivedDate: Date;
+    batchLines: BatchLineDto[];
+    financials: FinancialsDto;
+    notes: string;
+  }>, actorId: string): Promise<GRNDto | null>;
 }
 
 export function createGRNRepo(): GRNRepo {
@@ -135,11 +141,11 @@ export function createGRNRepo(): GRNRepo {
         grnNumber: input.grnNumber,
         poId: new Types.ObjectId(input.poId),
         vendorName: input.vendorName,
-        billNo: input.billNo,
+        invoiceNo: input.invoiceNo,
         billDate: input.billDate,
         transportDetails: input.transportDetails,
         receivedDate: input.receivedDate,
-        receivedById: new Types.ObjectId(input.receivedById),
+        receivedById: input.receivedById ? new Types.ObjectId(input.receivedById) : actor,
         batchLines: input.batchLines.map((b) => ({
           ...b,
           manufacturingDate: b.manufacturingDate ? new Date(b.manufacturingDate) : undefined,
@@ -147,18 +153,18 @@ export function createGRNRepo(): GRNRepo {
         })),
         financials: input.financials,
         notes: input.notes,
-        status: 'PENDING',
+        status: 'ACCEPTED',
         createdBy: actor,
         updatedBy: actor,
       });
       return toDto(doc.toObject() as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
     },
 
-    async updateStatus(id, status, actorId) {
+    async update(id, patch, actorId) {
       const actor = new Types.ObjectId(actorId);
       const doc = await GoodsReceiptModel.findOneAndUpdate(
         { _id: new Types.ObjectId(id), deletedAt: null },
-        { $set: { status, updatedBy: actor } },
+        { $set: { ...patch, updatedBy: actor } },
         { new: true },
       ).lean();
       if (!doc) return null;

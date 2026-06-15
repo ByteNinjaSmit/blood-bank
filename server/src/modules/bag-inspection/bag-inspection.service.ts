@@ -57,6 +57,8 @@ export function createBagInspectionService(deps: { inspections: BagInspectionRep
         testingStatus: input.testingType ? 'SENT' : undefined,
         sentDate: input.sentDate,
         testingLab: input.testingLab,
+        bagNo: input.bagNo,
+        segmentNo: input.segmentNo,
         actorId,
       });
       log.info({ inspectionId, grnId: input.grnId, decision: input.decision, actorId }, 'bag inspection recorded');

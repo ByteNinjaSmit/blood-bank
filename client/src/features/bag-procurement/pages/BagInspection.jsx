@@ -10,6 +10,16 @@ const DECISION_BADGE = {
   QUARANTINE: 'bg-orange-50 text-orange-700 border-orange-200',
 };
 
+const TESTING_TYPE_LABELS = {
+  EMPTY: 'Empty Blood Bag',
+  WB: 'Whole Blood (WB)',
+  PRBC: 'Packed Red Blood Cells (PRBC / PCV)',
+  FFP: 'Fresh Frozen Plasma (FFP)',
+  PC: 'Platelet Concentrate (PC / RDP)',
+  CRYO: 'Cryoprecipitate',
+  OTHER: 'Other Blood Bag',
+};
+
 const PHYSICAL_CHECKS = [
   { key: 'sealIntact',           label: 'Seal Intact' },
   { key: 'noLeakage',            label: 'No Leakage' },
@@ -51,6 +61,8 @@ function InspectionDrawer({ onClose, grns }) {
     sentDate: new Date().toISOString().split('T')[0],
     testingLab: 'Arpan Blood Center, Nashik',
     customTestingLab: '',
+    bagNo: '',
+    segmentNo: '',
   });
   const createInspection = useCreateBagInspection();
 
@@ -94,7 +106,7 @@ function InspectionDrawer({ onClose, grns }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const { grnId, batchNumber, sampleSize, testingType, sentDate, testingLab, customTestingLab } = form;
+    const { grnId, batchNumber, sampleSize, testingType, sentDate, testingLab, customTestingLab, bagNo, segmentNo } = form;
     const labName = testingLab === 'Others' ? customTestingLab : testingLab;
 
     createInspection.mutateAsync({
@@ -118,6 +130,8 @@ function InspectionDrawer({ onClose, grns }) {
       testingType,
       sentDate,
       testingLab: labName,
+      bagNo,
+      segmentNo,
     }).then(onClose).catch(() => {});
   };
 
@@ -170,9 +184,23 @@ function InspectionDrawer({ onClose, grns }) {
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Testing Type *</label>
               <select required value={form.testingType} onChange={setField('testingType')} className={`${fieldClass} bg-white`}>
                 <option value="EMPTY">Empty Blood Bag</option>
-                <option value="PCV">PCV Blood Bag</option>
+                <option value="WB">Whole Blood (WB)</option>
+                <option value="PRBC">Packed Red Blood Cells (PRBC / PCV)</option>
+                <option value="FFP">Fresh Frozen Plasma (FFP)</option>
+                <option value="PC">Platelet Concentrate (PC / RDP)</option>
+                <option value="CRYO">Cryoprecipitate</option>
                 <option value="OTHER">Other Blood Bag</option>
               </select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bag No *</label>
+                <input required value={form.bagNo} onChange={setField('bagNo')} className={fieldClass} placeholder="e.g. BAG-001" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Segment No *</label>
+                <input required value={form.segmentNo} onChange={setField('segmentNo')} className={fieldClass} placeholder="e.g. SEG-99" />
+              </div>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Date Sent for Testing *</label>
@@ -212,8 +240,8 @@ function InspectionDrawer({ onClose, grns }) {
 
 function UpdateReportDrawer({ onClose, inspection }) {
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
-  const [bagNo, setBagNo] = useState('');
-  const [segmentNo, setSegmentNo] = useState('');
+  const [bagNo, setBagNo] = useState(inspection.bagNo || '');
+  const [segmentNo, setSegmentNo] = useState(inspection.segmentNo || '');
   const [bloodGroup, setBloodGroup] = useState('A+');
   const [testResult, setTestResult] = useState('bag and segment is sterile');
   const [factorVIII, setFactorVIII] = useState('');
@@ -244,7 +272,10 @@ function UpdateReportDrawer({ onClose, inspection }) {
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
       <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white z-50 shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b bg-orange-800">
-          <h2 className="text-base font-semibold text-white">Update Quality Report ({inspection.testingType} Bag)</h2>
+          <div>
+            <h2 className="text-base font-semibold text-white">Update Quality Report ({TESTING_TYPE_LABELS[inspection.testingType] ?? inspection.testingType})</h2>
+            <p className="text-xs text-orange-200 mt-0.5">Batch No: {inspection.batchNumber}</p>
+          </div>
           <button onClick={onClose} className="text-orange-200 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
@@ -270,11 +301,11 @@ function UpdateReportDrawer({ onClose, inspection }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bag No *</label>
-                <input required value={bagNo} onChange={(e) => setBagNo(e.target.value)} className={fieldClass} placeholder="e.g. BAG-001" />
+                <input required disabled value={bagNo} onChange={(e) => setBagNo(e.target.value)} className={`${fieldClass} bg-gray-50 cursor-not-allowed`} placeholder="e.g. BAG-001" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Segment No *</label>
-                <input required value={segmentNo} onChange={(e) => setSegmentNo(e.target.value)} className={fieldClass} placeholder="e.g. SEG-99" />
+                <input required disabled value={segmentNo} onChange={(e) => setSegmentNo(e.target.value)} className={`${fieldClass} bg-gray-50 cursor-not-allowed`} placeholder="e.g. SEG-99" />
               </div>
             </div>
 
@@ -298,11 +329,11 @@ function UpdateReportDrawer({ onClose, inspection }) {
                 <div className="text-xs font-bold text-gray-600 uppercase tracking-wide mt-2">Coagulation Work Up Results</div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Factor VIII (%)</label>
-                    <input type="number" step="any" value={factorVIII} onChange={(e) => setFactorVIII(e.target.value)} className={fieldClass} placeholder="e.g. 85" />
+                    <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Factor VIII (Unit/mL)</label>
+                    <input type="number" step="any" value={factorVIII} onChange={(e) => setFactorVIII(e.target.value)} className={fieldClass} placeholder="e.g. 0.92" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Fibrinogen (mg/dL)</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Fibrinogen (mg)</label>
                     <input type="number" step="any" value={fibrinogen} onChange={(e) => setFibrinogen(e.target.value)} className={fieldClass} placeholder="e.g. 250" />
                   </div>
                 </div>
@@ -391,7 +422,7 @@ export default function BagInspection() {
                       {ins.testingType ? (
                         ins.testingStatus === 'SENT' ? (
                           <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
-                            Under Testing ({ins.testingType})
+                            Under Testing ({TESTING_TYPE_LABELS[ins.testingType] ?? ins.testingType})
                           </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
@@ -409,8 +440,8 @@ export default function BagInspection() {
                           <div><span className="font-semibold text-gray-500">Bag/Seg:</span> {ins.bagNo || '—'} / {ins.segmentNo || '—'}</div>
                           {ins.testingType === 'EMPTY' ? (
                             <div>
-                              <span className="font-semibold text-gray-500">Factor VIII:</span> {ins.factorVIII ?? '—'}%, 
-                              <span className="font-semibold text-gray-500 ml-1">Fibrinogen:</span> {ins.fibrinogen ?? '—'} mg/dL
+                              <span className="font-semibold text-gray-500">Factor VIII:</span> {ins.factorVIII ?? '—'} Unit/mL, 
+                              <span className="font-semibold text-gray-500 ml-1">Fibrinogen:</span> {ins.fibrinogen ?? '—'} mg
                             </div>
                           ) : (
                             <div><span className="font-semibold text-gray-500">BG / Result:</span> {ins.bloodGroup || '—'} / {ins.testResult || '—'}</div>

@@ -124,10 +124,10 @@ export function useCreateGRN() {
   });
 }
 
-export function useAcceptGRN() {
+export function useUpdateGRN() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id) => bagProcurementApi.goodsReceipt.accept(id),
+    mutationFn: ({ id, data }) => bagProcurementApi.goodsReceipt.update(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['goods-receipt', 'list'] }),
   });
 }

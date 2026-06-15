@@ -4,6 +4,7 @@ import type { ListVendorsInput } from '@/modules/vendor/vendor.validator';
 
 export interface VendorDto {
   id: string;
+  _id: string;
   vendorId: string;
   name: string;
   manufacturer: string;
@@ -24,6 +25,7 @@ export interface VendorDto {
 function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date }): VendorDto {
   return {
     id: doc._id.toString(),
+    _id: doc._id.toString(),
     vendorId: doc.vendorId as string,
     name: doc.name as string,
     manufacturer: doc.manufacturer as string,

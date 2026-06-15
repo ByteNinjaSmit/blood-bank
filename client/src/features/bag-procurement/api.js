@@ -16,17 +16,14 @@ export const bagProcurementApi = {
     list:    (params)   => apiClient.get(`${V}/purchase-order`, { params }).then(unwrap),
     get:     (id)       => apiClient.get(`${V}/purchase-order/${id}`).then(unwrap),
     create:  (data)     => apiClient.post(`${V}/purchase-order`, data).then(unwrap),
-    update:  (id, data) => apiClient.put(`${V}/purchase-order/${id}`, data).then(unwrap),
-    submit:  (id)       => apiClient.patch(`${V}/purchase-order/${id}/submit`).then(unwrap),
-    approve: (id)       => apiClient.patch(`${V}/purchase-order/${id}/approve`).then(unwrap),
-    reject:  (id, data) => apiClient.patch(`${V}/purchase-order/${id}/reject`, data).then(unwrap),
+    update:  (id, data) => apiClient.patch(`${V}/purchase-order/${id}`, data).then(unwrap),
   },
 
   goodsReceipt: {
     list:   (params)   => apiClient.get(`${V}/goods-receipt`, { params }).then(unwrap),
     get:    (id)       => apiClient.get(`${V}/goods-receipt/${id}`).then(unwrap),
     create: (data)     => apiClient.post(`${V}/goods-receipt`, data).then(unwrap),
-    accept: (id)       => apiClient.patch(`${V}/goods-receipt/${id}/accept`).then(unwrap),
+    update: (id, data) => apiClient.patch(`${V}/goods-receipt/${id}`, data).then(unwrap),
   },
 
   bagStock: {

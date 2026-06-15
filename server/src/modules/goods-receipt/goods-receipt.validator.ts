@@ -13,14 +13,12 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T
 
 const BatchLineSchema = z.object({
   bagType: z.enum(BAG_TYPE),
-  capacityMl: z.number().positive(),
+  capacityMl: z.number().positive().optional().default(350),
   anticoagulant: z.enum(ANTICOAGULANT).optional(),
   batchNumber: z.string().trim().min(1).max(100),
   manufacturingDate: z.coerce.date().optional(),
   expiryDate: z.coerce.date(),
   quantityReceived: z.number().int().positive(),
-  quantityAccepted: z.number().int().min(0).optional(),
-  quantityRejected: z.number().int().min(0).optional(),
 });
 
 const FinancialsSchema = z.object({
@@ -35,12 +33,22 @@ const FinancialsSchema = z.object({
 export const CreateGRNBody = z.object({
   poId: z.string().regex(OBJECT_ID, 'Invalid poId'),
   vendorName: z.string().trim().min(1).optional(),
-  billNo: z.string().trim().min(1).max(100),
-  billDate: z.coerce.date(),
+  invoiceNo: z.string().trim().min(1).max(100),
+  billDate: z.coerce.date().optional(),
   transportDetails: z.string().trim().max(500).optional(),
-  receivedDate: z.coerce.date(),
-  receivedById: z.string().regex(OBJECT_ID, 'Invalid receivedById'),
+  receivedDate: z.coerce.date().optional(),
+  receivedById: z.string().regex(OBJECT_ID, 'Invalid receivedById').optional(),
   batchLines: z.array(BatchLineSchema).min(1, 'At least one batch line required'),
+  financials: FinancialsSchema,
+  notes: z.string().trim().max(2000).optional(),
+});
+
+export const UpdateGRNBody = z.object({
+  invoiceNo: z.string().trim().min(1).max(100).optional(),
+  billDate: z.coerce.date().optional(),
+  transportDetails: z.string().trim().max(500).optional(),
+  receivedDate: z.coerce.date().optional(),
+  batchLines: z.array(BatchLineSchema).min(1).optional(),
   financials: FinancialsSchema,
   notes: z.string().trim().max(2000).optional(),
 });
@@ -58,10 +66,12 @@ export const ListGRNQuery = z.object({
 export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid id') });
 
 export type CreateGRNInput = z.infer<typeof CreateGRNBody>;
+export type UpdateGRNInput = z.infer<typeof UpdateGRNBody>;
 export type ListGRNInput = z.infer<typeof ListGRNQuery>;
 
 export const ValidateGRN = {
   createBody: (req: Request) => parseOrThrow(CreateGRNBody, req.body, 'request body'),
+  updateBody: (req: Request) => parseOrThrow(UpdateGRNBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListGRNQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
 };
