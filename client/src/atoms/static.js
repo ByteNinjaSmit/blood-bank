@@ -16,7 +16,8 @@ export const ModuleArray = [
   "Hospital",
   "MIS",
   "Volunteer",
-  "Bag Procurement"
+  "Bag Procurement",
+  "Chemical Inventory"
 ];
 
 export const RoleArray = [

@@ -57,6 +57,17 @@ import BagInspection from './features/bag-procurement/pages/BagInspection';
 import BagIssuance from './features/bag-procurement/pages/BagIssuance';
 import BagDiscard from './features/bag-procurement/pages/BagDiscard';
 
+// Chemical Reagents Inventory
+import ChemicalDashboard from './features/chemical-inventory/pages/ChemicalDashboard';
+import ChemicalMaster from './features/chemical-inventory/pages/ChemicalMaster';
+import Suppliers from './features/chemical-inventory/pages/Suppliers';
+import Manufacturers from './features/chemical-inventory/pages/Manufacturers';
+import PurchaseEntry from './features/chemical-inventory/pages/PurchaseEntry';
+import StockUsage from './features/chemical-inventory/pages/StockUsage';
+import ExpiryMonitoring from './features/chemical-inventory/pages/ExpiryMonitoring';
+import Reports from './features/chemical-inventory/pages/Reports';
+import AuditHistory from './features/chemical-inventory/pages/AuditHistory';
+
 // Requisition
 import RequisitionManagement from './features/requisition/pages/RequisitionManagement';
 import RequisitionList from './features/requisition/pages/RequisitionList';
@@ -132,6 +143,17 @@ const App = () => {
           <Route path="procurement/issue" element={<BagIssuance />} />
           <Route path="procurement/discard" element={<BagDiscard />} />
           <Route path="procurement/inventory" element={<BagInventory />} />
+
+          {/* Chemical Inventory */}
+          <Route path="chemical-inventory/dashboard" element={<ChemicalDashboard />} />
+          <Route path="chemical-inventory/chemicals" element={<ChemicalMaster />} />
+          <Route path="chemical-inventory/suppliers" element={<Suppliers />} />
+          <Route path="chemical-inventory/manufacturers" element={<Manufacturers />} />
+          <Route path="chemical-inventory/purchase" element={<PurchaseEntry />} />
+          <Route path="chemical-inventory/usage" element={<StockUsage />} />
+          <Route path="chemical-inventory/expiry" element={<ExpiryMonitoring />} />
+          <Route path="chemical-inventory/reports" element={<Reports />} />
+          <Route path="chemical-inventory/history" element={<AuditHistory />} />
 
           {/* Serology */}
           <Route path="labs/serology" element={<Serology />} />

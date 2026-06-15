@@ -34,6 +34,7 @@ import bagInspectionRouter from '@/modules/bag-inspection/bag-inspection.routes'
 import bagIssueRouter from '@/modules/bag-issue/bag-issue.routes';
 import bagDiscardRouter from '@/modules/bag-discard/bag-discard.routes';
 import componentRouter from '@/modules/component/component.routes';
+import chemicalInventoryRouter from '@/modules/chemical-inventory/chemical-inventory.routes';
 import { errorMiddleware } from '@/shared/middlewares/error';
 
 interface ModuleRoute {
@@ -64,6 +65,7 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/bag-issue', router: bagIssueRouter },
   { path: '/bag-discard', router: bagDiscardRouter },
   { path: '/component', router: componentRouter },
+  { path: '/chemical-inventory', router: chemicalInventoryRouter },
 ];
 
 export function registerRoutes(): Router {
