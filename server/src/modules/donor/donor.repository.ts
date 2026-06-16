@@ -5,6 +5,9 @@ import type {
 } from '@/modules/donor/donor.validator';
 import { NotFoundError } from '@/shared/errors';
 import { DonorModel } from './donor.model';
+import { DonationModel } from '@/modules/donation/donation.model';
+import { CampModel } from '@/modules/camp/camp.model';
+import { Types } from 'mongoose';
 
 export interface DonorDto {
   id: string;
@@ -142,6 +145,23 @@ export function createDonorRepo(): DonorRepo {
       if (input.bloodGroup) filter.bloodGroup = input.bloodGroup;
       if (input.rh) filter.rh = input.rh === 'Positive' ? 'POSITIVE' : input.rh === 'Negative' ? 'NEGATIVE' : input.rh;
       if (input.city) filter['address.city'] = input.city;
+      
+      if (input.source === 'camp') {
+        const campDonations = await DonationModel.find({ campId: { $ne: null } }, { donor: 1 }).lean();
+        const campDonorIds = campDonations.map(d => d.donor?.toString()).filter(Boolean);
+        const camps = await CampModel.find({}, { donorData: 1 }).lean();
+        const campDataDonorIds = camps.flatMap(c => c.donorData || []).map(id => id.toString());
+        const allCampDonorIds = Array.from(new Set([...campDonorIds, ...campDataDonorIds]));
+        filter._id = { $in: allCampDonorIds.map(id => new Types.ObjectId(id)) };
+      } else if (input.source === 'inhouse') {
+        const campDonations = await DonationModel.find({ campId: { $ne: null } }, { donor: 1 }).lean();
+        const campDonorIds = campDonations.map(d => d.donor?.toString()).filter(Boolean);
+        const camps = await CampModel.find({}, { donorData: 1 }).lean();
+        const campDataDonorIds = camps.flatMap(c => c.donorData || []).map(id => id.toString());
+        const allCampDonorIds = Array.from(new Set([...campDonorIds, ...campDataDonorIds]));
+        filter._id = { $nin: allCampDonorIds.map(id => new Types.ObjectId(id)) };
+      }
+
       if (input.search) {
         const term = input.search.trim();
         filter.$or = [

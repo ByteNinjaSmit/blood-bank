@@ -4,6 +4,7 @@ import { authenticate } from '@/shared/middlewares/authenticate';
 import { DonationModel } from '@/modules/donation/donation.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
+import { BagInspectionModel } from '@/modules/bag-inspection/bag-inspection.model';
 
 const router = Router();
 
@@ -117,7 +118,7 @@ router.get('/list', authenticate, async (req, res, next) => {
 
       return {
         id: d._id.toString(),
-        bagNo: d.donationId,
+        bagNo: (d as any).bagNo || d.donationId,
         bloodGroup,
         site: d.campId ? (d.campId as any).name : 'Inhouse',
         createdAt: d.createdAt ? d.createdAt.toISOString() : d.collectedAt.toISOString(),
@@ -151,6 +152,8 @@ router.get('/bags-to-separate', authenticate, async (req, res, next) => {
     const allUnits = await BloodUnitModel.find({ donationId: { $in: donationIds }, deletedAt: null }).lean();
     const ttiResults = await TtiResultModel.find({ donationId: { $in: donationIds } }).lean();
     const ttiMap = new Map(ttiResults.map(t => [t.donationId, t]));
+    const inspections = await BagInspectionModel.find({ bagNo: { $in: donationIds }, deletedAt: null }).lean();
+    const inspectionMap = new Map(inspections.map(i => [i.bagNo, i]));
 
     const unitsMap: Record<string, typeof allUnits> = {};
     allUnits.forEach(u => {
@@ -167,6 +170,7 @@ router.get('/bags-to-separate', authenticate, async (req, res, next) => {
     const bags = donations.map(d => {
       const units = unitsMap[d.donationId] || [];
       const tti = ttiMap.get(d.donationId);
+      const inspection = inspectionMap.get(d.donationId);
       
       const hasCollectedUnits = units.some(u => u.status === 'COLLECTED');
       if (!hasCollectedUnits) {
@@ -175,10 +179,13 @@ router.get('/bags-to-separate', authenticate, async (req, res, next) => {
 
       const abo = tti?.aboGroupConfirmed || units[0]?.aboGroup || 'O';
       const rh = tti?.rhFactorConfirmed || units[0]?.rhFactor || 'POSITIVE';
+      const segmentNo = inspection?.segmentNo || units[0]?.unitDin || units[0]?.unitId || '';
 
       return {
-        bagNo: d.donationId,
-        segmentNo: '',
+        id: d._id.toString(),
+        donationId: d.donationId,
+        bagNo: (d as any).bagNo || d.donationId,
+        segmentNo: (d as any).segmentNo || segmentNo,
         bloodGroup: abo,
         rh: rh === 'POSITIVE' ? 'Positive' : 'Negative',
         collectionDate: d.collectedAt.toISOString(),
@@ -379,7 +386,12 @@ router.get('/near-expiry', authenticate, async (req, res, next) => {
       .limit(limitNum)
       .lean();
 
+    const donationIds = units.map(u => u.donationId).filter(Boolean);
+    const donations = await DonationModel.find({ donationId: { $in: donationIds }, deletedAt: null }).select('donationId bagNo').lean();
+    const donationMap = new Map(donations.map(d => [d.donationId, d]));
+
     const components = units.map(u => {
+      const d = donationMap.get(u.donationId);
       let legacyStatus = 'in-stock';
       if (u.status === 'RELEASED') legacyStatus = 'in-stock';
       else if (u.status === 'RESERVED') legacyStatus = 'reserved';
@@ -398,7 +410,7 @@ router.get('/near-expiry', authenticate, async (req, res, next) => {
         volumeMl: u.volumeMl,
         status: legacyStatus,
         expiryDate: u.expiresAt.toISOString(),
-        bagNo: u.donationId,
+        bagNo: d?.bagNo || u.donationId,
         bloodGroup: `${u.aboGroup}${u.rhFactor === 'POSITIVE' ? '+' : '-'}`
       };
     });
@@ -469,7 +481,8 @@ router.get('/:id', authenticate, async (req, res, next) => {
 
     const result = {
       bloodBag: {
-        bagNo: donationDoc.donationId,
+        bagNo: donationDoc.bagNo || donationDoc.donationId,
+        segmentNo: donationDoc.segmentNo,
         bloodGroup,
         collectionDate: donationDoc.collectedAt.toISOString(),
         status: donationDoc.donorFitness?.isFit ? 'collected' : 'rejected',

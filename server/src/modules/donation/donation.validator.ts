@@ -55,6 +55,9 @@ export const CreateDonationBody = z.object({
   rhFactor: z.enum(RH_FACTOR),
   unitTemplates: z.array(UnitTemplateSchema).optional(),
   typeOfBag: z.enum(['SB', 'DB', 'TB', 'QB']).optional(),
+  bagNo: z.string().trim().min(1).max(100).optional(),
+  segmentNo: z.string().trim().min(1).max(100).optional(),
+  lotNo: z.string().trim().min(1).max(100).optional(),
 });
 export type CreateDonationInput = z.infer<typeof CreateDonationBody>;
 
@@ -62,6 +65,7 @@ export const ListDonationsQuery = z.object({
   donorId: blankToUndef(z.string().regex(OBJECT_ID).optional()),
   donationType: z.enum(DONATION_TYPE).optional(),
   source: z.enum(['inhouse', 'camp']).optional(),
+  campId: blankToUndef(z.string().regex(OBJECT_ID).optional()),
   fromDate: z.coerce.date().optional(),
   toDate: z.coerce.date().optional(),
   page: z.coerce.number().int().min(1).default(1),

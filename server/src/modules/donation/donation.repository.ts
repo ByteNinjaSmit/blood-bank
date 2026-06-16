@@ -17,6 +17,9 @@ import { NotFoundError } from '@/shared/errors';
 export interface DonationDto {
   id: string;
   donationId: string;
+  bagNo?: string | null;
+  segmentNo?: string | null;
+  lotNo?: string | null;
   donor: string;
   donorName?: string;
   donationType: string;
@@ -94,12 +97,16 @@ export function createDonationRepo(): DonationRepo {
                     : undefined,
                   typeOfBag: input.typeOfBag || 'SB',
                   notes: input.notes,
+                  bagNo: input.bagNo,
+                  segmentNo: input.segmentNo,
+                  lotNo: input.lotNo,
                   createdBy: actor,
                   updatedBy: actor,
                 },
               ],
               { session },
             );
+            if (!donation) throw new Error('Failed to create donation');
 
             const unitDocs = await BloodUnitModel.insertMany(
               units.map((u) => ({
@@ -152,6 +159,9 @@ export function createDonationRepo(): DonationRepo {
               bloodGroup: input.bloodGroup,
               rhFactor: input.rhFactor,
               unitCount: unitDocs.length,
+              bagNo: donation.bagNo,
+              segmentNo: donation.segmentNo,
+              lotNo: donation.lotNo,
               createdAt: (donation as unknown as { createdAt: Date }).createdAt.toISOString(),
               updatedAt: (donation as unknown as { updatedAt: Date }).updatedAt.toISOString(),
               units: unitDocs.map((u) => ({
@@ -186,11 +196,15 @@ export function createDonationRepo(): DonationRepo {
                 : undefined,
               typeOfBag: input.typeOfBag || 'SB',
               notes: input.notes,
+              bagNo: input.bagNo,
+              segmentNo: input.segmentNo,
+              lotNo: input.lotNo,
               createdBy: actor,
               updatedBy: actor,
             },
           ]
         );
+        if (!donation) throw new Error('Failed to create donation');
 
         const unitDocs = await BloodUnitModel.insertMany(
           units.map((u) => ({
@@ -241,6 +255,9 @@ export function createDonationRepo(): DonationRepo {
           bloodGroup: input.bloodGroup,
           rhFactor: input.rhFactor,
           unitCount: unitDocs.length,
+          bagNo: donation.bagNo,
+          segmentNo: donation.segmentNo,
+          lotNo: donation.lotNo,
           createdAt: (donation as unknown as { createdAt: Date }).createdAt.toISOString(),
           updatedAt: (donation as unknown as { updatedAt: Date }).updatedAt.toISOString(),
           units: unitDocs.map((u) => ({
@@ -271,12 +288,15 @@ export function createDonationRepo(): DonationRepo {
       return {
         id: doc._id.toString(),
         donationId: doc.donationId,
-        donor: donorDoc?._id?.toString() ?? doc.donor.toString(),
+        donor: donorDoc?._id?.toString() ?? doc.donor?.toString() ?? '',
         donorName: donorDoc?.name
           ? `${donorDoc.name.firstName ?? ''} ${donorDoc.name.lastName ?? ''}`.trim()
           : undefined,
         donationType: doc.donationType,
         typeOfBag: doc.typeOfBag,
+        bagNo: doc.bagNo,
+        segmentNo: doc.segmentNo,
+        lotNo: doc.lotNo,
         collectedAt: doc.collectedAt.toISOString(),
         bloodGroup: tti?.aboGroupConfirmed ?? '',
         rhFactor: tti?.rhFactorConfirmed ?? '',
@@ -305,6 +325,7 @@ export function createDonationRepo(): DonationRepo {
       };
       if (q.donorId) filter.donor = new Types.ObjectId(q.donorId);
       if (q.donationType) filter.donationType = q.donationType;
+      if (q.campId) filter.campId = new Types.ObjectId(q.campId);
       if (q.source === 'inhouse') {
         // Match donations with no camp: campId is null, undefined, or the field doesn't exist.
         const inhouse$or = [{ campId: null }, { campId: { $exists: false } }];
@@ -329,39 +350,61 @@ export function createDonationRepo(): DonationRepo {
           .lean(),
         DonationModel.countDocuments(filter),
       ]);
-      const [unitCounts, ttiResults] = await Promise.all([
-        BloodUnitModel.aggregate<{
-          _id: string;
-          count: number;
-        }>([
-          { $match: { donationId: { $in: docs.map((d) => d.donationId) } } },
-          { $group: { _id: '$donationId', count: { $sum: 1 } } },
-        ]),
+      const [unitDocs, ttiResults] = await Promise.all([
+        BloodUnitModel.find({
+          donationId: { $in: docs.map((d) => d.donationId) },
+          deletedAt: null
+        }).select('donationId status').lean(),
         TtiResultModel.find({
           donationId: { $in: docs.map((d) => d.donationId) }
-        }).select('donationId aboGroupConfirmed rhFactorConfirmed').lean()
+        }).select('donationId aboGroupConfirmed rhFactorConfirmed releaseDecision').lean()
       ]);
-      const countMap = new Map(unitCounts.map((u) => [u._id, u.count]));
+
+      const unitMap = new Map<string, string[]>();
+      for (const u of unitDocs) {
+        if (!unitMap.has(u.donationId)) {
+          unitMap.set(u.donationId, []);
+        }
+        unitMap.get(u.donationId)!.push(u.status);
+      }
+
       const ttiMap = new Map(ttiResults.map((t) => [t.donationId, t]));
       return {
         items: docs.map((d) => {
           const donorDoc = d.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; lastName?: string } };
           const tti = ttiMap.get(d.donationId);
+          const statuses = unitMap.get(d.donationId) || [];
+
+          let status = 'collected';
+          if (d.donorFitness?.isFit === false) {
+            status = 'failed';
+          } else if (statuses.includes('ISSUED')) {
+            status = 'issued';
+          } else if (tti) {
+            if (tti.releaseDecision === 'released') status = 'passed';
+            else if (tti.releaseDecision === 'reactive') status = 'failed';
+            else if (tti.releaseDecision === 'pending') status = 'testing';
+          }
+
           return {
             id: d._id.toString(),
             donationId: d.donationId,
-            donor: donorDoc?._id?.toString() ?? d.donor.toString(),
+            donor: donorDoc?._id?.toString() ?? d.donor?.toString() ?? '',
             donorName: donorDoc?.name
               ? `${donorDoc.name.firstName ?? ''} ${donorDoc.name.lastName ?? ''}`.trim()
               : undefined,
             donationType: d.donationType,
             typeOfBag: d.typeOfBag,
+            bagNo: d.bagNo,
+            segmentNo: d.segmentNo,
+            lotNo: d.lotNo,
             collectedAt: d.collectedAt.toISOString(),
             bloodGroup: tti?.aboGroupConfirmed ?? '',
             rhFactor: tti?.rhFactorConfirmed ?? '',
-            unitCount: countMap.get(d.donationId) ?? 0,
+            unitCount: statuses.length,
             campId: d.campId?.toString(),
             isFit: d.donorFitness?.isFit,
+            status,
             createdAt: (d as unknown as { createdAt: Date }).createdAt.toISOString(),
             updatedAt: (d as unknown as { updatedAt: Date }).updatedAt.toISOString(),
           };

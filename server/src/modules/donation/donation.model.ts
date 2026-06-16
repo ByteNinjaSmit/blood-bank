@@ -41,6 +41,9 @@ const DonorFitnessSchema = new Schema(
 const DonationSchema = new Schema(
   {
     donationId: { type: String, required: true, unique: true },
+    bagNo: { type: String, trim: true },
+    segmentNo: { type: String, trim: true },
+    lotNo: { type: String, trim: true },
     legacyBagId: { type: Schema.Types.ObjectId, index: true },
     donor: { type: Schema.Types.ObjectId, ref: 'Donor', required: true, index: true },
     donationType: { type: String, enum: DONATION_TYPE, required: true },

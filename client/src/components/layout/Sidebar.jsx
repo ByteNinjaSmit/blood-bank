@@ -289,6 +289,29 @@ const MODULES = [
     description: "Manage discarded blood units",
   },
   {
+    id: "master-register",
+    name: "Master Register",
+    icon: <List className="w-5 h-5" />,
+    permissions: ["read"],
+    subModules: [
+      {
+        name: "All Donors",
+        href: "/master-register/donors",
+        permissions: ["read"],
+        description: "View all donors",
+        icon: <Users className="w-5 h-5" />,
+      },
+      {
+        name: "All Donations",
+        href: "/master-register/donations",
+        permissions: ["read"],
+        description: "View all donations",
+        icon: <Heart className="w-5 h-5" />,
+      },
+    ],
+    description: "Combined register of all donors and donations",
+  },
+  {
     id: "procurement",
     name: "Bag Procurement",
     icon: <Package className="w-5 h-5" />,
@@ -572,7 +595,12 @@ const MODULES = [
 ];
 
 // Access helper wrappers around user.permissions
-const canViewModule = (user, moduleName) => checkAccess(user, moduleName, 'view');
+const canViewModule = (user, moduleName) => {
+  if (moduleName === "Master Register") {
+    return checkAccess(user, "Donor", "view") || checkAccess(user, "Donations", "view");
+  }
+  return checkAccess(user, moduleName, 'view');
+};
 const canCreateInModule = (user, moduleName) => checkAccess(user, moduleName, 'create');
 const canUpdateInModule = (user, moduleName) => checkAccess(user, moduleName, 'update');
 const canDeleteInModule = (user, moduleName) => checkAccess(user, moduleName, 'delete');

@@ -234,11 +234,14 @@ export function createInventoryControllers(service: InventoryService): Inventory
               crossmatchStatus: 'NOT_REQUIRED',
             });
 
+            const donDoc = await mongoose.model('Donation').findOne({ donationId: unitDoc.donationId, deletedAt: null }).select('bagNo').lean() as any;
+            const finalBagNo = donDoc?.bagNo || unitDoc.donationId;
+
             resultItems.push({
               _id: unitDoc._id.toString(),
-              bagNo: unitDoc.donationId,
+              bagNo: finalBagNo,
               bag: {
-                bagNo: unitDoc.donationId,
+                bagNo: finalBagNo,
                 bloodGroup: unitDoc.aboGroup,
                 rh: unitDoc.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
               },

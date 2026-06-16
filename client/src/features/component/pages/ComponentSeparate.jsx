@@ -14,7 +14,6 @@ const ComponentSeparate = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [bags, setBags] = useState([]);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [bagIdByBagNo, setBagIdByBagNo] = useState({});
   const [showSeparateModal, setShowSeparateModal] = useState(false);
   const [activeBag, setActiveBag] = useState(null);
   const [separateForm, setSeparateForm] = useState({ componentType: "RBC", volumeMl: 250 });
@@ -37,30 +36,16 @@ const ComponentSeparate = () => {
   const fetchBags = async () => {
     setIsLoading(true);
     try {
-      const [bagsRes, donationRes] = await Promise.all([
-        axios.get(`${API}/api/v2/component/bags-to-separate`, {
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
-        }),
-        axios.get(`${API}/api/v2/donation`, {
-          params: { page: 1, limit: 1000 },
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
-        }),
-      ]);
+      const bagsRes = await axios.get(`${API}/api/v2/component/bags-to-separate`, {
+        headers: { Authorization: authorizationToken },
+        withCredentials: true,
+      });
       console.log("Bags to separate response:", bagsRes.data);
 
       const bagsData = Array.isArray(bagsRes.data?.bags) ? bagsRes.data.bags : [];
       setBags(bagsData);
-
-      const donationList = Array.isArray(donationRes.data?.data?.items) ? donationRes.data.data.items : [];
-      const map = {};
-      donationList.forEach((d) => {
-        if (d?.donationId && d?.id) map[d.donationId] = d.id;
-      });
-      setBagIdByBagNo(map);
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Failed to fetch bags");
       setBags([]);
     } finally {
       setIsLoading(false);
@@ -81,7 +66,7 @@ const ComponentSeparate = () => {
     if (!activeBag) return;
     const inputVolume = Number(separateForm.volumeMl);
 
-    const donationId = bagIdByBagNo[activeBag.bagNo];
+    const donationId = activeBag.id || activeBag.donationId;
     if (!donationId) {
       toast.error("Unable to resolve donationId for this bag");
       return;
@@ -115,7 +100,7 @@ const ComponentSeparate = () => {
   };
 
   const markCompleted = async (bag, signature) => {
-    const donationId = bagIdByBagNo[bag.bagNo];
+    const donationId = bag.id || bag.donationId;
     if (!donationId) {
       toast.error("Unable to resolve donationId for this bag");
       return;
@@ -189,6 +174,7 @@ const ComponentSeparate = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag No</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag Type</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segment</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Collected</th>
@@ -199,7 +185,7 @@ const ComponentSeparate = () => {
               <tbody className="bg-white divide-y divide-gray-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan="6" className="px-4 py-8 text-center">
+                    <td colSpan="7" className="px-4 py-8 text-center">
                       <div className="inline-flex items-center gap-2 text-gray-500">
                         <Loader2 className="w-5 h-5 animate-spin" /> Loading bags...
                       </div>
@@ -207,12 +193,17 @@ const ComponentSeparate = () => {
                   </tr>
                 ) : bags.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500">No collected blood bags found.</td>
+                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">No collected blood bags found.</td>
                   </tr>
                 ) : (
                   bags.map((bag, idx) => (
                     <tr key={`${bag.bagNo}-${idx}`} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{bag.bagNo}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-200">
+                          {bag.typeOfBag || "SB"}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.segmentNo || "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.bloodGroup} {bag.rh}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.collectionDate ? new Date(bag.collectionDate).toLocaleString() : "-"}</td>

@@ -44,6 +44,8 @@ import CreateDonation from './features/donation/components/Create-Donation';
 import DonationManagement from './features/donation/pages/DonationManagement';
 import DonorManagement from './features/donor/pages/DonorManagement';
 import CreateDonorPage from './features/donor/pages/CreateDonor';
+import MasterDonors from './features/donor/pages/MasterDonors';
+import MasterDonations from './features/donation/pages/MasterDonations';
 
 // User + Hospital
 import UserManage from './features/user/pages/UserManage';
@@ -164,6 +166,8 @@ const App = () => {
           <Route path="donations/view-donation" element={<DonationManagement />} />
           <Route path="donor/create-donor" element={<CreateDonorPage />} />
           <Route path="donor/view-donor" element={<DonorManagement />} />
+          <Route path="master-register/donors" element={<MasterDonors />} />
+          <Route path="master-register/donations" element={<MasterDonations />} />
 
           {/* Appointments */}
           <Route path="appointments" element={<AppointmentList />} />

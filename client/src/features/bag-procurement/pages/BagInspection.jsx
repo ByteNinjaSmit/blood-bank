@@ -243,7 +243,7 @@ function UpdateReportDrawer({ onClose, inspection }) {
   const [bagNo, setBagNo] = useState(inspection.bagNo || '');
   const [segmentNo, setSegmentNo] = useState(inspection.segmentNo || '');
   const [bloodGroup, setBloodGroup] = useState('A+');
-  const [testResult, setTestResult] = useState('bag and segment is sterile');
+  const [testResult, setTestResult] = useState(inspection.testResult || '');
   const [factorVIII, setFactorVIII] = useState('');
   const [fibrinogen, setFibrinogen] = useState('');
   
@@ -252,7 +252,7 @@ function UpdateReportDrawer({ onClose, inspection }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     updateReport.mutateAsync({
-      id: inspection._id,
+      id: inspection.id || inspection._id,
       data: {
         reportDate,
         bagNo,

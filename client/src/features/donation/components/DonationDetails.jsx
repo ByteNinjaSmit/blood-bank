@@ -17,6 +17,32 @@ const DonationDetails = ({ donation }) => {
     return d.toLocaleDateString();
   };
 
+  const bagNo = donation.bagNo || donation.donationId || 'N/A';
+  const collectionDate = donation.collectedAt || donation.collectionDate;
+  const bloodGroup = donation.bloodGroup || 'N/A';
+  const rhSymbol = donation.rhFactor 
+    ? (donation.rhFactor === 'POSITIVE' ? '+' : '-') 
+    : (donation.rh === 'Positive' ? '+' : donation.rh === 'Negative' ? '-' : '');
+  const status = donation.status || 
+                 (donation.ttiReleaseDecision === 'released' ? 'passed' : donation.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
+  const isFit = donation.isFit !== undefined 
+    ? donation.isFit 
+    : (donation.donorFitness?.isFit !== undefined ? donation.donorFitness.isFit : true);
+  const donorName = donation.donorName || 
+                    (donation.donor?.name 
+                      ? `${donation.donor.name.firstName || ''} ${donation.donor.name.lastName || ''}`.trim() 
+                      : (typeof donation.donor === 'string' ? donation.donor : ''));
+  const vitals = donation.initialVitals || (donation.medicalExam ? {
+    hb: donation.medicalExam.hbGdl,
+    weightKg: donation.medicalExam.weightKg,
+    pulse: donation.medicalExam.pulseBpm,
+    tempC: donation.medicalExam.temperatureCelsius,
+    bp: donation.medicalExam.bloodPressure 
+      ? `${donation.medicalExam.bloodPressure.systolic}/${donation.medicalExam.bloodPressure.diastolic}`
+      : undefined
+  } : undefined);
+  const components = donation.components || donation.units || [];
+
   return (
     <div className="space-y-6 text-sm text-slate-800">
       {/* Summary */}
@@ -26,32 +52,30 @@ const DonationDetails = ({ donation }) => {
             Donation overview
           </p>
           <h3 className="text-lg font-semibold text-slate-900">
-            Bag {donation.bagNo}
+            Bag {bagNo}
           </h3>
           <p className="text-xs text-slate-500 mt-1">
-            Collected on {formatDateTime(donation.collectionDate)}
+            Collected on {formatDateTime(collectionDate)}
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-800 font-medium">
-            {donation.bloodGroup} {donation.rh === 'Positive' ? '+' : '-'}
+            {bloodGroup} {rhSymbol}
           </span>
-          {donation.status && (
+          {status && (
             <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700 font-medium">
-              Status: {donation.status}
+              Status: {status}
             </span>
           )}
-          {donation.donorFitness && (
-            <span
-              className={`px-2 py-1 rounded-full font-medium ${
-                donation.donorFitness.isFit
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-red-100 text-red-800'
-              }`}
-            >
-              Fitness: {donation.donorFitness.isFit ? 'Fit' : 'Unfit'}
-            </span>
-          )}
+          <span
+            className={`px-2 py-1 rounded-full font-medium ${
+              isFit
+                ? 'bg-green-100 text-green-800'
+                : 'bg-red-100 text-red-800'
+            }`}
+          >
+            Fitness: {isFit ? 'Fit' : 'Unfit'}
+          </span>
         </div>
       </div>
 
@@ -61,10 +85,10 @@ const DonationDetails = ({ donation }) => {
           <p className="font-semibold text-slate-700 mb-2">Bag Information</p>
           <div className="space-y-1.5 text-slate-600">
             <p>
-              <span className="font-medium">Bag No:</span> {donation.bagNo}
+              <span className="font-medium">Bag No:</span> {bagNo}
             </p>
             <p>
-              <span className="font-medium">Segment No:</span> {donation.segmentNo}
+              <span className="font-medium">Segment No:</span> {donation.segmentNo || components[0]?.unitId || '-'}
             </p>
             {donation.lotNo && (
               <p>
@@ -72,27 +96,28 @@ const DonationDetails = ({ donation }) => {
               </p>
             )}
             <p>
-              <span className="font-medium">Type of Bag:</span> {donation.typeOfBag}
+              <span className="font-medium">Type of Bag:</span> {donation.typeOfBag || '-'}
             </p>
             <p>
               <span className="font-medium">Collection Date & Time:</span>{' '}
-              {formatDateTime(donation.collectionDate)}
+              {formatDateTime(collectionDate)}
             </p>
           </div>
         </div>
         <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-4">
           <p className="font-semibold text-slate-700 mb-2">Donor & Site</p>
           <div className="space-y-1.5 text-slate-600">
-            {donation.donor && (
+            {(donorName || donation.donor) && (
               <p>
-                <span className="font-medium">Donor:</span>{' '}
-                {donation.donor.name?.firstName} {donation.donor.name?.lastName}
+                <span className="font-medium">Donor:</span> {donorName}
               </p>
             )}
-            {donation.donor && (
+            {(donation.donor || bloodGroup) && (
               <p>
                 <span className="font-medium">Donor Blood Group:</span>{' '}
-                {donation.donor.bloodGroup} {donation.donor.rh === 'Positive' ? '+' : '-'}
+                {donation.donor?.bloodGroup 
+                  ? `${donation.donor.bloodGroup} ${donation.donor.rh === 'Positive' ? '+' : '-'}`
+                  : `${bloodGroup} ${rhSymbol}`}
               </p>
             )}
             {donation.siteId && (
@@ -107,42 +132,52 @@ const DonationDetails = ({ donation }) => {
         </div>
       </div>
 
-      {donation.initialVitals && (
+      {vitals && (
         <div className="rounded-lg border border-slate-100 bg-white/70 p-4">
           <p className="font-semibold text-slate-700 mb-2">Initial Vitals</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-600">
-            <p>
-              <span className="font-medium">Hb:</span> {donation.initialVitals.hb} g/dL
-            </p>
-            <p>
-              <span className="font-medium">Weight:</span> {donation.initialVitals.weightKg} kg
-            </p>
-            <p>
-              <span className="font-medium">Pulse:</span> {donation.initialVitals.pulse} bpm
-            </p>
-            <p>
-              <span className="font-medium">Temp:</span> {donation.initialVitals.tempC} °C
-            </p>
-            <p className="md:col-span-2">
-              <span className="font-medium">BP:</span> {donation.initialVitals.bp}
-            </p>
+            {vitals.hb !== undefined && (
+              <p>
+                <span className="font-medium">Hb:</span> {vitals.hb} g/dL
+              </p>
+            )}
+            {vitals.weightKg !== undefined && (
+              <p>
+                <span className="font-medium">Weight:</span> {vitals.weightKg} kg
+              </p>
+            )}
+            {vitals.pulse !== undefined && (
+              <p>
+                <span className="font-medium">Pulse:</span> {vitals.pulse} bpm
+              </p>
+            )}
+            {vitals.tempC !== undefined && (
+              <p>
+                <span className="font-medium">Temp:</span> {vitals.tempC} °C
+              </p>
+            )}
+            {vitals.bp && (
+              <p className="md:col-span-2">
+                <span className="font-medium">BP:</span> {vitals.bp}
+              </p>
+            )}
           </div>
         </div>
       )}
 
-      {Array.isArray(donation.components) && donation.components.length > 0 && (
+      {Array.isArray(components) && components.length > 0 && (
         <div className="rounded-lg border border-slate-100 bg-white/70 p-4">
           <p className="font-semibold text-slate-700 mb-2">Components</p>
           <div className="border rounded-lg divide-y">
-            {donation.components.map((comp) => (
+            {components.map((comp) => (
               <div
-                key={comp._id || comp.componentId}
+                key={comp._id || comp.componentId || comp.unitId}
                 className="px-3 py-2 text-xs flex justify-between"
               >
                 <div className="space-y-0.5">
                   <p className="font-medium text-slate-800">{comp.componentType}</p>
-                  {comp.componentId && (
-                    <p className="text-slate-500">ID: {comp.componentId}</p>
+                  {(comp.componentId || comp.unitId) && (
+                    <p className="text-slate-500">ID: {comp.componentId || comp.unitId}</p>
                   )}
                 </div>
                 <div className="text-right space-y-0.5">
@@ -152,9 +187,9 @@ const DonationDetails = ({ donation }) => {
                   {comp.status && (
                     <p className="text-slate-600">Status: {comp.status}</p>
                   )}
-                  {comp.expiryDate && (
+                  {(comp.expiryDate || comp.expiresAt) && (
                     <p className="text-slate-500">
-                      Exp: {formatDate(comp.expiryDate)}
+                      Exp: {formatDate(comp.expiryDate || comp.expiresAt)}
                     </p>
                   )}
                 </div>

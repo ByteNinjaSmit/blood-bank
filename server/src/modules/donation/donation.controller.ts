@@ -88,6 +88,9 @@ export function createDonationControllers(service: DonationService): DonationCon
             unitTemplates,
             typeOfBag,
             notes: legacy.notes,
+            bagNo: legacy.bagNo,
+            segmentNo: legacy.segmentNo,
+            lotNo: legacy.lotNo,
           };
         }
 

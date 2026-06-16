@@ -31,14 +31,19 @@ async function enrichRequisition(reqDto: any): Promise<any> {
   const units = await BloodUnitModel.find({ unitId: { $in: unitIds }, deletedAt: null }).lean();
   const unitMap = new Map(units.map(u => [u.unitId, u]));
 
+  const donationIds = units.map(u => u.donationId).filter(Boolean);
+  const donations = await mongoose.model('Donation').find({ donationId: { $in: donationIds } }).select('donationId bagNo').lean() as any[];
+  const donationMap = new Map(donations.map(d => [d.donationId, d]));
+
   const matchedInventory = matchedUnits.map((mu: any) => {
     const unit = unitMap.get(mu.unitId);
     if (!unit) return null;
+    const donation = donationMap.get(unit.donationId);
     return {
       inventoryId: {
         _id: unit.unitId,
         bagNo: {
-          bagNo: unit.donationId,
+          bagNo: donation?.bagNo || unit.donationId,
           bloodGroup: unit.aboGroup,
           rh: unit.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
         },

@@ -10,6 +10,7 @@ import { createDeferralRepo } from '@/modules/deferral/deferral.repository';
 import { createDonationRepo } from '@/modules/donation/donation.repository';
 import { createTtiService } from '@/modules/tti/tti.service';
 import { invalidate } from '@/core/cache';
+import { BagInspectionModel } from '@/modules/bag-inspection/bag-inspection.model';
 
 const router = Router();
 
@@ -284,6 +285,9 @@ async function mapTtiBags(ttis: any[]) {
     }
   });
 
+  const inspections = await BagInspectionModel.find({ bagNo: { $in: donationIds }, deletedAt: null }).lean();
+  const inspectionMap = new Map(inspections.map(i => [i.bagNo, i]));
+
   return ttis.map(t => {
     const d = donationMap.get(t.donationId);
     const uList = unitsMap[t.donationId] || [];
@@ -304,10 +308,13 @@ async function mapTtiBags(ttis: any[]) {
       };
     });
 
+    const inspection = inspectionMap.get(t.donationId);
+    const segmentNo = inspection?.segmentNo || uList[0]?.unitDin || uList[0]?.unitId || '';
+
     return {
       _id: t._id.toString(),
-      bagNo: t.donationId,
-      segmentNo: uList[0]?.unitDin || '',
+      bagNo: (d as any).bagNo || t.donationId,
+      segmentNo: (d as any).segmentNo || segmentNo,
       bloodGroup: t.aboGroupConfirmed || uList[0]?.aboGroup || 'O',
       rh: t.rhFactorConfirmed === 'NEGATIVE' ? 'Negative' : 'Positive',
       siteId: d.campId ? { name: (d.campId as any).name } : null,

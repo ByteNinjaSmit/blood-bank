@@ -23,8 +23,14 @@ export function useDonation() {
   const loading = listQuery.isLoading || createMutation.isPending;
 
   return {
-    donations: listQuery.data?.data ?? (Array.isArray(listQuery.data) ? listQuery.data : []),
-    pagination: listQuery.data?.pagination ?? { currentPage: 1, totalPages: 1, totalBags: 0 },
+    donations: listQuery.data?.items ?? listQuery.data?.data ?? (Array.isArray(listQuery.data) ? listQuery.data : []),
+    pagination: {
+      currentPage: listQuery.data?.page ?? listQuery.data?.pagination?.currentPage ?? 1,
+      totalPages: listQuery.data?.total
+        ? Math.max(1, Math.ceil(listQuery.data.total / (listQuery.data.pageSize ?? 10)))
+        : (listQuery.data?.pagination?.totalPages ?? 1),
+      totalBags: listQuery.data?.total ?? listQuery.data?.pagination?.totalBags ?? 0,
+    },
     loading,
     error: listQuery.error?.message ?? null,
     fetchDonations: (f) => setFilters(f ?? {}),

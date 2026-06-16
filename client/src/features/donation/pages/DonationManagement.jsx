@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Droplets, Building2, Home, Activity, CheckCircle2, XCircle, GitCommitHorizontal, Plus, X } from 'lucide-react';
+import { Droplets, Building2, Home, Activity, CheckCircle2, XCircle, GitCommitHorizontal, Plus, X, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDonationList, useDonationDetail } from '@/features/donation/queries';
 import DonationTimeline from '../components/DonationTimeline';
+import Modal from '@/components/shared/Modal';
+import DonationDetails from '../components/DonationDetails';
 
 const TABS = [
   { key: 'inhouse', label: 'Inhouse Donations', icon: Home },
@@ -16,6 +18,7 @@ export default function DonationManagement() {
   const [activeTab, setActiveTab] = useState('inhouse');
   const [page, setPage]           = useState(1);
   const [trackId, setTrackId]     = useState(null);
+  const [viewDonationId, setViewDonationId] = useState(null);
 
   const { data, isLoading, isError } = useDonationList({
     source: activeTab,
@@ -24,6 +27,7 @@ export default function DonationManagement() {
   });
 
   const { data: detail, isLoading: detailLoading } = useDonationDetail(trackId);
+  const { data: viewDetail, isLoading: viewDetailLoading } = useDonationDetail(viewDonationId);
 
   const items      = data?.items  ?? [];
   const total      = data?.total  ?? 0;
@@ -124,20 +128,20 @@ export default function DonationManagement() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Donation ID</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Bag No</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Donor</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Blood</th>
                     <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Units</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Fitness</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Collected</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Track</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {items.map((d) => (
                     <tr key={d.id} className={`hover:bg-gray-50 transition-colors ${trackId === d.id ? 'bg-orange-50' : ''}`}>
-                      <td className="px-4 py-3 font-mono text-xs text-gray-700 font-medium">{d.donationId}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-gray-700 font-medium">{d.bagNo || d.donationId}</td>
                       <td className="px-4 py-3 text-gray-800">
                         {d.donorName || <span className="text-gray-400 text-xs">—</span>}
                       </td>
@@ -163,17 +167,26 @@ export default function DonationManagement() {
                         })}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => setTrackId(trackId === d.id ? null : d.id)}
-                          title="Track donation timeline"
-                          className={`p-1.5 rounded-lg border transition-colors ${
-                            trackId === d.id
-                              ? 'bg-orange-800 text-white border-orange-800'
-                              : 'text-orange-700 hover:bg-orange-50 border-orange-200'
-                          }`}
-                        >
-                          <GitCommitHorizontal className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setViewDonationId(d.id)}
+                            title="View Details"
+                            className="p-1 rounded-lg border border-orange-200 text-orange-700 hover:bg-orange-50 transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setTrackId(trackId === d.id ? null : d.id)}
+                            title="Track donation timeline"
+                            className={`p-1 rounded-lg border transition-colors ${
+                              trackId === d.id
+                                ? 'bg-orange-800 text-white border-orange-800'
+                                : 'text-orange-700 hover:bg-orange-50 border-orange-200'
+                            }`}
+                          >
+                            <GitCommitHorizontal className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -246,6 +259,22 @@ export default function DonationManagement() {
           </div>
         </div>
       )}
+      {/* ── Details modal ────────────────────────────────────────── */}
+      <Modal
+        isOpen={!!viewDonationId}
+        onClose={() => setViewDonationId(null)}
+        title="Donation Details"
+        size="lg"
+        className="bg-gradient-to-b from-orange-50 to-white"
+      >
+        {viewDetailLoading ? (
+          <div className="py-16 text-center text-gray-400 text-sm">Loading details…</div>
+        ) : viewDetail ? (
+          <DonationDetails donation={viewDetail} />
+        ) : (
+          <div className="py-16 text-center text-gray-400 text-sm">Donation not found.</div>
+        )}
+      </Modal>
     </div>
   );
 }
