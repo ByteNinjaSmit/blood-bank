@@ -96,10 +96,7 @@ export default function DonationManagement() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: 'Total Records', value: total,          icon: Activity,      cls: 'text-gray-700 bg-white border-gray-200'        },
-            { label: 'Donor Fit',     value: fit,            icon: CheckCircle2,  cls: 'text-green-700 bg-green-50 border-green-200'   },
-            { label: 'Donor Unfit',   value: unfit,          icon: XCircle,       cls: 'text-red-700 bg-red-50 border-red-200'         },
-            { label: 'Showing',       value: items.length,   icon: Droplets,      cls: 'text-orange-700 bg-orange-50 border-orange-200' },
-          ].map((stat) => {
+            ].map((stat) => {
             const StatIcon = stat.icon;
             return (
               <div key={stat.label} className={`rounded-xl border p-4 flex items-center gap-3 ${stat.cls}`}>

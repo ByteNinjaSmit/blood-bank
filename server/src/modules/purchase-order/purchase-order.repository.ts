@@ -8,8 +8,6 @@ export interface LineItemDto {
   anticoagulant: string;
   productCode?: string;
   quantityOrdered: number;
-  unitPriceRs?: number;
-  gstPercent?: number;
 }
 
 export interface PODto {
@@ -19,10 +17,8 @@ export interface PODto {
   poDate: string;
   vendorId: string;
   lineItems: LineItemDto[];
-  totalAmountRs?: number;
   expectedDelivery?: string;
   manufacturer?: string;
-  invoiceNo?: string;
   billDate?: string;
   notes?: string;
   createdAt: string;
@@ -37,10 +33,8 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     poDate: (doc.poDate as Date).toISOString(),
     vendorId: (doc.vendorId as Types.ObjectId).toString(),
     lineItems: (doc.lineItems as LineItemDto[]) ?? [],
-    totalAmountRs: doc.totalAmountRs as number | undefined,
     expectedDelivery: doc.expectedDelivery ? (doc.expectedDelivery as Date).toISOString() : undefined,
     manufacturer: doc.manufacturer as string | undefined,
-    invoiceNo: doc.invoiceNo as string | undefined,
     billDate: doc.billDate ? (doc.billDate as Date).toISOString() : undefined,
     notes: doc.notes as string | undefined,
     createdAt: doc.createdAt ? doc.createdAt.toISOString() : '',
@@ -56,23 +50,20 @@ export interface PORepo {
     poDate: Date;
     vendorId: string;
     lineItems: LineItemDto[];
-    totalAmountRs: number;
     expectedDelivery?: Date;
     manufacturer?: string;
-    invoiceNo?: string;
     billDate?: Date;
     notes?: string;
     actorId: string;
   }): Promise<PODto>;
   update(id: string, patch: Partial<{
     lineItems: LineItemDto[];
-    totalAmountRs: number;
     expectedDelivery: Date;
     manufacturer: string;
-    invoiceNo: string;
     billDate: Date;
     notes: string;
   }>, actorId: string): Promise<PODto | null>;
+  delete(id: string, actorId: string): Promise<boolean>;
 }
 
 export function createPORepo(): PORepo {
@@ -103,10 +94,8 @@ export function createPORepo(): PORepo {
         poDate: input.poDate,
         vendorId: new Types.ObjectId(input.vendorId),
         lineItems: input.lineItems,
-        totalAmountRs: input.totalAmountRs,
         expectedDelivery: input.expectedDelivery,
         manufacturer: input.manufacturer,
-        invoiceNo: input.invoiceNo,
         billDate: input.billDate,
         notes: input.notes,
         createdBy: actor,
@@ -124,6 +113,15 @@ export function createPORepo(): PORepo {
       ).lean();
       if (!doc) return null;
       return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+    },
+
+    async delete(id, actorId) {
+      const actor = new Types.ObjectId(actorId);
+      const res = await PurchaseOrderModel.updateOne(
+        { _id: new Types.ObjectId(id), deletedAt: null },
+        { $set: { deletedAt: new Date(), updatedBy: actor } }
+      );
+      return res.modifiedCount > 0;
     },
   };
 }

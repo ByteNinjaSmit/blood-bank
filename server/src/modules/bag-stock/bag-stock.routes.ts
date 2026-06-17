@@ -43,4 +43,12 @@ router.patch(
   controllers.updateStatus,
 );
 
+router.post(
+  '/:id/open-box',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'store-keeper']),
+  requirePermission('bag-stock:update'),
+  controllers.openBox,
+);
+
 export default router;

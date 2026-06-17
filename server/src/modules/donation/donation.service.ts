@@ -18,6 +18,8 @@ import type {
 } from '@/modules/donation/donation.repository';
 import type { DonorRepo } from '@/modules/donor/donor.repository';
 import type { DeferralRepo } from '@/modules/deferral/deferral.repository';
+import type { BagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
+import type { BagIssueRepo } from '@/modules/bag-issue/bag-issue.repository';
 
 export interface DonationService {
   register(input: CreateDonationInput, actorId: string): Promise<DonationWithUnitsDto>;
@@ -34,6 +36,8 @@ export function createDonationService(deps: {
   donations: DonationRepo;
   donors: DonorRepo;
   deferrals: DeferralRepo;
+  bagStock?: BagStockRepo;
+  bagIssues?: BagIssueRepo;
 }): DonationService {
   const log = childLogger({ module: 'donation-service' });
 
@@ -105,6 +109,39 @@ export function createDonationService(deps: {
         },
         'donation registered',
       );
+
+      if (input.lotNo && input.typeOfBag) {
+        const mappedBagType = input.typeOfBag === 'DB' ? 'DOUBLE' : input.typeOfBag === 'TB' ? 'TRIPLE' : null;
+        if (mappedBagType && deps.bagStock) {
+          try {
+            const bagStock = await deps.bagStock.findByBatchAndType(input.lotNo, mappedBagType);
+            if (bagStock) {
+              await deps.bagStock.incrementIssued(bagStock.id, 1, actorId);
+              log.info({ donationId: donationPublicId, batchNumber: input.lotNo, bagType: mappedBagType }, 'Bag stock issued count incremented due to donation');
+            }
+          } catch (err) {
+            log.error({ err: (err as Error).message }, 'Failed to increment BagStock issued count');
+          }
+        }
+      }
+
+      if (input.bagNo && deps.bagIssues) {
+        try {
+          const bagIssue = await deps.bagIssues.findBySerialNumber(input.bagNo);
+          if (bagIssue) {
+            await deps.bagIssues.updateStatus(bagIssue.id, {
+              status: 'USED',
+              donorId: input.donor,
+              donationId: created.id,
+              usedAt: new Date(),
+            }, actorId);
+            log.info({ bagSerialNumber: input.bagNo, donationId: created.id }, 'BagIssue marked as USED');
+          }
+        } catch (err) {
+          log.error({ err: (err as Error).message }, 'Failed to mark BagIssue as USED');
+        }
+      }
+
       return created;
     },
 

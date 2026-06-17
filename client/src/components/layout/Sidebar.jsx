@@ -308,6 +308,13 @@ const MODULES = [
         description: "View all donations",
         icon: <Heart className="w-5 h-5" />,
       },
+      {
+        name: "Donor Creation",
+        href: "/master-register/donor-creation",
+        permissions: ["read"],
+        description: "Unified donor registration and donation check",
+        icon: <Plus className="w-5 h-5" />,
+      },
     ],
     description: "Combined register of all donors and donations",
   },

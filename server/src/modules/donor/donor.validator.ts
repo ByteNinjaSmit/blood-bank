@@ -54,6 +54,7 @@ export const ListDonorsQuery = z.object({
   rh: z.enum(['Positive', 'Negative']).optional(),
   city: z.string().trim().max(80).optional(),
   source: z.enum(['inhouse', 'camp']).optional(),
+  eligibilityStatus: z.enum(['eligible', 'deferred', 'temp-deferred']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(25),
 });

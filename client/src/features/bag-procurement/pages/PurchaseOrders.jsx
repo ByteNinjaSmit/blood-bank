@@ -4,6 +4,7 @@ import {
   usePOList,
   useCreatePO,
   useUpdatePO,
+  useDeletePO,
   useVendorList,
   useCreateVendor,
 } from '../queries';
@@ -12,10 +13,17 @@ import { formatBloodBagQty, calcTotalBags } from '../utils/qtyHelper';
 
 
 
-const BAG_TYPES = ['SINGLE', 'DOUBLE', 'TRIPLE', 'QUADRUPLE'];
+const BAG_TYPES = ['DOUBLE', 'TRIPLE'];
 const ANTICOAGULANTS = ['CPDA-1', 'CPD', 'ACD', 'SAG-M'];
 
-const EMPTY_LINE = { bagType: 'SINGLE', capacity: '', anticoagulant: 'CPDA-1', boxes: '', packets: '', bags: '', unitPrice: '', gstPercent: '' };
+const ANTICOAGULANT_MAP = {
+  'CPDA-1': 'CPDA_1',
+  'CPD': 'CPD',
+  'ACD': 'ACD',
+  'SAG-M': 'SAG_MANNITOL',
+};
+
+const EMPTY_LINE = { bagType: 'DOUBLE', capacity: '350', anticoagulant: 'SAG-M', boxes: '', packets: '', bags: '' };
 
 
 
@@ -31,13 +39,21 @@ function StatCard({ label, value, color }) {
 function PODrawer({ onClose, vendors, poToEdit }) {
   const { user } = useAuth();
   const [vendorSearchText, setVendorSearchText] = useState('');
-  const [expectedDelivery, setExpectedDelivery] = useState('');
   const [manufacturer, setManufacturer] = useState(poToEdit?.manufacturer || '');
-  const [invoiceNo, setInvoiceNo] = useState(poToEdit?.invoiceNo || '');
   const [billDate, setBillDate] = useState(poToEdit?.billDate ? new Date(poToEdit.billDate).toISOString().split('T')[0] : '');
-  const [lines, setLines] = useState(poToEdit?.lineItems?.length > 0 ? poToEdit.lineItems.map(l => ({
-    ...EMPTY_LINE, bagType: l.bagType, capacity: l.capacityMl, anticoagulant: l.anticoagulant, bags: l.quantityOrdered, unitPrice: l.unitPriceRs, gstPercent: l.gstPercent
-  })) : [{ ...EMPTY_LINE }]);
+  
+  const [lines, setLines] = useState(poToEdit?.lineItems?.length > 0 ? poToEdit.lineItems.map(l => {
+    const qty = l.quantityOrdered || 0;
+    return {
+      ...EMPTY_LINE,
+      bagType: l.bagType,
+      capacity: l.capacityMl,
+      anticoagulant: Object.keys(ANTICOAGULANT_MAP).find(k => ANTICOAGULANT_MAP[k] === l.anticoagulant) || l.anticoagulant,
+      boxes: qty ? String(Number((qty / 45).toFixed(2))) : '',
+      packets: qty ? String(Number((qty / 5).toFixed(2))) : '',
+      bags: qty ? String(qty) : ''
+    };
+  }) : [{ ...EMPTY_LINE }]);
 
   const createPO = useCreatePO();
   const updatePO = useUpdatePO();
@@ -57,23 +73,50 @@ function PODrawer({ onClose, vendors, poToEdit }) {
   }, []);
 
   const updateLine = (i, k, v) => setLines((ls) => ls.map((l, idx) => idx === i ? { ...l, [k]: v } : l));
+  
+  const handleQtyChange = (i, field, val) => {
+    setLines((ls) =>
+      ls.map((l, idx) => {
+        if (idx !== i) return l;
+
+        const numVal = val === '' ? '' : parseFloat(val);
+        
+        if (numVal === '' || isNaN(numVal)) {
+          return { ...l, [field]: val, boxes: '', packets: '', bags: '' };
+        }
+
+        if (field === 'boxes') {
+          return {
+            ...l,
+            boxes: val,
+            packets: String(numVal * 9),
+            bags: String(numVal * 45),
+          };
+        } else if (field === 'packets') {
+          return {
+            ...l,
+            packets: val,
+            boxes: String(Number((numVal / 9).toFixed(2))),
+            bags: String(numVal * 5),
+          };
+        } else if (field === 'bags') {
+          return {
+            ...l,
+            bags: val,
+            packets: String(Number((numVal / 5).toFixed(2))),
+            boxes: String(Number((numVal / 45).toFixed(2))),
+          };
+        }
+
+        return { ...l, [field]: val };
+      })
+    );
+  };
+
   const addLine = () => setLines((ls) => [...ls, { ...EMPTY_LINE }]);
   const removeLine = (i) => setLines((ls) => ls.filter((_, idx) => idx !== i));
 
-  const lineTotal = (l) => {
-    const totalQty = calcTotalBags(l.boxes, l.packets, l.bags);
-    const base = totalQty * Number(l.unitPrice || 0);
-    const gst = base * (Number(l.gstPercent || 0) / 100);
-    return base + gst;
-  };
-  const grandTotal = lines.reduce((s, l) => s + lineTotal(l), 0);
 
-  const ANTICOAGULANT_MAP = {
-    'CPDA-1': 'CPDA_1',
-    'CPD': 'CPD',
-    'ACD': 'ACD',
-    'SAG-M': 'SAG_MANNITOL',
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -107,17 +150,13 @@ function PODrawer({ onClose, vendors, poToEdit }) {
       const payload = {
         poDate: poToEdit ? poToEdit.poDate : new Date().toISOString(),
         vendorId: finalVendorId,
-        expectedDelivery: expectedDelivery || undefined,
         manufacturer: manufacturer || undefined,
-        invoiceNo: invoiceNo || undefined,
         billDate: billDate || undefined,
         lineItems: lines.map((l) => ({
           bagType: l.bagType,
           capacityMl: Number(l.capacity) || 350,
           anticoagulant: ANTICOAGULANT_MAP[l.anticoagulant] ?? l.anticoagulant,
-          quantityOrdered: calcTotalBags(l.boxes, l.packets, l.bags) || Number(l.bags) || 1,
-          unitPriceRs: Number(l.unitPrice) || 0,
-          gstPercent: Number(l.gstPercent) || 0,
+          quantityOrdered: Number(l.bags) || 1,
         })),
       };
 
@@ -146,8 +185,8 @@ function PODrawer({ onClose, vendors, poToEdit }) {
           <button onClick={onClose} className="text-orange-200 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-3">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Vendor *</label>
               <input required type="text" list="vendors-datalist" value={vendorSearchText} onChange={(e) => setVendorSearchText(e.target.value)}
                 placeholder="Type or select vendor..."
@@ -175,16 +214,6 @@ function PODrawer({ onClose, vendors, poToEdit }) {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="e.g. Terumo Penpol" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Expected Delivery</label>
-              <input type="date" value={expectedDelivery} onChange={(e) => setExpectedDelivery(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Invoice No</label>
-              <input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="BILL-1234" />
-            </div>
-            <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bill Date</label>
               <input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
@@ -204,7 +233,7 @@ function PODrawer({ onClose, vendors, poToEdit }) {
               <table className="min-w-full text-xs">
                 <thead className="bg-gray-50">
                   <tr>
-                    {['Bag Type', 'Cap (mL)', 'Anticoag.', 'Boxes', 'Pkts', 'Bags', 'Total Bags', 'Unit Price (₹)', 'GST %', 'Total', ''].map((h) => (
+                    {['Bag Type', 'Cap (mL)', 'Anticoag.', 'Boxes', 'Pkts', 'Bags', 'Total Bags', ''].map((h) => (
                       <th key={h} className="px-2 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -219,8 +248,11 @@ function PODrawer({ onClose, vendors, poToEdit }) {
                         </select>
                       </td>
                       <td className="px-2 py-1.5">
-                        <input value={l.capacity} onChange={(e) => updateLine(i, 'capacity', e.target.value)} type="number"
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-14" placeholder="450" />
+                        <select value={l.capacity} onChange={(e) => updateLine(i, 'capacity', e.target.value)}
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs bg-white w-14">
+                          <option value="350">350</option>
+                          <option value="450">450</option>
+                        </select>
                       </td>
                       <td className="px-2 py-1.5">
                         <select value={l.anticoagulant} onChange={(e) => updateLine(i, 'anticoagulant', e.target.value)}
@@ -229,30 +261,19 @@ function PODrawer({ onClose, vendors, poToEdit }) {
                         </select>
                       </td>
                       <td className="px-1 py-1.5">
-                        <input value={l.boxes} onChange={(e) => updateLine(i, 'boxes', e.target.value)} type="number" min="0"
+                        <input value={l.boxes} onChange={(e) => handleQtyChange(i, 'boxes', e.target.value)} type="number" min="0"
                           className="border border-gray-200 rounded px-1.5 py-1 text-xs w-10 text-center font-medium" placeholder="0" />
                       </td>
                       <td className="px-1 py-1.5">
-                        <input value={l.packets} onChange={(e) => updateLine(i, 'packets', e.target.value)} type="number" min="0"
+                        <input value={l.packets} onChange={(e) => handleQtyChange(i, 'packets', e.target.value)} type="number" min="0"
                           className="border border-gray-200 rounded px-1.5 py-1 text-xs w-10 text-center font-medium" placeholder="0" />
                       </td>
                       <td className="px-1 py-1.5">
-                        <input value={l.bags} onChange={(e) => updateLine(i, 'bags', e.target.value)} type="number" min="0"
+                        <input value={l.bags} onChange={(e) => handleQtyChange(i, 'bags', e.target.value)} type="number" min="0"
                           className="border border-gray-200 rounded px-1.5 py-1 text-xs w-10 text-center font-medium" placeholder="0" />
                       </td>
                       <td className="px-2 py-1.5 font-bold text-gray-700 text-center bg-gray-50/50">
-                        {calcTotalBags(l.boxes, l.packets, l.bags)}
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <input value={l.unitPrice} onChange={(e) => updateLine(i, 'unitPrice', e.target.value)} type="number"
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-16" />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <input value={l.gstPercent} onChange={(e) => updateLine(i, 'gstPercent', e.target.value)} type="number"
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-10" placeholder="18" />
-                      </td>
-                      <td className="px-2 py-1.5 font-semibold text-gray-700">
-                        ₹{lineTotal(l).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                        {Number(l.bags) || 0}
                       </td>
                       <td className="px-2 py-1.5">
                         {lines.length > 1 && (
@@ -265,9 +286,6 @@ function PODrawer({ onClose, vendors, poToEdit }) {
                   ))}
                 </tbody>
               </table>
-            </div>
-            <div className="flex justify-end mt-2 text-sm font-semibold text-gray-800">
-              Grand Total: ₹{grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
             </div>
           </div>
 
@@ -293,6 +311,7 @@ export default function PurchaseOrders() {
   const [editPO, setEditPO] = useState(null);
   const { data, isLoading } = usePOList({});
   const { data: vendorData } = useVendorList({});
+  const deletePO = useDeletePO();
 
   const orders = data?.items ?? data?.purchaseOrders ?? (Array.isArray(data) ? data : []);
   const vendors = vendorData?.items ?? vendorData?.vendors ?? (Array.isArray(vendorData) ? vendorData : []);
@@ -305,6 +324,16 @@ export default function PurchaseOrders() {
   const fmtMoney = (n) => n != null ? `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
 
   const toggleExpand = (id) => setExpandedId((prev) => (prev === id ? null : id));
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this purchase order?')) {
+      try {
+        await deletePO.mutateAsync(id);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -336,16 +365,16 @@ export default function PurchaseOrders() {
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
-                  {['', 'PO Number', 'PO Date', 'Vendor', 'Total Amount', 'Expected Delivery', 'Actions'].map((h) => (
+                  {['', 'PO Number', 'PO Date', 'Vendor', 'Actions'].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {isLoading ? (
-                  <tr><td colSpan={8} className="py-12 text-center text-sm text-gray-500">Loading...</td></tr>
+                  <tr><td colSpan={5} className="py-12 text-center text-sm text-gray-500">Loading...</td></tr>
                 ) : orders.length === 0 ? (
-                  <tr><td colSpan={8} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
+                  <tr><td colSpan={5} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
                 ) : orders.map((o) => (
                   <>
                     <tr key={o._id} className="hover:bg-orange-50/30 transition-colors">
@@ -357,30 +386,31 @@ export default function PurchaseOrders() {
                       <td className="px-4 py-3 text-sm font-mono font-medium text-gray-900">{o.poNumber}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(o.poDate)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{(vendors.find(v => v._id === o.vendorId || v.id === o.vendorId)?.name ?? o.vendorId)}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-800">{fmtMoney(o.totalAmountRs)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(o.expectedDelivery)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           <button onClick={() => { setEditPO(o); setShowDrawer(true); }}
                             className="px-2.5 py-1 text-xs font-medium text-blue-700 border border-blue-200 rounded-md hover:bg-blue-50">
                             Edit
                           </button>
+                          <button onClick={() => handleDelete(o._id || o.id)} disabled={deletePO.isPending}
+                            className="px-2.5 py-1 text-xs font-medium text-red-700 border border-red-200 rounded-md hover:bg-red-50 disabled:opacity-50">
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
                     {expandedId === o._id && (
                       <tr key={`${o._id}-expand`} className="bg-orange-50/20">
-                        <td colSpan={8} className="px-8 py-4">
-                          <div className="grid grid-cols-4 gap-4 mb-4 text-xs bg-white p-3 rounded-lg border border-gray-150 shadow-sm max-w-2xl">
+                        <td colSpan={5} className="px-8 py-4">
+                          <div className="grid grid-cols-2 gap-4 mb-4 text-xs bg-white p-3 rounded-lg border border-gray-150 shadow-sm max-w-2xl">
                             <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Manufacturer:</span> <span className="font-medium text-gray-800 ml-1">{o.manufacturer || '—'}</span></div>
-                            <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Invoice No:</span> <span className="font-medium text-gray-800 ml-1">{o.invoiceNo || '—'}</span></div>
                             <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Bill Date:</span> <span className="font-medium text-gray-800 ml-1">{fmtDate(o.billDate)}</span></div>
                           </div>
                           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Line Items</div>
                           <table className="min-w-full text-xs border border-gray-100 rounded-lg overflow-hidden">
                             <thead className="bg-gray-100">
                               <tr>
-                                {['Bag Type', 'Capacity', 'Anticoagulant', 'Qty Ordered', 'Unit Price', 'GST %', 'Line Total'].map((h) => (
+                                {['Bag Type', 'Capacity', 'Anticoagulant', 'Qty Ordered'].map((h) => (
                                   <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                                 ))}
                               </tr>
@@ -392,9 +422,6 @@ export default function PurchaseOrders() {
                                   <td className="px-3 py-2">{it.capacityMl} mL</td>
                                   <td className="px-3 py-2">{it.anticoagulant}</td>
                                   <td className="px-3 py-2 font-medium">{formatBloodBagQty((it.quantityOrdered))}</td>
-                                  <td className="px-3 py-2">{fmtMoney(it.unitPriceRs)}</td>
-                                  <td className="px-3 py-2">{it.gstPercent}%</td>
-                                  <td className="px-3 py-2 font-semibold">{fmtMoney((it.quantityOrdered || 0) * (it.unitPriceRs || 0) * (1 + (it.gstPercent || 0)/100))}</td>
                                 </tr>
                               ))}
                             </tbody>

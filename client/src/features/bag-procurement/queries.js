@@ -96,6 +96,14 @@ export function useUpdatePO() {
   });
 }
 
+export function useDeletePO() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => bagProcurementApi.purchaseOrder.remove(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-order', 'list'] }),
+  });
+}
+
 
 
 // ─── Goods Receipt ────────────────────────────────────────────────────────────
@@ -163,6 +171,17 @@ export function useUpdateStockStatus() {
   return useMutation({
     mutationFn: ({ id, status }) => bagProcurementApi.bagStock.updateStatus(id, status),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['bag-stock', 'list'] }),
+  });
+}
+
+export function useOpenBagStockBox() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => bagProcurementApi.bagStock.openBox(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bag-stock', 'list'] });
+      qc.invalidateQueries({ queryKey: ['bag-stock', 'summary'] });
+    },
   });
 }
 

@@ -90,7 +90,7 @@ export function createGRNService(deps: {
           batchNumber: line.batchNumber,
           expiryDate: new Date(line.expiryDate),
           grnId: created.id,
-          receivedQty: line.quantityReceived,
+          receivedQty: 0,
           actorId,
         });
       }
@@ -151,7 +151,7 @@ export function createGRNService(deps: {
             batchNumber: line.batchNumber,
             expiryDate: new Date(line.expiryDate),
             grnId: id,
-            receivedQty: line.quantityReceived,
+            receivedQty: 0,
             actorId,
           });
         }

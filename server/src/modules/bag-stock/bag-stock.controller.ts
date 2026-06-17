@@ -8,6 +8,7 @@ export interface BagStockControllers {
   get(req: Request, res: Response, next: NextFunction): Promise<void>;
   summary(req: Request, res: Response, next: NextFunction): Promise<void>;
   updateStatus(req: Request, res: Response, next: NextFunction): Promise<void>;
+  openBox(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export function createBagStockControllers(service: BagStockService): BagStockControllers {
@@ -45,6 +46,14 @@ export function createBagStockControllers(service: BagStockService): BagStockCon
         const { id } = ValidateBagStock.idParam(req);
         const body = ValidateBagStock.updateStatusBody(req);
         const data = await service.updateStatus(id, body, actorId(req));
+        res.json({ success: true, data, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+
+    async openBox(req, res, next) {
+      try {
+        const { id } = ValidateBagStock.idParam(req);
+        const data = await service.openBox(id, actorId(req));
         res.json({ success: true, data, requestId: req.id });
       } catch (e) { next(e); }
     },

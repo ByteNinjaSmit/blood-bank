@@ -38,15 +38,16 @@ const MasterDonors = () => {
     pageSize: PAGE_SIZE,
     search: searchQuery || undefined,
     bloodGroup: bloodGroupFilter || undefined,
+    // Pass eligibilityStatus to the backend: 'deferred' matches both 'deferred' and 'temp-deferred'
+    eligibilityStatus: eligibilityFilter || undefined,
   });
 
   const rawItems = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const items = eligibilityFilter
-    ? rawItems.filter(donor => donor.eligibilityStatus === eligibilityFilter)
-    : rawItems;
+  // Items are already filtered server-side; just use rawItems
+  const items = rawItems;
 
   const eligible = items.filter(d => d.eligibilityStatus === 'eligible').length;
   const deferred = items.filter(d => d.eligibilityStatus === 'deferred' || d.eligibilityStatus === 'temp-deferred').length;
@@ -272,8 +273,7 @@ const MasterDonors = () => {
               >
                 <option value="">All Status</option>
                 <option value="eligible">Eligible</option>
-                <option value="deferred">Deferred</option>
-                <option value="temp-deferred">Temp Deferred</option>
+                <option value="deferred">Deferred (All)</option>
               </select>
             </div>
           </div>

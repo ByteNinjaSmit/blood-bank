@@ -8,6 +8,7 @@ export interface POControllers {
   get(req: Request, res: Response, next: NextFunction): Promise<void>;
   create(req: Request, res: Response, next: NextFunction): Promise<void>;
   update(req: Request, res: Response, next: NextFunction): Promise<void>;
+  remove(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export function createPOControllers(service: POService): POControllers {
@@ -47,6 +48,14 @@ export function createPOControllers(service: POService): POControllers {
         const body = ValidatePO.updateBody(req);
         const data = await service.update(id, body, actorId(req));
         res.json({ success: true, data, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+
+    async remove(req, res, next) {
+      try {
+        const { id } = ValidatePO.idParam(req);
+        await service.delete(id, actorId(req));
+        res.json({ success: true, message: 'Purchase order deleted successfully', requestId: req.id });
       } catch (e) { next(e); }
     },
   };

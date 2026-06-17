@@ -13,6 +13,7 @@ import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { DeferralRepo } from '@/modules/deferral/deferral.repository';
 import type { DonationRepo } from '@/modules/donation/donation.repository';
 import type { LookbackService } from '@/modules/lookback/lookback.service';
+import type { BagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
 import type { TtiTest, TtiResult } from '@/shared/enums';
 
 export interface TtiService {
@@ -38,6 +39,7 @@ export function createTtiService(deps: {
   units: UnitRepo;
   deferrals: DeferralRepo;
   donations: DonationRepo;
+  bagStock?: BagStockRepo;
   lookback?: LookbackService;
   counsellorEmail?: string;
   notify?: INotificationService;
@@ -94,6 +96,23 @@ export function createTtiService(deps: {
         ]);
         const donation = await deps.donations.findById(donationId).catch(() => null);
         const donorId = donation?.donor;
+
+        if (donation && donation.lotNo && donation.typeOfBag) {
+          const mappedBagType = donation.typeOfBag === 'DB' ? 'DOUBLE' : donation.typeOfBag === 'TB' ? 'TRIPLE' : null;
+          if (mappedBagType && deps.bagStock) {
+            try {
+              const bagStock = await deps.bagStock.findByBatchAndType(donation.lotNo, mappedBagType);
+              if (bagStock) {
+                await deps.bagStock.decrementIssued(bagStock.id, 1, actorId);
+                await deps.bagStock.incrementDiscarded(bagStock.id, 1, actorId);
+                log.info({ donationId, batchNumber: donation.lotNo, bagType: mappedBagType }, 'Bag stock updated: issued decremented, discarded incremented due to reactive TTI');
+              }
+            } catch (err) {
+              log.error({ err: (err as Error).message }, 'Failed to update BagStock for reactive donation');
+            }
+          }
+        }
+
         if (donorId) {
           await deps.deferrals.create(
             {

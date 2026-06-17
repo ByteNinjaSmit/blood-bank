@@ -7,6 +7,7 @@ import { Types } from 'mongoose';
 import { DonationModel } from '@/modules/donation/donation.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
+import { DonorModel } from '@/modules/donor/donor.model';
 import type {
   CreateDonationInput,
   ListDonationsInput,
@@ -108,6 +109,16 @@ export function createDonationRepo(): DonationRepo {
             );
             if (!donation) throw new Error('Failed to create donation');
 
+            // Update donor's lastDonationDate if the donor is fit
+            if (input.donorFitness.isFit) {
+              await DonorModel.findByIdAndUpdate(
+                donorObjId,
+                { lastDonationDate: input.collectedAt, updatedAt: new Date() },
+                { session },
+              );
+            }
+
+
             const unitDocs = await BloodUnitModel.insertMany(
               units.map((u) => ({
                 unitId: u.unitId,
@@ -180,6 +191,7 @@ export function createDonationRepo(): DonationRepo {
           await session.endSession();
         }
       } catch (err: any) {
+        // Fallback (no-transaction) path
         const [donation] = await DonationModel.create(
           [
             {
@@ -205,6 +217,14 @@ export function createDonationRepo(): DonationRepo {
           ]
         );
         if (!donation) throw new Error('Failed to create donation');
+
+        // Update donor's lastDonationDate in fallback path too
+        if (input.donorFitness.isFit) {
+          await DonorModel.findByIdAndUpdate(
+            donorObjId,
+            { lastDonationDate: input.collectedAt, updatedAt: new Date() },
+          );
+        }
 
         const unitDocs = await BloodUnitModel.insertMany(
           units.map((u) => ({

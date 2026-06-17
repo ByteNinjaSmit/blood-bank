@@ -14,14 +14,7 @@ export interface POService {
   get(id: string): Promise<PODto>;
   create(input: CreatePOInput, actorId: string): Promise<PODto>;
   update(id: string, input: UpdatePOInput, actorId: string): Promise<PODto>;
-}
-
-function calcTotal(lineItems: LineItemDto[]): number {
-  return lineItems.reduce((sum, item) => {
-    const base = item.quantityOrdered * (item.unitPriceRs ?? 0);
-    const gst = base * ((item.gstPercent ?? 0) / 100);
-    return sum + base + gst;
-  }, 0);
+  delete(id: string, actorId: string): Promise<boolean>;
 }
 
 function generatePONumber(): string {
@@ -51,16 +44,13 @@ export function createPOService(deps: { pos: PORepo; vendors: VendorRepo }): POS
       if (!vendor) throw new NotFoundError('Vendor', input.vendorId);
 
       const poNumber = generatePONumber();
-      const totalAmountRs = calcTotal(input.lineItems);
       const created = await deps.pos.create({
         poNumber,
         poDate: input.poDate,
         vendorId: input.vendorId,
         lineItems: input.lineItems,
-        totalAmountRs,
         expectedDelivery: input.expectedDelivery,
         manufacturer: input.manufacturer,
-        invoiceNo: input.invoiceNo,
         billDate: input.billDate,
         notes: input.notes,
         actorId,
@@ -73,19 +63,23 @@ export function createPOService(deps: { pos: PORepo; vendors: VendorRepo }): POS
       const po = await deps.pos.findById(id);
       if (!po) throw new NotFoundError('PurchaseOrder', id);
       
-      const patch: Partial<{ lineItems: LineItemDto[]; totalAmountRs: number; expectedDelivery: Date; manufacturer: string; invoiceNo: string; billDate: Date; notes: string }> = {};
+      const patch: Partial<{ lineItems: LineItemDto[]; expectedDelivery: Date; manufacturer: string; billDate: Date; notes: string }> = {};
       if (input.lineItems) {
         patch.lineItems = input.lineItems;
-        patch.totalAmountRs = calcTotal(input.lineItems);
       }
       if (input.expectedDelivery) patch.expectedDelivery = input.expectedDelivery;
       if (input.manufacturer !== undefined) patch.manufacturer = input.manufacturer;
-      if (input.invoiceNo !== undefined) patch.invoiceNo = input.invoiceNo;
       if (input.billDate !== undefined) patch.billDate = input.billDate;
       if (input.notes !== undefined) patch.notes = input.notes;
       const updated = await deps.pos.update(id, patch, actorId);
       if (!updated) throw new NotFoundError('PurchaseOrder', id);
       return updated;
+    },
+
+    async delete(id, actorId) {
+      const deleted = await deps.pos.delete(id, actorId);
+      if (!deleted) throw new NotFoundError('PurchaseOrder', id);
+      return deleted;
     },
   };
 }

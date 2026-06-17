@@ -15,7 +15,7 @@ const STATUS_BADGE = {
 };
 
 const EMPTY_BATCH = {
-  bagType: 'SINGLE', batchNo: '', mfgDate: '', expiryDate: '',
+  bagType: 'DOUBLE', batchNo: '', mfgDate: '', expiryDate: '',
   quantityReceived: '',
 };
 
@@ -66,7 +66,6 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
     }
     const selectedPo = pos.find((p) => (p._id ?? p.id) === selectedPoId);
     if (selectedPo) {
-      if (selectedPo.invoiceNo) setInvoiceNo(selectedPo.invoiceNo);
       if (selectedPo.billDate) setBillDate(selectedPo.billDate.split('T')[0]);
     }
   };
@@ -125,7 +124,10 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
               <select required disabled={Boolean(grnToEdit)} value={poId} onChange={handlePoChange} className={`${fieldClass} bg-white disabled:opacity-75`}>
                 <option value="">Select PO...</option>
                 {(pos ?? []).filter((p) => p.status !== 'CANCELLED' && p.status !== 'REJECTED').map((p) => (
-                  <option key={p._id ?? p.id} value={p._id ?? p.id}>{p.poNumber} — {vendors.find(v => (v._id ?? v.id) === p.vendorId)?.name || 'Unknown Vendor'}</option>
+                  <option key={p._id ?? p.id} value={p._id ?? p.id}>
+                    {p.poNumber} — {vendors.find(v => (v._id ?? v.id) === p.vendorId)?.name || 'Unknown Vendor'}
+                    {p.billDate ? ` (Bill Date: ${new Date(p.billDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })})` : ''}
+                  </option>
                 ))}
               </select>
             </div>
@@ -187,7 +189,7 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
                       <label className="block text-xs text-gray-500 mb-1">Bag Type</label>
                       <select value={b.bagType} onChange={(e) => updateBatch(i, 'bagType', e.target.value)}
                         className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-orange-400">
-                        {['SINGLE', 'DOUBLE', 'TRIPLE', 'QUADRUPLE'].map((t) => <option key={t}>{t}</option>)}
+                        {['DOUBLE', 'TRIPLE'].map((t) => <option key={t}>{t}</option>)}
                       </select>
                     </div>
                     <div>

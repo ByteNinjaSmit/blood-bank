@@ -4,6 +4,7 @@ import type { ListBagIssueInput } from '@/modules/bag-issue/bag-issue.validator'
 
 export interface BagIssueDto {
   id: string;
+  _id?: string;
   issueNumber: string;
   issueDate: string;
   stockId: string;
@@ -12,8 +13,25 @@ export interface BagIssueDto {
   batchNumber: string;
   issuedById: string;
   collectionRoom?: string;
-  donorId?: string;
-  donationId?: string;
+  donorId?: string | {
+    id: string;
+    name?: { firstName?: string; middleName?: string; lastName?: string };
+    dob?: string;
+    sex?: string;
+    phone?: string;
+    email?: string;
+    bloodGroup?: string;
+    rh?: string;
+  };
+  donationId?: string | {
+    id: string;
+    donationId: string;
+    donationType: string;
+    collectedAt: string;
+    segmentNo?: string | null;
+    typeOfBag?: string;
+    medicalExam?: any;
+  };
   status: string;
   returnedAt?: string;
   usedAt?: string;
@@ -21,21 +39,43 @@ export interface BagIssueDto {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  segmentNo?: string;
+  donorName?: string;
 }
 
-function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date }): BagIssueDto {
+function toDto(doc: any): BagIssueDto {
+  const donor = doc.donorId;
+  const donation = doc.donationId;
   return {
     id: doc._id.toString(),
+    _id: doc._id.toString(),
     issueNumber: doc.issueNumber as string,
     issueDate: (doc.issueDate as Date).toISOString(),
-    stockId: (doc.stockId as Types.ObjectId).toString(),
+    stockId: doc.stockId ? doc.stockId.toString() : '',
     bagSerialNumber: doc.bagSerialNumber as string,
     bagType: doc.bagType as string,
     batchNumber: doc.batchNumber as string,
-    issuedById: (doc.issuedById as Types.ObjectId).toString(),
+    issuedById: doc.issuedById ? doc.issuedById.toString() : '',
     collectionRoom: doc.collectionRoom as string | undefined,
-    donorId: doc.donorId ? (doc.donorId as Types.ObjectId).toString() : undefined,
-    donationId: doc.donationId ? (doc.donationId as Types.ObjectId).toString() : undefined,
+    donorId: donor?._id ? {
+      id: donor._id.toString(),
+      name: donor.name,
+      dob: donor.dob ? new Date(donor.dob).toISOString() : undefined,
+      sex: donor.sex,
+      phone: donor.phone,
+      email: donor.email,
+      bloodGroup: donor.bloodGroup,
+      rh: donor.rh,
+    } : (doc.donorId ? doc.donorId.toString() : undefined),
+    donationId: donation?._id ? {
+      id: donation._id.toString(),
+      donationId: donation.donationId,
+      donationType: donation.donationType,
+      collectedAt: donation.collectedAt ? new Date(donation.collectedAt).toISOString() : undefined,
+      segmentNo: donation.segmentNo,
+      typeOfBag: donation.typeOfBag,
+      medicalExam: donation.medicalExam,
+    } : (doc.donationId ? doc.donationId.toString() : undefined),
     status: doc.status as string,
     returnedAt: doc.returnedAt ? (doc.returnedAt as Date).toISOString() : undefined,
     usedAt: doc.usedAt ? (doc.usedAt as Date).toISOString() : undefined,
@@ -43,12 +83,17 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     notes: doc.notes as string | undefined,
     createdAt: doc.createdAt ? doc.createdAt.toISOString() : '',
     updatedAt: doc.updatedAt ? doc.updatedAt.toISOString() : '',
+    segmentNo: donation?.segmentNo ?? undefined,
+    donorName: donor?.name
+      ? `${donor.name.firstName ?? ''} ${donor.name.lastName ?? ''}`.trim()
+      : undefined,
   };
 }
 
 export interface BagIssueRepo {
   list(q: ListBagIssueInput): Promise<{ items: BagIssueDto[]; total: number }>;
   findById(id: string): Promise<BagIssueDto | null>;
+  findBySerialNumber(bagSerialNumber: string): Promise<BagIssueDto | null>;
   create(doc: {
     issueNumber: string;
     issueDate: Date;
@@ -83,14 +128,29 @@ export function createBagIssueRepo(): BagIssueRepo {
       const pageSize = q.pageSize ?? 20;
       const skip = (page - 1) * pageSize;
       const [docs, total] = await Promise.all([
-        BagIssueModel.find(filter).sort({ issueDate: -1 }).skip(skip).limit(pageSize).lean(),
+        BagIssueModel.find(filter)
+          .populate('donorId', 'name')
+          .populate('donationId', 'segmentNo')
+          .sort({ issueDate: -1 })
+          .skip(skip)
+          .limit(pageSize)
+          .lean(),
         BagIssueModel.countDocuments(filter),
       ]);
-      return { items: docs.map((d) => toDto(d as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date })), total };
+      return { items: docs.map((d) => toDto(d)), total };
     },
 
     async findById(id) {
-      const doc = await BagIssueModel.findOne({ _id: new Types.ObjectId(id), deletedAt: null }).lean();
+      const doc = await BagIssueModel.findOne({ _id: new Types.ObjectId(id), deletedAt: null })
+        .populate('donorId')
+        .populate('donationId')
+        .lean();
+      if (!doc) return null;
+      return toDto(doc);
+    },
+
+    async findBySerialNumber(bagSerialNumber) {
+      const doc = await BagIssueModel.findOne({ bagSerialNumber, deletedAt: null }).lean();
       if (!doc) return null;
       return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
     },
@@ -126,9 +186,12 @@ export function createBagIssueRepo(): BagIssueRepo {
         { _id: new Types.ObjectId(id), deletedAt: null },
         { $set: update },
         { new: true },
-      ).lean();
+      )
+      .populate('donorId')
+      .populate('donationId')
+      .lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(doc);
     },
   };
 }

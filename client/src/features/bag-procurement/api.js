@@ -17,6 +17,7 @@ export const bagProcurementApi = {
     get:     (id)       => apiClient.get(`${V}/purchase-order/${id}`).then(unwrap),
     create:  (data)     => apiClient.post(`${V}/purchase-order`, data).then(unwrap),
     update:  (id, data) => apiClient.patch(`${V}/purchase-order/${id}`, data).then(unwrap),
+    remove:  (id)       => apiClient.delete(`${V}/purchase-order/${id}`).then(unwrap),
   },
 
   goodsReceipt: {
@@ -31,6 +32,7 @@ export const bagProcurementApi = {
     get:          (id)            => apiClient.get(`${V}/bag-stock/${id}`).then(unwrap),
     summary:      ()              => apiClient.get(`${V}/bag-stock/summary`).then(unwrap),
     updateStatus: (id, status)    => apiClient.patch(`${V}/bag-stock/${id}/status`, { status }).then(unwrap),
+    openBox:      (id)            => apiClient.post(`${V}/bag-stock/${id}/open-box`).then(unwrap),
   },
 
   bagInspection: {

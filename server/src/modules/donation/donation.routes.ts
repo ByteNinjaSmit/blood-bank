@@ -6,11 +6,15 @@ import { createDonationRepo } from '@/modules/donation/donation.repository';
 import { createDeferralRepo } from '@/modules/deferral/deferral.repository';
 import { createDonationService } from '@/modules/donation/donation.service';
 import { createDonationControllers } from '@/modules/donation/donation.controller';
+import { createBagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
+import { createBagIssueRepo } from '@/modules/bag-issue/bag-issue.repository';
 
 const service = createDonationService({
   donations: createDonationRepo(),
   donors: createDonorRepo(),
   deferrals: createDeferralRepo(),
+  bagStock: createBagStockRepo(),
+  bagIssues: createBagIssueRepo(),
 });
 const controllers = createDonationControllers(service);
 

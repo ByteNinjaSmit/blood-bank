@@ -1,8 +1,20 @@
+import { useBagStockList } from '../../../bag-procurement/queries';
+
 const BagInformationStep = ({ formData, fieldErrors, onFieldChange }) => {
+  const { data } = useBagStockList({});
+  const stocks = data?.items ?? data?.bagStocks ?? (Array.isArray(data) ? data : []);
+
+  const selectedBagType = formData.typeOfBag === 'DB' ? 'DOUBLE' : formData.typeOfBag === 'TB' ? 'TRIPLE' : null;
+  const activeBatches = stocks.filter((s) => {
+    const closing = (s.openingStock ?? 0) + (s.receivedQty ?? 0) - (s.issuedQty ?? 0) - (s.damagedQty ?? 0) - (s.discardedQty ?? 0);
+    return s.bagType === selectedBagType &&
+           s.status === 'AVAILABLE' &&
+           closing > (s.unopenedBoxes ?? 0) * 45;
+  });
+
   const textFields = [
     { key: "bagNo", label: "Bag No" },
     { key: "segmentNo", label: "Segment No" },
-    { key: "lotNo", label: "Lot No" },
   ];
 
   return (
@@ -36,18 +48,48 @@ const BagInformationStep = ({ formData, fieldErrors, onFieldChange }) => {
           </label>
           <select
             value={formData.typeOfBag}
-            onChange={(e) => onFieldChange("typeOfBag", e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg ${fieldErrors.typeOfBag ? "border-red-500" : "border-gray-300"
-              }`}
+            onChange={(e) => {
+              onFieldChange("typeOfBag", e.target.value);
+              onFieldChange("lotNo", "");
+            }}
+            className={`w-full px-3 py-2 border rounded-lg bg-white ${fieldErrors.typeOfBag ? "border-red-500" : "border-gray-300"}`}
           >
             <option value="">Select type</option>
-            <option value="SB">Single Bag</option>
             <option value="DB">Double Bag</option>
             <option value="TB">Triple Bag</option>
-            <option value="QB">Quadruple Bag</option>
           </select>
           {fieldErrors.typeOfBag && (
             <p className="text-xs text-red-600 mt-1">{fieldErrors.typeOfBag}</p>
+          )}
+        </div>
+
+        {/* Batch No (Lot No) */}
+        <div>
+          <label className="block text-sm mb-1">
+            Batch No (Lot No)
+            <span className="text-red-500 ml-1">*</span>
+          </label>
+          <select
+            value={formData.lotNo}
+            onChange={(e) => onFieldChange("lotNo", e.target.value)}
+            disabled={!formData.typeOfBag}
+            className={`w-full px-3 py-2 border rounded-lg bg-white ${fieldErrors.lotNo ? "border-red-500" : "border-gray-300"}`}
+          >
+            <option value="">Select batch...</option>
+            {activeBatches.map((s) => (
+              <option key={s.batchNumber || s.batchNo} value={s.batchNumber || s.batchNo}>
+                {s.batchNumber || s.batchNo} (Exp: {new Date(s.expiryDate).toLocaleDateString('en-IN')})
+              </option>
+            ))}
+          </select>
+          {fieldErrors.lotNo && (
+            <p className="text-xs text-red-600 mt-1">{fieldErrors.lotNo}</p>
+          )}
+          {!formData.typeOfBag && (
+            <p className="text-xs text-gray-500 mt-1">Please select Bag Type first to load active batches.</p>
+          )}
+          {formData.typeOfBag && activeBatches.length === 0 && (
+            <p className="text-xs text-red-500 mt-1">No active, opened boxes found for this bag type in inventory.</p>
           )}
         </div>
 

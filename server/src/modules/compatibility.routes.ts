@@ -9,6 +9,7 @@ import { createUnitRepo } from '@/modules/unit/unit.repository';
 import { createDeferralRepo } from '@/modules/deferral/deferral.repository';
 import { createDonationRepo } from '@/modules/donation/donation.repository';
 import { createTtiService } from '@/modules/tti/tti.service';
+import { createBagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
 import { invalidate } from '@/core/cache';
 import { BagInspectionModel } from '@/modules/bag-inspection/bag-inspection.model';
 
@@ -19,6 +20,7 @@ const ttiService = createTtiService({
   units: createUnitRepo(),
   deferrals: createDeferralRepo(),
   donations: createDonationRepo(),
+  bagStock: createBagStockRepo(),
 });
 
 // 1. GET /inventory
@@ -26,7 +28,11 @@ router.get('/inventory', authenticate, async (req, res, next) => {
   try {
     const { page, limit, status, componentType, siteId, search, sortBy, order } = req.query as any;
 
-    const unitFilter: any = { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] };
+    const unitFilter: any = {
+      $and: [
+        { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] }
+      ]
+    };
 
     if (status) {
       if (status === 'in-stock') unitFilter.status = 'RELEASED';
@@ -49,11 +55,30 @@ router.get('/inventory', authenticate, async (req, res, next) => {
 
     if (search) {
       const searchRegex = new RegExp(search, 'i');
-      unitFilter.$or = [
-        { donationId: searchRegex },
-        { unitId: searchRegex },
-        { aboGroup: searchRegex }
-      ];
+      const matchingDonations = await DonationModel.find({
+        $and: [
+          {
+            $or: [
+              { donationId: searchRegex },
+              { bagNo: searchRegex }
+            ]
+          },
+          {
+            $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }]
+          }
+        ]
+      }).select('donationId').lean();
+
+      const matchedDonationIds = matchingDonations.map(d => d.donationId);
+
+      unitFilter.$and.push({
+        $or: [
+          { donationId: { $in: matchedDonationIds } },
+          { donationId: searchRegex },
+          { unitId: searchRegex },
+          { aboGroup: searchRegex }
+        ]
+      });
     }
 
     const pageNum = parseInt(page) || 1;
@@ -76,6 +101,19 @@ router.get('/inventory', authenticate, async (req, res, next) => {
       .skip(skipNum)
       .limit(limitNum)
       .lean();
+
+    const donationIds = units.map(u => u.donationId).filter(Boolean);
+    const donations = await DonationModel.find({
+      donationId: { $in: donationIds },
+      $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }]
+    }).select('donationId bagNo').lean();
+
+    const donationMap = new Map<string, string>();
+    donations.forEach(d => {
+      if (d.donationId && d.bagNo) {
+        donationMap.set(d.donationId, d.bagNo);
+      }
+    });
 
     const data = units.map(u => {
       let legacyStatus = 'in-stock';
@@ -115,11 +153,13 @@ router.get('/inventory', authenticate, async (req, res, next) => {
         }
       }
 
+      const displayBagNo = donationMap.get(u.donationId) || u.donationId;
+
       return {
         _id: u._id.toString(),
-        bagNo: u.donationId,
+        bagNo: displayBagNo,
         bag: {
-          bagNo: u.donationId,
+          bagNo: displayBagNo,
           bloodGroup: u.aboGroup,
           rh: u.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
         },
@@ -153,6 +193,8 @@ router.get('/inventory', authenticate, async (req, res, next) => {
     next(e);
   }
 });
+
+
 
 // POST /inventory/unreserve
 router.post('/inventory/unreserve', authenticate, async (req, res, next) => {
@@ -198,14 +240,38 @@ router.get('/discard/get-list', authenticate, async (req, res, next) => {
   try {
     const { page, limit, search, itemType, fromDate, toDate, sortBy, order } = req.query as any;
 
-    const unitFilter: any = { status: 'DISCARDED', $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] };
+    const unitFilter: any = {
+      status: 'DISCARDED',
+      $and: [
+        { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] }
+      ]
+    };
 
     if (search) {
       const searchRegex = new RegExp(search, 'i');
-      unitFilter.$or = [
-        { donationId: searchRegex },
-        { unitId: searchRegex }
-      ];
+      const matchingDonations = await DonationModel.find({
+        $and: [
+          {
+            $or: [
+              { donationId: searchRegex },
+              { bagNo: searchRegex }
+            ]
+          },
+          {
+            $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }]
+          }
+        ]
+      }).select('donationId').lean();
+
+      const matchedDonationIds = matchingDonations.map(d => d.donationId);
+
+      unitFilter.$and.push({
+        $or: [
+          { donationId: { $in: matchedDonationIds } },
+          { donationId: searchRegex },
+          { unitId: searchRegex }
+        ]
+      });
     }
 
     if (fromDate || toDate) {
@@ -228,6 +294,19 @@ router.get('/discard/get-list', authenticate, async (req, res, next) => {
       .limit(limitNum)
       .lean();
 
+    const donationIds = units.map(u => u.donationId).filter(Boolean);
+    const donations = await DonationModel.find({
+      donationId: { $in: donationIds },
+      $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }]
+    }).select('donationId bagNo').lean();
+
+    const donationMap = new Map<string, string>();
+    donations.forEach(d => {
+      if (d.donationId && d.bagNo) {
+        donationMap.set(d.donationId, d.bagNo);
+      }
+    });
+
     const data = units.map(u => {
       let legacyType: string = u.componentType;
       if (u.componentType === 'PRBC') legacyType = 'RBC';
@@ -238,7 +317,7 @@ router.get('/discard/get-list', authenticate, async (req, res, next) => {
 
       return {
         id: u._id.toString(),
-        bagNo: u.donationId,
+        bagNo: donationMap.get(u.donationId) || u.donationId,
         componentId: u.unitId,
         componentType: legacyType,
         itemType: 'Component',

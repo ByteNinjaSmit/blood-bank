@@ -9,6 +9,7 @@ import { createLookbackRepo } from '@/modules/lookback/lookback.repository';
 import { createLookbackService } from '@/modules/lookback/lookback.service';
 import { createTtiService } from '@/modules/tti/tti.service';
 import { createTtiControllers } from '@/modules/tti/tti.controller';
+import { createBagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
 import { env } from '@/core/config/env';
 
 const units = createUnitRepo();
@@ -19,6 +20,7 @@ const service = createTtiService({
   units,
   deferrals: createDeferralRepo(),
   donations: createDonationRepo(),
+  bagStock: createBagStockRepo(),
   // Reactive result auto-triggers recall + alerts the configured inbox.
   lookback,
   counsellorEmail: env.ADMIN_EMAIL,

@@ -16,6 +16,7 @@ const BagStockSchema = new Schema(
     issuedQty: { type: Number, default: 0, min: 0 },
     damagedQty: { type: Number, default: 0, min: 0 },
     discardedQty: { type: Number, default: 0, min: 0 },
+    unopenedBoxes: { type: Number, default: 0, min: 0 },
     status: { type: String, enum: BAG_STOCK_STATUS, default: 'AVAILABLE', index: true },
     lastUpdatedAt: { type: Date },
     deletedAt: { type: Date, default: null, index: true },

@@ -46,4 +46,12 @@ router.patch(
   controllers.update,
 );
 
+router.delete(
+  '/:id',
+  authenticate,
+  requireRole(['system-admin', 'bbo']),
+  requirePermission('po:create'),
+  controllers.remove,
+);
+
 export default router;

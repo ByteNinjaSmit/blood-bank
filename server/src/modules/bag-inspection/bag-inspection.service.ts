@@ -7,6 +7,8 @@ import type {
   UpdateBagInspectionReportInput,
   ListBagInspectionInput,
 } from '@/modules/bag-inspection/bag-inspection.validator';
+import type { GRNRepo } from '@/modules/goods-receipt/goods-receipt.repository';
+import type { BagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
 
 export interface BagInspectionService {
   list(q: ListBagInspectionInput): Promise<{ items: BagInspectionDto[]; total: number; page: number; pageSize: number }>;
@@ -22,7 +24,11 @@ function generateInspectionId(): string {
   return `INS-${yyyymm}-${rand}`;
 }
 
-export function createBagInspectionService(deps: { inspections: BagInspectionRepo }): BagInspectionService {
+export function createBagInspectionService(deps: {
+  inspections: BagInspectionRepo;
+  grns: GRNRepo;
+  bagStock: BagStockRepo;
+}): BagInspectionService {
   const log = childLogger({ module: 'bag-inspection-service' });
 
   return {
@@ -82,6 +88,29 @@ export function createBagInspectionService(deps: { inspections: BagInspectionRep
       
       if (!updated) throw new NotFoundError('BagInspection', id);
       log.info({ inspectionId: updated.inspectionId, actorId }, 'bag inspection report updated');
+
+      if (updated.testingType === 'EMPTY' && input.testResult && /sterile/i.test(input.testResult)) {
+        const grn = await deps.grns.findById(updated.grnId);
+        if (grn) {
+          const line = grn.batchLines.find((l) => l.batchNumber === updated.batchNumber);
+          if (line) {
+            const quantityReceived = line.quantityReceived;
+            const unopenedBoxes = Math.floor(quantityReceived / 45);
+            await deps.bagStock.setReceivedQtyAndBoxes(
+              updated.batchNumber,
+              line.bagType,
+              quantityReceived,
+              unopenedBoxes,
+              actorId
+            );
+            log.info(
+              { batchNumber: updated.batchNumber, bagType: line.bagType, quantityReceived },
+              'sterile check passed: bag units added to inventory'
+            );
+          }
+        }
+      }
+
       return updated;
     },
   };

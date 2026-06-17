@@ -17,8 +17,6 @@ const LineItemSchema = z.object({
   anticoagulant: z.enum(ANTICOAGULANT),
   productCode: z.string().trim().max(100).optional(),
   quantityOrdered: z.number().int().positive(),
-  unitPriceRs: z.number().min(0).optional(),
-  gstPercent: z.number().min(0).max(100).optional(),
 });
 
 export const CreatePOBody = z.object({
@@ -27,7 +25,6 @@ export const CreatePOBody = z.object({
   lineItems: z.array(LineItemSchema).min(1, 'At least one line item required'),
   expectedDelivery: z.coerce.date().optional(),
   manufacturer: z.string().trim().max(200).optional(),
-  invoiceNo: z.string().trim().max(100).optional(),
   billDate: z.coerce.date().optional(),
   notes: z.string().trim().max(2000).optional(),
 });
@@ -36,7 +33,6 @@ export const UpdatePOBody = z.object({
   lineItems: z.array(LineItemSchema).min(1).optional(),
   expectedDelivery: z.coerce.date().optional(),
   manufacturer: z.string().trim().max(200).optional(),
-  invoiceNo: z.string().trim().max(100).optional(),
   billDate: z.coerce.date().optional(),
   notes: z.string().trim().max(2000).optional(),
 });

@@ -145,7 +145,13 @@ export function createDonorRepo(): DonorRepo {
       if (input.bloodGroup) filter.bloodGroup = input.bloodGroup;
       if (input.rh) filter.rh = input.rh === 'Positive' ? 'POSITIVE' : input.rh === 'Negative' ? 'NEGATIVE' : input.rh;
       if (input.city) filter['address.city'] = input.city;
-      
+      // Filter by eligibility status: support "deferred" to match both deferred types
+      if (input.eligibilityStatus === 'deferred') {
+        filter.eligibilityStatus = { $in: ['deferred', 'temp-deferred'] };
+      } else if (input.eligibilityStatus) {
+        filter.eligibilityStatus = input.eligibilityStatus;
+      }
+
       if (input.source === 'camp') {
         const campDonations = await DonationModel.find({ campId: { $ne: null } }, { donor: 1 }).lean();
         const campDonorIds = campDonations.map(d => d.donor?.toString()).filter(Boolean);
