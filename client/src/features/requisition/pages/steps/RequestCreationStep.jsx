@@ -155,7 +155,7 @@ export default function RequestCreationStep({
             />
 
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Doctor’s Name</label>
+              <label className="block text-sm text-gray-700 mb-1">Doctor’s Name <span className="text-red-600">*</span></label>
               <input
                 placeholder="Dr. Full Name"
                 className={`w-full px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}

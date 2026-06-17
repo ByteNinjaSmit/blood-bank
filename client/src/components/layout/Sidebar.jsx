@@ -274,21 +274,6 @@ const MODULES = [
     description: "Blood stock management",
   },
   {
-    id: "discard",
-    name: "Discard",
-    icon: <FaTrash className="w-5 h-5" />,
-    permissions: ["read", "write"],
-    subModules: [
-      {
-        name: "Discard List",
-        href: "/discard",
-        permissions: ["read", "write"],
-        description: "View discarded blood units",
-      },
-    ],
-    description: "Manage discarded blood units",
-  },
-  {
     id: "master-register",
     name: "Master Register",
     icon: <List className="w-5 h-5" />,
@@ -570,6 +555,21 @@ const MODULES = [
       },
     ],
     description: "Management Information System",
+  },
+  {
+    id: "discard",
+    name: "Discard",
+    icon: <FaTrash className="w-5 h-5" />,
+    permissions: ["read", "write"],
+    subModules: [
+      {
+        name: "Discard List",
+        href: "/discard",
+        permissions: ["read", "write"],
+        description: "View discarded blood units",
+      },
+    ],
+    description: "Manage discarded blood units",
   },
   // {
   //   id: "report",

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function Stepper({
     children,
     initialStep = 1,
+    activeStep,
     onStepChange = () => { },
     onFinalStepCompleted = () => { },
     stepCircleContainerClassName = "",
@@ -22,6 +23,13 @@ export default function Stepper({
 }) {
     const [currentStep, setCurrentStep] = useState(initialStep)
     const [direction, setDirection] = useState(0)
+
+    React.useEffect(() => {
+        if (activeStep !== undefined && activeStep !== currentStep) {
+            setDirection(activeStep > currentStep ? 1 : -1)
+            setCurrentStep(activeStep)
+        }
+    }, [activeStep, currentStep])
     const stepsArray = Children.toArray(children)
     const totalSteps = stepsArray.length
     const isCompleted = currentStep > totalSteps

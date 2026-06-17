@@ -144,7 +144,7 @@ const App = () => {
           <Route path="procurement/grn" element={<GoodsReceipt />} />
           <Route path="procurement/inspection" element={<BagInspection />} />
           <Route path="procurement/issue" element={<BagIssuance />} />
-          <Route path="procurement/discard" element={<BagDiscard />} />
+          <Route path="procurement/discard" element={<ViewDiscarded />} />
           <Route path="procurement/inventory" element={<BagInventory />} />
 
           {/* Chemical Inventory */}

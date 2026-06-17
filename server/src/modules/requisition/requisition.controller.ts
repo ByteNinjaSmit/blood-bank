@@ -1,6 +1,9 @@
 import type { NextFunction, Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
+import { DonationModel } from '@/modules/donation/donation.model';
+import { HospitalModel } from '@/modules/hospital/hospital.model';
+import { PatientModel } from '@/modules/patient/patient.model';
 import { ValidateRequisition } from '@/modules/requisition/requisition.validator';
 import { ValidateCrossmatch } from '@/modules/crossmatch/crossmatch.validator';
 import { ValidateIssue } from '@/modules/issue/issue.validator';
@@ -32,7 +35,7 @@ async function enrichRequisition(reqDto: any): Promise<any> {
   const unitMap = new Map(units.map(u => [u.unitId, u]));
 
   const donationIds = units.map(u => u.donationId).filter(Boolean);
-  const donations = await mongoose.model('Donation').find({ donationId: { $in: donationIds } }).select('donationId bagNo').lean() as any[];
+  const donations = await DonationModel.find({ donationId: { $in: donationIds } }).select('donationId bagNo').lean() as any[];
   const donationMap = new Map(donations.map(d => [d.donationId, d]));
 
   const matchedInventory = matchedUnits.map((mu: any) => {
@@ -61,12 +64,12 @@ async function enrichRequisition(reqDto: any): Promise<any> {
 
   let hospitalDoc = null;
   if (reqDto.hospitalId && mongoose.Types.ObjectId.isValid(reqDto.hospitalId)) {
-    hospitalDoc = await mongoose.model('Hospital').findById(reqDto.hospitalId).select('name').lean() as any;
+    hospitalDoc = await HospitalModel.findById(reqDto.hospitalId).select('name').lean() as any;
   }
 
   let patientDoc = null;
   if (reqDto.patientId && mongoose.Types.ObjectId.isValid(reqDto.patientId)) {
-    patientDoc = await mongoose.model('Patient').findById(reqDto.patientId).lean() as any;
+    patientDoc = await PatientModel.findById(reqDto.patientId).lean() as any;
   }
 
   let age = '';
@@ -83,6 +86,7 @@ async function enrichRequisition(reqDto: any): Promise<any> {
 
   return {
     ...reqDto,
+    requestId: reqDto.requisitionId,
     matchedInventory,
     hospitalId: hospitalDoc ? { _id: reqDto.hospitalId, name: hospitalDoc.name } : reqDto.hospitalId,
     patient: patientDoc ? {
@@ -129,8 +133,85 @@ export function createRequisitionControllers(deps: {
 
     async create(req, res, next) {
       try {
+        const actorId = actor(req);
+        
+        // Normalize requestedComponents
+        const requestedComponents = (req.body.requestedComponents || []).map((rc: any) => {
+          let componentType = rc.componentType || 'PRBC';
+          if (componentType === 'RBC') componentType = 'PRBC';
+          if (componentType === 'Platelet') componentType = 'PLATELET_CONCENTRATE';
+          if (componentType === 'Cryo') componentType = 'CRYOPRECIPITATE';
+
+          const aboGroup = rc.aboGroup || rc.bloodGroup || 'O';
+
+          let rhFactor = rc.rhFactor || rc.rh || 'POSITIVE';
+          if (typeof rhFactor === 'string') {
+            const upper = rhFactor.toUpperCase();
+            if (upper === 'POSITIVE' || upper === 'POS') rhFactor = 'POSITIVE';
+            else if (upper === 'NEGATIVE' || upper === 'NEG') rhFactor = 'NEGATIVE';
+            else rhFactor = 'POSITIVE';
+          }
+
+          let urgency = rc.urgency || 'ROUTINE';
+          if (typeof urgency === 'string') {
+            const upper = urgency.toUpperCase();
+            if (upper === 'REGULAR' || upper === 'ROUTINE') urgency = 'ROUTINE';
+            else if (upper === 'URGENT') urgency = 'URGENT';
+            else if (upper === 'EMERGENCY') urgency = 'EMERGENCY';
+            else urgency = 'ROUTINE';
+          }
+
+          return {
+            componentType,
+            units: Number(rc.units || 1),
+            aboGroup,
+            rhFactor,
+            urgency,
+          };
+        });
+
+        // Auto create patient if details are sent directly in body.patient
+        if (!req.body.patientId && req.body.patient) {
+          const p = req.body.patient;
+          const patientPublicId = 'PAT-' + new mongoose.Types.ObjectId().toHexString().slice(-6).toUpperCase();
+          
+          let dob: Date | undefined = undefined;
+          if (p.age) {
+            const ageNum = Number(p.age);
+            if (!isNaN(ageNum)) {
+              dob = new Date();
+              dob.setFullYear(dob.getFullYear() - ageNum);
+            }
+          }
+
+          const firstComp = requestedComponents[0];
+          const aboGroup = firstComp?.aboGroup;
+          const rhFactor = firstComp?.rhFactor;
+
+          const createdPatient = await deps.patients.create({
+            patientPublicId,
+            name: p.name || 'Unnamed Patient',
+            dob,
+            sex: p.sex || 'M',
+            medicalRecordNumber: p.mrn,
+            aboGroup,
+            rhFactor,
+            specialNeeds: [],
+          }, actorId);
+
+          req.body.patientId = createdPatient.id;
+        }
+
+        // Map doctorName to clinicianName
+        if (!req.body.clinicianName && req.body.doctorName) {
+          req.body.clinicianName = req.body.doctorName;
+        }
+
+        // Set normalized requestedComponents back to req.body
+        req.body.requestedComponents = requestedComponents;
+
         const body = ValidateRequisition.createBody(req);
-        const created = await deps.requisitions.create(body, actor(req));
+        const created = await deps.requisitions.create(body, actorId);
         const enriched = await enrichRequisition(created);
         res.status(201).json({ success: true, data: enriched, requestId: req.id });
       } catch (e) {

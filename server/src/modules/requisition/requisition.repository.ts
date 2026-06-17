@@ -54,15 +54,15 @@ interface RawReq {
 
 function toDto(raw: RawReq): RequisitionDto {
   return {
-    id: raw._id.toString(),
-    requisitionId: raw.requisitionId,
-    hospitalId: raw.hospitalId.toString(),
-    patientId: raw.patientId.toString(),
-    clinicianName: raw.clinicianName,
-    requestedComponents: raw.requestedComponents,
-    matchedUnits: raw.matchedUnits,
+    id: raw._id?.toString() || '',
+    requisitionId: raw.requisitionId || '',
+    hospitalId: raw.hospitalId ? raw.hospitalId.toString() : '',
+    patientId: raw.patientId ? raw.patientId.toString() : '',
+    clinicianName: raw.clinicianName || '',
+    requestedComponents: raw.requestedComponents || [],
+    matchedUnits: raw.matchedUnits || [],
     status: raw.status,
-    createdAt: raw.createdAt.toISOString(),
+    createdAt: raw.createdAt ? new Date(raw.createdAt).toISOString() : '',
   };
 }
 

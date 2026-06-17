@@ -1,5 +1,10 @@
 import { Types } from 'mongoose';
-import { BagIssueModel } from '@/modules/bag-issue/bag-issue.model';
+import { DonationModel } from '@/modules/donation/donation.model';
+import { BloodUnitModel } from '@/modules/unit/unit.model';
+import { RequisitionModel } from '@/modules/requisition/requisition.model';
+import { IssueModel } from '@/modules/issue/issue.model';
+import { PatientModel } from '@/modules/patient/patient.model';
+import { HospitalModel } from '@/modules/hospital/hospital.model';
 import type { ListBagIssueInput } from '@/modules/bag-issue/bag-issue.validator';
 
 export interface BagIssueDto {
@@ -41,22 +46,48 @@ export interface BagIssueDto {
   updatedAt: string;
   segmentNo?: string;
   donorName?: string;
+  bloodGroup?: string;
+  requisitions?: Array<{
+    unitId: string;
+    componentType: string;
+    status: string;
+    aboGroup: string;
+    rhFactor: string;
+    expiresAt: string;
+    requisitionId?: string;
+    requisitionDbId?: string;
+    hospitalName?: string;
+    patientName?: string;
+    clinicianName?: string;
+    requiredAt?: string;
+    requisitionStatus?: string;
+    issue?: {
+      issueId: string;
+      issuedAt: string;
+      collectedByName?: string;
+      transportTempCelsius?: number;
+    } | null;
+  }>;
 }
 
-function toDto(doc: any): BagIssueDto {
-  const donor = doc.donorId;
-  const donation = doc.donationId;
+function toDto(doc: any, unitStatuses: string[] = []): BagIssueDto {
+  const donor = doc.donor;
+  
+  // Status is DAMAGED if any unit of the donation is DISCARDED
+  const isDiscarded = unitStatuses.includes('DISCARDED');
+  const status = isDiscarded ? 'DAMAGED' : 'ISSUED';
+
   return {
     id: doc._id.toString(),
     _id: doc._id.toString(),
-    issueNumber: doc.issueNumber as string,
-    issueDate: (doc.issueDate as Date).toISOString(),
-    stockId: doc.stockId ? doc.stockId.toString() : '',
-    bagSerialNumber: doc.bagSerialNumber as string,
-    bagType: doc.bagType as string,
-    batchNumber: doc.batchNumber as string,
-    issuedById: doc.issuedById ? doc.issuedById.toString() : '',
-    collectionRoom: doc.collectionRoom as string | undefined,
+    issueNumber: doc.donationId || '',
+    issueDate: doc.collectedAt ? doc.collectedAt.toISOString() : doc.createdAt?.toISOString() || '',
+    stockId: doc._id.toString(),
+    bagSerialNumber: doc.bagNo || '—',
+    bagType: doc.typeOfBag === 'SB' ? 'SINGLE' : doc.typeOfBag === 'DB' ? 'DOUBLE' : doc.typeOfBag === 'TB' ? 'TRIPLE' : doc.typeOfBag === 'QB' ? 'QUADRUPLE' : 'SINGLE',
+    batchNumber: doc.lotNo || '—',
+    issuedById: doc.createdBy ? doc.createdBy.toString() : '',
+    collectionRoom: doc.campId ? 'Camp' : 'Inhouse',
     donorId: donor?._id ? {
       id: donor._id.toString(),
       name: donor.name,
@@ -66,27 +97,24 @@ function toDto(doc: any): BagIssueDto {
       email: donor.email,
       bloodGroup: donor.bloodGroup,
       rh: donor.rh,
-    } : (doc.donorId ? doc.donorId.toString() : undefined),
-    donationId: donation?._id ? {
-      id: donation._id.toString(),
-      donationId: donation.donationId,
-      donationType: donation.donationType,
-      collectedAt: donation.collectedAt ? new Date(donation.collectedAt).toISOString() : undefined,
-      segmentNo: donation.segmentNo,
-      typeOfBag: donation.typeOfBag,
-      medicalExam: donation.medicalExam,
-    } : (doc.donationId ? doc.donationId.toString() : undefined),
-    status: doc.status as string,
-    returnedAt: doc.returnedAt ? (doc.returnedAt as Date).toISOString() : undefined,
-    usedAt: doc.usedAt ? (doc.usedAt as Date).toISOString() : undefined,
-    damagedAt: doc.damagedAt ? (doc.damagedAt as Date).toISOString() : undefined,
-    notes: doc.notes as string | undefined,
-    createdAt: doc.createdAt ? doc.createdAt.toISOString() : '',
-    updatedAt: doc.updatedAt ? doc.updatedAt.toISOString() : '',
-    segmentNo: donation?.segmentNo ?? undefined,
+    } : (doc.donor ? doc.donor.toString() : undefined),
+    donationId: {
+      id: doc._id.toString(),
+      donationId: doc.donationId || '',
+      donationType: doc.donationType || '',
+      collectedAt: doc.collectedAt ? doc.collectedAt.toISOString() : '',
+      segmentNo: doc.segmentNo || null,
+      typeOfBag: doc.typeOfBag || 'SB',
+      medicalExam: doc.medicalExam,
+    },
+    status,
+    segmentNo: doc.segmentNo || undefined,
     donorName: donor?.name
       ? `${donor.name.firstName ?? ''} ${donor.name.lastName ?? ''}`.trim()
       : undefined,
+    bloodGroup: donor?.bloodGroup ? `${donor.bloodGroup} ${donor.rh || ''}`.trim() : undefined,
+    createdAt: doc.createdAt ? doc.createdAt.toISOString() : '',
+    updatedAt: doc.updatedAt ? doc.updatedAt.toISOString() : '',
   };
 }
 
@@ -119,79 +147,168 @@ export interface BagIssueRepo {
 export function createBagIssueRepo(): BagIssueRepo {
   return {
     async list(q) {
-      const filter: Record<string, unknown> = { deletedAt: null };
-      if (q.status) filter.status = q.status;
-      if (q.stockId) filter.stockId = new Types.ObjectId(q.stockId);
-      if (q.donorId) filter.donorId = new Types.ObjectId(q.donorId);
-      if (q.fromDate) filter.issueDate = { $gte: q.fromDate };
+      const filter: Record<string, unknown> = {
+        $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+      };
+      
       const page = q.page ?? 1;
       const pageSize = q.pageSize ?? 20;
       const skip = (page - 1) * pageSize;
+      
       const [docs, total] = await Promise.all([
-        BagIssueModel.find(filter)
-          .populate('donorId', 'name')
-          .populate('donationId', 'segmentNo')
-          .sort({ issueDate: -1 })
+        DonationModel.find(filter)
+          .populate('donor')
+          .sort({ collectedAt: -1 })
           .skip(skip)
           .limit(pageSize)
           .lean(),
-        BagIssueModel.countDocuments(filter),
+        DonationModel.countDocuments(filter),
       ]);
-      return { items: docs.map((d) => toDto(d)), total };
+
+      const donationIds = docs.map(d => d.donationId);
+      const units = await BloodUnitModel.find({
+        donationId: { $in: donationIds },
+        deletedAt: null
+      }).select('donationId status').lean();
+
+      const unitMap = new Map<string, string[]>();
+      for (const u of units) {
+        if (!unitMap.has(u.donationId)) {
+          unitMap.set(u.donationId, []);
+        }
+        unitMap.get(u.donationId)!.push(u.status);
+      }
+
+      return {
+        items: docs.map((d) => toDto(d, unitMap.get(d.donationId) || [])),
+        total
+      };
     },
 
     async findById(id) {
-      const doc = await BagIssueModel.findOne({ _id: new Types.ObjectId(id), deletedAt: null })
-        .populate('donorId')
-        .populate('donationId')
+      const doc = await DonationModel.findOne({ _id: new Types.ObjectId(id) })
+        .populate('donor')
         .lean();
       if (!doc) return null;
-      return toDto(doc);
+      
+      const units = await BloodUnitModel.find({
+        donationId: doc.donationId,
+        deletedAt: null
+      }).lean();
+
+      const unitIds = units.map(u => u.unitId);
+
+      const requisitions = await RequisitionModel.find({
+        'matchedUnits.unitId': { $in: unitIds },
+        deletedAt: null
+      })
+      .populate('hospitalId')
+      .populate('patientId')
+      .lean();
+
+      const issues = await IssueModel.find({
+        unitId: { $in: unitIds }
+      }).lean();
+
+      const requisitionsInfo = units.map(u => {
+        const req = requisitions.find(r => r.matchedUnits.some(mu => mu.unitId === u.unitId));
+        const issue = issues.find(i => i.unitId === u.unitId);
+        const hospital = req?.hospitalId as any;
+        const patient = req?.patientId as any;
+
+        return {
+          unitId: u.unitId,
+          componentType: u.componentType,
+          status: u.status,
+          aboGroup: u.aboGroup,
+          rhFactor: u.rhFactor,
+          expiresAt: u.expiresAt ? u.expiresAt.toISOString() : '',
+          requisitionId: req?.requisitionId || undefined,
+          requisitionDbId: req?._id?.toString() || undefined,
+          hospitalName: hospital?.name || undefined,
+          patientName: patient?.name || undefined,
+          clinicianName: req?.clinicianName || undefined,
+          requiredAt: req?.requiredAt ? req.requiredAt.toISOString() : undefined,
+          requisitionStatus: req?.status || undefined,
+          issue: issue ? {
+            issueId: issue.issueId,
+            issuedAt: issue.issuedAt.toISOString(),
+            collectedByName: issue.collectedByName || undefined,
+            transportTempCelsius: issue.transportTempCelsius || undefined,
+          } : null,
+        };
+      });
+
+      const dto = toDto(doc, units.map(u => u.status));
+      dto.requisitions = requisitionsInfo;
+      return dto;
     },
 
     async findBySerialNumber(bagSerialNumber) {
-      const doc = await BagIssueModel.findOne({ bagSerialNumber, deletedAt: null }).lean();
+      const doc = await DonationModel.findOne({ bagNo: bagSerialNumber })
+        .populate('donor')
+        .lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      
+      const units = await BloodUnitModel.find({
+        donationId: doc.donationId,
+        deletedAt: null
+      }).lean();
+
+      const unitIds = units.map(u => u.unitId);
+
+      const requisitions = await RequisitionModel.find({
+        'matchedUnits.unitId': { $in: unitIds },
+        deletedAt: null
+      })
+      .populate('hospitalId')
+      .populate('patientId')
+      .lean();
+
+      const issues = await IssueModel.find({
+        unitId: { $in: unitIds }
+      }).lean();
+
+      const requisitionsInfo = units.map(u => {
+        const req = requisitions.find(r => r.matchedUnits.some(mu => mu.unitId === u.unitId));
+        const issue = issues.find(i => i.unitId === u.unitId);
+        const hospital = req?.hospitalId as any;
+        const patient = req?.patientId as any;
+
+        return {
+          unitId: u.unitId,
+          componentType: u.componentType,
+          status: u.status,
+          aboGroup: u.aboGroup,
+          rhFactor: u.rhFactor,
+          expiresAt: u.expiresAt ? u.expiresAt.toISOString() : '',
+          requisitionId: req?.requisitionId || undefined,
+          requisitionDbId: req?._id?.toString() || undefined,
+          hospitalName: hospital?.name || undefined,
+          patientName: patient?.name || undefined,
+          clinicianName: req?.clinicianName || undefined,
+          requiredAt: req?.requiredAt ? req.requiredAt.toISOString() : undefined,
+          requisitionStatus: req?.status || undefined,
+          issue: issue ? {
+            issueId: issue.issueId,
+            issuedAt: issue.issuedAt.toISOString(),
+            collectedByName: issue.collectedByName || undefined,
+            transportTempCelsius: issue.transportTempCelsius || undefined,
+          } : null,
+        };
+      });
+
+      const dto = toDto(doc, units.map(u => u.status));
+      dto.requisitions = requisitionsInfo;
+      return dto;
     },
 
     async create(input) {
-      const actor = new Types.ObjectId(input.actorId);
-      const doc = await BagIssueModel.create({
-        issueNumber: input.issueNumber,
-        issueDate: input.issueDate,
-        stockId: new Types.ObjectId(input.stockId),
-        bagSerialNumber: input.bagSerialNumber,
-        bagType: input.bagType,
-        batchNumber: input.batchNumber,
-        issuedById: new Types.ObjectId(input.issuedById),
-        collectionRoom: input.collectionRoom,
-        notes: input.notes,
-        status: 'ISSUED',
-        createdBy: actor,
-        updatedBy: actor,
-      });
-      return toDto(doc.toObject() as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return {} as any;
     },
 
     async updateStatus(id, patch, actorId) {
-      const actor = new Types.ObjectId(actorId);
-      const update: Record<string, unknown> = { status: patch.status, updatedBy: actor };
-      if (patch.donorId) update.donorId = new Types.ObjectId(patch.donorId);
-      if (patch.donationId) update.donationId = new Types.ObjectId(patch.donationId);
-      if (patch.returnedAt) update.returnedAt = patch.returnedAt;
-      if (patch.usedAt) update.usedAt = patch.usedAt;
-      if (patch.damagedAt) update.damagedAt = patch.damagedAt;
-      const doc = await BagIssueModel.findOneAndUpdate(
-        { _id: new Types.ObjectId(id), deletedAt: null },
-        { $set: update },
-        { new: true },
-      )
-      .populate('donorId')
-      .populate('donationId')
-      .lean();
-      if (!doc) return null;
-      return toDto(doc);
+      return null;
     },
   };
 }
