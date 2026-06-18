@@ -7,6 +7,7 @@ import {
   useVendorList,
 } from '../queries';
 import { usePOList } from '../queries';
+import { formatBloodBagQty } from '../utils/qtyHelper';
 
 const STATUS_BADGE = {
   PENDING:  'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -17,6 +18,13 @@ const STATUS_BADGE = {
 const EMPTY_BATCH = {
   bagType: 'DOUBLE', batchNo: '', mfgDate: '', expiryDate: '',
   quantityReceived: '',
+};
+
+const ANTICOAGULANT_DISPLAY = {
+  CPDA_1: 'CPDA-1',
+  CPD: 'CPD',
+  ACD: 'ACD',
+  SAG_MANNITOL: 'SAG-M',
 };
 
 function StatusBadge({ status }) {
@@ -49,6 +57,8 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
   );
   const createGRN = useCreateGRN();
   const updateGRN = useUpdateGRN();
+
+  const selectedPo = pos.find((p) => (p._id ?? p.id) === poId);
 
   const updateBatch = (i, k, v) => setBatches((bs) => bs.map((b, idx) => idx === i ? { ...b, [k]: v } : b));
   const addBatch    = () => setBatches((bs) => [...bs, { ...EMPTY_BATCH }]);
@@ -130,6 +140,29 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
                   </option>
                 ))}
               </select>
+              {selectedPo && (
+                <div className="mt-2 bg-orange-50/50 border border-orange-100 rounded-lg p-3">
+                  <div className="text-[10px] font-bold text-orange-800 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <span>Ordered Quantities in PO</span>
+                    <span className="font-normal text-gray-400 normal-case">(1 Box = 45 bags, 1 Pkt = 5 bags)</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {(selectedPo.lineItems ?? []).map((it, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-xs text-gray-700">
+                        <span className="font-semibold text-gray-600">
+                          {it.bagType} ({it.capacityMl} mL, {ANTICOAGULANT_DISPLAY[it.anticoagulant] ?? it.anticoagulant})
+                        </span>
+                        <span className="font-mono bg-white border border-gray-200 px-2 py-0.5 rounded text-[11px] text-gray-800 shadow-sm">
+                          {formatBloodBagQty(it.quantityOrdered)}
+                        </span>
+                      </div>
+                    ))}
+                    {(!selectedPo.lineItems || selectedPo.lineItems.length === 0) && (
+                      <div className="text-xs text-gray-500 italic">No items found in this PO.</div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Invoice No *</label>
@@ -235,12 +268,151 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
   );
 }
 
+function ViewGRNModal({ onClose, grn, vendors, pos }) {
+  if (!grn) return null;
+
+  const fmtDate  = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const fmtMoney = (n) => n != null ? `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
+
+  const po = pos.find(p => (p._id ?? p.id) === grn.poId);
+  const vendorName = grn.vendorName ?? vendors.find(v => (v._id ?? v.id) === po?.vendorId)?.name ?? '—';
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-40 animate-in fade-in duration-200" onClick={onClose} />
+      <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b bg-orange-850 text-white bg-orange-800">
+            <div>
+              <h2 className="text-base font-semibold text-white">Goods Receipt Details</h2>
+              <p className="text-[10px] text-orange-200 font-medium uppercase tracking-wider mt-0.5">Invoice: {grn.invoiceNo}</p>
+            </div>
+            <button onClick={onClose} className="text-orange-200 hover:text-white">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* General Info */}
+            <div className="grid grid-cols-2 gap-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+              <div>
+                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Vendor</span>
+                <span className="text-sm font-semibold text-gray-800">{vendorName}</span>
+              </div>
+              <div>
+                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Purchase Order</span>
+                <span className="text-sm font-medium text-gray-800 font-mono">{po?.poNumber || '—'}</span>
+              </div>
+              <div>
+                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Invoice Number</span>
+                <span className="text-sm font-medium text-gray-800 font-mono">{grn.invoiceNo}</span>
+              </div>
+              <div>
+                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Bill Date</span>
+                <span className="text-sm font-medium text-gray-800">{fmtDate(grn.billDate)}</span>
+              </div>
+              <div>
+                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Received Date</span>
+                <span className="text-sm font-medium text-gray-800">{fmtDate(grn.receivedDate)}</span>
+              </div>
+              <div>
+                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</span>
+                <span className="mt-1 block">
+                  <StatusBadge status={grn.status} />
+                </span>
+              </div>
+            </div>
+
+            {/* Financial Details */}
+            {grn.financials && (
+              <div>
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">GST Financials</h3>
+                <div className="grid grid-cols-4 gap-3 border border-gray-100 rounded-lg p-3 bg-white">
+                  <div>
+                    <span className="block text-[10px] text-gray-400">Taxable Amount</span>
+                    <span className="text-xs font-semibold text-gray-700">{fmtMoney(grn.financials.basicAmountRs)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] text-gray-400">CGST</span>
+                    <span className="text-xs font-semibold text-gray-700">{fmtMoney(grn.financials.cgstRs)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] text-gray-400">SGST</span>
+                    <span className="text-xs font-semibold text-gray-700">{fmtMoney(grn.financials.sgstRs)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] text-gray-400">IGST</span>
+                    <span className="text-xs font-semibold text-gray-700">{fmtMoney(grn.financials.igstRs)}</span>
+                  </div>
+                  <div className="col-span-4 border-t pt-2 mt-1 flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-500 uppercase">Net Amount</span>
+                    <span className="text-sm font-bold text-orange-800">{fmtMoney(grn.financials.netAmountRs)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Batch Lines */}
+            <div>
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Batch Lines</h3>
+              <div className="border border-gray-100 rounded-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-100 text-xs">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {['Bag Type', 'Capacity', 'Anticoagulant', 'Batch No', 'Mfg Date', 'Expiry Date', 'Qty Received'].map(h => (
+                        <th key={h} className="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {(grn.batchLines ?? []).map((line, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50/50">
+                        <td className="px-3 py-2 font-semibold text-gray-800">{line.bagType}</td>
+                        <td className="px-3 py-2 text-gray-600">{line.capacityMl} mL</td>
+                        <td className="px-3 py-2 text-gray-600">{ANTICOAGULANT_DISPLAY[line.anticoagulant] ?? line.anticoagulant ?? '—'}</td>
+                        <td className="px-3 py-2 font-mono font-medium text-gray-800">{line.batchNumber}</td>
+                        <td className="px-3 py-2 text-gray-600">{fmtDate(line.manufacturingDate)}</td>
+                        <td className="px-3 py-2 text-gray-600">{fmtDate(line.expiryDate)}</td>
+                        <td className="px-3 py-2 font-mono font-semibold text-gray-800">{formatBloodBagQty(line.quantityReceived)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Notes */}
+            {grn.notes && (
+              <div className="bg-yellow-50/50 border border-yellow-100 rounded-lg p-3 text-xs text-gray-700">
+                <span className="block font-bold text-yellow-800 uppercase tracking-wider text-[10px] mb-0.5">Notes</span>
+                {grn.notes}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t bg-gray-50 flex justify-end">
+            <button onClick={onClose} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function GoodsReceipt() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [editGrn, setEditGrn] = useState(null);
   const { data, isLoading } = useGRNList({});
   const { data: poData } = usePOList({});
   const { data: vendorData } = useVendorList({});
+
+  const [viewGrn, setViewGrn] = useState(null);
+  const [showViewModal, setShowViewModal] = useState(false);
 
   const grns = data?.items ?? data?.goodsReceipts ?? (Array.isArray(data) ? data : []);
   const pos = poData?.items ?? poData?.purchaseOrders ?? (Array.isArray(poData) ? poData : []);
@@ -275,31 +447,54 @@ export default function GoodsReceipt() {
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
-                  {['GRN Number', 'Invoice No', 'Vendor', 'Received Date', 'Net Amount', 'Actions'].map((h) => (
+                  {['Invoice No', 'Vendor', 'Received Date', 'Quantities (Boxes)', 'Actions'].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {isLoading ? (
-                  <tr><td colSpan={7} className="py-12 text-center text-sm text-gray-500">Loading...</td></tr>
+                  <tr><td colSpan={5} className="py-12 text-center text-sm text-gray-500">Loading...</td></tr>
                 ) : grns.length === 0 ? (
-                  <tr><td colSpan={7} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
-                ) : grns.map((g) => (
-                  <tr key={g._id} className="hover:bg-orange-50/30 transition-colors">
-                    <td className="px-4 py-3 text-sm font-mono font-medium text-gray-900">{g.grnNumber}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{g.invoiceNo}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{g.vendorName ?? vendors.find(v => (v._id ?? v.id) === g.purchaseOrder?.vendorId)?.name ?? '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(g.receivedDate)}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-800">{fmtMoney(g.netAmount)}</td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => { setEditGrn(g); setShowDrawer(true); }}
-                        className="px-2.5 py-1 text-xs font-medium text-blue-700 border border-blue-200 rounded-md hover:bg-blue-50">
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                  <tr><td colSpan={5} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
+                ) : grns.map((g) => {
+                  const doubleBags = (g.batchLines ?? []).filter(b => b.bagType === 'DOUBLE').reduce((sum, b) => sum + b.quantityReceived, 0);
+                  const tripleBags = (g.batchLines ?? []).filter(b => b.bagType === 'TRIPLE').reduce((sum, b) => sum + b.quantityReceived, 0);
+                  const dbBoxes = Number((doubleBags / 45).toFixed(2));
+                  const tbBoxes = Number((tripleBags / 45).toFixed(2));
+
+                  return (
+                    <tr key={g._id} className="hover:bg-orange-50/30 transition-colors">
+                      <td className="px-4 py-3 text-sm font-mono font-medium text-gray-900">{g.invoiceNo}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{g.vendorName ?? vendors.find(v => (v._id ?? v.id) === g.purchaseOrder?.vendorId)?.name ?? '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(g.receivedDate)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-0.5 text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-[9px] bg-orange-50 text-orange-700 px-1 py-0.2 rounded border border-orange-200 min-w-[20px] text-center">DB</span>
+                            <span className="font-medium text-gray-800 font-mono">{dbBoxes} Box{dbBoxes !== 1 ? 'es' : ''}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-[9px] bg-red-55 text-red-700 px-1 py-0.2 rounded border border-red-200 bg-red-50 min-w-[20px] text-center">TB</span>
+                            <span className="font-medium text-gray-800 font-mono">{tbBoxes} Box{tbBoxes !== 1 ? 'es' : ''}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <button onClick={() => { setViewGrn(g); setShowViewModal(true); }}
+                            className="px-2.5 py-1 text-xs font-medium text-emerald-700 border border-emerald-200 rounded-md hover:bg-emerald-50 transition-colors">
+                            View
+                          </button>
+                          <button onClick={() => { setEditGrn(g); setShowDrawer(true); }}
+                            className="px-2.5 py-1 text-xs font-medium text-blue-700 border border-blue-200 rounded-md hover:bg-blue-50 transition-colors">
+                            Edit
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -307,6 +502,7 @@ export default function GoodsReceipt() {
       </div>
 
       {showDrawer && <GRNDrawer onClose={() => { setShowDrawer(false); setEditGrn(null); }} pos={pos} vendors={vendors} grnToEdit={editGrn} />}
+      {showViewModal && <ViewGRNModal onClose={() => { setShowViewModal(false); setViewGrn(null); }} grn={viewGrn} vendors={vendors} pos={pos} />}
     </div>
   );
 }
