@@ -109,7 +109,6 @@ const RequisitionManagement = () => {
 
         <div className="max-w-7xl mx-auto px-4 py-8">
           <Stepper
-            activeStep={currentStep}
             onStepChange={(s) => setCurrentStep(s)}
             onFinalStepCompleted={async () => {
               if (!requestDoc?._id) {

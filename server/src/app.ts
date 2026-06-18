@@ -11,6 +11,7 @@ import { errorMiddleware } from '@/shared/middlewares/error';
 import { registerRoutes } from '@/routes';
 import componentRouter from '@/modules/component/component.routes';
 import compatibilityRouter from '@/modules/compatibility.routes';
+import requisitionRouter from '@/modules/requisition/requisition.routes';
 import { getQueuesHealth } from '@/core/queue';
 
 // Connect-style middleware (IncomingMessage signatures) are narrowed to
@@ -57,6 +58,7 @@ export function buildApp(opts: BuildAppOptions = {}): Express {
   });
 
   app.use('/api/v2', registerRoutes());
+  app.use('/api/requests', requisitionRouter);
   app.use('/api/component', componentRouter);
   app.use('/api', compatibilityRouter);
 

@@ -24,16 +24,48 @@ const RequestedComponent = z.object({
   urgency: z.enum(['ROUTINE', 'URGENT', 'EMERGENCY']).default('ROUTINE'),
 });
 
+const PatientHistory = z.object({
+  previousTransfusions: z.coerce.number().int().min(0).default(0),
+  approximateDate: z.string().trim().optional(),
+  presenceOfReaction: z.enum(['Presence', 'Absence', 'None']).default('None'),
+});
+
+const PatientPregnancy = z.object({
+  numPregnancies: z.coerce.number().int().min(0).default(0),
+  numMiscarriages: z.coerce.number().int().min(0).default(0),
+  numChildrenWithHemolyticDisease: z.coerce.number().int().min(0).default(0),
+});
+
+const RequisitionPatient = z.object({
+  name: z.string().trim().min(1).max(200),
+  age: z.coerce.number().int().min(0),
+  sex: z.enum(['M', 'F', 'O']),
+  mrn: z.string().trim().max(80).optional(),
+  diagnosis: z.string().trim().optional(),
+  indication: z.string().trim().optional(),
+  hb: z.coerce.number().optional(),
+  history: PatientHistory.optional(),
+  pregnancy: PatientPregnancy.optional(),
+});
+
 export const CreateRequisitionBody = z.object({
   hospitalId: z.string().regex(OBJECT_ID),
   patientId: z.string().regex(OBJECT_ID),
   clinicianName: z.string().trim().min(1).max(200),
+  doctorName: z.string().trim().max(200).optional(),
   requiredAt: z.coerce.date().optional(),
+  medicalOfficerSignature: z.string().trim().optional(),
+  hospitalSeal: z.string().trim().optional(),
+  patient: RequisitionPatient.optional(),
   requestedComponents: z.array(RequestedComponent).min(1),
 });
 
 export const RejectBody = z.object({
-  reason: z.string().trim().min(1).max(300),
+  reason: z.string().trim().min(1).max(300).optional(),
+  rejectionReason: z.string().trim().min(1).max(300).optional(),
+}).refine(data => data.reason || data.rejectionReason, {
+  message: 'rejectionReason or reason is required',
+  path: ['rejectionReason']
 });
 
 export const RequisitionIdParam = z.object({
@@ -48,12 +80,18 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T
 
 export const ListRequisitionsQuery = z.object({
   status: z
-    .enum(['PENDING', 'MATCHED', 'CROSSMATCHED', 'APPROVED', 'ISSUED', 'COMPLETED', 'REJECTED'])
-    .optional(),
-  hospitalId: z.string().regex(OBJECT_ID).optional(),
-  patientId: z.string().regex(OBJECT_ID).optional(),
+    .preprocess((val) => (val === '' ? undefined : val), z.enum(['PENDING', 'MATCHED', 'CROSSMATCHED', 'APPROVED', 'ISSUED', 'COMPLETED', 'REJECTED']).optional()),
+  hospitalId: z
+    .preprocess((val) => (val === '' ? undefined : val), z.string().regex(OBJECT_ID).optional()),
+  patientId: z
+    .preprocess((val) => (val === '' ? undefined : val), z.string().regex(OBJECT_ID).optional()),
+  search: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
+  from: z.preprocess((val) => (val === '' ? undefined : val), z.coerce.date().optional()),
+  to: z.preprocess((val) => (val === '' ? undefined : val), z.coerce.date().optional()),
+  sortBy: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()).default('updatedAt'),
+  order: z.preprocess((val) => (val === '' ? undefined : val), z.enum(['asc', 'desc']).optional()).default('desc'),
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  limit: z.coerce.number().int().min(1).max(1000).default(20),
 });
 
 export const ValidateRequisition = {

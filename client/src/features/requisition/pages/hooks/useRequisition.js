@@ -146,7 +146,6 @@ export default function useRequisition(authToken) {
     try {
       // validation minimal
       if (!form.hospitalId) return toast.error('Select hospital');
-      if (!form.doctorName?.trim()) return toast.error("Enter Doctor's Name");
       if (!form.patient.name || !form.patient.age || !form.patient.sex) return toast.error('Fill patient details');
       if (!form.requestedComponents.length) return toast.error('Add at least one component');
       const payload = {
@@ -183,18 +182,10 @@ export default function useRequisition(authToken) {
         })),
       };
       const res = await requisitionApi.createRequest(payload);
-      if (!res.success) {
-        const details = res.errorData?.details;
-        if (details && Array.isArray(details) && details.length > 0) {
-          const fieldErrors = details.map(d => `${d.path?.join('.') || 'field'}: ${d.message}`).join(' | ');
-          return toast.error(`Validation error — ${fieldErrors}`, { duration: 8000 });
-        }
-        return toast.error(res.error || 'Failed to create request');
-      }
+      if (!res.success) return toast.error(res.error || 'Failed to create request');
       setRequestDoc(res.data);
       toast.success(res?.raw?.message || 'Request created');
-      // auto match immediately after creating the request; the user can
-      // then Continue to the Match Review step once matching succeeds.
+      // auto match immediately after creating the request
       await handleMatch(res.data?._id);
       setCurrentStep(2);
     } catch (e) {
@@ -221,6 +212,7 @@ export default function useRequisition(authToken) {
       return false;
     }
     setRequestDoc(r.data);
+    setCurrentStep(statusToStep(r.data.status));
     return true;
   };
 
@@ -269,7 +261,6 @@ export default function useRequisition(authToken) {
     if (!res.success) return toast.error(res.error || 'Issuing failed');
     await refreshRequest(requestDoc._id);
     toast.success(res?.raw?.message || 'Units issued');
-    setCurrentStep(4);
   };
 
   const handleComplete = async () => {
@@ -302,10 +293,6 @@ export default function useRequisition(authToken) {
     try {
       if (!form.hospitalId) {
         toast.error('Select hospital first');
-        return false;
-      }
-      if (!form.doctorName?.trim()) {
-        toast.error("Enter Doctor's Name first");
         return false;
       }
       if (!form.patient.name || !form.patient.age || !form.patient.sex) {
@@ -351,13 +338,7 @@ export default function useRequisition(authToken) {
       };
       const createRes = await requisitionApi.createRequest(payload);
       if (!createRes.success) {
-        const details = createRes.errorData?.details;
-        if (details && Array.isArray(details) && details.length > 0) {
-          const fieldErrors = details.map(d => `${d.path?.join('.') || 'field'}: ${d.message}`).join(' | ');
-          toast.error(`Validation error — ${fieldErrors}`, { duration: 8000 });
-        } else {
-          toast.error(createRes.error || 'Failed to create request');
-        }
+        toast.error(createRes.error || 'Failed to create request');
         return false;
       }
       const createdReq = createRes.data;

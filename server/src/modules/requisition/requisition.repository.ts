@@ -28,15 +28,41 @@ export interface MatchedUnitDto {
   crossmatchStatus: 'NOT_REQUIRED' | 'PENDING' | 'COMPATIBLE' | 'INCOMPATIBLE';
 }
 
+export interface RequisitionPatientDto {
+  name: string;
+  age: number;
+  sex: 'M' | 'F' | 'O';
+  mrn?: string;
+  diagnosis?: string;
+  indication?: string;
+  hb?: number;
+  history?: {
+    previousTransfusions: number;
+    approximateDate?: string;
+    presenceOfReaction: 'Presence' | 'Absence' | 'None';
+  };
+  pregnancy?: {
+    numPregnancies: number;
+    numMiscarriages: number;
+    numChildrenWithHemolyticDisease: number;
+  };
+}
+
 export interface RequisitionDto {
   id: string;
+  _id?: string;
   requisitionId: string;
   hospitalId: string;
   patientId: string;
   clinicianName: string;
+  doctorName?: string;
+  medicalOfficerSignature?: string;
+  hospitalSeal?: string;
+  patient?: RequisitionPatientDto;
   requestedComponents: RequestedComponentDto[];
   matchedUnits: MatchedUnitDto[];
   status: RequisitionStatus;
+  requestedAt?: string;
   createdAt: string;
 }
 
@@ -46,22 +72,51 @@ interface RawReq {
   hospitalId: { toString(): string };
   patientId: { toString(): string };
   clinicianName: string;
+  doctorName?: string;
+  medicalOfficerSignature?: string;
+  hospitalSeal?: string;
+  patient?: RequisitionPatientDto;
   requestedComponents: RequestedComponentDto[];
   matchedUnits: MatchedUnitDto[];
   status: RequisitionStatus;
+  requestedAt?: Date;
   createdAt: Date;
 }
 
 function toDto(raw: RawReq): RequisitionDto {
   return {
     id: raw._id?.toString() || '',
+    _id: raw._id?.toString() || '',
     requisitionId: raw.requisitionId || '',
     hospitalId: raw.hospitalId ? raw.hospitalId.toString() : '',
     patientId: raw.patientId ? raw.patientId.toString() : '',
     clinicianName: raw.clinicianName || '',
+    doctorName: raw.doctorName || raw.clinicianName || '',
+    medicalOfficerSignature: raw.medicalOfficerSignature || '',
+    hospitalSeal: raw.hospitalSeal || '',
+    patient: raw.patient ? {
+      name: raw.patient.name,
+      age: raw.patient.age,
+      sex: raw.patient.sex,
+      mrn: raw.patient.mrn,
+      diagnosis: raw.patient.diagnosis,
+      indication: raw.patient.indication,
+      hb: raw.patient.hb,
+      history: raw.patient.history ? {
+        previousTransfusions: raw.patient.history.previousTransfusions ?? 0,
+        approximateDate: raw.patient.history.approximateDate || '',
+        presenceOfReaction: raw.patient.history.presenceOfReaction || 'None',
+      } : undefined,
+      pregnancy: raw.patient.pregnancy ? {
+        numPregnancies: raw.patient.pregnancy.numPregnancies ?? 0,
+        numMiscarriages: raw.patient.pregnancy.numMiscarriages ?? 0,
+        numChildrenWithHemolyticDisease: raw.patient.pregnancy.numChildrenWithHemolyticDisease ?? 0,
+      } : undefined,
+    } : undefined,
     requestedComponents: raw.requestedComponents || [],
     matchedUnits: raw.matchedUnits || [],
     status: raw.status,
+    requestedAt: raw.requestedAt ? new Date(raw.requestedAt).toISOString() : raw.createdAt ? new Date(raw.createdAt).toISOString() : '',
     createdAt: raw.createdAt ? new Date(raw.createdAt).toISOString() : '',
   };
 }
@@ -71,6 +126,10 @@ export interface CreateRequisitionInput {
   hospitalId: string;
   patientId: string;
   clinicianName: string;
+  doctorName?: string;
+  medicalOfficerSignature?: string;
+  hospitalSeal?: string;
+  patient?: RequisitionPatientDto;
   requiredAt?: Date;
   requestedComponents: RequestedComponentDto[];
 }
@@ -79,6 +138,11 @@ export interface ListRequisitionsFilter {
   status?: RequisitionStatus;
   hospitalId?: string;
   patientId?: string;
+  search?: string;
+  from?: Date;
+  to?: Date;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
   page: number;
   limit: number;
 }
@@ -107,14 +171,32 @@ export function createRequisitionRepo(): RequisitionRepo {
 
   return {
     async list(f) {
-      const query: Record<string, unknown> = { deletedAt: null };
+      const query: Record<string, any> = { deletedAt: null };
       if (f.status) query.status = f.status;
       if (f.hospitalId) query.hospitalId = new Types.ObjectId(f.hospitalId);
       if (f.patientId) query.patientId = new Types.ObjectId(f.patientId);
+
+      if (f.from || f.to) {
+        query.requestedAt = {};
+        if (f.from) query.requestedAt.$gte = f.from;
+        if (f.to) query.requestedAt.$lte = f.to;
+      }
+
+      if (f.search) {
+        query.$or = [
+          { requisitionId: { $regex: f.search, $options: 'i' } },
+          { 'patient.name': { $regex: f.search, $options: 'i' } },
+        ];
+      }
+
+      const sortBy = f.sortBy || 'updatedAt';
+      const order = f.order === 'asc' ? 1 : -1;
+      const sort = { [sortBy]: order } as any;
+
       const skip = (f.page - 1) * f.limit;
       const [docs, total] = await Promise.all([
         RequisitionModel.find(query)
-          .sort({ createdAt: -1 })
+          .sort(sort)
           .skip(skip)
           .limit(f.limit)
           .lean() as Promise<RawReq[]>,
@@ -129,6 +211,7 @@ export function createRequisitionRepo(): RequisitionRepo {
         ...input,
         hospitalId: new Types.ObjectId(input.hospitalId),
         patientId: new Types.ObjectId(input.patientId),
+        requestedAt: new Date(),
         status: 'PENDING',
         matchedUnits: [],
         createdBy: actor,

@@ -35,13 +35,55 @@ const MatchedUnit = new Schema(
   { _id: false },
 );
 
+const PatientHistorySchema = new Schema(
+  {
+    previousTransfusions: { type: Number, default: 0 },
+    approximateDate: { type: String, trim: true },
+    presenceOfReaction: {
+      type: String,
+      enum: ['Presence', 'Absence', 'None'],
+      default: 'None',
+    },
+  },
+  { _id: false },
+);
+
+const PatientPregnancySchema = new Schema(
+  {
+    numPregnancies: { type: Number, default: 0 },
+    numMiscarriages: { type: Number, default: 0 },
+    numChildrenWithHemolyticDisease: { type: Number, default: 0 },
+  },
+  { _id: false },
+);
+
+const RequisitionPatientSchema = new Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    age: { type: Number, required: true },
+    sex: { type: String, enum: ['M', 'F', 'O'], required: true },
+    mrn: { type: String, trim: true },
+    diagnosis: { type: String, trim: true },
+    indication: { type: String, trim: true },
+    hb: { type: Number },
+    history: { type: PatientHistorySchema, default: () => ({}) },
+    pregnancy: { type: PatientPregnancySchema, default: () => ({}) },
+  },
+  { _id: false },
+);
+
 const RequisitionSchema = new Schema(
   {
     requisitionId: { type: String, required: true, unique: true },
     hospitalId: { type: Schema.Types.ObjectId, ref: 'Hospital', required: true, index: true },
     patientId: { type: Schema.Types.ObjectId, ref: 'Patient', required: true, index: true },
     clinicianName: { type: String, required: true, trim: true },
+    doctorName: { type: String, trim: true },
     requiredAt: { type: Date, index: true },
+    requestedAt: { type: Date, default: Date.now },
+    medicalOfficerSignature: { type: String, trim: true },
+    hospitalSeal: { type: String, trim: true },
+    patient: { type: RequisitionPatientSchema },
     requestedComponents: { type: [RequestedComponent], default: [] },
     matchedUnits: { type: [MatchedUnit], default: [] },
     status: {

@@ -200,6 +200,73 @@ export default function DonorCreation() {
   const [reasonSearch, setReasonSearch] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
+  const handleFormKeyDown = (e) => {
+    if (e.key === "Enter") {
+      const target = e.target;
+      
+      if (
+        target.tagName === "INPUT" && 
+        (target.type === "submit" || target.type === "button" || target.type === "radio" || target.type === "checkbox")
+      ) {
+        return;
+      }
+      
+      if (target.tagName === "INPUT" || target.tagName === "SELECT") {
+        e.preventDefault();
+        
+        const isCompulsory = target.hasAttribute("required");
+        const val = target.value ? target.value.trim() : "";
+        
+        let isValid = true;
+        let errorMsg = "";
+        const labelText = target.previousElementSibling?.textContent || "";
+        const fieldLabel = labelText.replace("*", "").trim() || "This field";
+        
+        if (isCompulsory && !val) {
+          isValid = false;
+          errorMsg = `${fieldLabel} is required`;
+        } else if (val) {
+          if (target.type === "tel" && val.length !== 10) {
+            isValid = false;
+            errorMsg = "Phone number must be exactly 10 digits";
+          } else if (target.placeholder === "DD/MM/YYYY" && !validateDate(val)) {
+            isValid = false;
+            errorMsg = `Enter a valid date for ${fieldLabel} (DD/MM/YYYY)`;
+          } else if (labelText.includes("Weight") && parseFloat(val) <= 0) {
+            isValid = false;
+            errorMsg = "Weight must be greater than 0 kg";
+          } else if (labelText.includes("Pincode") && val.length !== 6) {
+            isValid = false;
+            errorMsg = "Pincode must be exactly 6 digits";
+          }
+        }
+        
+        if (!isValid) {
+          toast.error(errorMsg);
+          return;
+        }
+        
+        const container = e.currentTarget;
+        const allElements = Array.from(
+          container.querySelectorAll(
+            "input:not([disabled]):not([type=radio]):not([type=checkbox]), select:not([disabled])"
+          )
+        );
+        
+        const currentIndex = allElements.indexOf(target);
+        if (currentIndex !== -1 && currentIndex < allElements.length - 1) {
+          allElements[currentIndex + 1].focus();
+        } else if (currentIndex === allElements.length - 1) {
+          if (isStepComplete()) {
+            handleNext();
+          } else {
+            toast.warning("Please complete all required fields on this step before continuing.");
+          }
+        }
+      }
+    }
+  };
+
   const { data: stockData } = useBagStockList({});
   const stocks = stockData?.items ?? stockData?.bagStocks ?? (Array.isArray(stockData) ? stockData : []);
 
@@ -708,7 +775,7 @@ export default function DonorCreation() {
 
       {/* Content Form Body */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-        <div className="bg-white rounded-2xl border border-gray-200 shadow overflow-hidden">
+        <div onKeyDown={handleFormKeyDown} className="bg-white rounded-2xl border border-gray-200 shadow overflow-hidden">
           
           {/* Step 1: Donor Profile */}
           {currentStep === 1 && (

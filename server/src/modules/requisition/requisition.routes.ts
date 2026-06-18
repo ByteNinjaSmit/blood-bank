@@ -71,6 +71,13 @@ router.post(
   requirePermission('requisition:create'),
   controllers.createPatient,
 );
+// Compatibility info (must be BEFORE /:id to avoid route conflict)
+router.get(
+  '/compatibility-info',
+  authenticate,
+  controllers.getCompatibilityInfoLegacy,
+);
+
 router.post(
   '/',
   authenticate,
@@ -78,6 +85,7 @@ router.post(
   requirePermission('requisition:create'),
   controllers.create,
 );
+
 router.get(
   '/:id',
   authenticate,
@@ -100,6 +108,13 @@ router.post(
   requirePermission('requisition:approve'),
   controllers.approve,
 );
+router.patch(
+  '/:id/approve',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'medical-officer']),
+  requirePermission('requisition:approve'),
+  controllers.approve,
+);
 router.post(
   '/:id/complete',
   authenticate,
@@ -107,7 +122,21 @@ router.post(
   requirePermission('requisition:approve'),
   controllers.complete,
 );
+router.patch(
+  '/:id/complete',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'issue-counter']),
+  requirePermission('requisition:approve'),
+  controllers.complete,
+);
 router.post(
+  '/:id/reject',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'medical-officer']),
+  requirePermission('requisition:reject'),
+  controllers.reject,
+);
+router.patch(
   '/:id/reject',
   authenticate,
   requireRole(['system-admin', 'bbo', 'medical-officer']),
@@ -136,6 +165,22 @@ router.post(
   requireRole(['system-admin', 'bbo', 'medical-officer', 'issue-counter']),
   requirePermission('unit:issue'),
   controllers.issueAll,
+);
+router.patch(
+  '/:id/issue',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'medical-officer', 'issue-counter']),
+  requirePermission('unit:issue'),
+  controllers.issueAll,
+);
+
+// Update crossmatch status for a matched unit
+router.patch(
+  '/:id/crossmatch',
+  authenticate,
+  requireRole(['system-admin', 'lab-tech-serology']),
+  requirePermission('crossmatch:perform'),
+  controllers.updateCrossmatchLegacy,
 );
 
 export default router;
