@@ -1,33 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, Phone, Mail, Users, Calendar, Droplets, Plus, Activity, Clock } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { MapPin, Phone, Mail, Users, Calendar, Droplets, Plus, Activity, Clock, ArrowLeft } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
-import { useCamp } from '@/hooks/useCamp';
+import { useCampDetail } from '@/hooks/useCamp';
 import EnhancedLoader from '@/components/utils/Spinner';
 
 const CampDetails = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { getCampById, loading, error } = useCamp();
-  const [camp, setCamp] = useState(null);
-
   const campId = searchParams.get('id');
+  const { data: camp, isLoading: loading, error: queryError } = useCampDetail(campId);
 
   useEffect(() => {
     if (!campId) {
       navigate('/camp-listing');
-      return;
     }
-    fetchCampDetails(campId);
   }, [campId, navigate]);
 
-  const fetchCampDetails = async (id) => {
-    const result = await getCampById(id);
-    if (result.success) {
-      setCamp(result.data);
-    }
-  };
+  const error = queryError?.message ?? null;
 
   const handleFacilityClick = (facilityType) => {
     switch (facilityType) {
