@@ -162,6 +162,7 @@ export const AuthProvider = ({ children }) => {
     setUser(data.user);
     return data;
   };
+  
   const resendOtpLogin = (email, txnId) => authApi.resendOtpLogin(email, txnId);
 
   // ── Registration ──────────────────────────────────────────────────────────
