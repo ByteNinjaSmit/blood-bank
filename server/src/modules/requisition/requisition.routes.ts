@@ -86,6 +86,14 @@ router.post(
   controllers.create,
 );
 
+router.put(
+  '/:id',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'medical-officer', 'hospital-user', 'issue-counter']),
+  requirePermission('requisition:create'),
+  controllers.update,
+);
+
 router.get(
   '/:id',
   authenticate,

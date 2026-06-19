@@ -18,7 +18,7 @@ export default function RequestCreationStep({
   openAddHospital,
   onReject,
 }) {
-  const readOnly = !!requestDoc?._id;
+  const readOnly = false;
   const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
 
   const handleOpenRejectClick = () => {

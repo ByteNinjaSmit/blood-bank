@@ -213,7 +213,7 @@ const DonationList = ({
               const typeOfBag = donation.typeOfBag || '-';
               const donorName = donation.donorName || 
                 (donation.donor?.name 
-                  ? `${donation.donor.name.firstName || ''} ${donation.donor.name.lastName || ''}`.trim() 
+                  ? [donation.donor.name.firstName, donation.donor.name.middleName, donation.donor.name.lastName].filter(Boolean).join(' ') 
                   : (typeof donation.donor === 'string' ? donation.donor : '-'));
               const bloodGroup = donation.bloodGroup || '-';
               const rhSymbol = donation.rhFactor

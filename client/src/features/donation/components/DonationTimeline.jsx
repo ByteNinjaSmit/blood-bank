@@ -212,7 +212,7 @@ export default function DonationTimeline({ donation }) {
                   <span className={`px-2 py-0.5 rounded-full text-xs border font-medium ${
                     UNIT_STATUS_CLASSES[u.status] ?? 'bg-gray-50 text-gray-600 border-gray-200'
                   }`}>
-                    {u.status}
+                    {u.status === 'RELEASED' ? 'INSTOCK' : u.status}
                   </span>
                   {u.volumeMl && (
                     <p className="text-xs text-gray-400 mt-0.5">{u.volumeMl} mL</p>

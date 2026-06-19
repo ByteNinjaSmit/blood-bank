@@ -19,6 +19,10 @@ class RequisitionApiService {
     return this._wrap(await apiService.post(`${this.baseUrl}`, payload));
   }
 
+  async updateRequest(id, payload) {
+    return this._wrap(await apiService.put(`${this.baseUrl}/${id}`, payload));
+  }
+
   async listRequests(params = {}) {
     return this._wrap(await apiService.get(`${this.baseUrl}`, params));
   }

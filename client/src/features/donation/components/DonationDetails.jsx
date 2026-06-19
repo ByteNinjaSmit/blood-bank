@@ -30,7 +30,7 @@ const DonationDetails = ({ donation }) => {
     : (donation.donorFitness?.isFit !== undefined ? donation.donorFitness.isFit : true);
   const donorName = donation.donorName || 
                     (donation.donor?.name 
-                      ? `${donation.donor.name.firstName || ''} ${donation.donor.name.lastName || ''}`.trim() 
+                      ? [donation.donor.name.firstName, donation.donor.name.middleName, donation.donor.name.lastName].filter(Boolean).join(' ') 
                       : (typeof donation.donor === 'string' ? donation.donor : ''));
   const vitals = donation.initialVitals || (donation.medicalExam ? {
     hb: donation.medicalExam.hbGdl,
@@ -176,16 +176,13 @@ const DonationDetails = ({ donation }) => {
               >
                 <div className="space-y-0.5">
                   <p className="font-medium text-slate-800">{comp.componentType}</p>
-                  {(comp.componentId || comp.unitId) && (
-                    <p className="text-slate-500">ID: {comp.componentId || comp.unitId}</p>
-                  )}
                 </div>
                 <div className="text-right space-y-0.5">
                   {comp.volumeMl && (
                     <p className="text-slate-600">Volume: {comp.volumeMl} mL</p>
                   )}
                   {comp.status && (
-                    <p className="text-slate-600">Status: {comp.status}</p>
+                    <p className="text-slate-600">Status: {comp.status === 'RELEASED' ? 'INSTOCK' : comp.status}</p>
                   )}
                   {(comp.expiryDate || comp.expiresAt) && (
                     <p className="text-slate-500">
@@ -228,6 +225,47 @@ const DonationDetails = ({ donation }) => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {donation.requisitions && donation.requisitions.filter(r => r.requisitionId).length > 0 && (
+        <div className="rounded-lg border border-slate-100 bg-white/70 p-4 space-y-3">
+          <p className="font-semibold text-slate-700 mb-2">Requisition & Delivery Details</p>
+          <div className="space-y-4">
+            {donation.requisitions
+              .filter(r => r.requisitionId)
+              .map((req) => (
+                <div key={req.unitId} className="bg-blue-50/20 border border-blue-100 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between border-b border-blue-50 pb-2">
+                    <span className="font-mono text-xs font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                      {req.unitId.split('-').slice(-2).join(' ')} ({req.componentType})
+                    </span>
+                    <span className="text-xs font-semibold text-gray-500">
+                      Blood Group: <span className="text-red-700 font-bold">{req.aboGroup} {req.rhFactor}</span>
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div><span className="text-slate-500 font-medium">Requisition No:</span> <span className="font-mono text-slate-900 font-semibold">{req.requisitionId}</span></div>
+                    <div><span className="text-slate-500 font-medium">Status:</span> <span className="capitalize text-blue-850 font-bold">{req.requisitionStatus}</span></div>
+                    <div><span className="text-slate-500 font-medium">Hospital:</span> <span className="text-slate-800 font-semibold">{req.hospitalName}</span></div>
+                    <div><span className="text-slate-500 font-medium">Patient:</span> <span className="text-slate-800 font-semibold">{req.patientName}</span></div>
+                    <div><span className="text-slate-500 font-medium">Clinician:</span> <span className="text-slate-800">{req.clinicianName}</span></div>
+                    <div><span className="text-slate-500 font-medium">Required At:</span> <span className="text-slate-800">{req.requiredAt ? new Date(req.requiredAt).toLocaleString('en-IN') : '—'}</span></div>
+                  </div>
+
+                  {req.issue ? (
+                    <div className="mt-2 pt-2 border-t border-dashed border-blue-100 grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-gray-700 bg-blue-50/10 rounded-lg p-2">
+                      <div className="col-span-2 font-bold text-blue-800 text-[10px] uppercase tracking-wider">Delivery Pass Details</div>
+                      <div><span className="text-slate-500 font-medium">Issued At:</span> <span className="text-gray-800">{new Date(req.issue.issuedAt).toLocaleString('en-IN')}</span></div>
+                      <div className="col-span-2"><span className="text-slate-500 font-medium">Collected By:</span> <span className="text-gray-800 font-semibold">{req.issue.collectedByName || '—'}</span></div>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-amber-700 bg-amber-50/50 border border-amber-100 rounded-lg p-2 text-center font-medium">
+                      Component is matched/reserved but not issued from the blood bank yet.
+                    </div>
+                  )}
+                </div>
+              ))}
           </div>
         </div>
       )}

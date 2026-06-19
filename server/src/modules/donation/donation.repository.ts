@@ -8,6 +8,8 @@ import { DonationModel } from '@/modules/donation/donation.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { DonorModel } from '@/modules/donor/donor.model';
+import { RequisitionModel } from '@/modules/requisition/requisition.model';
+import { IssueModel } from '@/modules/issue/issue.model';
 import type {
   CreateDonationInput,
   ListDonationsInput,
@@ -47,6 +49,7 @@ export interface DonationWithUnitsDto extends DonationDto {
   }>;
   ttiResultId?: string;
   ttiReleaseDecision?: string;
+  requisitions?: any[];
 }
 
 interface CreateInput {
@@ -295,22 +298,65 @@ export function createDonationRepo(): DonationRepo {
 
     async findById(id) {
       const doc = await DonationModel.findById(id)
-        .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; lastName?: string } } }>('donor', 'name')
+        .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string } } }>('donor', 'name')
         .lean();
       if (!doc) return null;
-      const donorDoc = doc.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; lastName?: string } };
+      const donorDoc = doc.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string } };
       const [units, tti] = await Promise.all([
         BloodUnitModel.find({ donationId: doc.donationId })
-          .select('unitId componentType volumeMl expiresAt status')
+          .select('unitId componentType volumeMl expiresAt status aboGroup rhFactor')
           .lean(),
         TtiResultModel.findOne({ donationId: doc.donationId }).select('_id releaseDecision aboGroupConfirmed rhFactorConfirmed').lean(),
       ]);
+
+      const unitIds = units.map(u => u.unitId);
+
+      const requisitions = await RequisitionModel.find({
+        'matchedUnits.unitId': { $in: unitIds },
+        deletedAt: null
+      })
+      .populate('hospitalId')
+      .populate('patientId')
+      .lean();
+
+      const issues = await IssueModel.find({
+        unitId: { $in: unitIds }
+      }).lean();
+
+      const requisitionsInfo = units.map(u => {
+        const req = requisitions.find(r => r.matchedUnits.some(mu => mu.unitId === u.unitId));
+        const issue = issues.find(i => i.unitId === u.unitId);
+        const hospital = req?.hospitalId as any;
+        const patient = req?.patientId as any;
+
+        return {
+          unitId: u.unitId,
+          componentType: u.componentType,
+          status: u.status,
+          aboGroup: u.aboGroup,
+          rhFactor: u.rhFactor,
+          expiresAt: u.expiresAt ? u.expiresAt.toISOString() : '',
+          requisitionId: req?.requisitionId || undefined,
+          requisitionDbId: req?._id?.toString() || undefined,
+          hospitalName: hospital?.name || undefined,
+          patientName: patient?.name || undefined,
+          clinicianName: req?.clinicianName || undefined,
+          requiredAt: req?.requiredAt ? req.requiredAt.toISOString() : undefined,
+          requisitionStatus: req?.status || undefined,
+          issue: issue ? {
+            issueId: issue.issueId,
+            issuedAt: issue.issuedAt.toISOString(),
+            collectedByName: issue.collectedByName || undefined,
+          } : null,
+        };
+      });
+
       return {
         id: doc._id.toString(),
         donationId: doc.donationId,
         donor: donorDoc?._id?.toString() ?? doc.donor?.toString() ?? '',
         donorName: donorDoc?.name
-          ? `${donorDoc.name.firstName ?? ''} ${donorDoc.name.lastName ?? ''}`.trim()
+          ? [donorDoc.name.firstName, donorDoc.name.middleName, donorDoc.name.lastName].filter(Boolean).join(' ')
           : undefined,
         donationType: doc.donationType,
         typeOfBag: doc.typeOfBag,
@@ -336,6 +382,7 @@ export function createDonationRepo(): DonationRepo {
         })),
         ttiResultId: tti?._id?.toString(),
         ttiReleaseDecision: tti?.releaseDecision,
+        requisitions: requisitionsInfo,
       };
     },
 
@@ -363,7 +410,7 @@ export function createDonationRepo(): DonationRepo {
       const skip = (q.page - 1) * q.pageSize;
       const [docs, total] = await Promise.all([
         DonationModel.find(filter)
-          .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; lastName?: string } } }>('donor', 'name')
+          .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string } } }>('donor', 'name')
           .sort({ collectedAt: -1 })
           .skip(skip)
           .limit(q.pageSize)
@@ -391,7 +438,7 @@ export function createDonationRepo(): DonationRepo {
       const ttiMap = new Map(ttiResults.map((t) => [t.donationId, t]));
       return {
         items: docs.map((d) => {
-          const donorDoc = d.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; lastName?: string } };
+          const donorDoc = d.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string } };
           const tti = ttiMap.get(d.donationId);
           const statuses = unitMap.get(d.donationId) || [];
 
@@ -411,7 +458,7 @@ export function createDonationRepo(): DonationRepo {
             donationId: d.donationId,
             donor: donorDoc?._id?.toString() ?? d.donor?.toString() ?? '',
             donorName: donorDoc?.name
-              ? `${donorDoc.name.firstName ?? ''} ${donorDoc.name.lastName ?? ''}`.trim()
+              ? [donorDoc.name.firstName, donorDoc.name.middleName, donorDoc.name.lastName].filter(Boolean).join(' ')
               : undefined,
             donationType: d.donationType,
             typeOfBag: d.typeOfBag,

@@ -67,6 +67,44 @@ export default function useRequisition(authToken) {
   const canProceedToMatch = useMemo(() => !!requestDoc?._id, [requestDoc]);
 
   useEffect(() => {
+    if (requestDoc) {
+      setForm({
+        hospitalId: requestDoc.hospitalId?._id || requestDoc.hospitalId || '',
+        doctorName: requestDoc.doctorName || requestDoc.clinicianName || '',
+        requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 16) : '',
+        medicalOfficerSignature: requestDoc.medicalOfficerSignature || '',
+        hospitalSeal: requestDoc.hospitalSeal || '',
+        patient: {
+          name: requestDoc.patient?.name || '',
+          age: requestDoc.patient?.age || '',
+          sex: requestDoc.patient?.sex || 'M',
+          mrn: requestDoc.patient?.mrn || '',
+          diagnosis: requestDoc.patient?.diagnosis || '',
+          hb: requestDoc.patient?.hb || '',
+          indication: requestDoc.patient?.indication || '',
+          history: {
+            previousTransfusions: requestDoc.patient?.history?.previousTransfusions || 0,
+            approximateDate: requestDoc.patient?.history?.approximateDate || '',
+            presenceOfReaction: requestDoc.patient?.history?.presenceOfReaction || 'None',
+          },
+          pregnancy: {
+            numPregnancies: requestDoc.patient?.pregnancy?.numPregnancies || 0,
+            numMiscarriages: requestDoc.patient?.pregnancy?.numMiscarriages || 0,
+            numChildrenWithHemolyticDisease: requestDoc.patient?.pregnancy?.numChildrenWithHemolyticDisease || 0,
+          },
+        },
+        requestedComponents: (requestDoc.requestedComponents || []).map((rc) => ({
+          componentType: rc.componentType === 'PRBC' ? 'RBC' : rc.componentType === 'PLATELET_CONCENTRATE' ? 'Platelet' : rc.componentType === 'CRYOPRECIPITATE' ? 'Cryo' : rc.componentType,
+          units: rc.units,
+          bloodGroup: rc.bloodGroup,
+          rh: rc.rh === 'Positive' || rc.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
+          urgency: rc.urgency?.toLowerCase() === 'routine' ? 'regular' : rc.urgency?.toLowerCase() || 'regular',
+        })),
+      });
+    }
+  }, [requestDoc]);
+
+  useEffect(() => {
     if (!authToken) return;
     // init API clients
     hospitalApi.initialize(authToken);
@@ -142,6 +180,75 @@ export default function useRequisition(authToken) {
     }));
   };
 
+function checkHasChanges(doc, payload) {
+  if (!doc) return true;
+  
+  const docHospId = doc.hospitalId?._id || doc.hospitalId || '';
+  if (docHospId !== payload.hospitalId) return true;
+  
+  if ((doc.doctorName || doc.clinicianName || '') !== (payload.doctorName || '')) return true;
+  
+  const docRequiredAt = doc.requiredAt ? new Date(doc.requiredAt).getTime() : 0;
+  const payRequiredAt = payload.requiredAt ? new Date(payload.requiredAt).getTime() : 0;
+  if (docRequiredAt !== payRequiredAt) return true;
+  
+  if ((doc.medicalOfficerSignature || '') !== (payload.medicalOfficerSignature || '')) return true;
+  if ((doc.hospitalSeal || '') !== (payload.hospitalSeal || '')) return true;
+  
+  // Patient details
+  if ((doc.patient?.name || '') !== (payload.patient.name || '')) return true;
+  if (Number(doc.patient?.age || 0) !== Number(payload.patient.age || 0)) return true;
+  if ((doc.patient?.sex || 'M') !== (payload.patient.sex || 'M')) return true;
+  if ((doc.patient?.mrn || '') !== (payload.patient.mrn || '')) return true;
+  if ((doc.patient?.diagnosis || '') !== (payload.patient.diagnosis || '')) return true;
+  if (Number(doc.patient?.hb || 0) !== Number(payload.patient.hb || 0)) return true;
+  if ((doc.patient?.indication || '') !== (payload.patient.indication || '')) return true;
+  
+  // Transfusion history
+  if (Number(doc.patient?.history?.previousTransfusions || 0) !== Number(payload.patient.history.previousTransfusions || 0)) return true;
+  if ((doc.patient?.history?.approximateDate || '') !== (payload.patient.history.approximateDate || '')) return true;
+  if ((doc.patient?.history?.presenceOfReaction || 'None') !== (payload.patient.history.presenceOfReaction || 'None')) return true;
+  
+  // Pregnancy
+  if (Number(doc.patient?.pregnancy?.numPregnancies || 0) !== Number(payload.patient.pregnancy.numPregnancies || 0)) return true;
+  if (Number(doc.patient?.pregnancy?.numMiscarriages || 0) !== Number(payload.patient.pregnancy.numMiscarriages || 0)) return true;
+  if (Number(doc.patient?.pregnancy?.numChildrenWithHemolyticDisease || 0) !== Number(payload.patient.pregnancy.numChildrenWithHemolyticDisease || 0)) return true;
+  
+  // Requested components
+  const docComponents = doc.requestedComponents || [];
+  const payComponents = payload.requestedComponents || [];
+  if (docComponents.length !== payComponents.length) return true;
+  
+  for (let i = 0; i < docComponents.length; i++) {
+    const dc = docComponents[i];
+    const pc = payComponents[i];
+    
+    let dcType = dc.componentType;
+    if (dcType === 'PRBC') dcType = 'RBC';
+    if (dcType === 'PLATELET_CONCENTRATE') dcType = 'Platelet';
+    if (dcType === 'CRYOPRECIPITATE') dcType = 'Cryo';
+    
+    let pcType = pc.componentType;
+    if (pcType === 'PRBC') pcType = 'RBC';
+    if (pcType === 'PLATELET_CONCENTRATE') pcType = 'Platelet';
+    if (pcType === 'CRYOPRECIPITATE') pcType = 'Cryo';
+    
+    if (dcType !== pcType) return true;
+    if (Number(dc.units) !== Number(pc.units)) return true;
+    if (dc.bloodGroup !== pc.bloodGroup) return true;
+    
+    const dcRh = dc.rh === 'Positive' || dc.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative';
+    const pcRh = pc.rh === 'Positive' || pc.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative';
+    if (dcRh !== pcRh) return true;
+    
+    const dcUrgency = dc.urgency?.toLowerCase() === 'routine' ? 'regular' : dc.urgency?.toLowerCase();
+    const pcUrgency = pc.urgency?.toLowerCase() === 'routine' ? 'regular' : pc.urgency?.toLowerCase();
+    if (dcUrgency !== pcUrgency) return true;
+  }
+  
+  return false;
+}
+
   const handleCreate = async () => {
     try {
       // validation minimal
@@ -181,6 +288,26 @@ export default function useRequisition(authToken) {
           urgency: r.urgency,
         })),
       };
+
+      if (requestDoc?._id) {
+        // Request is already created! Check for updates
+        const hasChanges = checkHasChanges(requestDoc, payload);
+        if (!hasChanges) {
+          toast.warning('Request is already created');
+          setCurrentStep(2);
+          return;
+        }
+
+        const res = await requisitionApi.updateRequest(requestDoc._id, payload);
+        if (!res.success) return toast.error(res.error || 'Failed to update request');
+        setRequestDoc(res.data);
+        toast.success('Changes updated');
+        // auto match immediately after updating the request
+        await handleMatch(res.data?._id);
+        setCurrentStep(2);
+        return;
+      }
+
       const res = await requisitionApi.createRequest(payload);
       if (!res.success) return toast.error(res.error || 'Failed to create request');
       setRequestDoc(res.data);

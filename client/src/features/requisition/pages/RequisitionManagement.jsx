@@ -73,8 +73,10 @@ const RequisitionManagement = () => {
 
   const canProceedFromStep2 = React.useMemo(() => {
     const okStatus = ['matched', 'approved', 'issued', 'completed'];
-    return !!requestDoc?._id && okStatus.includes(requestDoc?.status);
-  }, [requestDoc]);
+    const hasShortage = Array.isArray(shortages) && shortages.length > 0;
+    const hasReserved = Array.isArray(requestDoc?.matchedInventory) && requestDoc.matchedInventory.length > 0;
+    return !!requestDoc?._id && okStatus.includes(requestDoc?.status) && !hasShortage && hasReserved;
+  }, [requestDoc, shortages]);
 
   const canProceedFromStep3 = React.useMemo(() => {
     const okStatus = ['issued', 'completed'];

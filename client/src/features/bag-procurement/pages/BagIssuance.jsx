@@ -389,10 +389,8 @@ function ViewIssueModal({ id, onClose }) {
                         {req.issue ? (
                           <div className="mt-2 pt-2 border-t border-dashed border-blue-100 grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-gray-700 bg-blue-50/10 rounded-lg p-2">
                             <div className="col-span-2 font-bold text-blue-800 text-[10px] uppercase tracking-wider">Delivery Pass Details</div>
-                            <div><span className="text-gray-500 font-medium">Issue Pass No:</span> <span className="font-mono font-semibold text-gray-900">{req.issue.issueId}</span></div>
                             <div><span className="text-gray-500 font-medium">Issued At:</span> <span className="text-gray-800">{new Date(req.issue.issuedAt).toLocaleString('en-IN')}</span></div>
-                            <div><span className="text-gray-500 font-medium">Collected By:</span> <span className="text-gray-800 font-semibold">{req.issue.collectedByName || '—'}</span></div>
-                            <div><span className="text-gray-500 font-medium">Transport Temp:</span> <span className="text-gray-800 font-semibold">{req.issue.transportTempCelsius !== undefined ? `${req.issue.transportTempCelsius} °C` : '—'}</span></div>
+                            <div className="col-span-2"><span className="text-gray-500 font-medium">Collected By:</span> <span className="text-gray-800 font-semibold">{req.issue.collectedByName || '—'}</span></div>
                           </div>
                         ) : (
                           <div className="text-xs text-amber-700 bg-amber-50/50 border border-amber-100 rounded-lg p-2 text-center font-medium">

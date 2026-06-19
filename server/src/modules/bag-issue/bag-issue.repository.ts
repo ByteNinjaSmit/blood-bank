@@ -110,7 +110,7 @@ function toDto(doc: any, unitStatuses: string[] = []): BagIssueDto {
     status,
     segmentNo: doc.segmentNo || undefined,
     donorName: donor?.name
-      ? `${donor.name.firstName ?? ''} ${donor.name.lastName ?? ''}`.trim()
+      ? [donor.name.firstName, donor.name.middleName, donor.name.lastName].filter(Boolean).join(' ')
       : undefined,
     bloodGroup: donor?.bloodGroup ? `${donor.bloodGroup} ${donor.rh || ''}`.trim() : undefined,
     createdAt: doc.createdAt ? doc.createdAt.toISOString() : '',

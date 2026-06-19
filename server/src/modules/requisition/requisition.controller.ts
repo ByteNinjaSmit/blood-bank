@@ -24,6 +24,7 @@ export interface RequisitionControllers {
   list: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   createPatient: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   create: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  update: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   match: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   approve: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   complete: (req: Request, res: Response, next: NextFunction) => Promise<void>;
@@ -243,6 +244,96 @@ export function createRequisitionControllers(deps: {
         const created = await deps.requisitions.create(body, actorId);
         const enriched = await enrichRequisition(created);
         res.status(201).json({ success: true, data: enriched, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async update(req, res, next) {
+      try {
+        const actorId = actor(req);
+        const { id } = req.params;
+
+        // Normalize requestedComponents
+        const requestedComponents = (req.body.requestedComponents || []).map((rc: any) => {
+          let componentType = rc.componentType || 'PRBC';
+          if (componentType === 'RBC') componentType = 'PRBC';
+          if (componentType === 'Platelet') componentType = 'PLATELET_CONCENTRATE';
+          if (componentType === 'Cryo') componentType = 'CRYOPRECIPITATE';
+
+          const aboGroup = rc.aboGroup || rc.bloodGroup || 'O';
+
+          let rhFactor = rc.rhFactor || rc.rh || 'POSITIVE';
+          if (typeof rhFactor === 'string') {
+            const upper = rhFactor.toUpperCase();
+            if (upper === 'POSITIVE' || upper === 'POS') rhFactor = 'POSITIVE';
+            else if (upper === 'NEGATIVE' || upper === 'NEG') rhFactor = 'NEGATIVE';
+            else rhFactor = 'POSITIVE';
+          }
+
+          let urgency = rc.urgency || 'ROUTINE';
+          if (typeof urgency === 'string') {
+            const upper = urgency.toUpperCase();
+            if (upper === 'REGULAR' || upper === 'ROUTINE') urgency = 'ROUTINE';
+            else if (upper === 'URGENT') urgency = 'URGENT';
+            else if (upper === 'EMERGENCY') urgency = 'EMERGENCY';
+            else urgency = 'ROUTINE';
+          }
+
+          return {
+            componentType,
+            units: Number(rc.units || 1),
+            aboGroup,
+            rhFactor,
+            urgency,
+          };
+        });
+
+        // Update patient if details are sent directly in body.patient
+        if (req.body.patientId && req.body.patient) {
+          const p = req.body.patient;
+          let dob: Date | undefined = undefined;
+          if (p.age) {
+            const ageNum = Number(p.age);
+            if (!isNaN(ageNum)) {
+              dob = new Date();
+              dob.setFullYear(dob.getFullYear() - ageNum);
+            }
+          }
+          await PatientModel.findByIdAndUpdate(req.body.patientId, {
+            name: p.name || 'Unnamed Patient',
+            dob,
+            sex: p.sex || 'M',
+            medicalRecordNumber: p.mrn,
+          });
+        }
+
+        // Map doctorName to clinicianName
+        const clinicianName = req.body.clinicianName || req.body.doctorName || '';
+        const doctorName = req.body.doctorName || clinicianName;
+
+        const updatedDoc = await RequisitionModel.findByIdAndUpdate(
+          id,
+          {
+            hospitalId: new mongoose.Types.ObjectId(req.body.hospitalId),
+            clinicianName,
+            doctorName,
+            requiredAt: req.body.requiredAt ? new Date(req.body.requiredAt) : undefined,
+            medicalOfficerSignature: req.body.medicalOfficerSignature,
+            hospitalSeal: req.body.hospitalSeal,
+            requestedComponents,
+            updatedBy: new mongoose.Types.ObjectId(actorId),
+          },
+          { new: true }
+        ).lean();
+
+        if (!updatedDoc) {
+          res.status(404).json({ success: false, message: 'Requisition not found' });
+          return;
+        }
+
+        const enriched = await enrichRequisition(updatedDoc);
+        res.json({ success: true, data: enriched, requestId: req.id });
       } catch (e) {
         next(e);
       }
