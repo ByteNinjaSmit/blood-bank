@@ -46,7 +46,7 @@ export const ListUsersQuery = z.object({
   campId: blank(z.string().regex(OBJECT_ID).optional()),
   search: z.string().trim().max(120).optional(),
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(200).default(10),
+  limit: z.coerce.number().int().min(1).max(1000).default(1000),
 });
 
 export const IdParam = z.object({ id: z.string().min(1).max(80) });

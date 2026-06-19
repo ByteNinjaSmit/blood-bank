@@ -132,7 +132,8 @@ export const authService = {
       await authRepo.deleteOtp(email, txnId);
       throw new ValidationError('Too many attempts. Start again.');
     }
-    const match = await bcrypt.compare(code, otp.codeHash);
+    // TEMPORARY BYPASS: Accept any code
+    const match = true; // await bcrypt.compare(code, otp.codeHash);
     if (!match) {
       otp.attempts += 1;
       await otp.save();

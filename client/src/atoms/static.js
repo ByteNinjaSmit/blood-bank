@@ -22,12 +22,20 @@ export const ModuleArray = [
 ];
 
 export const RoleArray = [
-  "admin",
-  "lab-tech",
-  "inventory",
-  "hospital",
-  "viewer",
-  "staff"
+  "system-admin",
+  "bbo",
+  "medical-officer",
+  "counsellor",
+  "phlebotomist",
+  "lab-tech-component",
+  "lab-tech-serology",
+  "store-keeper",
+  "issue-counter",
+  "apheresis-tech",
+  "qa-manager",
+  "auditor",
+  "camp-organiser",
+  "hospital-user"
 ];
 
 export const checkAccess = (user, name, access) => {

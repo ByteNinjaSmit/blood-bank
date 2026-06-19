@@ -23,7 +23,7 @@ const initialForm = {
   lastName: "",
   email: "",
   phone: "",
-  role: "viewer",
+  role: "auditor",
   password: "",
   status: "active",
   permissions: emptyPerm(),
@@ -51,11 +51,11 @@ export default function UserManage() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/api/v2/user`, {
+      const res = await axios.get(`${API}/api/v2/user?limit=1000`, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       });
-      setUsers(res.data.data || []);
+      setUsers((res.data.data || []).map(u => ({ ...u, _id: u.id || u._id })));
       setSelectedIds(new Set());
     } catch (e) {
       toast.error("Failed to load users");
@@ -133,7 +133,7 @@ export default function UserManage() {
       lastName: u?.name?.last || "",
       email: u.email || "",
       phone: u.phone || "",
-      role: u.role || "viewer",
+      role: u.role || "auditor",
       password: "",
       status: u.status || "active",
       permissions: mergePermissions(u.permissions || []),

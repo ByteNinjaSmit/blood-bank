@@ -68,7 +68,7 @@ export const userService = {
     // Cache simple unfiltered first-page staff roster (used by camp + donation forms).
     const isSimple = !filter.search && !filter.campId && filter.page === 1;
     const key = isSimple
-      ? `user:list:role=${filter.role ?? 'all'}:status=${filter.status ?? 'all'}`
+      ? `user:list:role=${filter.role ?? 'all'}:status=${filter.status ?? 'all'}:limit=${filter.limit}`
       : null;
 
     const fetch = async () => {

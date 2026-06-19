@@ -59,45 +59,10 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
 
   return {
     async seedInitialData(actorId) {
-      log.info('checking and seeding initial chemical categories, suppliers, and manufacturers...');
-      
-      // Categories
-      await ChemicalCategoryModel.deleteOne({ name: 'Blood Bags' });
-      await ChemicalCategoryModel.deleteOne({ name: 'Other Consumables' });
-      const categories = await deps.inventory.listCategories();
-      if (categories.length === 0) {
-        const defaultCats = [
-          { name: 'Blood Grouping Reagents', description: 'Anti-A, Anti-B, Anti-D, AHG etc.' },
-          { name: 'ELISA / Microlisa Kits', description: 'HIV, HBsAg, HCV, Syphilis testing kits' },
-          { name: 'Immunohematology', description: 'Gel cards, Monocells, Coombs control cells' },
-        ];
-        for (const cat of defaultCats) {
-          await deps.inventory.createCategory({ ...cat, actorId });
-        }
-        log.info('categories seeded successfully');
-      }
-
-
-
-      // Manufacturers
-      const manufacturers = await deps.inventory.listManufacturers();
-      if (manufacturers.length === 0) {
-        const defaultManufacturers = [
-          { name: 'Tulip Diagnostics' },
-          { name: 'J. Mitra' },
-          { name: 'Bio-Rad' },
-          { name: 'Cluett' },
-        ];
-        for (const mfg of defaultManufacturers) {
-          await deps.inventory.createManufacturer({ ...mfg, actorId });
-        }
-        log.info('manufacturers seeded successfully');
-      }
+      // No-op: Seed logic is now handled in database reset/clear scripts
     },
 
     async listCategories(actorId) {
-      // Auto seed if empty on list
-      await this.seedInitialData(actorId);
       return deps.inventory.listCategories();
     },
 
@@ -110,9 +75,6 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
     },
 
     async listSuppliers(actorId?: string) {
-      if (actorId) {
-        await this.seedInitialData(actorId);
-      }
       return deps.inventory.listSuppliers();
     },
 
@@ -129,9 +91,6 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
     },
 
     async listManufacturers(actorId?: string) {
-      if (actorId) {
-        await this.seedInitialData(actorId);
-      }
       return deps.inventory.listManufacturers();
     },
 

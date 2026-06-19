@@ -1,6 +1,6 @@
 export function checkAccess(user, moduleAliases = ["users","user management","admin users","user"]) {
   const normalize = (s = "") => String(s).toLowerCase();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'system-admin';
   const perms = user?.permissions || [];
   const match = perms.find(p => moduleAliases.some(a => normalize(p.moduleName) === normalize(a)));
   return {

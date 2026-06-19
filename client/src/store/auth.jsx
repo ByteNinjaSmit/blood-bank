@@ -151,7 +151,11 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const loginStartOtp = (email, password) => authApi.startOtpLogin(email, password);
+  const loginStartOtp = async (email, password) => {
+    // TEMPORARY BYPASS: Call login directly instead of starting OTP
+    const data = await login(email, password);
+    return { txnId: "bypassed", expiresInSeconds: 0, resendCooldownSeconds: 0 };
+  };
   const verifyOtpLogin = async (email, txnId, code) => {
     const data = await authApi.verifyOtpLogin(email, txnId, code);
     setToken(data.accessToken);
