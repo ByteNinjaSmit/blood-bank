@@ -32,6 +32,7 @@ export interface DonorDto {
   rh: 'Positive' | 'Negative';
   eligibilityStatus?: 'eligible' | 'deferred' | 'temp-deferred';
   lastDonationDate?: string;
+  lastDonationId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -107,6 +108,21 @@ export interface DonorRepo {
   findActiveByPhone(phone: string): Promise<DonorDto | null>;
 }
 
+async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto[]> {
+  if (dtos.length === 0) return dtos;
+  const donorIds = dtos.map(d => new Types.ObjectId(d.id));
+  const donations = await DonationModel.aggregate([
+    { $match: { donor: { $in: donorIds } } },
+    { $sort: { donationDate: -1, createdAt: -1 } },
+    { $group: { _id: '$donor', lastDonationId: { $first: '$_id' } } }
+  ]);
+  const donationMap = new Map(donations.map(d => [d._id.toString(), d.lastDonationId.toString()]));
+  return dtos.map(dto => ({
+    ...dto,
+    lastDonationId: donationMap.get(dto.id)
+  }));
+}
+
 export function createDonorRepo(): DonorRepo {
   return {
     async create(input, actorId) {
@@ -118,12 +134,15 @@ export function createDonorRepo(): DonorRepo {
         updatedBy: actorId,
       });
       const raw = doc.toObject() as unknown as RawDonor;
-      return toDto(raw);
+      const dtos = await populateLastDonationId([toDto(raw)]);
+      return dtos[0] as DonorDto;
     },
 
     async findById(id) {
       const raw = (await DonorModel.findById(id).lean()) as unknown as RawDonor | null;
-      return raw ? toDto(raw) : null;
+      if (!raw) return null;
+      const dtos = await populateLastDonationId([toDto(raw)]);
+      return dtos[0] as DonorDto;
     },
 
     async update(id, patch, actorId) {
@@ -137,7 +156,8 @@ export function createDonorRepo(): DonorRepo {
         { new: true, runValidators: true },
       ).lean()) as unknown as RawDonor | null;
       if (!updated) throw new NotFoundError('Donor', id);
-      return toDto(updated);
+      const dtos = await populateLastDonationId([toDto(updated)]);
+      return dtos[0] as DonorDto;
     },
 
     async list(input) {
@@ -168,6 +188,17 @@ export function createDonorRepo(): DonorRepo {
         filter._id = { $nin: allCampDonorIds.map(id => new Types.ObjectId(id)) };
       }
 
+      if (input.campId) {
+        const campIdObj = new Types.ObjectId(input.campId);
+        const campDonations = await DonationModel.find({ campId: campIdObj }, { donor: 1 }).lean();
+        const campDonorIds = campDonations.map(d => d.donor?.toString()).filter(Boolean);
+        const camp = await CampModel.findById(campIdObj, { donorData: 1 }).lean();
+        const campDataDonorIds = (camp?.donorData || []).map(id => id.toString());
+        const specificCampDonorIds = Array.from(new Set([...campDonorIds, ...campDataDonorIds]));
+        const existingIdFilter = (filter._id as any) || {};
+        filter._id = { ...existingIdFilter, $in: specificCampDonorIds.map(id => new Types.ObjectId(id)) };
+      }
+
       if (input.search) {
         const term = input.search.trim();
         filter.$or = [
@@ -184,8 +215,10 @@ export function createDonorRepo(): DonorRepo {
         DonorModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(input.pageSize).lean(),
         DonorModel.countDocuments(filter),
       ]);
+      const dtos = (docs as unknown as RawDonor[]).map(toDto);
+      const populatedDtos = await populateLastDonationId(dtos);
       return {
-        items: (docs as unknown as RawDonor[]).map(toDto),
+        items: populatedDtos,
         total,
       };
     },
@@ -201,7 +234,9 @@ export function createDonorRepo(): DonorRepo {
 
     async findActiveByPhone(phone) {
       const raw = (await DonorModel.findOne({ phone }).lean()) as unknown as RawDonor | null;
-      return raw ? toDto(raw) : null;
+      if (!raw) return null;
+      const dtos = await populateLastDonationId([toDto(raw)]);
+      return dtos[0] as DonorDto;
     },
   };
 }

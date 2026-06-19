@@ -7,6 +7,7 @@ import type {
   UpdateDonorInput,
 } from '@/modules/donor/donor.validator';
 import type { DonorDto, DonorRepo } from '@/modules/donor/donor.repository';
+import { CampModel } from '@/modules/camp/camp.model';
 
 const MINIMUM_DONOR_WEIGHT_KG = 45;
 const MINIMUM_DONOR_AGE_YEARS = 18;
@@ -36,8 +37,13 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
         });
       }
       const created = await deps.repo.create(input, actorId);
+      if (input.campId) {
+        await CampModel.findByIdAndUpdate(input.campId, {
+          $addToSet: { donorData: created.id }
+        });
+      }
       await invalidate('donor:detail:*');
-      log.info({ donorId: created.id, actorId }, 'donor registered');
+      log.info({ donorId: created.id, actorId, campId: input.campId }, 'donor registered');
       return created;
     },
 

@@ -211,10 +211,24 @@ const DonorForm = ({
   };
 
   const handleFormSubmit = (data) => {
+    const isDef = data.eligibilityStatus === 'deferred' || data.eligibilityStatus === 'temp-deferred';
+    let generatedId = data.donorId;
+    if (!generatedId) {
+      const prefix = isDef ? 'DFR' : 'DNR';
+      const now = new Date();
+      const yy = String(now.getFullYear()).slice(-2);
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      generatedId = `${prefix}-${yy}-${mm}-${dd}-${hh}-${min}-${rand}`;
+    }
+
     // Transform data to match API structure
     const transformedData = {
       ...data,
-      donorId: isDeferred && !data.donorId ? `DFR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}` : data.donorId,
+      donorId: generatedId,
       name: {
         firstName: data.firstName,
         middleName: data.middleName,
@@ -236,33 +250,9 @@ const DonorForm = ({
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-      {/* Basic Information */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Basic Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {!isDeferred && (
-            <FormField label="Donor ID" required error={errors.donorId?.message}>
-              <FormField.Input
-                {...register('donorId', { required: !isDeferred ? 'Donor ID is required' : false })}
-                placeholder="Enter Donor ID manually"
-              />
-            </FormField>
-          )}
-
-          <FormField label="UID (12 digits)" error={errors.uid?.message}>
-            <FormField.Input
-              {...register('uid', {
-                pattern: {
-                  value: /^\d{12}$/,
-                  message: 'UID must be exactly 12 digits'
-                }
-              })}
-              placeholder="123456789012"
-              maxLength={12}
-            />
-          </FormField>
-        </div>
-      </div>
+      <input type="hidden" {...register('donorId')} />
+      <input type="hidden" {...register('uid')} />
+      <input type="hidden" {...register('eligibilityStatus')} />
 
       {/* Personal Details */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -274,9 +264,9 @@ const DonorForm = ({
             />
           </FormField>
 
-          <FormField label="Middle Name" error={errors.middleName?.message}>
+          <FormField label="Middle Name" required error={errors.middleName?.message}>
             <FormField.Input
-              {...register('middleName')}
+              {...register('middleName', { required: 'Middle name is required' })}
             />
           </FormField>
 
@@ -407,7 +397,7 @@ const DonorForm = ({
       {/* Medical Information */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Medical Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <FormField label="Blood Group" required error={errors.bloodGroup?.message}>
             <FormField.Select
               {...register('bloodGroup', { required: 'Blood group is required' })}
@@ -427,17 +417,6 @@ const DonorForm = ({
               <option value="">Select</option>
               <option value="Positive">Positive</option>
               <option value="Negative">Negative</option>
-            </FormField.Select>
-          </FormField>
-
-          <FormField label="Eligibility Status" required error={errors.eligibilityStatus?.message}>
-            <FormField.Select
-              {...register('eligibilityStatus', { required: 'Eligibility status is required' })}
-            >
-              <option value="">Select</option>
-              <option value="eligible">Eligible</option>
-              <option value="deferred">Deferred</option>
-              <option value="temp-deferred">Temporarily Deferred</option>
             </FormField.Select>
           </FormField>
         </div>

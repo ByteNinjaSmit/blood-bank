@@ -328,7 +328,7 @@ export default function DonorManagement() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Donor ID</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{activeTab === 'camp' ? 'Donation ID' : 'Donor ID'}</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Full Name</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">DOB</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Sex</th>
@@ -345,7 +345,7 @@ export default function DonorManagement() {
                     return (
                       <tr key={donor._id || donor.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3 font-mono text-xs text-gray-700 font-medium">
-                          {isDeferred ? '-' : donor.donorId}
+                          {isDeferred ? '-' : (activeTab === 'camp' ? (donor.lastDonationId || 'N/A') : donor.donorId)}
                         </td>
                         <td className="px-4 py-3 text-gray-800 font-medium">
                           {donor.name?.firstName} {donor.name?.middleName || ''} {donor.name?.lastName}

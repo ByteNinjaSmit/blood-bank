@@ -30,7 +30,7 @@ const CampDonorManagement = () => {
 
   const handleCreateDonor = async (donorData) => {
     setLoading(true);
-    const result = await createDonor(donorData);
+    const result = await createDonor({ ...donorData, campId });
     if (result.success) {
       setShowCreateModal(false);
     }

@@ -89,7 +89,8 @@ export function createBagInspectionService(deps: {
       if (!updated) throw new NotFoundError('BagInspection', id);
       log.info({ inspectionId: updated.inspectionId, actorId }, 'bag inspection report updated');
 
-      if (updated.testingType === 'EMPTY' && input.testResult && /sterile/i.test(input.testResult)) {
+      const isFailed = input.testResult && /fail|contaminat|leak|broken|reject/i.test(input.testResult);
+      if (updated.testingType === 'EMPTY' && !isFailed) {
         const grn = await deps.grns.findById(updated.grnId);
         if (grn) {
           const line = grn.batchLines.find((l) => l.batchNumber === updated.batchNumber);

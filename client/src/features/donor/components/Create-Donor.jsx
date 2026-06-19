@@ -195,6 +195,18 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
   }
 
   const validateForm = () => {
+    if (!formData.firstName) {
+      setError("First Name is required")
+      return false
+    }
+    if (!formData.middleName) {
+      setError("Middle Name is required")
+      return false
+    }
+    if (!formData.lastName) {
+      setError("Last Name is required")
+      return false
+    }
     if (!formData.city || !formData.district || !formData.state) {
       setError("City, District, and State are required")
       return false
@@ -308,12 +320,23 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
 
     setLoading(true)
     try {
-      const generatedId = isDeferred && !formData.donorId ? `DFR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}` : formData.donorId;
+      let generatedId = formData.donorId;
+      if (!generatedId) {
+        const prefix = isDeferred ? 'DFR' : 'DNR';
+        const now = new Date();
+        const yy = String(now.getFullYear()).slice(-2);
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const hh = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        generatedId = `${prefix}-${yy}-${mm}-${dd}-${hh}-${min}-${rand}`;
+      }
       const donorData = {
         donorId: generatedId,
         name: {
           firstName: formData.firstName,
-          middleName: formData.middleName || undefined,
+          middleName: formData.middleName,
           lastName: formData.lastName,
         },
         uid: formData.uid || undefined,
@@ -450,21 +473,6 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
           {mode === "quick" ? (
             <div className="bg-white rounded-lg border border-orange-200 p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {!isDeferred && (
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Donor ID *</label>
-                    <input
-                      ref={donorIdInputRef}
-                      type="text"
-                      name="donorId"
-                      value={formData.donorId}
-                      onChange={handleInputChange}
-                      placeholder="Enter Donor ID manually"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                      required
-                    />
-                  </div>
-                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone (10 digits) *</label>
                   <input
@@ -490,7 +498,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Middle Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Middle Name *</label>
                   <input
                     type="text"
                     name="middleName"
@@ -498,6 +506,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                     onChange={handleInputChange}
                     placeholder="Middle Name"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                    required
                   />
                 </div>
                 <div>
@@ -584,33 +593,6 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Eligibility Status *</label>
-                  <select
-                    name="eligibilityStatus"
-                    value={formData.eligibilityStatus}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                    required
-                  >
-                    <option value="">Select</option>
-                    <option value="eligible">Eligible</option>
-                    <option value="deferred">Deferred</option>
-                    <option value="temp-deferred">Temporarily Deferred</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">UID (12 digits)</label>
-                  <input
-                    type="text"
-                    name="uid"
-                    value={formData.uid}
-                    onChange={handleInputChange}
-                    placeholder="123456789012"
-                    maxLength={12}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                  />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
                   <input
                     type="text"
@@ -662,40 +644,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
               </div>
             </div>
           ) : (
-            <>
-              {/* Basic Information */}
-              <div className="bg-white rounded-lg border border-orange-200 p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Basic Information</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {!isDeferred && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Donor ID *</label>
-                      <input
-                        type="text"
-                        name="donorId"
-                        value={formData.donorId}
-                        onChange={handleInputChange}
-                        placeholder="Enter Donor ID manually"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                        required
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">UID (12 digits)</label>
-                    <input
-                      type="text"
-                      name="uid"
-                      value={formData.uid}
-                      onChange={handleInputChange}
-                      placeholder="123456789012"
-                      maxLength={12}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                    />
-                  </div>
-                </div>
-              </div>
-
+             <>
               {/* Personal Details */}
               <div className="bg-white rounded-lg border border-orange-200 p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Personal Details</h2>
@@ -712,13 +661,14 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Middle Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Middle Name *</label>
                     <input
                       type="text"
                       name="middleName"
                       value={formData.middleName}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
+                      required
                     />
                   </div>
                   <div>
@@ -885,7 +835,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
               {/* Medical Information */}
               <div className="bg-white rounded-lg border border-orange-200 p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Medical Information</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Blood Group *</label>
                     <select
@@ -914,21 +864,6 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                       <option value="">Select</option>
                       <option value="Positive">Positive</option>
                       <option value="Negative">Negative</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Eligibility Status *</label>
-                    <select
-                      name="eligibilityStatus"
-                      value={formData.eligibilityStatus}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
-                      required
-                    >
-                      <option value="">Select</option>
-                      <option value="eligible">Eligible</option>
-                      <option value="deferred">Deferred</option>
-                      <option value="temp-deferred">Temporarily Deferred</option>
                     </select>
                   </div>
                 </div>

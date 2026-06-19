@@ -15,7 +15,7 @@ const blankToUndef = <T extends z.ZodTypeAny>(schema: T) =>
 
 const NameSchema = z.object({
   firstName: z.string().trim().min(1).max(80),
-  middleName: blankToUndef(z.string().trim().max(80).optional()),
+  middleName: z.string().trim().min(1, 'Middle name is required').max(80),
   lastName: z.string().trim().min(1).max(80),
 });
 
@@ -42,6 +42,7 @@ export const CreateDonorBody = z.object({
   bloodGroup: z.enum(ABO_GROUP),
   rh: z.enum(['Positive', 'Negative']), // legacy enum for read-side; new code uses RH_FACTOR
   eligibilityStatus: blankToUndef(z.enum(['eligible', 'deferred', 'temp-deferred']).optional()),
+  campId: blankToUndef(z.string().regex(OBJECT_ID, 'Invalid camp id').optional()),
 });
 export type CreateDonorInput = z.infer<typeof CreateDonorBody>;
 
@@ -55,6 +56,7 @@ export const ListDonorsQuery = z.object({
   city: z.string().trim().max(80).optional(),
   source: z.enum(['inhouse', 'camp']).optional(),
   eligibilityStatus: z.enum(['eligible', 'deferred', 'temp-deferred']).optional(),
+  campId: z.string().regex(OBJECT_ID, 'Invalid camp id').optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(25),
 });

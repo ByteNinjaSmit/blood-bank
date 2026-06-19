@@ -227,7 +227,7 @@ const DonorList = ({
         <Table>
           <Table.Header>
             <tr>
-              <Table.Head>Donor ID</Table.Head>
+              <Table.Head>{campId ? 'Donation ID' : 'Donor ID'}</Table.Head>
               <Table.Head>Full Name</Table.Head>
               <Table.Head>DOB</Table.Head>
               <Table.Head>Sex</Table.Head>
@@ -243,7 +243,7 @@ const DonorList = ({
               const isDeferred = donor.eligibilityStatus === 'deferred' || donor.eligibilityStatus === 'temp-deferred';
               return (
                 <Table.Row key={donor._id || donor.id || index}>
-                  <Table.Cell className="font-medium">{isDeferred ? '-' : donor.donorId}</Table.Cell>
+                  <Table.Cell className="font-medium">{isDeferred ? '-' : (campId ? (donor.lastDonationId || 'N/A') : donor.donorId)}</Table.Cell>
                   <Table.Cell>
                     {donor.name?.firstName} {donor.name?.middleName} {donor.name?.lastName}
                   </Table.Cell>

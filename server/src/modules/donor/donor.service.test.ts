@@ -5,7 +5,7 @@ import { ConflictError } from '@/shared/errors';
 
 function baseDonor(): Parameters<DonorRepo['create']>[0] {
   return {
-    name: { firstName: 'Asha', lastName: 'Patil' },
+    name: { firstName: 'Asha', middleName: 'Devi', lastName: 'Patil' },
     dob: new Date('2000-01-01'),
     sex: 'F',
     phone: '9876543210',
