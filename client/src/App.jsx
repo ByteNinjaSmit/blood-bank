@@ -163,7 +163,7 @@ const App = () => {
           <Route path="labs/serology-results" element={<SerologyResults />} />
 
           {/* Donation + Donor */}
-          <Route path="donations/create-donation" element={<CreateDonation />} />
+          <Route path="donations/create-donation" element={<DonorCreation />} />
           <Route path="donations/view-donation" element={<DonationManagement />} />
           <Route path="donor/create-donor" element={<CreateDonorPage />} />
           <Route path="donor/view-donor" element={<DonorManagement />} />

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/store/auth";
 import { toast } from "sonner";
 import axios from "axios";
@@ -216,6 +216,9 @@ const getDaysDifference = (dateStr1, dateStr2) => {
 
 export default function DonorCreation() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const campId = searchParams.get("campId");
+  const draftId = searchParams.get("draftId");
   const { API, authorizationToken } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({ ...INITIAL_FORM_DATA });
@@ -225,6 +228,73 @@ export default function DonorCreation() {
 
   const [repeatedDonation, setRepeatedDonation] = useState("No");
   const [selectedDonor, setSelectedDonor] = useState(null);
+
+  React.useEffect(() => {
+    if (draftId) {
+      const rawDrafts = localStorage.getItem("blood_bank_donor_creation_drafts");
+      try {
+        const drafts = rawDrafts ? JSON.parse(rawDrafts) : [];
+        const draft = drafts.find((d) => d.id === draftId);
+        if (draft) {
+          setFormData(draft.formData);
+          setCurrentStep(draft.currentStep);
+          setRepeatedDonation(draft.repeatedDonation);
+          setSelectedDonor(draft.selectedDonor);
+          toast.success("Draft donation form loaded successfully.");
+        }
+      } catch (e) {
+        console.error("Error loading draft", e);
+      }
+    }
+  }, [draftId]);
+
+  const handleSaveDraft = () => {
+    const id = draftId || `draft-${Date.now()}`;
+    let donorName = "Anonymous / New Donor";
+    if (repeatedDonation === "Yes" && selectedDonor) {
+      donorName = `${selectedDonor.name?.firstName || ''} ${selectedDonor.name?.lastName || ''}`.trim() || selectedDonor.fullName || selectedDonor.donorId;
+    } else if (formData.firstName || formData.lastName) {
+      donorName = `${formData.firstName} ${formData.lastName}`.trim();
+    }
+
+    const newDraft = {
+      id,
+      campId: campId || null,
+      donorName,
+      lastSaved: new Date().toISOString(),
+      currentStep,
+      repeatedDonation,
+      selectedDonor,
+      formData,
+    };
+
+    const rawDrafts = localStorage.getItem("blood_bank_donor_creation_drafts");
+    let drafts = [];
+    try {
+      drafts = rawDrafts ? JSON.parse(rawDrafts) : [];
+      if (!Array.isArray(drafts)) drafts = [];
+    } catch (e) {
+      drafts = [];
+    }
+
+    const index = drafts.findIndex((d) => d.id === id);
+    if (index > -1) {
+      drafts[index] = newDraft;
+    } else {
+      drafts.push(newDraft);
+    }
+
+    localStorage.setItem("blood_bank_donor_creation_drafts", JSON.stringify(drafts));
+    toast.success("Draft saved successfully!");
+
+    if (campId) {
+      navigate(`/camp-details?id=${campId}`);
+    } else {
+      if (!draftId) {
+        navigate(`/donations/create-donation?draftId=${id}`, { replace: true });
+      }
+    }
+  };
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -736,6 +806,7 @@ export default function DonorCreation() {
           donor: registeredDonorId,
           donationType: formData.donationType,
           collectedAt: new Date(formData.collectionDate).toISOString(),
+          campId: campId || null,
           donorFitness: {
             isFit: false,
             rejectionReason: reasonObj.reason,
@@ -767,8 +838,20 @@ export default function DonorCreation() {
           withCredentials: true,
         });
 
+        // Delete draft from localStorage on success
+        if (draftId) {
+          const rawDrafts = localStorage.getItem("blood_bank_donor_creation_drafts");
+          try {
+            let drafts = rawDrafts ? JSON.parse(rawDrafts) : [];
+            drafts = drafts.filter((d) => d.id !== draftId);
+            localStorage.setItem("blood_bank_donor_creation_drafts", JSON.stringify(drafts));
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
         toast.success(`Donor successfully registered and deferred for ${reasonObj.days === 0 ? "indefinite" : `${reasonObj.days} days`}`);
-        navigate("/master-register/donors");
+        navigate(campId ? `/camp-details?id=${campId}` : "/master-register/donors");
       } else {
         const medicalQuestions = {};
         QUESTIONS.forEach((q) => {
@@ -781,7 +864,7 @@ export default function DonorCreation() {
           donor: registeredDonorId,
           donationType: formData.donationType,
           collectedAt: new Date(collectionDateTimeStr).toISOString(),
-          campId: null,
+          campId: campId || null,
           medicalExam: {
             weightKg: formData.weightKg ? Number(formData.weightKg) : undefined,
             hbGdl: formData.hb ? Number(formData.hb) : undefined,
@@ -822,8 +905,20 @@ export default function DonorCreation() {
           withCredentials: true,
         });
 
+        // Delete draft from localStorage on success
+        if (draftId) {
+          const rawDrafts = localStorage.getItem("blood_bank_donor_creation_drafts");
+          try {
+            let drafts = rawDrafts ? JSON.parse(rawDrafts) : [];
+            drafts = drafts.filter((d) => d.id !== draftId);
+            localStorage.setItem("blood_bank_donor_creation_drafts", JSON.stringify(drafts));
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
         toast.success("Donor registered and fit donation saved successfully");
-        navigate("/master-register/donations");
+        navigate(campId ? `/camp-details?id=${campId}` : "/master-register/donations");
       }
     } catch (err) {
       const details = err.response?.data?.details;
@@ -890,15 +985,21 @@ export default function DonorCreation() {
               <Droplets className="w-8 h-8" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Donor Creation & Register</h1>
-              <p className="text-gray-500 text-sm">Unified registration, medical exam, fitness, and bag collection checks</p>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {campId ? "New Camp Donation" : "Donor Creation & Register"}
+              </h1>
+              <p className="text-gray-500 text-sm">
+                {campId
+                  ? "Unified camp donor registration and donation form"
+                  : "Unified registration, medical exam, fitness, and bag collection checks"}
+              </p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Stepper Status Indicator Bar (6 Steps) */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <div className="bg-white p-6 rounded-3xl border border-red-200 flex justify-between items-center shadow-md">
           {[
             { step: 1, label: "Donor Profile" },
@@ -955,7 +1056,7 @@ export default function DonorCreation() {
       </div>
 
       {/* Content Form Body */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
         <div onKeyDown={handleFormKeyDown} className="bg-white rounded-2xl border border-gray-200 shadow overflow-hidden">
           
           {/* Step 1: Donor Profile */}
@@ -2021,6 +2122,17 @@ export default function DonorCreation() {
               <ArrowLeft className="w-4 h-4" />
               Back
             </button>
+            {currentStep < 6 && (
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={isSubmitting}
+                className="px-5 py-2 border border-orange-250 rounded-full text-sm font-semibold text-orange-800 hover:bg-orange-50 disabled:opacity-40 transition-colors flex items-center gap-1.5 bg-white select-none shadow-sm"
+              >
+                <Save className="w-4 h-4 text-orange-800" />
+                Save Draft
+              </button>
+            )}
             <button
               onClick={currentStep === 6 ? handleSubmit : handleNext}
               disabled={!isStepComplete() || isSubmitting}

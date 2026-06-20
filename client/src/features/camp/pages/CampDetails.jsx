@@ -1,16 +1,46 @@
 import React, { useEffect } from 'react';
-import { MapPin, Phone, Mail, Users, Calendar, Droplets, Plus, Activity, Clock, ArrowLeft } from 'lucide-react';
+import { MapPin, Phone, Mail, Users, Calendar, Droplets, Plus, Activity, Clock, ArrowLeft, Trash2, FolderOpen } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { useCampDetail } from '@/hooks/useCamp';
 import EnhancedLoader from '@/components/utils/Spinner';
+import Modal from '@/components/shared/Modal';
+import { toast } from 'sonner';
 
 const CampDetails = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const campId = searchParams.get('id');
   const { data: camp, isLoading: loading, error: queryError } = useCampDetail(campId);
+  const [drafts, setDrafts] = React.useState([]);
+  const [showDraftsModal, setShowDraftsModal] = React.useState(false);
+
+  useEffect(() => {
+    const rawDrafts = localStorage.getItem("blood_bank_donor_creation_drafts");
+    try {
+      const allDrafts = rawDrafts ? JSON.parse(rawDrafts) : [];
+      if (Array.isArray(allDrafts)) {
+        const campDrafts = allDrafts.filter(d => d.campId === campId);
+        setDrafts(campDrafts);
+      }
+    } catch (e) {
+      console.error("Failed to parse drafts", e);
+    }
+  }, [campId, showDraftsModal]);
+
+  const handleDeleteDraft = (id) => {
+    const rawDrafts = localStorage.getItem("blood_bank_donor_creation_drafts");
+    try {
+      let allDrafts = rawDrafts ? JSON.parse(rawDrafts) : [];
+      allDrafts = allDrafts.filter(d => d.id !== id);
+      localStorage.setItem("blood_bank_donor_creation_drafts", JSON.stringify(allDrafts));
+      setDrafts(allDrafts.filter(d => d.campId === campId));
+      toast.success("Draft deleted successfully");
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     if (!campId) {
@@ -30,6 +60,9 @@ const CampDetails = () => {
         break;
       case 'view-donations':
         navigate(`/camp-donation?id=${campId}`);
+        break;
+      case 'draft-forms':
+        setShowDraftsModal(true);
         break;
       default:
         break;
@@ -127,6 +160,14 @@ const CampDetails = () => {
       icon: Activity,
       color: "bg-orange-800",
       stats: `${camp?.bagsCount || 0} This Camp`,
+    },
+    {
+      id: "draft-forms",
+      title: "Draft Forms",
+      description: "Resume or manage partially completed donor registration and donation forms",
+      icon: FolderOpen,
+      color: "bg-orange-800",
+      stats: `${drafts.length} Draft Form${drafts.length !== 1 ? 's' : ''}`,
     },
   ];
 
@@ -310,7 +351,7 @@ const CampDetails = () => {
         </div>
 
         {/* Facilities Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {facilities.map((facility) => {
             const IconComponent = facility.icon;
             return (
@@ -352,6 +393,58 @@ const CampDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* Drafts Modal */}
+      <Modal
+        isOpen={showDraftsModal}
+        onClose={() => setShowDraftsModal(false)}
+        title="Draft Donation Forms"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">
+            Select a draft form to resume filling or delete it.
+          </p>
+          {drafts.length === 0 ? (
+            <div className="text-center py-8 text-gray-400 text-sm">
+              No draft forms found for this camp.
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-150 max-h-96 overflow-y-auto pr-1">
+              {drafts.map((draft) => (
+                <div key={draft.id} className="py-3.5 flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-800">
+                      {draft.donorName || "Unnamed Donor"}
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Last Saved: {new Date(draft.lastSaved).toLocaleString()} • Step {draft.currentStep} of 6
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setShowDraftsModal(false);
+                        navigate(`/donations/create-donation?campId=${campId}&draftId=${draft.id}`);
+                      }}
+                      className="px-3.5 py-1.5 bg-orange-800 text-white rounded-lg text-xs font-semibold hover:bg-orange-900 transition-colors shadow-sm"
+                    >
+                      Resume
+                    </button>
+                    <button
+                      onClick={() => handleDeleteDraft(draft.id)}
+                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                      title="Delete Draft"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };
