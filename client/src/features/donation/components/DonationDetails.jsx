@@ -181,9 +181,22 @@ const DonationDetails = ({ donation }) => {
                   {comp.volumeMl && (
                     <p className="text-slate-600">Volume: {comp.volumeMl} mL</p>
                   )}
-                  {comp.status && (
-                    <p className="text-slate-600">Status: {comp.status === 'RELEASED' ? 'INSTOCK' : comp.status}</p>
-                  )}
+                  {comp.status && (() => {
+                    const raw = comp.status === 'RELEASED' ? 'INSTOCK' : comp.status;
+                    const cls =
+                      raw === 'ISSUED'                    ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                      raw === 'INSTOCK'                   ? 'bg-green-50 text-green-700 border-green-200' :
+                      raw === 'COLLECTED'                 ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                      raw === 'QUARANTINE'                ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                      raw === 'DISCARDED' || raw === 'EXPIRED' ? 'bg-red-50 text-red-700 border-red-200' :
+                      'bg-gray-50 text-gray-600 border-gray-200';
+                    return (
+                      <p className="flex items-center justify-end gap-1">
+                        <span className="text-slate-500">Status:</span>
+                        <span className={`px-1.5 py-0.5 rounded text-xs font-semibold border ${cls}`}>{raw}</span>
+                      </p>
+                    );
+                  })()}
                   {(comp.expiryDate || comp.expiresAt) && (
                     <p className="text-slate-500">
                       Exp: {formatDate(comp.expiryDate || comp.expiresAt)}

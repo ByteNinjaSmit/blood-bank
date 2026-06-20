@@ -1,13 +1,23 @@
 import React, { useState } from 'react';
-import { Droplets, Activity, CheckCircle2, XCircle, Search, Eye, GitCommitHorizontal, Plus, X } from 'lucide-react';
+import { BookOpen, Home, Building2, Droplets, Activity, CheckCircle2, XCircle, Search, Eye, GitCommitHorizontal, Plus, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDonationList, useDonationDetail } from '@/features/donation/queries';
 import DonationTimeline from '../components/DonationTimeline';
 import DonationDetails from '../components/DonationDetails';
 import Modal from '@/components/shared/Modal';
 
+const TABS = [
+  { key: 'all',     label: 'Master Donation Register', icon: BookOpen },
+  { key: 'inhouse', label: 'Inhouse Donations',        icon: Home },
+  { key: 'camp',    label: 'Camp Donations',            icon: Building2 },
+];
+
+const PAGE_SIZE = 20;
+
 export default function MasterDonations() {
   const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [trackId, setTrackId] = useState(null);
   const [viewDonationId, setViewDonationId] = useState(null);
@@ -18,13 +28,15 @@ export default function MasterDonations() {
   const [bloodGroupFilter, setBloodGroupFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  const PAGE_SIZE = 20;
+  // source param: undefined for 'all', otherwise the tab key
+  const sourceParam = activeTab === 'all' ? undefined : activeTab;
 
-  // Fetch all donations (pageSize 200 handles all existing/legacy records in a single query)
-  const { data, isLoading, isError } = useDonationList({
-    page: 1,
-    pageSize: 200,
-  });
+  // Fetch server-side for inhouse/camp tabs (paginated); fetch all for 'all' tab (client-side filtered)
+  const { data, isLoading, isError } = useDonationList(
+    activeTab === 'all'
+      ? { page: 1, pageSize: 200 }
+      : { source: sourceParam, page: 1, pageSize: 200 }
+  );
 
   const { data: detail, isLoading: detailLoading } = useDonationDetail(trackId);
   const { data: viewDetail, isLoading: viewDetailLoading } = useDonationDetail(viewDonationId);
@@ -33,30 +45,20 @@ export default function MasterDonations() {
 
   // Client-side filtering
   const filteredItems = allItems.filter((d) => {
-    // 1. Text Search (checks Bag No, Donation ID, and Donor Name)
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const bagNoMatch = (d.bagNo || d.donationId || '').toLowerCase().includes(q);
       const donorMatch = (d.donorName || '').toLowerCase().includes(q);
       if (!bagNoMatch && !donorMatch) return false;
     }
-    // 2. Bag Type
-    if (bagTypeFilter && d.typeOfBag !== bagTypeFilter) {
-      return false;
-    }
-    // 3. Blood Group
-    if (bloodGroupFilter && d.bloodGroup !== bloodGroupFilter) {
-      return false;
-    }
-    // 4. Status
+    if (bagTypeFilter && d.typeOfBag !== bagTypeFilter) return false;
+    if (bloodGroupFilter && d.bloodGroup !== bloodGroupFilter) return false;
     const status = d.status || (d.ttiReleaseDecision === 'released' ? 'passed' : d.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
-    if (statusFilter && status !== statusFilter) {
-      return false;
-    }
+    if (statusFilter && status !== statusFilter) return false;
     return true;
   });
 
-  // Stats calculation
+  // Stats
   const totalCount = allItems.length;
   const fitCount = filteredItems.filter((d) => d.isFit === true).length;
   const unfitCount = filteredItems.filter((d) => d.isFit === false).length;
@@ -67,6 +69,16 @@ export default function MasterDonations() {
     currentPage * PAGE_SIZE
   );
 
+  function switchTab(key) {
+    setActiveTab(key);
+    setCurrentPage(1);
+    setTrackId(null);
+    setSearchQuery('');
+    setBagTypeFilter('');
+    setBloodGroupFilter('');
+    setStatusFilter('');
+  }
+
   const handleFilterChange = (setter, value) => {
     setter(value);
     setCurrentPage(1);
@@ -75,41 +87,34 @@ export default function MasterDonations() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "collected":
-        return "bg-blue-50 text-blue-700 border border-blue-200";
-      case "testing":
-        return "bg-yellow-50 text-yellow-700 border border-yellow-200";
-      case "passed":
-        return "bg-green-50 text-green-700 border border-green-200";
-      case "failed":
-        return "bg-red-50 text-red-700 border border-red-200";
-      case "issued":
-        return "bg-purple-50 text-purple-700 border border-purple-200";
-      default:
-        return "bg-gray-50 text-gray-700 border border-gray-200";
+      case 'collected': return 'bg-blue-50 text-blue-700 border border-blue-200';
+      case 'testing':   return 'bg-yellow-50 text-yellow-700 border border-yellow-200';
+      case 'passed':    return 'bg-green-50 text-green-700 border border-green-200';
+      case 'failed':    return 'bg-red-50 text-red-700 border border-red-200';
+      case 'issued':    return 'bg-purple-50 text-purple-700 border border-purple-200';
+      default:          return 'bg-gray-50 text-gray-700 border border-gray-200';
     }
   };
 
   const getStatusText = (status) => {
     switch (status) {
-      case "collected":
-        return "Collected";
-      case "testing":
-        return "Testing";
-      case "passed":
-        return "Passed";
-      case "failed":
-        return "Failed";
-      case "issued":
-        return "Issued";
-      default:
-        return status || 'N/A';
+      case 'collected': return 'Collected';
+      case 'testing':   return 'Testing';
+      case 'passed':    return 'Passed';
+      case 'failed':    return 'Failed';
+      case 'issued':    return 'Issued';
+      default:          return status || 'N/A';
     }
   };
 
+  const emptyText =
+    activeTab === 'inhouse' ? 'No inhouse donations found.' :
+    activeTab === 'camp'    ? 'No camp donations found.' :
+                              'No donations found in the master register.';
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ── Page header ─────────────────────────────────────────── */}
+      {/* Page Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
@@ -118,8 +123,8 @@ export default function MasterDonations() {
                 <Droplets className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Master Register - Donations</h1>
-                <p className="text-gray-500 text-sm">Combined view — Inhouse &amp; Camp donations</p>
+                <h1 className="text-2xl font-bold text-gray-900">Master Register — Donations</h1>
+                <p className="text-gray-500 text-sm">Inhouse, Camp & combined master register</p>
               </div>
             </div>
             <button
@@ -130,19 +135,40 @@ export default function MasterDonations() {
               New Donation
             </button>
           </div>
+
+          {/* Tabs */}
+          <div className="flex gap-0 mt-6 border-b border-gray-200 -mb-px">
+            {TABS.map((tab) => {
+              const TabIcon = tab.icon;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => switchTab(tab.key)}
+                  className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === tab.key
+                      ? 'border-orange-800 text-orange-800'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <TabIcon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* ── Body ────────────────────────────────────────────────── */}
+      {/* Body */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: 'Total Records', value: totalCount,      icon: Activity,      cls: 'text-gray-700 bg-white border-gray-200'        },
-            { label: 'Donor Fit',     value: fitCount,        icon: CheckCircle2,  cls: 'text-green-700 bg-green-50 border-green-200'   },
-            { label: 'Donor Unfit',   value: unfitCount,      icon: XCircle,       cls: 'text-red-700 bg-red-50 border-red-200'         },
-            { label: 'Showing',       value: filteredItems.length, icon: Droplets, cls: 'text-orange-700 bg-orange-50 border-orange-200' },
+            { label: 'Total Records', value: totalCount,           icon: Activity,     cls: 'text-gray-700 bg-white border-gray-200'        },
+            { label: 'Donor Fit',     value: fitCount,             icon: CheckCircle2, cls: 'text-green-700 bg-green-50 border-green-200'   },
+            { label: 'Donor Unfit',   value: unfitCount,           icon: XCircle,      cls: 'text-red-700 bg-red-50 border-red-200'         },
+            { label: 'Showing',       value: filteredItems.length, icon: Droplets,     cls: 'text-orange-700 bg-orange-50 border-orange-200' },
           ].map((stat) => {
             const StatIcon = stat.icon;
             return (
@@ -218,9 +244,7 @@ export default function MasterDonations() {
           ) : isError ? (
             <div className="p-10 text-center text-red-600 text-sm">Failed to load donations.</div>
           ) : filteredItems.length === 0 ? (
-            <div className="p-12 text-center text-gray-400 text-sm">
-              No donations found matching criteria in the master register.
-            </div>
+            <div className="p-12 text-center text-gray-400 text-sm">{emptyText}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -228,6 +252,9 @@ export default function MasterDonations() {
                   <tr>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Bag No</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Donor</th>
+                    {activeTab === 'all' && (
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Source</th>
+                    )}
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Blood</th>
                     <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Units</th>
@@ -239,12 +266,25 @@ export default function MasterDonations() {
                 <tbody className="divide-y divide-gray-100">
                   {displayedItems.map((d) => {
                     const status = d.status || (d.ttiReleaseDecision === 'released' ? 'passed' : d.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
+                    const isCamp = !!d.campId;
                     return (
                       <tr key={d.id} className={`hover:bg-gray-50 transition-colors ${trackId === d.id ? 'bg-orange-50' : ''}`}>
                         <td className="px-4 py-3 font-mono text-xs text-gray-700 font-medium">{d.bagNo || d.donationId}</td>
                         <td className="px-4 py-3 text-gray-800 font-medium">
                           {d.donorName || <span className="text-gray-400 text-xs">—</span>}
                         </td>
+                        {activeTab === 'all' && (
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                              isCamp
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : 'bg-purple-50 text-purple-700 border-purple-200'
+                            }`}>
+                              {isCamp ? <Building2 className="w-3 h-3" /> : <Home className="w-3 h-3" />}
+                              {isCamp ? 'Camp' : 'Inhouse'}
+                            </span>
+                          </td>
+                        )}
                         <td className="px-4 py-3">
                           <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200 font-medium">
                             {d.donationType}
@@ -322,7 +362,7 @@ export default function MasterDonations() {
         </div>
       </div>
 
-      {/* ── Timeline drawer ──────────────────────────────────────── */}
+      {/* Timeline drawer */}
       {trackId && (
         <div className="fixed inset-0 z-50 flex">
           <div
@@ -334,6 +374,11 @@ export default function MasterDonations() {
               <div className="flex items-center gap-2">
                 <GitCommitHorizontal className="w-4 h-4 text-orange-800" />
                 <h2 className="font-semibold text-gray-900 text-sm">Donation Timeline</h2>
+                {activeTab === 'camp' && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-200">
+                    <Building2 className="w-3 h-3" /> Camp
+                  </span>
+                )}
               </div>
               <button
                 onClick={() => setTrackId(null)}
@@ -342,7 +387,6 @@ export default function MasterDonations() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-
             <div className="flex-1 overflow-y-auto p-5">
               {detailLoading ? (
                 <div className="py-16 text-center text-gray-400 text-sm">Loading timeline…</div>
@@ -356,7 +400,7 @@ export default function MasterDonations() {
         </div>
       )}
 
-      {/* ── Details modal ────────────────────────────────────────── */}
+      {/* Details modal */}
       <Modal
         isOpen={!!viewDonationId}
         onClose={() => setViewDonationId(null)}
