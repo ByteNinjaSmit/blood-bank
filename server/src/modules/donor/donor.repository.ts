@@ -39,6 +39,7 @@ export interface DonorDto {
   lastDonationId?: string;
   isAvailableToDonate?: boolean;
   daysUntilEligible?: number;
+  source?: 'inhouse' | 'camp';
   createdAt: string;
   updatedAt: string;
 }
@@ -374,8 +375,31 @@ export function createDonorRepo(): DonorRepo {
       ]);
       const dtos = (docs as unknown as RawDonor[]).map(toDto);
       const populatedDtos = await populateLastDonationId(dtos);
+
+      // Compute camp donor IDs so each DTO can be tagged with its source.
+      // Re-use the camp lookup only when we don't already know (i.e. source filter not set).
+      let campDonorIdSet: Set<string>;
+      if (input.source === 'camp') {
+        campDonorIdSet = new Set(populatedDtos.map(d => d.id));
+      } else if (input.source === 'inhouse') {
+        campDonorIdSet = new Set();
+      } else {
+        const [campDonationsAll, campsAll] = await Promise.all([
+          DonationModel.find({ campId: { $ne: null } }, { donor: 1 }).lean(),
+          CampModel.find({}, { donorData: 1 }).lean(),
+        ]);
+        const campDonorIdsAll = campDonationsAll.map(d => d.donor?.toString()).filter(Boolean) as string[];
+        const campDataDonorIdsAll = campsAll.flatMap(c => c.donorData || []).map(id => id.toString());
+        campDonorIdSet = new Set([...campDonorIdsAll, ...campDataDonorIdsAll]);
+      }
+
+      const taggedDtos = populatedDtos.map(dto => ({
+        ...dto,
+        source: campDonorIdSet.has(dto.id) ? ('camp' as const) : ('inhouse' as const),
+      }));
+
       return {
-        items: populatedDtos,
+        items: taggedDtos,
         total,
       };
     },

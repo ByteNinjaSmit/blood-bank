@@ -11,9 +11,9 @@ import Modal from '@/components/shared/Modal';
 import CustomModal from '@/components/CustomModal';
 
 const TABS = [
+  { key: 'all',     label: 'Master Donor Register', icon: BookOpen },
   { key: 'inhouse', label: 'Inhouse Donors', icon: Home },
   { key: 'camp',    label: 'Camp Donors',    icon: Building2 },
-  { key: 'all',     label: 'Master Donor Register', icon: BookOpen },
 ];
 
 const PAGE_SIZE = 20;
@@ -345,7 +345,9 @@ const MasterDonors = () => {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{idColLabel}</th>
+                    {activeTab !== 'all' && (
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{idColLabel}</th>
+                    )}
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Full Name</th>
                     {activeTab === 'all' && (
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Source</th>
@@ -367,15 +369,15 @@ const MasterDonors = () => {
                       ? '-'
                       : activeTab === 'camp'
                         ? (donor.lastDonationId || 'N/A')
-                        : activeTab === 'all'
-                          ? (donorSource === 'camp' ? (donor.lastDonationId || 'N/A') : donor.donorId)
-                          : donor.donorId;
+                        : donor.donorId;
 
                     return (
                       <tr key={donor._id || donor.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 font-mono text-xs text-gray-700 font-medium">
-                          {idValue}
-                        </td>
+                        {activeTab !== 'all' && (
+                          <td className="px-4 py-3 font-mono text-xs text-gray-700 font-medium">
+                            {idValue}
+                          </td>
+                        )}
                         <td className="px-4 py-3 text-gray-800 font-medium">
                           {donor.name?.firstName} {donor.name?.middleName || ''} {donor.name?.lastName}
                         </td>
