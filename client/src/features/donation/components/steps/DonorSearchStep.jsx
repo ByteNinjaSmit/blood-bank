@@ -204,17 +204,34 @@ const DonorSearchStep = ({
           </div>
 
           {donor && (
-            <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-full">
-                <Check className="w-5 h-5 text-green-700" />
+            donor.isAvailableToDonate === false ? (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-fadeIn">
+                <div className="p-2 bg-red-100 rounded-full">
+                  <X className="w-5 h-5 text-red-700" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-red-800">
+                    Selected Donor is Not Eligible: {getDonorName(donor)}
+                  </p>
+                  <p className="text-xs text-red-655 mt-0.5 font-semibold">
+                    Last donation was on {donor.lastDonationDate ? new Date(donor.lastDonationDate).toLocaleDateString() : 'N/A'}. 
+                    Waiting period is {donor.sex === 'F' ? '120 days (4 months)' : '90 days (3 months)'}.
+                  </p>
+                </div>
               </div>
-              <p className="text-sm font-medium text-green-800">
-                Selected: <span className="font-bold">{getDonorName(donor)}</span>
-                {donor?.donorId && (
-                  <span className="text-green-600 font-normal"> (ID: {donor.donorId})</span>
-                )}
-              </p>
-            </div>
+            ) : (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3 animate-fadeIn">
+                <div className="p-2 bg-green-100 rounded-full">
+                  <Check className="w-5 h-5 text-green-700" />
+                </div>
+                <p className="text-sm font-medium text-green-800">
+                  Selected: <span className="font-bold">{getDonorName(donor)}</span>
+                  {donor?.donorId && (
+                    <span className="text-green-600 font-normal"> (ID: {donor.donorId})</span>
+                  )}
+                </p>
+              </div>
+            )
           )}
           {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
         </div>

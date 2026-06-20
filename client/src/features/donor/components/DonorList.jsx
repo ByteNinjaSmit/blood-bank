@@ -249,7 +249,7 @@ const DonorList = ({
                   </Table.Cell>
                   <Table.Cell>
                     <div className="flex items-center gap-2">
-                      <span>{donor.dob ? new Date(donor.dob).toLocaleDateString() : 'N/A'}</span>
+                      <span>{donor.dob ? new Date(donor.dob).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</span>
                       {donor.dob && calculateAge(donor.dob) !== null && (
                         <span
                           className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold ${
@@ -270,7 +270,7 @@ const DonorList = ({
                   </Table.Cell>
                   <Table.Cell>
                     {donor.lastDonationDate 
-                      ? new Date(donor.lastDonationDate).toLocaleDateString() 
+                      ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) 
                       : "N/A"
                     }
                   </Table.Cell>

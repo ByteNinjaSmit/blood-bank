@@ -243,7 +243,7 @@ const CreateDonation = ({ onCreateDonor }) => {
     8 – Review & Submit
   */
   const isCurrentStepComplete = () => {
-    if (currentStep === 1) return !!donor
+    if (currentStep === 1) return !!donor && donor.isAvailableToDonate !== false
 
     if (currentStep === 2) {
       return (

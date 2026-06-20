@@ -15,6 +15,7 @@ export default function RequestCreationStep({
   removeRequestLine,
   handleCreate,
   requestDoc,
+  hasChanges,
   openAddHospital,
   onReject,
 }) {
@@ -357,12 +358,29 @@ export default function RequestCreationStep({
             </button>
           )}
         </div>
+
+        {/* Update Changes Button */}
+        {hasChanges && (
+          <button
+            type="button"
+            onClick={handleCreate}
+            className="px-6 py-2.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-semibold transition active:scale-95 shadow cursor-pointer flex items-center gap-1.5"
+          >
+            Update Changes
+          </button>
+        )}
+
         <div>
           {!readOnly && (
             <button
               type="button"
               onClick={handleCreate}
-              className="px-6 py-2.5 rounded-lg bg-orange-800 text-white font-medium hover:bg-orange-900 transition active:scale-95 shadow cursor-pointer"
+              disabled={!!requestDoc}
+              className={`px-6 py-2.5 rounded-lg font-medium shadow transition ${
+                requestDoc
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70'
+                  : 'bg-orange-800 text-white hover:bg-orange-900 active:scale-95 cursor-pointer'
+              }`}
             >
               Create Request & Auto-Match FIFO
             </button>

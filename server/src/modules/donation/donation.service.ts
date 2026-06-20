@@ -53,6 +53,31 @@ export function createDonationService(deps: {
         deps.donations.findLatestByDonor(input.donor),
         deps.deferrals.findActiveByDonor(input.donor, input.collectedAt),
       ]);
+
+      const dbLastDonation = latestDonation?.collectedAt;
+      const donorLastDonation = donor.lastDonationDate ? new Date(donor.lastDonationDate) : undefined;
+      let effectiveLastDonationDate: Date | undefined = undefined;
+
+      if (dbLastDonation && donorLastDonation) {
+        effectiveLastDonationDate = dbLastDonation > donorLastDonation ? dbLastDonation : donorLastDonation;
+      } else {
+        effectiveLastDonationDate = dbLastDonation || donorLastDonation;
+      }
+
+      if (effectiveLastDonationDate) {
+        const daysSince = Math.floor(
+          (new Date(input.collectedAt).getTime() - effectiveLastDonationDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        const requiredInterval = donor.sex === 'F' ? 120 : 90;
+        if (daysSince < requiredInterval) {
+          throw new ConflictError(
+            `Donor cannot donate yet. Last donation was on ${effectiveLastDonationDate.toISOString().slice(0, 10)}. ` +
+            `The waiting period is ${requiredInterval === 120 ? '120 days (4 months)' : '90 days (3 months)'}. ` +
+            `Only ${daysSince} day(s) have passed.`
+          );
+        }
+      }
+
       const eligibility = checkEligibility({
         donor: {
           ageYears: yearsBetween(new Date(donor.dob), input.collectedAt),

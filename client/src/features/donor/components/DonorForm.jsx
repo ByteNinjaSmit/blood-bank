@@ -75,6 +75,8 @@ const DonorForm = ({
   const watchDob = watch('dob');
   const watchWeight = watch('weightKg');
   const watchEligibilityStatus = watch('eligibilityStatus');
+  const watchLastDonationDate = watch('lastDonationDate');
+  const watchSex = watch('sex');
   const isDeferred = watchEligibilityStatus === 'deferred' || watchEligibilityStatus === 'temp-deferred';
 
   useEffect(() => {
@@ -87,12 +89,27 @@ const DonorForm = ({
 
       const weightNum = parseFloat(watchWeight);
       if (!isNaN(age) && !isNaN(weightNum)) {
-        // Eligibility Criteria: 18-65 years old and at least 45kg
-        const isEligible = age >= 18 && age <= 65 && weightNum >= 45;
-        setValue('eligibilityStatus', isEligible ? 'eligible' : 'deferred');
+        if (age < 18 || age > 65 || weightNum < 45) {
+          setValue('eligibilityStatus', 'deferred');
+        } else if (watchLastDonationDate && watchSex) {
+          const lDate = new Date(watchLastDonationDate);
+          const now = new Date();
+          lDate.setHours(0,0,0,0);
+          now.setHours(0,0,0,0);
+          const diffTime = now.getTime() - lDate.getTime();
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          const requiredInterval = watchSex === 'F' ? 120 : 90;
+          if (diffDays < requiredInterval) {
+            setValue('eligibilityStatus', 'temp-deferred');
+          } else {
+            setValue('eligibilityStatus', 'eligible');
+          }
+        } else {
+          setValue('eligibilityStatus', 'eligible');
+        }
       }
     }
-  }, [watchDob, watchWeight, setValue]);
+  }, [watchDob, watchWeight, watchLastDonationDate, watchSex, setValue]);
 
   useEffect(() => {
     if (initialData) {
@@ -437,6 +454,23 @@ const DonorForm = ({
                 onChange: handleLastDonationDateDisplayChange
               })}
             />
+            {watchLastDonationDate && watchSex && (() => {
+              const lDate = new Date(watchLastDonationDate);
+              const now = new Date();
+              lDate.setHours(0,0,0,0);
+              now.setHours(0,0,0,0);
+              const diffTime = now.getTime() - lDate.getTime();
+              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+              const requiredInterval = watchSex === 'F' ? 120 : 90;
+              if (diffDays < requiredInterval) {
+                return (
+                  <p className="text-xs text-red-655 mt-1 font-semibold">
+                    Interval too short: last donation was {diffDays} days ago. Required is {requiredInterval === 120 ? '120 days (4 months)' : '90 days (3 months)'}.
+                  </p>
+                );
+              }
+              return null;
+            })()}
           </FormField>
         </div>
       </div>

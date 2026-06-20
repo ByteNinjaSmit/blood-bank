@@ -357,10 +357,10 @@ export default function RequisitionList() {
                     <p className="font-medium text-red-950 font-serif leading-relaxed italic">
                       "{viewDoc.rejectionReason}"
                     </p>
-                    {(viewDoc.rejectedAt || viewDoc.rejectedBy) && (
+                    {(viewDoc.rejectedAt || viewDoc.rejectedBy || viewDoc.medicalOfficerSignature) && (
                       <div className="mt-2 text-xs text-red-500/80 flex flex-wrap gap-x-3 gap-y-1 border-t border-red-100 pt-1.5 font-medium">
-                        {viewDoc.rejectedBy && (
-                          <span>Rejected By: <strong className="text-red-700">{viewDoc.rejectedBy.name || viewDoc.rejectedBy.username || viewDoc.rejectedBy}</strong></span>
+                        {(viewDoc.medicalOfficerSignature || viewDoc.rejectedBy) && (
+                          <span>Rejected By: <strong className="text-red-700">{viewDoc.medicalOfficerSignature || viewDoc.rejectedBy?.name || viewDoc.rejectedBy?.username || viewDoc.rejectedBy}</strong></span>
                         )}
                         {viewDoc.rejectedAt && (
                           <span>Rejected At: <strong className="text-red-700">{fmt(viewDoc.rejectedAt)}</strong></span>
@@ -400,7 +400,7 @@ export default function RequisitionList() {
             </div>
             <div>
               <h4 className="font-semibold mb-2">Matched/Reserved Inventory</h4>
-              {viewDoc?.matchedInventory?.length ? (
+              {viewDoc?.status !== 'rejected' && viewDoc?.matchedInventory?.length ? (
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
                     <thead>
@@ -409,6 +409,8 @@ export default function RequisitionList() {
                         <th className="p-2">Component</th>
                         <th className="p-2">Bag No</th>
                         <th className="p-2">Blood</th>
+                        <th className="p-2">Donor Name</th>
+                        <th className="p-2">Day of Donation</th>
                         <th className="p-2">Reserved At</th>
                       </tr>
                     </thead>
@@ -419,6 +421,8 @@ export default function RequisitionList() {
                           <td className="p-2">{mi?.inventoryId?.componentId?.componentType || '—'}</td>
                           <td className="p-2">{mi?.inventoryId?.bagNo?.bagNo || '—'}</td>
                           <td className="p-2">{mi?.inventoryId?.bagNo ? `${mi.inventoryId.bagNo.bloodGroup} ${mi.inventoryId.bagNo.rh}` : '—'}</td>
+                          <td className="p-2">{mi?.inventoryId?.bagNo?.donorName || '—'}</td>
+                          <td className="p-2">{mi?.inventoryId?.bagNo?.collectedAt ? new Date(mi.inventoryId.bagNo.collectedAt).toLocaleDateString() : '—'}</td>
                           <td className="p-2">{mi?.reservedAt ? fmt(mi.reservedAt) : '—'}</td>
                         </tr>
                       ))}

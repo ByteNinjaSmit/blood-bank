@@ -43,6 +43,7 @@ export const CreateDonorBody = z.object({
   rh: z.enum(['Positive', 'Negative']), // legacy enum for read-side; new code uses RH_FACTOR
   eligibilityStatus: blankToUndef(z.enum(['eligible', 'deferred', 'temp-deferred']).optional()),
   campId: blankToUndef(z.string().regex(OBJECT_ID, 'Invalid camp id').optional()),
+  lastDonationDate: blankToUndef(z.coerce.date().optional()),
 });
 export type CreateDonorInput = z.infer<typeof CreateDonorBody>;
 

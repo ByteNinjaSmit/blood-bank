@@ -36,6 +36,7 @@ const RequisitionManagement = () => {
     approving,
     completing,
     crossmatchUpdating,
+    hasChanges,
     handleCreateHospital,
     addRequestLine,
     removeRequestLine,
@@ -146,6 +147,7 @@ const RequisitionManagement = () => {
                 removeRequestLine={removeRequestLine}
                 handleCreate={handleCreate}
                 requestDoc={requestDoc}
+                hasChanges={hasChanges}
                 openAddHospital={() => setAddHospitalOpen(true)}
                 onReject={handleRejectAndExit}
               />

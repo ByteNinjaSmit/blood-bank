@@ -64,6 +64,9 @@ export interface RequisitionDto {
   status: RequisitionStatus;
   requestedAt?: string;
   createdAt: string;
+  rejectionReason?: string;
+  rejectedBy?: string;
+  rejectedAt?: string;
 }
 
 interface RawReq {
@@ -81,6 +84,9 @@ interface RawReq {
   status: RequisitionStatus;
   requestedAt?: Date;
   createdAt: Date;
+  rejectionReason?: string;
+  rejectedBy?: { toString(): string };
+  rejectedAt?: Date;
 }
 
 function toDto(raw: RawReq): RequisitionDto {
@@ -118,6 +124,9 @@ function toDto(raw: RawReq): RequisitionDto {
     status: raw.status,
     requestedAt: raw.requestedAt ? new Date(raw.requestedAt).toISOString() : raw.createdAt ? new Date(raw.createdAt).toISOString() : '',
     createdAt: raw.createdAt ? new Date(raw.createdAt).toISOString() : '',
+    rejectionReason: raw.rejectionReason,
+    rejectedBy: raw.rejectedBy ? raw.rejectedBy.toString() : undefined,
+    rejectedAt: raw.rejectedAt ? new Date(raw.rejectedAt).toISOString() : undefined,
   };
 }
 
@@ -272,6 +281,7 @@ export function createRequisitionRepo(): RequisitionRepo {
           rejectedBy: new Types.ObjectId(actorId),
           rejectedAt: new Date(),
           updatedBy: new Types.ObjectId(actorId),
+          matchedUnits: [],
         },
         { new: true },
       ).lean()) as RawReq | null;

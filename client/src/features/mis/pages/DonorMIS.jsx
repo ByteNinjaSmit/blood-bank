@@ -314,7 +314,7 @@ export default function DonorMIS() {
                     <TableCell>{donor.sex}</TableCell>
                     <TableCell>{donor.address?.city}</TableCell>
                     <TableCell className="text-slate-500 text-xs">
-                      {donor.lastDonationDate ? new Date(donor.lastDonationDate).toLocaleDateString() : "Never"}
+                      {donor.lastDonationDate ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : "Never"}
                     </TableCell>
                   </TableRow>
                 ))

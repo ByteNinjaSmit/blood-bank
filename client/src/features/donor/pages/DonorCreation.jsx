@@ -16,7 +16,10 @@ import {
   Search,
   ChevronDown,
   Save,
-  Loader2
+  Loader2,
+  Lock,
+  Unlock,
+  X
 } from "lucide-react";
 import { states } from "@/constants/states";
 import { useBagStockList } from "../../bag-procurement/queries";
@@ -191,6 +194,26 @@ const INITIAL_FORM_DATA = {
   crossCheckingDone: false,
 };
 
+const getDaysDifference = (dateStr1, dateStr2) => {
+  if (!dateStr1 || !dateStr2) return null;
+  const p1 = dateStr1.split('-');
+  const p2 = dateStr2.split('-');
+  if (p1.length !== 3 || p2.length !== 3) return null;
+  const y1 = parseInt(p1[0], 10);
+  const m1 = parseInt(p1[1], 10) - 1;
+  const d1 = parseInt(p1[2], 10);
+  const y2 = parseInt(p2[0], 10);
+  const m2 = parseInt(p2[1], 10) - 1;
+  const d2 = parseInt(p2[2], 10);
+  if (isNaN(y1) || isNaN(m1) || isNaN(d1) || isNaN(y2) || isNaN(m2) || isNaN(d2)) return null;
+  const date1 = new Date(y1, m1, d1);
+  const date2 = new Date(y2, m2, d2);
+  date1.setHours(0,0,0,0);
+  date2.setHours(0,0,0,0);
+  const diffTime = date2.getTime() - date1.getTime();
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+};
+
 export default function DonorCreation() {
   const navigate = useNavigate();
   const { API, authorizationToken } = useAuth();
@@ -199,6 +222,113 @@ export default function DonorCreation() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reasonSearch, setReasonSearch] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const [repeatedDonation, setRepeatedDonation] = useState("No");
+  const [selectedDonor, setSelectedDonor] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
+
+  const loadDonorIntoForm = (donor) => {
+    const dobDate = donor.dob ? new Date(donor.dob) : null;
+    const dobDisplay = dobDate
+      ? `${String(dobDate.getDate()).padStart(2, '0')}/${String(dobDate.getMonth() + 1).padStart(2, '0')}/${dobDate.getFullYear()}`
+      : "";
+    const dobISO = dobDate ? dobDate.toISOString().split("T")[0] : "";
+
+    const lddDate = donor.lastDonationDate ? new Date(donor.lastDonationDate) : null;
+    const lddDisplay = lddDate
+      ? `${String(lddDate.getDate()).padStart(2, '0')}/${String(lddDate.getMonth() + 1).padStart(2, '0')}/${lddDate.getFullYear()}`
+      : "";
+    const lddISO = lddDate ? lddDate.toISOString().split("T")[0] : "";
+
+    setFormData((prev) => ({
+      ...prev,
+      firstName: donor.name?.firstName || donor.firstName || "",
+      middleName: donor.name?.middleName || donor.middleName || "",
+      lastName: donor.name?.lastName || donor.lastName || "",
+      dob: dobISO,
+      dobDisplay: dobDisplay,
+      age: calculateAgeFromDob(dobISO),
+      sex: donor.sex || "",
+      phone: donor.phone || "",
+      email: donor.email || "",
+      weightKg: donor.weightKg ? String(donor.weightKg) : "",
+      bloodGroup: donor.bloodGroup || "",
+      rh: donor.rh === "POSITIVE" ? "Positive" : donor.rh === "NEGATIVE" ? "Negative" : (donor.rh || ""),
+      addressLine1: donor.address?.line1 || "",
+      addressLine2: donor.address?.line2 || "",
+      city: donor.address?.city || "",
+      district: donor.address?.district || "",
+      state: donor.address?.state || "",
+      pincode: donor.address?.pincode || "",
+      occupation: donor.occupation || "",
+      lastDonationDate: lddISO,
+      lastDonationDateDisplay: lddDisplay,
+    }));
+  };
+
+  React.useEffect(() => {
+    if (repeatedDonation !== "Yes" || !searchQuery.trim()) {
+      setSearchResults([]);
+      setSearchError("");
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+        setSearchError("");
+        const res = await axios.get(`${API}/api/v2/donor/search`, {
+          params: { q: searchQuery, limit: 20 },
+          headers: { Authorization: authorizationToken },
+          withCredentials: true,
+        });
+        const list = res?.data?.data?.items || res?.data?.data;
+        setSearchResults(Array.isArray(list) ? list : []);
+      } catch (e) {
+        setSearchError(e?.response?.data?.message || "Search failed");
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery, repeatedDonation, API, authorizationToken]);
+
+  const handleSelectDonor = async (d) => {
+    if (d.eligibilityStatus === 'deferred' || d.eligibilityStatus === 'temp-deferred') {
+      toast.error(`${d.fullName} is deferred and cannot donate.`, { duration: 5000 });
+      return;
+    }
+
+    if (d.isAvailableToDonate === false) {
+      const lastDate = d.lastDonationDate
+         ? new Date(d.lastDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+        : "N/A";
+      const waitingPeriod =
+        d.sex === "F" ? "120 days (4 months)" : "90 days (3 months)";
+      toast.error(
+        `${d.fullName} cannot donate yet. Last donation was on ${lastDate}. The waiting period is ${waitingPeriod}. Eligible after ${d.daysUntilEligible} days.`,
+        { duration: 5000 }
+      );
+      return;
+    }
+
+    try {
+      setSelectedDonor(d);
+      const res = await axios.get(`${API}/api/v2/donor/${d._id}`, {
+        headers: { Authorization: authorizationToken },
+        withCredentials: true,
+      });
+      const full = res?.data?.donor || res?.data?.data || d;
+      loadDonorIntoForm(full);
+      toast.success(`Selected donor profile loaded`);
+    } catch (e) {
+      setSelectedDonor(d);
+      loadDonorIntoForm(d);
+    }
+  };
 
   const handleFormKeyDown = (e) => {
     if (e.key === "Enter") {
@@ -297,6 +427,26 @@ export default function DonorCreation() {
         }
       }
 
+      // 2.5 Determine if Last Donation Date is within waiting period
+      let isIntervalInvalid = false;
+      let intervalReason = null;
+      if (updated.lastDonationDate && updated.sex) {
+        const collectionDateStr = updated.collectionDate || new Date().toISOString().split("T")[0];
+        const diffDays = getDaysDifference(updated.lastDonationDate, collectionDateStr);
+        if (diffDays !== null) {
+          const isFemale = (updated.sex || "").toUpperCase().startsWith('F');
+          const requiredInterval = isFemale ? 120 : 90;
+          if (diffDays < requiredInterval) {
+            isIntervalInvalid = true;
+            intervalReason = {
+              reason: `Unfit due to Last Donation Date: only ${diffDays} day(s) passed since last donation (need ${requiredInterval === 120 ? '120 days for female' : '90 days for male/other'})`,
+              days: requiredInterval - diffDays,
+              type: "TEMPORARY"
+            };
+          }
+        }
+      }
+
       // 3. Set fit status and reason based on these checks
       if (questionReason) {
         updated.donorIsFit = false;
@@ -304,11 +454,15 @@ export default function DonorCreation() {
       } else if (isHbInvalid) {
         updated.donorIsFit = false;
         updated.deferralReasonObj = hbReason;
+      } else if (isIntervalInvalid) {
+        updated.donorIsFit = false;
+        updated.deferralReasonObj = intervalReason;
       } else {
-        // If neither check is active, see if we need to auto-recover from a previous forced unfit status
+        // If none of these checks are active, see if we need to auto-recover from a previous forced unfit status
         const wasForced = prev.deferralReasonObj && (
           prev.deferralReasonObj.reason.startsWith("Unfit due to Medical Question") ||
-          prev.deferralReasonObj.reason.toLowerCase().includes("haemoglobin")
+          prev.deferralReasonObj.reason.toLowerCase().includes("haemoglobin") ||
+          prev.deferralReasonObj.reason.startsWith("Unfit due to Last Donation Date")
         );
         if (wasForced) {
           updated.donorIsFit = true;
@@ -433,6 +587,8 @@ export default function DonorCreation() {
   };
 
   const isStep1Complete = () => {
+    if (repeatedDonation === "Yes" && !selectedDonor) return false;
+
     const isBaseComplete =
       formData.firstName.trim() &&
       formData.middleName.trim() &&
@@ -451,6 +607,17 @@ export default function DonorCreation() {
 
     if (formData.pincode && !/^\d{6}$/.test(formData.pincode)) return false;
     if (formData.lastDonationDateDisplay && !validateDate(formData.lastDonationDateDisplay)) return false;
+
+    // Check last donation interval!
+    if (formData.lastDonationDate) {
+      const collectionDateStr = formData.collectionDate || new Date().toISOString().split("T")[0];
+      const diffDays = getDaysDifference(formData.lastDonationDate, collectionDateStr);
+      if (diffDays !== null) {
+        const isFemale = (formData.sex || "").toUpperCase().startsWith('F');
+        const requiredInterval = isFemale ? 120 : 90;
+        if (diffDays < requiredInterval) return false;
+      }
+    }
 
     return true;
   };
@@ -492,7 +659,6 @@ export default function DonorCreation() {
     try {
       const generatedId = `DFR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
       const donorPayload = {
-        donorId: formData.donorIsFit ? `DON-${Date.now()}` : generatedId,
         name: {
           firstName: formData.firstName,
           middleName: formData.middleName,
@@ -518,13 +684,28 @@ export default function DonorCreation() {
         lastDonationDate: formData.lastDonationDate ? new Date(formData.lastDonationDate).toISOString() : undefined,
       };
 
-      const donorRes = await axios.post(`${API}/api/v2/donor`, donorPayload, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
-      });
+      let registeredDonorId = "";
+      let registeredDonor = null;
 
-      const registeredDonor = donorRes.data?.data || donorRes.data?.donor;
-      const registeredDonorId = registeredDonor?._id || registeredDonor?.id;
+      if (repeatedDonation === "Yes" && selectedDonor) {
+        const donorRes = await axios.put(`${API}/api/v2/donor/${selectedDonor._id}`, donorPayload, {
+          headers: { Authorization: authorizationToken },
+          withCredentials: true,
+        });
+        registeredDonor = donorRes.data?.data || donorRes.data?.donor;
+        registeredDonorId = registeredDonor?._id || registeredDonor?.id;
+      } else {
+        const fullPayload = {
+          ...donorPayload,
+          donorId: formData.donorIsFit ? `DON-${Date.now()}` : generatedId,
+        };
+        const donorRes = await axios.post(`${API}/api/v2/donor`, fullPayload, {
+          headers: { Authorization: authorizationToken },
+          withCredentials: true,
+        });
+        registeredDonor = donorRes.data?.data || donorRes.data?.donor;
+        registeredDonorId = registeredDonor?._id || registeredDonor?.id;
+      }
 
       if (!registeredDonorId) {
         throw new Error("Failed to resolve registered donor profile database ID.");
@@ -788,6 +969,146 @@ export default function DonorCreation() {
                 <p className="text-sm text-gray-500 mt-1">Provide full donor registration information. All fields marked * are required.</p>
               </div>
 
+              {/* Repeated Donation Dropdown */}
+              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-3">
+                <label className="block text-sm font-semibold text-gray-700">Repeated Donation?</label>
+                <select
+                  value={repeatedDonation}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRepeatedDonation(val);
+                    if (val === "No") {
+                      setSelectedDonor(null);
+                      setFormData({ ...INITIAL_FORM_DATA });
+                    }
+                  }}
+                  className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800 bg-white text-sm outline-none"
+                >
+                  <option value="No">No (New Donor)</option>
+                  <option value="Yes">Yes (Existing Donor)</option>
+                </select>
+              </div>
+
+              {/* Repeated Donation: Search and Selection UI */}
+              {repeatedDonation === "Yes" && (
+                <div className="bg-white p-6 rounded-xl border border-red-100 shadow-sm space-y-6 animate-fadeIn">
+                  <h3 className="text-md font-bold text-gray-800">Search Existing Donor</h3>
+                  <div className="flex flex-col md:flex-row gap-6">
+                    {/* LEFT: Search Bar */}
+                    <div className="md:w-2/3 space-y-4">
+                      <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-red-800">
+                          <Search className="w-5 h-5" />
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Search by Name, Phone, ID, or UID..."
+                          className="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-300 rounded-xl text-sm font-medium placeholder:text-gray-400 focus:ring-2 focus:ring-red-800/20 focus:border-red-800 focus:bg-white outline-none transition-all"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setSearchQuery("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                      {searchError && (
+                        <p className="text-red-500 text-xs flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4" /> {searchError}
+                        </p>
+                      )}
+                      {selectedDonor && (
+                        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2">
+                          <CheckCircle className="w-5 h-5 text-emerald-700 shrink-0" />
+                          <p className="text-xs font-semibold text-emerald-800">
+                            Selected Donor Profile Loaded: <span className="font-bold">{selectedDonor.name?.firstName} {selectedDonor.name?.lastName}</span> ({selectedDonor.donorId})
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* RIGHT: Results List */}
+                    <div className="md:w-1/3 border border-gray-200 rounded-xl p-3 h-[250px] overflow-y-auto bg-gray-50/50">
+                      <div className="sticky top-0 bg-gray-50/50 backdrop-blur-sm pb-2 mb-2 flex items-center justify-between border-b border-gray-150">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                          Results
+                        </span>
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold bg-gray-200 text-gray-600 rounded-full">
+                          {searchResults.length} FOUND
+                        </span>
+                      </div>
+
+                      {searchLoading ? (
+                        <div className="space-y-2">
+                          {[...Array(3)].map((_, i) => (
+                            <div key={i} className="p-3 bg-white border border-gray-100 rounded-lg animate-pulse">
+                              <div className="h-3 bg-gray-100 rounded w-1/2 mb-2" />
+                              <div className="h-2 bg-gray-50 rounded w-3/4" />
+                            </div>
+                          ))}
+                        </div>
+                      ) : searchResults.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center p-4 grayscale opacity-60">
+                          <Search className="w-6 h-6 text-gray-300 mb-1" />
+                          <p className="text-xs text-gray-400">
+                            {searchQuery ? "No donors matched" : "Search to see results"}
+                          </p>
+                        </div>
+                      ) : (
+                        searchResults.map((d) => {
+                          const isBlocked = d.eligibilityStatus === 'deferred' || d.eligibilityStatus === 'temp-deferred' || d.isAvailableToDonate === false;
+                          return (
+                            <div
+                              key={d._id}
+                              role="button"
+                              onClick={() => handleSelectDonor(d)}
+                              className={`p-3 mb-2 bg-white border rounded-lg cursor-pointer transition-all hover:scale-[1.01] ${
+                                selectedDonor?._id === d._id
+                                  ? "ring-2 ring-red-800 border-red-800"
+                                  : "border-gray-100 hover:border-red-200"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-gray-900 truncate">
+                                    {d.fullName}
+                                  </p>
+                                  <p className="text-[10px] text-gray-500">
+                                    {d.age ? `${d.age} Yrs` : ""} {d.sex ? `• ${d.sex}` : ""}
+                                  </p>
+                                </div>
+                                <div className="shrink-0 ml-1">
+                                  {isBlocked ? (
+                                    <Lock className="w-3 h-3 text-red-500" />
+                                  ) : (
+                                    <Unlock className="w-3 h-3 text-green-500" />
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap gap-1 flex-row">
+                                <span className="px-1 py-0.5 text-[8px] font-bold rounded bg-red-50 text-red-700">
+                                  {d.bloodGroup}{d.rh}
+                                </span>
+                                {d.city && (
+                                  <span className="px-1 py-0.5 text-[8px] font-bold rounded bg-blue-50 text-blue-700">
+                                    {d.city}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Personal Details */}
               <div className="bg-white rounded-lg border border-orange-200 p-6 space-y-4 shadow-sm">
                 <h3 className="text-md font-semibold text-gray-900 border-b pb-1">Personal Details</h3>
@@ -1024,6 +1345,22 @@ export default function DonorCreation() {
                     {formData.lastDonationDateDisplay && !validateDate(formData.lastDonationDateDisplay) && (
                       <p className="text-xs text-red-655 mt-1 font-semibold">Enter a valid past date (DD/MM/YYYY)</p>
                     )}
+                    {formData.lastDonationDateDisplay && validateDate(formData.lastDonationDateDisplay) && formData.lastDonationDate && formData.sex && (() => {
+                      const collectionDateStr = formData.collectionDate || new Date().toISOString().split("T")[0];
+                      const diffDays = getDaysDifference(formData.lastDonationDate, collectionDateStr);
+                      if (diffDays !== null) {
+                        const isFemale = (formData.sex || "").toUpperCase().startsWith('F');
+                        const requiredInterval = isFemale ? 120 : 90;
+                        if (diffDays < requiredInterval) {
+                          return (
+                            <p className="text-xs text-red-655 mt-1 font-semibold">
+                              Donor cannot donate yet. Last donation was {diffDays} days ago. Required waiting period is {requiredInterval === 120 ? '120 days (4 months)' : '90 days (3 months)'}.
+                            </p>
+                          );
+                        }
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
               </div>
@@ -1559,9 +1896,6 @@ export default function DonorCreation() {
                   <p className="text-sm text-blue-800">
                     <strong>Name:</strong> {[formData.firstName, formData.middleName, formData.lastName].filter(Boolean).join(" ")}
                   </p>
-                  <p className="text-sm text-blue-800">
-                    <strong>Donor ID:</strong> <span className="italic text-gray-500">To be auto-generated</span>
-                  </p>
                 </div>
 
                 {/* Bag Information Card */}
@@ -1573,7 +1907,7 @@ export default function DonorCreation() {
                     <p><strong>Lot No:</strong> {formData.lotNo}</p>
                     <p><strong>Type:</strong> {formData.typeOfBag}</p>
                     {formData.collectionDate && (
-                      <p><strong>Donation Date:</strong> {new Date(formData.collectionDate).toLocaleDateString()}</p>
+                      <p><strong>Donation Date:</strong> {new Date(formData.collectionDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                     )}
                     {formData.collectionTime && (
                       <p><strong>Donation Time:</strong> {formData.collectionTime}</p>
@@ -1602,7 +1936,7 @@ export default function DonorCreation() {
                       if (!val) return null;
                       return (
                         <div key={key} className="flex items-start gap-2 text-xs text-indigo-800">
-                          <span className={`shrink-0 px-1.5 py-0.5 rounded text-white font-medium ${val === "Yes" ? "bg-green-650" : "bg-red-650"}`}>
+                          <span className={`shrink-0 px-1.5 py-0.5 rounded text-white font-semibold ${val === "Yes" ? "bg-green-600" : "bg-red-600"}`}>
                             {val}
                           </span>
                           <span className="leading-relaxed">{text}</span>

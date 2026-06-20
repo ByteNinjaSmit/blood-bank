@@ -318,7 +318,7 @@ const MasterDonors = () => {
                         </td>
                         <td className="px-4 py-3 text-gray-700">
                           <div className="flex items-center gap-2">
-                            <span>{donor.dob ? new Date(donor.dob).toLocaleDateString() : 'N/A'}</span>
+                            <span>{donor.dob ? new Date(donor.dob).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</span>
                             {donor.dob && calculateAge(donor.dob) !== null && (
                               <span
                                 className={`w-6 h-6 flex items-center justify-center rounded-full text-2xs font-bold ${
@@ -441,7 +441,7 @@ const MasterDonors = () => {
               </span>
               {selectedDonor.lastDonationDate && (
                 <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700">
-                  Last donation: {new Date(selectedDonor.lastDonationDate).toLocaleDateString()}
+                  Last donation: {new Date(selectedDonor.lastDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </span>
               )}
             </div>

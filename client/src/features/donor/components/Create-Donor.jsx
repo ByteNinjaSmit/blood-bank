@@ -89,8 +89,8 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
     const { name, value } = e.target
     setFormData((prev) => {
       const newData = { ...prev, [name]: value }
-      if (name === "weightKg") {
-        const autoStatus = getAutoEligibilityStatus(newData.age, value)
+      if (name === "weightKg" || name === "sex") {
+        const autoStatus = getAutoEligibilityStatus(newData.age, newData.weightKg, newData.lastDonationDate, newData.sex)
         if (autoStatus) newData.eligibilityStatus = autoStatus
       }
       return newData
@@ -117,16 +117,31 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
     return `${birthYear}-01-01`
   }
 
-  // Auto-calculate eligibility status based on age and weight
-  const getAutoEligibilityStatus = (age, weight) => {
+  // Auto-calculate eligibility status based on age, weight, last donation date, and sex
+  const getAutoEligibilityStatus = (age, weight, lastDonationDate, sex) => {
     if (!age || !weight) return null
     const ageNum = parseInt(age, 10)
     const weightNum = parseFloat(weight)
     if (isNaN(ageNum) || isNaN(weightNum)) return null
 
-    // Criteria: 18-65 years old and at least 45kg
-    const isEligible = ageNum >= 18 && ageNum <= 65 && weightNum >= 45
-    return isEligible ? "eligible" : "deferred"
+    if (ageNum < 18 || ageNum > 65 || weightNum < 45) {
+      return "deferred"
+    }
+
+    if (lastDonationDate && sex) {
+      const lDate = new Date(lastDonationDate);
+      const now = new Date();
+      lDate.setHours(0,0,0,0);
+      now.setHours(0,0,0,0);
+      const diffTime = now.getTime() - lDate.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const requiredInterval = sex === 'F' ? 120 : 90;
+      if (diffDays < requiredInterval) {
+        return "temp-deferred"
+      }
+    }
+
+    return "eligible"
   }
 
   const handleDobChange = (e) => {
@@ -148,7 +163,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
       age = calculateAgeFromDob(isoDob);
     }
 
-    const autoStatus = getAutoEligibilityStatus(age, formData.weightKg)
+    const autoStatus = getAutoEligibilityStatus(age, formData.weightKg, formData.lastDonationDate, formData.sex)
     setFormData((prev) => ({
       ...prev,
       dobDisplay: display,
@@ -175,17 +190,21 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
       isoDate = `${y}-${m}-${d}`;
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      lastDonationDateDisplay: display,
-      lastDonationDate: isoDate || prev.lastDonationDate,
-    }))
+    setFormData((prev) => {
+      const autoStatus = getAutoEligibilityStatus(prev.age, prev.weightKg, isoDate || prev.lastDonationDate, prev.sex)
+      return {
+        ...prev,
+        lastDonationDateDisplay: display,
+        lastDonationDate: isoDate || prev.lastDonationDate,
+        eligibilityStatus: autoStatus || prev.eligibilityStatus
+      }
+    })
   }
 
   const handleAgeChange = (e) => {
     const age = e.target.value
     const dob = calculateDobFromAge(age)
-    const autoStatus = getAutoEligibilityStatus(age, formData.weightKg)
+    const autoStatus = getAutoEligibilityStatus(age, formData.weightKg, formData.lastDonationDate, formData.sex)
     setFormData((prev) => ({
       ...prev,
       age,
@@ -888,6 +907,23 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
                       placeholder="DD/MM/YYYY"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800"
                     />
+                    {formData.lastDonationDateDisplay && validateDateString(formData.lastDonationDateDisplay) === true && formData.lastDonationDate && formData.sex && (() => {
+                      const lDate = new Date(formData.lastDonationDate);
+                      const now = new Date();
+                      lDate.setHours(0,0,0,0);
+                      now.setHours(0,0,0,0);
+                      const diffTime = now.getTime() - lDate.getTime();
+                      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                      const requiredInterval = formData.sex === 'F' ? 120 : 90;
+                      if (diffDays < requiredInterval) {
+                        return (
+                          <p className="text-xs text-red-655 mt-1 font-semibold">
+                            Interval too short: last donation was {diffDays} days ago. Required is {requiredInterval === 120 ? '120 days (4 months)' : '90 days (3 months)'}.
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
               </div>

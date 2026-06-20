@@ -503,6 +503,44 @@ function checkHasChanges(doc, payload) {
     return true;
   };
 
+  const hasChanges = useMemo(() => {
+    if (!requestDoc) return false;
+    const payload = {
+      hospitalId: form.hospitalId,
+      doctorName: form.doctorName || undefined,
+      requiredAt: form.requiredAt || undefined,
+      medicalOfficerSignature: form.medicalOfficerSignature || undefined,
+      hospitalSeal: form.hospitalSeal || undefined,
+      patient: {
+        name: form.patient.name,
+        age: Number(form.patient.age),
+        sex: form.patient.sex,
+        mrn: form.patient.mrn || undefined,
+        diagnosis: form.patient.diagnosis || undefined,
+        hb: form.patient.hb ? Number(form.patient.hb) : undefined,
+        indication: form.patient.indication || undefined,
+        history: {
+          previousTransfusions: Number(form.patient.history?.previousTransfusions || 0),
+          approximateDate: form.patient.history?.approximateDate || undefined,
+          presenceOfReaction: form.patient.history?.presenceOfReaction || 'None',
+        },
+        pregnancy: {
+          numPregnancies: Number(form.patient.pregnancy?.numPregnancies || 0),
+          numMiscarriages: Number(form.patient.pregnancy?.numMiscarriages || 0),
+          numChildrenWithHemolyticDisease: Number(form.patient.pregnancy?.numChildrenWithHemolyticDisease || 0),
+        },
+      },
+      requestedComponents: form.requestedComponents.map((r) => ({
+        componentType: r.componentType,
+        units: Number(r.units),
+        bloodGroup: r.bloodGroup,
+        rh: r.rh,
+        urgency: r.urgency,
+      })),
+    };
+    return checkHasChanges(requestDoc, payload);
+  }, [form, requestDoc]);
+
   return {
     // state
     currentStep,
@@ -525,6 +563,7 @@ function checkHasChanges(doc, payload) {
     completing,
     crossmatchUpdating,
     canProceedToMatch,
+    hasChanges,
 
     // actions
     handleCreateHospital,

@@ -153,7 +153,7 @@ describe('donation-service.register', () => {
     expect(result.units).toHaveLength(1);
   });
 
-  it('registers a fit donation even on too-soon repeat WB donation', async () => {
+  it('rejects too-soon repeat WB donation (under 90 days for male)', async () => {
     const donations = mockDonations();
     donations.findLatestByDonor = vi.fn().mockResolvedValue({
       collectedAt: new Date('2026-04-01T00:00:00Z'),
@@ -162,6 +162,55 @@ describe('donation-service.register', () => {
     const svc = createDonationService({
       donations,
       donors: mockDonors(),
+      deferrals: mockDeferrals(),
+    });
+    await expect(svc.register(baseInput(), 'actor-id')).rejects.toThrowError(
+      /Donor cannot donate yet/
+    );
+  });
+
+  it('rejects too-soon repeat WB donation (under 120 days for female)', async () => {
+    const donations = mockDonations();
+    donations.findLatestByDonor = vi.fn().mockResolvedValue({
+      collectedAt: new Date('2026-04-01T00:00:00Z'),
+      donationType: 'WHOLE_BLOOD',
+    });
+    const femaleDonor = { ...donorMatchingMinimum, sex: 'F' as const };
+    const svc = createDonationService({
+      donations,
+      donors: mockDonors(femaleDonor),
+      deferrals: mockDeferrals(),
+    });
+    await expect(svc.register(baseInput(), 'actor-id')).rejects.toThrowError(
+      /Donor cannot donate yet/
+    );
+  });
+
+  it('accepts repeat WB donation after required interval (90 days for male)', async () => {
+    const donations = mockDonations();
+    donations.findLatestByDonor = vi.fn().mockResolvedValue({
+      collectedAt: new Date('2026-02-01T00:00:00Z'),
+      donationType: 'WHOLE_BLOOD',
+    });
+    const svc = createDonationService({
+      donations,
+      donors: mockDonors(),
+      deferrals: mockDeferrals(),
+    });
+    const result = await svc.register(baseInput(), 'actor-id');
+    expect(result.units).toHaveLength(1);
+  });
+
+  it('accepts repeat WB donation after required interval (120 days for female)', async () => {
+    const donations = mockDonations();
+    donations.findLatestByDonor = vi.fn().mockResolvedValue({
+      collectedAt: new Date('2026-01-01T00:00:00Z'),
+      donationType: 'WHOLE_BLOOD',
+    });
+    const femaleDonor = { ...donorMatchingMinimum, sex: 'F' as const };
+    const svc = createDonationService({
+      donations,
+      donors: mockDonors(femaleDonor),
       deferrals: mockDeferrals(),
     });
     const result = await svc.register(baseInput(), 'actor-id');

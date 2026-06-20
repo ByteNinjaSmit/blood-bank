@@ -7,6 +7,9 @@ import { NotFoundError } from '@/shared/errors';
 import { DonorModel } from './donor.model';
 import { DonationModel } from '@/modules/donation/donation.model';
 import { CampModel } from '@/modules/camp/camp.model';
+import { BloodUnitModel } from '@/modules/unit/unit.model';
+import { RequisitionModel } from '@/modules/requisition/requisition.model';
+import { HospitalModel } from '@/modules/hospital/hospital.model';
 import { Types } from 'mongoose';
 
 export interface DonorDto {
@@ -18,6 +21,7 @@ export interface DonorDto {
   sex: 'M' | 'F' | 'O';
   phone: string;
   email?: string;
+  donationHistory?: any[];
   address: {
     line1?: string;
     line2?: string;
@@ -33,6 +37,8 @@ export interface DonorDto {
   eligibilityStatus?: 'eligible' | 'deferred' | 'temp-deferred';
   lastDonationDate?: string;
   lastDonationId?: string;
+  isAvailableToDonate?: boolean;
+  daysUntilEligible?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -74,6 +80,22 @@ export function toDto(raw: any): any {
     }
   }
 
+  let isAvailableToDonate = true;
+  let daysUntilEligible = 0;
+  if (raw.lastDonationDate) {
+    const lastDate = raw.lastDonationDate instanceof Date ? raw.lastDonationDate : new Date(raw.lastDonationDate);
+    const now = new Date();
+    lastDate.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    const diffTime = now.getTime() - lastDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const waitingPeriod = raw.sex === 'F' ? 120 : 90;
+    if (diffDays < waitingPeriod) {
+      isAvailableToDonate = false;
+      daysUntilEligible = waitingPeriod - diffDays;
+    }
+  }
+
   return {
     id: raw._id?.toString() || raw.id,
     _id: raw._id?.toString() || raw.id,
@@ -94,6 +116,8 @@ export function toDto(raw: any): any {
     rh: raw.rh === 'POSITIVE' ? 'Positive' : raw.rh === 'NEGATIVE' ? 'Negative' : raw.rh,
     eligibilityStatus: raw.eligibilityStatus,
     lastDonationDate: raw.lastDonationDate ? (raw.lastDonationDate instanceof Date ? raw.lastDonationDate.toISOString() : new Date(raw.lastDonationDate).toISOString()) : undefined,
+    isAvailableToDonate,
+    daysUntilEligible,
     createdAt: raw.createdAt ? (raw.createdAt instanceof Date ? raw.createdAt.toISOString() : new Date(raw.createdAt).toISOString()) : new Date().toISOString(),
     updatedAt: raw.updatedAt ? (raw.updatedAt instanceof Date ? raw.updatedAt.toISOString() : new Date(raw.updatedAt).toISOString()) : new Date().toISOString(),
   };
@@ -112,15 +136,140 @@ async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto[]> {
   if (dtos.length === 0) return dtos;
   const donorIds = dtos.map(d => new Types.ObjectId(d.id));
   const donations = await DonationModel.aggregate([
-    { $match: { donor: { $in: donorIds } } },
-    { $sort: { donationDate: -1, createdAt: -1 } },
-    { $group: { _id: '$donor', lastDonationId: { $first: '$_id' } } }
+    {
+      $match: {
+        donor: { $in: donorIds },
+        $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+      },
+    },
+    { $sort: { collectedAt: -1, createdAt: -1 } },
+    {
+      $group: {
+        _id: '$donor',
+        lastDonationId: { $first: '$_id' },
+        lastDonationDate: { $first: '$collectedAt' },
+      },
+    },
   ]);
-  const donationMap = new Map(donations.map(d => [d._id.toString(), d.lastDonationId.toString()]));
-  return dtos.map(dto => ({
-    ...dto,
-    lastDonationId: donationMap.get(dto.id)
-  }));
+  const donationMap = new Map(
+    donations.map(d => [
+      d._id.toString(),
+      { id: d.lastDonationId.toString(), date: d.lastDonationDate },
+    ]),
+  );
+  return dtos.map(dto => {
+    const dbDonation = donationMap.get(dto.id);
+    let effectiveDate = dto.lastDonationDate;
+    if (dbDonation?.date) {
+      const dbDate = new Date(dbDonation.date);
+      const profileDate = dto.lastDonationDate ? new Date(dto.lastDonationDate) : null;
+      if (profileDate) {
+        effectiveDate = dbDate > profileDate ? dbDate.toISOString() : profileDate.toISOString();
+      } else {
+        effectiveDate = dbDate.toISOString();
+      }
+    }
+
+    let isAvailableToDonate = true;
+    let daysUntilEligible = 0;
+    if (effectiveDate) {
+      const lastDate = new Date(effectiveDate);
+      const now = new Date();
+      lastDate.setHours(0, 0, 0, 0);
+      now.setHours(0, 0, 0, 0);
+      const diffTime = now.getTime() - lastDate.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const waitingPeriod = dto.sex === 'F' ? 120 : 90;
+      if (diffDays < waitingPeriod) {
+        isAvailableToDonate = false;
+        daysUntilEligible = waitingPeriod - diffDays;
+      }
+    }
+
+    return {
+      ...dto,
+      lastDonationId: dbDonation?.id,
+      lastDonationDate: effectiveDate,
+      isAvailableToDonate,
+      daysUntilEligible,
+    };
+  });
+}
+
+async function getDetailedDonationHistory(donorId: string): Promise<any[]> {
+  const donations = await DonationModel.find({
+    donor: new Types.ObjectId(donorId),
+    deletedAt: null,
+  })
+    .sort({ collectedAt: -1 })
+    .lean();
+
+  const history = [];
+
+  for (const donation of donations) {
+    let donationPlace = 'Inhouse';
+    if (donation.campId) {
+      const camp = await CampModel.findById(donation.campId).lean();
+      if (camp) {
+        donationPlace = `Camp: ${camp.name}`;
+      }
+    }
+
+    // Find components (BloodUnits) derived from this donation
+    const components = await BloodUnitModel.find({
+      donationId: donation.donationId,
+      deletedAt: null,
+    }).lean();
+
+    const componentsWithReqs = [];
+    for (const comp of components) {
+      // Find if this component has a requisition
+      let reqDoc = null;
+      if (comp.reservedFor) {
+        reqDoc = await RequisitionModel.findById(comp.reservedFor).lean();
+      } else {
+        reqDoc = await RequisitionModel.findOne({
+          'matchedUnits.unitId': comp.unitId,
+          deletedAt: null,
+        }).lean();
+      }
+
+      let requisitionDetails = null;
+      if (reqDoc) {
+        const hospital = await HospitalModel.findById(reqDoc.hospitalId).lean();
+        requisitionDetails = {
+          requisitionId: reqDoc.requisitionId,
+          hospitalName: hospital ? hospital.name : 'Unknown Hospital',
+          patientName: reqDoc.patient?.name || 'N/A',
+          urgency: reqDoc.requestedComponents?.find(rc => rc.componentType === comp.componentType)?.urgency || 'ROUTINE',
+          status: reqDoc.status,
+          requiredAt: reqDoc.requiredAt ? reqDoc.requiredAt.toISOString() : null,
+        };
+      }
+
+      componentsWithReqs.push({
+        unitId: comp.unitId,
+        componentType: comp.componentType,
+        aboGroup: comp.aboGroup,
+        rhFactor: comp.rhFactor,
+        volumeMl: comp.volumeMl,
+        status: comp.status,
+        expiresAt: comp.expiresAt ? comp.expiresAt.toISOString() : null,
+        requisition: requisitionDetails,
+      });
+    }
+
+    history.push({
+      donationId: donation.donationId,
+      bagNo: donation.bagNo,
+      segmentNo: donation.segmentNo || 'N/A',
+      collectedAt: donation.collectedAt ? donation.collectedAt.toISOString() : null,
+      donationPlace,
+      components: componentsWithReqs,
+    });
+  }
+
+  return history;
 }
 
 export function createDonorRepo(): DonorRepo {
@@ -142,7 +291,11 @@ export function createDonorRepo(): DonorRepo {
       const raw = (await DonorModel.findById(id).lean()) as unknown as RawDonor | null;
       if (!raw) return null;
       const dtos = await populateLastDonationId([toDto(raw)]);
-      return dtos[0] as DonorDto;
+      const history = await getDetailedDonationHistory(id);
+      return {
+        ...dtos[0],
+        donationHistory: history,
+      } as DonorDto;
     },
 
     async update(id, patch, actorId) {
@@ -157,7 +310,11 @@ export function createDonorRepo(): DonorRepo {
       ).lean()) as unknown as RawDonor | null;
       if (!updated) throw new NotFoundError('Donor', id);
       const dtos = await populateLastDonationId([toDto(updated)]);
-      return dtos[0] as DonorDto;
+      const history = await getDetailedDonationHistory(id);
+      return {
+        ...dtos[0],
+        donationHistory: history,
+      } as DonorDto;
     },
 
     async list(input) {

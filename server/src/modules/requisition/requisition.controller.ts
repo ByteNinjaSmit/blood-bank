@@ -4,6 +4,8 @@ import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { DonationModel } from '@/modules/donation/donation.model';
 import { HospitalModel } from '@/modules/hospital/hospital.model';
 import { PatientModel } from '@/modules/patient/patient.model';
+import { DonorModel } from '@/modules/donor/donor.model';
+import { UserModel } from '@/modules/user/user.model';
 import { ValidateRequisition } from '@/modules/requisition/requisition.validator';
 import { ValidateCrossmatch } from '@/modules/crossmatch/crossmatch.validator';
 import { ValidateIssue } from '@/modules/issue/issue.validator';
@@ -45,8 +47,15 @@ async function enrichRequisition(reqDto: any): Promise<any> {
   const unitMap = new Map(units.map(u => [u.unitId, u]));
 
   const donationIds = units.map(u => u.donationId).filter(Boolean);
-  const donations = await DonationModel.find({ donationId: { $in: donationIds } }).select('donationId bagNo').lean() as any[];
+  const donations = await DonationModel.find({ donationId: { $in: donationIds } }).select('donationId bagNo collectedAt donor').lean() as any[];
   const donationMap = new Map(donations.map(d => [d.donationId, d]));
+
+  const donorIds = donations.map(d => d.donor).filter(Boolean);
+  const donors = await DonorModel.find({ _id: { $in: donorIds } }).select('_id name').lean() as any[];
+  const donorMap = new Map(donors.map(d => {
+    const fullName = d.name ? [d.name.firstName, d.name.middleName, d.name.lastName].filter(Boolean).join(' ') : 'Unknown';
+    return [d._id.toString(), fullName];
+  }));
 
   const matchedInventory = matchedUnits.map((mu: any) => {
     const unit = unitMap.get(mu.unitId);
@@ -59,6 +68,8 @@ async function enrichRequisition(reqDto: any): Promise<any> {
           bagNo: donation?.bagNo || unit.donationId,
           bloodGroup: unit.aboGroup,
           rh: unit.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
+          donorName: donation?.donor ? donorMap.get(donation.donor.toString()) || 'Unknown' : 'Unknown',
+          collectedAt: donation?.collectedAt ? donation.collectedAt.toISOString() : null,
         },
         componentId: {
           componentType: unit.componentType === 'PRBC' ? 'RBC' : unit.componentType === 'PLATELET_CONCENTRATE' ? 'Platelet' : unit.componentType === 'CRYOPRECIPITATE' ? 'Cryo' : unit.componentType,
@@ -110,6 +121,11 @@ async function enrichRequisition(reqDto: any): Promise<any> {
     urgency: rc.urgency?.toLowerCase() === 'routine' ? 'regular' : rc.urgency?.toLowerCase(),
   }));
 
+  let rejectedByDoc = null;
+  if (reqDto.rejectedBy && mongoose.Types.ObjectId.isValid(reqDto.rejectedBy)) {
+    rejectedByDoc = await UserModel.findById(reqDto.rejectedBy).select('name username').lean() as any;
+  }
+
   return {
     ...reqDto,
     _id: reqDto.id || reqDto._id || '',
@@ -122,6 +138,10 @@ async function enrichRequisition(reqDto: any): Promise<any> {
     status: reqDto.status?.toLowerCase(),
     hospitalId: hospitalDoc ? { _id: reqDto.hospitalId, name: hospitalDoc.name } : reqDto.hospitalId,
     patient: patientData,
+    rejectedBy: rejectedByDoc ? {
+      _id: reqDto.rejectedBy,
+      name: rejectedByDoc.name ? [rejectedByDoc.name.first, rejectedByDoc.name.last].filter(Boolean).join(' ') : (rejectedByDoc.username || '')
+    } : reqDto.rejectedBy,
   };
 }
 
