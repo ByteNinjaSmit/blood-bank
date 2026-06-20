@@ -165,8 +165,8 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
             <div>
               <p className="text-sm font-medium text-gray-700">Last Donation</p>
               <p className="text-gray-900">
-                {donor.lastDonationDate 
-                  ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) 
+                {donor.lastDonationDate
+                  ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
                   : 'No previous donations'
                 }
               </p>
@@ -205,10 +205,10 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Derived Components</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {donation.components && donation.components.map((comp) => {
-                        const isIssued = comp.status === 'ISSUED' || 
-                                         comp.status === 'TRANSFUSED' || 
-                                         comp.requisition?.status === 'ISSUED' || 
-                                         comp.requisition?.status === 'COMPLETED';
+                        const isIssued = comp.status === 'ISSUED' ||
+                          comp.status === 'TRANSFUSED' ||
+                          comp.requisition?.status === 'ISSUED' ||
+                          comp.requisition?.status === 'COMPLETED';
 
                         const getUnitStatusText = () => {
                           if (comp.status === 'RELEASED') return 'INSTOCK';
@@ -219,7 +219,7 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
 
                         const getUnitStatusBadge = () => {
                           if (isIssued) return 'bg-slate-50 text-slate-700 border-slate-200';
-                          
+
                           switch (comp.status) {
                             case 'RELEASED':
                               return 'bg-green-50 text-green-700 border-green-200';
@@ -261,13 +261,12 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
                                 <div className="bg-blue-50/70 border border-blue-100 rounded-md p-2.5 space-y-1.5">
                                   <div className="flex items-center justify-between">
                                     <span className="font-semibold text-blue-800">REQUISITED DETAILS</span>
-                                    <span className={`px-1.5 py-0.5 rounded text-3xs font-bold ${
-                                      comp.requisition.status === 'ISSUED' || comp.requisition.status === 'COMPLETED'
+                                    <span className={`px-1.5 py-0.5 rounded text-3xs font-bold ${comp.requisition.status === 'ISSUED' || comp.requisition.status === 'COMPLETED'
                                         ? 'bg-green-100 text-green-800'
                                         : comp.requisition.status === 'REJECTED'
-                                        ? 'bg-red-100 text-red-800'
-                                        : 'bg-blue-100 text-blue-800'
-                                    }`}>
+                                          ? 'bg-red-100 text-red-800'
+                                          : 'bg-blue-100 text-blue-800'
+                                      }`}>
                                       {comp.requisition.status}
                                     </span>
                                   </div>
@@ -288,13 +287,12 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
                                     </div>
                                     <div>
                                       <span className="text-gray-400 block font-normal">Urgency</span>
-                                      <span className={`font-bold ${
-                                        comp.requisition.urgency === 'EMERGENCY'
+                                      <span className={`font-bold ${comp.requisition.urgency === 'EMERGENCY'
                                           ? 'text-red-600'
                                           : comp.requisition.urgency === 'URGENT'
-                                          ? 'text-yellow-600'
-                                          : 'text-gray-600'
-                                      }`}>{comp.requisition.urgency}</span>
+                                            ? 'text-yellow-600'
+                                            : 'text-gray-600'
+                                        }`}>{comp.requisition.urgency}</span>
                                     </div>
                                   </div>
                                 </div>

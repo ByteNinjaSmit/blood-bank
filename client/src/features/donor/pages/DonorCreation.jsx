@@ -367,21 +367,17 @@ export default function DonorCreation() {
   }, [searchQuery, repeatedDonation, API, authorizationToken]);
 
   const handleSelectDonor = async (d) => {
-    if (d.eligibilityStatus === 'deferred' || d.eligibilityStatus === 'temp-deferred') {
-      toast.error(`${d.fullName} is deferred and cannot donate.`, { duration: 5000 });
-      return;
-    }
+    const isDeferred = d.eligibilityStatus === 'deferred' || d.eligibilityStatus === 'temp-deferred';
+    const isUnavailable = d.isAvailableToDonate === false;
 
-    if (d.isAvailableToDonate === false) {
-      const lastDate = d.lastDonationDate
-         ? new Date(d.lastDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-        : "N/A";
-      const waitingPeriod =
-        d.sex === "F" ? "120 days (4 months)" : "90 days (3 months)";
-      toast.error(
-        `${d.fullName} cannot donate yet. Last donation was on ${lastDate}. The waiting period is ${waitingPeriod}. Eligible after ${d.daysUntilEligible} days.`,
-        { duration: 5000 }
-      );
+    if (isDeferred || isUnavailable) {
+      let errorMsg = `${d.fullName} cannot donate.`;
+      if (isDeferred) errorMsg = `${d.fullName} is deferred.`;
+      if (isUnavailable) {
+        const lastDate = d.lastDonationDate ? new Date(d.lastDonationDate).toLocaleDateString('en-IN') : "N/A";
+        errorMsg = `${d.fullName} cannot donate yet. Last donation: ${lastDate}. Eligible after ${d.daysUntilEligible} days.`;
+      }
+      toast.error(errorMsg, { duration: 5000 });
       return;
     }
 

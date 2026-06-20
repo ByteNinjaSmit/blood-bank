@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Activity, CheckCircle2, XCircle, Search, Eye, Edit, Trash2, Plus } from 'lucide-react';
+import { Home, Building2, BookOpen, Users, Activity, CheckCircle2, XCircle, Search, Eye, Edit, Trash2, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useDonor, useDonorList } from '@/hooks/useDonor';
@@ -10,6 +10,12 @@ import DonorDetails from '@/features/donor/components/DonorDetails';
 import Modal from '@/components/shared/Modal';
 import CustomModal from '@/components/CustomModal';
 
+const TABS = [
+  { key: 'inhouse', label: 'Inhouse Donors', icon: Home },
+  { key: 'camp',    label: 'Camp Donors',    icon: Building2 },
+  { key: 'all',     label: 'Master Donor Register', icon: BookOpen },
+];
+
 const PAGE_SIZE = 20;
 
 const MasterDonors = () => {
@@ -18,6 +24,7 @@ const MasterDonors = () => {
   const { createDonor, updateDonor, deleteDonor, forceDeleteDonor } = useDonor();
   const donorAccess = checkAccess(user, ["donor", "donors", "donor management"]);
 
+  const [activeTab, setActiveTab] = useState('inhouse');
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodGroupFilter, setBloodGroupFilter] = useState('');
@@ -32,13 +39,15 @@ const MasterDonors = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Fetch paginated lists (no source filter means combined inhouse and camp)
+  // For 'all' tab we don't filter by source; for others we pass the source
+  const sourceParam = activeTab === 'all' ? undefined : activeTab;
+
   const { data, isLoading, isError } = useDonorList({
+    source: sourceParam,
     page,
     pageSize: PAGE_SIZE,
     search: searchQuery || undefined,
     bloodGroup: bloodGroupFilter || undefined,
-    // Pass eligibilityStatus to the backend: 'deferred' matches both 'deferred' and 'temp-deferred'
     eligibilityStatus: eligibilityFilter || undefined,
   });
 
@@ -46,11 +55,21 @@ const MasterDonors = () => {
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // Items are already filtered server-side; just use rawItems
-  const items = rawItems;
+  // Local eligibility filter for inhouse/camp tabs (backend may not support it)
+  const items = (activeTab !== 'all' && eligibilityFilter)
+    ? rawItems.filter(d => d.eligibilityStatus === eligibilityFilter)
+    : rawItems;
 
   const eligible = items.filter(d => d.eligibilityStatus === 'eligible').length;
   const deferred = items.filter(d => d.eligibilityStatus === 'deferred' || d.eligibilityStatus === 'temp-deferred').length;
+
+  function switchTab(key) {
+    setActiveTab(key);
+    setPage(1);
+    setSearchQuery('');
+    setBloodGroupFilter('');
+    setEligibilityFilter('');
+  }
 
   const editInitialData = selectedDonor
     ? {
@@ -181,6 +200,18 @@ const MasterDonors = () => {
     }
   };
 
+  // Donor ID column label depends on tab
+  const idColLabel =
+    activeTab === 'camp' ? 'Donation ID' :
+    activeTab === 'all'  ? 'Donor ID'    :
+                           'Donor ID';
+
+  // Empty state text
+  const emptyText =
+    activeTab === 'inhouse' ? 'No inhouse donors found.' :
+    activeTab === 'camp'    ? 'No camp donors found.' :
+                              'No donors found in the master register.';
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Page Header */}
@@ -192,8 +223,8 @@ const MasterDonors = () => {
                 <Users className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Master Register - Donors</h1>
-                <p className="text-gray-500 text-sm">Combined list of all inhouse and camp donors</p>
+                <h1 className="text-2xl font-bold text-gray-900">Master Register — Donors</h1>
+                <p className="text-gray-500 text-sm">Inhouse, Camp & combined master register</p>
               </div>
             </div>
             <button
@@ -204,6 +235,27 @@ const MasterDonors = () => {
               New Donor
             </button>
           </div>
+
+          {/* Tabs */}
+          <div className="flex gap-0 mt-6 border-b border-gray-200 -mb-px">
+            {TABS.map((tab) => {
+              const TabIcon = tab.icon;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => switchTab(tab.key)}
+                  className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === tab.key
+                      ? 'border-orange-800 text-orange-800'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <TabIcon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -212,10 +264,10 @@ const MasterDonors = () => {
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: 'Total Records', value: total,          icon: Activity,      cls: 'text-gray-700 bg-white border-gray-200'        },
-            { label: 'Eligible Donors', value: eligible,     icon: CheckCircle2,  cls: 'text-green-700 bg-green-50 border-green-200'   },
-            { label: 'Deferred Donors', value: deferred,     icon: XCircle,       cls: 'text-red-700 bg-red-50 border-red-200'         },
-            { label: 'Showing',       value: items.length,   icon: Users,         cls: 'text-orange-700 bg-orange-50 border-orange-200' },
+            { label: 'Total Records',   value: total,        icon: Activity,     cls: 'text-gray-700 bg-white border-gray-200'        },
+            { label: 'Eligible Donors', value: eligible,     icon: CheckCircle2, cls: 'text-green-700 bg-green-50 border-green-200'   },
+            { label: 'Deferred Donors', value: deferred,     icon: XCircle,      cls: 'text-red-700 bg-red-50 border-red-200'         },
+            { label: 'Showing',         value: items.length, icon: Users,        cls: 'text-orange-700 bg-orange-50 border-orange-200' },
           ].map((stat) => {
             const StatIcon = stat.icon;
             return (
@@ -273,7 +325,8 @@ const MasterDonors = () => {
               >
                 <option value="">All Status</option>
                 <option value="eligible">Eligible</option>
-                <option value="deferred">Deferred (All)</option>
+                <option value="deferred">Deferred</option>
+                <option value="temp-deferred">Temp Deferred</option>
               </select>
             </div>
           </div>
@@ -286,16 +339,17 @@ const MasterDonors = () => {
           ) : isError ? (
             <div className="p-10 text-center text-red-600 text-sm">Failed to load donors.</div>
           ) : items.length === 0 ? (
-            <div className="p-12 text-center text-gray-400 text-sm">
-              No donors found in the master register.
-            </div>
+            <div className="p-12 text-center text-gray-400 text-sm">{emptyText}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Donor ID</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{idColLabel}</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Full Name</th>
+                    {activeTab === 'all' && (
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Source</th>
+                    )}
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">DOB</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Sex</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Phone</th>
@@ -308,24 +362,44 @@ const MasterDonors = () => {
                 <tbody className="divide-y divide-gray-100">
                   {items.map((donor) => {
                     const isDeferred = donor.eligibilityStatus === 'deferred' || donor.eligibilityStatus === 'temp-deferred';
+                    const donorSource = donor.source || 'inhouse';
+                    const idValue = isDeferred
+                      ? '-'
+                      : activeTab === 'camp'
+                        ? (donor.lastDonationId || 'N/A')
+                        : activeTab === 'all'
+                          ? (donorSource === 'camp' ? (donor.lastDonationId || 'N/A') : donor.donorId)
+                          : donor.donorId;
+
                     return (
                       <tr key={donor._id || donor.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3 font-mono text-xs text-gray-700 font-medium">
-                          {isDeferred ? '-' : donor.donorId}
+                          {idValue}
                         </td>
                         <td className="px-4 py-3 text-gray-800 font-medium">
                           {donor.name?.firstName} {donor.name?.middleName || ''} {donor.name?.lastName}
                         </td>
+                        {activeTab === 'all' && (
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                              donorSource === 'camp'
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : 'bg-purple-50 text-purple-700 border-purple-200'
+                            }`}>
+                              {donorSource === 'camp' ? <Building2 className="w-3 h-3" /> : <Home className="w-3 h-3" />}
+                              {donorSource === 'camp' ? 'Camp' : 'Inhouse'}
+                            </span>
+                          </td>
+                        )}
                         <td className="px-4 py-3 text-gray-700">
                           <div className="flex items-center gap-2">
                             <span>{donor.dob ? new Date(donor.dob).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</span>
                             {donor.dob && calculateAge(donor.dob) !== null && (
                               <span
-                                className={`w-6 h-6 flex items-center justify-center rounded-full text-2xs font-bold ${
-                                  calculateAge(donor.dob) < 18 
-                                    ? "bg-red-100 text-red-600" 
-                                    : "bg-green-100 text-green-600"
-                                }`}
+                                className={`w-6 h-6 flex items-center justify-center rounded-full text-2xs font-bold ${calculateAge(donor.dob) < 18
+                                  ? "bg-red-100 text-red-600"
+                                  : "bg-green-100 text-green-600"
+                                  }`}
                               >
                                 {calculateAge(donor.dob)}
                               </span>
@@ -338,10 +412,10 @@ const MasterDonors = () => {
                           {donor.bloodGroup} {donor.rh === 'Positive' ? '+' : '-'}
                         </td>
                         <td className="px-4 py-3 text-gray-500 text-xs">
-                          {donor.lastDonationDate 
+                          {donor.lastDonationDate
                             ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', {
-                                day: '2-digit', month: 'short', year: 'numeric',
-                              })
+                              day: '2-digit', month: 'short', year: 'numeric',
+                            })
                             : 'N/A'
                           }
                         </td>
