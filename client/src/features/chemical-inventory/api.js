@@ -37,6 +37,7 @@ export const chemicalInventoryApi = {
 
   purchase: {
     list:           ()         => apiClient.get(`${V}/purchase`).then(unwrap),
+    update:         (id, data) => apiClient.patch(`${V}/purchase/${id}`, data).then(unwrap),
     updatePayments: (id, data) => apiClient.patch(`${V}/purchase/${id}/payments`, data).then(unwrap),
   },
 
@@ -54,4 +55,14 @@ export const chemicalInventoryApi = {
     expiry:      ()       => apiClient.get(`${V}/reports/expiry`).then(unwrap),
     consumption: ()       => apiClient.get(`${V}/reports/consumption`).then(unwrap),
   },
+};
+
+export const uploadFile = (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiClient.post('/api/v2/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }).then(unwrap);
 };

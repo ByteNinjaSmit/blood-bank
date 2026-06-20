@@ -38,6 +38,7 @@ export interface BagInspectionDto {
   testResult?: string;
   factorVIII?: number;
   fibrinogen?: number;
+  reportImage?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -69,6 +70,7 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     testResult: doc.testResult as string | undefined,
     factorVIII: doc.factorVIII as number | undefined,
     fibrinogen: doc.fibrinogen as number | undefined,
+    reportImage: (doc.reportImage as string) || undefined,
     createdAt: doc.createdAt ? doc.createdAt.toISOString() : '',
     updatedAt: doc.updatedAt ? doc.updatedAt.toISOString() : '',
   };
@@ -108,6 +110,7 @@ export interface BagInspectionRepo {
     testResult: string;
     factorVIII: number;
     fibrinogen: number;
+    reportImage: string | null;
   }>, actorId: string): Promise<BagInspectionDto | null>;
 }
 

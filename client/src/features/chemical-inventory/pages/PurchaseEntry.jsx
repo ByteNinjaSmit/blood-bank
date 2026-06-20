@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, ArrowLeft, Trash2, X, CreditCard, Calendar, ShoppingBag, FileText, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Plus, ArrowLeft, Trash2, X, CreditCard, Calendar, ShoppingBag, FileText, CheckCircle2, AlertCircle, Clock, Upload, Image as ImageIcon } from 'lucide-react';
 import {
   useChemicalList,
   useSupplierList,
@@ -8,8 +8,46 @@ import {
   useCreateLot,
   usePurchaseList,
   useUpdatePurchasePayments,
+  useUpdatePurchase,
 } from '../queries';
+import { apiClient, unwrap } from '@/core/api-client';
 import { toast } from 'sonner';
+
+const uploadFile = (file, folder) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiClient.post(`/api/v2/upload${folder ? `?folder=${folder}` : ''}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }).then(unwrap);
+};
+
+function IframePreviewModal({ isOpen, url, title, onClose }) {
+  if (!isOpen || !url) return null;
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[999] p-4 backdrop-blur-sm transition-opacity">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-4xl w-full h-[80vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <h3 className="text-base font-bold text-gray-900">{title || 'Document Viewer'}</h3>
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="flex-1 bg-gray-100 p-2">
+          <iframe
+            src={url}
+            title={title}
+            className="w-full h-full border-0 rounded-lg bg-white"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function PurchaseEntry() {
   const location = useLocation();
@@ -22,6 +60,7 @@ export default function PurchaseEntry() {
 
   const createLot = useCreateLot();
   const updatePaymentsMutation = useUpdatePurchasePayments();
+  const updatePurchaseMutation = useUpdatePurchase();
 
   const [showForm, setShowForm] = useState(false);
   const [showInstallmentModal, setShowInstallmentModal] = useState(false);
@@ -31,12 +70,21 @@ export default function PurchaseEntry() {
   const [tempInstallments, setTempInstallments] = useState([]);
   const [newInst, setNewInst] = useState({ amount: '', paymentDate: new Date().toISOString().split('T')[0], remarks: '' });
 
+  // Upload state
+  const [uploading, setUploading] = useState(false);
+  const [tableUploadingId, setTableUploadingId] = useState(null);
+
+  // Iframe Preview state
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewTitle, setPreviewTitle] = useState('');
+
   // Invoice Form state
   const [invoiceForm, setInvoiceForm] = useState({
     purchaseDate: new Date().toISOString().split('T')[0],
     invoiceNumber: '',
     supplierId: '',
     remarks: '',
+    invoiceImage: '',
   });
 
   const [items, setItems] = useState([
@@ -102,6 +150,55 @@ export default function PurchaseEntry() {
     setItems((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  // Form image upload
+  const handleFormImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const res = await uploadFile(file, 'chemicalorderinvoice');
+      setInvoiceForm((prev) => ({ ...prev, invoiceImage: res.url }));
+      toast.success('Invoice uploaded successfully');
+    } catch (err) {
+      toast.error(err.message || 'File upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Table row image upload
+  const handleTableImageUpload = async (e, purchaseId) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setTableUploadingId(purchaseId);
+    try {
+      const res = await uploadFile(file, 'chemicalorderinvoice');
+      await updatePurchaseMutation.mutateAsync({
+        id: purchaseId,
+        data: { invoiceImage: res.url },
+      });
+      toast.success('Invoice updated successfully');
+    } catch (err) {
+      toast.error(err.message || 'File upload failed');
+    } finally {
+      setTableUploadingId(null);
+    }
+  };
+
+  // Table row delete image
+  const handleTableImageDelete = async (purchaseId) => {
+    if (!window.confirm('Are you sure you want to delete this invoice image?')) return;
+    try {
+      await updatePurchaseMutation.mutateAsync({
+        id: purchaseId,
+        data: { invoiceImage: null },
+      });
+      toast.success('Invoice image deleted');
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete invoice image');
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!invoiceForm.invoiceNumber.trim() || !invoiceForm.supplierId) {
@@ -128,6 +225,7 @@ export default function PurchaseEntry() {
       invoiceNumber: invoiceForm.invoiceNumber.trim(),
       supplierId: invoiceForm.supplierId,
       remarks: invoiceForm.remarks.trim(),
+      invoiceImage: invoiceForm.invoiceImage || undefined,
       items: items.map((item) => {
         const qty = Number(item.qtyPurchased) || 0;
         const rate = Number(item.costPerUnit) || 0;
@@ -163,6 +261,7 @@ export default function PurchaseEntry() {
         invoiceNumber: '',
         supplierId: '',
         remarks: '',
+        invoiceImage: '',
       });
       setItems([
         {
@@ -346,6 +445,7 @@ export default function PurchaseEntry() {
                     <th className="px-6 py-4.5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Paid Amount</th>
                     <th className="px-6 py-4.5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Balance</th>
                     <th className="px-6 py-4.5 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Payment Status</th>
+                    <th className="px-6 py-4.5 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Invoice Attachment</th>
                     <th className="px-6 py-4.5 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
@@ -353,7 +453,7 @@ export default function PurchaseEntry() {
                   {purchases.map((p) => {
                     const balance = Math.max(0, p.totalAmount - p.paidAmount);
                     return (
-                      <tr key={p._id} className="hover:bg-gray-55/30 transition-colors">
+                      <tr key={p._id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
                           {formatDate(p.purchaseDate)}
                         </td>
@@ -376,6 +476,45 @@ export default function PurchaseEntry() {
                           {getStatusBadge(p.paymentStatus)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
+                          {p.invoiceImage ? (
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setPreviewUrl(p.invoiceImage);
+                                  setPreviewTitle(`Invoice: ${p.invoiceNumber}`);
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-red-800 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors"
+                              >
+                                <ImageIcon className="w-3.5 h-3.5" /> View
+                              </button>
+                              <button
+                                onClick={() => handleTableImageDelete(p._id)}
+                                className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Delete invoice image"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="relative inline-block">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleTableImageUpload(e, p._id)}
+                                disabled={tableUploadingId === p._id}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                              <button
+                                type="button"
+                                disabled={tableUploadingId === p._id}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 border border-gray-200 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 rounded-lg shadow-sm transition-colors"
+                              >
+                                <Upload className="w-3 h-3" /> {tableUploadingId === p._id ? 'Uploading...' : 'Upload'}
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
                           <button
                             onClick={() => openInstallments(p)}
                             className="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-200 text-xs font-bold text-gray-700 bg-white hover:bg-gray-50 rounded-lg shadow-sm transition-colors"
@@ -392,7 +531,7 @@ export default function PurchaseEntry() {
           )}
         </div>
       ) : (
-        /* Purchase Stock Entry Form View (Existing) */
+        /* Purchase Stock Entry Form View */
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
           {/* Invoice Information */}
           <div className="space-y-4">
@@ -414,6 +553,48 @@ export default function PurchaseEntry() {
                     <option key={s._id} value={s._id}>{s.name}</option>
                   ))}
                 </select>
+              </div>
+              <div className="col-span-1 md:col-span-3">
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Invoice Image Attachment</label>
+                {invoiceForm.invoiceImage ? (
+                  <div className="inline-flex items-center gap-2 p-2 px-3 bg-red-50 border border-red-200 rounded-lg text-sm">
+                    <ImageIcon className="w-4 h-4 text-red-800" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewUrl(invoiceForm.invoiceImage);
+                        setPreviewTitle('Invoice Attachment Draft');
+                      }}
+                      className="font-semibold text-red-800 hover:underline"
+                    >
+                      View uploaded invoice draft
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInvoiceForm((prev) => ({ ...prev, invoiceImage: '' }))}
+                      className="p-1 hover:bg-red-100 rounded text-red-850 text-red-900 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative inline-block">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFormImageUpload}
+                      disabled={uploading}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <button
+                      type="button"
+                      disabled={uploading}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 rounded-lg shadow-sm transition-colors"
+                    >
+                      <Upload className="w-4 h-4" /> {uploading ? 'Uploading...' : 'Upload Invoice Image'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -462,7 +643,7 @@ export default function PurchaseEntry() {
                     const total = subtotal + cgstAmt + sgstAmt;
 
                     return (
-                      <tr key={idx} className="hover:bg-gray-50/50">
+                      <tr key={idx} className="hover:bg-gray-55/30">
                         {/* Item Name */}
                         <td className="px-1 py-1.5">
                           <select
@@ -726,7 +907,7 @@ export default function PurchaseEntry() {
                 ) : (
                   <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-100 bg-white">
                     {tempInstallments.map((inst, index) => (
-                      <div key={index} className="flex justify-between items-center p-3 hover:bg-gray-50/50 transition-colors">
+                      <div key={index} className="flex justify-between items-center p-3 hover:bg-gray-55/30 transition-colors">
                         <div className="space-y-0.5">
                           <div className="text-xs font-bold text-gray-800">
                             ₹{inst.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
@@ -815,6 +996,17 @@ export default function PurchaseEntry() {
           </div>
         </div>
       )}
+
+      {/* Central Iframe Viewer Modal */}
+      <IframePreviewModal
+        isOpen={Boolean(previewUrl)}
+        url={previewUrl}
+        title={previewTitle}
+        onClose={() => {
+          setPreviewUrl('');
+          setPreviewTitle('');
+        }}
+      />
     </div>
   );
 }

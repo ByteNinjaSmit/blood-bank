@@ -36,6 +36,7 @@ export interface ChemicalInventoryService {
 
   // Purchases
   listPurchases(actorId: string): Promise<any[]>;
+  updatePurchase(id: string, patch: any, actorId: string): Promise<any>;
   updatePurchasePayments(id: string, installments: any[], actorId: string): Promise<any>;
 
   // History
@@ -148,6 +149,7 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
         paidAmount: 0,
         paymentStatus: 'Pending',
         installments: [],
+        invoiceImage: doc.invoiceImage,
         remarks: doc.remarks,
         actorId,
       });
@@ -205,6 +207,17 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
 
     async listPurchases(actorId) {
       return deps.inventory.listChemicalPurchases();
+    },
+
+    async updatePurchase(id, patch, actorId) {
+      const purchase = await deps.inventory.findChemicalPurchaseById(id);
+      if (!purchase) throw new NotFoundError('ChemicalPurchase', id);
+
+      const updateData: any = {};
+      if (patch.invoiceImage !== undefined) updateData.invoiceImage = patch.invoiceImage;
+      if (patch.remarks !== undefined) updateData.remarks = patch.remarks;
+
+      return deps.inventory.updateChemicalPurchase(id, updateData, actorId);
     },
 
     async updatePurchasePayments(id, installments, actorId) {

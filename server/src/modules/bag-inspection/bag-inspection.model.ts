@@ -40,6 +40,7 @@ const BagInspectionSchema = new Schema(
     testResult: { type: String, trim: true },
     factorVIII: { type: Number },
     fibrinogen: { type: Number },
+    reportImage: { type: String, default: null },
     deletedAt: { type: Date, default: null, index: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },

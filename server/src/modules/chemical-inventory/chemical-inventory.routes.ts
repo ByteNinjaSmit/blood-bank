@@ -140,6 +140,12 @@ router.get(
   controllers.listPurchases
 );
 router.patch(
+  '/purchase/:id',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'store-keeper']),
+  controllers.updatePurchase
+);
+router.patch(
   '/purchase/:id/payments',
   authenticate,
   requireRole(['system-admin', 'bbo', 'store-keeper']),

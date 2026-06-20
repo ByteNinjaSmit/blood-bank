@@ -84,6 +84,7 @@ export function createBagInspectionService(deps: {
         testResult: input.testResult,
         factorVIII: input.factorVIII,
         fibrinogen: input.fibrinogen,
+        reportImage: input.reportImage,
       }, actorId);
       
       if (!updated) throw new NotFoundError('BagInspection', id);

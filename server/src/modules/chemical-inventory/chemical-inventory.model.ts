@@ -102,6 +102,7 @@ const ChemicalPurchaseSchema = new Schema(
       },
     ],
     remarks: { type: String, trim: true },
+    invoiceImage: { type: String, default: null },
     deletedAt: { type: Date, default: null, index: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },

@@ -41,6 +41,7 @@ export const CreateGRNBody = z.object({
   batchLines: z.array(BatchLineSchema).min(1, 'At least one batch line required'),
   financials: FinancialsSchema,
   notes: z.string().trim().max(2000).optional(),
+  invoiceImage: z.string().trim().optional().nullable(),
 });
 
 export const UpdateGRNBody = z.object({
@@ -51,6 +52,7 @@ export const UpdateGRNBody = z.object({
   batchLines: z.array(BatchLineSchema).min(1).optional(),
   financials: FinancialsSchema,
   notes: z.string().trim().max(2000).optional(),
+  invoiceImage: z.string().trim().optional().nullable(),
 });
 
 export const ListGRNQuery = z.object({

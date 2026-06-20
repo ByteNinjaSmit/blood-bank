@@ -73,6 +73,7 @@ export function createGRNService(deps: {
         batchLines,
         financials: input.financials ?? undefined,
         notes: input.notes,
+        invoiceImage: input.invoiceImage ?? undefined,
         actorId,
       });
 
@@ -111,6 +112,7 @@ export function createGRNService(deps: {
         batchLines: BatchLineDto[];
         financials: any;
         notes: string;
+        invoiceImage: string | null;
       }> = {};
 
       if (input.invoiceNo !== undefined) patch.invoiceNo = input.invoiceNo;
@@ -119,6 +121,7 @@ export function createGRNService(deps: {
       if (input.receivedDate !== undefined) patch.receivedDate = input.receivedDate;
       if (input.financials !== undefined) patch.financials = input.financials;
       if (input.notes !== undefined) patch.notes = input.notes;
+      if (input.invoiceImage !== undefined) patch.invoiceImage = input.invoiceImage;
 
       if (input.batchLines !== undefined) {
         patch.batchLines = input.batchLines.map((b) => ({

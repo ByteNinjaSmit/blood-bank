@@ -50,6 +50,7 @@ export const UpdateBagInspectionReportBody = z.object({
   testResult: z.string().trim().max(1000).optional(),
   factorVIII: z.number().optional(),
   fibrinogen: z.number().optional(),
+  reportImage: z.string().trim().optional().nullable(),
 });
 
 export const ListBagInspectionQuery = z.object({

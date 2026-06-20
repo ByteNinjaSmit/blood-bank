@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PackageCheck, Plus, X } from 'lucide-react';
+import { PackageCheck, Plus, X, Upload, FileText, Image as ImageIcon } from 'lucide-react';
 import {
   useGRNList,
   useCreateGRN,
@@ -8,6 +8,44 @@ import {
 } from '../queries';
 import { usePOList } from '../queries';
 import { formatBloodBagQty } from '../utils/qtyHelper';
+import { apiClient, unwrap } from '@/core/api-client';
+import { toast } from 'sonner';
+
+const uploadFile = (file, folder) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiClient.post(`/api/v2/upload${folder ? `?folder=${folder}` : ''}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }).then(unwrap);
+};
+
+function IframePreviewModal({ isOpen, url, title, onClose }) {
+  if (!isOpen || !url) return null;
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[999] p-4 backdrop-blur-sm transition-opacity">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-4xl w-full h-[80vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <h3 className="text-base font-bold text-gray-900">{title || 'Document Viewer'}</h3>
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="flex-1 bg-gray-100 p-2">
+          <iframe
+            src={url}
+            title={title}
+            className="w-full h-full border-0 rounded-lg bg-white"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const STATUS_BADGE = {
   PENDING:  'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -44,6 +82,8 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
   const [cgst, setCgst] = useState(grnToEdit?.financials?.cgstRs || '');
   const [sgst, setSgst] = useState(grnToEdit?.financials?.sgstRs || '');
   const [igst, setIgst] = useState(grnToEdit?.financials?.igstRs || '');
+  const [invoiceImage, setInvoiceImage] = useState(grnToEdit?.invoiceImage || '');
+  const [uploading, setUploading] = useState(false);
   const [batches, setBatches] = useState(
     grnToEdit?.batchLines?.length > 0
       ? grnToEdit.batchLines.map((b) => ({
@@ -86,6 +126,7 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
       poId,
       vendorName: vendors.find(v => (v._id ?? v.id) === pos.find(p => (p._id ?? p.id) === poId)?.vendorId)?.name || 'Unknown Vendor',
       invoiceNo,
+      invoiceImage: invoiceImage || null,
       billDate: billDate || undefined,
       receivedDate: receivedDate || undefined,
       financials: {
@@ -175,6 +216,50 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Received Date</label>
               <input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} className={fieldClass} />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Invoice Upload</label>
+              {uploading ? (
+                <div className="text-xs text-gray-500 py-2">Uploading invoice...</div>
+              ) : invoiceImage ? (
+                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-2.5">
+                  <div className="flex-1 flex items-center gap-2 truncate">
+                    <ImageIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                    <span className="text-xs text-gray-600 truncate">{invoiceImage.split('/').pop()}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceImage('')}
+                    className="p-1 hover:bg-gray-200 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 cursor-pointer hover:bg-gray-50 bg-white shadow-sm">
+                  <Upload className="w-4 h-4 text-gray-400" />
+                  <span>Upload Invoice Document</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      setUploading(true);
+                      try {
+                        const res = await uploadFile(file, 'bagorderinvoice');
+                        setInvoiceImage(res.url);
+                        toast.success('Invoice uploaded successfully');
+                      } catch (err) {
+                        toast.error(err.message || 'File upload failed');
+                      } finally {
+                        setUploading(false);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              )}
             </div>
           </div>
 
@@ -268,7 +353,7 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
   );
 }
 
-function ViewGRNModal({ onClose, grn, vendors, pos }) {
+function ViewGRNModal({ onClose, grn, vendors, pos, onViewInvoice }) {
   if (!grn) return null;
 
   const fmtDate  = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -307,7 +392,17 @@ function ViewGRNModal({ onClose, grn, vendors, pos }) {
               </div>
               <div>
                 <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Invoice Number</span>
-                <span className="text-sm font-medium text-gray-800 font-mono">{grn.invoiceNo}</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-sm font-medium text-gray-850 text-gray-800 font-mono">{grn.invoiceNo}</span>
+                  {grn.invoiceImage && (
+                    <button
+                      onClick={() => onViewInvoice(grn.invoiceImage, `Invoice: ${grn.invoiceNo}`)}
+                      className="px-1.5 py-0.5 text-[10px] font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 transition-colors"
+                    >
+                      View Document
+                    </button>
+                  )}
+                </div>
               </div>
               <div>
                 <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Bill Date</span>
@@ -414,12 +509,53 @@ export default function GoodsReceipt() {
   const [viewGrn, setViewGrn] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
 
+  // Preview state
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewTitle, setPreviewTitle] = useState('');
+
+  // Table row upload state
+  const updateGRNMutation = useUpdateGRN();
+  const [tableUploadingId, setTableUploadingId] = useState(null);
+
   const grns = data?.items ?? data?.goodsReceipts ?? (Array.isArray(data) ? data : []);
   const pos = poData?.items ?? poData?.purchaseOrders ?? (Array.isArray(poData) ? poData : []);
   const vendors = vendorData?.items ?? vendorData?.vendors ?? (Array.isArray(vendorData) ? vendorData : []);
 
   const fmtDate  = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   const fmtMoney = (n) => n != null ? `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
+
+  // Table row image upload
+  const handleTableImageUpload = async (e, grnId) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setTableUploadingId(grnId);
+    try {
+      const res = await uploadFile(file, 'bagorderinvoice');
+      await updateGRNMutation.mutateAsync({
+        id: grnId,
+        data: { invoiceImage: res.url },
+      });
+      toast.success('Invoice uploaded successfully');
+    } catch (err) {
+      toast.error(err.message || 'File upload failed');
+    } finally {
+      setTableUploadingId(null);
+    }
+  };
+
+  // Table row delete image
+  const handleTableImageDelete = async (grnId) => {
+    if (!window.confirm('Are you sure you want to delete this invoice image?')) return;
+    try {
+      await updateGRNMutation.mutateAsync({
+        id: grnId,
+        data: { invoiceImage: null },
+      });
+      toast.success('Invoice image deleted');
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete invoice image');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -447,16 +583,16 @@ export default function GoodsReceipt() {
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
-                  {['Invoice No', 'Vendor', 'Received Date', 'Quantities (Boxes)', 'Actions'].map((h) => (
+                  {['Invoice No', 'Vendor', 'Received Date', 'Quantities (Boxes)', 'Invoice Document', 'Actions'].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {isLoading ? (
-                  <tr><td colSpan={5} className="py-12 text-center text-sm text-gray-500">Loading...</td></tr>
+                  <tr><td colSpan={6} className="py-12 text-center text-sm text-gray-500">Loading...</td></tr>
                 ) : grns.length === 0 ? (
-                  <tr><td colSpan={5} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
+                  <tr><td colSpan={6} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
                 ) : grns.map((g) => {
                   const doubleBags = (g.batchLines ?? []).filter(b => b.bagType === 'DOUBLE').reduce((sum, b) => sum + b.quantityReceived, 0);
                   const tripleBags = (g.batchLines ?? []).filter(b => b.bagType === 'TRIPLE').reduce((sum, b) => sum + b.quantityReceived, 0);
@@ -481,6 +617,45 @@ export default function GoodsReceipt() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
+                        {g.invoiceImage ? (
+                          <div className="inline-flex items-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                setPreviewUrl(g.invoiceImage);
+                                setPreviewTitle(`Invoice: ${g.invoiceNo}`);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-orange-850 bg-orange-50 hover:bg-orange-100 rounded-lg border border-orange-200 transition-colors"
+                            >
+                              <ImageIcon className="w-3.5 h-3.5 text-orange-700 shrink-0" /> View
+                            </button>
+                            <button
+                              onClick={() => handleTableImageDelete(g._id ?? g.id)}
+                              className="p-1 text-gray-400 hover:text-red-655 hover:bg-red-50 rounded transition-colors"
+                              title="Delete invoice image"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="relative inline-block">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleTableImageUpload(e, g._id ?? g.id)}
+                              disabled={tableUploadingId === (g._id ?? g.id)}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            <button
+                              type="button"
+                              disabled={tableUploadingId === (g._id ?? g.id)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 border border-gray-200 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 rounded-lg shadow-sm transition-colors"
+                            >
+                              <Upload className="w-3 h-3 text-gray-400" /> {tableUploadingId === (g._id ?? g.id) ? 'Uploading...' : 'Upload'}
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           <button onClick={() => { setViewGrn(g); setShowViewModal(true); }}
                             className="px-2.5 py-1 text-xs font-medium text-emerald-700 border border-emerald-200 rounded-md hover:bg-emerald-50 transition-colors">
@@ -502,7 +677,24 @@ export default function GoodsReceipt() {
       </div>
 
       {showDrawer && <GRNDrawer onClose={() => { setShowDrawer(false); setEditGrn(null); }} pos={pos} vendors={vendors} grnToEdit={editGrn} />}
-      {showViewModal && <ViewGRNModal onClose={() => { setShowViewModal(false); setViewGrn(null); }} grn={viewGrn} vendors={vendors} pos={pos} />}
+      {showViewModal && (
+        <ViewGRNModal
+          onClose={() => { setShowViewModal(false); setViewGrn(null); }}
+          grn={viewGrn}
+          vendors={vendors}
+          pos={pos}
+          onViewInvoice={(url, title) => {
+            setPreviewUrl(url);
+            setPreviewTitle(title);
+          }}
+        />
+      )}
+      <IframePreviewModal
+        isOpen={!!previewUrl}
+        url={previewUrl}
+        title={previewTitle}
+        onClose={() => setPreviewUrl('')}
+      />
     </div>
   );
 }

@@ -36,6 +36,7 @@ export interface GRNDto {
   financials?: FinancialsDto;
   status: string;
   notes?: string;
+  invoiceImage?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -73,6 +74,7 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     } : undefined,
     status: doc.status as string,
     notes: doc.notes as string | undefined,
+    invoiceImage: (doc.invoiceImage as string) || undefined,
     createdAt: doc.createdAt ? doc.createdAt.toISOString() : '',
     updatedAt: doc.updatedAt ? doc.updatedAt.toISOString() : '',
   };
@@ -82,7 +84,7 @@ export interface GRNRepo {
   list(q: ListGRNInput): Promise<{ items: GRNDto[]; total: number }>;
   findById(id: string): Promise<GRNDto | null>;
   create(doc: {
-    grnNumber: string;
+    grnNumber?: string;
     poId: string;
     vendorName?: string;
     invoiceNo: string;
@@ -93,6 +95,7 @@ export interface GRNRepo {
     batchLines: BatchLineDto[];
     financials?: FinancialsDto;
     notes?: string;
+    invoiceImage?: string | null;
     actorId: string;
   }): Promise<GRNDto>;
   update(id: string, patch: Partial<{
@@ -103,6 +106,7 @@ export interface GRNRepo {
     batchLines: BatchLineDto[];
     financials: FinancialsDto;
     notes: string;
+    invoiceImage: string | null;
   }>, actorId: string): Promise<GRNDto | null>;
 }
 
@@ -153,6 +157,7 @@ export function createGRNRepo(): GRNRepo {
         })),
         financials: input.financials,
         notes: input.notes,
+        invoiceImage: input.invoiceImage,
         status: 'ACCEPTED',
         createdBy: actor,
         updatedBy: actor,

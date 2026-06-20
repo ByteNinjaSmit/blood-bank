@@ -31,6 +31,7 @@ export interface ChemicalInventoryControllers {
   createStockLot(req: Request, res: Response, next: NextFunction): Promise<void>;
   updateUsage(req: Request, res: Response, next: NextFunction): Promise<void>;
   listPurchases(req: Request, res: Response, next: NextFunction): Promise<void>;
+  updatePurchase(req: Request, res: Response, next: NextFunction): Promise<void>;
   updatePurchasePayments(req: Request, res: Response, next: NextFunction): Promise<void>;
 
   // Audit Timeline
@@ -189,6 +190,15 @@ export function createChemicalInventoryControllers(service: ChemicalInventorySer
     async listPurchases(req, res, next) {
       try {
         const result = await service.listPurchases(actorId(req));
+        res.json({ success: true, data: result, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+
+    async updatePurchase(req, res, next) {
+      try {
+        const { id } = ValidateChemicalInventory.idParam(req);
+        const body = ValidateChemicalInventory.updatePurchase(req);
+        const result = await service.updatePurchase(id, body, actorId(req));
         res.json({ success: true, data: result, requestId: req.id });
       } catch (e) { next(e); }
     },

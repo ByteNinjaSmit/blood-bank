@@ -177,6 +177,16 @@ export function useUpdatePurchasePayments() {
   });
 }
 
+export function useUpdatePurchase() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => chemicalInventoryApi.purchase.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['chemical-inventory'] });
+    },
+  });
+}
+
 // Audit History
 export function useHistoryList(filters) {
   return useQuery({
