@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PackageCheck, Plus, X, Upload, FileText, Image as ImageIcon } from 'lucide-react';
+import { PackageCheck, Plus, X, Upload, FileText, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import {
   useGRNList,
   useCreateGRN,
@@ -21,8 +21,16 @@ const uploadFile = (file, folder) => {
   }).then(unwrap);
 };
 
+const deleteFile = (url) => {
+  return apiClient.delete('/api/v2/upload', {
+    params: { url },
+  }).then(unwrap);
+};
+
 function IframePreviewModal({ isOpen, url, title, onClose }) {
   if (!isOpen || !url) return null;
+  const isImage = /\.(jpeg|jpg|gif|png|webp|svg)($|\?)/i.test(url) || !url.toLowerCase().endsWith('.pdf');
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[999] p-4 backdrop-blur-sm transition-opacity">
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-4xl w-full h-[80vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
@@ -35,12 +43,58 @@ function IframePreviewModal({ isOpen, url, title, onClose }) {
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex-1 bg-gray-100 p-2">
-          <iframe
-            src={url}
-            title={title}
-            className="w-full h-full border-0 rounded-lg bg-white"
-          />
+        <div className="flex-1 bg-gray-50 flex items-center justify-center p-4 overflow-auto">
+          {isImage ? (
+            <img
+              src={url}
+              alt={title}
+              className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-sm border border-gray-205"
+            />
+          ) : (
+            <iframe
+              src={url}
+              title={title}
+              className="w-full h-full border-0 rounded-lg bg-white"
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmDeleteModal({ isOpen, title, message, onConfirm, onClose }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4 backdrop-blur-sm transition-opacity animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-sm w-full p-6 animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-red-50 text-red-600 rounded-xl shrink-0 animate-bounce">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-gray-900">{title || 'Delete Confirmation'}</h3>
+            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">{message || 'Are you sure you want to delete this?'}</p>
+          </div>
+        </div>
+        <div className="flex gap-3 justify-end mt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors"
+          >
+            Delete
+          </button>
         </div>
       </div>
     </div>
@@ -84,8 +138,8 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
   const [igst, setIgst] = useState(grnToEdit?.financials?.igstRs || '');
   const [invoiceImage, setInvoiceImage] = useState(grnToEdit?.invoiceImage || '');
   const [uploading, setUploading] = useState(false);
-  const [batches, setBatches] = useState(
-    grnToEdit?.batchLines?.length > 0
+  const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
+  const [batches, setBatches] = useState( grnToEdit?.batchLines?.length > 0
       ? grnToEdit.batchLines.map((b) => ({
           bagType: b.bagType,
           batchNo: b.batchNumber,
@@ -229,7 +283,23 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setInvoiceImage('')}
+                    onClick={() => {
+                      setConfirmDelete({
+                        isOpen: true,
+                        title: 'Delete Invoice Image?',
+                        message: 'Are you sure you want to delete this invoice image? This will permanently remove the invoice attachment from storage.',
+                        onConfirm: async () => {
+                          try {
+                            await deleteFile(invoiceImage);
+                            toast.success('Invoice image deleted from S3');
+                          } catch (err) {
+                            console.error('S3 delete failed:', err);
+                            toast.error('Failed to delete invoice image from S3');
+                          }
+                          setInvoiceImage('');
+                        }
+                      });
+                    }}
                     className="p-1 hover:bg-gray-200 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
                   >
                     <X className="w-4 h-4" />
@@ -349,6 +419,13 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
           </div>
         </form>
       </div>
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.isOpen}
+        title={confirmDelete.title}
+        message={confirmDelete.message}
+        onConfirm={confirmDelete.onConfirm}
+        onClose={() => setConfirmDelete({ isOpen: false, onConfirm: null, title: '', message: '' })}
+      />
     </>
   );
 }
@@ -516,6 +593,7 @@ export default function GoodsReceipt() {
   // Table row upload state
   const updateGRNMutation = useUpdateGRN();
   const [tableUploadingId, setTableUploadingId] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
 
   const grns = data?.items ?? data?.goodsReceipts ?? (Array.isArray(data) ? data : []);
   const pos = poData?.items ?? poData?.purchaseOrders ?? (Array.isArray(poData) ? poData : []);
@@ -545,16 +623,30 @@ export default function GoodsReceipt() {
 
   // Table row delete image
   const handleTableImageDelete = async (grnId) => {
-    if (!window.confirm('Are you sure you want to delete this invoice image?')) return;
-    try {
-      await updateGRNMutation.mutateAsync({
-        id: grnId,
-        data: { invoiceImage: null },
-      });
-      toast.success('Invoice image deleted');
-    } catch (err) {
-      toast.error(err.message || 'Failed to delete invoice image');
-    }
+    const grn = grns.find(g => (g._id ?? g.id) === grnId);
+    if (!grn || !grn.invoiceImage) return;
+
+    setConfirmDelete({
+      isOpen: true,
+      title: 'Delete Invoice Image?',
+      message: `Are you sure you want to delete the invoice image for GRN No: ${grn.invoiceNo}? This action is permanent and cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          try {
+            await deleteFile(grn.invoiceImage);
+          } catch (err) {
+            console.error('S3 delete failed:', err);
+          }
+          await updateGRNMutation.mutateAsync({
+            id: grnId,
+            data: { invoiceImage: null },
+          });
+          toast.success('Invoice image deleted successfully');
+        } catch (err) {
+          toast.error(err.message || 'Failed to delete invoice image');
+        }
+      }
+    });
   };
 
   return (
@@ -694,6 +786,13 @@ export default function GoodsReceipt() {
         url={previewUrl}
         title={previewTitle}
         onClose={() => setPreviewUrl('')}
+      />
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.isOpen}
+        title={confirmDelete.title}
+        message={confirmDelete.message}
+        onConfirm={confirmDelete.onConfirm}
+        onClose={() => setConfirmDelete({ isOpen: false, onConfirm: null, title: '', message: '' })}
       />
     </div>
   );

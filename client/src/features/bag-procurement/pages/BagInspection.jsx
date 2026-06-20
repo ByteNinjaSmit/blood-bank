@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ClipboardCheck, Plus, X, Upload, FileText, Image as ImageIcon } from 'lucide-react';
+import { ClipboardCheck, Plus, X, Upload, FileText, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import { useBagInspectionList, useCreateBagInspection, useUpdateBagInspectionReport } from '../queries';
 import { useGRNList } from '../queries';
 import { useAuth } from '@/store/auth';
@@ -16,8 +16,16 @@ const uploadFile = (file, folder) => {
   }).then(unwrap);
 };
 
+const deleteFile = (url) => {
+  return apiClient.delete('/api/v2/upload', {
+    params: { url },
+  }).then(unwrap);
+};
+
 function IframePreviewModal({ isOpen, url, title, onClose }) {
   if (!isOpen || !url) return null;
+  const isImage = /\.(jpeg|jpg|gif|png|webp|svg)($|\?)/i.test(url) || !url.toLowerCase().endsWith('.pdf');
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[999] p-4 backdrop-blur-sm transition-opacity">
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-4xl w-full h-[80vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
@@ -30,12 +38,58 @@ function IframePreviewModal({ isOpen, url, title, onClose }) {
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex-1 bg-gray-100 p-2">
-          <iframe
-            src={url}
-            title={title}
-            className="w-full h-full border-0 rounded-lg bg-white"
-          />
+        <div className="flex-1 bg-gray-50 flex items-center justify-center p-4 overflow-auto">
+          {isImage ? (
+            <img
+              src={url}
+              alt={title}
+              className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-sm border border-gray-205"
+            />
+          ) : (
+            <iframe
+              src={url}
+              title={title}
+              className="w-full h-full border-0 rounded-lg bg-white"
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmDeleteModal({ isOpen, title, message, onConfirm, onClose }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4 backdrop-blur-sm transition-opacity animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-sm w-full p-6 animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-red-50 text-red-600 rounded-xl shrink-0 animate-bounce">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-gray-900">{title || 'Delete Confirmation'}</h3>
+            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">{message || 'Are you sure you want to delete this?'}</p>
+          </div>
+        </div>
+        <div className="flex gap-3 justify-end mt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors"
+          >
+            Delete
+          </button>
         </div>
       </div>
     </div>
@@ -286,6 +340,7 @@ function UpdateReportDrawer({ onClose, inspection }) {
   const [fibrinogen, setFibrinogen] = useState('');
   const [reportImage, setReportImage] = useState(inspection.reportImage || '');
   const [uploading, setUploading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
   
   const updateReport = useUpdateBagInspectionReport();
 
@@ -398,7 +453,23 @@ function UpdateReportDrawer({ onClose, inspection }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setReportImage('')}
+                    onClick={() => {
+                      setConfirmDelete({
+                        isOpen: true,
+                        title: 'Delete Report Image?',
+                        message: 'Are you sure you want to delete this quality testing report image? This action will permanently remove the report attachment.',
+                        onConfirm: async () => {
+                          try {
+                            await deleteFile(reportImage);
+                            toast.success('Report image deleted from S3');
+                          } catch (err) {
+                            console.error('S3 delete failed:', err);
+                            toast.error('Failed to delete report image from S3');
+                          }
+                          setReportImage('');
+                        }
+                      });
+                    }}
                     className="p-1 hover:bg-gray-200 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
                   >
                     <X className="w-4 h-4" />
@@ -442,14 +513,85 @@ function UpdateReportDrawer({ onClose, inspection }) {
           </div>
         </form>
       </div>
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.isOpen}
+        title={confirmDelete.title}
+        message={confirmDelete.message}
+        onConfirm={confirmDelete.onConfirm}
+        onClose={() => setConfirmDelete({ isOpen: false, onConfirm: null, title: '', message: '' })}
+      />
     </>
   );
 }
 
 function ViewInspectionModal({ onClose, inspection, onViewReportImage }) {
+  const [uploading, setUploading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
+  const updateReport = useUpdateBagInspectionReport();
+
   if (!inspection) return null;
 
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+  const handleImageDelete = () => {
+    setConfirmDelete({
+      isOpen: true,
+      title: 'Delete Report Image?',
+      message: 'Are you sure you want to delete this laboratory report image? This action will permanently remove the document from storage.',
+      onConfirm: async () => {
+        try {
+          try {
+            await deleteFile(inspection.reportImage);
+          } catch (err) {
+            console.error('S3 delete failed:', err);
+          }
+          await updateReport.mutateAsync({
+            id: inspection.id || inspection._id,
+            data: {
+              reportDate: inspection.reportDate || new Date().toISOString(),
+              bagNo: inspection.bagNo || '—',
+              segmentNo: inspection.segmentNo || '—',
+              bloodGroup: inspection.bloodGroup || undefined,
+              testResult: inspection.testResult || undefined,
+              factorVIII: inspection.factorVIII != null ? Number(inspection.factorVIII) : undefined,
+              fibrinogen: inspection.fibrinogen != null ? Number(inspection.fibrinogen) : undefined,
+              reportImage: null,
+            },
+          });
+          toast.success('Report image deleted successfully');
+        } catch (err) {
+          toast.error(err.message || 'Failed to delete report image');
+        }
+      }
+    });
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const res = await uploadFile(file, 'bagtestingreport');
+      await updateReport.mutateAsync({
+        id: inspection.id || inspection._id,
+        data: {
+          reportDate: inspection.reportDate || new Date().toISOString(),
+          bagNo: inspection.bagNo || '—',
+          segmentNo: inspection.segmentNo || '—',
+          bloodGroup: inspection.bloodGroup || undefined,
+          testResult: inspection.testResult || undefined,
+          factorVIII: inspection.factorVIII != null ? Number(inspection.factorVIII) : undefined,
+          fibrinogen: inspection.fibrinogen != null ? Number(inspection.fibrinogen) : undefined,
+          reportImage: res.url,
+        },
+      });
+      toast.success('Report image uploaded successfully');
+    } catch (err) {
+      toast.error(err.message || 'File upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <>
@@ -561,18 +703,49 @@ function ViewInspectionModal({ onClose, inspection, onViewReportImage }) {
             )}
 
             {/* Document Image section */}
-            {inspection.reportImage && (
+            {inspection.reportImage ? (
               <div className="bg-orange-50/50 border border-orange-100 rounded-lg p-4 flex items-center justify-between">
                 <div>
                   <span className="block text-[10px] font-bold text-orange-800 uppercase tracking-wider mb-0.5">Laboratory Report Document</span>
                   <span className="text-xs text-gray-600">Attached image of lab report is available.</span>
                 </div>
-                <button
-                  onClick={() => onViewReportImage(inspection.reportImage)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-800 hover:bg-orange-900 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
-                >
-                  <ImageIcon className="w-3.5 h-3.5" /> View Report Document
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onViewReportImage(inspection.reportImage)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-800 hover:bg-orange-900 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5" /> View Report Document
+                  </button>
+                  <button
+                    onClick={handleImageDelete}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-105 text-xs font-bold rounded-lg border border-red-200 transition-colors shadow-sm bg-red-50"
+                    title="Delete report image"
+                  >
+                    <X className="w-3.5 h-3.5" /> Delete
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 border border-gray-200 border-dashed rounded-lg p-4 flex items-center justify-between">
+                <div>
+                  <span className="block text-[10px] font-bold text-gray-505 text-gray-500 uppercase tracking-wider mb-0.5">Laboratory Report Document</span>
+                  <span className="text-xs text-gray-500">No report document image uploaded.</span>
+                </div>
+                <div>
+                  {uploading ? (
+                    <div className="text-xs text-gray-500 py-1.5">Uploading...</div>
+                  ) : (
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold rounded-lg cursor-pointer transition-colors shadow-sm">
+                      <Upload className="w-3.5 h-3.5" /> Upload Report Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
             )}
 
@@ -623,6 +796,13 @@ function ViewInspectionModal({ onClose, inspection, onViewReportImage }) {
           </div>
         </div>
       </div>
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.isOpen}
+        title={confirmDelete.title}
+        message={confirmDelete.message}
+        onConfirm={confirmDelete.onConfirm}
+        onClose={() => setConfirmDelete({ isOpen: false, onConfirm: null, title: '', message: '' })}
+      />
     </>
   );
 }
@@ -774,7 +954,7 @@ export default function BagInspection() {
             setShowViewModal(false);
             setSelectedInspection(null);
           }}
-          inspection={selectedInspection}
+          inspection={inspections.find(ins => (ins._id ?? ins.id) === (selectedInspection?._id ?? selectedInspection?.id)) || selectedInspection}
           onViewReportImage={(url) => {
             setPreviewUrl(url);
             setPreviewTitle(`Lab Report Document: Batch ${selectedInspection.batchNumber}`);

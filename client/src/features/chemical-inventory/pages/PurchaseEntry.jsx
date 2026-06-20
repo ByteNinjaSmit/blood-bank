@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, ArrowLeft, Trash2, X, CreditCard, Calendar, ShoppingBag, FileText, CheckCircle2, AlertCircle, Clock, Upload, Image as ImageIcon } from 'lucide-react';
+import { Plus, ArrowLeft, Trash2, X, CreditCard, Calendar, ShoppingBag, FileText, CheckCircle2, AlertCircle, Clock, Upload, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import {
   useChemicalList,
   useSupplierList,
@@ -23,8 +23,16 @@ const uploadFile = (file, folder) => {
   }).then(unwrap);
 };
 
+const deleteFile = (url) => {
+  return apiClient.delete('/api/v2/upload', {
+    params: { url },
+  }).then(unwrap);
+};
+
 function IframePreviewModal({ isOpen, url, title, onClose }) {
   if (!isOpen || !url) return null;
+  const isImage = /\.(jpeg|jpg|gif|png|webp|svg)($|\?)/i.test(url) || !url.toLowerCase().endsWith('.pdf');
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[999] p-4 backdrop-blur-sm transition-opacity">
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-4xl w-full h-[80vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
@@ -37,12 +45,58 @@ function IframePreviewModal({ isOpen, url, title, onClose }) {
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex-1 bg-gray-100 p-2">
-          <iframe
-            src={url}
-            title={title}
-            className="w-full h-full border-0 rounded-lg bg-white"
-          />
+        <div className="flex-1 bg-gray-50 flex items-center justify-center p-4 overflow-auto">
+          {isImage ? (
+            <img
+              src={url}
+              alt={title}
+              className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-sm border border-gray-205"
+            />
+          ) : (
+            <iframe
+              src={url}
+              title={title}
+              className="w-full h-full border-0 rounded-lg bg-white"
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmDeleteModal({ isOpen, title, message, onConfirm, onClose }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4 backdrop-blur-sm transition-opacity animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-sm w-full p-6 animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-red-50 text-red-600 rounded-xl shrink-0 animate-bounce">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-gray-900">{title || 'Delete Confirmation'}</h3>
+            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">{message || 'Are you sure you want to delete this?'}</p>
+          </div>
+        </div>
+        <div className="flex gap-3 justify-end mt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors"
+          >
+            Delete
+          </button>
         </div>
       </div>
     </div>
@@ -73,6 +127,7 @@ export default function PurchaseEntry() {
   // Upload state
   const [uploading, setUploading] = useState(false);
   const [tableUploadingId, setTableUploadingId] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
 
   // Iframe Preview state
   const [previewUrl, setPreviewUrl] = useState('');
@@ -187,16 +242,30 @@ export default function PurchaseEntry() {
 
   // Table row delete image
   const handleTableImageDelete = async (purchaseId) => {
-    if (!window.confirm('Are you sure you want to delete this invoice image?')) return;
-    try {
-      await updatePurchaseMutation.mutateAsync({
-        id: purchaseId,
-        data: { invoiceImage: null },
-      });
-      toast.success('Invoice image deleted');
-    } catch (err) {
-      toast.error(err.message || 'Failed to delete invoice image');
-    }
+    const purchase = purchases?.find((p) => (p._id ?? p.id) === purchaseId);
+    if (!purchase || !purchase.invoiceImage) return;
+
+    setConfirmDelete({
+      isOpen: true,
+      title: 'Delete Invoice Image?',
+      message: `Are you sure you want to delete the invoice image for purchase invoice: ${purchase.invoiceNumber}? This action is permanent and cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          try {
+            await deleteFile(purchase.invoiceImage);
+          } catch (err) {
+            console.error('S3 delete failed:', err);
+          }
+          await updatePurchaseMutation.mutateAsync({
+            id: purchaseId,
+            data: { invoiceImage: null },
+          });
+          toast.success('Invoice image deleted successfully');
+        } catch (err) {
+          toast.error(err.message || 'Failed to delete invoice image');
+        }
+      }
+    });
   };
 
   const handleSubmit = (e) => {
@@ -571,7 +640,23 @@ export default function PurchaseEntry() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setInvoiceForm((prev) => ({ ...prev, invoiceImage: '' }))}
+                      onClick={() => {
+                        setConfirmDelete({
+                          isOpen: true,
+                          title: 'Delete Invoice Image?',
+                          message: 'Are you sure you want to delete this invoice image? This will permanently remove the invoice attachment from storage.',
+                          onConfirm: async () => {
+                            try {
+                              await deleteFile(invoiceForm.invoiceImage);
+                              toast.success('Invoice image deleted from S3');
+                            } catch (err) {
+                              console.error('S3 delete failed:', err);
+                              toast.error('Failed to delete invoice image from S3');
+                            }
+                            setInvoiceForm((prev) => ({ ...prev, invoiceImage: '' }));
+                          }
+                        });
+                      }}
                       className="p-1 hover:bg-red-100 rounded text-red-850 text-red-900 transition-colors"
                     >
                       <X className="w-4 h-4" />
@@ -1006,6 +1091,13 @@ export default function PurchaseEntry() {
           setPreviewUrl('');
           setPreviewTitle('');
         }}
+      />
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.isOpen}
+        title={confirmDelete.title}
+        message={confirmDelete.message}
+        onConfirm={confirmDelete.onConfirm}
+        onClose={() => setConfirmDelete({ isOpen: false, onConfirm: null, title: '', message: '' })}
       />
     </div>
   );

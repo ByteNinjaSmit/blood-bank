@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import multer from 'multer';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { env } from '@/core/config/env';
 import { authenticate } from '@/shared/middlewares/authenticate';
 import { ValidationError } from '@/shared/errors';
@@ -75,6 +75,41 @@ router.post(
           filename,
           url: fileUrl,
         },
+      });
+    } catch (e: any) {
+      next(e);
+    }
+  }
+);
+
+router.delete(
+  '/',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const fileUrl = req.query.url as string;
+      if (!fileUrl) {
+        throw new ValidationError('url query parameter is required');
+      }
+
+      const publicUrl = env.S3_PUBLIC_URL;
+      if (!fileUrl.startsWith(publicUrl)) {
+        throw new ValidationError('Invalid file URL');
+      }
+
+      const key = fileUrl.replace(`${publicUrl}/`, '');
+      const bucketName = env.S3_BUCKET || 'blood-bank';
+
+      await s3Client.send(
+        new DeleteObjectCommand({
+          Bucket: bucketName,
+          Key: key,
+        })
+      );
+
+      res.json({
+        success: true,
+        message: 'File deleted from S3 successfully',
       });
     } catch (e: any) {
       next(e);
