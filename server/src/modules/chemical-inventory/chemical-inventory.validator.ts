@@ -95,6 +95,16 @@ export const SupplierReportQuery = z.object({
   endDate: z.string().trim().optional(),
 });
 
+export const UpdatePurchasePaymentsBody = z.object({
+  installments: z.array(
+    z.object({
+      amount: z.number().positive(),
+      paymentDate: z.coerce.date(),
+      remarks: z.string().trim().max(500).optional(),
+    })
+  ),
+});
+
 export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid id') });
 
 export const ValidateChemicalInventory = {
@@ -106,6 +116,7 @@ export const ValidateChemicalInventory = {
   updateChemical: (req: Request) => parseOrThrow(UpdateChemicalBody, req.body, 'request body'),
   createStockLot: (req: Request) => parseOrThrow(CreateStockLotBody, req.body, 'request body'),
   updateUsage: (req: Request) => parseOrThrow(UpdateUsageBody, req.body, 'request body'),
+  updatePurchasePayments: (req: Request) => parseOrThrow(UpdatePurchasePaymentsBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListQuery, req.query, 'query string'),
   supplierReportQuery: (req: Request) => parseOrThrow(SupplierReportQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),

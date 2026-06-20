@@ -1,5 +1,5 @@
 import { childLogger } from '@/core/logger';
-import { NotFoundError, ValidationError } from '@/shared/errors';
+import { ConflictError, NotFoundError, ValidationError } from '@/shared/errors';
 import type { ChemicalInventoryRepo } from './chemical-inventory.repository';
 import { ChemicalCategoryModel } from './chemical-inventory.model';
 
@@ -33,6 +33,10 @@ export interface ChemicalInventoryService {
   listStockLots(filters: any): Promise<{ items: any[]; total: number }>;
   createStockLot(doc: any, actorId: string): Promise<any>;
   updateUsage(lotId: string, action: 'OPEN' | 'CONSUME', quantity: number, actorId: string): Promise<any>;
+
+  // Purchases
+  listPurchases(actorId: string): Promise<any[]>;
+  updatePurchasePayments(id: string, installments: any[], actorId: string): Promise<any>;
 
   // History
   listHistory(chemicalId?: string, lotId?: string): Promise<any[]>;
@@ -130,6 +134,24 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
     },
 
     async createStockLot(doc, actorId) {
+      const existingPurchase = await deps.inventory.findChemicalPurchaseByInvoice(doc.invoiceNumber);
+      if (existingPurchase) {
+        throw new ConflictError(`Purchase with invoice number '${doc.invoiceNumber}' already exists.`);
+      }
+
+      const totalAmount = doc.items.reduce((sum: number, item: any) => sum + (item.totalAmount || 0), 0);
+      const purchase = await deps.inventory.createChemicalPurchase({
+        invoiceNumber: doc.invoiceNumber,
+        purchaseDate: doc.purchaseDate,
+        supplierId: doc.supplierId,
+        totalAmount,
+        paidAmount: 0,
+        paymentStatus: 'Pending',
+        installments: [],
+        remarks: doc.remarks,
+        actorId,
+      });
+
       const results = [];
       for (const item of doc.items) {
         if (item.qtyPurchased <= 0) {
@@ -143,6 +165,7 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
         
         const lot = await deps.inventory.createStockLot({
           chemicalId: item.chemicalId,
+          purchaseId: purchase._id.toString(),
           purchaseDate: doc.purchaseDate,
           invoiceNumber: doc.invoiceNumber,
           supplierId: doc.supplierId,
@@ -178,6 +201,35 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
         results.push(lot);
       }
       return results;
+    },
+
+    async listPurchases(actorId) {
+      return deps.inventory.listChemicalPurchases();
+    },
+
+    async updatePurchasePayments(id, installments, actorId) {
+      const purchase = await deps.inventory.findChemicalPurchaseById(id);
+      if (!purchase) {
+        throw new NotFoundError('ChemicalPurchase', id);
+      }
+
+      // Calculate paidAmount and status
+      const paidAmount = installments.reduce((sum: number, inst: any) => sum + (inst.amount || 0), 0);
+      let paymentStatus: 'Pending' | 'Partially Paid' | 'Fully Paid' = 'Pending';
+      if (paidAmount >= purchase.totalAmount) {
+        paymentStatus = 'Fully Paid';
+      } else if (paidAmount > 0) {
+        paymentStatus = 'Partially Paid';
+      }
+
+      const updated = await deps.inventory.updateChemicalPurchase(id, {
+        installments,
+        paidAmount,
+        paymentStatus,
+      }, actorId);
+
+      log.info({ purchaseId: id, paidAmount, paymentStatus, actorId }, 'Purchase payments updated');
+      return updated;
     },
 
     async updateUsage(lotId, action, quantity, actorId) {

@@ -132,6 +132,20 @@ router.patch(
   controllers.updateUsage
 );
 
+// Purchases
+router.get(
+  '/purchase',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'store-keeper', 'lab-tech-serology', 'qa-manager']),
+  controllers.listPurchases
+);
+router.patch(
+  '/purchase/:id/payments',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'store-keeper']),
+  controllers.updatePurchasePayments
+);
+
 // History Audit Logs
 router.get(
   '/history',

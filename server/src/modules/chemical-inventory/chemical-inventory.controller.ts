@@ -30,6 +30,8 @@ export interface ChemicalInventoryControllers {
   listStockLots(req: Request, res: Response, next: NextFunction): Promise<void>;
   createStockLot(req: Request, res: Response, next: NextFunction): Promise<void>;
   updateUsage(req: Request, res: Response, next: NextFunction): Promise<void>;
+  listPurchases(req: Request, res: Response, next: NextFunction): Promise<void>;
+  updatePurchasePayments(req: Request, res: Response, next: NextFunction): Promise<void>;
 
   // Audit Timeline
   listHistory(req: Request, res: Response, next: NextFunction): Promise<void>;
@@ -180,6 +182,22 @@ export function createChemicalInventoryControllers(service: ChemicalInventorySer
         const { id } = ValidateChemicalInventory.idParam(req);
         const body = ValidateChemicalInventory.updateUsage(req);
         const result = await service.updateUsage(id, body.action, body.quantity, actorId(req));
+        res.json({ success: true, data: result, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+
+    async listPurchases(req, res, next) {
+      try {
+        const result = await service.listPurchases(actorId(req));
+        res.json({ success: true, data: result, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+
+    async updatePurchasePayments(req, res, next) {
+      try {
+        const { id } = ValidateChemicalInventory.idParam(req);
+        const body = ValidateChemicalInventory.updatePurchasePayments(req);
+        const result = await service.updatePurchasePayments(id, body.installments, actorId(req));
         res.json({ success: true, data: result, requestId: req.id });
       } catch (e) { next(e); }
     },

@@ -9,6 +9,7 @@ export const chemicalInventoryKeys = {
   chemical:     ()       => [...chemicalInventoryKeys.all, 'chemical'],
   lot:          (f)      => [...chemicalInventoryKeys.all, 'lot', f ?? {}],
   history:      (f)      => [...chemicalInventoryKeys.all, 'history', f ?? {}],
+  purchase:     ()       => [...chemicalInventoryKeys.all, 'purchase'],
   stats:        ()       => [...chemicalInventoryKeys.all, 'stats'],
   reports:      (t, f)   => [...chemicalInventoryKeys.all, 'reports', t, f ?? {}],
 };
@@ -152,6 +153,24 @@ export function useUpdateUsage() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, action, quantity }) => chemicalInventoryApi.lot.updateUsage(id, { action, quantity }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['chemical-inventory'] });
+    },
+  });
+}
+
+export function usePurchaseList() {
+  return useQuery({
+    queryKey: chemicalInventoryKeys.purchase(),
+    queryFn: chemicalInventoryApi.purchase.list,
+    staleTime: 10_000,
+  });
+}
+
+export function useUpdatePurchasePayments() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, installments }) => chemicalInventoryApi.purchase.updatePayments(id, { installments }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['chemical-inventory'] });
     },

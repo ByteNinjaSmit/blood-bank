@@ -7,6 +7,7 @@ import {
   ChemicalModel,
   ChemicalStockLotModel,
   ChemicalStockHistoryModel,
+  ChemicalPurchaseModel,
 } from './chemical-inventory.model';
 import type { ListQuery, SupplierReportQuery } from './chemical-inventory.validator';
 
@@ -39,6 +40,13 @@ export interface ChemicalInventoryRepo {
   findStockLotById(id: string): Promise<any>;
   updateStockLot(id: string, patch: any, actorId: string): Promise<any>;
   listStockLots(q: z.infer<typeof ListQuery>): Promise<{ items: any[]; total: number }>;
+
+  // Purchase Invoices & Installments
+  createChemicalPurchase(doc: any & { actorId: string }): Promise<any>;
+  findChemicalPurchaseById(id: string): Promise<any>;
+  findChemicalPurchaseByInvoice(invoiceNumber: string): Promise<any>;
+  updateChemicalPurchase(id: string, patch: any, actorId: string): Promise<any>;
+  listChemicalPurchases(): Promise<any[]>;
 
   // Audit Logs
   createHistoryLog(log: {
@@ -189,6 +197,7 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
       const actor = new Types.ObjectId(doc.actorId);
       return ChemicalStockLotModel.create({
         chemicalId: new Types.ObjectId(doc.chemicalId),
+        purchaseId: doc.purchaseId ? new Types.ObjectId(doc.purchaseId) : null,
         purchaseDate: doc.purchaseDate,
         invoiceNumber: doc.invoiceNumber,
         supplierId: new Types.ObjectId(doc.supplierId),
@@ -293,6 +302,48 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
       ]);
 
       return { items, total };
+    },
+
+    async createChemicalPurchase(doc) {
+      const actor = new Types.ObjectId(doc.actorId);
+      return ChemicalPurchaseModel.create({
+        invoiceNumber: doc.invoiceNumber,
+        purchaseDate: doc.purchaseDate,
+        supplierId: new Types.ObjectId(doc.supplierId),
+        totalAmount: doc.totalAmount,
+        paidAmount: doc.paidAmount ?? 0,
+        paymentStatus: doc.paymentStatus ?? 'Pending',
+        installments: doc.installments ?? [],
+        remarks: doc.remarks,
+        createdBy: actor,
+        updatedBy: actor,
+      });
+    },
+
+    async findChemicalPurchaseById(id) {
+      return ChemicalPurchaseModel.findOne({ _id: new Types.ObjectId(id), deletedAt: null }).lean();
+    },
+
+    async findChemicalPurchaseByInvoice(invoiceNumber) {
+      return ChemicalPurchaseModel.findOne({
+        invoiceNumber: { $regex: new RegExp(`^${invoiceNumber.trim()}$`, 'i') },
+        deletedAt: null,
+      }).lean();
+    },
+
+    async updateChemicalPurchase(id, patch, actorId) {
+      return ChemicalPurchaseModel.findByIdAndUpdate(
+        new Types.ObjectId(id),
+        { $set: { ...patch, updatedBy: new Types.ObjectId(actorId) } },
+        { new: true }
+      );
+    },
+
+    async listChemicalPurchases() {
+      return ChemicalPurchaseModel.find({ deletedAt: null })
+        .populate('supplierId', 'name contactPerson phone email')
+        .sort({ purchaseDate: -1 })
+        .lean();
     },
 
     async createHistoryLog(log) {

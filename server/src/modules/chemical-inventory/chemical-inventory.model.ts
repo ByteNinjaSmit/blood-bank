@@ -80,10 +80,46 @@ export const ChemicalModel: ChemicalModel =
   (mongoose.models.Chemical as ChemicalModel | undefined) ??
   mongoose.model<Chemical>('Chemical', ChemicalSchema);
 
+// ─── Chemical Purchase ────────────────────────────────────────────────────────
+const ChemicalPurchaseSchema = new Schema(
+  {
+    invoiceNumber: { type: String, required: true, unique: true, trim: true },
+    purchaseDate: { type: Date, required: true, index: true },
+    supplierId: { type: Schema.Types.ObjectId, ref: 'ChemicalSupplier', required: true, index: true },
+    totalAmount: { type: Number, required: true, default: 0 },
+    paidAmount: { type: Number, required: true, default: 0 },
+    paymentStatus: {
+      type: String,
+      enum: ['Pending', 'Partially Paid', 'Fully Paid'],
+      default: 'Pending',
+      index: true,
+    },
+    installments: [
+      {
+        amount: { type: Number, required: true },
+        paymentDate: { type: Date, required: true },
+        remarks: { type: String, trim: true },
+      },
+    ],
+    remarks: { type: String, trim: true },
+    deletedAt: { type: Date, default: null, index: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  },
+  { timestamps: true }
+);
+
+export type ChemicalPurchase = InferSchemaType<typeof ChemicalPurchaseSchema>;
+export type ChemicalPurchaseModel = Model<ChemicalPurchase>;
+export const ChemicalPurchaseModel: ChemicalPurchaseModel =
+  (mongoose.models.ChemicalPurchase as ChemicalPurchaseModel | undefined) ??
+  mongoose.model<ChemicalPurchase>('ChemicalPurchase', ChemicalPurchaseSchema);
+
 // ─── Chemical Stock Lot ───────────────────────────────────────────────────────
 const ChemicalStockLotSchema = new Schema(
   {
     chemicalId: { type: Schema.Types.ObjectId, ref: 'Chemical', required: true, index: true },
+    purchaseId: { type: Schema.Types.ObjectId, ref: 'ChemicalPurchase', default: null, index: true },
     purchaseDate: { type: Date, required: true, index: true },
     invoiceNumber: { type: String, required: true, trim: true },
     supplierId: { type: Schema.Types.ObjectId, ref: 'ChemicalSupplier', required: true, index: true },
