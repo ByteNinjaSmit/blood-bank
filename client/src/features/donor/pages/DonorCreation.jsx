@@ -291,7 +291,7 @@ export default function DonorCreation() {
       navigate(`/camp-details?id=${campId}`);
     } else {
       if (!draftId) {
-        navigate(`/donations/create-donation?draftId=${id}`, { replace: true });
+        navigate(`/master-register/donor-creation?draftId=${id}`, { replace: true });
       }
     }
   };
@@ -826,7 +826,7 @@ export default function DonorCreation() {
         }
       }
 
-      navigate("/donor/view-donor");
+      navigate("/master-register/donors");
     } catch (err) {
       const details = err.response?.data?.details;
       if (Array.isArray(details)) {

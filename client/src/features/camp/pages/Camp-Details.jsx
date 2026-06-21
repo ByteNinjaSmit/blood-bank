@@ -97,7 +97,7 @@ const CampDonations = () => {
     if(facilityType === "view-donor") {
       navigate(`/camp-donors?id=${camp._id}`);
     }else if(facilityType === "create-donation") {
-      navigate(`/donations/create-donation?campId=${camp._id}`);
+      navigate(`/master-register/donor-creation?campId=${camp._id}`);
     }else if(facilityType === "view-donations") {
       navigate(`/camp-donation?id=${camp._id}`);
     }

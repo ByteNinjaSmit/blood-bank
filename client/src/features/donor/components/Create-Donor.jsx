@@ -431,7 +431,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
     if (onStartDonation) {
       onStartDonation(createdDonor)
     } else {
-      navigate('/donations/create-donation', { state: { donor: createdDonor } })
+      navigate('/master-register/donor-creation', { state: { donor: createdDonor } })
     }
     setShowPostCreate(false)
   }

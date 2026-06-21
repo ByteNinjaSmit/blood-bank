@@ -40,10 +40,6 @@ import Serology from './features/serology/pages/Serology';
 import SerologyResults from './features/serology/pages/SerologyResults';
 
 // Donation + Donor
-import CreateDonation from './features/donation/components/Create-Donation';
-import DonationManagement from './features/donation/pages/DonationManagement';
-import DonorManagement from './features/donor/pages/DonorManagement';
-import CreateDonorPage from './features/donor/pages/CreateDonor';
 import MasterDonors from './features/donor/pages/MasterDonors';
 import MasterDonations from './features/donation/pages/MasterDonations';
 import DonorCreation from './features/donor/pages/DonorCreation';
@@ -163,10 +159,6 @@ const App = () => {
           <Route path="labs/serology-results" element={<SerologyResults />} />
 
           {/* Donation + Donor */}
-          <Route path="donations/create-donation" element={<DonorCreation />} />
-          <Route path="donations/view-donation" element={<DonationManagement />} />
-          <Route path="donor/create-donor" element={<CreateDonorPage />} />
-          <Route path="donor/view-donor" element={<DonorManagement />} />
           <Route path="master-register/donors" element={<MasterDonors />} />
           <Route path="master-register/donations" element={<MasterDonations />} />
           <Route path="master-register/donor-creation" element={<DonorCreation />} />

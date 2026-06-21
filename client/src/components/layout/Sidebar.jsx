@@ -144,54 +144,7 @@ const MODULES = [
     ],
     description: "Blood donation camp management",
   },
-  {
-    id: "donor",
-    name: "Donor",
-    icon: <FaUser className="w-5 h-5" />,
-    href: "/donor",
-    permissions: ["read", "write"],
-    subModules: [
-      {
-        name: "Create Donor",
-        icon: <FiUserPlus className="w-5 h-5" />,
-        href: "/donor/create-donor",
-        permissions: ["read", "write"],
-        description: "Create Donor",
-      },
-      {
-        name: "View Donor",
-        icon: <FaEye className="w-5 h-5" />,
-        href: "/donor/view-donor",
-        permissions: ["read", "write"],
-        description: "View Donor",
-      },
-    ],
-    description: "Manage donor records",
-  },
-  {
-    id: "donations",
-    name: "Donations",
-    icon: <FaHeart className="w-5 h-5" />,
-    href: "/donations",
-    permissions: ["read", "write"],
-    subModules: [
-      {
-        name: "Create Donation",
-        href: "/donations/create-donation",
-        icon: <Plus className="w-5 h-5" />,
-        permissions: ["read", "write"],
-        description: "Create Donation",
-      },
-      {
-        name: "View Donation",
-        icon: <FaEye className="w-5 h-5" />,
-        href: "/donations/view-donation",
-        permissions: ["read", "write"],
-        description: "View Donation",
-      },
-    ],
-    description: "Track donation records",
-  },
+
   {
     id: "component",
     name: "Component",

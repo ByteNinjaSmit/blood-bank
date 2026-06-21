@@ -56,7 +56,7 @@ const CampDetails = () => {
         navigate(`/camp-donors?id=${campId}`);
         break;
       case 'create-donation':
-        navigate(`/donations/create-donation?campId=${campId}`);
+        navigate(`/master-register/donor-creation?campId=${campId}`);
         break;
       case 'view-donations':
         navigate(`/camp-donation?id=${campId}`);
@@ -209,14 +209,14 @@ const CampDetails = () => {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => navigate(`/donor/create-donor?campId=${campId}`)}
+                onClick={() => navigate(`/master-register/donor-creation?campId=${campId}`)}
                 title="Create a new donor"
                 className="hidden md:flex"
               >
                 <Plus className="w-4 h-4 mr-2" /> Create Donor
               </Button>
               <Button
-                onClick={() => navigate(`/donations/create-donation?campId=${campId}`)}
+                onClick={() => navigate(`/master-register/donor-creation?campId=${campId}`)}
                 title="Create a new donation"
               >
                 <Plus className="w-4 h-4 mr-2" /> Create Donation
@@ -425,7 +425,7 @@ const CampDetails = () => {
                     <button
                       onClick={() => {
                         setShowDraftsModal(false);
-                        navigate(`/donations/create-donation?campId=${campId}&draftId=${draft.id}`);
+                        navigate(`/master-register/donor-creation?campId=${campId}&draftId=${draft.id}`);
                       }}
                       className="px-3.5 py-1.5 bg-orange-800 text-white rounded-lg text-xs font-semibold hover:bg-orange-900 transition-colors shadow-sm"
                     >

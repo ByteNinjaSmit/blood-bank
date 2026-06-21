@@ -93,7 +93,7 @@ const CampDonationManagement = () => {
             </div>
           </div>
           <button
-            onClick={() => navigate(`/donations/create-donation?campId=${campId}`)}
+            onClick={() => navigate(`/master-register/donor-creation?campId=${campId}`)}
             className="flex items-center gap-2 px-4 py-2 bg-orange-850 bg-orange-800 text-white rounded-lg text-sm font-semibold hover:bg-orange-900 transition-colors shadow-sm animate-in fade-in zoom-in duration-200"
           >
             <Plus className="w-4 h-4" />

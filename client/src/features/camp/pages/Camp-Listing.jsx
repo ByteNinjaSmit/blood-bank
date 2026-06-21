@@ -203,7 +203,7 @@ const CampList = ({ OnBack }) => {
         description="Manage and monitor all your blood donation camps"
         iconBgColor="bg-red-600"
         rightSection={
-          <Link to={"/donations/create-donation"}>
+          <Link to={"/master-register/donor-creation"}>
             <button className="bg-orange-800 cursor-pointer hover:bg-red-900 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors">
               <Plus className="w-4 h-4" />
               New Camp
