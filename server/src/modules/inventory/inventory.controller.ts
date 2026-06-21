@@ -76,6 +76,7 @@ export function createInventoryControllers(service: InventoryService): Inventory
           name: body.patient.name,
           dob,
           sex: body.patient.sex,
+          medicalRecordNumber: body.patient.mrn,
           createdBy: actorObjId,
           updatedBy: actorObjId,
         });
@@ -101,13 +102,34 @@ export function createInventoryControllers(service: InventoryService): Inventory
         });
 
         // 3. Create Requisition
+        const threeDaysFromNow = new Date();
+        threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+
+        const reservedUntil = body.reservedUntil && !isNaN(body.reservedUntil.getTime())
+          ? (body.reservedUntil > threeDaysFromNow ? threeDaysFromNow : body.reservedUntil)
+          : threeDaysFromNow;
+
         const requisitionId = `RQ-${dateStamp()}-${rand()}`;
         const requisition = await RequisitionModel.create({
           requisitionId,
           hospitalId: new mongoose.Types.ObjectId(body.hospitalId),
           patientId: patient._id,
-          clinicianName: 'Reserve Wizard',
-          requiredAt: body.reservedUntil,
+          clinicianName: body.doctorName || 'Reserve Wizard',
+          doctorName: body.doctorName,
+          requiredAt: reservedUntil,
+          medicalOfficerSignature: body.medicalOfficerSignature,
+          hospitalSeal: body.hospitalSeal,
+          patient: {
+            name: body.patient.name,
+            age: body.patient.age,
+            sex: body.patient.sex,
+            mrn: body.patient.mrn,
+            diagnosis: body.patient.diagnosis,
+            indication: body.patient.indication,
+            hb: body.patient.hb,
+            history: body.patient.history,
+            pregnancy: body.patient.pregnancy,
+          },
           requestedComponents,
           status: 'PENDING',
           createdBy: actorObjId,
@@ -205,7 +227,7 @@ export function createInventoryControllers(service: InventoryService): Inventory
                 status: nextStatus,
                 reservedFor: requisition._id,
                 reservedAt: new Date(),
-                reservedUntil: body.reservedUntil,
+                reservedUntil: reservedUntil,
                 updatedBy: actorObjId,
                 $push: {
                   statusHistory: {

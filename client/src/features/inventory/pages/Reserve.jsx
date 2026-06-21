@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
-import { Loader2, Hand } from "lucide-react";
+import { Loader2, Hand, X } from "lucide-react";
 import { toast } from "sonner";
 import { COMPONENT_TYPES, SEX_TYPES } from "@/features/requisition/pages/constants";
 import CustomModal from "@/components/CustomModal";
@@ -25,6 +25,7 @@ const Reserve = () => {
   const [selected, setSelected] = useState({});
   const [unreserveModalOpen, setUnreserveModalOpen] = useState(false);
   const [targetUnreserveId, setTargetUnreserveId] = useState(null);
+  const [selectedReserve, setSelectedReserve] = useState(null);
 
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
@@ -186,7 +187,13 @@ const Reserve = () => {
                         const found = (SEX_TYPES || []).find(s => s.value === sex);
                         return found ? found.label : (sex || '—');
                       })()}</td>
-                      <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm text-right whitespace-nowrap space-x-2">
+                        <button
+                          onClick={() => setSelectedReserve(r)}
+                          className="px-2.5 py-1 text-xs font-semibold text-orange-800 hover:text-white border border-orange-200 hover:bg-orange-800 rounded transition-all duration-150"
+                        >
+                          View
+                        </button>
                         <button
                           onClick={() => triggerUnreserveConfirm(r._id)}
                           disabled={isLoading}
@@ -260,6 +267,218 @@ const Reserve = () => {
           setTargetUnreserveId(null);
         }}
       />
+
+      {selectedReserve && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-orange-100 bg-orange-50/20">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Reservation & Requisition Details</h3>
+                <p className="text-xs text-orange-850 font-semibold uppercase tracking-wider mt-0.5">
+                  Requisition ID: {selectedReserve.requisition?.requisitionId || 'N/A'}
+                </p>
+              </div>
+              <button 
+                onClick={() => setSelectedReserve(null)}
+                className="p-1 rounded-lg border border-gray-200 text-slate-500 hover:bg-gray-50 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              
+              {/* Card 1: Requisition Metadata */}
+              <div className="bg-white p-4 rounded-xl border border-gray-150 shadow-sm space-y-3">
+                <h4 className="font-bold text-sm text-orange-900 border-b pb-1.5 uppercase tracking-wide">
+                  Hospital & Clinician Details
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <span className="font-semibold text-gray-500">Hospital:</span>
+                    <div className="text-slate-800 mt-0.5 font-medium">{selectedReserve.hospital?.name || '—'}</div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Doctor / Clinician Name:</span>
+                    <div className="text-slate-800 mt-0.5 font-medium">{selectedReserve.requisition?.doctorName || '—'}</div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Reserved Until:</span>
+                    <div className="text-slate-800 mt-0.5 font-medium">
+                      {selectedReserve.reservedUntil ? new Date(selectedReserve.reservedUntil).toLocaleString() : '—'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Patient Information */}
+              <div className="bg-white p-4 rounded-xl border border-gray-150 shadow-sm space-y-3">
+                <h4 className="font-bold text-sm text-orange-900 border-b pb-1.5 uppercase tracking-wide">
+                  Patient Information
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <span className="font-semibold text-gray-500">Patient Name:</span>
+                    <div className="text-slate-800 mt-0.5 font-semibold">{selectedReserve.requisition?.patient?.name || selectedReserve.reservedPatientName || '—'}</div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Age & Sex:</span>
+                    <div className="text-slate-800 mt-0.5 font-semibold">
+                      {selectedReserve.requisition?.patient?.age || selectedReserve.reservedPatientAge || '—'} yrs / {(() => {
+                        const sex = selectedReserve.requisition?.patient?.sex || selectedReserve.reservedPatientSex;
+                        return sex === 'M' ? 'Male' : sex === 'F' ? 'Female' : sex === 'O' ? 'Other' : '—';
+                      })()}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Medical Record Number (MRN):</span>
+                    <div className="text-slate-800 mt-0.5 font-medium">{selectedReserve.requisition?.patient?.mrn || '—'}</div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Haemoglobin (Hb):</span>
+                    <div className="text-slate-800 mt-0.5 font-medium">
+                      {selectedReserve.requisition?.patient?.hb ? `${selectedReserve.requisition.patient.hb} g/dL` : '—'}
+                    </div>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="font-semibold text-gray-500">Diagnosis / Indication:</span>
+                    <div className="text-slate-800 mt-0.5 font-medium">
+                      {selectedReserve.requisition?.patient?.diagnosis || '—'} 
+                      {selectedReserve.requisition?.patient?.indication ? ` (${selectedReserve.requisition.patient.indication})` : ''}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Clinical / Obstetric History */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                {/* History of Previous Transfusions */}
+                <div className="bg-white p-4 rounded-xl border border-gray-150 shadow-sm space-y-3">
+                  <h4 className="font-bold text-xs text-orange-900 border-b pb-1.5 uppercase tracking-wide">
+                    Transfusion History
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    <div>
+                      <span className="font-semibold text-gray-500">Previous Transfusions:</span>
+                      <div className="text-slate-800 font-medium">
+                        {selectedReserve.requisition?.patient?.history?.previousTransfusions ?? 0}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-gray-500">Approximate Date:</span>
+                      <div className="text-slate-800 font-medium">
+                        {selectedReserve.requisition?.patient?.history?.approximateDate || '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-gray-500">Presence of Reaction:</span>
+                      <div className="text-slate-800 font-semibold text-orange-700">
+                        {selectedReserve.requisition?.patient?.history?.presenceOfReaction || 'None'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pregnancy History */}
+                {selectedReserve.requisition?.patient?.sex === 'F' ? (
+                  <div className="bg-white p-4 rounded-xl border border-gray-150 shadow-sm space-y-3">
+                    <h4 className="font-bold text-xs text-orange-900 border-b pb-1.5 uppercase tracking-wide">
+                      Pregnancy History
+                    </h4>
+                    <div className="space-y-2 text-xs">
+                      <div>
+                        <span className="font-semibold text-gray-500">No. of Pregnancies:</span>
+                        <div className="text-slate-800 font-medium">
+                          {selectedReserve.requisition?.patient?.pregnancy?.numPregnancies ?? 0}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-gray-500">No. of Miscarriages:</span>
+                        <div className="text-slate-800 font-medium">
+                          {selectedReserve.requisition?.patient?.pregnancy?.numMiscarriages ?? 0}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-gray-500">Haemolytic Newborns:</span>
+                        <div className="text-slate-800 font-medium">
+                          {selectedReserve.requisition?.patient?.pregnancy?.numChildrenWithHemolyticDisease ?? 0}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 p-4 rounded-xl border border-dashed border-gray-200 flex flex-col items-center justify-center text-center text-xs">
+                    <span className="font-semibold text-gray-400">Pregnancy History Blocked</span>
+                    <p className="text-[10px] text-gray-400 mt-1">Not applicable for male/other sex patients.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Card 4: Reserved Component Details */}
+              <div className="bg-white p-4 rounded-xl border border-gray-150 shadow-sm space-y-3">
+                <h4 className="font-bold text-sm text-orange-900 border-b pb-1.5 uppercase tracking-wide">
+                  Reserved Component Details
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <span className="font-semibold text-gray-500">Bag Number:</span>
+                    <div className="text-slate-800 mt-0.5 font-bold">{selectedReserve.bagNo}</div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Component Type:</span>
+                    <div className="text-slate-800 mt-0.5 font-bold">{selectedReserve.component?.componentType}</div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Blood Group / Rh:</span>
+                    <div className="text-slate-800 mt-0.5 font-bold">
+                      {selectedReserve.bag?.bloodGroup} {selectedReserve.bag?.rh}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Volume:</span>
+                    <div className="text-slate-800 mt-0.5 font-medium">{selectedReserve.component?.volumeMl} mL</div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Expiry Date:</span>
+                    <div className="text-slate-800 mt-0.5 font-semibold text-red-700">
+                      {selectedReserve.component?.expiryDate ? new Date(selectedReserve.component.expiryDate).toLocaleDateString() : '—'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 5: Authorization Details */}
+              <div className="bg-white p-4 rounded-xl border border-gray-150 shadow-sm space-y-3">
+                <h4 className="font-bold text-sm text-orange-900 border-b pb-1.5 uppercase tracking-wide">
+                  Authorization & Hospital Seal
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <span className="font-semibold text-gray-500">Medical Officer Signature:</span>
+                    <div className="text-slate-800 mt-0.5 font-medium">
+                      {selectedReserve.requisition?.medicalOfficerSignature || '—'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Hospital Seal Code:</span>
+                    <div className="text-slate-800 mt-0.5 font-medium">
+                      {selectedReserve.requisition?.hospitalSeal || '—'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+            
+            <div className="p-6 border-t border-gray-150 bg-gray-50 flex justify-end">
+              <Button onClick={() => setSelectedReserve(null)} variant="outline">
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

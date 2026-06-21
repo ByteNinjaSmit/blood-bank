@@ -35,7 +35,7 @@ import { Droplets, Users, Package, ClipboardList, Activity, AlertTriangle, Trend
 const number = (v) => (typeof v === "number" ? v : 0);
 
 export default function Dashboard() {
-  const { API } = useAuth();
+  const { API, authorizationToken } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -66,7 +66,13 @@ export default function Dashboard() {
         } else {
           params.range = "7d";
         }
-        const res = await axios.get(`${API}/api/dashboard`, { withCredentials: true, params });
+        const res = await axios.get(`${API}/api/dashboard`, {
+          withCredentials: true,
+          params,
+          headers: {
+            Authorization: authorizationToken,
+          },
+        });
         if (!mounted) return;
         setPayload(res.data?.data || null);
       } catch (e) {
@@ -79,7 +85,7 @@ export default function Dashboard() {
     return () => {
       mounted = false;
     };
-  }, [API, preset, range?.from, range?.to]);
+  }, [API, authorizationToken, preset, range?.from, range?.to]);
 
   const totals = payload?.totals || {};
   const trends = payload?.trends || {};

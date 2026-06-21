@@ -36,10 +36,28 @@ export const NearExpiryQuery = z.object({
 
 const OBJECT_ID = /^[a-f0-9]{24}$/i;
 
+const PatientHistoryValidator = z.object({
+  previousTransfusions: z.coerce.number().int().min(0).default(0),
+  approximateDate: z.string().trim().optional(),
+  presenceOfReaction: z.enum(['Presence', 'Absence', 'None']).default('None'),
+});
+
+const PatientPregnancyValidator = z.object({
+  numPregnancies: z.coerce.number().int().min(0).default(0),
+  numMiscarriages: z.coerce.number().int().min(0).default(0),
+  numChildrenWithHemolyticDisease: z.coerce.number().int().min(0).default(0),
+});
+
 export const PatientValidator = z.object({
   name: z.string().trim().min(1).max(200),
   age: z.coerce.number().int().min(0).max(120),
   sex: z.enum(['M', 'F', 'O']),
+  mrn: z.string().trim().max(80).optional(),
+  diagnosis: z.string().trim().optional(),
+  indication: z.string().trim().optional(),
+  hb: z.coerce.number().optional(),
+  history: PatientHistoryValidator.optional(),
+  pregnancy: PatientPregnancyValidator.optional(),
 });
 
 export const ReserveItemValidator = z.object({
@@ -51,7 +69,13 @@ export const ReserveItemValidator = z.object({
 
 export const ReserveBodyValidator = z.object({
   hospitalId: z.string().regex(OBJECT_ID),
-  reservedUntil: z.coerce.date(),
+  reservedUntil: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.coerce.date().optional()
+  ),
+  doctorName: z.string().trim().max(200).optional(),
+  medicalOfficerSignature: z.string().trim().optional(),
+  hospitalSeal: z.string().trim().optional(),
   patient: PatientValidator,
   items: z.array(ReserveItemValidator).min(1),
 });

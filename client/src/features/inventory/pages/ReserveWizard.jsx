@@ -6,9 +6,11 @@ import hospitalApi from '@/services/hospitalApi';
 import inventoryApi from '@/services/inventoryApi';
 import HospitalSelect from '@/features/requisition/pages/components/HospitalSelect';
 import AddHospitalModal from '@/features/requisition/pages/components/AddHospitalModal';
+import PatientForm from '@/features/requisition/pages/components/PatientForm';
 import RequestedComponentsList from '@/features/requisition/pages/components/RequestedComponentsList';
 import { defaultRequestedComponent, defaultPatient } from '@/features/requisition/pages/hooks/useRequisition';
 import { SEX_TYPES } from '@/features/requisition/pages/constants';
+import { FileText, User, HeartHandshake, History, FileCheck, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ReserveWizard() {
@@ -27,7 +29,10 @@ export default function ReserveWizard() {
   // form
   const [form, setForm] = useState({
     hospitalId: '',
+    doctorName: '',
     reservedUntil: '',
+    medicalOfficerSignature: '',
+    hospitalSeal: '',
     patient: { ...defaultPatient },
     items: [ { ...defaultRequestedComponent } ],
   });
@@ -56,7 +61,6 @@ export default function ReserveWizard() {
 
   const canReserve = useMemo(() => {
     if (!form.hospitalId) return false;
-    if (!form.reservedUntil) return false;
     if (!form.patient?.name || form.patient?.age === '' || form.patient?.sex === '') return false;
     if (!Array.isArray(form.items) || form.items.length === 0) return false;
     for (const it of form.items) {
@@ -111,10 +115,27 @@ export default function ReserveWizard() {
       const payload = {
         hospitalId: form.hospitalId,
         reservedUntil: form.reservedUntil,
+        doctorName: form.doctorName || undefined,
+        medicalOfficerSignature: form.medicalOfficerSignature || undefined,
+        hospitalSeal: form.hospitalSeal || undefined,
         patient: {
           name: form.patient.name,
           age: Number(form.patient.age),
           sex: form.patient.sex,
+          mrn: form.patient.mrn || undefined,
+          diagnosis: form.patient.diagnosis || undefined,
+          hb: form.patient.hb ? Number(form.patient.hb) : undefined,
+          indication: form.patient.indication || undefined,
+          history: {
+            previousTransfusions: Number(form.patient.history?.previousTransfusions || 0),
+            approximateDate: form.patient.history?.approximateDate || undefined,
+            presenceOfReaction: form.patient.history?.presenceOfReaction || 'None',
+          },
+          pregnancy: {
+            numPregnancies: Number(form.patient.pregnancy?.numPregnancies || 0),
+            numMiscarriages: Number(form.patient.pregnancy?.numMiscarriages || 0),
+            numChildrenWithHemolyticDisease: Number(form.patient.pregnancy?.numChildrenWithHemolyticDisease || 0),
+          },
         },
         items: form.items.map((r) => ({
           componentType: r.componentType,
@@ -142,7 +163,7 @@ export default function ReserveWizard() {
       setResult(res.data);
       setShortages(null);
       toast.success('Reserved successfully');
-      setCurrentStep(2); // enable Next
+      navigate('/inventory/reserve');
     } catch (e) {
       setReserving(false);
       toast.error('Reservation failed');
@@ -166,69 +187,235 @@ export default function ReserveWizard() {
           footerClassName="bg-white rounded-b-xl"
         >
           <Step>
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <HospitalSelect
-                  hospitals={hospitals}
-                  loading={hospitalsLoading}
-                  value={form.hospitalId}
-                  onChange={(v) => setForm((p)=>({ ...p, hospitalId: v }))}
-                  onAdd={() => setAddHospitalOpen(true)}
+            <div className="p-6 space-y-6 bg-gray-50/50 rounded-xl">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Card 1: General Request Details */}
+                <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-sm space-y-4">
+                  <div className="flex items-center gap-2 border-b pb-2 text-orange-800">
+                    <FileText className="w-5 h-5" />
+                    <h3 className="font-semibold text-gray-800">Hospital & Doctor Details</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <HospitalSelect
+                      hospitals={hospitals}
+                      loading={hospitalsLoading}
+                      value={form.hospitalId}
+                      onChange={(v) => setForm((p) => ({ ...p, hospitalId: v }))}
+                      onAdd={() => setAddHospitalOpen(true)}
+                    />
+
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-1">Doctor’s Name</label>
+                      <input
+                        placeholder="Dr. Full Name"
+                        className="w-full px-3 py-2 border rounded-lg bg-white"
+                        value={form.doctorName}
+                        onChange={(e) => setForm((p) => ({ ...p, doctorName: e.target.value }))}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-1">Reserve Until (Optional - Default 3 days)</label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 border rounded-lg bg-white"
+                        min={new Date().toISOString().split('T')[0]}
+                        max={(() => {
+                          const maxDate = new Date();
+                          maxDate.setDate(maxDate.getDate() + 3);
+                          return maxDate.toISOString().split('T')[0];
+                        })()}
+                        value={form.reservedUntil}
+                        onChange={(e) => setForm((p) => ({ ...p, reservedUntil: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 2: Patient Demographics & Indication */}
+                <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-sm space-y-4">
+                  <div className="flex items-center gap-2 border-b pb-2 text-orange-800">
+                    <User className="w-5 h-5" />
+                    <h3 className="font-semibold text-gray-800">Patient Information</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <PatientForm
+                      patient={form.patient}
+                      onChange={(patch) => setForm((p) => ({ ...p, patient: { ...p.patient, ...patch } }))}
+                      readOnly={false}
+                    />
+                  </div>
+                </div>
+
+                {/* Card 3: Clinical / Transfusion History */}
+                <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-sm space-y-4">
+                  <div className="flex items-center gap-2 border-b pb-2 text-orange-800">
+                    <History className="w-5 h-5" />
+                    <h3 className="font-semibold text-gray-800">History of Previous Transfusions</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-1">No. of Transfusions Given</label>
+                      <input
+                        type="number"
+                        min={0}
+                        className="w-full px-3 py-2 border rounded-lg bg-white"
+                        value={form.patient.history?.previousTransfusions ?? 0}
+                        onChange={(e) => setForm((p) => ({
+                          ...p,
+                          patient: {
+                            ...p.patient,
+                            history: { ...p.patient.history, previousTransfusions: e.target.value }
+                          }
+                        }))}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-1">Approximate Date of Last</label>
+                      <input
+                        placeholder="e.g. June 2025 or MM/YYYY"
+                        className="w-full px-3 py-2 border rounded-lg bg-white"
+                        value={form.patient.history?.approximateDate || ''}
+                        onChange={(e) => setForm((p) => ({
+                          ...p,
+                          patient: {
+                            ...p.patient,
+                            history: { ...p.patient.history, approximateDate: e.target.value }
+                          }
+                        }))}
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm text-gray-700 mb-1">Presence / Absence of Reaction</label>
+                      <select
+                        className="w-full px-3 py-2 border rounded-lg bg-white"
+                        value={form.patient.history?.presenceOfReaction || 'None'}
+                        onChange={(e) => setForm((p) => ({
+                          ...p,
+                          patient: {
+                            ...p.patient,
+                            history: { ...p.patient.history, presenceOfReaction: e.target.value }
+                          }
+                        }))}
+                      >
+                        <option value="None">None (No Previous Transfusion)</option>
+                        <option value="Absence">Absence (No Reactions Recorded)</option>
+                        <option value="Presence">Presence (Transfusion Reactions Present)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 4: Pregnancy / Obstetric History */}
+                {form.patient.sex === 'F' ? (
+                  <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-sm space-y-4 animate-fadeIn">
+                    <div className="flex items-center gap-2 border-b pb-2 text-orange-800">
+                      <HeartHandshake className="w-5 h-5" />
+                      <h3 className="font-semibold text-gray-800">Pregnancy History</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm text-gray-700 mb-1">No. of Pregnancies</label>
+                        <input
+                          type="number"
+                          min={0}
+                          className="w-full px-3 py-2 border rounded-lg bg-white"
+                          value={form.patient.pregnancy?.numPregnancies ?? 0}
+                          onChange={(e) => setForm((p) => ({
+                            ...p,
+                            patient: {
+                              ...p.patient,
+                              pregnancy: { ...p.patient.pregnancy, numPregnancies: e.target.value }
+                            }
+                          }))}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm text-gray-700 mb-1">No. of Miscarriages</label>
+                        <input
+                          type="number"
+                          min={0}
+                          className="w-full px-3 py-2 border rounded-lg bg-white"
+                          value={form.patient.pregnancy?.numMiscarriages ?? 0}
+                          onChange={(e) => setForm((p) => ({
+                            ...p,
+                            patient: {
+                              ...p.patient,
+                              pregnancy: { ...p.patient.pregnancy, numMiscarriages: e.target.value }
+                            }
+                          }))}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm text-gray-700 mb-1">Haemolytic Newborns</label>
+                        <input
+                          type="number"
+                          min={0}
+                          className="w-full px-3 py-2 border rounded-lg bg-white"
+                          value={form.patient.pregnancy?.numChildrenWithHemolyticDisease ?? 0}
+                          onChange={(e) => setForm((p) => ({
+                            ...p,
+                            patient: {
+                              ...p.patient,
+                              pregnancy: { ...p.patient.pregnancy, numChildrenWithHemolyticDisease: e.target.value }
+                            }
+                          }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 p-5 rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center text-center space-y-2">
+                    <ShieldAlert className="w-8 h-8 text-gray-400" />
+                    <span className="text-sm font-medium text-gray-500">Pregnancy History Blocked</span>
+                    <span className="text-xs text-gray-400">Only enabled for patients with Sex set to Female.</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Card 5: Requested Components Table */}
+              <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-sm space-y-4">
+                <RequestedComponentsList
+                  items={form.items}
+                  onItemChange={onItemChange}
+                  onAdd={addRequestLine}
+                  onRemove={removeRequestLine}
                 />
-                <div>
-                  <label className="block text-sm text-gray-700 mb-1">Reserve Until</label>
-                  <input
-                    type="date"
-                    className="w-full px-3 py-2 border rounded-lg"
-                    min={new Date().toISOString().split('T')[0]}
-                    value={form.reservedUntil}
-                    onChange={(e)=> setForm((p)=>({ ...p, reservedUntil: e.target.value }))}
-                  />
-                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-700 mb-1">Patient Name</label>
-                  <input
-                    className="w-full px-3 py-2 border rounded-lg"
-                    value={form.patient.name}
-                    onChange={(e)=> setForm((p)=>({ ...p, patient: { ...p.patient, name: e.target.value } }))}
-                    placeholder="Patient name"
-                  />
+              {/* Card 6: Authorization & Seal */}
+              <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-sm space-y-4">
+                <div className="flex items-center gap-2 border-b pb-2 text-orange-800">
+                  <FileCheck className="w-5 h-5" />
+                  <h3 className="font-semibold text-gray-800">Authorization & Hospital Seal</h3>
                 </div>
-                <div>
-                  <label className="block text-sm text-gray-700 mb-1">Patient Age</label>
-                  <input
-                    type="number"
-                    className="w-full px-3 py-2 border rounded-lg"
-                    min={0}
-                    max={120}
-                    value={form.patient.age}
-                    onChange={(e)=> setForm((p)=>({ ...p, patient: { ...p.patient, age: e.target.value } }))}
-                    placeholder="Age"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-700 mb-1">Patient Sex</label>
-                  <select
-                    className="w-full px-3 py-2 border rounded-lg"
-                    value={form.patient.sex}
-                    onChange={(e)=> setForm((p)=>({ ...p, patient: { ...p.patient, sex: e.target.value } }))}
-                  >
-                    {SEX_TYPES.map((s) => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Signature of Medical Officer (Typed Name)</label>
+                    <input
+                      placeholder="Full M.O. Name / Digital Stamp"
+                      className="w-full px-3 py-2 border rounded-lg bg-white"
+                      value={form.medicalOfficerSignature}
+                      onChange={(e) => setForm((p) => ({ ...p, medicalOfficerSignature: e.target.value }))}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Hospital Seal Verification Code / Text</label>
+                    <input
+                      placeholder="Seal reference number or stamp text"
+                      className="w-full px-3 py-2 border rounded-lg bg-white"
+                      value={form.hospitalSeal}
+                      onChange={(e) => setForm((p) => ({ ...p, hospitalSeal: e.target.value }))}
+                    />
+                  </div>
                 </div>
               </div>
-
-              <RequestedComponentsList
-                items={form.items}
-                onItemChange={onItemChange}
-                onAdd={addRequestLine}
-                onRemove={removeRequestLine}
-              />
 
               {Array.isArray(shortages) && shortages.length > 0 && (
                 <div className="p-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900">
@@ -248,7 +435,7 @@ export default function ReserveWizard() {
                   type="button"
                   onClick={handleReserve}
                   disabled={!canReserve || reserving}
-                  className={`px-4 py-2 rounded-lg ${reserving ? 'bg-orange-300' : 'bg-orange-800 hover:bg-orange-900'} text-white`}
+                  className={`px-4 py-2 rounded-lg ${reserving ? 'bg-orange-300' : 'bg-orange-800 hover:bg-orange-900'} text-white font-semibold shadow transition cursor-pointer`}
                 >
                   {reserving ? 'Reserving…' : 'Reserve FIFO'}
                 </button>

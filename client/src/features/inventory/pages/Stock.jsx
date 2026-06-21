@@ -329,7 +329,14 @@ const Stock = () => {
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl} mL</td>
                       <td className="px-4 py-3 text-sm text-gray-600 font-medium">
-                        {r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '-'}
+                        {r?.component?.expiryDate ? (() => {
+                          const d = new Date(r.component.expiryDate);
+                          if (isNaN(d.getTime())) return '-';
+                          const day = String(d.getDate()).padStart(2, '0');
+                          const month = String(d.getMonth() + 1).padStart(2, '0');
+                          const year = d.getFullYear();
+                          return `${day}/${month}/${year}`;
+                        })() : '-'}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <span
