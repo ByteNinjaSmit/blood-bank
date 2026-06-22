@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComponentDetailsModal } from "@/components/blood-components";
+import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
+import { exportComponents } from "@/utils/excelExportHelper";
 
 const COMPONENT_TYPES = [
   { value: "RBC", label: "Red Blood Cells" },
@@ -28,6 +30,71 @@ const STATUS_OPTIONS = [
 const ComponentsList = () => {
   const { API, authorizationToken } = useAuth();
   const navigate = useNavigate();
+
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const flattenComponents = (bags) => {
+    const list = [];
+    bags.forEach(bag => {
+      ['rbc', 'ffp', 'platelet', 'cryo'].forEach(type => {
+        const comp = bag[type];
+        if (comp && comp.status === 'prepared') {
+          list.push({
+            componentId: comp.componentId || comp._id || `${bag.bagNo}-${type.toUpperCase()}`,
+            bagNo: bag.bagNo,
+            componentType: type.toUpperCase(),
+            bloodGroup: bag.bloodGroup || (bag.bag ? `${bag.bag.bloodGroup} ${bag.bag.rh || ''}` : '—'),
+            volumeMl: comp.volumeMl ?? '—',
+            expiryDate: comp.expiryDate,
+            status: comp.componentStatus || comp.status || 'prepared',
+          });
+        }
+      });
+    });
+    return list;
+  };
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      let dataToExport = [];
+      if (exportAll) {
+        // Fetch all components without pagination limit (up to 5000)
+        const params = {
+          page: 1,
+          limit: 5000,
+          ...(state.filters.type && { type: state.filters.type }),
+          ...(state.filters.status && { status: state.filters.status }),
+          ...(state.filters.expiryBefore && { expiryBefore: state.filters.expiryBefore }),
+          ...(state.filters.fromDate && { fromDate: state.filters.fromDate }),
+          ...(state.filters.toDate && { toDate: state.filters.toDate }),
+          ...(state.filters.search && { search: state.filters.search }),
+        };
+        const response = await axios.get(`${API}/api/v2/component/list`, {
+          params,
+          headers: { Authorization: authorizationToken },
+          withCredentials: true,
+        });
+        if (response.data?.components) {
+          dataToExport = flattenComponents(response.data.components);
+        }
+      } else {
+        dataToExport = flattenComponents(state.components);
+      }
+      
+      if (dataToExport.length === 0) {
+        toast.info("No components to export");
+        return;
+      }
+      
+      await exportComponents(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   // State management following SOLID principles
   const [state, setState] = useState({
@@ -249,6 +316,7 @@ const ComponentsList = () => {
             </div>
             
             <div className="flex items-center gap-2">
+                <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
                 <Button 
                     onClick={() => navigate("/component/separate")}
                     variant="outline"

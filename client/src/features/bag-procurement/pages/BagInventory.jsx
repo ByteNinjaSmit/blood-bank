@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Warehouse, AlertTriangle } from 'lucide-react';
 import { useBagStockList, useOpenBagStockBox } from '../queries';
 import { formatBloodBagQty } from '../utils/qtyHelper';
+import { toast } from 'sonner';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportProcurementInventory } from '@/utils/excelExportHelper';
 
 const STATUS_BADGE = {
   AVAILABLE:    'bg-green-50 text-green-700 border-green-200',
@@ -51,6 +54,41 @@ export default function BagInventory() {
 
   const [confirmOpenBoxId, setConfirmOpenBoxId] = useState(null);
   const [confirmOpenBoxBatch, setConfirmOpenBoxBatch] = useState('');
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const mapInventoryForExport = (items) => {
+    return items.map(s => {
+      const closing = (s.openingStock ?? 0) + (s.receivedQty ?? 0)
+        - (s.issuedQty ?? 0) - (s.damagedQty ?? 0) - (s.discardedQty ?? 0);
+      const zeroStock  = closing === 0;
+      const statusVal = zeroStock ? 'OUT_OF_STOCK' : (s.unopenedBoxes === 0 ? 'LOW_STOCK' : 'AVAILABLE');
+      return {
+        bagId: s.batchNumber || s.batchNo || s.id || s._id,
+        capacityMl: s.bagType || '—',
+        anticoagulant: `${s.unopenedBoxes} Box (${closing} bags remaining)`,
+        status: statusVal,
+      };
+    });
+  };
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      const dataToExport = mapInventoryForExport(stocks);
+
+      if (dataToExport.length === 0) {
+        toast.info("No stock records to export");
+        return;
+      }
+
+      await exportProcurementInventory(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   const stocks   = data?.items ?? data?.bagStocks ?? (Array.isArray(data) ? data : []);
 
@@ -95,13 +133,18 @@ export default function BagInventory() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-br from-orange-700 to-orange-900 rounded-xl shadow-sm">
-            <Warehouse className="w-6 h-6 text-white" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-br from-orange-700 to-orange-900 rounded-xl shadow-sm">
+              <Warehouse className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Blood Bag Stock Register</h1>
+              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Inventory Overview</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Blood Bag Stock Register</h1>
-            <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Inventory Overview</p>
+          <div className="flex items-center gap-2">
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
           </div>
         </div>
       </div>

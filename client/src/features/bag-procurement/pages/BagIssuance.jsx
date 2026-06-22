@@ -5,6 +5,9 @@ import {
   useBagIssueDetail,
 } from '../queries';
 import { useStockSummary } from '@/features/inventory/queries';
+import { toast } from 'sonner';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportProcurementIssue } from '@/utils/excelExportHelper';
 
 const STATUS_BADGE = {
   ISSUED:   'bg-blue-50 text-blue-700 border-blue-200',
@@ -161,10 +164,40 @@ function ComponentStockLines({ stockSummary }) {
 
 export default function BagIssuance() {
   const [viewingIssueId, setViewingIssueId] = useState(null);
+  const [excelLoading, setExcelLoading] = useState(false);
   const { data, isLoading } = useBagIssueList({});
   const { data: stockSummaryData } = useStockSummary();
 
   const issues = data?.items ?? data?.bagIssues ?? (Array.isArray(data) ? data : []);
+
+  const mapIssuanceForExport = (items) => {
+    return items.map(iss => ({
+      issueId: iss.id || iss._id,
+      issuedAt: iss.issueDate || iss.createdAt,
+      receiverName: iss.collectionRoom || '—',
+      totalBagsIssued: 1,
+      status: iss.status || 'ISSUED',
+    }));
+  };
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      const dataToExport = mapIssuanceForExport(issues);
+
+      if (dataToExport.length === 0) {
+        toast.info("No issuances to export");
+        return;
+      }
+
+      await exportProcurementIssue(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   const stats = {
     total:    issues.length,
@@ -189,6 +222,9 @@ export default function BagIssuance() {
               <h1 className="text-xl font-bold text-gray-900">Bag Issuance for Collection</h1>
               <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Blood Collection Ops</p>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
           </div>
         </div>
       </div>

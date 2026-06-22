@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Search, FlaskConical, Play, CheckCircle, Info } from 'lucide-react';
 import { useLotList, useUpdateUsage } from '../queries';
 import { toast } from 'sonner';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportChemicalUsage } from '@/utils/excelExportHelper';
+import { chemicalInventoryApi } from '../api';
 
 export default function StockUsage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,12 +36,62 @@ export default function StockUsage() {
     return true;
   });
 
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      let rawLots = [];
+      if (exportAll) {
+        const res = await chemicalInventoryApi.lot.list({
+          search: searchQuery || undefined,
+          status: statusFilter === 'Expired' ? 'Expired' : undefined,
+          limit: 5000,
+        });
+        const items = res?.items || res || [];
+        rawLots = items.filter((lot) => {
+          if (statusFilter === 'In Use') return lot.qtyInUse > 0;
+          if (statusFilter === 'Available') return lot.qtyAvailable > 0;
+          return true;
+        });
+      } else {
+        rawLots = filteredLots;
+      }
+
+      if (rawLots.length === 0) {
+        toast.info("No records to export");
+        return;
+      }
+
+      const dataToExport = rawLots.map(lot => ({
+        _id: lot._id,
+        chemicalName: lot.chemicalId?.name || '—',
+        lotNumber: lot.lotNumber || '—',
+        quantity: lot.qtyConsumed,
+        usedBy: `Avail: ${lot.qtyAvailable} | In Use: ${lot.qtyInUse}`,
+        createdAt: lot.createdAt || lot.expiryDate,
+      }));
+
+      await exportChemicalUsage(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Stock Usage Logic</h1>
-        <p className="text-sm text-gray-500 font-medium">Start chemical units (Available ➔ In Use) and complete them (In Use ➔ Consumed)</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Stock Usage Logic</h1>
+          <p className="text-sm text-gray-500 font-medium">Start chemical units (Available ➔ In Use) and complete them (In Use ➔ Consumed)</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+        </div>
       </div>
 
       {/* Filter and Search Panel */}

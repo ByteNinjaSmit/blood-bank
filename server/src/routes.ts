@@ -36,6 +36,7 @@ import bagDiscardRouter from '@/modules/bag-discard/bag-discard.routes';
 import componentRouter from '@/modules/component/component.routes';
 import chemicalInventoryRouter from '@/modules/chemical-inventory/chemical-inventory.routes';
 import uploadRouter from '@/modules/upload/upload.routes';
+import exportRouter from '@/modules/export/export.routes';
 import { errorMiddleware } from '@/shared/middlewares/error';
 
 interface ModuleRoute {
@@ -68,6 +69,7 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/component', router: componentRouter },
   { path: '/chemical-inventory', router: chemicalInventoryRouter },
   { path: '/upload', router: uploadRouter },
+  { path: '/export', router: exportRouter },
 ];
 
 export function registerRoutes(): Router {

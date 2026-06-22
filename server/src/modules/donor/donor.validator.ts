@@ -59,7 +59,7 @@ export const ListDonorsQuery = z.object({
   eligibilityStatus: z.enum(['eligible', 'deferred', 'temp-deferred']).optional(),
   campId: z.string().regex(OBJECT_ID, 'Invalid camp id').optional(),
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(200).default(25),
+  pageSize: z.coerce.number().int().min(1).max(10000).default(25),
 });
 export type ListDonorsInput = z.infer<typeof ListDonorsQuery>;
 

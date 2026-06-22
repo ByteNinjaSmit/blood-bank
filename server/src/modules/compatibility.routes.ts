@@ -494,7 +494,24 @@ router.get('/serology/bags', authenticate, async (req, res, next) => {
       donationId: { $in: separatedDonationIds }
     };
     if (search) {
-      ttiFilter.donationId = { $in: separatedDonationIds, $regex: new RegExp(search, 'i') };
+      const searchRegex = new RegExp(search, 'i');
+      const matchingDonations = await DonationModel.find({
+        $and: [
+          {
+            $or: [
+              { donationId: searchRegex },
+              { bagNo: searchRegex }
+            ]
+          },
+          {
+            $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }]
+          }
+        ]
+      }).select('donationId').lean();
+
+      const matchedDonationIds = matchingDonations.map(d => d.donationId);
+      const targetIds = matchedDonationIds.filter(id => separatedDonationIds.includes(id));
+      ttiFilter.donationId = { $in: targetIds };
     }
 
     const pageNum = parseInt(page) || 1;
@@ -530,17 +547,50 @@ router.get('/serology/bags', authenticate, async (req, res, next) => {
 // 4. GET /serology/results
 router.get('/serology/results', authenticate, async (req, res, next) => {
   try {
-    const { page, limit, search, order, fromDate, toDate } = req.query as any;
+    const { page, limit, search, order, fromDate, toDate, status } = req.query as any;
 
     const ttiFilter: any = { releaseDecision: { $ne: 'pending' } };
+
+    if (status && status !== 'all') {
+      if (status === 'passed') {
+        ttiFilter.releaseDecision = 'released';
+      } else if (status === 'failed' || status === 'discarded') {
+        ttiFilter.releaseDecision = 'reactive';
+      }
+    }
+
     if (search) {
-      ttiFilter.donationId = new RegExp(search, 'i');
+      const searchRegex = new RegExp(search, 'i');
+      const matchingDonations = await DonationModel.find({
+        $and: [
+          {
+            $or: [
+              { donationId: searchRegex },
+              { bagNo: searchRegex }
+            ]
+          },
+          {
+            $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }]
+          }
+        ]
+      }).select('donationId').lean();
+
+      const matchedDonationIds = matchingDonations.map(d => d.donationId);
+      ttiFilter.donationId = { $in: matchedDonationIds };
     }
 
     if (fromDate || toDate) {
       ttiFilter.decidedAt = {};
-      if (fromDate) ttiFilter.decidedAt.$gte = new Date(fromDate);
-      if (toDate) ttiFilter.decidedAt.$lte = new Date(toDate);
+      if (fromDate) {
+        const start = new Date(fromDate);
+        start.setUTCHours(0, 0, 0, 0);
+        ttiFilter.decidedAt.$gte = start;
+      }
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setUTCHours(23, 59, 59, 999);
+        ttiFilter.decidedAt.$lte = end;
+      }
     }
 
     const pageNum = parseInt(page) || 1;

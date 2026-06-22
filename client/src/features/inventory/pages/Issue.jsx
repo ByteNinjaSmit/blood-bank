@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Loader2, PackageCheck } from "lucide-react";
 import { toast } from "sonner";
 import CustomModal from "@/components/CustomModal";
+import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
+import { exportIssues } from "@/utils/excelExportHelper";
 
 const Issue = () => {
   const { API, authorizationToken, user } = useAuth();
@@ -12,6 +14,59 @@ const Issue = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [rows, setRows] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const mapIssuesForExport = (data) => {
+    return data.map(r => ({
+      bagNo: r?.bag?.bagNo || r.bagNo,
+      componentType: r?.component?.componentType,
+      bloodGroup: r?.bag?.bloodGroup ? `${r.bag.bloodGroup} ${r.bag.rh === 'Positive' ? '+' : r.bag.rh === 'Negative' ? '-' : ''}`.trim() : '—',
+      volumeMl: r?.component?.volumeMl,
+      expiryDate: r?.component?.expiryDate,
+      issuedToHospital: r?.hospital?.name || '—',
+      issuedBy: r?.issuedBy || '—',
+      issuedAt: r?.issuedAt || r?.updatedAt,
+    }));
+  };
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      let dataToExport = [];
+      if (exportAll) {
+        // Fetch all issued/matching items without limit (up to 5000)
+        const res = await axios.get(`${API}/api/inventory`, {
+          headers: { Authorization: authorizationToken },
+          withCredentials: true,
+          params: {
+            page: 1,
+            limit: 5000,
+            status,
+            componentType: componentType || undefined,
+            search: search || undefined,
+            sortBy,
+            order,
+          },
+        });
+        const data = Array.isArray(res.data?.data) ? res.data.data : [];
+        dataToExport = mapIssuesForExport(data);
+      } else {
+        dataToExport = mapIssuesForExport(rows);
+      }
+
+      if (dataToExport.length === 0) {
+        toast.info("No items to export");
+        return;
+      }
+
+      await exportIssues(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   // filters
   const [componentType, setComponentType] = useState("");
@@ -86,13 +141,18 @@ const Issue = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 bg-gradient-to-br from-red-800 to-red-900 rounded-xl">
-            <PackageCheck className="w-8 h-8 text-white" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gradient-to-br from-red-800 to-red-900 rounded-xl">
+              <PackageCheck className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Issue Stock</h1>
+              <p className="text-gray-600 mt-1">Issue previously reserved components</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Issue Stock</h1>
-            <p className="text-gray-600 mt-1">Issue previously reserved components</p>
+          <div className="flex items-center gap-2">
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
           </div>
         </div>
 

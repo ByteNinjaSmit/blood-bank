@@ -10,6 +10,9 @@ import {
 } from '../queries';
 import { useAuth } from '@/store/auth';
 import { formatBloodBagQty, calcTotalBags } from '../utils/qtyHelper';
+import { toast } from 'sonner';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportProcurementPO } from '@/utils/excelExportHelper';
 
 
 
@@ -309,9 +312,43 @@ export default function PurchaseOrders() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [editPO, setEditPO] = useState(null);
+  const [excelLoading, setExcelLoading] = useState(false);
+  
   const { data, isLoading } = usePOList({});
   const { data: vendorData } = useVendorList({});
   const deletePO = useDeletePO();
+
+  const mapPOForExport = (items, vendorsList) => {
+    return items.map(o => {
+      const vendorName = vendorsList.find(v => v._id === o.vendorId || v.id === o.vendorId)?.name ?? o.vendorId;
+      return {
+        poNumber: o.poNumber,
+        poDate: o.poDate,
+        vendorName: vendorName,
+        manufacturer: o.manufacturer,
+        billDate: o.billDate,
+      };
+    });
+  };
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      const dataToExport = mapPOForExport(orders, vendors);
+
+      if (dataToExport.length === 0) {
+        toast.info("No purchase orders to export");
+        return;
+      }
+
+      await exportProcurementPO(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   const orders = data?.items ?? data?.purchaseOrders ?? (Array.isArray(data) ? data : []);
   const vendors = vendorData?.items ?? vendorData?.vendors ?? (Array.isArray(vendorData) ? vendorData : []);
@@ -348,10 +385,13 @@ export default function PurchaseOrders() {
               <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Blood Bag Procurement</p>
             </div>
           </div>
-          <button onClick={() => { setEditPO(null); setShowDrawer(true); }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">
-            <Plus className="w-4 h-4" /> New PO
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+            <button onClick={() => { setEditPO(null); setShowDrawer(true); }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">
+              <Plus className="w-4 h-4" /> New PO
+            </button>
+          </div>
         </div>
       </div>
 

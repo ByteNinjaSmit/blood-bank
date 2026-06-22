@@ -5,6 +5,8 @@ import { useGRNList } from '../queries';
 import { useAuth } from '@/store/auth';
 import { apiClient, unwrap } from '@/core/api-client';
 import { toast } from 'sonner';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportProcurementInspection } from '@/utils/excelExportHelper';
 
 const uploadFile = (file, folder) => {
   const formData = new FormData();
@@ -816,6 +818,37 @@ export default function BagInspection() {
   // Preview state
   const [previewUrl, setPreviewUrl] = useState('');
   const [previewTitle, setPreviewTitle] = useState('');
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const mapInspectionForExport = (items) => {
+    return items.map(ins => ({
+      inspectionId: ins.inspectionId || ins._id,
+      batchNo: ins.batchNumber,
+      poNumber: ins.grn?.poNumber || ins.poNumber || '—',
+      inspectionDate: ins.inspectionDate || ins.createdAt,
+      inspectorName: ins.inspectedBy?.name || ins.inspectorName || '—',
+      status: ins.decision || ins.status || '—',
+    }));
+  };
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      const dataToExport = mapInspectionForExport(inspections);
+
+      if (dataToExport.length === 0) {
+        toast.info("No inspections to export");
+        return;
+      }
+
+      await exportProcurementInspection(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
   
   const { data, isLoading } = useBagInspectionList({});
   const { data: grnData } = useGRNList({});
@@ -840,10 +873,13 @@ export default function BagInspection() {
               <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Incoming Batch QC</p>
             </div>
           </div>
-          <button onClick={() => setShowDrawer(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">
-            <Plus className="w-4 h-4" /> New Inspection
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+            <button onClick={() => setShowDrawer(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">
+              <Plus className="w-4 h-4" /> New Inspection
+            </button>
+          </div>
         </div>
       </div>
 

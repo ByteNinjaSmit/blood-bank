@@ -10,6 +10,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown"
+import { exportProcurementDiscard } from "@/utils/excelExportHelper"
+import { toast } from "sonner"
 
 // Local button removed; table and modal handle their own buttons
 
@@ -35,7 +38,57 @@ const ViewDiscarded = () => {
     const [sortBy, setSortBy] = useState("discardedAt");
     const [order, setOrder] = useState("desc");
     // const [sites, setSites] = useState([]);
+    const [excelLoading, setExcelLoading] = useState(false);
 
+    const handleExportExcel = async (exportAll = false) => {
+        try {
+            setExcelLoading(true);
+            let rawData = [];
+            if (exportAll) {
+                const response = await axios.get(`${API}/api/discard/get-list`, {
+                    headers: {
+                        Authorization: authorizationToken,
+                    },
+                    params: {
+                        page: 1,
+                        limit: 5000,
+                        search: filters.search || undefined,
+                        itemType: filters.itemType === "all" ? undefined : filters.itemType,
+                        fromDate: filters.fromDate || undefined,
+                        toDate: filters.toDate || undefined,
+                        sortBy,
+                        order,
+                    },
+                    withCredentials: true,
+                });
+                rawData = response?.data?.data || [];
+            } else {
+                rawData = discardedItems;
+            }
+
+            if (rawData.length === 0) {
+                toast.info("No records to export");
+                return;
+            }
+
+            // Map frontend naming/keys to what excelExportHelper expects
+            const mappedData = rawData.map(r => ({
+                bagNo: r.bagNo,
+                componentId: r.componentId || r.componentNo,
+                itemType: r.itemType,
+                itemName: r.componentType || r.itemName || "—",
+                reason: r.reason,
+                discardedAt: r.discardedAt || r.createdAt
+            }));
+
+            await exportProcurementDiscard(mappedData);
+        } catch (e) {
+            console.error(e);
+            toast.error("Failed to generate Excel report");
+        } finally {
+            setExcelLoading(false);
+        }
+    };
 
     const getItems = async () => {
         setIsLoading(true);
@@ -115,7 +168,7 @@ const ViewDiscarded = () => {
         <div className="min-h-screen bg-gray-50">
             {/* Compact Header */}
             <div className="bg-white border-b border-gray-100">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
                             <AlertTriangle className="w-6 h-6 text-white" />
@@ -124,6 +177,9 @@ const ViewDiscarded = () => {
                             <h1 className="text-xl font-bold text-gray-900">View Discarded Items</h1>
                             <p className="text-xs text-gray-500 uppercase tracking-wide">Management Portal</p>
                         </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
                     </div>
                 </div>
             </div>

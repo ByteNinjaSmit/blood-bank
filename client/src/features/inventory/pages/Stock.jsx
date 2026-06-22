@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStockSummary } from "@/features/inventory/queries";
+import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
+import { exportStock } from "@/utils/excelExportHelper";
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -143,6 +145,7 @@ const Stock = () => {
   const { data: stockSummaryData } = useStockSummary();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [excelLoading, setExcelLoading] = useState(false);
   const [rows, setRows] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
 
@@ -178,6 +181,36 @@ const Stock = () => {
       setRows([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      let dataToExport = rows;
+      if (exportAll) {
+        toast.info("Fetching complete stock list for export...");
+        const res = await axios.get(`${API}/api/inventory`, {
+          headers: { Authorization: authorizationToken },
+          withCredentials: true,
+          params: {
+            page: 1,
+            limit: 5000,
+            status,
+            componentType: componentType || undefined,
+            siteId: siteId || undefined,
+            search: search || undefined,
+            sortBy,
+            order,
+          },
+        });
+        dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
+      }
+      await exportStock(dataToExport);
+    } catch (e) {
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
     }
   };
 
@@ -284,6 +317,7 @@ const Stock = () => {
                 <Button onClick={()=>fetchRows(pagination.page)} variant="outline" size="sm" className="h-8 w-8 p-0" disabled={isLoading}>
                     {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                 </Button>
+                <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
               </div>
             </div>
           </CardContent>

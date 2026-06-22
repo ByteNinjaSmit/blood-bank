@@ -11,6 +11,8 @@ import { useAuth } from '@/store/auth';
 import { checkAccess } from '@/features/user/pages/utils/access';
 import EnhancedLoader from '@/components/utils/Spinner';
 import { toast } from 'sonner';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportCampDonors } from '@/utils/excelExportHelper';
 
 const ConfirmDeleteModal = ({ isOpen, title, message, onConfirm, onClose }) => {
   if (!isOpen) return null;
@@ -83,6 +85,19 @@ const CampDonorManagement = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
   const [showForceModal, setShowForceModal] = useState(false);
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      const dataToExport = exportAll ? donors : filteredDonors;
+      await exportCampDonors(dataToExport, "Camp");
+    } catch (e) {
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   useEffect(() => {
     const id = searchParams.get('id');
@@ -247,13 +262,16 @@ const CampDonorManagement = () => {
               <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Manage donors for this camp</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-850 bg-orange-800 text-white rounded-lg text-sm font-semibold hover:bg-orange-900 transition-colors shadow-sm animate-in fade-in zoom-in duration-200"
-          >
-            <Plus className="w-4 h-4" />
-            Add New Donor
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-850 bg-orange-800 text-white rounded-lg text-sm font-semibold hover:bg-orange-900 transition-colors shadow-sm animate-in fade-in zoom-in duration-200"
+            >
+              <Plus className="w-4 h-4" />
+              Add New Donor
+            </button>
+          </div>
         </div>
       </div>
 

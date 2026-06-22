@@ -69,7 +69,7 @@ export const ListDonationsQuery = z.object({
   fromDate: z.coerce.date().optional(),
   toDate: z.coerce.date().optional(),
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(200).default(25),
+  pageSize: z.coerce.number().int().min(1).max(10000).default(25),
 });
 export type ListDonationsInput = z.infer<typeof ListDonationsQuery>;
 

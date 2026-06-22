@@ -94,6 +94,18 @@ class ApiService {
       return { data: null, error: error.response?.data?.message || error.message, errorData: error.response?.data };
     }
   }
+
+  async postDownload(url, data = {}) {
+    if (!this.client) {
+      return { data: null, error: 'API client not initialized' };
+    }
+    try {
+      const response = await this.client.post(url, data, { responseType: 'blob' });
+      return { data: response.data, error: null };
+    } catch (error) {
+      return { data: null, error: error.response?.data?.message || error.message, errorData: error.response?.data };
+    }
+  }
 }
 
 export default new ApiService();

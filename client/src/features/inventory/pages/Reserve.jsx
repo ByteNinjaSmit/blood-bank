@@ -7,6 +7,8 @@ import { Loader2, Hand, X } from "lucide-react";
 import { toast } from "sonner";
 import { COMPONENT_TYPES, SEX_TYPES } from "@/features/requisition/pages/constants";
 import CustomModal from "@/components/CustomModal";
+import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
+import { exportReserve } from "@/utils/excelExportHelper";
 
 const Reserve = () => {
   const { API, authorizationToken, user } = useAuth();
@@ -15,6 +17,61 @@ const Reserve = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [rows, setRows] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const mapReserveForExport = (data) => {
+    return data.map(r => ({
+      bagNo: r?.bag?.bagNo || r.bagNo,
+      componentType: r?.component?.componentType,
+      bloodGroup: r?.bag?.bloodGroup ? `${r.bag.bloodGroup} ${r.bag.rh === 'Positive' ? '+' : r.bag.rh === 'Negative' ? '-' : ''}`.trim() : '—',
+      volumeMl: r?.component?.volumeMl,
+      expiryDate: r?.component?.expiryDate,
+      reservedForHospital: r?.hospital?.name || '—',
+      reservedUntil: r?.reservedUntil,
+      patientName: r?.reservedPatientName || '—',
+      patientAge: r?.reservedPatientAge ?? '—',
+      patientSex: r?.reservedPatientSex || '—',
+    }));
+  };
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      let dataToExport = [];
+      if (exportAll) {
+        // Fetch all reserved items without limit (up to 5000)
+        const res = await axios.get(`${API}/api/inventory`, {
+          headers: { Authorization: authorizationToken },
+          withCredentials: true,
+          params: {
+            page: 1,
+            limit: 5000,
+            status: 'reserved',
+            componentType: componentType || undefined,
+            search: search || undefined,
+            sortBy,
+            order,
+          },
+        });
+        const data = Array.isArray(res.data?.data) ? res.data.data : [];
+        dataToExport = mapReserveForExport(data);
+      } else {
+        dataToExport = mapReserveForExport(rows);
+      }
+
+      if (dataToExport.length === 0) {
+        toast.info("No items to export");
+        return;
+      }
+
+      await exportReserve(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   // filters
   const [componentType, setComponentType] = useState("");
@@ -100,13 +157,18 @@ const Reserve = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 bg-gradient-to-br from-red-800 to-red-900 rounded-xl">
-            <Hand className="w-8 h-8 text-white" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gradient-to-br from-red-800 to-red-900 rounded-xl">
+              <Hand className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Reserved Stock</h1>
+              <p className="text-gray-600 mt-1">Viewing only currently reserved components</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Reserved Stock</h1>
-            <p className="text-gray-600 mt-1">Viewing only currently reserved components</p>
+          <div className="flex items-center gap-2">
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
           </div>
         </div>
 

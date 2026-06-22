@@ -12,6 +12,9 @@ import {
 } from '../queries';
 import { apiClient, unwrap } from '@/core/api-client';
 import { toast } from 'sonner';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportChemicalPurchase } from '@/utils/excelExportHelper';
+import { chemicalInventoryApi } from '../api';
 
 const uploadFile = (file, folder) => {
   const formData = new FormData();
@@ -155,6 +158,60 @@ export default function PurchaseEntry() {
       sgstAmount: '',
     },
   ]);
+
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      let rawPurchases = [];
+      if (exportAll) {
+        rawPurchases = await chemicalInventoryApi.purchase.list();
+        rawPurchases = rawPurchases?.items || rawPurchases || [];
+      } else {
+        rawPurchases = purchases || [];
+      }
+
+      if (rawPurchases.length === 0) {
+        toast.info("No purchases to export");
+        return;
+      }
+
+      // Flatten invoice purchase records to item level
+      const flattened = [];
+      rawPurchases.forEach((p) => {
+        const invoiceItems = p.items || [];
+        if (invoiceItems.length === 0) {
+          flattened.push({
+            invoiceNumber: p.invoiceNumber || '—',
+            purchaseDate: p.purchaseDate,
+            supplierName: p.supplierId?.name || '—',
+            chemicalName: '—',
+            quantity: 0,
+            unitPrice: 0,
+          });
+        } else {
+          invoiceItems.forEach((item) => {
+            flattened.push({
+              invoiceNumber: p.invoiceNumber || '—',
+              purchaseDate: p.purchaseDate,
+              supplierName: p.supplierId?.name || '—',
+              chemicalName: item.chemicalId?.name || '—',
+              quantity: item.qtyPurchased || 0,
+              unitPrice: item.costPerUnit || 0,
+            });
+          });
+        }
+      });
+
+      await exportChemicalPurchase(flattened);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   const [activeMfgIndex, setActiveMfgIndex] = useState(-1);
 
@@ -467,12 +524,15 @@ export default function PurchaseEntry() {
         </div>
 
         {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-800 text-white text-sm font-semibold rounded-lg hover:bg-red-900 transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4" /> Add New Purchase Entry
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+            <button
+              onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-800 text-white text-sm font-semibold rounded-lg hover:bg-red-900 transition-colors shadow-sm"
+            >
+              <Plus className="w-4 h-4" /> Add New Purchase Entry
+            </button>
+          </div>
         )}
       </div>
 

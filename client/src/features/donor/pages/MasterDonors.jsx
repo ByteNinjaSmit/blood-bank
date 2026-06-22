@@ -9,6 +9,9 @@ import DonorForm from '@/features/donor/components/DonorForm';
 import DonorDetails from '@/features/donor/components/DonorDetails';
 import Modal from '@/components/shared/Modal';
 import CustomModal from '@/components/CustomModal';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportMasterDonors } from '@/utils/excelExportHelper';
+import { donorApi } from '@/features/donor/api';
 
 const TABS = [
   { key: 'all',     label: 'Master Donor Register', icon: BookOpen },
@@ -29,6 +32,40 @@ const MasterDonors = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodGroupFilter, setBloodGroupFilter] = useState('');
   const [eligibilityFilter, setEligibilityFilter] = useState('');
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      let dataToExport = [];
+      if (exportAll) {
+        // Fetch all matching donors matching filters but without pagination (limit 5000)
+        const res = await donorApi.list({
+          source: sourceParam,
+          page: 1,
+          pageSize: 5000,
+          search: searchQuery || undefined,
+          bloodGroup: bloodGroupFilter || undefined,
+          eligibilityStatus: eligibilityFilter || undefined,
+        });
+        dataToExport = res?.items ?? [];
+      } else {
+        dataToExport = items;
+      }
+
+      if (dataToExport.length === 0) {
+        toast.info("No donors to export");
+        return;
+      }
+
+      await exportMasterDonors(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   // Modals state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -227,13 +264,16 @@ const MasterDonors = () => {
                 <p className="text-gray-500 text-sm">Inhouse, Camp & combined master register</p>
               </div>
             </div>
-            <button
-              onClick={() => navigate('/master-register/donor-creation')}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-800 text-white rounded-lg text-sm font-semibold hover:bg-orange-900 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              New Donor
-            </button>
+            <div className="flex items-center gap-2">
+              <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+              <button
+                onClick={() => navigate('/master-register/donor-creation')}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-800 text-white rounded-lg text-sm font-semibold hover:bg-orange-900 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                New Donor
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}

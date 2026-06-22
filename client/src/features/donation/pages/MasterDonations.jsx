@@ -5,6 +5,10 @@ import { useDonationList, useDonationDetail } from '@/features/donation/queries'
 import DonationTimeline from '../components/DonationTimeline';
 import DonationDetails from '../components/DonationDetails';
 import Modal from '@/components/shared/Modal';
+import { toast } from 'sonner';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportMasterDonations } from '@/utils/excelExportHelper';
+import { donationApi } from '@/features/donation/api';
 
 const TABS = [
   { key: 'all',     label: 'Master Donation Register', icon: BookOpen },
@@ -27,6 +31,68 @@ export default function MasterDonations() {
   const [bagTypeFilter, setBagTypeFilter] = useState('');
   const [bloodGroupFilter, setBloodGroupFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const mapMasterDonationsForExport = (items) => {
+    return items.map(d => {
+      const status = d.status || (d.ttiReleaseDecision === 'released' ? 'passed' : d.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
+      return {
+        bagNo: d.bagNo || d.donationId,
+        donorName: d.donorName || '—',
+        donorSource: d.campId ? 'camp' : 'inhouse',
+        donationType: d.donationType || '—',
+        bloodGroup: d.bloodGroup ? `${d.bloodGroup} ${d.rhFactor === 'Positive' ? '+' : d.rhFactor === 'Negative' ? '-' : ''}`.trim() : '—',
+        unitsCount: d.unitCount ?? 1,
+        fitnessStatus: d.isFit === true ? 'fit' : d.isFit === false ? 'unfit' : 'pending',
+        collectedAt: d.collectedAt,
+      };
+    });
+  };
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      let dataToExport = [];
+      if (exportAll) {
+        // Fetch all matching donations matching filters but without pagination (limit 5000)
+        const res = await donationApi.list({
+          source: sourceParam,
+          page: 1,
+          pageSize: 5000,
+        });
+        const allFetched = res?.items ?? [];
+        // Filter them using the exact same filters on client-side
+        const filteredAll = allFetched.filter((d) => {
+          if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            const bagNoMatch = (d.bagNo || d.donationId || '').toLowerCase().includes(q);
+            const donorMatch = (d.donorName || '').toLowerCase().includes(q);
+            if (!bagNoMatch && !donorMatch) return false;
+          }
+          if (bagTypeFilter && d.typeOfBag !== bagTypeFilter) return false;
+          if (bloodGroupFilter && d.bloodGroup !== bloodGroupFilter) return false;
+          const status = d.status || (d.ttiReleaseDecision === 'released' ? 'passed' : d.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
+          if (statusFilter && status !== statusFilter) return false;
+          return true;
+        });
+        dataToExport = mapMasterDonationsForExport(filteredAll);
+      } else {
+        dataToExport = mapMasterDonationsForExport(filteredItems);
+      }
+
+      if (dataToExport.length === 0) {
+        toast.info("No donations to export");
+        return;
+      }
+
+      await exportMasterDonations(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   // source param: undefined for 'all', otherwise the tab key
   const sourceParam = activeTab === 'all' ? undefined : activeTab;
@@ -127,13 +193,16 @@ export default function MasterDonations() {
                 <p className="text-gray-500 text-sm">Inhouse, Camp & combined master register</p>
               </div>
             </div>
-            <button
-              onClick={() => navigate('/master-register/donor-creation')}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-800 text-white rounded-lg text-sm font-semibold hover:bg-orange-900 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              New Donation
-            </button>
+            <div className="flex items-center gap-2">
+              <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+              <button
+                onClick={() => navigate('/master-register/donor-creation')}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-800 text-white rounded-lg text-sm font-semibold hover:bg-orange-900 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                New Donation
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}

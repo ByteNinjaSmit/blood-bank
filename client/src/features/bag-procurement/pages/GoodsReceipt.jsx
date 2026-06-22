@@ -10,6 +10,8 @@ import { usePOList } from '../queries';
 import { formatBloodBagQty } from '../utils/qtyHelper';
 import { apiClient, unwrap } from '@/core/api-client';
 import { toast } from 'sonner';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportProcurementGRN } from '@/utils/excelExportHelper';
 
 const uploadFile = (file, folder) => {
   const formData = new FormData();
@@ -589,6 +591,42 @@ export default function GoodsReceipt() {
   // Preview state
   const [previewUrl, setPreviewUrl] = useState('');
   const [previewTitle, setPreviewTitle] = useState('');
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const mapGRNForExport = (items, posList, vendorsList) => {
+    return items.map(g => {
+      const po = posList.find(p => (p._id ?? p.id) === g.poId);
+      const vendorName = g.vendorName ?? vendorsList.find(v => (v._id ?? v.id) === po?.vendorId)?.name ?? '—';
+      const receivedQty = (g.batchLines ?? []).reduce((sum, b) => sum + (b.quantityReceived || 0), 0);
+      return {
+        grnNumber: g.grnNumber,
+        receivedDate: g.receivedDate || g.createdAt,
+        poNumber: po?.poNumber || '—',
+        vendorName: vendorName,
+        receivedQty: receivedQty,
+        status: g.status,
+      };
+    });
+  };
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      const dataToExport = mapGRNForExport(grns, pos, vendors);
+
+      if (dataToExport.length === 0) {
+        toast.info("No goods receipt notes to export");
+        return;
+      }
+
+      await exportProcurementGRN(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   // Table row upload state
   const updateGRNMutation = useUpdateGRN();
@@ -662,10 +700,13 @@ export default function GoodsReceipt() {
               <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Inward Stock Register</p>
             </div>
           </div>
-          <button onClick={() => { setEditGrn(null); setShowDrawer(true); }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">
-            <Plus className="w-4 h-4" /> Create GRN
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+            <button onClick={() => { setEditGrn(null); setShowDrawer(true); }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">
+              <Plus className="w-4 h-4" /> Create GRN
+            </button>
+          </div>
         </div>
       </div>
 

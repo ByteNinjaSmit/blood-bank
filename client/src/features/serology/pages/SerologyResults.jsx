@@ -9,6 +9,8 @@ import CustomModal from "@/components/CustomModal";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
+import { exportSerologyResults } from "@/utils/excelExportHelper";
 
 const SerologyResults = () => {
   const { API, authorizationToken } = useAuth();
@@ -16,6 +18,56 @@ const SerologyResults = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [bags, setBags] = useState([]);
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const mapSerologyForExport = (bagsList) => {
+    return bagsList.map(bag => ({
+      ...bag,
+      bloodGroup: bag.bloodGroup ? `${bag.bloodGroup} ${bag.rh === 'Positive' ? '+' : bag.rh === 'Negative' ? '-' : ''}`.trim() : '—',
+      collectedAt: bag.collectionDate,
+      tests: Array.isArray(bag.testResults) ? bag.testResults.map(t => ({ testName: t.test, result: t.result })) : [],
+    }));
+  };
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      let dataToExport = [];
+      if (exportAll) {
+        // Fetch all serology results without limit (up to 5000)
+        const res = await axios.get(`${API}/api/serology/results`, {
+          params: { 
+            page: 1, 
+            limit: 5000, 
+            search: filters.search || undefined, 
+            status: filters.status === "all" ? undefined : filters.status,
+            fromDate: filters.fromDate || undefined,
+            toDate: filters.toDate || undefined,
+            sortBy, 
+            order 
+          },
+          headers: { Authorization: authorizationToken },
+          withCredentials: true,
+        });
+        const data = Array.isArray(res.data?.data) ? res.data.data : [];
+        dataToExport = mapSerologyForExport(data);
+      } else {
+        dataToExport = mapSerologyForExport(bags);
+      }
+      
+      if (dataToExport.length === 0) {
+        toast.info("No records to export");
+        return;
+      }
+      
+      await exportSerologyResults(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
   const [filters, setFilters] = useState({
     search: "",
@@ -108,13 +160,18 @@ const SerologyResults = () => {
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white border-b border-red-100 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-gradient-to-br from-red-800 to-red-900 rounded-xl">
-                <Microscope className="w-8 h-8 text-white" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-br from-red-800 to-red-900 rounded-xl">
+                  <Microscope className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Serology Results</h1>
+                  <p className="text-gray-600 mt-1">View finalized or recorded serology results</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Serology Results</h1>
-                <p className="text-gray-600 mt-1">View finalized or recorded serology results</p>
+              <div className="flex items-center gap-2">
+                <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
               </div>
             </div>
           </div>

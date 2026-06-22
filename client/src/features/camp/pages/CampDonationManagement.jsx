@@ -6,6 +6,9 @@ import Modal from '@/components/shared/Modal';
 import DonationDetails from '@/features/donation/components/DonationDetails';
 import { useDonationDetail } from '@/features/donation/queries';
 import { useDonation } from '@/hooks/useDonation';
+import { toast } from 'sonner';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportCampDonations } from '@/utils/excelExportHelper';
 
 const CampDonationManagement = () => {
   const navigate = useNavigate();
@@ -13,6 +16,18 @@ const CampDonationManagement = () => {
   const { donations, pagination, loading, error, fetchCampDonations } = useDonation();
   const [campId, setCampId] = useState(null);
   const [viewDonationId, setViewDonationId] = useState(null);
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      await exportCampDonations(donations, "Camp");
+    } catch (e) {
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   const { data: viewDetail, isLoading: viewDetailLoading } = useDonationDetail(viewDonationId);
 
@@ -92,13 +107,16 @@ const CampDonationManagement = () => {
               <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Manage donations for this camp</p>
             </div>
           </div>
-          <button
-            onClick={() => navigate(`/master-register/donor-creation?campId=${campId}`)}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-850 bg-orange-800 text-white rounded-lg text-sm font-semibold hover:bg-orange-900 transition-colors shadow-sm animate-in fade-in zoom-in duration-200"
-          >
-            <Plus className="w-4 h-4" />
-            New Donation
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+            <button
+              onClick={() => navigate(`/master-register/donor-creation?campId=${campId}`)}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-850 bg-orange-800 text-white rounded-lg text-sm font-semibold hover:bg-orange-900 transition-colors shadow-sm animate-in fade-in zoom-in duration-200"
+            >
+              <Plus className="w-4 h-4" />
+              New Donation
+            </button>
+          </div>
         </div>
       </div>
 
