@@ -42,7 +42,7 @@ export default function Dashboard() {
   const [payload, setPayload] = useState(null);
 
   // Filters: presets and custom range
-  const [preset, setPreset] = useState("7d"); // 'all' | '1d' | '2d' | '7d' | '30d' | 'custom'
+  const [preset, setPreset] = useState("today"); // 'all' | 'today' | '2d' | '7d' | '30d' | 'custom'
   const [openCal, setOpenCal] = useState(false);
   const [range, setRange] = useState({ from: null, to: null });
 
@@ -54,7 +54,7 @@ export default function Dashboard() {
         const params = {};
         if (preset === "all") {
           params.range = "all";
-        } else if (["1d", "2d", "7d", "30d"].includes(preset)) {
+        } else if (["today", "2d", "7d", "30d"].includes(preset)) {
           params.range = preset;
         } else if (preset === "custom" && range?.from && range?.to) {
           const from = new Date(range.from);
@@ -92,6 +92,32 @@ export default function Dashboard() {
 
   const stockByComponent = useMemo(() => (payload?.stockByComponent || []).map((x) => ({ name: x.componentType, value: x.value })), [payload]);
   const nearExpiryByComponent = useMemo(() => (payload?.nearExpiryByComponent || []).map((x) => ({ name: x.componentType, value: x.value })), [payload]);
+  const stockByComponentAndGroup = useMemo(() => payload?.stockByComponentAndGroup || [], [payload]);
+
+  const getMatrixStock = (compKey, group, rh) => {
+    const match = stockByComponentAndGroup.find(
+      (x) => x.componentType === compKey && x.bloodGroup === group && x.rh === rh
+    );
+    return match ? number(match.value) : 0;
+  };
+
+  const matrixComponents = [
+    { key: "RBC", label: "Red Blood Cells (RBC)", theme: "text-rose-700 bg-rose-50 border-rose-200" },
+    { key: "FFP", label: "Fresh Frozen Plasma (FFP)", theme: "text-sky-700 bg-sky-50 border-sky-200" },
+    { key: "Platelet", label: "Platelets (PLT)", theme: "text-amber-700 bg-amber-50 border-amber-200" },
+    { key: "Cryo", label: "Cryoprecipitate (CRYO)", theme: "text-indigo-700 bg-indigo-50 border-indigo-200" },
+  ];
+
+  const bloodGroupsList = [
+    { group: "A", rh: "Positive", label: "A+" },
+    { group: "A", rh: "Negative", label: "A-" },
+    { group: "B", rh: "Positive", label: "B+" },
+    { group: "B", rh: "Negative", label: "B-" },
+    { group: "AB", rh: "Positive", label: "AB+" },
+    { group: "AB", rh: "Negative", label: "AB-" },
+    { group: "O", rh: "Positive", label: "O+" },
+    { group: "O", rh: "Negative", label: "O-" },
+  ];
 
   const donationsTrend = trends?.donations || [];
   const issuedTrend = trends?.issued || [];
@@ -139,6 +165,8 @@ export default function Dashboard() {
     for (const item of stockByComponent) m[item.name] = item.value;
     return m;
   }, [stockByComponent]);
+
+  const ongoingCamps = useMemo(() => payload?.ongoingCamps || [], [payload]);
 
   const overview = payload?.overview || {};
   const donorDonation = overview.donorDonation || {};
@@ -205,7 +233,7 @@ export default function Dashboard() {
             <span className="text-sm text-slate-600 flex items-center gap-2"><Filter className="w-4 h-4"/>Quick Range</span>
             {[
               { key: "all", label: "All" },
-              { key: "1d", label: "1d" },
+              { key: "today", label: "Today" },
               { key: "2d", label: "2d" },
               { key: "7d", label: "7d" },
               { key: "30d", label: "30d" },
@@ -261,6 +289,157 @@ export default function Dashboard() {
           <SummaryStat label="Transfusions (range)" value={totals.transfusions} />
         </CardContent>
       </Card>
+
+      {/* Real-Time Blood Stock Inventory Matrix */}
+      <Card className="border-slate-100 shadow-md">
+        <CardHeader className="bg-gradient-to-r from-red-800 to-red-900 text-white rounded-t-xl py-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <Droplets className="w-5 h-5 text-red-200 animate-pulse" />
+              Real-Time Blood Stock Inventory Matrix (ABO / Rh)
+            </CardTitle>
+            <Badge variant="outline" className="text-white border-red-300 text-xs">
+              Status: Released / In-Stock
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50">Component Type</th>
+                  {bloodGroupsList.map((bg) => (
+                    <th key={bg.label} className="px-4 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider bg-gray-50/80">
+                      {bg.label}
+                    </th>
+                  ))}
+                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-800 uppercase tracking-wider bg-gray-100 font-extrabold">Total</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {matrixComponents.map((comp) => {
+                  let rowTotal = 0;
+                  return (
+                    <tr key={comp.key} className="hover:bg-slate-50/30 transition-colors">
+                      <td className="px-6 py-4 text-sm font-medium text-slate-800 whitespace-nowrap">
+                        <span className={`px-2.5 py-1.5 rounded-lg text-xs font-extrabold border ${comp.theme}`}>
+                          {comp.label}
+                        </span>
+                      </td>
+                      {bloodGroupsList.map((bg) => {
+                        const count = getMatrixStock(comp.key, bg.group, bg.rh);
+                        rowTotal += count;
+                        const hasStock = count > 0;
+                        return (
+                          <td key={bg.label} className="px-4 py-4 whitespace-nowrap text-center">
+                            <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full text-xs transition-all duration-200 ${
+                              hasStock
+                                ? `${comp.theme.split(' ')[0]} font-extrabold border shadow-sm scale-105`
+                                : 'text-gray-300 font-normal border border-gray-100 bg-gray-50/50'
+                            }`}>
+                              {count}
+                            </span>
+                          </td>
+                        );
+                      })}
+                      <td className="px-6 py-4 whitespace-nowrap text-center bg-gray-50/50 font-extrabold text-sm text-slate-800">
+                        {rowTotal}
+                      </td>
+                    </tr>
+                  );
+                })}
+                
+                {/* Column Totals Row */}
+                <tr className="bg-gray-100/60 font-extrabold text-slate-800">
+                  <td className="px-6 py-4 text-xs uppercase tracking-wider text-slate-700 font-extrabold">
+                    Group Totals
+                  </td>
+                  {bloodGroupsList.map((bg) => {
+                    const colTotal = matrixComponents.reduce((sum, comp) => sum + getMatrixStock(comp.key, bg.group, bg.rh), 0);
+                    return (
+                      <td key={bg.label} className="px-4 py-4 text-center whitespace-nowrap text-sm font-black text-slate-800">
+                        {colTotal}
+                      </td>
+                    );
+                  })}
+                  <td className="px-6 py-4 text-center whitespace-nowrap text-sm font-black text-red-800 bg-red-50/50">
+                    {matrixComponents.reduce((sum, comp) => {
+                      return sum + bloodGroupsList.reduce((sumBg, bg) => sumBg + getMatrixStock(comp.key, bg.group, bg.rh), 0);
+                    }, 0)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Ongoing Donation Camps */}
+      <div className="space-y-4">
+        <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2 uppercase tracking-wider">
+          <Truck className="w-4 h-4 text-orange-600" />
+          Active Ongoing Donation Camps
+        </h2>
+        {ongoingCamps.length === 0 ? (
+          <Card className="border-dashed border-slate-200">
+            <CardContent className="py-8 text-center text-slate-455 text-xs font-medium">
+              No donation camps are currently active/ongoing today.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {ongoingCamps.map((camp) => (
+              <Card key={camp.id} className="border-orange-100 hover:shadow-md transition-shadow relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500" />
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-bold text-slate-900">{camp.name}</CardTitle>
+                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50 text-[10px]" variant="outline">
+                      Live
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{camp.address}</p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2 text-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                    <div>
+                      <div className="text-xs font-bold text-slate-800">{camp.donorsCount}</div>
+                      <div className="text-[9px] text-slate-400 uppercase font-bold">Donors</div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-red-700">{camp.unitsCount}</div>
+                      <div className="text-[9px] text-slate-400 uppercase font-bold">Units</div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-800">{camp.staff.length}</div>
+                      <div className="text-[9px] text-slate-400 uppercase font-bold">Staff</div>
+                    </div>
+                  </div>
+                  
+                  {camp.staff.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="text-[9px] text-slate-400 uppercase font-bold">Assigned Staff</div>
+                      <div className="flex flex-wrap gap-1">
+                        {camp.staff.map((st, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-[9px] py-0 px-1.5 font-medium">
+                            {st}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="text-[9px] text-slate-400 text-right font-medium">
+                    Scheduled: {new Date(camp.dateFrom).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(camp.dateTo).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* KPI Cards (filtered) */}
       <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
         <Card>

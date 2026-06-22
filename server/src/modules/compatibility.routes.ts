@@ -689,6 +689,10 @@ router.get('/dashboard', authenticate, async (req, res, next) => {
     } else if (typeof rangeDays !== 'undefined' && !Number.isNaN(parseInt(rangeDays as string, 10))) {
       const days = Math.max(1, parseInt(rangeDays as string, 10));
       fromDate = new Date(toDate.getTime() - days * 24 * 60 * 60 * 1000);
+    } else if (range && String(range).toLowerCase() === 'today') {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      fromDate = start;
     } else if (range && ['1d', '2d', '7d', '30d'].includes(String(range).toLowerCase())) {
       const map: Record<string, number> = { '1d': 1, '2d': 2, '7d': 7, '30d': 30 };
       const days = map[String(range).toLowerCase()] || 30;
@@ -719,6 +723,7 @@ router.get('/dashboard', authenticate, async (req, res, next) => {
     const [
       stockByGroupAgg,
       stockByComponentAgg,
+      stockByComponentAndGroupAgg,
       donationsTrendAgg,
       issuedTrendAgg,
       discardedTrendAgg,
@@ -746,6 +751,27 @@ router.get('/dashboard', authenticate, async (req, res, next) => {
           }
         },
         { $group: { _id: '$componentType', count: { $sum: 1 } } },
+      ]),
+      // Stock by Component and ABO/Rh
+      BloodUnitModel.aggregate([
+        {
+          $match: {
+            status: 'RELEASED',
+            ...(fromDate ? { createdAt: { $gte: fromDate, $lte: toDate } } : {}),
+            ...siteMatchComponent,
+            deletedAt: null
+          }
+        },
+        {
+          $group: {
+            _id: {
+              componentType: '$componentType',
+              bloodGroup: '$aboGroup',
+              rhFactor: '$rhFactor'
+            },
+            count: { $sum: 1 }
+          }
+        }
       ]),
       // Donations trend
       DonationModel.aggregate([
@@ -1017,6 +1043,12 @@ router.get('/dashboard', authenticate, async (req, res, next) => {
       componentType: toLegacyComponentType(x._id),
       value: x.count,
     }));
+    const stockByComponentAndGroup = stockByComponentAndGroupAgg.map((x) => ({
+      componentType: toLegacyComponentType(x._id?.componentType),
+      bloodGroup: x._id?.bloodGroup || 'Unknown',
+      rh: x._id?.rhFactor === 'NEGATIVE' ? 'Negative' : 'Positive',
+      value: x.count,
+    }));
     const nearExpiryByComponent = nearExpiryAgg.map((x) => ({
       componentType: toLegacyComponentType(x._id),
       value: x.count,
@@ -1203,6 +1235,23 @@ router.get('/dashboard', authenticate, async (req, res, next) => {
       })
     ]);
 
+    const ongoingCampsRaw = await CampModel.find({
+      dateFrom: { $lte: now },
+      dateTo: { $gte: now }
+    }).populate('staff', 'name').lean();
+
+    const ongoingCamps = ongoingCampsRaw.map((c: any) => ({
+      id: c._id.toString(),
+      campId: c.campId,
+      name: c.name,
+      address: c.address,
+      dateFrom: c.dateFrom.toISOString(),
+      dateTo: c.dateTo.toISOString(),
+      staff: c.staff?.map((s: any) => s ? `${s.name?.first || ''} ${s.name?.last || ''}`.trim() : '').filter(Boolean) || [],
+      donorsCount: c.donorData?.length || 0,
+      unitsCount: c.unitData?.length || 0,
+    }));
+
     const overview = {
       donorDonation: {
         donors: donorsTotal,
@@ -1306,6 +1355,7 @@ router.get('/dashboard', authenticate, async (req, res, next) => {
         },
         stockByGroup,
         stockByComponent,
+        stockByComponentAndGroup,
         nearExpiryByComponent,
         nearExpiryTotal,
         trends: {
@@ -1320,6 +1370,7 @@ router.get('/dashboard', authenticate, async (req, res, next) => {
         transfusionsLast30d: transfusionsInRange,
         positivity,
         bloodbagStatusPie,
+        ongoingCamps,
         overview,
       },
     });
