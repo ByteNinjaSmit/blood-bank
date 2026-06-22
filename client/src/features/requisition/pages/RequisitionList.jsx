@@ -44,6 +44,9 @@ export default function RequisitionList() {
   const [multiLabelModalOpen, setMultiLabelModalOpen] = useState(false);
   const [multiLabelDoc, setMultiLabelDoc] = useState(null);
 
+  const [excelLoading, setExcelLoading] = useState(false);
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectingDocId, setRejectingDocId] = useState(null);
   const [rejectingDocReqId, setRejectingDocReqId] = useState('');
@@ -195,6 +198,43 @@ export default function RequisitionList() {
     const a = document.createElement('a');
     a.href = url; a.download = 'requisitions.csv'; a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      setExportDropdownOpen(false);
+      toast.info(exportAll ? 'Generating Excel report for all records...' : 'Generating Excel report for filtered records...');
+
+      const params = exportAll ? { exportAll: true } : {
+        search: filters.search,
+        status: filters.status,
+        hospitalId: filters.hospitalId,
+        from: filters.from,
+        to: filters.to,
+      };
+
+      const res = await requisitionApi.exportExcel(params);
+      if (res.error) {
+        toast.error(res.error || 'Failed to generate Excel report');
+        return;
+      }
+
+      // Trigger browser download of the blob
+      const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.download = `Sanjivani_Blood_Requests_Report_${exportAll ? 'All' : 'Filtered'}_${dateStr}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Excel report downloaded successfully!');
+    } catch (e) {
+      toast.error('Network error during excel generation');
+    } finally {
+      setExcelLoading(false);
+    }
   };
 
   const setSort = (col) => {
@@ -602,6 +642,57 @@ export default function RequisitionList() {
               <button type="button" onClick={applyFilters} className="px-4 py-2 rounded-lg bg-orange-800 text-white hover:bg-orange-900" disabled={loading}>Apply</button>
               <button type="button" onClick={resetFilters} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50" disabled={loading}>Reset</button>
               <button type="button" onClick={exportCsv} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50" disabled={loading}>Export CSV</button>
+              
+              <div className="relative inline-block text-left">
+                <button
+                  type="button"
+                  onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                  className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white flex items-center gap-1.5 font-medium transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+                  disabled={excelLoading}
+                >
+                  {excelLoading ? (
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  )}
+                  Export Excel
+                  <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {exportDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setExportDropdownOpen(false)}></div>
+                    <div className="absolute left-0 mt-1.5 w-56 rounded-lg bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-20 overflow-hidden divide-y divide-gray-100">
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={() => handleExportExcel(false)}
+                          className="flex w-full items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left cursor-pointer"
+                        >
+                          <svg className="w-4 h-4 mr-2.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                          </svg>
+                          Export Filtered View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleExportExcel(true)}
+                          className="flex w-full items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left cursor-pointer"
+                        >
+                          <svg className="w-4 h-4 mr-2.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                          </svg>
+                          Export All Records
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <label className="text-sm text-gray-700">Rows</label>

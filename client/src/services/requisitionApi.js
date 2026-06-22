@@ -66,6 +66,10 @@ class RequisitionApiService {
     if (rh) params.rh = rh;
     return this._wrap(await apiService.get(`${this.baseUrl}/compatibility-info`, params));
   }
+
+  async exportExcel(params = {}) {
+    return await apiService.download(`${this.baseUrl}/export-excel`, params);
+  }
 }
 
 export default new RequisitionApiService();

@@ -15,6 +15,7 @@ import type { CrossmatchService } from '@/modules/crossmatch/crossmatch.service'
 import type { IssueService } from '@/modules/issue/issue.service';
 import type { PatientRepo } from '@/modules/patient/patient.repository';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
+import { generateRequisitionExcel } from '@/modules/requisition/requisition.excel';
 import {
   compatibleAboGroups,
   requiresCrossmatch,
@@ -37,6 +38,7 @@ export interface RequisitionControllers {
   issueAll: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   getCompatibilityInfoLegacy: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   updateCrossmatchLegacy: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  exportExcel: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
 async function enrichRequisition(reqDto: any): Promise<any> {
@@ -745,6 +747,41 @@ export function createRequisitionControllers(deps: {
         });
       } catch (err) {
         next(err);
+      }
+    },
+
+    async exportExcel(req, res, next) {
+      try {
+        const actorId = actor(req);
+        const user = await UserModel.findById(actorId).lean();
+        const userName = user
+          ? [user.name?.first, user.name?.last].filter(Boolean).join(' ') || user.email
+          : 'System User';
+
+        const filters = {
+          search: req.query.search,
+          status: req.query.status,
+          hospitalId: req.query.hospitalId,
+          from: req.query.from,
+          to: req.query.to,
+          exportAll: req.query.exportAll,
+        };
+
+        const workbook = await generateRequisitionExcel(filters, userName);
+
+        res.setHeader(
+          'Content-Type',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+        res.setHeader(
+          'Content-Disposition',
+          'attachment; filename=Blood_Request_Management_Report.xlsx'
+        );
+
+        await workbook.xlsx.write(res);
+        res.end();
+      } catch (e) {
+        next(e);
       }
     },
   };
