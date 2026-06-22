@@ -1,4 +1,4 @@
-import apiService from '@/services/api';
+import { apiClient } from '@/core/api-client';
 import { toast } from 'sonner';
 
 /**
@@ -35,17 +35,12 @@ export const formatDateTime = (d) => {
 export async function downloadExcelReport(sheets, filename = 'Report.xlsx') {
   try {
     toast.info('Generating Excel report...');
-    const res = await apiService.postDownload('/api/v2/export/excel', {
+    const response = await apiClient.post('/api/v2/export/excel', {
       filename,
       sheets,
-    });
+    }, { responseType: 'blob' });
 
-    if (res.error) {
-      toast.error(res.error || 'Failed to generate Excel report');
-      return;
-    }
-
-    const blob = new Blob([res.data], {
+    const blob = new Blob([response.data], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
     const url = URL.createObjectURL(blob);
@@ -56,7 +51,7 @@ export async function downloadExcelReport(sheets, filename = 'Report.xlsx') {
     URL.revokeObjectURL(url);
     toast.success('Excel report downloaded successfully!');
   } catch (e) {
-    toast.error('Network error during Excel report download');
+    toast.error(e.message || 'Failed to generate Excel report');
     console.error(e);
   }
 }
@@ -479,20 +474,23 @@ export async function exportProcurementPO(items) {
 
 // 13. Procurement Issue (Bag Issuance)
 export async function exportProcurementIssue(items) {
-  const headers = ['Sr No', 'Issue ID', 'Issued Date', 'Receiver Name', 'Total Bags Issued', 'Status'];
-  const alignments = ['center', 'center', 'center', 'left', 'center', 'center'];
+  const headers = ['Sr No', 'Bag No', 'Segment No', 'Bag Type', 'Blood Group', 'Batch No', 'Issue Date', 'Status'];
+  const alignments = ['center', 'center', 'center', 'center', 'center', 'center', 'center', 'center'];
 
   const rows = items.map((r, i) => [
     i + 1,
-    r.issueId || r._id || '—',
-    formatDateTime(r.issuedAt || r.createdAt),
-    r.receiverName || r.issuedTo || '—',
-    r.totalBagsIssued || r.quantityIssued || 0,
-    (r.status || 'Completed').toUpperCase(),
+    r.bagNo || '—',
+    r.segmentNo || '—',
+    r.bagType || '—',
+    r.bloodGroup || '—',
+    r.batchNo || '—',
+    formatDateTime(r.issueDate),
+    (r.status || 'ISSUED').toUpperCase(),
   ]);
 
   const stats = [
     { label: 'Total Issuances', value: items.length },
+    { label: 'Total Discarded', value: items.filter(r => r.status?.toUpperCase() === 'DISCARDED').length },
   ];
 
   await downloadExcelReport([{

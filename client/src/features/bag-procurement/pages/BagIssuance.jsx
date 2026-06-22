@@ -172,11 +172,13 @@ export default function BagIssuance() {
 
   const mapIssuanceForExport = (items) => {
     return items.map(iss => ({
-      issueId: iss.id || iss._id,
-      issuedAt: iss.issueDate || iss.createdAt,
-      receiverName: iss.collectionRoom || '—',
-      totalBagsIssued: 1,
-      status: iss.status || 'ISSUED',
+      bagNo: iss.bagSerialNumber ?? iss.bagSerialNo ?? '—',
+      segmentNo: iss.segmentNo ?? '—',
+      bagType: iss.bagType || '—',
+      bloodGroup: iss.bloodGroup ?? '—',
+      batchNo: iss.batchNumber ?? iss.batchNo ?? '—',
+      issueDate: iss.issueDate || iss.createdAt,
+      status: iss.status === 'DAMAGED' ? 'DISCARDED' : (iss.status || 'ISSUED'),
     }));
   };
 
