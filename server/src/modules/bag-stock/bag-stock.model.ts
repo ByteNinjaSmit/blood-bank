@@ -27,8 +27,6 @@ const BagStockSchema = new Schema(
 );
 
 BagStockSchema.index({ batchNumber: 1, bagType: 1 }, { unique: true });
-BagStockSchema.index({ expiryDate: 1 });
-BagStockSchema.index({ status: 1 });
 
 export type BagStock = InferSchemaType<typeof BagStockSchema>;
 export type BagStockModel = Model<BagStock>;

@@ -31,7 +31,6 @@ const PurchaseOrderSchema = new Schema(
 );
 
 PurchaseOrderSchema.index({ poDate: -1 });
-PurchaseOrderSchema.index({ vendorId: 1 });
 
 export type PurchaseOrder = InferSchemaType<typeof PurchaseOrderSchema>;
 export type PurchaseOrderModel = Model<PurchaseOrder>;

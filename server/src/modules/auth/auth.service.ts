@@ -5,7 +5,6 @@
 
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
-import fs from 'node:fs';
 import { childLogger } from '@/core/logger';
 import { env } from '@/core/config/env';
 import {
@@ -75,29 +74,11 @@ function sixDigit(): string {
 export const authService = {
   // ---- Password login (single step) ----
   async login(email: string, password: string, ip?: string): Promise<TokenPair> {
-    const logFilePath = 'c:/Users/athar/Documents/GitHub/blood-bank/server/logs/diagnostic.log';
-    const logDiag = (msg: string) => {
-      const line = `[${new Date().toISOString()}] ${msg}\n`;
-      fs.appendFileSync(logFilePath, line);
-    };
-
-    logDiag(`Login attempt for email: "${email}" (length: ${email?.length})`);
     const user = await authRepo.findUserByEmail(email);
-    if (!user) {
-      logDiag(`User not found for email: "${email}"`);
-      throw new UnauthorizedError('Invalid credentials');
-    }
-    logDiag(`Found user "${user.email}". Status: "${user.status}". Role: "${user.role}".`);
-    if (user.status !== 'active') {
-      logDiag(`User status is not active: "${user.status}"`);
-      throw new ForbiddenError('Account pending admin approval');
-    }
+    if (!user) throw new UnauthorizedError('Invalid credentials');
+    if (user.status !== 'active') throw new ForbiddenError('Account pending admin approval');
     const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) {
-      logDiag(`Password comparison failed for user "${user.email}". Entered password: "${password}" (length: ${password?.length})`);
-      throw new UnauthorizedError('Invalid credentials');
-    }
-    logDiag(`Password matches successfully for user "${user.email}"!`);
+    if (!ok) throw new UnauthorizedError('Invalid credentials');
     log.info({ userId: user.id }, 'password login');
     return issuePair(user, ip);
   },
@@ -149,8 +130,7 @@ export const authService = {
       await authRepo.deleteOtp(email, txnId);
       throw new ValidationError('Too many attempts. Start again.');
     }
-    // TEMPORARY BYPASS: Accept any code
-    const match = true; // await bcrypt.compare(code, otp.codeHash);
+    const match = await bcrypt.compare(code, otp.codeHash);
     if (!match) {
       otp.attempts += 1;
       await otp.save();
