@@ -318,10 +318,13 @@ const SerologyResults = () => {
                           {Array.isArray(bag.testResults) && bag.testResults.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
                               {bag.testResults.map((t, i) => {
-                                const isPositive = String(t.result).toLowerCase() === "positive";
-                                const chipCls = isPositive
-                                  ? "bg-red-50 text-red-700 border-red-200"
-                                  : "bg-emerald-50 text-emerald-700 border-emerald-200";
+                                const normalized = String(t.result).toUpperCase();
+                                const chipCls =
+                                  normalized === "REACTIVE" || normalized === "POSITIVE"
+                                    ? "bg-red-50 text-red-700 border-red-200"
+                                    : normalized === "NEGATIVE"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-amber-50 text-amber-700 border-amber-200";
                                 return (
                                   <span
                                     key={i}
@@ -497,10 +500,13 @@ const SerologyResults = () => {
                           {t.notes && <p className="text-xs text-slate-500 mt-0.5">{t.notes}</p>}
                         </div>
                         {(() => {
-                          const isPositive = String(t.result).toLowerCase() === "positive";
-                          const chipCls = isPositive
-                            ? "bg-red-50 text-red-700 border-red-200"
-                            : "bg-emerald-50 text-emerald-700 border-emerald-200";
+                          const normalized = String(t.result).toUpperCase();
+                          const chipCls =
+                            normalized === "REACTIVE" || normalized === "POSITIVE"
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : normalized === "NEGATIVE"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200";
                           return (
                             <span className={`px-2 py-0.5 rounded-full text-xs border ${chipCls}`}>
                               {t.result}

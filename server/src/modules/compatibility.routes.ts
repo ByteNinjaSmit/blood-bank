@@ -300,7 +300,10 @@ router.get('/discard/get-list', authenticate, async (req, res, next) => {
     const skipNum = (pageNum - 1) * limitNum;
 
     const sortDir = order === 'asc' ? 1 : -1;
-    const sortField = sortBy || 'updatedAt';
+    let sortField = sortBy || 'updatedAt';
+    if (sortField === 'discardedAt') {
+      sortField = 'updatedAt';
+    }
 
     const total = await BloodUnitModel.countDocuments(unitFilter);
     const units = await BloodUnitModel.find(unitFilter)

@@ -124,7 +124,7 @@ const PHYSICAL_CHECKS = [
   { key: 'packagingCondition', label: 'Packaging Condition' },
 ];
 
-const EMPTY_FORM = {
+const EMPTY_FORM 
   grnId: '', batchNumber: '', sampleSize: '',
   sealIntact: false, noLeakage: false, tubeIntegrity: false,
   needleCondition: false, labelPresence: false, sterilityCheck: false,

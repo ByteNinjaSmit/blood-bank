@@ -648,7 +648,7 @@ const ViewDiscarded = () => {
     };
 
     const handleRowsPerPageChange = (newLimit) => {
-      setRowsPerPage(parseInt(newLimit));
+      setRowsPerPage(newLimit === "all" ? 5000 : parseInt(newLimit));
       setCurrentPage(1);
     };
 
@@ -838,7 +838,7 @@ const ViewDiscarded = () => {
                                     <div className="flex items-center gap-2">
                                         <span className="text-sm text-gray-600">Rows per page:</span>
                                         <Select 
-                                            value={rowsPerPage.toString()} 
+                                            value={rowsPerPage === 5000 ? "all" : rowsPerPage.toString()} 
                                             onValueChange={handleRowsPerPageChange}
                                         >
                                             <SelectTrigger className="w-20 h-8 text-xs">
@@ -850,6 +850,7 @@ const ViewDiscarded = () => {
                                                 <SelectItem value="25">25</SelectItem>
                                                 <SelectItem value="50">50</SelectItem>
                                                 <SelectItem value="100">100</SelectItem>
+                                                <SelectItem value="all">All</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>

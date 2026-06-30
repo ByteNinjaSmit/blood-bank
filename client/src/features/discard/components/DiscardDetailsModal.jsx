@@ -21,6 +21,50 @@ const Button = ({ children, onClick, variant = "default", size = "default", clas
   );
 };
 
+const renderTestResults = (testResultsStr) => {
+  if (!testResultsStr) return <span className="text-slate-400 text-xs">No tests performed</span>;
+  
+  if (testResultsStr.includes(", ") || testResultsStr.includes(": ")) {
+    const parts = testResultsStr.split(", ");
+    return (
+      <div className="flex flex-wrap gap-1.5 mt-1.5">
+        {parts.map((p, idx) => {
+          const colonIdx = p.indexOf(":");
+          if (colonIdx === -1) {
+            return (
+              <span key={idx} className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                {p}
+              </span>
+            );
+          }
+          const name = p.substring(0, colonIdx).trim();
+          const val = p.substring(colonIdx + 1).trim();
+          
+          const valUpper = val.toUpperCase();
+          let badgeClass = "bg-amber-50 text-amber-700 border-amber-200";
+          if (valUpper === "REACTIVE" || valUpper === "POSITIVE") {
+            badgeClass = "bg-red-50 text-red-700 border-red-200";
+          } else if (valUpper === "NEGATIVE") {
+            badgeClass = "bg-emerald-50 text-emerald-700 border-emerald-200";
+          }
+          
+          return (
+            <span key={idx} className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${badgeClass}`}>
+              {name}: {val}
+            </span>
+          );
+        })}
+      </div>
+    );
+  }
+  
+  return (
+    <div className="mt-1.5 p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-700">
+      {testResultsStr}
+    </div>
+  );
+};
+
 const DiscardDetailsModal = ({ selectedItem, showBagDetails, onClose, onToggleBagDetails }) => {
   if (!selectedItem) return null;
   return (
@@ -134,7 +178,7 @@ const DiscardDetailsModal = ({ selectedItem, showBagDetails, onClose, onToggleBa
                         <div><span className="font-medium text-slate-600">Component Type:</span> {selectedItem.componentType}</div>
                         <div className="mt-1">
                           <span className="font-medium text-slate-600">Test Results:</span>
-                          <div className="mt-1 p-2 bg-green-50 rounded border border-green-200">{selectedItem.testResults}</div>
+                          {renderTestResults(selectedItem.testResults)}
                         </div>
                       </div>
                     </>
