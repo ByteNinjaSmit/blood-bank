@@ -6,8 +6,8 @@ import { formatBloodBagQty, calcTotalBags } from '../utils/qtyHelper';
 
 const STATUS_BADGE = {
   PENDING_APPROVAL: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  APPROVED:         'bg-green-50 text-green-700 border-green-200',
-  DISPOSED:         'bg-gray-100 text-gray-600 border-gray-200',
+  APPROVED: 'bg-green-50 text-green-700 border-green-200',
+  DISPOSED: 'bg-gray-100 text-gray-600 border-gray-200',
 };
 
 const DISCARD_REASONS = [
@@ -38,12 +38,12 @@ function StatusBadge({ status }) {
 }
 
 function DiscardDrawer({ onClose, stockItems }) {
-  const [stockId, setStockId]         = useState('');
-  const [bagType, setBagType]         = useState('');
-  const [boxes, setBoxes]             = useState('');
-  const [packets, setPackets]         = useState('');
-  const [bags, setBags]               = useState('');
-  const [reason, setReason]           = useState('');
+  const [stockId, setStockId] = useState('');
+  const [bagType, setBagType] = useState('');
+  const [boxes, setBoxes] = useState('');
+  const [packets, setPackets] = useState('');
+  const [bags, setBags] = useState('');
+  const [reason, setReason] = useState('');
   const [reasonDetail, setReasonDetail] = useState('');
   const createDiscard = useCreateBagDiscard();
 
@@ -63,7 +63,7 @@ function DiscardDrawer({ onClose, stockItems }) {
       quantity: totalQty,
       reason,
       reasonDetail,
-    }).then(onClose).catch(() => {});
+    }).then(onClose).catch(() => { });
   };
 
   const fieldClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white';
@@ -142,9 +142,9 @@ function DiscardDrawer({ onClose, stockItems }) {
 }
 
 function ApproveDrawer({ discard, onClose }) {
-  const [disposalMethod, setDisposalMethod]           = useState('');
-  const [manifestNo, setManifestNo]                   = useState('');
-  const [disposalDate, setDisposalDate]               = useState('');
+  const [disposalMethod, setDisposalMethod] = useState('');
+  const [manifestNo, setManifestNo] = useState('');
+  const [disposalDate, setDisposalDate] = useState('');
   const approveDiscard = useApproveBagDiscard();
 
   const handleSubmit = (e) => {
@@ -156,7 +156,7 @@ function ApproveDrawer({ discard, onClose }) {
         biomedicalWasteManifestNo: manifestNo,
         disposalDate,
       },
-    }).then(onClose).catch(() => {});
+    }).then(onClose).catch(() => { });
   };
 
   const fieldClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white';
@@ -220,11 +220,11 @@ function ApproveDrawer({ discard, onClose }) {
 
 export default function BagDiscard() {
   const [showDiscardDrawer, setShowDiscardDrawer] = useState(false);
-  const [approveTarget, setApproveTarget]         = useState(null);
+  const [approveTarget, setApproveTarget] = useState(null);
   const { data, isLoading } = useBagDiscardList({});
   const { data: stockData } = useBagStockList({});
 
-  const discards   = data?.items ?? data?.bagDiscards ?? (Array.isArray(data) ? data : []);
+  const discards = data?.items ?? data?.bagDiscards ?? (Array.isArray(data) ? data : []);
   const stockItems = stockData?.items ?? stockData?.bagStocks ?? (Array.isArray(stockData) ? stockData : []);
 
   const fmtDate = (d) => d

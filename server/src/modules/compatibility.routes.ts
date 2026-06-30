@@ -368,8 +368,9 @@ router.get('/discard/get-list', authenticate, async (req, res, next) => {
         bagNo: donation?.bagNo || u.donationId,
         componentId: u.unitId,
         componentType: legacyType,
-        itemType: 'Component',
+        itemType: u.componentType === 'WHOLE_BLOOD' ? 'Bag' : 'Component',
         reason: u.discardReason || 'QC_FAIL',
+        description: u.discardNotes || '',
         discardedAt: discardHistory ? discardHistory.at.toISOString() : u.updatedAt.toISOString(),
         
         // Modal additional fields
@@ -416,6 +417,151 @@ router.get('/discard/get-list', authenticate, async (req, res, next) => {
     next(e);
   }
 });
+
+// POST /discard/create
+router.post('/discard/create', authenticate, async (req, res, next) => {
+  try {
+    const { bagNo, batchNo, segmentNo, reason, description } = req.body;
+    const actorId = (req.user as any)?.id;
+
+    if (!bagNo) {
+      return res.status(400).json({ success: false, message: 'Bag number (bagNo) is required.' });
+    }
+    if (!reason) {
+      return res.status(400).json({ success: false, message: 'Discard reason is required.' });
+    }
+
+    // 1. Find donation
+    const donation = await DonationModel.findOne({
+      $or: [
+        { donationId: bagNo },
+        { bagNo: bagNo }
+      ],
+      deletedAt: null
+    });
+
+    if (!donation) {
+      return res.status(404).json({ success: false, message: `No donation found matching bag number: ${bagNo}` });
+    }
+
+    // 2. Find all non-deleted units under this donationId
+    const units = await BloodUnitModel.find({
+      donationId: donation.donationId,
+      deletedAt: null
+    });
+
+    if (units.length === 0) {
+      return res.status(404).json({ success: false, message: `No blood units found for donation: ${donation.donationId}` });
+    }
+
+    // 3. Mark each unit as DISCARDED and clean up allocations
+    for (const unit of units) {
+      const oldStatus = unit.status;
+      unit.status = 'DISCARDED';
+      unit.discardReason = reason;
+      unit.discardNotes = description || undefined;
+      
+      // Clear reservation details
+      unit.reservedFor = null;
+      unit.reservedUntil = null;
+      unit.reservedAt = null;
+
+      unit.statusHistory.push({
+        from: oldStatus,
+        to: 'DISCARDED',
+        event: 'MANUAL_DISCARD',
+        actor: new Types.ObjectId(actorId),
+        at: new Date(),
+        reason: `Manually discarded via procurement portal. Description: ${description || 'N/A'}. Segment: ${segmentNo || donation.segmentNo || 'N/A'}, Batch: ${batchNo || donation.lotNo || 'N/A'}`
+      } as any);
+      await unit.save();
+
+      // Clean up from any requisition matchedUnits
+      const reqs = await RequisitionModel.find({ "matchedUnits.unitId": unit.unitId });
+      for (const r of reqs) {
+        r.matchedUnits = r.matchedUnits.filter((mu: any) => mu.unitId !== unit.unitId) as any;
+        if (r.matchedUnits.length === 0 && ['MATCHED', 'CROSSMATCHED', 'APPROVED'].includes(r.status)) {
+          r.status = 'PENDING';
+        }
+        await r.save();
+      }
+    }
+
+    // Update TtiResult if reason is TTI_POSITIVE
+    if (reason === 'TTI_POSITIVE' && req.body.ttiResults) {
+      const { ttiResults } = req.body;
+      const actorObjId = new Types.ObjectId(actorId);
+
+      const testsArray = [
+        { testName: 'HIV', method: 'ELISA', result: ttiResults.HIV || 'NEGATIVE', technicianId: actorObjId, performedAt: new Date() },
+        { testName: 'HBSAG', method: 'ELISA', result: ttiResults.HBSAG || 'NEGATIVE', technicianId: actorObjId, performedAt: new Date() },
+        { testName: 'HCV', method: 'ELISA', result: ttiResults.HCV || 'NEGATIVE', technicianId: actorObjId, performedAt: new Date() },
+        { testName: 'SYPHILIS', method: 'ELISA', result: ttiResults.SYPHILIS || 'NEGATIVE', technicianId: actorObjId, performedAt: new Date() },
+        { testName: 'MALARIA', method: 'ELISA', result: ttiResults.MALARIA || 'NEGATIVE', technicianId: actorObjId, performedAt: new Date() }
+      ];
+
+      let ttiResult = await TtiResultModel.findOne({ donationId: donation.donationId });
+      if (ttiResult) {
+        ttiResult.tests = testsArray as any;
+        ttiResult.releaseDecision = 'reactive';
+        ttiResult.updatedBy = actorObjId;
+        await ttiResult.save();
+      } else {
+        await TtiResultModel.create({
+          donationId: donation.donationId,
+          tests: testsArray,
+          releaseDecision: 'reactive',
+          createdBy: actorObjId,
+          updatedBy: actorObjId
+        });
+      }
+    }
+
+    // Also update the donation itself
+    if (segmentNo) donation.segmentNo = segmentNo;
+    if (batchNo) donation.lotNo = batchNo;
+    await donation.save();
+
+    // Invalidate inventory summary caching so the stock view gets updated instantly
+    await invalidate('inventory:*');
+
+    res.json({
+      success: true,
+      message: `Successfully discarded ${units.length} blood unit(s) associated with bag number ${bagNo}.`
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// GET /donation/lookup/:bagNo
+router.get('/donation/lookup/:bagNo', authenticate, async (req, res, next) => {
+  try {
+    const { bagNo } = req.params;
+    const donation = await DonationModel.findOne({
+      $or: [
+        { donationId: bagNo },
+        { bagNo: bagNo }
+      ],
+      deletedAt: null
+    }).lean();
+
+    if (!donation) {
+      return res.status(404).json({ success: false, message: 'Donation not found' });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        lotNo: donation.lotNo || '',
+        segmentNo: donation.segmentNo || ''
+      }
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
 
 // Helper for mapping TtiResult to bag representation
 async function mapTtiBags(ttis: any[]) {

@@ -99,8 +99,8 @@ function ConfirmDeleteModal({ isOpen, title, message, onConfirm, onClose }) {
 }
 
 const DECISION_BADGE = {
-  ACCEPTED:   'bg-green-50 text-green-700 border-green-200',
-  REJECTED:   'bg-red-50 text-red-700 border-red-200',
+  ACCEPTED: 'bg-green-50 text-green-700 border-green-200',
+  REJECTED: 'bg-red-50 text-red-700 border-red-200',
   QUARANTINE: 'bg-orange-50 text-orange-700 border-orange-200',
 };
 
@@ -115,13 +115,13 @@ const TESTING_TYPE_LABELS = {
 };
 
 const PHYSICAL_CHECKS = [
-  { key: 'sealIntact',           label: 'Seal Intact' },
-  { key: 'noLeakage',            label: 'No Leakage' },
-  { key: 'tubeIntegrity',        label: 'Tube Integrity' },
-  { key: 'needleCondition',      label: 'Needle Condition OK' },
-  { key: 'labelPresence',        label: 'Label Present' },
-  { key: 'sterilityCheck',       label: 'Sterility Check' },
-  { key: 'packagingCondition',   label: 'Packaging Condition' },
+  { key: 'sealIntact', label: 'Seal Intact' },
+  { key: 'noLeakage', label: 'No Leakage' },
+  { key: 'tubeIntegrity', label: 'Tube Integrity' },
+  { key: 'needleCondition', label: 'Needle Condition OK' },
+  { key: 'labelPresence', label: 'Label Present' },
+  { key: 'sterilityCheck', label: 'Sterility Check' },
+  { key: 'packagingCondition', label: 'Packaging Condition' },
 ];
 
 const EMPTY_FORM = {
@@ -173,7 +173,7 @@ function InspectionDrawer({ onClose, grns }) {
     const firstBatch = grn?.batchLines?.[0];
     const firstBatchNo = firstBatch?.batchNumber ?? '';
     const recQty = firstBatch ? Math.ceil(firstBatch.quantityReceived / 100) : 1;
-    
+
     setForm((f) => ({
       ...f,
       grnId,
@@ -226,7 +226,7 @@ function InspectionDrawer({ onClose, grns }) {
       testingLab: labName,
       bagNo,
       segmentNo,
-    }).then(onClose).catch(() => {});
+    }).then(onClose).catch(() => { });
   };
 
   const fieldClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400';
@@ -265,8 +265,8 @@ function InspectionDrawer({ onClose, grns }) {
             </div>
             {selectedBatch && (
               <div className="col-span-2 text-xs text-orange-800 bg-orange-50 p-2.5 rounded border border-orange-100">
-                <span className="font-bold">Batch info:</span> {selectedBatch.bagType} ({selectedBatch.capacityMl} mL), 
-                <span className="font-bold ml-2">Qty Received:</span> {selectedBatch.quantityReceived} units. 
+                <span className="font-bold">Batch info:</span> {selectedBatch.bagType} ({selectedBatch.capacityMl} mL),
+                <span className="font-bold ml-2">Qty Received:</span> {selectedBatch.quantityReceived} units.
                 <span className="font-bold ml-2">Recommended test sample:</span> {recommendedQty} {recommendedQty === 1 ? 'bag' : 'bags'}.
               </div>
             )}
@@ -343,7 +343,7 @@ function UpdateReportDrawer({ onClose, inspection }) {
   const [reportImage, setReportImage] = useState(inspection.reportImage || '');
   const [uploading, setUploading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
-  
+
   const updateReport = useUpdateBagInspectionReport();
 
   const handleSubmit = (e) => {
@@ -360,7 +360,7 @@ function UpdateReportDrawer({ onClose, inspection }) {
         fibrinogen: inspection.testingType === 'EMPTY' && fibrinogen ? Number(fibrinogen) : undefined,
         reportImage: reportImage || null,
       }
-    }).then(onClose).catch(() => {});
+    }).then(onClose).catch(() => { });
   };
 
   const fieldClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400';
@@ -672,7 +672,7 @@ function ViewInspectionModal({ onClose, inspection, onViewReportImage }) {
                       {inspection.bagNo || '—'} / {inspection.segmentNo || '—'}
                     </span>
                   </div>
-                  
+
                   {inspection.testingType === 'EMPTY' ? (
                     <>
                       <div>
@@ -849,12 +849,12 @@ export default function BagInspection() {
       setExcelLoading(false);
     }
   };
-  
+
   const { data, isLoading } = useBagInspectionList({});
   const { data: grnData } = useGRNList({});
 
   const inspections = data?.items ?? data?.bagInspections ?? (Array.isArray(data) ? data : []);
-  const grns        = grnData?.items ?? grnData?.goodsReceipts ?? (Array.isArray(grnData) ? grnData : []);
+  const grns = grnData?.items ?? grnData?.goodsReceipts ?? (Array.isArray(grnData) ? grnData : []);
 
   const fmtDate = (d) => d
     ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -927,7 +927,7 @@ export default function BagInspection() {
                           <div><span className="font-semibold text-gray-500">Bag/Seg:</span> {ins.bagNo || '—'} / {ins.segmentNo || '—'}</div>
                           {ins.testingType === 'EMPTY' ? (
                             <div>
-                              <span className="font-semibold text-gray-500">Factor VIII:</span> {ins.factorVIII ?? '—'} Unit/mL, 
+                              <span className="font-semibold text-gray-500">Factor VIII:</span> {ins.factorVIII ?? '—'} Unit/mL,
                               <span className="font-semibold text-gray-500 ml-1">Fibrinogen:</span> {ins.fibrinogen ?? '—'} mg
                             </div>
                           ) : (

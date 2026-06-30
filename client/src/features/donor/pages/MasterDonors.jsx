@@ -385,7 +385,7 @@ const MasterDonors = () => {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {activeTab !== 'all' && (
+                    {activeTab === 'all' && (
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{idColLabel}</th>
                     )}
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Full Name</th>
@@ -413,7 +413,7 @@ const MasterDonors = () => {
 
                     return (
                       <tr key={donor._id || donor.id} className="hover:bg-gray-50 transition-colors">
-                        {activeTab !== 'all' && (
+                        {activeTab === 'all' && (
                           <td className="px-4 py-3 font-mono text-xs text-gray-700 font-medium">
                             {idValue}
                           </td>

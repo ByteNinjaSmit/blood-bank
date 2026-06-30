@@ -74,7 +74,7 @@ export function createBagInspectionService(deps: {
     async updateReport(id, input, actorId) {
       const inspection = await deps.inspections.findById(id);
       if (!inspection) throw new NotFoundError('BagInspection', id);
-      
+
       const updated = await deps.inspections.update(id, {
         testingStatus: 'REPORT_RECEIVED',
         reportDate: input.reportDate,
@@ -86,7 +86,7 @@ export function createBagInspectionService(deps: {
         fibrinogen: input.fibrinogen,
         reportImage: input.reportImage,
       }, actorId);
-      
+
       if (!updated) throw new NotFoundError('BagInspection', id);
       log.info({ inspectionId: updated.inspectionId, actorId }, 'bag inspection report updated');
 

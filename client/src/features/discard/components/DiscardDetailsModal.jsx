@@ -81,6 +81,15 @@ const DiscardDetailsModal = ({ selectedItem, showBagDetails, onClose, onToggleBa
             </div>
           </div>
 
+          {selectedItem.description && (
+            <div>
+              <label className="text-sm font-medium text-slate-600">Remarks / Description</label>
+              <div className="mt-1 p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-700 text-sm">
+                {selectedItem.description}
+              </div>
+            </div>
+          )}
+
           <div className="border-t border-red-100 pt-6">
             <Button onClick={onToggleBagDetails} variant="outline" className="w-full text-red-600 border-red-200 hover:bg-red-50">
               <User className="w-4 h-4 mr-2" />

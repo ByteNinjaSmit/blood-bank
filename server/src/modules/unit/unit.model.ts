@@ -51,6 +51,7 @@ const BloodUnitSchema = new Schema(
 
     quarantineReason: { type: String, trim: true },
     discardReason: { type: String, enum: DISCARD_REASON },
+    discardNotes: { type: String, trim: true },
 
     reservedFor: { type: Schema.Types.ObjectId, ref: 'Requisition' },
     reservedAt: Date,
