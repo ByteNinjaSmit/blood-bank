@@ -265,6 +265,7 @@ export default function RequisitionList() {
   const handleOpenReject = (id, reqId) => {
     setRejectingDocId(id);
     setRejectingDocReqId(reqId);
+    setViewOpen(false);
     setRejectModalOpen(true);
   };
 
