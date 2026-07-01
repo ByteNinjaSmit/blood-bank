@@ -75,6 +75,15 @@ export function createBagInspectionService(deps: {
       const inspection = await deps.inspections.findById(id);
       if (!inspection) throw new NotFoundError('BagInspection', id);
 
+      const hasFailedCheck = 
+        input.anticoagulantVolumeOk === false ||
+        input.tubePatency === false ||
+        (input.physicalChecks && Object.values(input.physicalChecks).some(v => v === false));
+
+      const hasFailedTestResult = input.testResult && /fail|contaminat|leak|broken|reject/i.test(input.testResult);
+      const isFailed = Boolean(hasFailedCheck || hasFailedTestResult || input.decision === 'REJECTED');
+      const decision = isFailed ? 'REJECTED' : 'ACCEPTED';
+
       const updated = await deps.inspections.update(id, {
         testingStatus: 'REPORT_RECEIVED',
         reportDate: input.reportDate,
@@ -85,12 +94,16 @@ export function createBagInspectionService(deps: {
         factorVIII: input.factorVIII,
         fibrinogen: input.fibrinogen,
         reportImage: input.reportImage,
+        physicalChecks: input.physicalChecks,
+        anticoagulantVolumeOk: input.anticoagulantVolumeOk,
+        tubePatency: input.tubePatency,
+        decision,
+        rejectionReason: isFailed ? (input.rejectionReason || 'Quality check failed') : undefined,
       }, actorId);
 
       if (!updated) throw new NotFoundError('BagInspection', id);
       log.info({ inspectionId: updated.inspectionId, actorId }, 'bag inspection report updated');
 
-      const isFailed = input.testResult && /fail|contaminat|leak|broken|reject/i.test(input.testResult);
       if (updated.testingType === 'EMPTY' && !isFailed) {
         const grn = await deps.grns.findById(updated.grnId);
         if (grn) {

@@ -51,6 +51,11 @@ export const UpdateBagInspectionReportBody = z.object({
   factorVIII: z.number().optional(),
   fibrinogen: z.number().optional(),
   reportImage: z.string().trim().optional().nullable(),
+  physicalChecks: PhysicalChecksSchema,
+  anticoagulantVolumeOk: z.boolean().optional(),
+  tubePatency: z.boolean().optional(),
+  decision: z.enum(INSPECTION_DECISION).optional(),
+  rejectionReason: z.string().trim().max(1000).optional(),
 });
 
 export const ListBagInspectionQuery = z.object({

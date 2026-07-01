@@ -344,6 +344,24 @@ function UpdateReportDrawer({ onClose, inspection }) {
   const [uploading, setUploading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
 
+  // Physical checks state (empty string represents the "Select..." state)
+  const [sealIntact, setSealIntact] = useState('');
+  const [noLeakage, setNoLeakage] = useState('');
+  const [tubeIntegrity, setTubeIntegrity] = useState('');
+  const [needleCondition, setNeedleCondition] = useState('');
+  const [labelPresence, setLabelPresence] = useState('');
+  const [sterilityCheck, setSterilityCheck] = useState('');
+  const [packagingCondition, setPackagingCondition] = useState('');
+  const [anticoagulantVolumeOk, setAnticoagulantVolumeOk] = useState('');
+  const [tubePatency, setTubePatency] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  const isAnyFailed = [
+    sealIntact, noLeakage, tubeIntegrity, needleCondition,
+    labelPresence, sterilityCheck, packagingCondition,
+    anticoagulantVolumeOk, tubePatency
+  ].some(val => val === 'false');
+
   const updateReport = useUpdateBagInspectionReport();
 
   const handleSubmit = (e) => {
@@ -359,11 +377,25 @@ function UpdateReportDrawer({ onClose, inspection }) {
         factorVIII: inspection.testingType === 'EMPTY' && factorVIII ? Number(factorVIII) : undefined,
         fibrinogen: inspection.testingType === 'EMPTY' && fibrinogen ? Number(fibrinogen) : undefined,
         reportImage: reportImage || null,
+        physicalChecks: {
+          sealIntact: sealIntact === 'true',
+          noLeakage: noLeakage === 'true',
+          tubeIntegrity: tubeIntegrity === 'true',
+          needleCondition: needleCondition === 'true',
+          labelPresence: labelPresence === 'true',
+          sterilityCheck: sterilityCheck === 'true',
+          packagingCondition: packagingCondition === 'true',
+        },
+        anticoagulantVolumeOk: anticoagulantVolumeOk === 'true',
+        tubePatency: tubePatency === 'true',
+        decision: isAnyFailed ? 'REJECTED' : 'ACCEPTED',
+        rejectionReason: isAnyFailed ? rejectionReason : undefined,
       }
     }).then(onClose).catch(() => { });
   };
 
   const fieldClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400';
+  const selectClass = 'w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white';
 
   return (
     <>
@@ -406,6 +438,98 @@ function UpdateReportDrawer({ onClose, inspection }) {
                 <input required disabled value={segmentNo} onChange={(e) => setSegmentNo(e.target.value)} className={`${fieldClass} bg-gray-50 cursor-not-allowed`} placeholder="e.g. SEG-99" />
               </div>
             </div>
+
+            <div>
+              <h3 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Initial Physical Quality Checks</h3>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3 border border-gray-100 rounded-lg p-4 bg-gray-50/50 text-xs">
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">Seal Intact *</label>
+                  <select required value={sealIntact} onChange={(e) => setSealIntact(e.target.value)} className={selectClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">No Leakage *</label>
+                  <select required value={noLeakage} onChange={(e) => setNoLeakage(e.target.value)} className={selectClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">Tube Integrity *</label>
+                  <select required value={tubeIntegrity} onChange={(e) => setTubeIntegrity(e.target.value)} className={selectClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">Needle Condition OK *</label>
+                  <select required value={needleCondition} onChange={(e) => setNeedleCondition(e.target.value)} className={selectClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">Label Present *</label>
+                  <select required value={labelPresence} onChange={(e) => setLabelPresence(e.target.value)} className={selectClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">Sterility Check *</label>
+                  <select required value={sterilityCheck} onChange={(e) => setSterilityCheck(e.target.value)} className={selectClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">Packaging Condition *</label>
+                  <select required value={packagingCondition} onChange={(e) => setPackagingCondition(e.target.value)} className={selectClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">Anticoagulant Volume OK *</label>
+                  <select required value={anticoagulantVolumeOk} onChange={(e) => setAnticoagulantVolumeOk(e.target.value)} className={selectClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-gray-600 font-semibold mb-1">Tube Patency *</label>
+                  <select required value={tubePatency} onChange={(e) => setTubePatency(e.target.value)} className={selectClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {isAnyFailed && (
+              <div>
+                <label className="block text-xs font-semibold text-red-650 text-red-600 mb-1 uppercase tracking-wide">Rejection Reason *</label>
+                <textarea
+                  required
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className={`${fieldClass} border-red-200 focus:ring-red-400`}
+                  placeholder="Please enter the reason for rejecting this batch..."
+                  rows={2}
+                />
+              </div>
+            )}
 
             {inspection.testingType !== 'EMPTY' && (
               <>
@@ -760,26 +884,34 @@ function ViewInspectionModal({ onClose, inspection, onViewReportImage }) {
                   return (
                     <div key={chk.key} className="flex justify-between items-center py-0.5">
                       <span className="text-gray-600">{chk.label}</span>
-                      <span className={`font-semibold ${passed ? 'text-green-600' : 'text-red-600'}`}>
-                        {passed ? 'Passed' : 'Failed'}
+                      <span className={`font-semibold ${passed === true ? 'text-green-600' : passed === false ? 'text-red-600' : 'text-gray-400'}`}>
+                        {passed === true ? 'Passed' : passed === false ? 'Failed' : '—'}
                       </span>
                     </div>
                   );
                 })}
                 <div className="flex justify-between items-center py-0.5">
                   <span className="text-gray-600">Anticoagulant Volume OK</span>
-                  <span className={`font-semibold ${inspection.anticoagulantVolumeOk ? 'text-green-600' : 'text-red-600'}`}>
-                    {inspection.anticoagulantVolumeOk ? 'Passed' : 'Failed'}
+                  <span className={`font-semibold ${inspection.anticoagulantVolumeOk === true ? 'text-green-600' : inspection.anticoagulantVolumeOk === false ? 'text-red-600' : 'text-gray-400'}`}>
+                    {inspection.anticoagulantVolumeOk === true ? 'Passed' : inspection.anticoagulantVolumeOk === false ? 'Failed' : '—'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-0.5">
                   <span className="text-gray-600">Tube Patency</span>
-                  <span className={`font-semibold ${inspection.tubePatency ? 'text-green-600' : 'text-red-600'}`}>
-                    {inspection.tubePatency ? 'Passed' : 'Failed'}
+                  <span className={`font-semibold ${inspection.tubePatency === true ? 'text-green-600' : inspection.tubePatency === false ? 'text-red-600' : 'text-gray-400'}`}>
+                    {inspection.tubePatency === true ? 'Passed' : inspection.tubePatency === false ? 'Failed' : '—'}
                   </span>
                 </div>
               </div>
             </div>
+
+            {/* Rejection Reason */}
+            {inspection.decision === 'REJECTED' && inspection.rejectionReason && (
+              <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-xs text-red-700">
+                <span className="block font-bold text-red-800 uppercase tracking-wider text-[10px] mb-0.5">Rejection Reason</span>
+                {inspection.rejectionReason}
+              </div>
+            )}
 
             {/* Observation Notes */}
             {inspection.observation && (

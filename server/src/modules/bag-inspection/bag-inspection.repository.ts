@@ -111,6 +111,11 @@ export interface BagInspectionRepo {
     factorVIII: number;
     fibrinogen: number;
     reportImage: string | null;
+    physicalChecks: PhysicalChecksDto;
+    anticoagulantVolumeOk: boolean;
+    tubePatency: boolean;
+    decision: string;
+    rejectionReason: string;
   }>, actorId: string): Promise<BagInspectionDto | null>;
 }
 
