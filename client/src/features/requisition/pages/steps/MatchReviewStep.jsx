@@ -135,22 +135,23 @@ export default function MatchReviewStep({
         </div>
       </div>
 
-      {/* Shortages */}
+      {/* Shortages / Unavailable Components */}
       {Array.isArray(shortages) && shortages.length > 0 && (
         <div className="p-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900">
-          <p className="font-medium">Insufficient compatible stock to fully match this request.</p>
+          <p className="font-medium">⚠️ Partial match — some components are unavailable in stock.</p>
           <ul className="mt-2 text-sm list-disc pl-5 space-y-1">
             {shortages.map((s, idx) => (
               <li key={idx}>
-                <strong>{s.componentType}</strong> ({s.bloodGroup} {s.rh}): {s.available} of {s.required} available.
-                {Array.isArray(s.compatibleGroupsSearched) && (
-                  <span className="text-xs text-amber-700 ml-1">
-                    Searched: {s.compatibleGroupsSearched.join(', ')}
+                <strong>{s.componentType}</strong> ({s.bloodGroup} {s.rh}): only {s.available} of {s.required} unit{s.required > 1 ? 's' : ''} available.
+                {s.available === 0 && (
+                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gray-200 border border-gray-300 text-gray-700">
+                    Unavailable
                   </span>
                 )}
               </li>
             ))}
           </ul>
+          <p className="mt-2 text-xs text-amber-700 font-medium">The available components have been reserved. Unavailable components will be marked as "Unavailable" throughout the request.</p>
         </div>
       )}
 
@@ -272,6 +273,26 @@ export default function MatchReviewStep({
               </div>
             ) : (
               <p className="text-gray-600 text-sm">No inventory reserved yet.</p>
+            )}
+
+            {/* Unavailable components from partial shortages */}
+            {Array.isArray(shortages) && shortages.length > 0 && (
+              <div className="space-y-4 mt-4">
+                {shortages.filter(s => s.available === 0).map((s, idx) => (
+                  <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden opacity-75">
+                    <div className="px-3 py-2 bg-gray-100 border-b flex items-center gap-2">
+                      <span className="font-medium text-sm text-gray-500">{s.componentType}</span>
+                      <span className="text-xs text-gray-400">({s.required} unit{s.required > 1 ? 's' : ''} requested)</span>
+                      <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gray-200 border border-gray-300 text-gray-600">
+                        Unavailable
+                      </span>
+                    </div>
+                    <div className="px-3 py-3 text-sm text-gray-500 italic">
+                      No compatible {s.componentType} ({s.bloodGroup} {s.rh}) units are currently available in stock.
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

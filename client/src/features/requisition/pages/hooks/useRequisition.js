@@ -355,7 +355,6 @@ function checkHasChanges(doc, payload) {
       const sh = res?.errorData?.data?.shortages;
       if (Array.isArray(sh) && sh.length) {
         setShortages(sh);
-        // Show compact user message summarizing first shortage
         const s0 = sh[0];
         toast.error(`Insufficient stock: ${s0.available} of ${s0.required} ${s0.componentType} available`);
       } else {
@@ -366,10 +365,21 @@ function checkHasChanges(doc, payload) {
       await refreshRequest(id);
       return;
     }
+    // For multi-component requests, a 200 may still carry partial shortages
+    const partialShortages = res?.data?.shortages;
+    if (Array.isArray(partialShortages) && partialShortages.length > 0) {
+      setShortages(partialShortages);
+      toast.warning(
+        `Partial match: ${partialShortages.map((s) => `${s.componentType} unavailable`).join(', ')}. Proceeding with available components.`
+      );
+    } else {
+      setShortages(null);
+    }
     setMatchedResult(res.data);
-    setShortages(null);
     await refreshRequest(id);
-    toast.success('Matched and reserved');
+    if (!Array.isArray(partialShortages) || !partialShortages.length) {
+      toast.success('Matched and reserved');
+    }
   };
 
   const handleApprove = async () => {

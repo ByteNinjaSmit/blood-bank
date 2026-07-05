@@ -1,6 +1,10 @@
 import React from 'react';
 
-export default function CompleteStep({ requestDoc, completing, onComplete }) {
+export default function CompleteStep({ requestDoc, completing, onComplete, shortages }) {
+  const unavailableComponents = React.useMemo(() => {
+    if (!Array.isArray(shortages) || !shortages.length) return [];
+    return shortages.filter(s => s.available === 0);
+  }, [shortages]);
   const canComplete = !!requestDoc?._id && ['approved', 'issued'].includes(requestDoc.status) && !completing;
 
   return (
@@ -153,6 +157,41 @@ export default function CompleteStep({ requestDoc, completing, onComplete }) {
           </div>
         </div>
       ) : null}
+
+      {unavailableComponents.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+            <span className="w-1.5 h-3.5 bg-gray-400 rounded-full" />
+            <h5 className="text-xs font-bold uppercase tracking-wider text-gray-400">Unavailable Components</h5>
+          </div>
+          <div className="overflow-x-auto border border-gray-200 rounded-xl bg-gray-50 shadow-sm opacity-70">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-100">
+                <tr className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  <th className="p-3">Component</th>
+                  <th className="p-3">Blood Group</th>
+                  <th className="p-3">Units Requested</th>
+                  <th className="p-3 text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-gray-50">
+                {unavailableComponents.map((s, idx) => (
+                  <tr key={idx}>
+                    <td className="p-3 font-semibold text-gray-500">{s.componentType}</td>
+                    <td className="p-3 text-gray-500">{s.bloodGroup} {s.rh}</td>
+                    <td className="p-3 text-gray-500">{s.required} unit{s.required > 1 ? 's' : ''}</td>
+                    <td className="p-3 text-right">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-200 border border-gray-300 text-gray-500">
+                        Unavailable
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

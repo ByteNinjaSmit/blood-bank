@@ -25,13 +25,19 @@ function CrossmatchStatusBadge({ status, required }) {
   return map[status] || map.pending;
 }
 
-export default function ApproveIssueStep({ requestDoc, approving, issuing, onApprove, onIssue }) {
+export default function ApproveIssueStep({ requestDoc, approving, issuing, onApprove, onIssue, shortages }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedUnitIds, setSelectedUnitIds] = useState([]);
   const status = requestDoc?.status;
   const hasMatches = Array.isArray(requestDoc?.matchedInventory) && requestDoc.matchedInventory.length > 0;
   const canApprove = !!requestDoc?._id && status === 'matched' && !approving;
   const canIssue = !!requestDoc?._id && ['matched', 'approved'].includes(status) && hasMatches;
+
+  // Unavailable components (from partial match shortages)
+  const unavailableComponents = React.useMemo(() => {
+    if (!Array.isArray(shortages) || !shortages.length) return [];
+    return shortages.filter(s => s.available === 0);
+  }, [shortages]);
 
   // ── Crossmatch safety check (for warning display) ──
   const pendingCrossmatch = (requestDoc?.matchedInventory || []).filter(
@@ -279,17 +285,6 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
         >
           {approving ? 'Approving…' : 'Approve'}
         </button>
-        <button
-          disabled={!canIssue}
-          onClick={handleIssueClick}
-          className={`px-4 py-2 rounded-lg text-white ${
-            canIssue
-              ? 'bg-green-700 hover:bg-green-800 cursor-pointer'
-              : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-          }`}
-        >
-          {issuing ? 'Issuing…' : 'Issue Units'}
-        </button>
       </div>
 
       {requestDoc && (
@@ -457,7 +452,48 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
             </table>
           </div>
         </div>
-      ) : null}
+        ) : null}
+
+        {/* Unavailable components section */}
+        {unavailableComponents.length > 0 && (
+          <div className="mt-4">
+            <h4 className="font-semibold mb-2 text-gray-500">Unavailable Components</h4>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-400">
+                    <th className="p-2">Bag No</th>
+                    <th className="p-2">Segment No</th>
+                    <th className="p-2">Component</th>
+                    <th className="p-2">Blood</th>
+                    <th className="p-2">Compatibility</th>
+                    <th className="p-2">Crossmatch</th>
+                    <th className="p-2">Reserved At</th>
+                    <th className="p-2 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unavailableComponents.map((s, idx) => (
+                    <tr key={idx} className="border-t bg-gray-50 opacity-60">
+                      <td className="p-2 font-mono text-xs text-gray-400">—</td>
+                      <td className="p-2 font-mono text-xs text-gray-400">—</td>
+                      <td className="p-2 text-gray-500 font-medium">{s.componentType}</td>
+                      <td className="p-2 text-gray-400">{s.bloodGroup} {s.rh}</td>
+                      <td className="p-2 text-gray-400">—</td>
+                      <td className="p-2 text-gray-400">—</td>
+                      <td className="p-2 text-gray-400">—</td>
+                      <td className="p-2 text-right">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 border border-gray-300 text-gray-500">
+                          Unavailable
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
     </div>
   );
 }

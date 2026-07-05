@@ -399,11 +399,23 @@ export function createRequisitionControllers(deps: {
             }
           }
 
-          res.status(409).json({
-            success: false,
-            message: 'Insufficient compatible stock to fully match request',
-            data: { shortages: formattedShortages },
-          });
+          // For multi-component requests: if some units were matched, return 200 with shortages (partial success)
+          // For single-component requests: return 409 (full failure)
+          const isMultiComponent = Array.isArray(requisition?.requestedComponents) && requisition.requestedComponents.length > 1;
+          const hasAnyMatch = Array.isArray(result.requisition?.matchedUnits) && result.requisition.matchedUnits.length > 0;
+
+          if (isMultiComponent && hasAnyMatch) {
+            // Partial match — some components reserved, some unavailable
+            const enrichedReq = await enrichRequisition(result.requisition);
+            res.json({ success: true, data: { requisition: enrichedReq, shortages: formattedShortages }, requestId: req.id });
+          } else {
+            // Single component shortage or complete shortage — full failure
+            res.status(409).json({
+              success: false,
+              message: 'Insufficient compatible stock to fully match request',
+              data: { shortages: formattedShortages },
+            });
+          }
           return;
         }
 

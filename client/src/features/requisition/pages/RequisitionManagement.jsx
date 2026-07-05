@@ -81,9 +81,17 @@ const RequisitionManagement = () => {
 
   const canProceedFromStep2 = React.useMemo(() => {
     const okStatus = ['matched', 'approved', 'issued', 'completed'];
-    const hasShortage = Array.isArray(shortages) && shortages.length > 0;
     const hasReserved = Array.isArray(requestDoc?.matchedInventory) && requestDoc.matchedInventory.length > 0;
-    return !!requestDoc?._id && okStatus.includes(requestDoc?.status) && !hasShortage && hasReserved;
+    if (!requestDoc?._id || !okStatus.includes(requestDoc?.status) || !hasReserved) return false;
+
+    // If there are shortages but this is a multi-component request and at least one component was matched,
+    // allow proceeding (partial match for multi-component requests)
+    const hasShortage = Array.isArray(shortages) && shortages.length > 0;
+    if (!hasShortage) return true;
+
+    // Multi-component: allow partial match to proceed
+    const isMultiComponent = Array.isArray(requestDoc?.requestedComponents) && requestDoc.requestedComponents.length > 1;
+    return isMultiComponent;
   }, [requestDoc, shortages]);
 
   const canProceedFromStep3 = React.useMemo(() => {
@@ -180,6 +188,7 @@ const RequisitionManagement = () => {
                 issuing={issuing}
                 onApprove={handleApprove}
                 onIssue={handleIssue}
+                shortages={shortages}
               />
             </Step>
 
@@ -188,6 +197,7 @@ const RequisitionManagement = () => {
                 requestDoc={requestDoc}
                 completing={completing}
                 onComplete={handleComplete}
+                shortages={shortages}
               />
             </Step>
           </Stepper>
