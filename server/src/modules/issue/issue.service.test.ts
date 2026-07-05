@@ -46,6 +46,8 @@ function unitDto(over: Partial<UnitDto> = {}): UnitDto {
     expiresAt: '2026-07-01T00:00:00Z',
     status: 'CROSSMATCHED',
     specialAttributes: [],
+    storageLocation: null,
+    thalassemiaPatient: null,
     ...over,
   };
 }

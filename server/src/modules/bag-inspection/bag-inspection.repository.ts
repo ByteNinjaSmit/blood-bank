@@ -99,6 +99,7 @@ export interface BagInspectionRepo {
     testingLab?: string;
     bagNo?: string;
     segmentNo?: string;
+    bloodGroup?: string;
     actorId: string;
   }): Promise<BagInspectionDto>;
   update(id: string, patch: Partial<{
@@ -116,6 +117,8 @@ export interface BagInspectionRepo {
     tubePatency: boolean;
     decision: string;
     rejectionReason: string;
+    testingLab: string;
+    sentDate: Date;
   }>, actorId: string): Promise<BagInspectionDto | null>;
 }
 
@@ -164,6 +167,7 @@ export function createBagInspectionRepo(): BagInspectionRepo {
         testingLab: input.testingLab,
         bagNo: input.bagNo,
         segmentNo: input.segmentNo,
+        bloodGroup: input.bloodGroup,
         createdBy: actor,
         updatedBy: actor,
       });

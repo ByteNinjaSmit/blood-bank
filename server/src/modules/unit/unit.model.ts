@@ -59,6 +59,16 @@ const BloodUnitSchema = new Schema(
 
     issuedTo: { type: Schema.Types.ObjectId, ref: 'Issue' },
     issuedAt: Date,
+    storageLocation: { type: String, default: null },
+    thalassemiaPatient: {
+      firstName: String,
+      middleName: String,
+      lastName: String,
+      address: String,
+      age: Number,
+      sex: String,
+      bloodGroup: String,
+    },
 
     transfusedTo: { type: Schema.Types.ObjectId, ref: 'Transfusion' },
     transfusedAt: Date,

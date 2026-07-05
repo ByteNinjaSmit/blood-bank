@@ -40,22 +40,26 @@ export const CreateBagInspectionBody = z.object({
   testingLab: z.string().trim().max(200).optional(),
   bagNo: z.string().trim().min(1).max(100).optional(),
   segmentNo: z.string().trim().min(1).max(100).optional(),
+  bloodGroup: z.string().trim().max(20).optional(),
 });
 
 export const UpdateBagInspectionReportBody = z.object({
-  reportDate: z.coerce.date(),
-  bagNo: z.string().trim().min(1).max(100),
-  segmentNo: z.string().trim().min(1).max(100),
+  reportDate: z.coerce.date().optional(),
+  bagNo: z.string().trim().max(100).optional(),
+  segmentNo: z.string().trim().max(100).optional(),
   bloodGroup: z.string().trim().max(20).optional(),
   testResult: z.string().trim().max(1000).optional(),
   factorVIII: z.number().optional(),
   fibrinogen: z.number().optional(),
   reportImage: z.string().trim().optional().nullable(),
-  physicalChecks: PhysicalChecksSchema,
+  physicalChecks: PhysicalChecksSchema.optional(),
   anticoagulantVolumeOk: z.boolean().optional(),
   tubePatency: z.boolean().optional(),
   decision: z.enum(INSPECTION_DECISION).optional(),
+  testingLab: z.string().trim().max(200).optional(),
+  sentDate: z.coerce.date().optional(),
   rejectionReason: z.string().trim().max(1000).optional(),
+  testingStatus: z.enum(['SENT', 'REPORT_RECEIVED']).optional(),
 });
 
 export const ListBagInspectionQuery = z.object({

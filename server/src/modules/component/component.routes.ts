@@ -103,7 +103,13 @@ router.get('/list', authenticate, async (req, res, next) => {
         else if (u.status === 'RESERVED' || u.status === 'CROSSMATCHED') legacyStatus = 'reserved';
         else if (u.status === 'ISSUED' || u.status === 'TRANSFUSED') legacyStatus = 'issued';
         else if (u.status === 'DISCARDED' || u.status === 'EXPIRED') legacyStatus = 'discarded';
-        else if (u.status === 'QUARANTINE') legacyStatus = 'quarantined';
+        else if (u.status === 'QUARANTINE') {
+          if (tti && tti.releaseDecision === 'indeterminate') {
+            legacyStatus = 'quarantined';
+          } else {
+            legacyStatus = 'testing';
+          }
+        }
         else if (u.status === 'IN_TESTING') legacyStatus = 'testing';
         else if (u.status === 'COLLECTED') legacyStatus = 'collected';
 
@@ -415,15 +421,24 @@ router.get('/near-expiry', authenticate, async (req, res, next) => {
     const donationIds = units.map(u => u.donationId).filter(Boolean);
     const donations = await DonationModel.find({ donationId: { $in: donationIds }, deletedAt: null }).select('donationId bagNo').lean();
     const donationMap = new Map(donations.map(d => [d.donationId, d]));
+    const ttiResults = await TtiResultModel.find({ donationId: { $in: donationIds } }).select('donationId releaseDecision').lean();
+    const ttiMap = new Map(ttiResults.map(t => [t.donationId, t]));
 
     const components = units.map(u => {
       const d = donationMap.get(u.donationId);
+      const tti = ttiMap.get(u.donationId);
       let legacyStatus = 'in-stock';
       if (u.status === 'RELEASED') legacyStatus = 'in-stock';
       else if (u.status === 'RESERVED' || u.status === 'CROSSMATCHED') legacyStatus = 'reserved';
       else if (u.status === 'ISSUED' || u.status === 'TRANSFUSED') legacyStatus = 'issued';
       else if (u.status === 'DISCARDED' || u.status === 'EXPIRED') legacyStatus = 'discarded';
-      else if (u.status === 'QUARANTINE') legacyStatus = 'quarantined';
+      else if (u.status === 'QUARANTINE') {
+        if (tti && tti.releaseDecision === 'indeterminate') {
+          legacyStatus = 'quarantined';
+        } else {
+          legacyStatus = 'testing';
+        }
+      }
       else if (u.status === 'IN_TESTING') legacyStatus = 'testing';
       else if (u.status === 'COLLECTED') legacyStatus = 'collected';
 
@@ -491,7 +506,13 @@ router.get('/:id', authenticate, async (req, res, next) => {
       else if (u.status === 'RESERVED' || u.status === 'CROSSMATCHED') legacyStatus = 'reserved';
       else if (u.status === 'ISSUED' || u.status === 'TRANSFUSED') legacyStatus = 'issued';
       else if (u.status === 'DISCARDED' || u.status === 'EXPIRED') legacyStatus = 'discarded';
-      else if (u.status === 'QUARANTINE') legacyStatus = 'quarantined';
+      else if (u.status === 'QUARANTINE') {
+        if (tti && tti.releaseDecision === 'indeterminate') {
+          legacyStatus = 'quarantined';
+        } else {
+          legacyStatus = 'testing';
+        }
+      }
       else if (u.status === 'IN_TESTING') legacyStatus = 'testing';
       else if (u.status === 'COLLECTED') legacyStatus = 'collected';
 

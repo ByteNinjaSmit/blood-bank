@@ -141,7 +141,7 @@ const ReviewSubmitStep = ({ donor, formData, getDonorName }) => {
               {formData.emptyBagExamined ? "✅ Yes" : "❌ No"}
             </p>
             <p>
-              <strong>Collected within 6-8 min:</strong>{" "}
+              <strong>Collected within 3-5 min:</strong>{" "}
               {formData.collectedWithin6to8Min ? "✅ Yes" : "❌ No"}
             </p>
             <p>

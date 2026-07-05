@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ClipboardCheck, Plus, X, Upload, FileText, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import { useBagInspectionList, useCreateBagInspection, useUpdateBagInspectionReport } from '../queries';
 import { useGRNList } from '../queries';
+import { useDonationList } from '@/features/donation/queries';
 import { useAuth } from '@/store/auth';
 import { apiClient, unwrap } from '@/core/api-client';
 import { toast } from 'sonner';
@@ -147,6 +148,7 @@ function DecisionBadge({ decision }) {
 
 function InspectionDrawer({ onClose, grns }) {
   const { user } = useAuth();
+  const { data: donationData } = useDonationList({ pageSize: 1000 });
   const [form, setForm] = useState({
     grnId: '',
     batchNumber: '',
@@ -157,6 +159,17 @@ function InspectionDrawer({ onClose, grns }) {
     customTestingLab: '',
     bagNo: '',
     segmentNo: '',
+    bloodGroup: 'A+',
+    sealIntact: '',
+    noLeakage: '',
+    tubeIntegrity: '',
+    needleCondition: '',
+    labelPresence: '',
+    sterilityCheck: '',
+    packagingCondition: '',
+    anticoagulantVolumeOk: '',
+    tubePatency: '',
+    rejectionReason: '',
   });
   const createInspection = useCreateBagInspection();
 
@@ -198,10 +211,30 @@ function InspectionDrawer({ onClose, grns }) {
     setForm((f) => ({ ...f, [k]: val }));
   };
 
+  const donationsList = donationData?.items ?? donationData?.donations ?? (Array.isArray(donationData) ? donationData : []);
+  const filteredDonations = donationsList.filter(
+    (d) => d.bloodGroup === form.bloodGroup && d.bagNo
+  );
+  const uniqueDonations = [];
+  const seenBags = new Set();
+  for (const d of filteredDonations) {
+    if (!seenBags.has(d.bagNo)) {
+      seenBags.add(d.bagNo);
+      uniqueDonations.push(d);
+    }
+  }
+
+  const isAnyFailed = [
+    form.sealIntact, form.noLeakage, form.tubeIntegrity, form.needleCondition,
+    form.labelPresence, form.sterilityCheck, form.packagingCondition,
+    form.anticoagulantVolumeOk, form.tubePatency
+  ].some(val => val === 'false');
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    const { grnId, batchNumber, sampleSize, testingType, sentDate, testingLab, customTestingLab, bagNo, segmentNo } = form;
+    const { grnId, batchNumber, sampleSize, testingType, sentDate, testingLab, customTestingLab, bagNo, segmentNo, bloodGroup } = form;
     const labName = testingLab === 'Others' ? customTestingLab : testingLab;
+    const decision = isAnyFailed ? 'REJECTED' : 'ACCEPTED';
 
     createInspection.mutateAsync({
       grnId,
@@ -209,23 +242,25 @@ function InspectionDrawer({ onClose, grns }) {
       sampleSize: Number(sampleSize),
       inspectionDate: new Date(),
       inspectedById: user?.id ?? user?._id ?? '000000000000000000000000',
-      decision: 'ACCEPTED',
+      decision,
       physicalChecks: {
-        sealIntact: true,
-        noLeakage: true,
-        tubeIntegrity: true,
-        needleCondition: true,
-        labelPresence: true,
-        sterilityCheck: true,
-        packagingCondition: true,
+        sealIntact: form.sealIntact === 'true',
+        noLeakage: form.noLeakage === 'true',
+        tubeIntegrity: form.tubeIntegrity === 'true',
+        needleCondition: form.needleCondition === 'true',
+        labelPresence: form.labelPresence === 'true',
+        sterilityCheck: form.sterilityCheck === 'true',
+        packagingCondition: form.packagingCondition === 'true',
       },
-      anticoagulantVolumeOk: true,
-      tubePatency: true,
+      anticoagulantVolumeOk: form.anticoagulantVolumeOk === 'true',
+      tubePatency: form.tubePatency === 'true',
       testingType,
       sentDate,
       testingLab: labName,
       bagNo,
       segmentNo,
+      bloodGroup: testingType !== 'EMPTY' ? bloodGroup : undefined,
+      rejectionReason: isAnyFailed ? form.rejectionReason : undefined,
     }).then(onClose).catch(() => { });
   };
 
@@ -286,10 +321,50 @@ function InspectionDrawer({ onClose, grns }) {
                 <option value="OTHER">Other Blood Bag</option>
               </select>
             </div>
+            {form.testingType !== 'EMPTY' && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Blood Group *</label>
+                <select 
+                  required 
+                  value={form.bloodGroup || 'A+'} 
+                  onChange={(e) => {
+                    const bg = e.target.value;
+                    setForm(f => ({ ...f, bloodGroup: bg, bagNo: '', segmentNo: '' }));
+                  }} 
+                  className={`${fieldClass} bg-white`}
+                >
+                  {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                </select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bag No *</label>
-                <input required value={form.bagNo} onChange={setField('bagNo')} className={fieldClass} placeholder="e.g. BAG-001" />
+                {form.testingType === 'EMPTY' ? (
+                  <input required value={form.bagNo} onChange={setField('bagNo')} className={fieldClass} placeholder="e.g. BAG-001" />
+                ) : (
+                  <select
+                    required
+                    value={form.bagNo}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const matched = uniqueDonations.find(d => d.bagNo === val);
+                      setForm(f => ({
+                        ...f,
+                        bagNo: val,
+                        segmentNo: matched ? matched.segmentNo || '' : f.segmentNo
+                      }));
+                    }}
+                    className={`${fieldClass} bg-white`}
+                  >
+                    <option value="">Select Bag...</option>
+                    {uniqueDonations.map(d => (
+                      <option key={d.bagNo} value={d.bagNo}>
+                        {d.bagNo}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Segment No *</label>
@@ -314,6 +389,98 @@ function InspectionDrawer({ onClose, grns }) {
                 <input required value={form.customTestingLab} onChange={setField('customTestingLab')} className={fieldClass} placeholder="Enter name of laboratory" />
               </div>
             )}
+
+            <div>
+              <h3 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Initial Physical Quality Checks</h3>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3 border border-gray-100 rounded-lg p-4 bg-gray-50/50 text-xs">
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">Seal Intact *</label>
+                  <select required value={form.sealIntact} onChange={setField('sealIntact')} className={fieldClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">No Leakage *</label>
+                  <select required value={form.noLeakage} onChange={setField('noLeakage')} className={fieldClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">Tube Integrity *</label>
+                  <select required value={form.tubeIntegrity} onChange={setField('tubeIntegrity')} className={fieldClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">Needle Condition OK *</label>
+                  <select required value={form.needleCondition} onChange={setField('needleCondition')} className={fieldClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">Label Present *</label>
+                  <select required value={form.labelPresence} onChange={setField('labelPresence')} className={fieldClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">Sterility Check *</label>
+                  <select required value={form.sterilityCheck} onChange={setField('sterilityCheck')} className={fieldClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">Packaging Condition *</label>
+                  <select required value={form.packagingCondition} onChange={setField('packagingCondition')} className={fieldClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-600 font-semibold mb-1">Anticoagulant Volume OK *</label>
+                  <select required value={form.anticoagulantVolumeOk} onChange={setField('anticoagulantVolumeOk')} className={fieldClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-gray-600 font-semibold mb-1">Tube Patency *</label>
+                  <select required value={form.tubePatency} onChange={setField('tubePatency')} className={fieldClass}>
+                    <option value="">Select...</option>
+                    <option value="true">Passed</option>
+                    <option value="false">Failed</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {isAnyFailed && (
+              <div>
+                <label className="block text-xs font-semibold text-red-600 mb-1 uppercase tracking-wide">Rejection Reason *</label>
+                <textarea
+                  required
+                  value={form.rejectionReason}
+                  onChange={setField('rejectionReason')}
+                  className={`${fieldClass} border-red-200 focus:ring-red-400`}
+                  placeholder="Please enter the reason for rejecting this batch..."
+                  rows={2}
+                />
+              </div>
+            )}
           </div>
 
           <div className="pt-4 border-t flex gap-3 justify-end">
@@ -332,29 +499,58 @@ function InspectionDrawer({ onClose, grns }) {
   );
 }
 
-function UpdateReportDrawer({ onClose, inspection }) {
-  const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
+function UpdateReportDrawer({ onClose, inspection, mode }) {
+  const [reportDate, setReportDate] = useState(
+    inspection.reportDate 
+      ? new Date(inspection.reportDate).toISOString().split('T')[0] 
+      : (mode === 'edit' ? '' : new Date().toISOString().split('T')[0])
+  );
   const [bagNo, setBagNo] = useState(inspection.bagNo || '');
   const [segmentNo, setSegmentNo] = useState(inspection.segmentNo || '');
-  const [bloodGroup, setBloodGroup] = useState('A+');
+  const [bloodGroup, setBloodGroup] = useState(inspection.bloodGroup || 'A+');
   const [testResult, setTestResult] = useState(inspection.testResult || '');
-  const [factorVIII, setFactorVIII] = useState('');
-  const [fibrinogen, setFibrinogen] = useState('');
+  const [factorVIII, setFactorVIII] = useState(inspection.factorVIII !== undefined ? String(inspection.factorVIII) : '');
+  const [fibrinogen, setFibrinogen] = useState(inspection.fibrinogen !== undefined ? String(inspection.fibrinogen) : '');
   const [reportImage, setReportImage] = useState(inspection.reportImage || '');
   const [uploading, setUploading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
 
+  const [testingLab, setTestingLab] = useState(inspection.testingLab || '');
+  const [sentDate, setSentDate] = useState(
+    inspection.sentDate 
+      ? new Date(inspection.sentDate).toISOString().split('T')[0] 
+      : ''
+  );
+
   // Physical checks state (empty string represents the "Select..." state)
-  const [sealIntact, setSealIntact] = useState('');
-  const [noLeakage, setNoLeakage] = useState('');
-  const [tubeIntegrity, setTubeIntegrity] = useState('');
-  const [needleCondition, setNeedleCondition] = useState('');
-  const [labelPresence, setLabelPresence] = useState('');
-  const [sterilityCheck, setSterilityCheck] = useState('');
-  const [packagingCondition, setPackagingCondition] = useState('');
-  const [anticoagulantVolumeOk, setAnticoagulantVolumeOk] = useState('');
-  const [tubePatency, setTubePatency] = useState('');
-  const [rejectionReason, setRejectionReason] = useState('');
+  const [sealIntact, setSealIntact] = useState(
+    inspection.physicalChecks?.sealIntact !== undefined ? String(inspection.physicalChecks.sealIntact) : ''
+  );
+  const [noLeakage, setNoLeakage] = useState(
+    inspection.physicalChecks?.noLeakage !== undefined ? String(inspection.physicalChecks.noLeakage) : ''
+  );
+  const [tubeIntegrity, setTubeIntegrity] = useState(
+    inspection.physicalChecks?.tubeIntegrity !== undefined ? String(inspection.physicalChecks.tubeIntegrity) : ''
+  );
+  const [needleCondition, setNeedleCondition] = useState(
+    inspection.physicalChecks?.needleCondition !== undefined ? String(inspection.physicalChecks.needleCondition) : ''
+  );
+  const [labelPresence, setLabelPresence] = useState(
+    inspection.physicalChecks?.labelPresence !== undefined ? String(inspection.physicalChecks.labelPresence) : ''
+  );
+  const [sterilityCheck, setSterilityCheck] = useState(
+    inspection.physicalChecks?.sterilityCheck !== undefined ? String(inspection.physicalChecks.sterilityCheck) : ''
+  );
+  const [packagingCondition, setPackagingCondition] = useState(
+    inspection.physicalChecks?.packagingCondition !== undefined ? String(inspection.physicalChecks.packagingCondition) : ''
+  );
+  const [anticoagulantVolumeOk, setAnticoagulantVolumeOk] = useState(
+    inspection.anticoagulantVolumeOk !== undefined ? String(inspection.anticoagulantVolumeOk) : ''
+  );
+  const [tubePatency, setTubePatency] = useState(
+    inspection.tubePatency !== undefined ? String(inspection.tubePatency) : ''
+  );
+  const [rejectionReason, setRejectionReason] = useState(inspection.rejectionReason || '');
 
   const isAnyFailed = [
     sealIntact, noLeakage, tubeIntegrity, needleCondition,
@@ -369,25 +565,28 @@ function UpdateReportDrawer({ onClose, inspection }) {
     updateReport.mutateAsync({
       id: inspection.id || inspection._id,
       data: {
-        reportDate,
-        bagNo,
-        segmentNo,
-        bloodGroup: inspection.testingType !== 'EMPTY' ? bloodGroup : undefined,
+        reportDate: reportDate || undefined,
+        bagNo: bagNo || undefined,
+        segmentNo: segmentNo || undefined,
+        bloodGroup: inspection.testingType !== 'EMPTY' ? (bloodGroup || undefined) : undefined,
         testResult: testResult || undefined,
-        factorVIII: inspection.testingType === 'EMPTY' && factorVIII ? Number(factorVIII) : undefined,
-        fibrinogen: inspection.testingType === 'EMPTY' && fibrinogen ? Number(fibrinogen) : undefined,
+        factorVIII: inspection.testingType !== 'EMPTY' && factorVIII ? Number(factorVIII) : undefined,
+        fibrinogen: inspection.testingType !== 'EMPTY' && fibrinogen ? Number(fibrinogen) : undefined,
         reportImage: reportImage || null,
         physicalChecks: {
-          sealIntact: sealIntact === 'true',
-          noLeakage: noLeakage === 'true',
-          tubeIntegrity: tubeIntegrity === 'true',
-          needleCondition: needleCondition === 'true',
-          labelPresence: labelPresence === 'true',
-          sterilityCheck: sterilityCheck === 'true',
-          packagingCondition: packagingCondition === 'true',
+          sealIntact: sealIntact === '' ? undefined : sealIntact === 'true',
+          noLeakage: noLeakage === '' ? undefined : noLeakage === 'true',
+          tubeIntegrity: tubeIntegrity === '' ? undefined : tubeIntegrity === 'true',
+          needleCondition: needleCondition === '' ? undefined : needleCondition === 'true',
+          labelPresence: labelPresence === '' ? undefined : labelPresence === 'true',
+          sterilityCheck: sterilityCheck === '' ? undefined : sterilityCheck === 'true',
+          packagingCondition: packagingCondition === '' ? undefined : packagingCondition === 'true',
         },
-        anticoagulantVolumeOk: anticoagulantVolumeOk === 'true',
-        tubePatency: tubePatency === 'true',
+        anticoagulantVolumeOk: anticoagulantVolumeOk === '' ? undefined : anticoagulantVolumeOk === 'true',
+        tubePatency: tubePatency === '' ? undefined : tubePatency === 'true',
+        testingLab: testingLab || undefined,
+        sentDate: sentDate || undefined,
+        testingStatus: mode === 'update' ? 'REPORT_RECEIVED' : inspection.testingStatus,
         decision: isAnyFailed ? 'REJECTED' : 'ACCEPTED',
         rejectionReason: isAnyFailed ? rejectionReason : undefined,
       }
@@ -410,32 +609,32 @@ function UpdateReportDrawer({ onClose, inspection }) {
         </div>
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
           <div className="space-y-4">
-            <div>
-              <span className="text-xs text-gray-500 uppercase font-semibold">Testing Lab:</span>
-              <span className="text-sm font-medium text-gray-800 ml-2">{inspection.testingLab}</span>
-            </div>
-            <div>
-              <span className="text-xs text-gray-500 uppercase font-semibold">Sent Date:</span>
-              <span className="text-sm font-medium text-gray-800 ml-2">
-                {inspection.sentDate ? new Date(inspection.sentDate).toLocaleDateString('en-IN') : '—'}
-              </span>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Testing Lab {mode !== 'edit' && '*'}</label>
+                <input required={mode !== 'edit'} value={testingLab} onChange={(e) => setTestingLab(e.target.value)} className={fieldClass} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Sent Date {mode !== 'edit' && '*'}</label>
+                <input required={mode !== 'edit'} type="date" value={sentDate} onChange={(e) => setSentDate(e.target.value)} className={fieldClass} />
+              </div>
             </div>
 
             <hr className="border-gray-100" />
 
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Date Report Received *</label>
-              <input required type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className={fieldClass} />
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Date Report Received {mode !== 'edit' && '*'}</label>
+              <input required={mode !== 'edit'} type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className={fieldClass} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bag No *</label>
-                <input required disabled value={bagNo} onChange={(e) => setBagNo(e.target.value)} className={`${fieldClass} bg-gray-50 cursor-not-allowed`} placeholder="e.g. BAG-001" />
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bag No {mode !== 'edit' && '*'}</label>
+                <input required={mode !== 'edit'} value={bagNo} onChange={(e) => setBagNo(e.target.value)} className={fieldClass} placeholder="e.g. BAG-001" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Segment No *</label>
-                <input required disabled value={segmentNo} onChange={(e) => setSegmentNo(e.target.value)} className={`${fieldClass} bg-gray-50 cursor-not-allowed`} placeholder="e.g. SEG-99" />
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Segment No {mode !== 'edit' && '*'}</label>
+                <input required={mode !== 'edit'} value={segmentNo} onChange={(e) => setSegmentNo(e.target.value)} className={fieldClass} placeholder="e.g. SEG-99" />
               </div>
             </div>
 
@@ -443,72 +642,72 @@ function UpdateReportDrawer({ onClose, inspection }) {
               <h3 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Initial Physical Quality Checks</h3>
               <div className="grid grid-cols-2 gap-x-4 gap-y-3 border border-gray-100 rounded-lg p-4 bg-gray-50/50 text-xs">
                 <div>
-                  <label className="block text-gray-600 font-semibold mb-1">Seal Intact *</label>
-                  <select required value={sealIntact} onChange={(e) => setSealIntact(e.target.value)} className={selectClass}>
+                  <label className="block text-gray-600 font-semibold mb-1">Seal Intact {mode !== 'edit' && '*'}</label>
+                  <select required={mode !== 'edit'} value={sealIntact} onChange={(e) => setSealIntact(e.target.value)} className={selectClass}>
                     <option value="">Select...</option>
                     <option value="true">Passed</option>
                     <option value="false">Failed</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-600 font-semibold mb-1">No Leakage *</label>
-                  <select required value={noLeakage} onChange={(e) => setNoLeakage(e.target.value)} className={selectClass}>
+                  <label className="block text-gray-600 font-semibold mb-1">No Leakage {mode !== 'edit' && '*'}</label>
+                  <select required={mode !== 'edit'} value={noLeakage} onChange={(e) => setNoLeakage(e.target.value)} className={selectClass}>
                     <option value="">Select...</option>
                     <option value="true">Passed</option>
                     <option value="false">Failed</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-600 font-semibold mb-1">Tube Integrity *</label>
-                  <select required value={tubeIntegrity} onChange={(e) => setTubeIntegrity(e.target.value)} className={selectClass}>
+                  <label className="block text-gray-600 font-semibold mb-1">Tube Integrity {mode !== 'edit' && '*'}</label>
+                  <select required={mode !== 'edit'} value={tubeIntegrity} onChange={(e) => setTubeIntegrity(e.target.value)} className={selectClass}>
                     <option value="">Select...</option>
                     <option value="true">Passed</option>
                     <option value="false">Failed</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-600 font-semibold mb-1">Needle Condition OK *</label>
-                  <select required value={needleCondition} onChange={(e) => setNeedleCondition(e.target.value)} className={selectClass}>
+                  <label className="block text-gray-600 font-semibold mb-1">Needle Condition OK {mode !== 'edit' && '*'}</label>
+                  <select required={mode !== 'edit'} value={needleCondition} onChange={(e) => setNeedleCondition(e.target.value)} className={selectClass}>
                     <option value="">Select...</option>
                     <option value="true">Passed</option>
                     <option value="false">Failed</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-600 font-semibold mb-1">Label Present *</label>
-                  <select required value={labelPresence} onChange={(e) => setLabelPresence(e.target.value)} className={selectClass}>
+                  <label className="block text-gray-600 font-semibold mb-1">Label Present {mode !== 'edit' && '*'}</label>
+                  <select required={mode !== 'edit'} value={labelPresence} onChange={(e) => setLabelPresence(e.target.value)} className={selectClass}>
                     <option value="">Select...</option>
                     <option value="true">Passed</option>
                     <option value="false">Failed</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-600 font-semibold mb-1">Sterility Check *</label>
-                  <select required value={sterilityCheck} onChange={(e) => setSterilityCheck(e.target.value)} className={selectClass}>
+                  <label className="block text-gray-600 font-semibold mb-1">Sterility Check {mode !== 'edit' && '*'}</label>
+                  <select required={mode !== 'edit'} value={sterilityCheck} onChange={(e) => setSterilityCheck(e.target.value)} className={selectClass}>
                     <option value="">Select...</option>
                     <option value="true">Passed</option>
                     <option value="false">Failed</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-600 font-semibold mb-1">Packaging Condition *</label>
-                  <select required value={packagingCondition} onChange={(e) => setPackagingCondition(e.target.value)} className={selectClass}>
+                  <label className="block text-gray-600 font-semibold mb-1">Packaging Condition {mode !== 'edit' && '*'}</label>
+                  <select required={mode !== 'edit'} value={packagingCondition} onChange={(e) => setPackagingCondition(e.target.value)} className={selectClass}>
                     <option value="">Select...</option>
                     <option value="true">Passed</option>
                     <option value="false">Failed</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-600 font-semibold mb-1">Anticoagulant Volume OK *</label>
-                  <select required value={anticoagulantVolumeOk} onChange={(e) => setAnticoagulantVolumeOk(e.target.value)} className={selectClass}>
+                  <label className="block text-gray-600 font-semibold mb-1">Anticoagulant Volume OK {mode !== 'edit' && '*'}</label>
+                  <select required={mode !== 'edit'} value={anticoagulantVolumeOk} onChange={(e) => setAnticoagulantVolumeOk(e.target.value)} className={selectClass}>
                     <option value="">Select...</option>
                     <option value="true">Passed</option>
                     <option value="false">Failed</option>
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-gray-600 font-semibold mb-1">Tube Patency *</label>
-                  <select required value={tubePatency} onChange={(e) => setTubePatency(e.target.value)} className={selectClass}>
+                  <label className="block text-gray-600 font-semibold mb-1">Tube Patency {mode !== 'edit' && '*'}</label>
+                  <select required={mode !== 'edit'} value={tubePatency} onChange={(e) => setTubePatency(e.target.value)} className={selectClass}>
                     <option value="">Select...</option>
                     <option value="true">Passed</option>
                     <option value="false">Failed</option>
@@ -519,9 +718,9 @@ function UpdateReportDrawer({ onClose, inspection }) {
 
             {isAnyFailed && (
               <div>
-                <label className="block text-xs font-semibold text-red-650 text-red-600 mb-1 uppercase tracking-wide">Rejection Reason *</label>
+                <label className="block text-xs font-semibold text-red-600 mb-1 uppercase tracking-wide">Rejection Reason {mode !== 'edit' && '*'}</label>
                 <textarea
-                  required
+                  required={mode !== 'edit'}
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   className={`${fieldClass} border-red-200 focus:ring-red-400`}
@@ -534,20 +733,11 @@ function UpdateReportDrawer({ onClose, inspection }) {
             {inspection.testingType !== 'EMPTY' && (
               <>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Blood Group *</label>
-                  <select required value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)} className={`${fieldClass} bg-white`}>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Blood Group {mode !== 'edit' && '*'}</label>
+                  <select required={mode !== 'edit'} value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)} className={`${fieldClass} bg-white`}>
                     {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Test Result *</label>
-                  <input required value={testResult} onChange={(e) => setTestResult(e.target.value)} className={fieldClass} placeholder="e.g. bag and segment is sterile" />
-                </div>
-              </>
-            )}
-
-            {inspection.testingType === 'EMPTY' && (
-              <>
                 <div className="text-xs font-bold text-gray-600 uppercase tracking-wide mt-2">Coagulation Work Up Results</div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -560,10 +750,17 @@ function UpdateReportDrawer({ onClose, inspection }) {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Test Result / Sterile Check</label>
-                  <input value={testResult} onChange={(e) => setTestResult(e.target.value)} className={fieldClass} placeholder="e.g. bag and segment is sterile" />
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Test Result {mode !== 'edit' && '*'}</label>
+                  <input required={mode !== 'edit'} value={testResult} onChange={(e) => setTestResult(e.target.value)} className={fieldClass} placeholder="e.g. bag and segment is sterile" />
                 </div>
               </>
+            )}
+
+            {inspection.testingType === 'EMPTY' && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Test Result / Sterile Check</label>
+                <input value={testResult} onChange={(e) => setTestResult(e.target.value)} className={fieldClass} placeholder="e.g. bag and segment is sterile" />
+              </div>
             )}
 
             {/* Report Image Upload */}
@@ -634,7 +831,7 @@ function UpdateReportDrawer({ onClose, inspection }) {
               Cancel
             </button>
             <button type="submit" disabled={updateReport.isPending} className="px-5 py-2 text-sm font-semibold text-white bg-orange-800 rounded-lg hover:bg-orange-900 disabled:opacity-60">
-              {updateReport.isPending ? 'Saving…' : 'Save Report'}
+              {updateReport.isPending ? 'Saving…' : mode === 'edit' ? 'Save Changes' : 'Save Report'}
             </button>
           </div>
         </form>
@@ -650,7 +847,7 @@ function UpdateReportDrawer({ onClose, inspection }) {
   );
 }
 
-function ViewInspectionModal({ onClose, inspection, onViewReportImage }) {
+function ViewInspectionModal({ onClose, inspection, onViewReportImage, onEdit }) {
   const [uploading, setUploading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
   const updateReport = useUpdateBagInspectionReport();
@@ -923,7 +1120,15 @@ function ViewInspectionModal({ onClose, inspection, onViewReportImage }) {
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t bg-gray-50 flex justify-end">
+          <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-2">
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                className="px-4 py-2 bg-blue-55 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-lg text-sm font-semibold text-blue-700 transition-colors"
+              >
+                Edit Report
+              </button>
+            )}
             <button onClick={onClose} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
               Close
             </button>
@@ -946,6 +1151,7 @@ export default function BagInspection() {
   const [showReportDrawer, setShowReportDrawer] = useState(false);
   const [selectedInspection, setSelectedInspection] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [drawerMode, setDrawerMode] = useState('update'); // 'update' or 'edit'
 
   // Preview state
   const [previewUrl, setPreviewUrl] = useState('');
@@ -1074,26 +1280,51 @@ export default function BagInspection() {
                     <td className="px-4 py-3 text-sm">
                       <div className="flex items-center gap-1.5">
                         {ins.testingStatus === 'SENT' && (
-                          <button
-                            onClick={() => {
-                              setSelectedInspection(ins);
-                              setShowReportDrawer(true);
-                            }}
-                            className="px-2.5 py-1 text-xs font-semibold text-orange-700 border border-orange-200 rounded hover:bg-orange-50 transition-colors"
-                          >
-                            Update Report
-                          </button>
+                          <>
+                            <button
+                              onClick={() => {
+                                setSelectedInspection(ins);
+                                setDrawerMode('update');
+                                setShowReportDrawer(true);
+                              }}
+                              className="px-2.5 py-1 text-xs font-semibold text-orange-700 border border-orange-200 rounded hover:bg-orange-50 transition-colors"
+                            >
+                              Update Report
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedInspection(ins);
+                                setDrawerMode('edit');
+                                setShowReportDrawer(true);
+                              }}
+                              className="px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
+                            >
+                              Edit Report
+                            </button>
+                          </>
                         )}
                         {ins.testingStatus === 'REPORT_RECEIVED' && (
-                          <button
-                            onClick={() => {
-                              setSelectedInspection(ins);
-                              setShowViewModal(true);
-                            }}
-                            className="px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors"
-                          >
-                            View Report
-                          </button>
+                          <>
+                            <button
+                              onClick={() => {
+                                setSelectedInspection(ins);
+                                setShowViewModal(true);
+                              }}
+                              className="px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors"
+                            >
+                              View Report
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedInspection(ins);
+                                setDrawerMode('edit');
+                                setShowReportDrawer(true);
+                              }}
+                              className="px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
+                            >
+                              Edit Report
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -1113,6 +1344,7 @@ export default function BagInspection() {
             setSelectedInspection(null);
           }}
           inspection={selectedInspection}
+          mode={drawerMode}
         />
       )}
       {showViewModal && selectedInspection && (
@@ -1125,6 +1357,11 @@ export default function BagInspection() {
           onViewReportImage={(url) => {
             setPreviewUrl(url);
             setPreviewTitle(`Lab Report Document: Batch ${selectedInspection.batchNumber}`);
+          }}
+          onEdit={() => {
+            setShowViewModal(false);
+            setDrawerMode('edit');
+            setShowReportDrawer(true);
           }}
         />
       )}

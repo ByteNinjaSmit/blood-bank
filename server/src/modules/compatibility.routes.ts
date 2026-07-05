@@ -17,6 +17,7 @@ import { TransfusionModel } from '@/modules/transfusion/transfusion.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { CampModel } from '@/modules/camp/camp.model';
 import { UserModel } from '@/modules/user/user.model';
+import { IssueModel } from '@/modules/issue/issue.model';
 
 const router = Router();
 
@@ -114,12 +115,12 @@ router.get('/inventory', authenticate, async (req, res, next) => {
     const donations = await DonationModel.find({
       donationId: { $in: donationIds },
       $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }]
-    }).select('donationId bagNo').lean();
+    }).select('donationId bagNo segmentNo typeOfBag').lean();
 
-    const donationMap = new Map<string, string>();
+    const donationMap = new Map<string, { bagNo: string; segmentNo?: string | null; typeOfBag?: string }>();
     donations.forEach(d => {
       if (d.donationId && d.bagNo) {
-        donationMap.set(d.donationId, d.bagNo);
+        donationMap.set(d.donationId, { bagNo: d.bagNo, segmentNo: d.segmentNo, typeOfBag: d.typeOfBag || undefined });
       }
     });
 
@@ -170,11 +171,25 @@ router.get('/inventory', authenticate, async (req, res, next) => {
         };
       }
 
-      const displayBagNo = donationMap.get(u.donationId) || u.donationId;
+      const donObj = donationMap.get(u.donationId);
+      const displayBagNo = donObj?.bagNo || u.donationId;
+      const segmentNo = donObj?.segmentNo || u.unitDin || u.unitId || '—';
+      const typeOfBag = donObj?.typeOfBag || 'SB';
+
+      if (u.storageLocation) {
+        hospitalName = u.storageLocation;
+      } else if (u.thalassemiaPatient) {
+        const p = u.thalassemiaPatient;
+        hospitalName = `Thalassemia: ${p.firstName} ${p.lastName} (${p.bloodGroup})`;
+      }
 
       return {
         _id: u._id.toString(),
         bagNo: displayBagNo,
+        segmentNo,
+        storageLocation: u.storageLocation || undefined,
+        thalassemiaPatient: u.thalassemiaPatient || undefined,
+        typeOfBag,
         bag: {
           bagNo: displayBagNo,
           bloodGroup: u.aboGroup,
@@ -248,6 +263,164 @@ router.post('/inventory/unreserve', authenticate, async (req, res, next) => {
     }
 
     res.json({ success: true, message: 'Blood units successfully unreserved.' });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// POST /inventory/issue
+router.post('/inventory/issue', authenticate, async (req, res, next) => {
+  try {
+    const { inventoryIds, userId } = req.body;
+    const actorId = (req.user as any)?.id || userId;
+
+    if (!Array.isArray(inventoryIds) || inventoryIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'inventoryIds must be a non-empty array' });
+    }
+
+    const actorObjId = new Types.ObjectId(actorId);
+
+    for (const id of inventoryIds) {
+      let unit = await BloodUnitModel.findById(id);
+      if (!unit) {
+        unit = await BloodUnitModel.findOne({ unitId: id });
+      }
+      if (!unit) continue;
+
+      const oldStatus = unit.status;
+      unit.status = 'ISSUED';
+      unit.issuedAt = new Date();
+      unit.updatedBy = actorObjId;
+
+      let requisitionId = unit.reservedFor;
+      let patientId: any = null;
+
+      if (requisitionId) {
+        const reqDoc = await RequisitionModel.findById(requisitionId);
+        if (reqDoc) {
+          patientId = reqDoc.patientId;
+          reqDoc.status = 'ISSUED';
+          await reqDoc.save();
+        }
+      }
+
+      // Create an Issue record
+      const issueId = `IS-${new Date().getUTCFullYear()}${String(new Date().getUTCMonth() + 1).padStart(2, '0')}${String(new Date().getUTCDate()).padStart(2, '0')}-${new Types.ObjectId().toHexString().slice(-6).toUpperCase()}`;
+
+      const newIssue = await IssueModel.create({
+        issueId,
+        requisitionId: requisitionId || new Types.ObjectId(),
+        unitId: unit.unitId,
+        patientId: patientId || new Types.ObjectId(),
+        issuedBy: actorObjId,
+        createdBy: actorObjId,
+        updatedBy: actorObjId,
+      });
+
+      unit.issuedTo = newIssue._id;
+
+      unit.statusHistory.push({
+        from: oldStatus,
+        to: 'ISSUED',
+        event: 'ISSUE',
+        actor: actorObjId,
+        at: new Date(),
+        reason: 'Issued from inventory screen',
+      } as any);
+
+      await unit.save();
+    }
+
+    await invalidate('inventory:*');
+
+    res.json({ success: true, message: 'Blood units successfully issued.' });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// POST /inventory/send-to-storage
+router.post('/inventory/send-to-storage', authenticate, async (req, res, next) => {
+  try {
+    const { location, otherLocationName, bags, userId, dispatchType, thalassemiaPatient } = req.body;
+    const actorId = (req.user as any)?.id || userId;
+    const isThalassemia = dispatchType === 'THALASSEMIA';
+
+    let finalLocation = null;
+    if (!isThalassemia) {
+      if (!location) {
+        return res.status(400).json({ success: false, message: 'Location is required' });
+      }
+      finalLocation = location === 'Others' ? otherLocationName : location;
+      if (!finalLocation) {
+        return res.status(400).json({ success: false, message: 'Location name is required' });
+      }
+    } else {
+      if (!thalassemiaPatient || !thalassemiaPatient.firstName || !thalassemiaPatient.lastName) {
+        return res.status(400).json({ success: false, message: 'Patient details are required' });
+      }
+    }
+
+    if (!Array.isArray(bags) || bags.length === 0) {
+      return res.status(400).json({ success: false, message: 'bags must be a non-empty array' });
+    }
+
+    const actorObjId = new Types.ObjectId(actorId);
+
+    // Extract all unit IDs/bag IDs
+    const unitIds: string[] = [];
+    for (const group of bags) {
+      if (Array.isArray(group.bagIds)) {
+        unitIds.push(...group.bagIds);
+      }
+    }
+
+    if (unitIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'No blood bags selected' });
+    }
+
+    for (const id of unitIds) {
+      let unit = await BloodUnitModel.findById(id);
+      if (!unit) {
+        unit = await BloodUnitModel.findOne({ unitId: id });
+      }
+      if (!unit) continue;
+
+      const oldStatus = unit.status;
+      unit.status = 'ISSUED';
+      unit.issuedAt = new Date();
+      unit.updatedBy = actorObjId;
+
+      if (isThalassemia) {
+        (unit as any).storageLocation = null;
+        (unit as any).thalassemiaPatient = thalassemiaPatient;
+        unit.statusHistory.push({
+          from: oldStatus,
+          to: 'ISSUED',
+          event: 'ISSUE',
+          actor: actorObjId,
+          at: new Date(),
+          reason: `Issued to Thalassemia Patient: ${thalassemiaPatient.firstName} ${thalassemiaPatient.lastName}`,
+        } as any);
+      } else {
+        unit.storageLocation = finalLocation;
+        (unit as any).thalassemiaPatient = null;
+        unit.statusHistory.push({
+          from: oldStatus,
+          to: 'ISSUED',
+          event: 'SEND_TO_STORAGE',
+          actor: actorObjId,
+          at: new Date(),
+          reason: `Sent to storage at ${finalLocation}`,
+        } as any);
+      }
+
+      await unit.save();
+    }
+
+    await invalidate('inventory:*');
+
+    res.json({ success: true, message: isThalassemia ? 'Blood units successfully issued to Thalassemia patient.' : 'Blood units successfully sent to storage.' });
   } catch (e) {
     next(e);
   }

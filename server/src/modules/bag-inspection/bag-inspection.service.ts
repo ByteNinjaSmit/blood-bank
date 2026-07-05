@@ -65,6 +65,7 @@ export function createBagInspectionService(deps: {
         testingLab: input.testingLab,
         bagNo: input.bagNo,
         segmentNo: input.segmentNo,
+        bloodGroup: input.bloodGroup,
         actorId,
       });
       log.info({ inspectionId, grnId: input.grnId, decision: input.decision, actorId }, 'bag inspection recorded');
@@ -75,17 +76,25 @@ export function createBagInspectionService(deps: {
       const inspection = await deps.inspections.findById(id);
       if (!inspection) throw new NotFoundError('BagInspection', id);
 
-      const hasFailedCheck = 
-        input.anticoagulantVolumeOk === false ||
-        input.tubePatency === false ||
-        (input.physicalChecks && Object.values(input.physicalChecks).some(v => v === false));
+      const mergedPhysicalChecks = {
+        ...inspection.physicalChecks,
+        ...(input.physicalChecks || {})
+      };
+      const mergedAnticoagulant = input.anticoagulantVolumeOk !== undefined ? input.anticoagulantVolumeOk : inspection.anticoagulantVolumeOk;
+      const mergedPatency = input.tubePatency !== undefined ? input.tubePatency : inspection.tubePatency;
 
-      const hasFailedTestResult = input.testResult && /fail|contaminat|leak|broken|reject/i.test(input.testResult);
-      const isFailed = Boolean(hasFailedCheck || hasFailedTestResult || input.decision === 'REJECTED');
+      const hasFailedCheck = 
+        mergedAnticoagulant === false ||
+        mergedPatency === false ||
+        (mergedPhysicalChecks && Object.values(mergedPhysicalChecks).some(v => v === false));
+
+      const testResultVal = input.testResult !== undefined ? input.testResult : inspection.testResult;
+      const hasFailedTestResult = testResultVal && /fail|contaminat|leak|broken|reject/i.test(testResultVal);
+      const isFailed = Boolean(hasFailedCheck || hasFailedTestResult || input.decision === 'REJECTED' || (input.decision === undefined && inspection.decision === 'REJECTED'));
       const decision = isFailed ? 'REJECTED' : 'ACCEPTED';
 
       const updated = await deps.inspections.update(id, {
-        testingStatus: 'REPORT_RECEIVED',
+        testingStatus: input.testingStatus || 'REPORT_RECEIVED',
         reportDate: input.reportDate,
         bagNo: input.bagNo,
         segmentNo: input.segmentNo,
@@ -97,8 +106,10 @@ export function createBagInspectionService(deps: {
         physicalChecks: input.physicalChecks,
         anticoagulantVolumeOk: input.anticoagulantVolumeOk,
         tubePatency: input.tubePatency,
+        testingLab: input.testingLab,
+        sentDate: input.sentDate,
         decision,
-        rejectionReason: isFailed ? (input.rejectionReason || 'Quality check failed') : undefined,
+        rejectionReason: isFailed ? (input.rejectionReason || (input.rejectionReason === '' ? '' : (inspection.rejectionReason || 'Quality check failed'))) : undefined,
       }, actorId);
 
       if (!updated) throw new NotFoundError('BagInspection', id);

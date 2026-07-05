@@ -2110,7 +2110,7 @@ export default function DonorCreation() {
                       onChange={(e) => handleFormFieldChange("collectedWithin6to8Min", e.target.checked)}
                       className="w-5 h-5 text-green-700 rounded border-gray-300 focus:ring-green-500"
                     />
-                    <span className="font-medium leading-normal">Blood collected within standard time limits (6-8 minutes)</span>
+                    <span className="font-medium leading-normal">Blood collected within standard time limits (3-5 minutes)</span>
                   </label>
                   <label className="flex items-center gap-3.5 cursor-pointer select-none p-3 hover:bg-green-100/20 rounded-xl transition-all">
                     <input
@@ -2217,7 +2217,7 @@ export default function DonorCreation() {
                       {formData.emptyBagExamined ? "✅ Yes" : "❌ No"}
                     </p>
                     <p>
-                      <strong>Collected within 6-8 min:</strong>{" "}
+                      <strong>Collected within 3-5 min:</strong>{" "}
                       {formData.collectedWithin6to8Min ? "✅ Yes" : "❌ No"}
                     </p>
                     <p>

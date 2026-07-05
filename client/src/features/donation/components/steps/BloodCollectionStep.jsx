@@ -6,7 +6,7 @@ const BloodCollectionStep = ({ formData, onFieldChange }) => {
         },
         {
             key: "collectedWithin6to8Min",
-            label: "Blood is collected within 6 to 8 min",
+            label: "Blood is collected within 3 to 5 min",
         },
         {
             key: "crossCheckingDone",

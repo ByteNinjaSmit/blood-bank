@@ -410,7 +410,7 @@ export function createDonationRepo(): DonationRepo {
       const skip = (q.page - 1) * q.pageSize;
       const [docs, total] = await Promise.all([
         DonationModel.find(filter)
-          .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string } } }>('donor', 'name')
+          .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string }; bloodGroup?: string; rh?: string } }>('donor', 'name bloodGroup rh')
           .sort({ collectedAt: -1 })
           .skip(skip)
           .limit(q.pageSize)
@@ -438,7 +438,7 @@ export function createDonationRepo(): DonationRepo {
       const ttiMap = new Map(ttiResults.map((t) => [t.donationId, t]));
       return {
         items: docs.map((d) => {
-          const donorDoc = d.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string } };
+          const donorDoc = d.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string }; bloodGroup?: string; rh?: string };
           const tti = ttiMap.get(d.donationId);
           const statuses = unitMap.get(d.donationId) || [];
 
@@ -466,8 +466,8 @@ export function createDonationRepo(): DonationRepo {
             segmentNo: d.segmentNo,
             lotNo: d.lotNo,
             collectedAt: d.collectedAt.toISOString(),
-            bloodGroup: tti?.aboGroupConfirmed ?? '',
-            rhFactor: tti?.rhFactorConfirmed ?? '',
+            bloodGroup: tti?.aboGroupConfirmed || (donorDoc?.bloodGroup ? `${donorDoc.bloodGroup}${(donorDoc.rh === 'Positive' || donorDoc.rh === 'POSITIVE' || donorDoc.rh === '+') ? '+' : '-'}` : ''),
+            rhFactor: tti?.rhFactorConfirmed || donorDoc?.rh || '',
             unitCount: statuses.length,
             campId: d.campId?.toString(),
             isFit: d.donorFitness?.isFit,

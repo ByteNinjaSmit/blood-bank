@@ -30,6 +30,16 @@ export interface UnitDto {
   expiresAt: string;
   status: UnitStatus;
   specialAttributes: SpecialNeed[];
+  storageLocation: string | null;
+  thalassemiaPatient: {
+    firstName: string;
+    middleName: string;
+    lastName: string;
+    address: string;
+    age: number;
+    sex: string;
+    bloodGroup: string;
+  } | null;
 }
 
 interface RawUnit {
@@ -45,6 +55,16 @@ interface RawUnit {
   expiresAt: Date;
   status: UnitStatus;
   specialAttributes?: SpecialNeed[];
+  storageLocation?: string | null;
+  thalassemiaPatient?: {
+    firstName: string;
+    middleName: string;
+    lastName: string;
+    address: string;
+    age: number;
+    sex: string;
+    bloodGroup: string;
+  } | null;
 }
 
 function toDto(raw: RawUnit): UnitDto {
@@ -61,6 +81,8 @@ function toDto(raw: RawUnit): UnitDto {
     expiresAt: raw.expiresAt.toISOString(),
     status: raw.status,
     specialAttributes: raw.specialAttributes ?? [],
+    storageLocation: raw.storageLocation ?? null,
+    thalassemiaPatient: raw.thalassemiaPatient ?? null,
   };
 }
 

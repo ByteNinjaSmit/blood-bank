@@ -299,7 +299,7 @@ const ComponentsList = () => {
       case "issued": return "Issued";
       case "discarded": return "Discarded";
       case "quarantined": return "Quarantined";
-      case "testing": return "Testing";
+      case "testing": return "Under Testing";
       case "collected": return "Collected";
       default: return status || "Prepared";
     }
