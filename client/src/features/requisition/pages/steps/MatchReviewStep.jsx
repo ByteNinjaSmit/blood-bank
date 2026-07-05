@@ -115,22 +115,20 @@ export default function MatchReviewStep({
           <button
             disabled={!canMatch}
             onClick={onMatch}
-            className={`px-4 py-2 rounded-lg text-white ${
-              canMatch
+            className={`px-4 py-2 rounded-lg text-white ${canMatch
                 ? 'bg-orange-800 hover:bg-orange-900 cursor-pointer'
                 : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-            }`}
+              }`}
           >
             {matching ? 'Matching…' : 'Re-run Match'}
           </button>
           <button
             disabled={!canReject}
             onClick={() => setRejectConfirmOpen(true)}
-            className={`px-4 py-2 rounded-lg border ${
-              canReject
+            className={`px-4 py-2 rounded-lg border ${canReject
                 ? 'border-red-200 text-red-700 hover:bg-red-50 cursor-pointer'
                 : 'border-gray-200 text-gray-400 cursor-not-allowed'
-            }`}
+              }`}
           >
             Reject Request
           </button>
@@ -217,10 +215,31 @@ export default function MatchReviewStep({
                               ? `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}`
                               : '—';
 
+                            const rc = requestDoc?.requestedComponents?.find(
+                              (c) => c.componentType === compType
+                            );
+                            const isGroupMismatch = rc && inv?.bagNo && (
+                              inv.bagNo.bloodGroup !== rc.bloodGroup ||
+                              inv.bagNo.rh !== rc.rh
+                            );
+                            let mismatchWarning = null;
+                            if (isGroupMismatch) {
+                              const patGroupText = `${rc.bloodGroup} ${rc.rh}`;
+                              const bagGroupText = `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}`;
+                              mismatchWarning = `${patGroupText} patient is receiving ${bagGroupText} ${compType}`;
+                            }
+
                             return (
                               <tr key={invId} className="border-t hover:bg-gray-50 transition-colors">
                                 <td className="p-2 font-mono text-xs">{bagNo}</td>
-                                <td className="p-2 font-semibold">{blood}</td>
+                                <td className="p-2">
+                                  <div className="font-semibold">{blood}</div>
+                                  {mismatchWarning && (
+                                    <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1 mt-1.5 font-bold w-max flex items-center gap-1.5 shadow-sm">
+                                      <span className="text-amber-500 text-sm">⚠️</span> {mismatchWarning}
+                                    </div>
+                                  )}
+                                </td>
                                 <td className="p-2">
                                   <CompatBadge type={mi.compatibilityType || 'exact'} />
                                 </td>

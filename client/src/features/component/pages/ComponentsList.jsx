@@ -269,14 +269,39 @@ const ComponentsList = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  // Single responsibility: Get status badge variant
-  const getStatusBadgeVariant = (status) => {
+  // Single responsibility: Get status badge class for custom tailwind styling
+  const getStatusBadgeClass = (status) => {
     switch (status) {
-      case "in-stock": return "default";
-      case "reserved": return "secondary";
-      case "issued": return "outline";
-      case "discarded": return "destructive";
-      default: return "outline";
+      case "in-stock":
+        return "bg-green-50 text-green-700 border-green-200 hover:bg-green-50";
+      case "reserved":
+        return "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-50";
+      case "issued":
+        return "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-50";
+      case "discarded":
+        return "bg-red-50 text-red-700 border-red-200 hover:bg-red-50";
+      case "quarantined":
+        return "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50";
+      case "testing":
+        return "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50";
+      case "collected":
+        return "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-50";
+      default:
+        return "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-50";
+    }
+  };
+
+  // Single responsibility: Get status label
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case "in-stock": return "In Stock";
+      case "reserved": return "Reserved";
+      case "issued": return "Issued";
+      case "discarded": return "Discarded";
+      case "quarantined": return "Quarantined";
+      case "testing": return "Testing";
+      case "collected": return "Collected";
+      default: return status || "Prepared";
     }
   };
 
@@ -546,8 +571,8 @@ const ComponentsList = () => {
                         <td className="px-4 py-3 text-sm">
                           {bag.rbc.status === "prepared" ? (
                             <div className="flex flex-col gap-0.5">
-                              <Badge variant={getStatusBadgeVariant(bag.rbc.componentStatus)} className="w-fit text-[9px] font-bold px-1 py-0 uppercase tracking-wider">
-                                Prepared
+                              <Badge variant="outline" className={`w-fit text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${getStatusBadgeClass(bag.rbc.componentStatus)}`}>
+                                {getStatusLabel(bag.rbc.componentStatus)}
                               </Badge>
                               <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.rbc.volumeMl} mL</span>
                               {isExpired(bag.rbc.expiryDate) && (
@@ -571,8 +596,8 @@ const ComponentsList = () => {
                         <td className="px-4 py-3 text-sm">
                           {bag.ffp.status === "prepared" ? (
                             <div className="flex flex-col gap-0.5">
-                              <Badge variant={getStatusBadgeVariant(bag.ffp.componentStatus)} className="w-fit text-[9px] font-bold px-1 py-0 uppercase tracking-wider">
-                                Prepared
+                              <Badge variant="outline" className={`w-fit text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${getStatusBadgeClass(bag.ffp.componentStatus)}`}>
+                                {getStatusLabel(bag.ffp.componentStatus)}
                               </Badge>
                               <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.ffp.volumeMl} mL</span>
                               {isExpired(bag.ffp.expiryDate) && (
@@ -596,8 +621,8 @@ const ComponentsList = () => {
                         <td className="px-4 py-3 text-sm">
                           {bag.platelet.status === "prepared" ? (
                             <div className="flex flex-col gap-0.5">
-                              <Badge variant={getStatusBadgeVariant(bag.platelet.componentStatus)} className="w-fit text-[9px] font-bold px-1 py-0 uppercase tracking-wider">
-                                Prepared
+                              <Badge variant="outline" className={`w-fit text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${getStatusBadgeClass(bag.platelet.componentStatus)}`}>
+                                {getStatusLabel(bag.platelet.componentStatus)}
                               </Badge>
                               <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.platelet.volumeMl} mL</span>
                               {isExpired(bag.platelet.expiryDate) && (
@@ -621,8 +646,8 @@ const ComponentsList = () => {
                         <td className="px-4 py-3 text-sm">
                           {bag.cryo.status === "prepared" ? (
                             <div className="flex flex-col gap-0.5">
-                              <Badge variant={getStatusBadgeVariant(bag.cryo.componentStatus)} className="w-fit text-[9px] font-bold px-1 py-0 uppercase tracking-wider">
-                                Prepared
+                              <Badge variant="outline" className={`w-fit text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${getStatusBadgeClass(bag.cryo.componentStatus)}`}>
+                                {getStatusLabel(bag.cryo.componentStatus)}
                               </Badge>
                               <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.cryo.volumeMl} mL</span>
                               {isExpired(bag.cryo.expiryDate) && (

@@ -118,6 +118,78 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
         <div className="mt-2 text-sm text-gray-700">Current Status: <strong className="capitalize">{requestDoc.status}</strong></div>
       )}
 
+      {requestDoc && (
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mt-4">
+          <div className="bg-gray-50 border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+            <h4 className="font-semibold text-gray-800 text-sm">Requisition Details & Requirements</h4>
+            <span className="px-2.5 py-1 bg-red-50 border border-red-200 text-red-800 text-xs font-semibold rounded-lg uppercase tracking-wider font-mono">
+              ID: {requestDoc.requestId || requestDoc.requisitionId || '—'}
+            </span>
+          </div>
+          
+          <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Patient Info Card */}
+            <div className="space-y-3 lg:border-r lg:border-gray-100 lg:pr-8">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                <span className="w-1.5 h-3.5 bg-red-700 rounded-full"></span>
+                <h5 className="text-xs font-bold uppercase tracking-wider text-gray-500">Patient Details</h5>
+              </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3.5 text-sm">
+                <div>
+                  <span className="text-gray-400 text-xs uppercase tracking-wide font-medium block">Name</span>
+                  <p className="font-semibold text-gray-800 mt-0.5">{requestDoc.patient?.name || '—'}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400 text-xs uppercase tracking-wide font-medium block">MRN</span>
+                  <p className="font-mono text-gray-800 text-xs font-semibold mt-1 bg-gray-50 px-2 py-0.5 rounded border border-gray-200/50 w-fit">{requestDoc.patient?.mrn || '—'}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400 text-xs uppercase tracking-wide font-medium block">Age / Sex</span>
+                  <p className="font-semibold text-gray-800 mt-0.5">{requestDoc.patient?.age || '—'} Y / {requestDoc.patient?.sex || '—'}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400 text-xs uppercase tracking-wide font-medium block">Clinician</span>
+                  <p className="font-semibold text-gray-800 mt-0.5">{requestDoc.doctorName || '—'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Requested Components Card */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                <span className="w-1.5 h-3.5 bg-red-700 rounded-full"></span>
+                <h5 className="text-xs font-bold uppercase tracking-wider text-gray-500">Requested Components</h5>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {requestDoc.requestedComponents?.map((rc, idx) => {
+                  const isPositive = rc.rh === 'Positive' || rc.rhFactor === 'POSITIVE' || String(rc.rh).toLowerCase().includes('pos');
+                  const bloodSign = isPositive ? '+' : '-';
+                  return (
+                    <div key={idx} className="bg-gray-50/60 border border-gray-200 p-3 rounded-xl flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm">{rc.componentType}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 font-medium">Group: {rc.bloodGroup}{bloodSign}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="inline-block px-2.5 py-1 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-800">
+                          {rc.units} Unit{rc.units > 1 ? 's' : ''}
+                        </span>
+                        <p className={`text-[10px] capitalize font-bold mt-1 tracking-wider uppercase ${rc.urgency === 'urgent' ? 'text-red-600' : 'text-gray-400'}`}>
+                          {rc.urgency || 'regular'}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+                {!requestDoc.requestedComponents?.length && (
+                  <p className="text-sm text-gray-400 italic">No requested components specified.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {requestDoc?.matchedInventory?.length ? (
         <div className="mt-4">
           <h4 className="font-semibold mb-2">Units to Issue</h4>
@@ -137,11 +209,35 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
                 {requestDoc.matchedInventory.map((mi) => {
                   const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
                   const invId = inv?._id || mi.inventoryId;
+                  const compType = inv?.componentId?.componentType || '—';
+                  const blood = inv?.bagNo ? `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}` : '—';
+
+                   const rc = requestDoc?.requestedComponents?.find(
+                    (c) => c.componentType === compType
+                  );
+                  const isGroupMismatch = rc && inv?.bagNo && (
+                    inv.bagNo.bloodGroup !== rc.bloodGroup ||
+                    inv.bagNo.rh !== rc.rh
+                  );
+                  let mismatchWarning = null;
+                  if (isGroupMismatch) {
+                    const patGroupText = `${rc.bloodGroup} ${rc.rh}`;
+                    const bagGroupText = `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}`;
+                    mismatchWarning = `${patGroupText} patient is receiving ${bagGroupText} ${compType}`;
+                  }
+
                   return (
                     <tr key={invId} className="border-t">
                       <td className="p-2 font-mono text-xs">{inv?.bagNo?.bagNo || '—'}</td>
-                      <td className="p-2">{inv?.componentId?.componentType || '—'}</td>
-                      <td className="p-2 font-semibold">{inv?.bagNo ? `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}` : '—'}</td>
+                      <td className="p-2">{compType}</td>
+                      <td className="p-2">
+                        <div className="font-semibold">{blood}</div>
+                        {mismatchWarning && (
+                          <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1 mt-1.5 font-bold w-max flex items-center gap-1.5 shadow-sm">
+                            <span className="text-amber-500 text-sm">⚠️</span> {mismatchWarning}
+                          </div>
+                        )}
+                      </td>
                       <td className="p-2"><CompatBadge type={mi.compatibilityType || 'exact'} /></td>
                       <td className="p-2">
                         <CrossmatchStatusBadge status={mi.crossmatchStatus || 'not-required'} required={mi.crossmatchRequired || false} />

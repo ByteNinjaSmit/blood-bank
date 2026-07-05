@@ -41,7 +41,10 @@ router.get('/inventory', authenticate, async (req, res, next) => {
 
     if (status) {
       if (status === 'in-stock') unitFilter.status = 'RELEASED';
-      else if (status === 'reserved') unitFilter.status = 'RESERVED';
+      else if (status === 'reserved') {
+        unitFilter.status = 'RESERVED';
+        unitFilter.reservedUntil = { $ne: null };
+      }
       else if (status === 'issued') unitFilter.status = 'ISSUED';
     } else {
       unitFilter.status = { $in: ['RELEASED', 'RESERVED', 'ISSUED'] };
@@ -354,12 +357,12 @@ router.get('/discard/get-list', authenticate, async (req, res, next) => {
           if (tName === 'HBSAG') tName = 'HBsAg';
           else if (tName === 'SYPHILIS') tName = 'VDRL';
           else if (tName === 'MALARIA') tName = 'MP';
-          
+
           let result = t.result;
           if (result === 'NEGATIVE') result = 'Negative';
           else if (result === 'REACTIVE') result = 'Reactive';
           else if (result === 'INDETERMINATE') result = 'Indeterminate';
-          
+
           return `${tName}: ${result}`;
         }).join(', ');
       } else if (tti) {
@@ -375,7 +378,7 @@ router.get('/discard/get-list', authenticate, async (req, res, next) => {
         reason: u.discardReason || 'QC_FAIL',
         description: u.discardNotes || '',
         discardedAt: discardHistory ? discardHistory.at.toISOString() : u.updatedAt.toISOString(),
-        
+
         // Modal additional fields
         itemId: u.unitId,
         siteId: donation?.campId ? (donation.campId as any).name : 'In-House',
@@ -463,7 +466,7 @@ router.post('/discard/create', authenticate, async (req, res, next) => {
       unit.status = 'DISCARDED';
       unit.discardReason = reason;
       unit.discardNotes = description || undefined;
-      
+
       // Clear reservation details
       unit.reservedFor = null;
       unit.reservedUntil = null;
@@ -572,7 +575,7 @@ async function mapTtiBags(ttis: any[]) {
   const donations = await DonationModel.find({ donationId: { $in: donationIds }, $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] })
     .populate('campId', 'name')
     .lean();
-  
+
   const donationMap = new Map(donations.map(d => [d.donationId, d]));
 
   const units = await BloodUnitModel.find({ donationId: { $in: donationIds }, $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] }).lean();
@@ -601,7 +604,7 @@ async function mapTtiBags(ttis: any[]) {
       let testName = et.testName;
       if (testName === 'SYPHILIS') testName = 'VDRL';
       if (testName === 'MALARIA') testName = 'MP';
-      
+
       let resVal = et.result;
       if (resVal === 'INDETERMINATE') resVal = 'Shadeness';
 
@@ -638,7 +641,7 @@ router.get('/serology/bags', authenticate, async (req, res, next) => {
       $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }]
     });
 
-    const ttiFilter: any = { 
+    const ttiFilter: any = {
       releaseDecision: 'pending',
       donationId: { $in: separatedDonationIds }
     };
@@ -1523,6 +1526,376 @@ router.get('/dashboard', authenticate, async (req, res, next) => {
         overview,
       },
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Legacy helper for component type mapping
+const toLegacyComponentType = (type: string) => {
+  if (type === 'PRBC') return 'RBC';
+  if (type === 'PLATELET_CONCENTRATE') return 'Platelet';
+  if (type === 'CRYOPRECIPITATE') return 'Cryo';
+  return type;
+};
+
+// GET /mis/donors
+router.get('/mis/donors', authenticate, async (req, res, next) => {
+  try {
+    const total = await DonorModel.countDocuments({ deletedAt: null });
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const newThisMonth = await DonorModel.countDocuments({ createdAt: { $gte: startOfMonth }, deletedAt: null });
+
+    const active = await DonorModel.countDocuments({ eligibilityStatus: 'eligible', deletedAt: null });
+
+    const gender = await DonorModel.aggregate([
+      { $match: { deletedAt: null } },
+      { $group: { _id: '$sex', count: { $sum: 1 } } }
+    ]);
+
+    const bloodGroupAgg = await DonorModel.aggregate([
+      { $match: { deletedAt: null } },
+      { $group: { _id: { bg: '$bloodGroup', rh: '$rh' }, count: { $sum: 1 } } }
+    ]);
+    const bloodGroup = bloodGroupAgg.map(g => {
+      const bg = g._id?.bg || 'Unknown';
+      const rh = g._id?.rh || 'Positive';
+      return {
+        _id: `${bg}${rh === 'NEGATIVE' ? '-' : '+'}`,
+        count: g.count
+      };
+    });
+
+    const city = await DonorModel.aggregate([
+      { $match: { deletedAt: null } },
+      { $group: { _id: '$address.city', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 }
+    ]);
+
+    const donors = await DonorModel.find({ deletedAt: null }).lean();
+    const now = new Date();
+    const buckets = { '18-25': 0, '26-35': 0, '36-45': 0, '46-55': 0, '56+': 0 };
+    donors.forEach((d: any) => {
+      if (!d.dob) return;
+      const age = now.getFullYear() - new Date(d.dob).getFullYear();
+      if (age >= 18 && age <= 25) buckets['18-25']++;
+      else if (age >= 26 && age <= 35) buckets['26-35']++;
+      else if (age >= 36 && age <= 45) buckets['36-45']++;
+      else if (age >= 46 && age <= 55) buckets['46-55']++;
+      else if (age >= 56) buckets['56+']++;
+    });
+    const age = Object.entries(buckets).map(([k, v]) => ({ _id: k, count: v }));
+
+    const donationCounts = await DonationModel.aggregate([
+      { $match: { deletedAt: null } },
+      { $group: { _id: '$donor', count: { $sum: 1 } } }
+    ]);
+    const repeatCount = donationCounts.filter(d => d.count > 1).length;
+    const repeatPercentage = total > 0 ? Math.round((repeatCount / total) * 100) : 0;
+
+    const donorsList = await DonorModel.find({ deletedAt: null })
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .select('donorId name bloodGroup rh sex address phone lastDonationDate')
+      .lean();
+
+    const mappedDonors = donorsList.map((d: any) => ({
+      _id: d._id.toString(),
+      donorId: d.donorId,
+      name: d.name,
+      bloodGroup: d.bloodGroup,
+      rh: d.rh === 'NEGATIVE' ? '-' : '+',
+      sex: d.sex,
+      address: { city: d.address?.city || '' },
+      phone: d.phone,
+      lastDonationDate: d.lastDonationDate
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        stats: { total, newThisMonth, active, gender, bloodGroup, age, city },
+        behavior: { repeatPercentage },
+        register: { donors: mappedDonors }
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /mis/donations
+router.get('/mis/donations', authenticate, async (req, res, next) => {
+  try {
+    const total = await DonationModel.countDocuments({ deletedAt: null });
+
+    const byBloodGroupAgg = await DonationModel.aggregate([
+      { $match: { deletedAt: null } },
+      {
+        $lookup: {
+          from: 'donors',
+          localField: 'donor',
+          foreignField: '_id',
+          as: 'donorInfo'
+        }
+      },
+      { $unwind: '$donorInfo' },
+      {
+        $group: {
+          _id: { $concat: ['$donorInfo.bloodGroup', { $cond: [{ $eq: ['$donorInfo.rh', 'NEGATIVE'] }, '-', '+'] }] },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const bySite = await DonationModel.aggregate([
+      { $match: { deletedAt: null } },
+      {
+        $lookup: {
+          from: 'camps',
+          localField: 'campId',
+          foreignField: '_id',
+          as: 'campInfo'
+        }
+      },
+      {
+        $group: {
+          _id: { $ifNull: [{ $arrayElemAt: ['$campInfo.name', 0] }, 'In-house'] },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const byGender = await DonationModel.aggregate([
+      { $match: { deletedAt: null } },
+      {
+        $lookup: {
+          from: 'donors',
+          localField: 'donor',
+          foreignField: '_id',
+          as: 'donorInfo'
+        }
+      },
+      { $unwind: '$donorInfo' },
+      { $group: { _id: '$donorInfo.sex', count: { $sum: 1 } } }
+    ]);
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const trendsAgg = await DonationModel.aggregate([
+      { $match: { collectedAt: { $gte: thirtyDaysAgo }, deletedAt: null } },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$collectedAt' } },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+    const trends = trendsAgg.map(t => ({ date: t._id, count: t.count }));
+
+    res.json({
+      success: true,
+      data: {
+        summary: { total },
+        breakdowns: { byBloodGroup: byBloodGroupAgg, bySite, byGender },
+        trends
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /mis/camps
+router.get('/mis/camps', authenticate, async (req, res, next) => {
+  try {
+    const camps = await CampModel.find().lean();
+    const campIds = camps.map(c => c._id);
+
+    const donationsByCamp = await DonationModel.aggregate([
+      { $match: { campId: { $in: campIds }, deletedAt: null } },
+      { $group: { _id: '$campId', count: { $sum: 1 } } }
+    ]);
+    const donationMap = new Map(donationsByCamp.map(d => [d._id.toString(), d.count]));
+
+    const discardedByCamp = await BloodUnitModel.aggregate([
+      { $match: { campId: { $in: campIds }, status: 'DISCARDED', deletedAt: null } },
+      { $group: { _id: '$campId', count: { $sum: 1 } } }
+    ]);
+    const discardedMap = new Map(discardedByCamp.map(d => [d._id.toString(), d.count]));
+
+    const reactiveByCamp = await TtiResultModel.aggregate([
+      { $match: { releaseDecision: 'reactive' } },
+      {
+        $lookup: {
+          from: 'donations',
+          localField: 'donationId',
+          foreignField: 'donationId',
+          as: 'donation'
+        }
+      },
+      { $unwind: '$donation' },
+      { $match: { 'donation.campId': { $in: campIds } } },
+      { $group: { _id: '$donation.campId', count: { $sum: 1 } } }
+    ]);
+    const reactiveMap = new Map(reactiveByCamp.map(r => [r._id.toString(), r.count]));
+
+    const data = camps.map(camp => {
+      const cid = camp._id.toString();
+      return {
+        name: camp.name,
+        address: camp.address,
+        dateFrom: camp.dateFrom,
+        dateTo: camp.dateTo,
+        totalBags: donationMap.get(cid) || 0,
+        discardedBags: discardedMap.get(cid) || 0,
+        serologyFailures: reactiveMap.get(cid) || 0
+      };
+    });
+
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /mis/bags
+router.get('/mis/bags', authenticate, async (req, res, next) => {
+  try {
+    const ttiStats = await TtiResultModel.aggregate([
+      { $group: { _id: '$releaseDecision', count: { $sum: 1 } } }
+    ]);
+    const stats = ttiStats.map(s => {
+      let status = 'testing';
+      if (s._id === 'released') status = 'passed';
+      else if (s._id === 'reactive') status = 'failed';
+      else if (s._id === 'pending') status = 'testing';
+      return { _id: status, count: s.count };
+    });
+
+    const donations = await DonationModel.find({ deletedAt: null })
+      .sort({ collectedAt: -1 })
+      .limit(100)
+      .populate('donor', 'donorId bloodGroup rh')
+      .populate('campId', 'name')
+      .lean();
+
+    const donationIds = donations.map(d => d.donationId);
+    const ttis = await TtiResultModel.find({ donationId: { $in: donationIds } }).lean();
+    const ttiMap = new Map(ttis.map(t => [t.donationId, t.releaseDecision]));
+
+    const bags = donations.map((d: any) => {
+      const decision = ttiMap.get(d.donationId) || 'pending';
+      let status = 'testing';
+      if (decision === 'released') status = 'passed';
+      else if (decision === 'reactive') status = 'failed';
+
+      const donor = d.donor;
+      const bgStr = donor ? `${donor.bloodGroup}${donor.rh === 'NEGATIVE' ? '-' : '+'}` : 'Unknown';
+
+      return {
+        _id: d._id.toString(),
+        bagNo: d.bagNo || d.donationId,
+        donor: { donorId: donor?.donorId || '-' },
+        bloodGroup: bgStr,
+        collectionDate: d.collectedAt,
+        status,
+        siteId: { name: d.campId ? d.campId.name : 'In-house' }
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        stats,
+        register: { bags }
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /mis/components
+router.get('/mis/components', authenticate, async (req, res, next) => {
+  try {
+    const productionAgg = await BloodUnitModel.aggregate([
+      { $match: { deletedAt: null } },
+      {
+        $group: {
+          _id: '$componentType',
+          count: { $sum: 1 },
+          avgVolume: { $avg: '$volumeMl' }
+        }
+      }
+    ]);
+    const production = productionAgg.map(p => ({
+      _id: toLegacyComponentType(p._id),
+      count: p.count,
+      avgVolume: p.avgVolume || 0
+    }));
+
+    const units = await BloodUnitModel.find({ deletedAt: null }).lean();
+    const now = new Date();
+    const buckets = { '0-5': 0, '6-10': 0, '11-20': 0, '21-35': 0, '36+': 0 };
+    units.forEach((u: any) => {
+      if (!u.collectedAt) return;
+      const diffMs = now.getTime() - new Date(u.collectedAt).getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays <= 5) buckets['0-5']++;
+      else if (diffDays >= 6 && diffDays <= 10) buckets['6-10']++;
+      else if (diffDays >= 11 && diffDays <= 20) buckets['11-20']++;
+      else if (diffDays >= 21 && diffDays <= 35) buckets['21-35']++;
+      else if (diffDays >= 36) buckets['36+']++;
+    });
+    const ageing = Object.entries(buckets).map(([k, v]) => ({ _id: k, count: v }));
+
+    const status = await BloodUnitModel.aggregate([
+      { $match: { deletedAt: null } },
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    res.json({
+      success: true,
+      data: { production, ageing, status }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /mis/inventory
+router.get('/mis/inventory', authenticate, async (req, res, next) => {
+  try {
+    const inventoryAgg = await BloodUnitModel.aggregate([
+      { $match: { status: { $in: ['RELEASED', 'RESERVED', 'CROSSMATCHED'] }, deletedAt: null } },
+      {
+        $group: {
+          _id: {
+            type: '$componentType',
+            group: '$aboGroup',
+            rh: { $cond: [{ $eq: ['$rhFactor', 'NEGATIVE'] }, 'Negative', 'Positive'] }
+          },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const data = inventoryAgg.map(item => ({
+      _id: {
+        type: toLegacyComponentType(item._id.type),
+        group: item._id.group,
+        rh: item._id.rh
+      },
+      count: item.count
+    }));
+
+    res.json({ success: true, data });
   } catch (err) {
     next(err);
   }

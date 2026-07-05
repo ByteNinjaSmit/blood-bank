@@ -100,9 +100,12 @@ router.get('/list', authenticate, async (req, res, next) => {
         
         let legacyStatus = 'in-stock';
         if (u.status === 'RELEASED') legacyStatus = 'in-stock';
-        else if (u.status === 'RESERVED') legacyStatus = 'reserved';
-        else if (u.status === 'ISSUED') legacyStatus = 'issued';
+        else if (u.status === 'RESERVED' || u.status === 'CROSSMATCHED') legacyStatus = 'reserved';
+        else if (u.status === 'ISSUED' || u.status === 'TRANSFUSED') legacyStatus = 'issued';
         else if (u.status === 'DISCARDED' || u.status === 'EXPIRED') legacyStatus = 'discarded';
+        else if (u.status === 'QUARANTINE') legacyStatus = 'quarantined';
+        else if (u.status === 'IN_TESTING') legacyStatus = 'testing';
+        else if (u.status === 'COLLECTED') legacyStatus = 'collected';
 
         return {
           status: 'prepared',
@@ -315,23 +318,46 @@ router.post('/separation-completed', authenticate, async (req, res, next) => {
     }
     const resolvedDonationId = donation.donationId;
     
-    await BloodUnitModel.updateMany(
-      { donationId: resolvedDonationId, status: 'COLLECTED', deletedAt: null },
-      {
-        status: 'QUARANTINE',
-        updatedBy: actor,
-        $push: {
-          statusHistory: {
-            from: 'COLLECTED',
-            to: 'QUARANTINE',
-            event: 'SEPARATION_COMPLETE',
-            actor,
-            at: new Date(),
-            reason: `Signature: ${signature}`
+    const tti = await TtiResultModel.findOne({ donationId: resolvedDonationId }).lean();
+    const shouldRelease = tti?.releaseDecision === 'released';
+
+    if (shouldRelease) {
+      await BloodUnitModel.updateMany(
+        { donationId: resolvedDonationId, status: 'COLLECTED', deletedAt: null },
+        {
+          status: 'RELEASED',
+          updatedBy: actor,
+          $push: {
+            statusHistory: {
+              from: 'COLLECTED',
+              to: 'RELEASED',
+              event: 'RELEASE',
+              actor,
+              at: new Date(),
+              reason: `Signature: ${signature}. Auto-released because TTI is already released.`
+            }
           }
         }
-      }
-    );
+      );
+    } else {
+      await BloodUnitModel.updateMany(
+        { donationId: resolvedDonationId, status: 'COLLECTED', deletedAt: null },
+        {
+          status: 'QUARANTINE',
+          updatedBy: actor,
+          $push: {
+            statusHistory: {
+              from: 'COLLECTED',
+              to: 'QUARANTINE',
+              event: 'SEPARATION_COMPLETE',
+              actor,
+              at: new Date(),
+              reason: `Signature: ${signature}`
+            }
+          }
+        }
+      );
+    }
 
     res.json({ success: true, message: 'Separation completed successfully' });
   } catch (e) {
@@ -394,9 +420,12 @@ router.get('/near-expiry', authenticate, async (req, res, next) => {
       const d = donationMap.get(u.donationId);
       let legacyStatus = 'in-stock';
       if (u.status === 'RELEASED') legacyStatus = 'in-stock';
-      else if (u.status === 'RESERVED') legacyStatus = 'reserved';
-      else if (u.status === 'ISSUED') legacyStatus = 'issued';
+      else if (u.status === 'RESERVED' || u.status === 'CROSSMATCHED') legacyStatus = 'reserved';
+      else if (u.status === 'ISSUED' || u.status === 'TRANSFUSED') legacyStatus = 'issued';
       else if (u.status === 'DISCARDED' || u.status === 'EXPIRED') legacyStatus = 'discarded';
+      else if (u.status === 'QUARANTINE') legacyStatus = 'quarantined';
+      else if (u.status === 'IN_TESTING') legacyStatus = 'testing';
+      else if (u.status === 'COLLECTED') legacyStatus = 'collected';
 
       let legacyType: string = u.componentType;
       if (u.componentType === 'PRBC') legacyType = 'RBC';
@@ -459,9 +488,12 @@ router.get('/:id', authenticate, async (req, res, next) => {
       
       let legacyStatus = 'in-stock';
       if (u.status === 'RELEASED') legacyStatus = 'in-stock';
-      else if (u.status === 'RESERVED') legacyStatus = 'reserved';
-      else if (u.status === 'ISSUED') legacyStatus = 'issued';
+      else if (u.status === 'RESERVED' || u.status === 'CROSSMATCHED') legacyStatus = 'reserved';
+      else if (u.status === 'ISSUED' || u.status === 'TRANSFUSED') legacyStatus = 'issued';
       else if (u.status === 'DISCARDED' || u.status === 'EXPIRED') legacyStatus = 'discarded';
+      else if (u.status === 'QUARANTINE') legacyStatus = 'quarantined';
+      else if (u.status === 'IN_TESTING') legacyStatus = 'testing';
+      else if (u.status === 'COLLECTED') legacyStatus = 'collected';
 
       return {
         componentId: u.unitId,

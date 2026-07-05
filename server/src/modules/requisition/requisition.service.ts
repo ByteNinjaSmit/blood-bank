@@ -71,6 +71,26 @@ export function createRequisitionService(deps: {
       if (req.status !== 'PENDING' && req.status !== 'MATCHED') {
         throw new ConflictError(`Cannot match requisition in status ${req.status}`);
       }
+
+      // Unreserve any existing matched units to prevent resource leaks
+      if (Array.isArray(req.matchedUnits) && req.matchedUnits.length > 0) {
+        for (const m of req.matchedUnits) {
+          await deps.units
+            .applyEvent({
+              unitId: m.unitId,
+              event: 'UNRESERVE',
+              actorId,
+              reason: `Unreserving previous match for re-matching requisition ${req.requisitionId}`,
+              set: {
+                reservedFor: null,
+                reservedAt: null,
+                reservedUntil: null,
+              } as any,
+            })
+            .catch(() => undefined);
+        }
+      }
+
       const patient = await deps.patients.findById(req.patientId);
 
       const matched: MatchedUnitDto[] = [];
@@ -172,6 +192,11 @@ export function createRequisitionService(deps: {
             event: 'UNRESERVE',
             actorId,
             reason: `Requisition ${req.requisitionId} rejected`,
+            set: {
+              reservedFor: null,
+              reservedAt: null,
+              reservedUntil: null,
+            } as any,
           })
           .catch(() => undefined);
       }

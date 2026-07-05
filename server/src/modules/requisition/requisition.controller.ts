@@ -186,7 +186,7 @@ export function createRequisitionControllers(deps: {
     async create(req, res, next) {
       try {
         const actorId = actor(req);
-        
+
         // Normalize requestedComponents
         const requestedComponents = (req.body.requestedComponents || []).map((rc: any) => {
           let componentType = rc.componentType || 'PRBC';
@@ -226,7 +226,7 @@ export function createRequisitionControllers(deps: {
         if (!req.body.patientId && req.body.patient) {
           const p = req.body.patient;
           const patientPublicId = 'PAT-' + new mongoose.Types.ObjectId().toHexString().slice(-6).toUpperCase();
-          
+
           let dob: Date | undefined = undefined;
           if (p.age) {
             const ageNum = Number(p.age);
@@ -365,27 +365,27 @@ export function createRequisitionControllers(deps: {
       try {
         const { id } = ValidateRequisition.idParam(req);
         const result = await deps.requisitions.match(id, actor(req));
-        
+
         // Check if there are any shortages in result.shortages
         const shortageKeys = Object.keys(result.shortages || {});
         if (shortageKeys.length > 0) {
           // Format the shortages map back to the array of objects the frontend expects
           const requisition = await RequisitionModel.findById(id).lean() as any;
           const formattedShortages = [];
-          
+
           for (const key of shortageKeys) {
             // key is e.g. "PRBC-OPOSITIVE"
             const rc = requisition?.requestedComponents?.find((c: any) => {
               const keyPrefix = `${c.componentType}-${c.aboGroup}${c.rhFactor}`;
               return key === keyPrefix;
             });
-            
+
             if (rc) {
               const compType = rc.componentType === 'PRBC' ? 'RBC' : rc.componentType === 'PLATELET_CONCENTRATE' ? 'Platelet' : rc.componentType === 'CRYOPRECIPITATE' ? 'Cryo' : rc.componentType;
               const missingCount = result.shortages[key] || 0;
               const requiredCount = rc.units;
               const availableCount = Math.max(0, requiredCount - missingCount);
-              
+
               formattedShortages.push({
                 componentType: compType,
                 bloodGroup: rc.aboGroup,
@@ -396,7 +396,7 @@ export function createRequisitionControllers(deps: {
               });
             }
           }
-          
+
           res.status(409).json({
             success: false,
             message: 'Insufficient compatible stock to fully match request',

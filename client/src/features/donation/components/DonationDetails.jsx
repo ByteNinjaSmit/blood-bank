@@ -46,11 +46,19 @@ const DonationDetails = ({ donation }) => {
   return (
     <div className="space-y-6 text-sm text-slate-800">
       {/* Summary */}
-      <div className="rounded-lg bg-white/70 border border-slate-100 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div className="relative rounded-lg bg-white/70 border border-slate-100 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-6 sm:pt-4">
+        <div className="absolute top-3 right-4 text-right hidden sm:block">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Donation ID</span>
+          <span className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded shadow-sm">{donation.donationId}</span>
+        </div>
         <div>
           <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide mb-1">
             Donation overview
           </p>
+          <div className="sm:hidden mb-2 text-left">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Donation ID:</span>
+            <span className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded shadow-sm">{donation.donationId}</span>
+          </div>
           <h3 className="text-lg font-semibold text-slate-900">
             Bag {bagNo}
           </h3>
@@ -92,7 +100,7 @@ const DonationDetails = ({ donation }) => {
             </p>
             {donation.lotNo && (
               <p>
-                <span className="font-medium">Lot No:</span> {donation.lotNo}
+                <span className="font-medium">Batch No:</span> {donation.lotNo}
               </p>
             )}
             <p>

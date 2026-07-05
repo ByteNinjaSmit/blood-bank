@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Syringe, X } from 'lucide-react';
+import { Syringe, X, Search } from 'lucide-react';
 import {
   useBagIssueList,
   useBagIssueDetail,
@@ -168,7 +168,49 @@ export default function BagIssuance() {
   const { data, isLoading } = useBagIssueList({});
   const { data: stockSummaryData } = useStockSummary();
 
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilterType, setDateFilterType] = useState('all'); // 'all', 'today', 'custom'
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
   const issues = data?.items ?? data?.bagIssues ?? (Array.isArray(data) ? data : []);
+
+  // Filter logic
+  const filteredIssues = issues.filter((iss) => {
+    // 1. Search Query Filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const bagNo = (iss.bagSerialNumber || iss.bagSerialNo || '').toLowerCase();
+      const segmentNo = (iss.segmentNo || '').toLowerCase();
+      const batchNo = (iss.batchNumber || iss.batchNo || '').toLowerCase();
+      const bloodGroup = (iss.bloodGroup || '').toLowerCase();
+      
+      const match = bagNo.includes(q) || segmentNo.includes(q) || batchNo.includes(q) || bloodGroup.includes(q);
+      if (!match) return false;
+    }
+
+    // 2. Date Filter
+    if (dateFilterType === 'today') {
+      const todayStr = new Date().toDateString();
+      const issDateStr = iss.issueDate || iss.createdAt ? new Date(iss.issueDate || iss.createdAt).toDateString() : '';
+      if (todayStr !== issDateStr) return false;
+    } else if (dateFilterType === 'custom') {
+      const issTime = iss.issueDate || iss.createdAt ? new Date(iss.issueDate || iss.createdAt).getTime() : 0;
+      if (fromDate) {
+        const startOfDay = new Date(fromDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        if (issTime < startOfDay.getTime()) return false;
+      }
+      if (toDate) {
+        const endOfDay = new Date(toDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (issTime > endOfDay.getTime()) return false;
+      }
+    }
+
+    return true;
+  });
 
   const mapIssuanceForExport = (items) => {
     return items.map(iss => ({
@@ -185,7 +227,7 @@ export default function BagIssuance() {
   const handleExportExcel = async (exportAll = false) => {
     try {
       setExcelLoading(true);
-      const dataToExport = mapIssuanceForExport(issues);
+      const dataToExport = mapIssuanceForExport(filteredIssues);
 
       if (dataToExport.length === 0) {
         toast.info("No issuances to export");
@@ -202,10 +244,10 @@ export default function BagIssuance() {
   };
 
   const stats = {
-    total:    issues.length,
-    inUse:    issues.filter((i) => i.status === 'ISSUED').length,
-    returned: issues.filter((i) => i.status === 'RETURNED').length,
-    damaged:  issues.filter((i) => i.status === 'DAMAGED').length,
+    total:    filteredIssues.length,
+    inUse:    filteredIssues.filter((i) => i.status === 'ISSUED').length,
+    returned: filteredIssues.filter((i) => i.status === 'RETURNED').length,
+    damaged:  filteredIssues.filter((i) => i.status === 'DAMAGED').length,
   };
 
   const fmtDate = (d) => d
@@ -234,6 +276,89 @@ export default function BagIssuance() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <ComponentStockLines stockSummary={stockSummaryData} />
 
+        {/* Search and Date Filter Bar */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex-1 w-full">
+              <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                Search Bag Info
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search Bag No, Segment, Batch..."
+                  className="w-full pl-9 pr-4 py-2 border border-gray-250 rounded-lg text-sm focus:ring-2 focus:ring-orange-800/20 focus:border-orange-800 outline-none transition-all border-gray-200"
+                />
+              </div>
+            </div>
+
+            <div className="w-full md:w-48">
+              <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                Date Filter
+              </label>
+              <select
+                value={dateFilterType}
+                onChange={(e) => {
+                  setDateFilterType(e.target.value);
+                  if (e.target.value !== 'custom') {
+                    setFromDate('');
+                    setToDate('');
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-orange-800/20 focus:border-orange-800 outline-none transition-all"
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="custom">Custom Date Range</option>
+              </select>
+            </div>
+
+            {dateFilterType === 'custom' && (
+              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <div className="w-full sm:w-40">
+                  <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                    From Date
+                  </label>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-800/20 focus:border-orange-800 bg-white"
+                  />
+                </div>
+                <div className="w-full sm:w-40">
+                  <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                    To Date
+                  </label>
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-800/20 focus:border-orange-800 bg-white"
+                  />
+                </div>
+              </div>
+            )}
+
+            {(searchQuery || dateFilterType !== 'all' || fromDate || toDate) && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setDateFilterType('all');
+                  setFromDate('');
+                  setToDate('');
+                }}
+                className="px-4 py-2 border border-gray-205 rounded-lg text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors shrink-0 w-full md:w-auto border-gray-200 bg-white shadow-2xs"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-4 max-w-2xl">
           <StatCard label="Total Issued" value={stats.total}    color="text-gray-900" />
           <StatCard label="Total Discarded" value={stats.damaged}  color="text-red-700" />
@@ -252,9 +377,9 @@ export default function BagIssuance() {
               <tbody className="divide-y divide-gray-100">
                 {isLoading ? (
                   <tr><td colSpan={7} className="py-12 text-center text-sm text-gray-500">Loading...</td></tr>
-                ) : issues.length === 0 ? (
+                ) : filteredIssues.length === 0 ? (
                   <tr><td colSpan={7} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
-                ) : issues.map((iss) => (
+                ) : filteredIssues.map((iss) => (
                   <tr key={iss.id} className="hover:bg-orange-50/30 transition-colors">
                     <td className="px-4 py-3 text-sm font-mono font-bold text-gray-900">
                       {iss.bagSerialNumber ?? iss.bagSerialNo ?? '—'}

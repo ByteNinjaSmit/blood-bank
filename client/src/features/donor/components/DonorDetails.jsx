@@ -193,10 +193,19 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
                         Donation ID: {donation.donationId}
                       </span>
                     </div>
-                    <div className="text-xs text-gray-500 flex items-center gap-3 font-mono">
-                      <span>Date: {donation.collectedAt ? new Date(donation.collectedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</span>
-                      <span>Bag No: {donation.bagNo}</span>
-                      <span>Segment: {donation.segmentNo}</span>
+                    <div className="text-xs font-semibold text-gray-700 flex flex-wrap items-center gap-2">
+                      <span className="bg-white px-2 py-1 rounded-md border border-gray-200 shadow-sm">
+                        Date: <span className="text-gray-950 font-mono font-bold ml-0.5">{donation.collectedAt ? new Date(donation.collectedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</span>
+                      </span>
+                      <span className="bg-white px-2 py-1 rounded-md border border-gray-200 shadow-sm">
+                        Bag No: <span className="text-gray-950 font-mono font-bold ml-0.5">{donation.bagNo}</span>
+                      </span>
+                      <span className="bg-white px-2 py-1 rounded-md border border-gray-200 shadow-sm">
+                        Segment No: <span className="text-gray-950 font-mono font-bold ml-0.5">{donation.segmentNo}</span>
+                      </span>
+                      <span className="bg-white px-2 py-1 rounded-md border border-gray-200 shadow-sm">
+                        Batch No: <span className="text-gray-950 font-mono font-bold ml-0.5">{donation.lotNo || '—'}</span>
+                      </span>
                     </div>
                   </div>
 

@@ -1021,20 +1021,19 @@ export default function BagInspection() {
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
-                  {['Batch No', 'GRN Ref', 'Inspection Date', 'Decision', 'Testing Status', 'Results', 'Actions'].map((h) => (
+                  {['Batch No', 'Inspection Date', 'Decision', 'Testing Status', 'Results', 'Actions'].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {isLoading ? (
-                  <tr><td colSpan={7} className="py-12 text-center text-sm text-gray-500">Loading...</td></tr>
+                  <tr><td colSpan={6} className="py-12 text-center text-sm text-gray-500">Loading...</td></tr>
                 ) : inspections.length === 0 ? (
-                  <tr><td colSpan={7} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
+                  <tr><td colSpan={6} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
                 ) : inspections.map((ins) => (
                   <tr key={ins._id} className="hover:bg-orange-50/30 transition-colors">
                     <td className="px-4 py-3 text-sm font-mono text-gray-700">{ins.batchNumber}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{ins.grn?.grnNumber ?? ins.grnId}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(ins.inspectionDate ?? ins.createdAt)}</td>
                     <td className="px-4 py-3"><DecisionBadge decision={ins.decision} /></td>
                     <td className="px-4 py-3">

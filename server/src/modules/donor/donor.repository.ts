@@ -264,6 +264,7 @@ async function getDetailedDonationHistory(donorId: string): Promise<any[]> {
       donationId: donation.donationId,
       bagNo: donation.bagNo,
       segmentNo: donation.segmentNo || 'N/A',
+      lotNo: donation.lotNo || 'N/A',
       collectedAt: donation.collectedAt ? donation.collectedAt.toISOString() : null,
       donationPlace,
       components: componentsWithReqs,

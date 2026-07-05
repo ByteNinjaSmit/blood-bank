@@ -66,7 +66,7 @@ const BagInformationStep = ({ formData, fieldErrors, onFieldChange }) => {
         {/* Batch No (Lot No) */}
         <div>
           <label className="block text-sm mb-1">
-            Batch No (Lot No)
+            Batch No
             <span className="text-red-500 ml-1">*</span>
           </label>
           <select

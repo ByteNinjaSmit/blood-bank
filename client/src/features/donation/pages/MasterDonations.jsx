@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, Home, Building2, Droplets, Activity, CheckCircle2, XCircle, Search, Eye, GitCommitHorizontal, Plus, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDonationList, useDonationDetail } from '@/features/donation/queries';
@@ -25,6 +25,7 @@ export default function MasterDonations() {
   const [currentPage, setCurrentPage] = useState(1);
   const [trackId, setTrackId] = useState(null);
   const [viewDonationId, setViewDonationId] = useState(null);
+  const [searchedDonation, setSearchedDonation] = useState(null);
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,8 +110,53 @@ export default function MasterDonations() {
 
   const allItems = data?.items ?? [];
 
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      setSearchedDonation(null);
+      return;
+    }
+
+    const exists = allItems.some(
+      (d) =>
+        (d.donationId || '').toLowerCase() === trimmed.toLowerCase() ||
+        (d.bagNo || '').toLowerCase() === trimmed.toLowerCase()
+    );
+
+    if (exists) {
+      setSearchedDonation(null);
+      return;
+    }
+
+    const fetchSearched = async () => {
+      try {
+        const res = await donationApi.detail(trimmed);
+        if (res) {
+          setSearchedDonation(res);
+        } else {
+          setSearchedDonation(null);
+        }
+      } catch (err) {
+        setSearchedDonation(null);
+      }
+    };
+
+    const timer = setTimeout(fetchSearched, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, allItems]);
+
+  const baseItems = [...allItems];
+  if (searchedDonation) {
+    const alreadyExists = baseItems.some(
+      (d) => d.donationId === searchedDonation.donationId
+    );
+    if (!alreadyExists) {
+      baseItems.unshift(searchedDonation);
+    }
+  }
+
   // Client-side filtering
-  const filteredItems = allItems.filter((d) => {
+  const filteredItems = baseItems.filter((d) => {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const bagNoMatch = (d.bagNo || d.donationId || '').toLowerCase().includes(q);

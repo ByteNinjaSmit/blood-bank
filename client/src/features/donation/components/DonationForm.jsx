@@ -210,9 +210,9 @@ const DonationForm = ({
                   {...register('segmentNo', { required: 'Segment number is required' })}
                 />
               </FormField>
-              <FormField label="Lot No" required error={errors.lotNo?.message}>
+              <FormField label="Batch No" required error={errors.lotNo?.message}>
                 <FormField.Input
-                  {...register('lotNo', { required: 'Lot number is required' })}
+                  {...register('lotNo', { required: 'Batch number is required' })}
                 />
               </FormField>
               <FormField label="Type of Bag" required error={errors.typeOfBag?.message}>

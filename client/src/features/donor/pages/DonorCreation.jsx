@@ -1999,7 +1999,7 @@ export default function DonorCreation() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Lot Number <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Batch Number <span className="text-red-500">*</span></label>
                   <select
                     value={formData.lotNo}
                     onChange={(e) => handleFormFieldChange("lotNo", e.target.value)}
@@ -2146,7 +2146,7 @@ export default function DonorCreation() {
                   <div className="grid grid-cols-2 gap-2 text-sm text-purple-800">
                     <p><strong>Bag No:</strong> {formData.bagNo}</p>
                     <p><strong>Segment No:</strong> {formData.segmentNo}</p>
-                    <p><strong>Lot No:</strong> {formData.lotNo}</p>
+                    <p><strong>Batch No:</strong> {formData.lotNo}</p>
                     <p><strong>Type:</strong> {formData.typeOfBag}</p>
                     {formData.collectionDate && (
                       <p><strong>Donation Date:</strong> {new Date(formData.collectionDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
