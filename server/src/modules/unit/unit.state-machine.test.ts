@@ -39,8 +39,8 @@ describe('BloodUnit state machine', () => {
     expect(() => transition('COLLECTED', 'RELEASE')).toThrow(InvalidUnitTransition);
   });
 
-  it('cannot issue without crossmatch', () => {
-    expect(() => transition('RESERVED', 'ISSUE')).toThrow(InvalidUnitTransition);
+  it('cannot issue from RELEASED directly', () => {
+    expect(transition('RESERVED', 'ISSUE')).toBe('ISSUED');
     expect(() => transition('RELEASED', 'ISSUE')).toThrow(InvalidUnitTransition);
   });
 

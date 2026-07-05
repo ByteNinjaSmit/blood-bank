@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { ConfirmModal } from '@/components/shared';
+import React, { useState, useEffect } from 'react';
 
 function CompatBadge({ type }) {
   if (type === 'exact') {
@@ -28,13 +27,13 @@ function CrossmatchStatusBadge({ status, required }) {
 
 export default function ApproveIssueStep({ requestDoc, approving, issuing, onApprove, onIssue }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedUnitIds, setSelectedUnitIds] = useState([]);
   const status = requestDoc?.status;
   const hasMatches = Array.isArray(requestDoc?.matchedInventory) && requestDoc.matchedInventory.length > 0;
   const canApprove = !!requestDoc?._id && status === 'matched' && !approving;
-  const canIssue = !!requestDoc?._id && ['matched', 'approved'].includes(status) && hasMatches && !issuing;
+  const canIssue = !!requestDoc?._id && ['matched', 'approved'].includes(status) && hasMatches;
 
-  // ── Crossmatch safety check ──
-  // Block issuing if any RBC unit has pending or incompatible crossmatch
+  // ── Crossmatch safety check (for warning display) ──
   const pendingCrossmatch = (requestDoc?.matchedInventory || []).filter(
     (mi) => mi.crossmatchRequired && mi.crossmatchStatus === 'pending'
   );
@@ -42,30 +41,209 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
     (mi) => mi.crossmatchRequired && mi.crossmatchStatus === 'incompatible'
   );
   const hasCrossmatchBlocker = pendingCrossmatch.length > 0 || incompatibleCrossmatch.length > 0;
-  const safeToIssue = canIssue && !hasCrossmatchBlocker;
 
-  const handleIssueClick = () => {
-    if (!safeToIssue) return;
-    setConfirmOpen(true);
+  // Group inventory by component type for rendering in the selection modal
+  const groupedInventory = React.useMemo(() => {
+    const groups = {};
+    for (const mi of requestDoc?.matchedInventory || []) {
+      const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+      const compType = inv?.componentId?.componentType || 'Unknown';
+      if (!groups[compType]) groups[compType] = [];
+      groups[compType].push(mi);
+    }
+    return groups;
+  }, [requestDoc]);
+
+  // Count metrics for modal
+  const totalCount = requestDoc?.matchedInventory?.length || 0;
+  const alreadyIssuedCount = requestDoc?.matchedInventory?.filter(mi => {
+    const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+    return inv?.status === 'ISSUED';
+  }).length || 0;
+  const remainingCount = totalCount - alreadyIssuedCount;
+
+  // Initialize selected unit IDs when opening the modal
+  useEffect(() => {
+    if (confirmOpen && requestDoc?.matchedInventory) {
+      const pendingIds = requestDoc.matchedInventory
+        .filter((mi) => {
+          const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+          const isIssued = inv?.status === 'ISSUED';
+          const isXmBlocked = mi.crossmatchRequired && mi.crossmatchStatus !== 'compatible';
+          return !isIssued && !isXmBlocked;
+        })
+        .map((mi) => {
+          const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+          return inv?._id || mi.inventoryId;
+        })
+        .filter(Boolean);
+      setSelectedUnitIds(pendingIds);
+    }
+  }, [confirmOpen, requestDoc]);
+
+  const toggleUnitSelection = (unitId) => {
+    setSelectedUnitIds((prev) =>
+      prev.includes(unitId) ? prev.filter((id) => id !== unitId) : [...prev, unitId]
+    );
   };
 
-  const count = Array.isArray(requestDoc?.matchedInventory) ? requestDoc.matchedInventory.length : 0;
+  const handleIssueClick = () => {
+    if (!canIssue) return;
+    setConfirmOpen(true);
+  };
 
   return (
     <div className="p-6 space-y-4">
       <h3 className="font-semibold text-gray-800">Approve and Issue</h3>
 
-      <ConfirmModal
-        isOpen={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        onConfirm={onIssue}
-        title="Issue Blood Units"
-        message={`Are you sure you want to issue ${count} unit(s) for request ${requestDoc?.requestId}? This action will finalize the reservation.`}
-        confirmText="Yes, Issue Units"
-        type="info"
-      />
+      {/* Custom Component-Wise Issuing Selection Modal */}
+      {confirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-150 max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-150 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                  Select Units to Issue
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Select which reserved bags to issue for request {requestDoc?.requestId}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmOpen(false)}
+                className="text-gray-400 hover:text-gray-600 font-semibold p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
 
-      {/* Crossmatch blocker warnings */}
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-1">
+              {Object.keys(groupedInventory).length > 0 ? (
+                Object.entries(groupedInventory).map(([compType, items]) => (
+                  <div key={compType} className="border border-gray-150 rounded-xl overflow-hidden shadow-sm">
+                    <div className="px-4 py-2.5 bg-gray-50/50 border-b border-gray-150 flex items-center justify-between">
+                      <span className="font-semibold text-sm text-gray-800 uppercase tracking-wider">{compType}</span>
+                      <span className="text-xs text-gray-500 font-medium">({items.length} units total)</span>
+                    </div>
+                    <div className="divide-y divide-gray-150">
+                      {items.map((mi) => {
+                        const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+                        const unitId = inv?._id || mi.inventoryId;
+                        const isIssued = inv?.status === 'ISSUED';
+                        const isCrossmatchPending = mi.crossmatchRequired && mi.crossmatchStatus === 'pending';
+                        const isCrossmatchIncompatible = mi.crossmatchRequired && mi.crossmatchStatus === 'incompatible';
+                        const isXmBlocked = isCrossmatchPending || isCrossmatchIncompatible;
+                        const isCheckboxDisabled = isIssued || isXmBlocked;
+                        const isSelected = selectedUnitIds.includes(unitId);
+                        
+                        const bagNo = inv?.bagNo?.bagNo || '—';
+                        const groupText = inv?.bagNo ? `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}` : '—';
+                        
+                        return (
+                          <div 
+                            key={unitId} 
+                            onClick={() => !isCheckboxDisabled && toggleUnitSelection(unitId)}
+                            className={`p-3.5 flex items-center justify-between transition-colors ${
+                              isCheckboxDisabled 
+                                ? 'bg-gray-50/50 cursor-not-allowed opacity-80' 
+                                : 'hover:bg-orange-50/20 cursor-pointer'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3.5">
+                              <input
+                                type="checkbox"
+                                checked={isIssued || isSelected}
+                                disabled={isCheckboxDisabled}
+                                onChange={() => {}} // Controlled by row onClick
+                                className={`w-4 h-4 rounded text-green-700 border-gray-300 focus:ring-green-600 transition ${
+                                  isCheckboxDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                                }`}
+                              />
+                              <div>
+                                <div className="font-mono text-sm font-bold text-gray-700">{bagNo}</div>
+                                <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
+                                  <span>{groupText}</span>
+                                  <span>•</span>
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                                    mi.compatibilityType === 'exact' 
+                                      ? 'bg-green-50 text-green-700 border border-green-200' 
+                                      : 'bg-yellow-50 text-yellow-750 border border-yellow-200'
+                                  }`}>
+                                    {mi.compatibilityType === 'exact' ? 'Exact Match' : 'Compatible'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              {isIssued ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-50 border border-green-200 text-green-800">
+                                  ✅ Issued
+                                </span>
+                              ) : isCrossmatchPending ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 border border-amber-200 text-amber-800">
+                                  ⏳ XM Pending
+                                </span>
+                              ) : isCrossmatchIncompatible ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 border border-red-200 text-red-800">
+                                  🚫 Incompatible
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 border border-blue-200 text-blue-800">
+                                  Reserved
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 text-sm text-center py-4">No reserved units to display.</p>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-150 flex items-center justify-between">
+              <span className="text-xs text-gray-500 font-medium">
+                {selectedUnitIds.length} of {remainingCount} pending unit(s) selected
+              </span>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirmOpen(false)}
+                  className="px-4 py-2 border border-gray-250 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 hover:text-gray-800 transition active:scale-95 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedUnitIds.length === 0 || issuing}
+                  onClick={async () => {
+                    await onIssue(selectedUnitIds);
+                    setConfirmOpen(false);
+                  }}
+                  className={`px-5 py-2 rounded-lg text-sm font-bold text-white transition active:scale-95 flex items-center gap-2 ${
+                    selectedUnitIds.length === 0 || issuing
+                      ? 'bg-gray-305 cursor-not-allowed opacity-75'
+                      : 'bg-green-700 hover:bg-green-800 cursor-pointer shadow'
+                  }`}
+                >
+                  {issuing ? 'Issuing…' : 'Issue Selected'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Crossmatch blocker warnings (static feedback panel) */}
       {hasCrossmatchBlocker && (
         <div className="space-y-2">
           {pendingCrossmatch.length > 0 && (
@@ -73,7 +251,7 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
               <span className="text-lg">⚠️</span>
               <div>
                 <p className="font-semibold">Crossmatch Pending</p>
-                <p>{pendingCrossmatch.length} RBC unit(s) still have pending crossmatch. Complete crossmatch testing before issuing.</p>
+                <p>{pendingCrossmatch.length} RBC unit(s) still have pending crossmatch. RBC units must be compatible to issue, but other components can be issued now.</p>
               </div>
             </div>
           )}
@@ -82,7 +260,7 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
               <span className="text-lg">🚫</span>
               <div>
                 <p className="font-semibold">Crossmatch Incompatible</p>
-                <p>{incompatibleCrossmatch.length} RBC unit(s) marked incompatible. Go back to Match Review to resolve or replace.</p>
+                <p>{incompatibleCrossmatch.length} RBC unit(s) marked incompatible. Replace these units before issuing them.</p>
               </div>
             </div>
           )}
@@ -102,10 +280,10 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
           {approving ? 'Approving…' : 'Approve'}
         </button>
         <button
-          disabled={!safeToIssue}
+          disabled={!canIssue}
           onClick={handleIssueClick}
           className={`px-4 py-2 rounded-lg text-white ${
-            safeToIssue
+            canIssue
               ? 'bg-green-700 hover:bg-green-800 cursor-pointer'
               : 'bg-gray-200 text-gray-500 cursor-not-allowed'
           }`}
@@ -198,17 +376,21 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
               <thead>
                 <tr className="text-left text-gray-600">
                   <th className="p-2">Bag No</th>
+                  <th className="p-2">Segment No</th>
                   <th className="p-2">Component</th>
                   <th className="p-2">Blood</th>
                   <th className="p-2">Compatibility</th>
                   <th className="p-2">Crossmatch</th>
                   <th className="p-2">Reserved At</th>
+                  <th className="p-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {requestDoc.matchedInventory.map((mi) => {
                   const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
                   const invId = inv?._id || mi.inventoryId;
+                  const bagNo = inv?.bagNo?.bagNo || '—';
+                  const segmentNo = inv?.bagNo?.segmentNo || '—';
                   const compType = inv?.componentId?.componentType || '—';
                   const blood = inv?.bagNo ? `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}` : '—';
 
@@ -228,7 +410,8 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
 
                   return (
                     <tr key={invId} className="border-t">
-                      <td className="p-2 font-mono text-xs">{inv?.bagNo?.bagNo || '—'}</td>
+                      <td className="p-2 font-mono text-xs font-bold text-gray-800">{bagNo}</td>
+                      <td className="p-2 font-mono text-xs font-bold text-gray-800">{segmentNo}</td>
                       <td className="p-2">{compType}</td>
                       <td className="p-2">
                         <div className="font-semibold">{blood}</div>
@@ -243,6 +426,30 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
                         <CrossmatchStatusBadge status={mi.crossmatchStatus || 'not-required'} required={mi.crossmatchRequired || false} />
                       </td>
                       <td className="p-2 text-xs text-gray-500">{mi?.reservedAt ? new Date(mi.reservedAt).toLocaleString() : '—'}</td>
+                      <td className="p-2 text-right">
+                        {inv?.status === 'ISSUED' ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 border border-green-200 text-green-800">
+                            ✅ Issued
+                          </span>
+                        ) : mi.crossmatchRequired && mi.crossmatchStatus === 'pending' ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 border border-amber-200 text-amber-800" title="Crossmatch pending">
+                            ⏳ XM Pending
+                          </span>
+                        ) : mi.crossmatchRequired && mi.crossmatchStatus === 'incompatible' ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 border border-red-200 text-red-800" title="Crossmatch incompatible">
+                            🚫 Incompatible
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={issuing}
+                            onClick={() => onIssue([invId])}
+                            className="px-3 py-1 bg-green-700 hover:bg-green-800 text-white rounded text-xs font-bold transition active:scale-95 disabled:bg-gray-305 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            {issuing ? 'Issuing…' : 'Issue'}
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

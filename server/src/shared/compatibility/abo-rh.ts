@@ -26,9 +26,16 @@ const ABO_RBC: Readonly<Record<AboGroup, ReadonlyArray<AboGroup>>> = {
   AB: ['A', 'B', 'AB', 'O'],
 };
 
-// Plasma is the inverse table. Anti-A and anti-B antibodies in the
-// donor plasma must be acceptable to the recipient's red cells.
+// Plasma is strict same-group matching.
 const ABO_PLASMA: Readonly<Record<AboGroup, ReadonlyArray<AboGroup>>> = {
+  O: ['O'],
+  A: ['A'],
+  B: ['B'],
+  AB: ['AB'],
+};
+
+// Original Plasma compatibility table (used for Platelet Minor Compatibility mode)
+const ABO_PLASMA_COMPAT: Readonly<Record<AboGroup, ReadonlyArray<AboGroup>>> = {
   O: ['O', 'A', 'B', 'AB'],
   A: ['A', 'AB'],
   B: ['B', 'AB'],
@@ -64,6 +71,7 @@ const ABO_CRYO_PREF: Readonly<Record<AboGroup, ReadonlyArray<AboGroup>>> = {
 export function compatibleAboGroups(
   recipient: AboGroup,
   component: ComponentType,
+  plateletCompatibilityMode?: 'UNIVERSAL' | 'MAJOR' | 'MINOR',
 ): ReadonlyArray<AboGroup> {
   switch (rbcFamily(component)) {
     case 'RBC':
@@ -71,7 +79,13 @@ export function compatibleAboGroups(
     case 'PLASMA':
       return ABO_PLASMA[recipient];
     case 'PLATELET':
-      return ABO_PLATELET_PREF[recipient];
+      if (plateletCompatibilityMode === 'MAJOR') {
+        return ABO_RBC[recipient];
+      } else if (plateletCompatibilityMode === 'MINOR') {
+        return ABO_PLASMA_COMPAT[recipient];
+      } else {
+        return ABO_PLATELET_PREF[recipient];
+      }
     case 'CRYO':
       return ABO_CRYO_PREF[recipient];
     case 'WHOLE_BLOOD':

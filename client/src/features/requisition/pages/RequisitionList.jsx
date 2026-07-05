@@ -10,6 +10,7 @@ import RequisitionPrintTemplate from './components/RequisitionPrintTemplate';
 import RequisitionLabelTemplate from './components/RequisitionLabelTemplate';
 import RequisitionPrintService from '@/services/requisitionPrintService';
 import { RejectRequestModal } from '@/components/shared';
+import { Loader2 } from 'lucide-react';
 
 const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'rejected'];
 
@@ -43,6 +44,11 @@ export default function RequisitionList() {
   const [printType, setPrintType] = useState('report');
   const [multiLabelModalOpen, setMultiLabelModalOpen] = useState(false);
   const [multiLabelDoc, setMultiLabelDoc] = useState(null);
+
+  const [issueModalOpen, setIssueModalOpen] = useState(false);
+  const [issueDoc, setIssueDoc] = useState(null);
+  const [issueLoading, setIssueLoading] = useState(false);
+  const [issuingRowId, setIssuingRowId] = useState(null);
 
   const [excelLoading, setExcelLoading] = useState(false);
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
@@ -125,12 +131,34 @@ export default function RequisitionList() {
     fetchList();
   };
 
+  const handleOpenIssueModal = async (row) => {
+    setIssueLoading(true);
+    setIssueDoc(row);
+    setIssueModalOpen(true);
+    try {
+      const res = await requisitionApi.getRequest(row._id);
+      if (res.success) {
+        setIssueDoc(res.data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIssueLoading(false);
+    }
+  };
+
   const callAction = async (id, action) => {
     try {
       let res;
       if (action === 'match') res = await requisitionApi.match(id);
       if (action === 'approve') res = await requisitionApi.approve(id);
-      if (action === 'issue') res = await requisitionApi.issue(id);
+      if (action === 'issue') {
+        const row = data.find(r => r._id === id);
+        if (row) {
+          await handleOpenIssueModal(row);
+        }
+        return;
+      }
       if (action === 'complete') res = await requisitionApi.complete(id);
       if (action === 'reject') res = await requisitionApi.reject(id);
       if (!res?.success) return toast.error(res?.error || 'Action failed');
@@ -145,9 +173,45 @@ export default function RequisitionList() {
     const s = row.status;
     if (act === 'match') return s === 'pending';
     if (act === 'approve') return s === 'matched';
-    if (act === 'issue') return s === 'approved' || s === 'matched';
-    if (act === 'complete') return s === 'issued';
-    if (act === 'reject') return ['pending', 'matched', 'approved'].includes(s);
+    if (act === 'issue') {
+      if (s === 'rejected' || s === 'pending') return false;
+      const hasMatches = Array.isArray(row.matchedInventory) && row.matchedInventory.length > 0;
+      if (!hasMatches) return false;
+      const hasUnissued = row.matchedInventory.some(
+        (mi) => {
+          const status = typeof mi.inventoryId === 'object' ? mi.inventoryId?.status : '';
+          return status !== 'ISSUED';
+        }
+      );
+      return hasUnissued;
+    }
+    if (act === 'complete') {
+      if (s === 'completed' || s === 'rejected' || s === 'pending') return false;
+      const hasMatches = Array.isArray(row.matchedInventory) && row.matchedInventory.length > 0;
+      if (!hasMatches) return false;
+      const allIssued = row.matchedInventory.every(
+        (mi) => {
+          const status = typeof mi.inventoryId === 'object' ? mi.inventoryId?.status : '';
+          return status === 'ISSUED';
+        }
+      );
+      return allIssued;
+    }
+    if (act === 'reject') {
+      if (s === 'rejected') return false;
+      if (s === 'completed') {
+        const hasMatches = Array.isArray(row.matchedInventory) && row.matchedInventory.length > 0;
+        if (!hasMatches) return false;
+        const hasUnissued = row.matchedInventory.some(
+          (mi) => {
+            const status = typeof mi.inventoryId === 'object' ? mi.inventoryId?.status : '';
+            return status !== 'ISSUED';
+          }
+        );
+        return hasUnissued;
+      }
+      return ['pending', 'matched', 'approved', 'issued'].includes(s);
+    }
     return false;
   };
 
@@ -354,7 +418,7 @@ export default function RequisitionList() {
           <h1 className="text-2xl font-bold text-gray-900">Requisition List</h1>
           <p className="text-gray-600 text-sm">Filter, paginate, and manage requests</p>
         </div>
-      <CustomModal open={viewOpen} onCancel={closeView} title="Requisition Details" size="lg" hideFooter>
+      <CustomModal open={viewOpen} onCancel={closeView} title="Requisition Details" size="2xl" hideFooter>
         {!viewDoc || viewLoading ? (
           <div className="text-gray-600">Loading…</div>
         ) : (
@@ -446,27 +510,46 @@ export default function RequisitionList() {
                   <table className="min-w-full text-sm">
                     <thead>
                       <tr className="text-left text-gray-600">
-                        <th className="p-2">Inventory ID</th>
                         <th className="p-2">Component</th>
                         <th className="p-2">Bag No</th>
+                        <th className="p-2">Segment No</th>
                         <th className="p-2">Blood</th>
                         <th className="p-2">Donor Name</th>
                         <th className="p-2">Day of Donation</th>
                         <th className="p-2">Reserved At</th>
+                        <th className="p-2">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {viewDoc.matchedInventory.map((mi, i) => (
-                        <tr key={i} className="border-t">
-                          <td className="p-2">{typeof mi.inventoryId === 'object' ? mi.inventoryId?._id : mi.inventoryId}</td>
-                          <td className="p-2">{mi?.inventoryId?.componentId?.componentType || '—'}</td>
-                          <td className="p-2">{mi?.inventoryId?.bagNo?.bagNo || '—'}</td>
-                          <td className="p-2">{mi?.inventoryId?.bagNo ? `${mi.inventoryId.bagNo.bloodGroup} ${mi.inventoryId.bagNo.rh}` : '—'}</td>
-                          <td className="p-2">{mi?.inventoryId?.bagNo?.donorName || '—'}</td>
-                          <td className="p-2">{mi?.inventoryId?.bagNo?.collectedAt ? new Date(mi.inventoryId.bagNo.collectedAt).toLocaleDateString() : '—'}</td>
-                          <td className="p-2">{mi?.reservedAt ? fmt(mi.reservedAt) : '—'}</td>
-                        </tr>
-                      ))}
+                      {viewDoc.matchedInventory.map((mi, i) => {
+                        const st = mi?.inventoryId?.status;
+                        let badgeColor = 'bg-gray-50 border border-gray-200 text-gray-600';
+                        let label = 'Unavailable';
+                        if (st === 'ISSUED') {
+                          badgeColor = 'bg-green-50 border border-green-200 text-green-700';
+                          label = 'Issued';
+                        } else if (st === 'RESERVED' || st === 'CROSSMATCHED') {
+                          badgeColor = 'bg-blue-50 border border-blue-200 text-blue-700';
+                          label = 'Reserved';
+                        }
+
+                        return (
+                          <tr key={i} className="border-t">
+                            <td className="p-2">{mi?.inventoryId?.componentId?.componentType || '—'}</td>
+                            <td className="p-2">{mi?.inventoryId?.bagNo?.bagNo || '—'}</td>
+                            <td className="p-2">{mi?.inventoryId?.bagNo?.segmentNo || '—'}</td>
+                            <td className="p-2">{mi?.inventoryId?.bagNo ? `${mi.inventoryId.bagNo.bloodGroup} ${mi.inventoryId.bagNo.rh}` : '—'}</td>
+                            <td className="p-2">{mi?.inventoryId?.bagNo?.donorName || '—'}</td>
+                            <td className="p-2">{mi?.inventoryId?.bagNo?.collectedAt ? new Date(mi.inventoryId.bagNo.collectedAt).toLocaleDateString() : '—'}</td>
+                            <td className="p-2">{mi?.reservedAt ? fmt(mi.reservedAt) : '—'}</td>
+                            <td className="p-2">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${badgeColor}`}>
+                                {label}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -493,6 +576,162 @@ export default function RequisitionList() {
               <button
                 type="button"
                 onClick={closeView}
+                className="px-4 py-2 border border-gray-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold rounded-xl text-xs shadow-sm transition-all cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </CustomModal>
+
+      <CustomModal
+        open={issueModalOpen}
+        onCancel={() => { setIssueModalOpen(false); setIssueDoc(null); }}
+        title="Issue Components separately"
+        size="2xl"
+        hideFooter
+      >
+        {!issueDoc || issueLoading ? (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-green-700" />
+            <span className="ml-2 text-sm text-gray-500">Loading details…</span>
+          </div>
+        ) : (
+          <div className="space-y-4 text-sm">
+            {/* Patient Header Card */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row justify-between gap-4">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-0.5">Patient Details</span>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  {issueDoc.patient?.name || '—'}
+                </h3>
+                <span className="text-xs text-slate-500 mt-1 block font-medium">
+                  MRN: {issueDoc.patient?.mrn || '—'} • Age/Sex: {issueDoc.patient?.age || '—'}Y/{issueDoc.patient?.sex || '—'}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-0.5">Request ID</span>
+                <span className="px-2 py-0.5 bg-red-50 border border-red-200 text-red-800 text-xs font-semibold rounded-lg font-mono">
+                  {issueDoc.requestId || issueDoc.requisitionId || '—'}
+                </span>
+                <span className="text-xs text-slate-500 mt-1 block capitalize font-semibold">
+                  Status: {issueDoc.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Components list */}
+            <div>
+              <h4 className="font-semibold mb-2">Reserved Components to Issue</h4>
+              {issueDoc.matchedInventory?.length ? (
+                <div className="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50">
+                      <tr className="text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <th className="p-3">Bag No</th>
+                        <th className="p-3">Segment No</th>
+                        <th className="p-3">Component</th>
+                        <th className="p-3">Blood Group</th>
+                        <th className="p-3">Donation Date</th>
+                        <th className="p-3">Expiry Date</th>
+                        <th className="p-3 text-right">Status</th>
+                        <th className="p-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {issueDoc.matchedInventory.map((mi, idx) => {
+                        const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+                        const invId = inv?._id || mi.inventoryId || idx;
+                        const bagNo = inv?.bagNo?.bagNo || '—';
+                        const segmentNo = inv?.bagNo?.segmentNo || '—';
+                        const compType = inv?.componentId?.componentType || '—';
+                        const bloodGroup = inv?.bagNo?.bloodGroup ? `${inv.bagNo.bloodGroup} ${inv.bagNo.rh === 'Positive' ? '+' : inv.bagNo.rh === 'Negative' ? '-' : ''}` : '—';
+                        const donationDate = inv?.bagNo?.collectedAt ? new Date(inv.bagNo.collectedAt).toLocaleDateString() : '—';
+                        const expiryDate = inv?.componentId?.expiryDate ? new Date(inv.componentId.expiryDate).toLocaleDateString() : '—';
+                        const unitStatus = inv?.status || '—';
+
+                        const isIssued = unitStatus === 'ISSUED';
+                        const isReserved = unitStatus === 'RESERVED' || unitStatus === 'CROSSMATCHED';
+
+                        return (
+                          <tr key={invId} className="hover:bg-gray-50/50">
+                            <td className="p-3 font-mono text-xs font-bold text-gray-800">{bagNo}</td>
+                            <td className="p-3 font-mono text-xs font-bold text-gray-800">{segmentNo}</td>
+                            <td className="p-3 font-semibold text-gray-700">{compType}</td>
+                            <td className="p-3 font-bold text-gray-800">{bloodGroup}</td>
+                            <td className="p-3 text-gray-600">{donationDate}</td>
+                            <td className="p-3 text-gray-600">{expiryDate}</td>
+                            <td className="p-3 text-right">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+                                isIssued
+                                  ? 'bg-green-50 border border-green-200 text-green-700'
+                                  : isReserved
+                                  ? 'bg-blue-50 border border-blue-200 text-blue-700'
+                                  : 'bg-gray-50 border border-gray-200 text-gray-600'
+                              }`}>
+                                {isIssued ? 'ISSUED' : isReserved ? 'RESERVED' : unitStatus}
+                              </span>
+                            </td>
+                            <td className="p-3 text-right">
+                              {isReserved ? (
+                                <button
+                                  type="button"
+                                  disabled={issuingRowId === invId}
+                                  onClick={async () => {
+                                    setIssuingRowId(invId);
+                                    try {
+                                      const res = await requisitionApi.issue(issueDoc._id, [invId]);
+                                      if (!res.success) {
+                                        toast.error(res.error || 'Failed to issue component');
+                                      } else {
+                                        toast.success('Component issued successfully');
+                                        // Refresh the popup state
+                                        const fresh = await requisitionApi.getRequest(issueDoc._id);
+                                        if (fresh.success) {
+                                          setIssueDoc(fresh.data);
+                                          // Check if all units are issued to complete it automatically
+                                          const allDone = fresh.data.matchedInventory.every(
+                                            (m) => (typeof m.inventoryId === 'object' ? m.inventoryId?.status : '') === 'ISSUED'
+                                          );
+                                          if (allDone) {
+                                            const completeRes = await requisitionApi.complete(issueDoc._id);
+                                            if (completeRes.success) {
+                                              toast.success('All components issued. Requisition completed.');
+                                              setIssueModalOpen(false);
+                                              setIssueDoc(null);
+                                            }
+                                          }
+                                        }
+                                        fetchList();
+                                      }
+                                    } catch (e) {
+                                      toast.error('Network error during issue');
+                                    } finally {
+                                      setIssuingRowId(null);
+                                    }
+                                  }}
+                                  className="px-3 py-1 bg-green-700 hover:bg-green-800 text-white rounded text-xs font-bold transition active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                  {issuingRowId === invId ? 'Issuing…' : 'Issue'}
+                                </button>
+                              ) : null}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-gray-600 text-sm">No matched inventory.</div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-4 border-t mt-6">
+              <button
+                type="button"
+                onClick={() => { setIssueModalOpen(false); setIssueDoc(null); }}
                 className="px-4 py-2 border border-gray-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold rounded-xl text-xs shadow-sm transition-all cursor-pointer"
               >
                 Close
@@ -778,7 +1017,9 @@ export default function RequisitionList() {
                               <button disabled={!can(row, 'approve')} onClick={() => callAction(row._id, 'approve')} className={`px-3 py-1 rounded ${can(row,'approve') ? 'bg-blue-700 hover:bg-blue-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Approve</button>
                               <button disabled={!can(row, 'issue')} onClick={() => callAction(row._id, 'issue')} className={`px-3 py-1 rounded ${can(row,'issue') ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Issue</button>
                               <button disabled={!can(row, 'complete')} onClick={() => callAction(row._id, 'complete')} className={`px-3 py-1 rounded ${can(row,'complete') ? 'bg-purple-700 hover:bg-purple-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Complete</button>
-                              <button disabled={!can(row, 'reject')} onClick={() => handleOpenReject(row._id, row.requestId)} className={`px-3 py-1 rounded ${can(row,'reject') ? 'border border-red-200 text-red-700 hover:bg-red-50' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Reject</button>
+                              {can(row, 'reject') && (
+                                <button onClick={() => handleOpenReject(row._id, row.requestId)} className="px-3 py-1 rounded border border-red-200 text-red-700 hover:bg-red-50">Reject</button>
+                              )}
                             </>
                           )}
                         </div>

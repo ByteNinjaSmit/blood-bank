@@ -182,7 +182,7 @@ export function createUnitRepo(): UnitRepo {
         for (const [k, v] of Object.entries(set)) {
           if (v === undefined) continue;
           update[k] =
-            k === 'reservedFor' || k === 'issuedTo' || k === 'transfusedTo'
+            (k === 'reservedFor' || k === 'issuedTo' || k === 'transfusedTo') && v
               ? new Types.ObjectId(v as string)
               : v;
         }

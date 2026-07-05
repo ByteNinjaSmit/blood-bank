@@ -310,6 +310,24 @@ export default function RequestCreationStep({
           onRemove={readOnly ? undefined : removeRequestLine}
           readOnly={readOnly}
         />
+        { (displayForm.requestedComponents || []).some((rc) => rc.componentType === 'Platelet') && (
+          <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 flex flex-col gap-2 mt-4">
+            <label className="text-xs font-bold text-orange-950 uppercase tracking-wider">Platelet Compatibility Mode</label>
+            <select
+              className={`w-full md:w-1/3 px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+              value={displayForm.plateletCompatibilityMode || 'UNIVERSAL'}
+              onChange={(e) => !readOnly && setForm((p) => ({ ...p, plateletCompatibilityMode: e.target.value }))}
+              disabled={readOnly}
+            >
+              <option value="UNIVERSAL">Universal (Platelets can be given to all blood group patients)</option>
+              <option value="MAJOR">Major Compatible (Standard RBC compatibility)</option>
+              <option value="MINOR">Minor Compatible (Standard Plasma/inverse compatibility)</option>
+            </select>
+            <p className="text-xs text-gray-500">
+              Select how platelet matching should behave: Universal (default, compatible with any group), Major Compatible, or Minor Compatible.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Card 6: Authorization */}

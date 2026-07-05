@@ -5,6 +5,7 @@ import { DonationModel } from '@/modules/donation/donation.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { BagInspectionModel } from '@/modules/bag-inspection/bag-inspection.model';
+import { DonorModel } from '@/modules/donor/donor.model';
 
 const router = Router();
 
@@ -269,9 +270,16 @@ router.post('/separate', authenticate, async (req, res, next) => {
       { deletedAt: new Date(), deletedBy: new Types.ObjectId(actorId) }
     );
 
-    const refUnit = await BloodUnitModel.findOne({ donationId: resolvedDonationId, deletedAt: null }).lean();
-    const aboGroup = refUnit?.aboGroup || 'O';
-    const rhFactor = refUnit?.rhFactor || 'POSITIVE';
+    // Fetch the reference unit (ignoring soft delete status) to get the original ABO and Rh group
+    const refUnit = await BloodUnitModel.findOne({ donationId: resolvedDonationId }).lean();
+    let aboGroup = refUnit?.aboGroup;
+    let rhFactor = refUnit?.rhFactor;
+
+    if (!aboGroup) {
+      const donor = await DonorModel.findById(donation.donor).lean();
+      aboGroup = donor?.bloodGroup || 'O';
+      rhFactor = donor?.rh === 'POSITIVE' ? 'POSITIVE' : 'NEGATIVE';
+    }
 
     const unitCount = await BloodUnitModel.countDocuments({ donationId: resolvedDonationId });
     const unitId = `${resolvedDonationId}-${productCode}-${unitCount + 1}`;

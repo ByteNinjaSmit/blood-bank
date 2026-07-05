@@ -200,6 +200,7 @@ export default function MatchReviewStep({
                         <thead>
                           <tr className="text-left text-gray-600 bg-gray-50">
                             <th className="p-2">Bag No</th>
+                            <th className="p-2">Segment No</th>
                             <th className="p-2">Blood</th>
                             <th className="p-2">Compatibility</th>
                             <th className="p-2">Crossmatch</th>
@@ -211,6 +212,7 @@ export default function MatchReviewStep({
                             const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
                             const invId = inv?._id || mi.inventoryId;
                             const bagNo = inv?.bagNo?.bagNo || '—';
+                            const segmentNo = inv?.bagNo?.segmentNo || '—';
                             const blood = inv?.bagNo
                               ? `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}`
                               : '—';
@@ -231,7 +233,8 @@ export default function MatchReviewStep({
 
                             return (
                               <tr key={invId} className="border-t hover:bg-gray-50 transition-colors">
-                                <td className="p-2 font-mono text-xs">{bagNo}</td>
+                                <td className="p-2 font-mono text-xs font-bold text-gray-800">{bagNo}</td>
+                                <td className="p-2 font-mono text-xs font-bold text-gray-800">{segmentNo}</td>
                                 <td className="p-2">
                                   <div className="font-semibold">{blood}</div>
                                   {mismatchWarning && (

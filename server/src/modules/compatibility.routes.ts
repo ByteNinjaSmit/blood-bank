@@ -43,12 +43,11 @@ router.get('/inventory', authenticate, async (req, res, next) => {
     if (status) {
       if (status === 'in-stock') unitFilter.status = 'RELEASED';
       else if (status === 'reserved') {
-        unitFilter.status = 'RESERVED';
-        unitFilter.reservedUntil = { $ne: null };
+        unitFilter.status = { $in: ['RESERVED', 'CROSSMATCHED'] };
       }
       else if (status === 'issued') unitFilter.status = 'ISSUED';
     } else {
-      unitFilter.status = { $in: ['RELEASED', 'RESERVED', 'ISSUED'] };
+      unitFilter.status = { $in: ['RELEASED', 'RESERVED', 'CROSSMATCHED', 'ISSUED'] };
     }
 
     if (componentType) {
@@ -299,7 +298,9 @@ router.post('/inventory/issue', authenticate, async (req, res, next) => {
         const reqDoc = await RequisitionModel.findById(requisitionId);
         if (reqDoc) {
           patientId = reqDoc.patientId;
-          reqDoc.status = 'ISSUED';
+          if (reqDoc.status !== 'COMPLETED') {
+            reqDoc.status = 'ISSUED';
+          }
           await reqDoc.save();
         }
       }

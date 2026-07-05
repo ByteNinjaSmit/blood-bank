@@ -92,6 +92,11 @@ const RequisitionSchema = new Schema(
       default: 'PENDING',
       index: true,
     },
+    plateletCompatibilityMode: {
+      type: String,
+      enum: ['UNIVERSAL', 'MAJOR', 'MINOR'],
+      default: 'UNIVERSAL',
+    },
     approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     approvedAt: Date,
     rejectedBy: { type: Schema.Types.ObjectId, ref: 'User' },

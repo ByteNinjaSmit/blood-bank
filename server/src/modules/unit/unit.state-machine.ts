@@ -50,6 +50,7 @@ const TRANSITIONS: ReadonlyArray<Transition> = [
   { from: 'RELEASED', event: 'EXPIRE', to: 'EXPIRED' },
 
   { from: 'RESERVED', event: 'UNRESERVE', to: 'RELEASED' },
+  { from: 'RESERVED', event: 'ISSUE', to: 'ISSUED' },
   { from: 'RESERVED', event: 'CROSSMATCH_PASS', to: 'CROSSMATCHED' },
   { from: 'RESERVED', event: 'CROSSMATCH_FAIL', to: 'RELEASED' },
   { from: 'RESERVED', event: 'DISCARD', to: 'DISCARDED' },

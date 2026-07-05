@@ -99,7 +99,7 @@ describe('FEFO selector', () => {
     expect(r.selected.map((s) => s.unit.unitId)).toEqual(['irr']);
   });
 
-  it('FFP for O- patient accepts A+ plasma (Rh ignored, inverse ABO)', () => {
+  it('FFP for O- patient rejects A+ plasma (Rh ignored, but strict ABO same-group)', () => {
     const inv = [
       unit({
         unitId: 'a-pos-ffp',
@@ -115,7 +115,8 @@ describe('FEFO selector', () => {
       unitsRequired: 1,
       now: NOW,
     });
-    expect(r.selected).toHaveLength(1);
+    expect(r.selected).toHaveLength(0);
+    expect(r.shortage).toBe(1);
   });
 
   it('reports shortage when supply insufficient', () => {

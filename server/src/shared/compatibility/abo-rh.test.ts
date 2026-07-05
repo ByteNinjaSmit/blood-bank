@@ -23,18 +23,30 @@ describe('ABO compatibility — RBC', () => {
   });
 });
 
-describe('ABO compatibility — Plasma (inverse table)', () => {
-  it('O recipient accepts plasma from all four', () => {
-    expect(new Set(compatibleAboGroups('O', 'FFP'))).toEqual(new Set(['O', 'A', 'B', 'AB']));
+describe('ABO compatibility — Plasma (strict group-identical matching)', () => {
+  it('O recipient accepts O only', () => {
+    expect([...compatibleAboGroups('O', 'FFP')]).toEqual(['O']);
   });
-  it('AB recipient accepts only AB plasma', () => {
+  it('AB recipient accepts AB only', () => {
     expect([...compatibleAboGroups('AB', 'FFP')]).toEqual(['AB']);
   });
-  it('A recipient accepts A and AB plasma', () => {
-    expect(new Set(compatibleAboGroups('A', 'FFP'))).toEqual(new Set(['A', 'AB']));
+  it('A recipient accepts A only', () => {
+    expect([...compatibleAboGroups('A', 'FFP')]).toEqual(['A']);
   });
-  it('B recipient accepts B and AB plasma', () => {
-    expect(new Set(compatibleAboGroups('B', 'FFP'))).toEqual(new Set(['B', 'AB']));
+  it('B recipient accepts B only', () => {
+    expect([...compatibleAboGroups('B', 'FFP')]).toEqual(['B']);
+  });
+});
+
+describe('ABO compatibility — Platelets with modes', () => {
+  it('Universal mode (default) accepts all groups', () => {
+    expect(new Set(compatibleAboGroups('A', 'SDP', 'UNIVERSAL'))).toEqual(new Set(['A', 'AB', 'O', 'B']));
+  });
+  it('Major compatibility mode follows RBC rules', () => {
+    expect(new Set(compatibleAboGroups('A', 'SDP', 'MAJOR'))).toEqual(new Set(['A', 'O']));
+  });
+  it('Minor compatibility mode follows Plasma (inverse) rules', () => {
+    expect(new Set(compatibleAboGroups('A', 'SDP', 'MINOR'))).toEqual(new Set(['A', 'AB']));
   });
 });
 
@@ -70,7 +82,7 @@ describe('Crossmatch requirement', () => {
 describe('Strictness label', () => {
   it.each([
     ['PRBC', 'HIGH'],
-    ['FFP', 'MEDIUM'],
+    ['FFP', 'MEDIUM'], // FFP clinical strictness label is still MEDIUM
     ['SDP', 'LOW'],
     ['CRYOPRECIPITATE', 'VERY_LOW'],
   ] as const)('%s -> %s', (component, expected) => {
@@ -96,9 +108,9 @@ describe('Composite + classify', () => {
     const d = { aboGroup: 'A', rhFactor: 'POSITIVE' } as const;
     expect(isCompatible(p, d, 'PRBC')).toBe(false);
   });
-  it('O- patient CAN receive A+ FFP (plasma is inverse, Rh ignored)', () => {
+  it('O- patient cannot receive A+ FFP (plasma is strict group-identical)', () => {
     const p = { aboGroup: 'O', rhFactor: 'NEGATIVE' } as const;
     const d = { aboGroup: 'A', rhFactor: 'POSITIVE' } as const;
-    expect(isCompatible(p, d, 'FFP')).toBe(true);
+    expect(isCompatible(p, d, 'FFP')).toBe(false);
   });
 });

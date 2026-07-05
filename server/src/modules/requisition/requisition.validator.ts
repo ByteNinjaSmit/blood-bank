@@ -58,6 +58,7 @@ export const CreateRequisitionBody = z.object({
   hospitalSeal: z.string().trim().optional(),
   patient: RequisitionPatient.optional(),
   requestedComponents: z.array(RequestedComponent).min(1),
+  plateletCompatibilityMode: z.enum(['UNIVERSAL', 'MAJOR', 'MINOR']).default('UNIVERSAL'),
 });
 
 export const RejectBody = z.object({

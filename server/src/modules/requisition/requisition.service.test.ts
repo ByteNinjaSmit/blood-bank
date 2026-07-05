@@ -5,6 +5,12 @@ import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { PatientRepo, PatientDto } from '@/modules/patient/patient.repository';
 import type { SelectableUnit } from '@/shared/compatibility/fefo';
 
+vi.mock('@/modules/issue/issue.model', () => ({
+  IssueModel: {
+    create: vi.fn().mockResolvedValue({}),
+  },
+}));
+
 const REQ_ID = '507f1f77bcf86cd799439011';
 
 function patient(over: Partial<PatientDto> = {}): PatientDto {
@@ -116,5 +122,58 @@ describe('requisition-service.match', () => {
     const d = deps({ req: reqDto({ status: 'ISSUED' }) });
     const svc = createRequisitionService(d);
     await expect(svc.match(REQ_ID, 'actor')).rejects.toThrow();
+  });
+});
+
+describe('requisition-service.reject', () => {
+  it('unreserves all matched units and clears reservation/issuance fields', async () => {
+    const d = deps({
+      req: reqDto({
+        status: 'APPROVED',
+        matchedUnits: [
+          { unitId: 'U1', componentType: 'PRBC', compatibilityType: 'EXACT', crossmatchRequired: true, crossmatchStatus: 'COMPATIBLE' },
+          { unitId: 'U2', componentType: 'PRBC', compatibilityType: 'EXACT', crossmatchRequired: true, crossmatchStatus: 'COMPATIBLE' },
+        ],
+      }),
+    });
+    const svc = createRequisitionService(d);
+    await svc.reject(REQ_ID, 'Patient discharged', 'actor');
+    expect(d.units.applyEvent).toHaveBeenCalledTimes(2);
+    expect(d.units.applyEvent).toHaveBeenNthCalledWith(1, {
+      unitId: 'U1',
+      event: 'UNRESERVE',
+      actorId: 'actor',
+      reason: 'Requisition RQ-1 rejected',
+      set: {
+        reservedFor: null,
+        reservedAt: null,
+        reservedUntil: null,
+        issuedAt: null,
+        issuedTo: null,
+      },
+    });
+  });
+});
+
+describe('requisition-service.complete', () => {
+  it('does NOT automatically issue unissued matched units upon completing the requisition', async () => {
+    const d = deps({
+      req: reqDto({
+        status: 'APPROVED',
+        matchedUnits: [
+          { unitId: 'U1', componentType: 'PRBC', compatibilityType: 'EXACT', crossmatchRequired: true, crossmatchStatus: 'COMPATIBLE' },
+        ],
+      }),
+    });
+    d.units.findByUnitId = vi.fn().mockResolvedValue({
+      unitId: 'U1',
+      status: 'RESERVED',
+      componentType: 'PRBC',
+    });
+    const svc = createRequisitionService(d);
+    await svc.complete(REQ_ID, 'actor');
+
+    expect(d.units.applyEvent).not.toHaveBeenCalled();
+    expect(d.requisitions.setStatus).toHaveBeenCalledWith(REQ_ID, 'COMPLETED', 'actor');
   });
 });

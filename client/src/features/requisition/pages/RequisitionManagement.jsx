@@ -49,6 +49,7 @@ const RequisitionManagement = () => {
     handleCreateAndReject,
     handleCrossmatchUpdate,
     loadRequest,
+    refreshRequest,
   } = useRequisition(authorizationToken);
 
   React.useEffect(() => {
@@ -57,6 +58,12 @@ const RequisitionManagement = () => {
       loadRequest(params.id);
     }
   }, [params?.id]);
+
+  React.useEffect(() => {
+    if (params?.id && currentStep) {
+      refreshRequest(params.id);
+    }
+  }, [currentStep, params?.id]);
 
   const nextLabel = React.useMemo(() => {
     if (currentStep === 1) return 'Continue to Match Review';
@@ -80,7 +87,7 @@ const RequisitionManagement = () => {
   }, [requestDoc, shortages]);
 
   const canProceedFromStep3 = React.useMemo(() => {
-    const okStatus = ['issued', 'completed'];
+    const okStatus = ['approved', 'issued', 'completed'];
     return !!requestDoc?._id && okStatus.includes(requestDoc?.status);
   }, [requestDoc]);
 

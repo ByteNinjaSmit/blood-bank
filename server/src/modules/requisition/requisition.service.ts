@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
 import { ConflictError } from '@/shared/errors';
+import { IssueModel } from '@/modules/issue/issue.model';
 import type { IAuditService } from '@/shared/interfaces';
 import { auditService as defaultAudit } from '@/modules/audit/audit.service';
 import { selectUnits } from '@/shared/compatibility/fefo';
@@ -167,6 +168,8 @@ export function createRequisitionService(deps: {
       if (req.status !== 'ISSUED' && req.status !== 'APPROVED') {
         throw new ConflictError(`Cannot complete requisition in status ${req.status}.`);
       }
+
+
       const updated = await deps.requisitions.setStatus(id, 'COMPLETED', actorId);
       await audit.record({
         actorId,
@@ -196,6 +199,8 @@ export function createRequisitionService(deps: {
               reservedFor: null,
               reservedAt: null,
               reservedUntil: null,
+              issuedAt: null,
+              issuedTo: null,
             } as any,
           })
           .catch(() => undefined);

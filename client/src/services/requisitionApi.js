@@ -39,8 +39,8 @@ class RequisitionApiService {
     return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/approve`, {}));
   }
 
-  async issue(id) {
-    return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/issue`, {}));
+  async issue(id, unitIds = []) {
+    return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/issue`, { unitIds }));
   }
 
   async complete(id) {
@@ -60,10 +60,11 @@ class RequisitionApiService {
     );
   }
 
-  async getCompatibilityInfo(componentType, bloodGroup, rh) {
+  async getCompatibilityInfo(componentType, bloodGroup, rh, plateletCompatibilityMode) {
     const params = { componentType };
     if (bloodGroup) params.bloodGroup = bloodGroup;
     if (rh) params.rh = rh;
+    if (plateletCompatibilityMode) params.plateletCompatibilityMode = plateletCompatibilityMode;
     return this._wrap(await apiService.get(`${this.baseUrl}/compatibility-info`, params));
   }
 

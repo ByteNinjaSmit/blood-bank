@@ -49,7 +49,7 @@ async function enrichRequisition(reqDto: any): Promise<any> {
   const unitMap = new Map(units.map(u => [u.unitId, u]));
 
   const donationIds = units.map(u => u.donationId).filter(Boolean);
-  const donations = await DonationModel.find({ donationId: { $in: donationIds } }).select('donationId bagNo collectedAt donor').lean() as any[];
+  const donations = await DonationModel.find({ donationId: { $in: donationIds } }).select('donationId bagNo segmentNo collectedAt donor').lean() as any[];
   const donationMap = new Map(donations.map(d => [d.donationId, d]));
 
   const donorIds = donations.map(d => d.donor).filter(Boolean);
@@ -72,11 +72,13 @@ async function enrichRequisition(reqDto: any): Promise<any> {
           rh: unit.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
           donorName: donation?.donor ? donorMap.get(donation.donor.toString()) || 'Unknown' : 'Unknown',
           collectedAt: donation?.collectedAt ? donation.collectedAt.toISOString() : null,
+          segmentNo: donation?.segmentNo || unit.unitDin || unit.unitId || '—',
         },
         componentId: {
           componentType: unit.componentType === 'PRBC' ? 'RBC' : unit.componentType === 'PLATELET_CONCENTRATE' ? 'Platelet' : unit.componentType === 'CRYOPRECIPITATE' ? 'Cryo' : unit.componentType,
           expiryDate: unit.expiresAt ? unit.expiresAt.toISOString() : '',
-        }
+        },
+        status: unit.status,
       },
       compatibilityType: mu.compatibilityType.toLowerCase(),
       crossmatchRequired: mu.crossmatchRequired,
@@ -481,16 +483,32 @@ export function createRequisitionControllers(deps: {
     async issueAll(req, res, next) {
       try {
         const { id } = ValidateRequisition.idParam(req);
+        const { unitIds } = req.body;
         const requisition = await deps.requisitions.get(id);
         const results = [];
-        for (const unit of requisition.matchedUnits) {
+        
+        const targetUnits = Array.isArray(unitIds) && unitIds.length > 0
+          ? requisition.matchedUnits.filter(u => unitIds.includes(u.unitId))
+          : requisition.matchedUnits;
+
+        for (const unit of targetUnits) {
           const resUnit = await deps.issue.issue({
             requisitionId: id,
             unitId: unit.unitId,
           }, actor(req));
           results.push(resUnit);
         }
-        await deps.requisitions.setStatus(id, 'ISSUED', actor(req));
+
+        const matchedUnitIds = requisition.matchedUnits.map(mu => mu.unitId);
+        const matchedUnitsInDb = await BloodUnitModel.find({ unitId: { $in: matchedUnitIds } });
+        const allIssued = matchedUnitsInDb.every(u => u.status === 'ISSUED');
+
+        if (allIssued) {
+          await deps.requisitions.setStatus(id, 'COMPLETED', actor(req));
+        } else {
+          await deps.requisitions.setStatus(id, 'APPROVED', actor(req));
+        }
+
         res.status(201).json({ success: true, data: results, requestId: req.id });
       } catch (e) {
         next(e);
@@ -499,10 +517,11 @@ export function createRequisitionControllers(deps: {
 
     async getCompatibilityInfoLegacy(req, res, next) {
       try {
-        const { componentType, bloodGroup, rh } = req.query as {
+        const { componentType, bloodGroup, rh, plateletCompatibilityMode } = req.query as {
           componentType?: string;
           bloodGroup?: string;
           rh?: string;
+          plateletCompatibilityMode?: 'UNIVERSAL' | 'MAJOR' | 'MINOR';
         };
 
         if (!componentType) {
@@ -531,7 +550,7 @@ export function createRequisitionControllers(deps: {
           }
         }
 
-        const groups = compatibleAboGroups(aboGroup, compType);
+        const groups = compatibleAboGroups(aboGroup, compType, plateletCompatibilityMode);
         const reqXm = requiresCrossmatch(compType);
         const strict = getStrictness(compType);
 

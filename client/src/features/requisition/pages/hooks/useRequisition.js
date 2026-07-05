@@ -43,7 +43,6 @@ export default function useRequisition(authToken) {
   const [addHospitalForm, setAddHospitalForm] = useState({ name: '', address: '', contactPerson: '', phone: '' });
   const [addingHospital, setAddingHospital] = useState(false);
 
-  // Create request form state
   const [form, setForm] = useState({
     hospitalId: '',
     doctorName: '',
@@ -52,6 +51,7 @@ export default function useRequisition(authToken) {
     hospitalSeal: '',
     patient: { ...defaultPatient },
     requestedComponents: [ { ...defaultRequestedComponent } ],
+    plateletCompatibilityMode: 'UNIVERSAL',
   });
 
   // Created request state
@@ -74,6 +74,7 @@ export default function useRequisition(authToken) {
         requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 16) : '',
         medicalOfficerSignature: requestDoc.medicalOfficerSignature || '',
         hospitalSeal: requestDoc.hospitalSeal || '',
+        plateletCompatibilityMode: requestDoc.plateletCompatibilityMode || 'UNIVERSAL',
         patient: {
           name: requestDoc.patient?.name || '',
           age: requestDoc.patient?.age || '',
@@ -261,6 +262,7 @@ function checkHasChanges(doc, payload) {
         requiredAt: form.requiredAt || undefined,
         medicalOfficerSignature: form.medicalOfficerSignature || undefined,
         hospitalSeal: form.hospitalSeal || undefined,
+        plateletCompatibilityMode: form.plateletCompatibilityMode || 'UNIVERSAL',
         patient: {
           name: form.patient.name,
           age: Number(form.patient.age),
@@ -380,10 +382,10 @@ function checkHasChanges(doc, payload) {
     toast.success('Approved');
   };
 
-  const handleIssue = async () => {
+  const handleIssue = async (unitIds = []) => {
     if (!requestDoc?._id) return;
     setIssuing(true);
-    const res = await requisitionApi.issue(requestDoc._id);
+    const res = await requisitionApi.issue(requestDoc._id, unitIds);
     setIssuing(false);
     if (!res.success) return toast.error(res.error || 'Issuing failed');
     await refreshRequest(requestDoc._id);
@@ -578,5 +580,6 @@ function checkHasChanges(doc, payload) {
     handleCreateAndReject,
     handleCrossmatchUpdate,
     loadRequest,
+    refreshRequest,
   };
 }

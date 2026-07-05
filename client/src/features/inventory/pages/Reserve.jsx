@@ -10,6 +10,31 @@ import CustomModal from "@/components/CustomModal";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportReserve } from "@/utils/excelExportHelper";
 
+const formatDateDMY = (dateStr) => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '—';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+const formatDateTimeDMY = (dateStr) => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '—';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  return `${day}/${month}/${year}, ${hours}:${minutes} ${ampm}`;
+};
+
 const Reserve = () => {
   const { API, authorizationToken, user } = useAuth();
   const navigate = useNavigate();
@@ -239,9 +264,9 @@ const Reserve = () => {
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl} mL</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{formatDateDMY(r?.component?.expiryDate)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.hospital?.name || '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.reservedUntil ? new Date(r.reservedUntil).toLocaleDateString() : '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{formatDateDMY(r?.reservedUntil)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.reservedPatientName || '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{(r?.reservedPatientAge ?? '') !== '' ? r.reservedPatientAge : '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{(() => {
@@ -367,7 +392,7 @@ const Reserve = () => {
                   <div>
                     <span className="font-semibold text-gray-500">Reserved Until:</span>
                     <div className="text-slate-800 mt-0.5 font-medium">
-                      {selectedReserve.reservedUntil ? new Date(selectedReserve.reservedUntil).toLocaleString() : '—'}
+                      {formatDateTimeDMY(selectedReserve.reservedUntil)}
                     </div>
                   </div>
                 </div>
@@ -488,6 +513,10 @@ const Reserve = () => {
                     <div className="text-slate-800 mt-0.5 font-bold">{selectedReserve.bagNo}</div>
                   </div>
                   <div>
+                    <span className="font-semibold text-gray-500">Segment Number:</span>
+                    <div className="text-slate-800 mt-0.5 font-bold">{selectedReserve.segmentNo || '—'}</div>
+                  </div>
+                  <div>
                     <span className="font-semibold text-gray-500">Component Type:</span>
                     <div className="text-slate-800 mt-0.5 font-bold">{selectedReserve.component?.componentType}</div>
                   </div>
@@ -504,7 +533,7 @@ const Reserve = () => {
                   <div>
                     <span className="font-semibold text-gray-500">Expiry Date:</span>
                     <div className="text-slate-800 mt-0.5 font-semibold text-red-700">
-                      {selectedReserve.component?.expiryDate ? new Date(selectedReserve.component.expiryDate).toLocaleDateString() : '—'}
+                      {formatDateDMY(selectedReserve.component?.expiryDate)}
                     </div>
                   </div>
                 </div>
