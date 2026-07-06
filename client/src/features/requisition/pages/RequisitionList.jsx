@@ -10,7 +10,7 @@ import RequisitionPrintTemplate from './components/RequisitionPrintTemplate';
 import RequisitionLabelTemplate from './components/RequisitionLabelTemplate';
 import RequisitionPrintService from '@/services/requisitionPrintService';
 import { RejectRequestModal } from '@/components/shared';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 
 const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'rejected'];
 
@@ -44,6 +44,7 @@ export default function RequisitionList() {
   const [printType, setPrintType] = useState('report');
   const [multiLabelModalOpen, setMultiLabelModalOpen] = useState(false);
   const [multiLabelDoc, setMultiLabelDoc] = useState(null);
+  const [selectedPrintLabelDoc, setSelectedPrintLabelDoc] = useState(null);
 
   const [issueModalOpen, setIssueModalOpen] = useState(false);
   const [issueDoc, setIssueDoc] = useState(null);
@@ -373,23 +374,15 @@ export default function RequisitionList() {
 
   const printSingleLabel = (doc, matchedUnit) => {
     try {
-      setPrintLoading(true);
-      setPrintType('label');
       // Create a temporary clone with ONLY this single matched inventory unit
       const singleDoc = {
         ...doc,
         matchedInventory: [matchedUnit]
       };
-      setPrintDoc(singleDoc);
-      toast.info(`Preparing issue label sticker for ${matchedUnit?.inventoryId?.componentId?.componentType || 'component'}...`);
-      // Wait for React to render the printable HTML to DOM
-      setTimeout(() => {
-        RequisitionPrintService.print('label');
-      }, 100);
+      setSelectedPrintLabelDoc(singleDoc);
+      setMultiLabelModalOpen(false);
     } catch (e) {
-      toast.error('Error while preparing print');
-    } finally {
-      setPrintLoading(false);
+      toast.error('Error while preparing preview');
     }
   };
 
@@ -403,10 +396,16 @@ export default function RequisitionList() {
         return;
       }
 
-      // If it's a label print and has multiple matched inventory bags, open the pop-up selection modal
-      if (type === 'label' && res.data?.matchedInventory?.length > 1) {
-        setMultiLabelDoc(res.data);
-        setMultiLabelModalOpen(true);
+      if (type === 'label') {
+        // If it has multiple matched inventory bags, open the pop-up selection modal
+        if (res.data?.matchedInventory?.length > 1) {
+          setMultiLabelDoc(res.data);
+          setMultiLabelModalOpen(true);
+          return;
+        }
+        
+        // Otherwise, open the print preview modal for the single label directly
+        setSelectedPrintLabelDoc(res.data);
         return;
       }
 
@@ -1064,6 +1063,58 @@ export default function RequisitionList() {
           )}
         </div>,
         document.body
+      )}
+
+      {/* Requisition Label Print Preview Modal */}
+      {selectedPrintLabelDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs no-print select-none">
+          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-2xl relative flex flex-col items-center">
+            <button 
+              onClick={() => setSelectedPrintLabelDoc(null)} 
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <h3 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
+              Requisition Label Print Preview
+            </h3>
+
+            {/* Wrapper to contain the CSS scaled label preview on screen */}
+            <div 
+              className="flex items-center justify-center overflow-hidden my-4 border border-dashed border-gray-200 rounded-lg bg-gray-50/50" 
+              style={{ 
+                width: '15.2cm', 
+                height: '13.2cm', 
+              }}
+            >
+              <RequisitionLabelTemplate doc={selectedPrintLabelDoc} isPreview={true} />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3 mt-6 w-full justify-end">
+              <button 
+                onClick={() => setSelectedPrintLabelDoc(null)}
+                className="px-5 py-2 text-xs font-bold border border-gray-300 rounded-lg hover:bg-gray-50 bg-white text-gray-700 shadow-none transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  setPrintType('label');
+                  setPrintDoc(selectedPrintLabelDoc);
+                  setSelectedPrintLabelDoc(null);
+                  setTimeout(() => {
+                    RequisitionPrintService.print('label');
+                  }, 100);
+                }}
+                className="px-6 py-2 text-xs font-bold bg-red-800 hover:bg-red-900 text-white rounded-lg shadow-sm flex items-center gap-1.5 transition-colors"
+              >
+                Print Label
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <RejectRequestModal
