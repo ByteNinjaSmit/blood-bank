@@ -140,6 +140,108 @@ function ComponentStockLines({ stockSummary }) {
   );
 }
 
+const CODE39_PATTERNS = {
+  '0': 'n n n w w n w n n',
+  '1': 'w n n w n n n n w',
+  '2': 'n n w w n n n n w',
+  '3': 'w n w w n n n n n',
+  '4': 'n n n w w n n n w',
+  '5': 'w n n w w n n n n',
+  '6': 'n n w w w n n n n',
+  '7': 'n n n w n n w n w',
+  '8': 'w n n w n n w n n',
+  '9': 'n n w w n n w n n',
+  'A': 'w n n n n w n n w',
+  'B': 'n n w n n w n n w',
+  'C': 'w n w n n w n n n',
+  'D': 'n n n n w w n n w',
+  'E': 'w n n n w w n n n',
+  'F': 'n n w n w w n n n',
+  'G': 'n n n n n w w n w',
+  'H': 'w n n n n w w n n',
+  'I': 'n n w n n w w n n',
+  'J': 'n n n n w w w n n',
+  'K': 'w n n n n n n w w',
+  'L': 'n n w n n n n w w',
+  'M': 'w n w n n n n w n',
+  'N': 'n n n n w n n w w',
+  'O': 'w n n n w n n w n',
+  'P': 'n n w n w n n w n',
+  'Q': 'n n n n n n w w w',
+  'R': 'w n n n n n w w n',
+  'S': 'n n w n n n w w n',
+  'T': 'n n n n w n w w n',
+  'U': 'w w n n n n n n w',
+  'V': 'n w w n n n n n w',
+  'W': 'w w w n n n n n n',
+  'X': 'n w n n w n n n w',
+  'Y': 'w w n n w n n n n',
+  'Z': 'n w w n w n n n n',
+  '-': 'n w n n n n w n w',
+  '.': 'w w n n n n w n n',
+  ' ': 'n w w n n n w n n',
+  '*': 'n w n n w n w n n',
+  '$': 'n w n w n w n n n',
+  '/': 'n w n w n n n w n',
+  '+': 'n w n n n w n w n',
+  '%': 'n n n w n w n w n'
+};
+
+const Code39Barcode = ({ value, width = 1.0, height = 30, className = "" }) => {
+  if (!value) return null;
+  const uppercaseValue = `*${value.toString().toUpperCase()}*`;
+  
+  const narrowWidth = width;
+  const wideWidth = width * 3.0;
+  
+  let currentX = 0;
+  const rects = [];
+  
+  for (let i = 0; i < uppercaseValue.length; i++) {
+    const char = uppercaseValue[i];
+    const pattern = CODE39_PATTERNS[char];
+    if (!pattern) continue;
+    
+    const elements = pattern.split(' ');
+    elements.forEach((size, index) => {
+      const isBar = index % 2 === 0;
+      const elementWidth = size === 'w' ? wideWidth : narrowWidth;
+      
+      if (isBar) {
+        rects.push(
+          <rect
+            key={`${i}-${index}`}
+            x={currentX}
+            y={0}
+            width={elementWidth}
+            height={height}
+            fill="black"
+          />
+        );
+      }
+      currentX += elementWidth;
+    });
+    
+    currentX += narrowWidth;
+  }
+  
+  return (
+    <svg width={currentX} height={height} viewBox={`0 0 ${currentX} ${height}`} className={`max-w-full ${className}`}>
+      {rects}
+    </svg>
+  );
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'N/A';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = String(d.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
+};
+
 const Stock = () => {
   const { API, authorizationToken } = useAuth();
   const { data: stockSummaryData } = useStockSummary();
@@ -148,6 +250,7 @@ const Stock = () => {
   const [excelLoading, setExcelLoading] = useState(false);
   const [rows, setRows] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
+  const [selectedPrintItem, setSelectedPrintItem] = useState(null);
 
   // filters
   const [componentType, setComponentType] = useState("");
@@ -335,15 +438,17 @@ const Stock = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag No</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Component</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Collection</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan="6" className="px-4 py-8 text-center">
+                    <td colSpan="8" className="px-4 py-8 text-center">
                         <div className="inline-flex items-center gap-2 text-gray-500">
                         <Loader2 className="w-5 h-5 animate-spin" /> Loading stock...
                         </div>
@@ -351,7 +456,7 @@ const Stock = () => {
                   </tr>
                 ) : rows.length === 0 ? (
                     <tr>
-                    <td colSpan="6" className="px-4 py-12 text-center text-gray-500 font-medium">
+                    <td colSpan="8" className="px-4 py-12 text-center text-gray-500 font-medium">
                         No inventory items found matching the selection.
                     </td>
                   </tr>
@@ -361,6 +466,16 @@ const Stock = () => {
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{r?.bag?.bagNo || r.bagNo}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 font-medium">
+                        {r?.bag?.donationDate ? (() => {
+                          const d = new Date(r.bag.donationDate);
+                          if (isNaN(d.getTime())) return '-';
+                          const day = String(d.getDate()).padStart(2, '0');
+                          const month = String(d.getMonth() + 1).padStart(2, '0');
+                          const year = d.getFullYear();
+                          return `${day}/${month}/${year}`;
+                        })() : '-'}
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl} mL</td>
                       <td className="px-4 py-3 text-sm text-gray-600 font-medium">
                         {r?.component?.expiryDate ? (() => {
@@ -384,6 +499,16 @@ const Stock = () => {
                         >
                             {r.status}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right">
+                        <Button
+                          onClick={() => setSelectedPrintItem(r)}
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs font-bold text-red-800 hover:text-white hover:bg-red-800 border-red-200"
+                        >
+                          Print Label
+                        </Button>
                       </td>
                     </tr>
                   ))
@@ -495,6 +620,207 @@ const Stock = () => {
           </div>
         </div>
       </div>
+
+      {/* Print Preview Modal */}
+      {selectedPrintItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs no-print select-none">
+          <div className="bg-white rounded-2xl p-6 max-w-xl w-full shadow-2xl relative flex flex-col items-center">
+            <button 
+              onClick={() => setSelectedPrintItem(null)} 
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <h3 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
+              Blood Bag Label Print Preview
+            </h3>
+
+            {/* Printable Label Area of Size 13cm x 12cm */}
+            <div 
+              className="printable-label-area border border-black bg-white flex flex-col text-black font-sans relative overflow-hidden shrink-0 select-none"
+              style={{ 
+                width: '13cm', 
+                height: '12cm', 
+                boxSizing: 'border-box', 
+                padding: '0.2cm',
+                border: '1.5px solid black',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              {/* CSS Print Styles to Isolate the Label during Printing */}
+              <style dangerouslySetInnerHTML={{ __html: `
+                @media print {
+                  body * {
+                    visibility: hidden !important;
+                  }
+                  .printable-label-area, .printable-label-area * {
+                    visibility: visible !important;
+                  }
+                  .printable-label-area {
+                    position: absolute !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    width: 13cm !important;
+                    height: 12cm !important;
+                    margin: 0 !important;
+                    padding: 0.2cm !important;
+                    border: 1.5px solid black !important;
+                    box-shadow: none !important;
+                    box-sizing: border-box !important;
+                  }
+                  @page {
+                    size: auto !important;
+                    margin: 0 !important;
+                  }
+                }
+              `}} />
+
+              {/* Blood Bank Header matching the image */}
+              <div className="w-full flex flex-col items-center justify-center border-b border-black pb-1 mb-1 bg-white shrink-0 text-center relative select-none" style={{ height: '2.4cm' }}>
+                <span className="text-[7px] font-bold tracking-wide text-black uppercase">Sai Healthcare Foundation Charitable Trusts</span>
+                <div className="flex flex-col items-center justify-center w-[90%] mx-auto my-0.5">
+                  <h3 className="text-[24px] font-black text-black leading-none tracking-tight uppercase" style={{ wordSpacing: '2px' }}>
+                    SANJIVANI BLOOD CENTRE
+                  </h3>
+                  <div className="w-full flex justify-between text-[7px] font-black tracking-tight text-black uppercase mt-0.5 px-0.5">
+                    <span>(F.D.A. Lic. No. N-KD 15)</span>
+                    <span>(SBTC Reg. No. - 0031)</span>
+                  </div>
+                </div>
+                <span className="text-[7.5px] font-black leading-none text-black uppercase mt-0.5">
+                  110-2-B, 'Nishigandha', Vivekanandnagar, Near S. G. Vidyalaya,
+                </span>
+                <span className="text-[7.5px] font-black mt-1 leading-none text-black uppercase">
+                  Kopargaon - 423 601, Dist. Ahmednagar. (M.S.) <span style={{ filter: 'grayscale(100%) contrast(100%) brightness(0)' }}>☎︎</span> - (02423) 222237
+                </span>
+              </div>
+
+              {/* Middle Section (divided into Blood Group, Component details, and QR code/Dates) */}
+              <div className="flex w-full border-b border-black pb-1.5 shrink-0" style={{ height: '4.1cm' }}>
+                {/* Left Side: Huge Blood Group Display */}
+                <div className="w-[3.0cm] flex flex-col items-center justify-center border-r border-black pr-1 select-none shrink-0 text-center">
+                  <span 
+                    className="font-black leading-none text-black tracking-tighter" 
+                    style={{ 
+                      fontFamily: 'sans-serif', 
+                      fontSize: (selectedPrintItem?.bag?.bloodGroup || 'N/A') === 'AB' ? '72px' : '84px' 
+                    }}
+                  >
+                    {selectedPrintItem?.bag?.bloodGroup || 'N/A'}
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-tighter -mt-1 text-black whitespace-nowrap">
+                    Rh(D) {selectedPrintItem?.bag?.rh || 'N/A'}
+                  </span>
+                  <span className="text-[8px] font-black uppercase tracking-tighter text-black mt-1 whitespace-nowrap">
+                    {(selectedPrintItem?.bag?.donationType || 'VOLUNTARY').toLowerCase() === 'replacement' ? 'Replacement Donor' : 'Voluntary Donor'}
+                  </span>
+                </div>
+
+                {/* Center: Component Name, Volume, Test Results, and both separation specifications */}
+                <div className="flex-1 px-2 flex flex-col justify-center select-none text-left">
+                  <h4 className="text-[15.5px] font-black leading-tight text-black uppercase">
+                    {selectedPrintItem?.component?.componentType === 'RBC' ? 'Packed Red Blood Cells I.P' : 
+                     selectedPrintItem?.component?.componentType === 'FFP' ? 'Fresh Frozen Plasma' : 
+                     selectedPrintItem?.component?.componentType === 'Platelet' ? 'Platelet Concentrate' : 
+                     selectedPrintItem?.component?.componentType === 'Cryo' ? 'Cryoprecipitate' : 'Blood Component'}
+                  </h4>
+                  <p className="text-[10px] font-extrabold text-black mt-0.5">({selectedPrintItem?.component?.volumeMl} ml)</p>
+                  
+                  <div className="text-[7.2px] leading-tight font-black mt-1 space-y-0.5 text-black uppercase tracking-tight">
+                    <p>HIV I & II antibodies / HBs Ag / HCV: Non Reactive.</p>
+                    <p>VDRL / Malarial Parasite / Atypical Antibodies: Not Detected.</p>
+                  </div>
+
+                  <div className="border-t border-black my-1"></div>
+
+                  <div className="text-[5.8px] leading-tight font-bold text-black uppercase tracking-tight space-y-1">
+                    <p>Separated from 450 ml / 350 ml of human blood + 63 / 49 ml. of CPDA, anticoagulant</p>
+                    <div className="border-t border-black my-0.5 opacity-60"></div>
+                    <p>350 ml of blood (Volume 250 ± 20 ml.) Semi Packed Red Cells are stored after transferming 100 ml. of SAGM-2 Solution (Volume 350 ± 20 ml.)</p>
+                  </div>
+                </div>
+
+                {/* Right Side: QR Code Scan Area & Dates below it */}
+                <div className="w-[3.0cm] flex flex-col items-center justify-center border-l border-black pl-1 shrink-0 select-none">
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=BagNo:${selectedPrintItem?.bag?.bagNo || selectedPrintItem?.bagNo || 'N/A'};Group:${selectedPrintItem?.bag?.bloodGroup || 'N/A'}${selectedPrintItem?.bag?.rh === 'Positive' ? 'Pos' : 'Neg'};Expiry:${formatDate(selectedPrintItem?.component?.expiryDate)}`}
+                    alt="QR Code"
+                    className="w-[2.0cm] h-[2.0cm]"
+                  />
+                  <span className="text-[6.5px] font-black text-center mt-0.5 uppercase tracking-tighter text-black leading-none">Scan For More Details</span>
+                  
+                  <div className="flex flex-col text-[7.5px] font-black tracking-tighter text-black mt-1.5 text-center leading-tight">
+                    <span>Collection: {formatDate(selectedPrintItem?.bag?.donationDate)}</span>
+                    <span>Expiry: {formatDate(selectedPrintItem?.component?.expiryDate)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Section (divided into instructions and barcodes) */}
+              <div className="flex flex-1 w-full pt-1.5 overflow-hidden">
+                {/* Left Column: Instructions (widen to w-[7.5cm] to shift border towards barcodes) */}
+                <div className="w-[7.5cm] pr-1.5 border-r border-black flex flex-col justify-between shrink-0 select-none">
+                  <div>
+                    <h5 className="text-[9px] font-black uppercase tracking-wider mb-1.5 text-black underline">Instructions for Use & Storage</h5>
+                    <ol className="list-decimal pl-2.5 text-[6.8px] leading-tight font-bold space-y-1 text-black">
+                      <li>Keep continuously at +2°C to +6°C until administration.</li>
+                      <li>Do not dispense without prescription.</li>
+                      <li>Double check recipient's identity and cross-check the blood group of the unit and recipient before administration.</li>
+                      <li>Compatibility testing is essential before use (Report enclosed with bag).</li>
+                      <li>Shake the bag gently before use. Bring the unit to room temperature without warming the bag.</li>
+                      <li>Do not use if there is any visible evidence of haemolysis, clotting or discoloration in the bag.</li>
+                      <li>Do not add any other medication to the blood. Do not vent. Administration must be through a disposable, sterile set with filter.</li>
+                      <li>Caution: HIV, HBsAg & HCV transmission may not be ruled out despite careful donor screening due to the Window Period.</li>
+                      <li>Inform the Blood Bank immediately in case of any transfusion reaction.</li>
+                      <li>Unit once issued will not be taken back.</li>
+                    </ol>
+                  </div>
+                </div>
+
+                {/* Right Column: Barcodes */}
+                <div className="flex-1 pl-2 flex flex-col justify-center items-center select-none py-1">
+                  <div className="w-full flex flex-col items-center justify-center space-y-5 flex-1">
+                    {/* Bag No Barcode */}
+                    <div className="w-full flex flex-col items-center">
+                      <Code39Barcode value={selectedPrintItem?.bag?.bagNo || selectedPrintItem?.bagNo || 'N/A'} width={2.0} height={48} className="h-[48px]" />
+                      <span className="text-[13px] font-black tracking-widest mt-1 uppercase text-black">
+                        {selectedPrintItem?.bag?.bagNo || selectedPrintItem?.bagNo || 'N/A'}
+                      </span>
+                    </div>
+
+                    {/* Segment No Barcode */}
+                    <div className="w-full flex flex-col items-center">
+                      <Code39Barcode value={selectedPrintItem?.bag?.segmentNo || selectedPrintItem?.segmentNo || 'N/A'} width={1.6} height={48} className="h-[48px]" />
+                      <span className="text-[9.5px] font-black tracking-widest mt-1 uppercase text-black">
+                        Segment No: {selectedPrintItem?.bag?.segmentNo || selectedPrintItem?.segmentNo || 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3 mt-6 w-full justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setSelectedPrintItem(null)}
+                className="px-5 text-xs font-bold shadow-none"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => window.print()}
+                className="px-6 text-xs font-bold bg-red-800 hover:bg-red-900 text-white shadow-sm flex items-center gap-1.5"
+              >
+                Print Label
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

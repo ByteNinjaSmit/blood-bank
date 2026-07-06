@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import mongoose, { Types } from 'mongoose';
 import { authenticate } from '@/shared/middlewares/authenticate';
 import { DonationModel } from '@/modules/donation/donation.model';
@@ -130,7 +130,7 @@ router.get('/inventory', authenticate, async (req, res, next) => {
     const donations = await DonationModel.find({
       donationId: { $in: donationIds },
       $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }]
-    }).select('donationId bagNo segmentNo typeOfBag collectedAt donor').lean();
+    }).select('donationId bagNo segmentNo typeOfBag collectedAt donor donationType').lean();
 
     const donorIds = donations.map((d: any) => d.donor).filter(Boolean);
     const donors = await DonorModel.find({ _id: { $in: donorIds } }).select('_id name').lean() as any[];
@@ -140,7 +140,7 @@ router.get('/inventory', authenticate, async (req, res, next) => {
       donorMap.set(d._id.toString(), fullName);
     });
 
-    const donationMap = new Map<string, { bagNo: string; segmentNo?: string | null; typeOfBag?: string; collectedAt?: Date; donorName?: string }>();
+    const donationMap = new Map<string, { bagNo: string; segmentNo?: string | null; typeOfBag?: string; collectedAt?: Date; donorName?: string; donationType?: string }>();
     donations.forEach(d => {
       if (d.donationId && d.bagNo) {
         const donorName = d.donor ? donorMap.get(d.donor.toString()) || 'Unknown' : 'Unknown';
@@ -149,7 +149,8 @@ router.get('/inventory', authenticate, async (req, res, next) => {
           segmentNo: d.segmentNo,
           typeOfBag: d.typeOfBag || undefined,
           collectedAt: d.collectedAt,
-          donorName
+          donorName,
+          donationType: d.donationType
         });
       }
     });
@@ -228,6 +229,7 @@ router.get('/inventory', authenticate, async (req, res, next) => {
           segmentNo,
           donationDate: donObj?.collectedAt ? donObj.collectedAt.toISOString() : undefined,
           donorName: donObj?.donorName || 'Unknown',
+          donationType: donObj?.donationType || 'VOLUNTARY',
         },
         component: {
           componentType: legacyType,
