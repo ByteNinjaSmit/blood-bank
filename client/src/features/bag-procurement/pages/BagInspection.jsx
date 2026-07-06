@@ -1188,7 +1188,16 @@ export default function BagInspection() {
     }
   };
 
-  const { data, isLoading } = useBagInspectionList({});
+  const [decisionFilter, setDecisionFilter] = useState('');
+  const [batchNumberFilter, setBatchNumberFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const { data, isLoading } = useBagInspectionList({
+    decision: decisionFilter || undefined,
+    batchNumber: batchNumberFilter || undefined,
+    fromDate: fromDate || undefined,
+    toDate: toDate || undefined,
+  });
   const { data: grnData } = useGRNList({});
 
   const inspections = data?.items ?? data?.bagInspections ?? (Array.isArray(data) ? data : []);
@@ -1221,7 +1230,41 @@ export default function BagInspection() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Batch No</label>
+            <input value={batchNumberFilter} onChange={(e) => setBatchNumberFilter(e.target.value)} placeholder="Search batch..."
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Decision</label>
+            <select value={decisionFilter} onChange={(e) => setDecisionFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
+              <option value="">All Decisions</option>
+              <option value="ACCEPTED">Accepted</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="QUARANTINE">Quarantine</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Inspection From</label>
+            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Inspection To</label>
+            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          {(decisionFilter || batchNumberFilter || fromDate || toDate) && (
+            <button onClick={() => { setDecisionFilter(''); setBatchNumberFilter(''); setFromDate(''); setToDate(''); }}
+              className="px-3 py-2 text-sm text-orange-800 hover:bg-orange-50 rounded-lg font-medium">
+              Reset
+            </button>
+          )}
+        </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-100">

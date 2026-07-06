@@ -11,7 +11,7 @@ const router = Router();
 
 router.get('/list', authenticate, async (req, res, next) => {
   try {
-    const { page, limit, type, status, expiryBefore, fromDate, toDate, search } = req.query as any;
+    const { page, limit, type, status, expiryBefore, fromDate, toDate, search, order } = req.query as any;
 
     const unitFilter: any = { deletedAt: null, status: { $ne: 'COLLECTED' } };
     if (type) {
@@ -61,9 +61,10 @@ router.get('/list', authenticate, async (req, res, next) => {
     const limitNum = parseInt(limit) || 50;
     const skipNum = (pageNum - 1) * limitNum;
 
+    const sortDir = order === 'asc' ? 1 : -1;
     const total = await DonationModel.countDocuments(donationFilter);
     const donations = await DonationModel.find(donationFilter)
-      .sort({ collectedAt: -1 })
+      .sort({ collectedAt: sortDir })
       .skip(skipNum)
       .limit(limitNum)
       .populate('campId', 'name')

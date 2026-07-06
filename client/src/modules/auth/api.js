@@ -15,13 +15,6 @@ const unwrap = (res) => res.data?.data ?? res.data;
 export const authApi = {
   login: (email, password) => authAxios.post('/login', { email, password }).then(unwrap),
 
-  startOtpLogin: (email, password) =>
-    authAxios.post('/login/start-otp', { email, password }).then(unwrap),
-  verifyOtpLogin: (email, txnId, code) =>
-    authAxios.post('/login/verify-otp', { email, txnId, code }).then(unwrap),
-  resendOtpLogin: (email, txnId) =>
-    authAxios.post('/login/resend-otp', { email, txnId }).then(unwrap),
-
   startRegister: (payload) => authAxios.post('/register/start-otp', payload).then(unwrap),
   verifyRegister: (email, txnId, code) =>
     authAxios.post('/register/verify-otp', { email, txnId, code }).then(unwrap),

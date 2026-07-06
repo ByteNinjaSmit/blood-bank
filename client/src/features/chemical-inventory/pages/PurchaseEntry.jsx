@@ -161,6 +161,25 @@ export default function PurchaseEntry() {
 
   const [excelLoading, setExcelLoading] = useState(false);
 
+  // Purchase history filters
+  const [purchaseSearch, setPurchaseSearch] = useState('');
+  const [purchaseSupplierFilter, setPurchaseSupplierFilter] = useState('');
+  const [purchaseFromDate, setPurchaseFromDate] = useState('');
+  const [purchaseToDate, setPurchaseToDate] = useState('');
+
+  const filteredPurchases = (purchases || []).filter((p) => {
+    if (purchaseSearch.trim()) {
+      const q = purchaseSearch.trim().toLowerCase();
+      const invoiceMatch = (p.invoiceNumber || '').toLowerCase().includes(q);
+      const supplierMatch = (p.supplierId?.name || '').toLowerCase().includes(q);
+      if (!invoiceMatch && !supplierMatch) return false;
+    }
+    if (purchaseSupplierFilter && (p.supplierId?._id ?? p.supplierId?.id ?? p.supplierId) !== purchaseSupplierFilter) return false;
+    if (purchaseFromDate && new Date(p.purchaseDate) < new Date(purchaseFromDate)) return false;
+    if (purchaseToDate && new Date(p.purchaseDate) > new Date(`${purchaseToDate}T23:59:59`)) return false;
+    return true;
+  });
+
   const handleExportExcel = async (exportAll = false) => {
     try {
       setExcelLoading(true);
@@ -538,13 +557,54 @@ export default function PurchaseEntry() {
 
       {!showForm ? (
         /* Purchase List View */
+        <>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Search Invoice / Supplier</label>
+            <input
+              value={purchaseSearch}
+              onChange={(e) => setPurchaseSearch(e.target.value)}
+              placeholder="Search..."
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Supplier</label>
+            <select
+              value={purchaseSupplierFilter}
+              onChange={(e) => setPurchaseSupplierFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-400"
+            >
+              <option value="">All Suppliers</option>
+              {(suppliers || []).map((s) => (<option key={s._id ?? s.id} value={s._id ?? s.id}>{s.name}</option>))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Purchase Date From</label>
+            <input type="date" value={purchaseFromDate} onChange={(e) => setPurchaseFromDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Purchase Date To</label>
+            <input type="date" value={purchaseToDate} onChange={(e) => setPurchaseToDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+          </div>
+          {(purchaseSearch || purchaseSupplierFilter || purchaseFromDate || purchaseToDate) && (
+            <button
+              onClick={() => { setPurchaseSearch(''); setPurchaseSupplierFilter(''); setPurchaseFromDate(''); setPurchaseToDate(''); }}
+              className="px-3 py-2 text-sm text-red-800 hover:bg-red-50 rounded-lg font-medium"
+            >
+              Reset
+            </button>
+          )}
+        </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           {purchasesLoading ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-2">
               <div className="w-8 h-8 border-4 border-red-800 border-t-transparent rounded-full animate-spin"></div>
               <p className="text-sm text-gray-500 font-semibold">Loading purchase history...</p>
             </div>
-          ) : !purchases || purchases.length === 0 ? (
+          ) : filteredPurchases.length === 0 ? (
             <div className="text-center py-20 space-y-4">
               <div className="inline-flex p-4 bg-gray-100 rounded-full text-gray-400">
                 <ShoppingBag className="w-8 h-8" />
@@ -552,7 +612,9 @@ export default function PurchaseEntry() {
               <div>
                 <h3 className="text-base font-bold text-gray-900">No Purchase Records Found</h3>
                 <p className="text-sm text-gray-500 mt-1 max-w-sm mx-auto">
-                  Get started by adding your first chemical purchase entry to record stock and track installments.
+                  {(purchases || []).length === 0
+                    ? 'Get started by adding your first chemical purchase entry to record stock and track installments.'
+                    : 'Try adjusting your filters.'}
                 </p>
               </div>
               <button
@@ -579,7 +641,7 @@ export default function PurchaseEntry() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
-                  {purchases.map((p) => {
+                  {filteredPurchases.map((p) => {
                     const balance = Math.max(0, p.totalAmount - p.paidAmount);
                     return (
                       <tr key={p._id} className="hover:bg-gray-50/50 transition-colors">
@@ -659,6 +721,7 @@ export default function PurchaseEntry() {
             </div>
           )}
         </div>
+        </>
       ) : (
         /* Purchase Stock Entry Form View */
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">

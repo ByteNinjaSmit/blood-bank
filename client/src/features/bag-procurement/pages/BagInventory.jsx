@@ -232,7 +232,10 @@ export default function BagInventory() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-700">
-                        {Math.floor(s.receivedQty / 45)} Box
+                        <div>{Math.floor(s.receivedQty / 45)} Box</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5">
+                          {Math.max(0, Math.floor(s.receivedQty / 45) - (s.unopenedBoxes ?? 0))} Opened
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-700 font-semibold">
                         {formatRemainingStock(s.unopenedBoxes, closing)} ({closing} bags)

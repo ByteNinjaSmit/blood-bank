@@ -152,6 +152,8 @@ export interface ListRequisitionsFilter {
   hospitalId?: string;
   patientId?: string;
   search?: string;
+  urgency?: 'ROUTINE' | 'URGENT' | 'EMERGENCY';
+  componentType?: ComponentType;
   from?: Date;
   to?: Date;
   sortBy?: string;
@@ -188,6 +190,8 @@ export function createRequisitionRepo(): RequisitionRepo {
       if (f.status) query.status = f.status;
       if (f.hospitalId) query.hospitalId = new Types.ObjectId(f.hospitalId);
       if (f.patientId) query.patientId = new Types.ObjectId(f.patientId);
+      if (f.urgency) query['requestedComponents.urgency'] = f.urgency;
+      if (f.componentType) query['requestedComponents.componentType'] = f.componentType;
 
       if (f.from || f.to) {
         query.requestedAt = {};

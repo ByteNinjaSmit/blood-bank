@@ -74,6 +74,7 @@ const Reserve = () => {
             status: 'reserved',
             componentType: componentType || undefined,
             search: search || undefined,
+            bloodGroup: bloodGroup || undefined,
             sortBy,
             order,
           },
@@ -101,6 +102,7 @@ const Reserve = () => {
   // filters
   const [componentType, setComponentType] = useState("");
   const [search, setSearch] = useState("");
+  const [bloodGroup, setBloodGroup] = useState("");
   const [order, setOrder] = useState("desc");
   const [sortBy, setSortBy] = useState("createdAt");
 
@@ -121,6 +123,7 @@ const Reserve = () => {
           status: 'reserved',
           componentType: componentType || undefined,
           search: search || undefined,
+          bloodGroup: bloodGroup || undefined,
           sortBy,
           order,
         },
@@ -177,7 +180,7 @@ const Reserve = () => {
   useEffect(() => {
     fetchRows(1, pagination.limit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [componentType, search, order, sortBy]);
+  }, [componentType, search, bloodGroup, order, sortBy]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -203,7 +206,7 @@ const Reserve = () => {
               <div className="text-sm text-gray-600">Total: {pagination.total || 0}</div>
               <div />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
               <div className="flex flex-col">
                 <label className="text-xs text-gray-600 mb-1">Component</label>
                 <select value={componentType} onChange={(e)=>{setComponentType(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
@@ -211,6 +214,16 @@ const Reserve = () => {
                   {COMPONENT_TYPES.map((c) => (
                     <option key={c.value} value={c.value}>{c.label}</option>
                   ))}
+                </select>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-600 mb-1">Blood Group</label>
+                <select value={bloodGroup} onChange={(e)=>{setBloodGroup(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
+                  <option value="">All</option>
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="AB">AB</option>
+                  <option value="O">O</option>
                 </select>
               </div>
               <div className="flex flex-col md:col-span-2">

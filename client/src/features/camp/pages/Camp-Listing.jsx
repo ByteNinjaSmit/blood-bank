@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useMemo } from "react"
-import { Plus, Eye, Edit, Trash2, Filter, X, Search, ChevronDown, MapPin, Users, Phone, Calendar, Droplets } from "lucide-react"
+import { Plus, Eye, Edit, Trash2, Filter, X, Search, ChevronDown, MapPin, Users, Phone, Calendar, Droplets, ArrowUpDown } from "lucide-react"
 import { useNavigate, Link } from "react-router-dom"
 import { apiClient } from "@/core/api-client"
 import { toast } from "sonner"
@@ -18,7 +18,12 @@ const CampList = ({ OnBack }) => {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [showFilters, setShowFilters] = useState(false)
-  const [dateRangeFilter, setDateRangeFilter] = useState("all")
+  const [fromDate, setFromDate] = useState("")
+  const [toDate, setToDate] = useState("")
+  const [sortBy, setSortBy] = useState("dateFrom")
+  const [order, setOrder] = useState("desc")
+
+  const toggleOrder = () => setOrder((o) => (o === "desc" ? "asc" : "desc"))
 
   const [staffList, setStaffList] = useState([])
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -63,7 +68,7 @@ const CampList = ({ OnBack }) => {
   }
 
   const filteredCamps = useMemo(() => {
-    return camps.filter((camp) => {
+    const filtered = camps.filter((camp) => {
       const matchesSearch =
         (camp.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (camp.campId || camp.siteId || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,9 +77,21 @@ const CampList = ({ OnBack }) => {
       const status = getProgressStatus(camp)
       const matchesStatus = statusFilter === "all" || status === statusFilter
 
-      return matchesSearch && matchesStatus
+      const matchesFrom = !fromDate || (camp.dateFrom && new Date(camp.dateFrom) >= new Date(fromDate))
+      const matchesTo = !toDate || (camp.dateFrom && new Date(camp.dateFrom) <= new Date(`${toDate}T23:59:59`))
+
+      return matchesSearch && matchesStatus && matchesFrom && matchesTo
     })
-  }, [camps, searchTerm, statusFilter])
+
+    filtered.sort((a, b) => {
+      let cmp = 0
+      if (sortBy === "dateFrom") cmp = new Date(a.dateFrom || 0) - new Date(b.dateFrom || 0)
+      else if (sortBy === "name") cmp = (a.name || "").localeCompare(b.name || "")
+      return order === "asc" ? cmp : -cmp
+    })
+
+    return filtered
+  }, [camps, searchTerm, statusFilter, fromDate, toDate, sortBy, order])
 
   const handleDelete = async (camp) => {
     if (!window.confirm(`Are you sure you want to delete "${camp.name}"?`)) return
@@ -254,7 +271,7 @@ const CampList = ({ OnBack }) => {
           </div>
 
           {showFilters && (
-            <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
                 <select
@@ -270,27 +287,59 @@ const CampList = ({ OnBack }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Date Range</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Start Date From</label>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Start Date To</label>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Sort By</label>
                 <select
-                  value={dateRangeFilter}
-                  onChange={(e) => setDateRangeFilter(e.target.value)}
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-700"
                 >
-                  <option value="all">All Dates</option>
-                  <option value="this-month">This Month</option>
-                  <option value="this-quarter">This Quarter</option>
-                  <option value="this-year">This Year</option>
+                  <option value="dateFrom">Start Date</option>
+                  <option value="name">Name</option>
                 </select>
               </div>
 
-              {(searchTerm || statusFilter !== "all" || dateRangeFilter !== "all") && (
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={toggleOrder}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <ArrowUpDown className="w-4 h-4" />
+                  {order === "desc" ? "Newest First" : "Oldest First"}
+                </button>
+              </div>
+
+              {(searchTerm || statusFilter !== "all" || fromDate || toDate) && (
                 <button
                   onClick={() => {
                     setSearchTerm("")
                     setStatusFilter("all")
-                    setDateRangeFilter("all")
+                    setFromDate("")
+                    setToDate("")
+                    setSortBy("dateFrom")
+                    setOrder("desc")
                   }}
-                  className="sm:col-span-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  className="sm:col-span-2 lg:col-span-5 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                 >
                   <X className="w-4 h-4" />
                   Clear Filters

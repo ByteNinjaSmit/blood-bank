@@ -150,7 +150,14 @@ export function createBagIssueRepo(): BagIssueRepo {
       const filter: Record<string, unknown> = {
         $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
       };
-      
+      if (q.fromDate || q.toDate) {
+        const range: Record<string, Date> = {};
+        if (q.fromDate) range.$gte = q.fromDate;
+        if (q.toDate) range.$lte = q.toDate;
+        filter.collectedAt = range;
+      }
+      if (q.donorId) filter.donor = new Types.ObjectId(q.donorId);
+
       const page = q.page ?? 1;
       const pageSize = q.pageSize ?? 20;
       const skip = (page - 1) * pageSize;

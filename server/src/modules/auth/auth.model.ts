@@ -26,13 +26,13 @@ export const RefreshTokenModel: Model<RefreshTokenDoc> =
   (mongoose.models.AuthRefreshToken as Model<RefreshTokenDoc> | undefined) ??
   mongoose.model<RefreshTokenDoc>('AuthRefreshToken', RefreshTokenSchema, 'refreshtokens');
 
-// ---- OTP sessions (login + registration share the shape) ----
+// ---- OTP sessions (registration) ----
 const OtpSchema = new Schema(
   {
     email: { type: String, required: true, index: true },
     txnId: { type: String, required: true, index: true },
     codeHash: { type: String, required: true },
-    purpose: { type: String, enum: ['LOGIN', 'REGISTER'], required: true },
+    purpose: { type: String, enum: ['REGISTER'], required: true },
     expiresAt: { type: Date, required: true },
     attempts: { type: Number, default: 0 },
     maxAttempts: { type: Number, default: 5 },

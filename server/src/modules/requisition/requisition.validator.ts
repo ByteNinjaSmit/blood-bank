@@ -87,6 +87,10 @@ export const ListRequisitionsQuery = z.object({
   patientId: z
     .preprocess((val) => (val === '' ? undefined : val), z.string().regex(OBJECT_ID).optional()),
   search: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
+  urgency: z
+    .preprocess((val) => (val === '' ? undefined : val), z.enum(['ROUTINE', 'URGENT', 'EMERGENCY']).optional()),
+  componentType: z
+    .preprocess((val) => (val === '' ? undefined : val), z.enum(COMPONENT_TYPE).optional()),
   from: z.preprocess((val) => (val === '' ? undefined : val), z.coerce.date().optional()),
   to: z.preprocess((val) => (val === '' ? undefined : val), z.coerce.date().optional()),
   sortBy: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()).default('updatedAt'),

@@ -83,7 +83,10 @@ const ListHospital = () => {
   const [filters, setFilters] = useState({
     name: '',
     contactPerson: '',
-    phone: ''
+    phone: '',
+    isActive: '',
+    from: '',
+    to: ''
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,7 +155,10 @@ const ListHospital = () => {
     setFilters({
       name: '',
       contactPerson: '',
-      phone: ''
+      phone: '',
+      isActive: '',
+      from: '',
+      to: ''
     });
     setSearchQuery('');
     setCurrentPage(1);
@@ -412,6 +418,46 @@ const ListHospital = () => {
                 placeholder="Filter by phone..."
                 value={filters.phone}
                 onChange={(e) => handleFilterChange('phone', e.target.value)}
+              />
+            </div>
+
+            {/* Status Filter */}
+            <div className="space-y-2">
+              <Label htmlFor="isActive">Status</Label>
+              <Select
+                value={filters.isActive === '' ? 'all' : filters.isActive}
+                onValueChange={(val) => handleFilterChange('isActive', val === 'all' ? '' : val)}
+              >
+                <SelectTrigger id="isActive">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="true">Active</SelectItem>
+                  <SelectItem value="false">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Created From */}
+            <div className="space-y-2">
+              <Label htmlFor="from">Created From</Label>
+              <Input
+                id="from"
+                type="date"
+                value={filters.from}
+                onChange={(e) => handleFilterChange('from', e.target.value)}
+              />
+            </div>
+
+            {/* Created To */}
+            <div className="space-y-2">
+              <Label htmlFor="to">Created To</Label>
+              <Input
+                id="to"
+                type="date"
+                value={filters.to}
+                onChange={(e) => handleFilterChange('to', e.target.value)}
               />
             </div>
 

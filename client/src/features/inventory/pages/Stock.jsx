@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
-import { Loader2, Boxes, Search, ChevronLeft, ChevronRight, X, RefreshCw } from "lucide-react";
+import { Loader2, Boxes, Search, ChevronLeft, ChevronRight, X, RefreshCw, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -251,14 +251,34 @@ const Stock = () => {
   const [rows, setRows] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
   const [selectedPrintItem, setSelectedPrintItem] = useState(null);
+  const [selectedViewItem, setSelectedViewItem] = useState(null);
 
   // filters
   const [componentType, setComponentType] = useState("");
   const [status, setStatus] = useState("in-stock");
   const [siteId, setSiteId] = useState("");
   const [search, setSearch] = useState("");
+  const [bloodGroup, setBloodGroup] = useState("");
+  const [rh, setRh] = useState("");
+  const [expiryFrom, setExpiryFrom] = useState("");
+  const [expiryTo, setExpiryTo] = useState("");
   const [order, setOrder] = useState("desc");
   const [sortBy, setSortBy] = useState("createdAt");
+
+  const buildParams = (page, limit) => ({
+    page,
+    limit,
+    status,
+    componentType: componentType || undefined,
+    siteId: siteId || undefined,
+    search: search || undefined,
+    bloodGroup: bloodGroup || undefined,
+    rh: rh || undefined,
+    expiryFrom: expiryFrom || undefined,
+    expiryTo: expiryTo || undefined,
+    sortBy,
+    order,
+  });
 
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
@@ -266,16 +286,7 @@ const Stock = () => {
       const res = await axios.get(`${API}/api/inventory`, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
-        params: {
-          page,
-          limit,
-          status,
-          componentType: componentType || undefined,
-          siteId: siteId || undefined,
-          search: search || undefined,
-          sortBy,
-          order,
-        },
+        params: buildParams(page, limit),
       });
       setRows(Array.isArray(res.data?.data) ? res.data.data : []);
       setPagination((p) => ({ ...p, ...(res.data?.pagination || {}) }));
@@ -296,16 +307,7 @@ const Stock = () => {
         const res = await axios.get(`${API}/api/inventory`, {
           headers: { Authorization: authorizationToken },
           withCredentials: true,
-          params: {
-            page: 1,
-            limit: 5000,
-            status,
-            componentType: componentType || undefined,
-            siteId: siteId || undefined,
-            search: search || undefined,
-            sortBy,
-            order,
-          },
+          params: buildParams(1, 5000),
         });
         dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
       }
@@ -320,7 +322,7 @@ const Stock = () => {
   useEffect(() => {
     fetchRows(1, pagination.limit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, componentType, siteId, search, order, sortBy]);
+  }, [status, componentType, siteId, search, bloodGroup, rh, expiryFrom, expiryTo, order, sortBy]);
 
   return (
     <div className="min-h-screen bg-gray-50 uppercase tracking-tight">
@@ -392,6 +394,53 @@ const Stock = () => {
                 </Select>
               </div>
 
+              {/* Blood Group */}
+              <div className="w-32 space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Blood Group</label>
+                <Select value={bloodGroup || "all"} onValueChange={(val) => {setBloodGroup(val === "all" ? "" : val); setPagination(p=>({...p,page:1}));}}>
+                  <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                    <SelectValue placeholder="All Groups" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Groups</SelectItem>
+                    <SelectItem value="A">A</SelectItem>
+                    <SelectItem value="B">B</SelectItem>
+                    <SelectItem value="AB">AB</SelectItem>
+                    <SelectItem value="O">O</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Rh */}
+              <div className="w-32 space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Rh</label>
+                <Select value={rh || "all"} onValueChange={(val) => {setRh(val === "all" ? "" : val); setPagination(p=>({...p,page:1}));}}>
+                  <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                    <SelectValue placeholder="All Rh" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Rh</SelectItem>
+                    <SelectItem value="Positive">Positive</SelectItem>
+                    <SelectItem value="Negative">Negative</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Sort By */}
+              <div className="w-36 space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Sort By</label>
+                <Select value={sortBy} onValueChange={(val) => {setSortBy(val); setPagination(p=>({...p,page:1}));}}>
+                  <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="createdAt">Created Date</SelectItem>
+                    <SelectItem value="collectedAt">Collection Date</SelectItem>
+                    <SelectItem value="expiresAt">Expiry Date</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Order */}
               <div className="w-36 space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Sort Order</label>
@@ -406,11 +455,38 @@ const Stock = () => {
                 </Select>
               </div>
 
+              {/* Expiry From */}
+              <div className="w-36 space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Expiry From</label>
+                <Input
+                  type="date"
+                  value={expiryFrom}
+                  onChange={(e) => {setExpiryFrom(e.target.value); setPagination(p=>({...p,page:1}));}}
+                  className="h-9 text-xs border-gray-200 bg-gray-50/50 shadow-none"
+                />
+              </div>
+
+              {/* Expiry To */}
+              <div className="w-36 space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Expiry To</label>
+                <Input
+                  type="date"
+                  value={expiryTo}
+                  onChange={(e) => {setExpiryTo(e.target.value); setPagination(p=>({...p,page:1}));}}
+                  className="h-9 text-xs border-gray-200 bg-gray-50/50 shadow-none"
+                />
+              </div>
+
               {/* Actions */}
               <div className="flex items-center gap-2 border-l border-gray-200 pl-3 pt-4">
-                {(search || componentType || status !== "in-stock") && (
-                  <button 
-                    onClick={() => {setSearch(""); setComponentType(""); setStatus("in-stock"); setPagination(p=>({...p,page:1}));}}
+                {(search || componentType || status !== "in-stock" || bloodGroup || rh || expiryFrom || expiryTo) && (
+                  <button
+                    onClick={() => {
+                      setSearch(""); setComponentType(""); setStatus("in-stock");
+                      setBloodGroup(""); setRh(""); setExpiryFrom(""); setExpiryTo("");
+                      setSortBy("createdAt"); setOrder("desc");
+                      setPagination(p=>({...p,page:1}));
+                    }}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-100"
                     title="Clear all filters"
                   >
@@ -441,8 +517,8 @@ const Stock = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Collection</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="pl-4 pr-1 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="pl-1 pr-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
@@ -487,11 +563,11 @@ const Stock = () => {
                           return `${day}/${month}/${year}`;
                         })() : '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm">
+                      <td className="pl-4 pr-1 py-3 text-sm">
                         <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
                                 r.status === "in-stock"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-100"
                                 : r.status === "reserved"
                                 ? "bg-amber-50 text-amber-700 border-amber-100"
                                 : "bg-gray-50 text-gray-700 border-gray-100"
@@ -500,15 +576,25 @@ const Stock = () => {
                             {r.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-right">
-                        <Button
-                          onClick={() => setSelectedPrintItem(r)}
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-xs font-bold text-red-800 hover:text-white hover:bg-red-800 border-red-200"
-                        >
-                          Print Label
-                        </Button>
+                      <td className="pl-1 pr-4 py-3 text-sm text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            onClick={() => setSelectedViewItem(r)}
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs font-bold text-gray-700 hover:text-white hover:bg-gray-800 border-gray-200"
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1" /> View
+                          </Button>
+                          <Button
+                            onClick={() => setSelectedPrintItem(r)}
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs font-bold text-red-800 hover:text-white hover:bg-red-800 border-red-200"
+                          >
+                            Print Label
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -620,6 +706,113 @@ const Stock = () => {
           </div>
         </div>
       </div>
+
+      {/* View Details Modal */}
+      {selectedViewItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 normal-case">
+          <div className="bg-white rounded-2xl p-6 max-w-4xl w-full shadow-2xl relative">
+            <button
+              onClick={() => setSelectedViewItem(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-base font-bold text-gray-800 mb-4">Blood Bag Details</h3>
+
+            <div className="space-y-4 text-sm">
+              <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-100 rounded-xl">
+                <div className="text-3xl font-black text-red-800 leading-none">
+                  {selectedViewItem?.bag?.bloodGroup || '—'}
+                </div>
+                <div className="text-xs font-bold text-red-700 uppercase tracking-wide">
+                  Rh {selectedViewItem?.bag?.rh || '—'}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Bag Information</p>
+                <div className="grid grid-cols-4 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
+                  <div>
+                    <p className="text-[10px] text-gray-500">Bag No</p>
+                    <p className="font-semibold text-gray-800">{selectedViewItem?.bag?.bagNo || selectedViewItem?.bagNo || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500">Segment No</p>
+                    <p className="font-semibold text-gray-800">{selectedViewItem?.bag?.segmentNo || selectedViewItem?.segmentNo || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500">Batch No</p>
+                    <p className="font-semibold text-gray-800">{selectedViewItem?.bag?.batchNo || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500">Bag Type</p>
+                    <p className="font-semibold text-gray-800">{selectedViewItem?.typeOfBag || '—'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Component</p>
+                <div className="grid grid-cols-5 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
+                  <div>
+                    <p className="text-[10px] text-gray-500">Component Name</p>
+                    <p className="font-semibold text-gray-800">{selectedViewItem?.component?.componentType || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500">Volume</p>
+                    <p className="font-semibold text-gray-800">{selectedViewItem?.component?.volumeMl ? `${selectedViewItem.component.volumeMl} mL` : '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500">Collection Date</p>
+                    <p className="font-semibold text-gray-800">{formatDate(selectedViewItem?.bag?.donationDate)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500">Expiry Date</p>
+                    <p className="font-semibold text-gray-800">{formatDate(selectedViewItem?.component?.expiryDate)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500">Status</p>
+                    <p className="font-semibold text-gray-800 capitalize">{selectedViewItem?.status || '—'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Donor Information</p>
+                <div className="grid grid-cols-5 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
+                  <div>
+                    <p className="text-[10px] text-gray-500">Donor Name</p>
+                    <p className="font-semibold text-gray-800">{selectedViewItem?.bag?.donorName || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500">Donor ID</p>
+                    <p className="font-semibold text-gray-800">{selectedViewItem?.bag?.donorId || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500">Phone</p>
+                    <p className="font-semibold text-gray-800">{selectedViewItem?.bag?.donorPhone || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500">Email</p>
+                    <p className="font-semibold text-gray-800 truncate">{selectedViewItem?.bag?.donorEmail || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500">Donation Type</p>
+                    <p className="font-semibold text-gray-800 capitalize">{selectedViewItem?.bag?.donationType || '—'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end mt-6">
+              <Button variant="outline" onClick={() => setSelectedViewItem(null)} className="px-5 text-xs font-bold shadow-none">
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Print Preview Modal */}
       {selectedPrintItem && (

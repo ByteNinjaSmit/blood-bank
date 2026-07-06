@@ -581,7 +581,14 @@ function ViewGRNModal({ onClose, grn, vendors, pos, onViewInvoice }) {
 export default function GoodsReceipt() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [editGrn, setEditGrn] = useState(null);
-  const { data, isLoading } = useGRNList({});
+  const [statusFilter, setStatusFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const { data, isLoading } = useGRNList({
+    status: statusFilter || undefined,
+    fromDate: fromDate || undefined,
+    toDate: toDate || undefined,
+  });
   const { data: poData } = usePOList({});
   const { data: vendorData } = useVendorList({});
 
@@ -710,7 +717,37 @@ export default function GoodsReceipt() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
+              <option value="">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="ACCEPTED">Accepted</option>
+              <option value="PARTIALLY_ACCEPTED">Partially Accepted</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Received From</label>
+            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Received To</label>
+            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          {(statusFilter || fromDate || toDate) && (
+            <button onClick={() => { setStatusFilter(''); setFromDate(''); setToDate(''); }}
+              className="px-3 py-2 text-sm text-orange-800 hover:bg-orange-50 rounded-lg font-medium">
+              Reset
+            </button>
+          )}
+        </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-100">

@@ -31,23 +31,24 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  ArrowUpDown,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth } from '@/store/auth';
-import campService from '@/services/campService';
+import { campApi } from '@/features/camp/api';
 import CustomModal from '@/components/CustomModal';
 
 const CampVolunteerList = () => {
-  const { authorizationToken } = useAuth();
   const [volunteers, setVolunteers] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [siteFilter, setSiteFilter] = useState('all');
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
-  
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -62,47 +63,41 @@ const CampVolunteerList = () => {
 
   const fetchCamps = useCallback(async () => {
     try {
-      campService.initialize(authorizationToken);
-      const res = await campService.listCamps();
-      if (res.success) setCamps(res.data || []);
+      const items = await campApi.list();
+      setCamps(Array.isArray(items) ? items : []);
     } catch (err) {
       console.error("Error fetching camps:", err);
     }
-  }, [authorizationToken]);
+  }, []);
 
   const fetchVolunteers = useCallback(async () => {
     setLoading(true);
     try {
-      campService.initialize(authorizationToken);
-      
       const params = {
         page: currentPage,
         limit: pageSize,
         search: searchQuery.trim(),
         status: statusFilter,
-        siteId: siteFilter,
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate
+        campId: siteFilter,
+        startDate: dateRange.startDate || undefined,
+        endDate: dateRange.endDate || undefined,
+        sortBy,
+        sortOrder,
       };
 
-      const result = await campService.getVoluntaryDonations(params);
-      
-      if (result.success) {
-        setVolunteers(result.data || []);
-        if (result.pagination) {
-          setTotalCount(result.pagination.totalCount);
-          setTotalPages(result.pagination.totalPages);
-        }
-      } else {
-        toast.error(result.error || 'Failed to load volunteers');
+      const result = await campApi.voluntaryDonations(params);
+      setVolunteers(result?.items || []);
+      if (result?.pagination) {
+        setTotalCount(result.pagination.totalCount);
+        setTotalPages(result.pagination.totalPages);
       }
     } catch (error) {
       console.error('Error fetching volunteers:', error);
-      toast.error('Network error. Please check your connection.');
+      toast.error(error?.message || 'Network error. Please check your connection.');
     } finally {
       setLoading(false);
     }
-  }, [authorizationToken, currentPage, pageSize, searchQuery, statusFilter, siteFilter, dateRange]);
+  }, [currentPage, pageSize, searchQuery, statusFilter, siteFilter, dateRange, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchCamps();
@@ -126,8 +121,12 @@ const CampVolunteerList = () => {
     setStatusFilter('all');
     setSiteFilter('all');
     setDateRange({ startDate: '', endDate: '' });
+    setSortBy('createdAt');
+    setSortOrder('desc');
     setCurrentPage(1);
   };
+
+  const toggleSortOrder = () => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'));
 
   const handleOpenDetails = (volunteer) => {
     setSelectedVolunteer(volunteer);
@@ -249,9 +248,33 @@ const CampVolunteerList = () => {
                 </div>
               </div>
 
+              {/* Sort By */}
+              <div className="w-40 space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Sort By</label>
+                <Select value={sortBy} onValueChange={(val) => { setSortBy(val); setCurrentPage(1); }}>
+                  <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="createdAt">Registration Date</SelectItem>
+                    <SelectItem value="firstName">First Name</SelectItem>
+                    <SelectItem value="bloodGroup">Blood Group</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Sort Order */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 block">&nbsp;</label>
+                <Button onClick={toggleSortOrder} variant="outline" size="sm" className="h-9 text-xs font-bold gap-1.5" disabled={loading}>
+                  <ArrowUpDown className="w-3.5 h-3.5" />
+                  {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
+                </Button>
+              </div>
+
               {/* Actions */}
               <div className="flex items-center gap-2 border-l border-gray-200 pl-3 pt-4">
-                {(searchQuery || statusFilter !== 'all' || siteFilter !== 'all' || dateRange.startDate || dateRange.endDate) && (
+                {(searchQuery || statusFilter !== 'all' || siteFilter !== 'all' || dateRange.startDate || dateRange.endDate || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
                   <button 
                     onClick={handleClearFilters}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-100"

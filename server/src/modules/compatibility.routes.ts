@@ -32,7 +32,7 @@ const ttiService = createTtiService({
 // 1. GET /inventory
 router.get('/inventory', authenticate, async (req, res, next) => {
   try {
-    const { page, limit, status, componentType, siteId, search, sortBy, order, storageLocation, dispatchType } = req.query as any;
+    const { page, limit, status, componentType, siteId, search, sortBy, order, storageLocation, dispatchType, bloodGroup, rh, expiryFrom, expiryTo } = req.query as any;
 
     const unitFilter: any = {
       $and: [
@@ -59,6 +59,18 @@ router.get('/inventory', authenticate, async (req, res, next) => {
 
     if (siteId) {
       unitFilter.campId = new Types.ObjectId(siteId);
+    }
+
+    if (bloodGroup) {
+      unitFilter.aboGroup = bloodGroup;
+    }
+    if (rh) {
+      unitFilter.rhFactor = rh === 'Positive' || rh === 'POSITIVE' ? 'POSITIVE' : 'NEGATIVE';
+    }
+    if (expiryFrom || expiryTo) {
+      unitFilter.expiresAt = {};
+      if (expiryFrom) unitFilter.expiresAt.$gte = new Date(expiryFrom);
+      if (expiryTo) unitFilter.expiresAt.$lte = new Date(expiryTo);
     }
 
     if (search) {
@@ -130,26 +142,37 @@ router.get('/inventory', authenticate, async (req, res, next) => {
     const donations = await DonationModel.find({
       donationId: { $in: donationIds },
       $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }]
-    }).select('donationId bagNo segmentNo typeOfBag collectedAt donor donationType').lean();
+    }).select('donationId bagNo segmentNo lotNo typeOfBag collectedAt donor donationType').lean();
 
     const donorIds = donations.map((d: any) => d.donor).filter(Boolean);
-    const donors = await DonorModel.find({ _id: { $in: donorIds } }).select('_id name').lean() as any[];
-    const donorMap = new Map<string, string>();
+    const donors = await DonorModel.find({ _id: { $in: donorIds } }).select('_id donorId name phone email bloodGroup rh').lean() as any[];
+    const donorInfoMap = new Map<string, { name: string; donorId?: string; phone?: string; email?: string; bloodGroup?: string; rh?: string }>();
     donors.forEach(d => {
       const fullName = d.name ? [d.name.firstName, d.name.middleName, d.name.lastName].filter(Boolean).join(' ') : 'Unknown';
-      donorMap.set(d._id.toString(), fullName);
+      donorInfoMap.set(d._id.toString(), {
+        name: fullName,
+        donorId: d.donorId,
+        phone: d.phone,
+        email: d.email,
+        bloodGroup: d.bloodGroup,
+        rh: d.rh === 'NEGATIVE' ? 'Negative' : 'Positive',
+      });
     });
 
-    const donationMap = new Map<string, { bagNo: string; segmentNo?: string | null; typeOfBag?: string; collectedAt?: Date; donorName?: string; donationType?: string }>();
+    const donationMap = new Map<string, { bagNo: string; segmentNo?: string | null; batchNo?: string | null; typeOfBag?: string; collectedAt?: Date; donorName?: string; donorId?: string; donorPhone?: string; donorEmail?: string; donationType?: string }>();
     donations.forEach(d => {
       if (d.donationId && d.bagNo) {
-        const donorName = d.donor ? donorMap.get(d.donor.toString()) || 'Unknown' : 'Unknown';
+        const donorInfo = d.donor ? donorInfoMap.get(d.donor.toString()) : undefined;
         donationMap.set(d.donationId, {
           bagNo: d.bagNo,
           segmentNo: d.segmentNo,
+          batchNo: d.lotNo,
           typeOfBag: d.typeOfBag || undefined,
           collectedAt: d.collectedAt,
-          donorName,
+          donorName: donorInfo?.name || 'Unknown',
+          donorId: donorInfo?.donorId,
+          donorPhone: donorInfo?.phone,
+          donorEmail: donorInfo?.email,
           donationType: d.donationType
         });
       }
@@ -227,8 +250,12 @@ router.get('/inventory', authenticate, async (req, res, next) => {
           bloodGroup: u.aboGroup,
           rh: u.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
           segmentNo,
+          batchNo: donObj?.batchNo || undefined,
           donationDate: donObj?.collectedAt ? donObj.collectedAt.toISOString() : undefined,
           donorName: donObj?.donorName || 'Unknown',
+          donorId: donObj?.donorId || undefined,
+          donorPhone: donObj?.donorPhone || undefined,
+          donorEmail: donObj?.donorEmail || undefined,
           donationType: donObj?.donationType || 'VOLUNTARY',
         },
         component: {
@@ -846,7 +873,7 @@ async function mapTtiBags(ttis: any[]) {
 // 3. GET /serology/bags
 router.get('/serology/bags', authenticate, async (req, res, next) => {
   try {
-    const { page, limit, search, order } = req.query as any;
+    const { page, limit, search, order, fromDate, toDate } = req.query as any;
 
     const separatedDonationIds = await BloodUnitModel.distinct('donationId', {
       status: 'QUARANTINE',
@@ -876,6 +903,18 @@ router.get('/serology/bags', authenticate, async (req, res, next) => {
       const matchedDonationIds = matchingDonations.map(d => d.donationId);
       const targetIds = matchedDonationIds.filter(id => separatedDonationIds.includes(id));
       ttiFilter.donationId = { $in: targetIds };
+    }
+
+    if (fromDate || toDate) {
+      const collectedAtRange: any = {};
+      if (fromDate) collectedAtRange.$gte = new Date(fromDate);
+      if (toDate) collectedAtRange.$lte = new Date(`${toDate}T23:59:59`);
+      const donationsInRange = await DonationModel.find({
+        donationId: { $in: ttiFilter.donationId.$in },
+        collectedAt: collectedAtRange,
+        $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }]
+      }).select('donationId').lean();
+      ttiFilter.donationId = { $in: donationsInRange.map(d => d.donationId) };
     }
 
 
@@ -1756,22 +1795,28 @@ const toLegacyComponentType = (type: string) => {
 // GET /mis/donors
 router.get('/mis/donors', authenticate, async (req, res, next) => {
   try {
-    const total = await DonorModel.countDocuments({ deletedAt: null });
+    const { fromDate, toDate } = req.query as any;
+    const dateRange: any = {};
+    if (fromDate) dateRange.$gte = new Date(fromDate);
+    if (toDate) dateRange.$lte = new Date(`${toDate}T23:59:59`);
+    const dateMatch = (fromDate || toDate) ? { createdAt: dateRange } : {};
+
+    const total = await DonorModel.countDocuments({ deletedAt: null, ...dateMatch });
 
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
     const newThisMonth = await DonorModel.countDocuments({ createdAt: { $gte: startOfMonth }, deletedAt: null });
 
-    const active = await DonorModel.countDocuments({ eligibilityStatus: 'eligible', deletedAt: null });
+    const active = await DonorModel.countDocuments({ eligibilityStatus: 'eligible', deletedAt: null, ...dateMatch });
 
     const gender = await DonorModel.aggregate([
-      { $match: { deletedAt: null } },
+      { $match: { deletedAt: null, ...dateMatch } },
       { $group: { _id: '$sex', count: { $sum: 1 } } }
     ]);
 
     const bloodGroupAgg = await DonorModel.aggregate([
-      { $match: { deletedAt: null } },
+      { $match: { deletedAt: null, ...dateMatch } },
       { $group: { _id: { bg: '$bloodGroup', rh: '$rh' }, count: { $sum: 1 } } }
     ]);
     const bloodGroup = bloodGroupAgg.map(g => {
@@ -1811,7 +1856,7 @@ router.get('/mis/donors', authenticate, async (req, res, next) => {
     const repeatCount = donationCounts.filter(d => d.count > 1).length;
     const repeatPercentage = total > 0 ? Math.round((repeatCount / total) * 100) : 0;
 
-    const donorsList = await DonorModel.find({ deletedAt: null })
+    const donorsList = await DonorModel.find({ deletedAt: null, ...dateMatch })
       .sort({ createdAt: -1 })
       .limit(100)
       .select('donorId name bloodGroup rh sex address phone lastDonationDate')
@@ -1845,10 +1890,16 @@ router.get('/mis/donors', authenticate, async (req, res, next) => {
 // GET /mis/donations
 router.get('/mis/donations', authenticate, async (req, res, next) => {
   try {
-    const total = await DonationModel.countDocuments({ deletedAt: null });
+    const { fromDate, toDate } = req.query as any;
+    const dateRange: any = {};
+    if (fromDate) dateRange.$gte = new Date(fromDate);
+    if (toDate) dateRange.$lte = new Date(`${toDate}T23:59:59`);
+    const dateMatch = (fromDate || toDate) ? { collectedAt: dateRange } : {};
+
+    const total = await DonationModel.countDocuments({ deletedAt: null, ...dateMatch });
 
     const byBloodGroupAgg = await DonationModel.aggregate([
-      { $match: { deletedAt: null } },
+      { $match: { deletedAt: null, ...dateMatch } },
       {
         $lookup: {
           from: 'donors',
@@ -1867,7 +1918,7 @@ router.get('/mis/donations', authenticate, async (req, res, next) => {
     ]);
 
     const bySite = await DonationModel.aggregate([
-      { $match: { deletedAt: null } },
+      { $match: { deletedAt: null, ...dateMatch } },
       {
         $lookup: {
           from: 'camps',
@@ -1885,7 +1936,7 @@ router.get('/mis/donations', authenticate, async (req, res, next) => {
     ]);
 
     const byGender = await DonationModel.aggregate([
-      { $match: { deletedAt: null } },
+      { $match: { deletedAt: null, ...dateMatch } },
       {
         $lookup: {
           from: 'donors',
@@ -1928,7 +1979,15 @@ router.get('/mis/donations', authenticate, async (req, res, next) => {
 // GET /mis/camps
 router.get('/mis/camps', authenticate, async (req, res, next) => {
   try {
-    const camps = await CampModel.find().lean();
+    const { fromDate, toDate } = req.query as any;
+    const campDateMatch: any = {};
+    if (fromDate || toDate) {
+      const range: any = {};
+      if (fromDate) range.$gte = new Date(fromDate);
+      if (toDate) range.$lte = new Date(`${toDate}T23:59:59`);
+      campDateMatch.dateFrom = range;
+    }
+    const camps = await CampModel.find(campDateMatch).lean();
     const campIds = camps.map(c => c._id);
 
     const donationsByCamp = await DonationModel.aggregate([
@@ -1981,6 +2040,12 @@ router.get('/mis/camps', authenticate, async (req, res, next) => {
 // GET /mis/bags
 router.get('/mis/bags', authenticate, async (req, res, next) => {
   try {
+    const { fromDate, toDate } = req.query as any;
+    const dateRange: any = {};
+    if (fromDate) dateRange.$gte = new Date(fromDate);
+    if (toDate) dateRange.$lte = new Date(`${toDate}T23:59:59`);
+    const dateMatch = (fromDate || toDate) ? { collectedAt: dateRange } : {};
+
     const ttiStats = await TtiResultModel.aggregate([
       { $group: { _id: '$releaseDecision', count: { $sum: 1 } } }
     ]);
@@ -1992,7 +2057,7 @@ router.get('/mis/bags', authenticate, async (req, res, next) => {
       return { _id: status, count: s.count };
     });
 
-    const donations = await DonationModel.find({ deletedAt: null })
+    const donations = await DonationModel.find({ deletedAt: null, ...dateMatch })
       .sort({ collectedAt: -1 })
       .limit(100)
       .populate('donor', 'donorId bloodGroup rh')
@@ -2038,8 +2103,14 @@ router.get('/mis/bags', authenticate, async (req, res, next) => {
 // GET /mis/components
 router.get('/mis/components', authenticate, async (req, res, next) => {
   try {
+    const { fromDate, toDate } = req.query as any;
+    const dateRange: any = {};
+    if (fromDate) dateRange.$gte = new Date(fromDate);
+    if (toDate) dateRange.$lte = new Date(`${toDate}T23:59:59`);
+    const dateMatch = (fromDate || toDate) ? { collectedAt: dateRange } : {};
+
     const productionAgg = await BloodUnitModel.aggregate([
-      { $match: { deletedAt: null } },
+      { $match: { deletedAt: null, ...dateMatch } },
       {
         $group: {
           _id: '$componentType',
@@ -2054,7 +2125,7 @@ router.get('/mis/components', authenticate, async (req, res, next) => {
       avgVolume: p.avgVolume || 0
     }));
 
-    const units = await BloodUnitModel.find({ deletedAt: null }).lean();
+    const units = await BloodUnitModel.find({ deletedAt: null, ...dateMatch }).lean();
     const now = new Date();
     const buckets = { '0-5': 0, '6-10': 0, '11-20': 0, '21-35': 0, '36+': 0 };
     units.forEach((u: any) => {

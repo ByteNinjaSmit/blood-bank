@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Building2, BookOpen, Users, Activity, CheckCircle2, XCircle, Search, Eye, Edit, Trash2, Plus } from 'lucide-react';
+import { Home, Building2, BookOpen, Users, Activity, CheckCircle2, XCircle, Search, Eye, Edit, Trash2, Plus, ArrowUpDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useDonor, useDonorList } from '@/hooks/useDonor';
@@ -31,8 +31,27 @@ const MasterDonors = () => {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodGroupFilter, setBloodGroupFilter] = useState('');
+  const [rhFilter, setRhFilter] = useState('');
   const [eligibilityFilter, setEligibilityFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [order, setOrder] = useState('desc');
   const [excelLoading, setExcelLoading] = useState(false);
+
+  const toggleOrder = () => setOrder((o) => (o === 'desc' ? 'asc' : 'desc'));
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setBloodGroupFilter('');
+    setRhFilter('');
+    setEligibilityFilter('');
+    setFromDate('');
+    setToDate('');
+    setSortBy('createdAt');
+    setOrder('desc');
+    setPage(1);
+  };
 
   const handleExportExcel = async (exportAll = false) => {
     try {
@@ -46,7 +65,12 @@ const MasterDonors = () => {
           pageSize: 5000,
           search: searchQuery || undefined,
           bloodGroup: bloodGroupFilter || undefined,
+          rh: rhFilter || undefined,
           eligibilityStatus: eligibilityFilter || undefined,
+          from: fromDate || undefined,
+          to: toDate || undefined,
+          sortBy,
+          order,
         });
         dataToExport = res?.items ?? [];
       } else {
@@ -85,7 +109,12 @@ const MasterDonors = () => {
     pageSize: PAGE_SIZE,
     search: searchQuery || undefined,
     bloodGroup: bloodGroupFilter || undefined,
+    rh: rhFilter || undefined,
     eligibilityStatus: eligibilityFilter || undefined,
+    from: fromDate || undefined,
+    to: toDate || undefined,
+    sortBy,
+    order,
   });
 
   const rawItems = data?.items ?? [];
@@ -102,10 +131,7 @@ const MasterDonors = () => {
 
   function switchTab(key) {
     setActiveTab(key);
-    setPage(1);
-    setSearchQuery('');
-    setBloodGroupFilter('');
-    setEligibilityFilter('');
+    resetFilters();
   }
 
   const editInitialData = selectedDonor
@@ -340,7 +366,7 @@ const MasterDonors = () => {
                 />
               </div>
             </div>
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-4">
               <select
                 value={bloodGroupFilter}
                 onChange={(e) => {
@@ -356,6 +382,18 @@ const MasterDonors = () => {
                 <option value="O">O</option>
               </select>
               <select
+                value={rhFilter}
+                onChange={(e) => {
+                  setRhFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
+              >
+                <option value="">All Rh</option>
+                <option value="Positive">Positive</option>
+                <option value="Negative">Negative</option>
+              </select>
+              <select
                 value={eligibilityFilter}
                 onChange={(e) => {
                   setEligibilityFilter(e.target.value);
@@ -369,6 +407,55 @@ const MasterDonors = () => {
                 <option value="temp-deferred">Temp Deferred</option>
               </select>
             </div>
+          </div>
+          <div className="flex flex-col lg:flex-row lg:items-end gap-4 mt-4 pt-4 border-t border-gray-100">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Registered From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Registered To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Sort By</label>
+              <select
+                value={sortBy}
+                onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-sm"
+              >
+                <option value="createdAt">Registered Date</option>
+                <option value="lastDonationDate">Last Donation Date</option>
+                <option value="name">Name</option>
+                <option value="dob">Date of Birth</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={toggleOrder}
+              title="Toggle sort order"
+              className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <ArrowUpDown className="w-4 h-4" />
+              {order === 'desc' ? 'Newest First' : 'Oldest First'}
+            </button>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="px-3 py-2 rounded-lg text-sm text-orange-800 hover:bg-orange-50 transition-colors font-medium"
+            >
+              Reset Filters
+            </button>
           </div>
         </div>
 

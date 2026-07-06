@@ -69,6 +69,7 @@ const ComponentsList = () => {
           ...(state.filters.fromDate && { fromDate: state.filters.fromDate }),
           ...(state.filters.toDate && { toDate: state.filters.toDate }),
           ...(state.filters.search && { search: state.filters.search }),
+          order: state.filters.order,
         };
         const response = await axios.get(`${API}/api/v2/component/list`, {
           params,
@@ -113,6 +114,7 @@ const ComponentsList = () => {
       fromDate: "",
       toDate: "",
       search: "",
+      order: "desc",
     },
   });
 
@@ -136,6 +138,7 @@ const ComponentsList = () => {
         ...(state.filters.fromDate && { fromDate: state.filters.fromDate }),
         ...(state.filters.toDate && { toDate: state.filters.toDate }),
         ...(state.filters.search && { search: state.filters.search }),
+        order: state.filters.order,
       };
 
       console.log("Fetching components with params:", params);
@@ -200,7 +203,7 @@ const ComponentsList = () => {
     if (state.filters.search === "") {
       fetchComponents();
     }
-  }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore, state.filters.fromDate, state.filters.toDate]);
+  }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore, state.filters.fromDate, state.filters.toDate, state.filters.order]);
 
   // Single responsibility: Handle filter changes
   const handleFilterChange = (filterType, value) => {
@@ -242,6 +245,7 @@ const ComponentsList = () => {
         fromDate: "",
         toDate: "",
         search: "",
+        order: "desc",
       },
       pagination: { ...prev.pagination, page: 1 },
     }));
@@ -465,8 +469,22 @@ const ComponentsList = () => {
               </div>
 
               {/* Compact Actions */}
+              {/* Sort Order */}
+              <div className="w-36 space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Sort Order</label>
+                <Select value={state.filters.order} onValueChange={(value) => handleFilterChange("order", value)}>
+                  <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">Newest First</SelectItem>
+                    <SelectItem value="asc">Oldest First</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
-                {Object.values(state.filters).some(filter => filter !== "") && (
+                {Object.entries(state.filters).some(([k, v]) => k === "order" ? v !== "desc" : v !== "") && (
                   <button 
                     onClick={clearFilters}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-100"

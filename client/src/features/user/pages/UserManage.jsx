@@ -45,6 +45,8 @@ export default function UserManage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [sortBy, setSortBy] = useState("name");
+  const [order, setOrder] = useState("asc");
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(1);
 
@@ -103,18 +105,34 @@ export default function UserManage() {
     });
   }, [users, search, roleFilter, statusFilter]);
 
-  const total = filteredUsers.length;
+  const sortedUsers = useMemo(() => {
+    const list = [...filteredUsers];
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (sortBy === "name") {
+        cmp = `${a?.name?.first || ""} ${a?.name?.last || ""}`.localeCompare(`${b?.name?.first || ""} ${b?.name?.last || ""}`);
+      } else if (sortBy === "createdAt") {
+        cmp = new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+      } else if (sortBy === "role") {
+        cmp = (a.role || "").localeCompare(b.role || "");
+      }
+      return order === "asc" ? cmp : -cmp;
+    });
+    return list;
+  }, [filteredUsers, sortBy, order]);
+
+  const total = sortedUsers.length;
   const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * rowsPerPage;
   const endIndex = Math.min(startIndex + rowsPerPage, total);
-  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+  const paginatedUsers = sortedUsers.slice(startIndex, endIndex);
 
   useEffect(() => {
     // reset to first page when filters change
     setPage(1);
     setSelectedIds(new Set());
-  }, [search, roleFilter, statusFilter, rowsPerPage]);
+  }, [search, roleFilter, statusFilter, sortBy, order, rowsPerPage]);
 
   const { isAdmin, canView, canCreate, canUpdate, canDelete } = checkAccess(user);
 
@@ -272,6 +290,10 @@ export default function UserManage() {
         onRoleFilter={setRoleFilter}
         statusFilter={statusFilter}
         onStatusFilter={setStatusFilter}
+        sortBy={sortBy}
+        onSortBy={setSortBy}
+        order={order}
+        onOrder={setOrder}
         rowsPerPage={rowsPerPage}
         onRowsPerPage={setRowsPerPage}
         total={total}

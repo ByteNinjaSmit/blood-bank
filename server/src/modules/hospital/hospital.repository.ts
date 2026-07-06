@@ -10,6 +10,7 @@ export interface HospitalDto {
   phone?: string;
   email?: string;
   licenseNo?: string;
+  isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -23,6 +24,7 @@ interface RawHospital {
   phone?: string;
   email?: string;
   licenseNo?: string;
+  isActive?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -37,6 +39,7 @@ function toDto(r: RawHospital): HospitalDto {
     phone: r.phone,
     email: r.email,
     licenseNo: r.licenseNo,
+    isActive: r.isActive,
     createdAt: r.createdAt?.toISOString(),
     updatedAt: r.updatedAt?.toISOString(),
   };
@@ -46,6 +49,9 @@ export interface ListHospitalsFilter {
   name?: string;
   contactPerson?: string;
   phone?: string;
+  isActive?: boolean;
+  from?: Date;
+  to?: Date;
   page: number;
   limit: number;
   sortBy: string;
@@ -79,6 +85,13 @@ export const hospitalRepo = {
     if (f.name) filter.name = { $regex: f.name, $options: 'i' };
     if (f.contactPerson) filter.contactPerson = { $regex: f.contactPerson, $options: 'i' };
     if (f.phone) filter.phone = { $regex: f.phone, $options: 'i' };
+    if (f.isActive !== undefined) filter.isActive = f.isActive;
+    if (f.from || f.to) {
+      const range: Record<string, Date> = {};
+      if (f.from) range.$gte = f.from;
+      if (f.to) range.$lte = f.to;
+      filter.createdAt = range;
+    }
     const sort: Record<string, 1 | -1> = { [f.sortBy]: f.sortOrder === 'desc' ? -1 : 1 };
     const skip = (f.page - 1) * f.limit;
     const [docs, total] = await Promise.all([

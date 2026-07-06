@@ -23,6 +23,8 @@ export default function RequisitionList() {
     search: '',
     status: '',
     hospitalId: '',
+    urgency: '',
+    componentType: '',
     from: '',
     to: '',
     sortBy: 'updatedAt',
@@ -140,7 +142,7 @@ export default function RequisitionList() {
   };
 
   const resetFilters = () => {
-    setFilters({ search: '', status: '', hospitalId: '', from: '', to: '', sortBy: 'updatedAt', order: 'desc' });
+    setFilters({ search: '', status: '', hospitalId: '', urgency: '', componentType: '', from: '', to: '', sortBy: 'updatedAt', order: 'desc' });
     setPage(1);
     fetchList();
   };
@@ -648,6 +650,7 @@ export default function RequisitionList() {
                         <th className="p-3">Blood Group</th>
                         <th className="p-3">Donation Date</th>
                         <th className="p-3">Expiry Date</th>
+                        <th className="p-3">Issued At</th>
                         <th className="p-3 text-right">Status</th>
                         <th className="p-3 text-right">Actions</th>
                       </tr>
@@ -666,6 +669,7 @@ export default function RequisitionList() {
 
                         const isIssued = unitStatus === 'ISSUED';
                         const isReserved = unitStatus === 'RESERVED' || unitStatus === 'CROSSMATCHED';
+                        const issuedAtDisplay = isIssued && inv?.issuedAt ? fmt(inv.issuedAt) : '—';
 
                         return (
                           <tr key={invId} className="hover:bg-gray-50/50">
@@ -675,6 +679,7 @@ export default function RequisitionList() {
                             <td className="p-3 font-bold text-gray-800">{bloodGroup}</td>
                             <td className="p-3 text-gray-600">{donationDate}</td>
                             <td className="p-3 text-gray-600">{expiryDate}</td>
+                            <td className="p-3 text-gray-600 whitespace-nowrap">{issuedAtDisplay}</td>
                             <td className="p-3 text-right">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
                                 isIssued
@@ -888,6 +893,27 @@ export default function RequisitionList() {
             <div>
               <label className="block text-sm text-gray-700 mb-1">To</label>
               <input type="date" className="w-full px-3 py-2 border rounded-lg" value={filters.to} onChange={(e) => setFilters((p) => ({ ...p, to: e.target.value }))} />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Urgency</label>
+              <select className="w-full px-3 py-2 border rounded-lg" value={filters.urgency} onChange={(e) => setFilters((p) => ({ ...p, urgency: e.target.value }))}>
+                <option value="">All</option>
+                <option value="ROUTINE">Routine</option>
+                <option value="URGENT">Urgent</option>
+                <option value="EMERGENCY">Emergency</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Component</label>
+              <select className="w-full px-3 py-2 border rounded-lg" value={filters.componentType} onChange={(e) => setFilters((p) => ({ ...p, componentType: e.target.value }))}>
+                <option value="">All</option>
+                <option value="PRBC">PRBC</option>
+                <option value="FFP">FFP</option>
+                <option value="PLATELET_CONCENTRATE">Platelet Concentrate</option>
+                <option value="SDP">SDP</option>
+                <option value="CRYOPRECIPITATE">Cryoprecipitate</option>
+                <option value="WHOLE_BLOOD">Whole Blood</option>
+              </select>
             </div>
           </div>
           <div className="flex items-center justify-between mt-3">

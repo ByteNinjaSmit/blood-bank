@@ -122,6 +122,9 @@ const Issue = () => {
             status,
             componentType: componentType || undefined,
             search: search || undefined,
+            bloodGroup: bloodGroup || undefined,
+            expiryFrom: expiryFrom || undefined,
+            expiryTo: expiryTo || undefined,
             sortBy,
             order,
           },
@@ -149,6 +152,9 @@ const Issue = () => {
   // filters
   const [componentType, setComponentType] = useState("");
   const [search, setSearch] = useState("");
+  const [bloodGroup, setBloodGroup] = useState("");
+  const [expiryFrom, setExpiryFrom] = useState("");
+  const [expiryTo, setExpiryTo] = useState("");
   const [order, setOrder] = useState("desc");
   const [sortBy, setSortBy] = useState("createdAt");
 
@@ -185,6 +191,9 @@ const Issue = () => {
           status,
           componentType: componentType || undefined,
           search: search || undefined,
+          bloodGroup: bloodGroup || undefined,
+          expiryFrom: expiryFrom || undefined,
+          expiryTo: expiryTo || undefined,
           sortBy,
           order,
         },
@@ -325,7 +334,7 @@ const Issue = () => {
   useEffect(() => {
     fetchRows(1, pagination.limit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, componentType, search, order, sortBy]);
+  }, [status, componentType, search, bloodGroup, expiryFrom, expiryTo, order, sortBy]);
 
   const openView = (item) => { setViewItem(item); setViewOpen(true); };
   const closeView = () => { setViewOpen(false); setViewItem(null); };
@@ -716,9 +725,27 @@ const Issue = () => {
                   <option value="Cryo">Cryo</option>
                 </select>
               </div>
-              <div className="flex flex-col md:col-span-2">
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-600 mb-1">Blood Group</label>
+                <select value={bloodGroup} onChange={(e)=>{setBloodGroup(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
+                  <option value="">All</option>
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="AB">AB</option>
+                  <option value="O">O</option>
+                </select>
+              </div>
+              <div className="flex flex-col">
                 <label className="text-xs text-gray-600 mb-1">Search Bag No</label>
                 <input value={search} onChange={(e)=>{setSearch(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm" placeholder="Bag ID" />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-600 mb-1">Expiry From</label>
+                <input type="date" value={expiryFrom} onChange={(e)=>{setExpiryFrom(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm" />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-600 mb-1">Expiry To</label>
+                <input type="date" value={expiryTo} onChange={(e)=>{setExpiryTo(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm" />
               </div>
               <div className="flex flex-col">
                 <label className="text-xs text-gray-600 mb-1">Order</label>

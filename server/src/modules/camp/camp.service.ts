@@ -4,6 +4,7 @@ import { ConflictError, ForbiddenError, NotFoundError } from '@/shared/errors';
 import { auditService } from '@/modules/audit/audit.service';
 import { campRepo, type VoluntaryFilter } from './camp.repository';
 import { toDto as donorToDto } from '@/modules/donor/donor.repository';
+import { DonationModel } from '@/modules/donation/donation.model';
 
 export interface CreateCampInput {
   campId: string;
@@ -96,12 +97,13 @@ export const campService = {
   async detail(id: string) {
     const camp = await campRepo.detail(id);
     if (!camp) throw new NotFoundError('Camp', id);
-    const c = camp as Record<string, unknown> & { donorData?: unknown[]; unitData?: unknown[] };
+    const c = camp as Record<string, unknown> & { _id: unknown; donorData?: unknown[]; unitData?: unknown[] };
     const donorCount = c.donorData?.length ?? 0;
     const unitCount = c.unitData?.length ?? 0;
+    const donationCount = await DonationModel.countDocuments({ campId: c._id, deletedAt: null });
     delete c.donorData;
     delete c.unitData;
-    return { ...c, donorCount, unitCount };
+    return { ...c, donorCount, unitCount, donationCount };
   },
 
   campList: () => cached(CAMP_LIST_KEY, CAMP_LIST_TTL, () => campRepo.campList()),

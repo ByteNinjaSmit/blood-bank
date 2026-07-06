@@ -369,9 +369,20 @@ export function createDonorRepo(): DonorRepo {
           { email: { $regex: term, $options: 'i' } },
         ];
       }
+
+      if (input.from || input.to) {
+        const range: Record<string, Date> = {};
+        if (input.from) range.$gte = input.from;
+        if (input.to) range.$lte = input.to;
+        filter.createdAt = range;
+      }
+
+      const sortField = input.sortBy === 'name' ? 'name.firstName' : input.sortBy;
+      const sortDir = input.order === 'asc' ? 1 : -1;
+
       const skip = (input.page - 1) * input.pageSize;
       const [docs, total] = await Promise.all([
-        DonorModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(input.pageSize).lean(),
+        DonorModel.find(filter).sort({ [sortField]: sortDir }).skip(skip).limit(input.pageSize).lean(),
         DonorModel.countDocuments(filter),
       ]);
       const dtos = (docs as unknown as RawDonor[]).map(toDto);

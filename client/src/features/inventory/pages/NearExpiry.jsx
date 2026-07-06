@@ -5,6 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
+const daysFromNow = (n) => {
+  const d = new Date();
+  d.setDate(d.getDate() + Number(n || 0));
+  return d.toISOString().split('T')[0];
+};
+
+const daysUntil = (dateStr) => {
+  if (!dateStr) return null;
+  const diff = new Date(dateStr).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diff / 86_400_000));
+};
+
 const InventoryNearExpiry = () => {
   const { API, authorizationToken } = useAuth();
 
@@ -14,21 +26,24 @@ const InventoryNearExpiry = () => {
 
   // filters
   const [componentType, setComponentType] = useState("");
-  const [siteId, setSiteId] = useState("");
+  const [bloodGroup, setBloodGroup] = useState("");
+  const [withinDays, setWithinDays] = useState(30);
   const [order, setOrder] = useState("asc");
-  const [sortBy, setSortBy] = useState("expiryDate");
+  const [sortBy, setSortBy] = useState("expiresAt");
 
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`${API}/api/inventory/near-expiry`, {
+      const res = await axios.get(`${API}/api/inventory`, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
         params: {
           page,
           limit,
+          status: 'in-stock',
           componentType: componentType || undefined,
-          siteId: siteId || undefined,
+          bloodGroup: bloodGroup || undefined,
+          expiryTo: daysFromNow(withinDays),
           sortBy,
           order,
         },
@@ -46,7 +61,7 @@ const InventoryNearExpiry = () => {
   useEffect(() => {
     fetchRows(1, pagination.limit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [componentType, siteId, order, sortBy]);
+  }, [componentType, bloodGroup, withinDays, order, sortBy]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -57,7 +72,7 @@ const InventoryNearExpiry = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Near-Expiry Components</h1>
-            <p className="text-gray-600 mt-1">Platelets ≤ 1 day, RBC ≤ 7, FFP/Cryo ≤ 30 days</p>
+            <p className="text-gray-600 mt-1">In-stock components expiring within the selected window</p>
           </div>
         </div>
 
@@ -66,7 +81,7 @@ const InventoryNearExpiry = () => {
             <div className="flex items-center justify-between mb-3">
               <div className="text-sm text-gray-600">Total: {pagination.total || 0}</div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
               <div className="flex flex-col">
                 <label className="text-xs text-gray-600 mb-1">Component</label>
                 <select value={componentType} onChange={(e)=>{setComponentType(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
@@ -78,13 +93,34 @@ const InventoryNearExpiry = () => {
                 </select>
               </div>
               <div className="flex flex-col">
+                <label className="text-xs text-gray-600 mb-1">Blood Group</label>
+                <select value={bloodGroup} onChange={(e)=>{setBloodGroup(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
+                  <option value="">All</option>
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="AB">AB</option>
+                  <option value="O">O</option>
+                </select>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-600 mb-1">Expiring Within (days)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={withinDays}
+                  onChange={(e)=>{setWithinDays(e.target.value); setPagination(p=>({...p,page:1}));}}
+                  className="h-10 px-3 border rounded-md text-sm"
+                />
+              </div>
+              <div className="flex flex-col">
                 <label className="text-xs text-gray-600 mb-1">Order</label>
                 <select value={order} onChange={(e)=>{setOrder(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
                   <option value="asc">Nearest First</option>
                   <option value="desc">Farthest First</option>
                 </select>
               </div>
-              <div className="flex items-end gap-2 md:col-span-3">
+              <div className="flex items-end gap-2 md:col-span-2">
                 <Button onClick={()=>fetchRows(pagination.page)} variant="outline" size="sm" className="h-10" disabled={isLoading}>
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
                 </Button>
@@ -115,7 +151,7 @@ const InventoryNearExpiry = () => {
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.daysToExpiry}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{daysUntil(r?.component?.expiryDate) ?? '-'}</td>
                     </tr>
                   ))
                 )}

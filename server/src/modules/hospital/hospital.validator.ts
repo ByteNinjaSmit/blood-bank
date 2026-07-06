@@ -29,9 +29,12 @@ export const ListHospitalsQuery = z.object({
   name: z.string().trim().max(200).optional(),
   contactPerson: z.string().trim().max(200).optional(),
   phone: z.string().trim().max(20).optional(),
+  isActive: blank(z.enum(['true', 'false']).transform((v) => v === 'true').optional()),
+  from: blank(z.coerce.date().optional()),
+  to: blank(z.coerce.date().optional()),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(1000).default(10),
-  sortBy: z.enum(['name', 'contactPerson', 'phone', 'createdAt', 'updatedAt']).default('name'),
+  sortBy: z.enum(['hospitalId', 'name', 'contactPerson', 'phone', 'createdAt', 'updatedAt']).default('name'),
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
 });
 

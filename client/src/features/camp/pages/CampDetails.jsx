@@ -151,7 +151,6 @@ const CampDetails = () => {
       description: "Record new blood donations with vitals, tests, and bag information",
       icon: Plus,
       color: "bg-orange-800",
-      stats: `${camp?.bagsCount || 0} Total Donations`,
     },
     {
       id: "view-donations",
@@ -159,7 +158,7 @@ const CampDetails = () => {
       description: "Manage donation records, track status, and view test results",
       icon: Activity,
       color: "bg-orange-800",
-      stats: `${camp?.bagsCount || 0} This Camp`,
+      stats: `${camp?.donationCount || 0} Total Donations`,
     },
     {
       id: "draft-forms",
@@ -240,7 +239,7 @@ const CampDetails = () => {
               <span className="text-sm text-gray-500">Donations</span>
               <Droplets className="w-4 h-4 text-gray-400" />
             </div>
-            <div className="mt-2 text-2xl font-semibold text-gray-900">{camp?.bagsCount || 0}</div>
+            <div className="mt-2 text-2xl font-semibold text-gray-900">{camp?.donationCount || 0}</div>
           </div>
           <div className="rounded-xl border border-gray-200 p-4">
             <div className="flex items-center justify-between" title="Camp duration">
@@ -371,27 +370,15 @@ const CampDetails = () => {
                   <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-orange-800 transition-colors">
                     {facility.title}
                   </h3>
-                  <p className="text-xs text-gray-500 mb-2">{facility.stats}</p>
+                  {facility.stats && (
+                    <p className="text-xs text-gray-500 mb-2">{facility.stats}</p>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Security Notice */}
-        <div className="mt-8 bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Droplets className="w-5 h-5 text-orange-800" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-1">Medical-Grade Security</h3>
-              <p className="text-sm text-gray-600">
-                All data is protected with HIPAA-compliant security measures for complete privacy and regulatory compliance.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Drafts Modal */}

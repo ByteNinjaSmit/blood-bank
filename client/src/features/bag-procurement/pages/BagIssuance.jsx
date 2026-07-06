@@ -165,14 +165,19 @@ function ComponentStockLines({ stockSummary }) {
 export default function BagIssuance() {
   const [viewingIssueId, setViewingIssueId] = useState(null);
   const [excelLoading, setExcelLoading] = useState(false);
-  const { data, isLoading } = useBagIssueList({});
-  const { data: stockSummaryData } = useStockSummary();
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilterType, setDateFilterType] = useState('all'); // 'all', 'today', 'custom'
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+
+  const { data, isLoading } = useBagIssueList({
+    pageSize: 500,
+    fromDate: dateFilterType === 'custom' && fromDate ? fromDate : undefined,
+    toDate: dateFilterType === 'custom' && toDate ? toDate : undefined,
+  });
+  const { data: stockSummaryData } = useStockSummary();
 
   const issues = data?.items ?? data?.bagIssues ?? (Array.isArray(data) ? data : []);
 

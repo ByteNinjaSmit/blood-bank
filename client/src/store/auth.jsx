@@ -151,20 +151,6 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const loginStartOtp = async (email, password) => {
-    // TEMPORARY BYPASS: Call login directly instead of starting OTP
-    const data = await login(email, password);
-    return { txnId: "bypassed", expiresInSeconds: 0, resendCooldownSeconds: 0 };
-  };
-  const verifyOtpLogin = async (email, txnId, code) => {
-    const data = await authApi.verifyOtpLogin(email, txnId, code);
-    setToken(data.accessToken);
-    setUser(data.user);
-    return data;
-  };
-  
-  const resendOtpLogin = (email, txnId) => authApi.resendOtpLogin(email, txnId);
-
   // ── Registration ──────────────────────────────────────────────────────────
   const registerStartOtp = (payload) => authApi.startRegister(payload);
   const verifyRegisterOtp = (email, txnId, code) => authApi.verifyRegister(email, txnId, code);
@@ -182,9 +168,6 @@ export const AuthProvider = ({ children }) => {
         API,
         storeTokenInCookies,
         login,
-        loginStartOtp,
-        verifyOtpLogin,
-        resendOtpLogin,
         registerStartOtp,
         verifyRegisterOtp,
         resendRegisterOtp,

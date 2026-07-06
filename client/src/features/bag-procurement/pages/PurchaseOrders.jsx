@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, Plus, X, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import {
   usePOList,
   useCreatePO,
@@ -313,8 +313,17 @@ export default function PurchaseOrders() {
   const [expandedId, setExpandedId] = useState(null);
   const [editPO, setEditPO] = useState(null);
   const [excelLoading, setExcelLoading] = useState(false);
-  
-  const { data, isLoading } = usePOList({});
+  const [search, setSearch] = useState('');
+  const [vendorFilter, setVendorFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
+  const { data, isLoading } = usePOList({
+    search: search || undefined,
+    vendorId: vendorFilter || undefined,
+    from: fromDate || undefined,
+    to: toDate || undefined,
+  });
   const { data: vendorData } = useVendorList({});
   const deletePO = useDeletePO();
 
@@ -398,6 +407,53 @@ export default function PurchaseOrders() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <StatCard label="Total POs" value={stats.total} color="text-gray-900" />
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-end gap-3">
+          <div className="relative flex-1 min-w-[220px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Search PO Number</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="PO Number..."
+                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Vendor</label>
+            <select
+              value={vendorFilter}
+              onChange={(e) => setVendorFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+            >
+              <option value="">All Vendors</option>
+              {vendors.map((v) => (
+                <option key={v._id ?? v.id} value={v._id ?? v.id}>{v.vendorName ?? v.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">PO Date From</label>
+            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">PO Date To</label>
+            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          {(search || vendorFilter || fromDate || toDate) && (
+            <button
+              onClick={() => { setSearch(''); setVendorFilter(''); setFromDate(''); setToDate(''); }}
+              className="px-3 py-2 text-sm text-orange-800 hover:bg-orange-50 rounded-lg font-medium"
+            >
+              Reset
+            </button>
+          )}
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Search, Eye, Edit, Trash2, Download, Activity, AlertTriangle, X } from 'lucide-react';
+import { Users, Plus, Search, Eye, Edit, Trash2, Download, Activity, AlertTriangle, X, ArrowUpDown } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import DonorForm from '@/features/donor/components/DonorForm';
@@ -80,6 +80,21 @@ const CampDonorManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodGroupFilter, setBloodGroupFilter] = useState('');
   const [eligibilityFilter, setEligibilityFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [order, setOrder] = useState('asc');
+
+  const toggleOrder = () => setOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+  const resetFilters = () => {
+    setSearchQuery('');
+    setBloodGroupFilter('');
+    setEligibilityFilter('');
+    setFromDate('');
+    setToDate('');
+    setSortBy('name');
+    setOrder('asc');
+  };
 
   // Delete dialogs state
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -184,15 +199,29 @@ const CampDonorManagement = () => {
 
   // Filter computation
   const filteredDonors = donors.filter((donor) => {
-    const matchesSearch = 
+    const matchesSearch =
       donor.name?.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       donor.name?.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       donor.donorId?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesBloodGroup = !bloodGroupFilter || donor.bloodGroup === bloodGroupFilter;
     const matchesEligibility = !eligibilityFilter || donor.eligibilityStatus === eligibilityFilter;
+    const matchesFrom = !fromDate || (donor.lastDonationDate && new Date(donor.lastDonationDate) >= new Date(fromDate));
+    const matchesTo = !toDate || (donor.lastDonationDate && new Date(donor.lastDonationDate) <= new Date(`${toDate}T23:59:59`));
 
-    return matchesSearch && matchesBloodGroup && matchesEligibility;
+    return matchesSearch && matchesBloodGroup && matchesEligibility && matchesFrom && matchesTo;
+  });
+
+  filteredDonors.sort((a, b) => {
+    let cmp = 0;
+    if (sortBy === 'name') {
+      cmp = `${a.name?.firstName || ''} ${a.name?.lastName || ''}`.localeCompare(`${b.name?.firstName || ''} ${b.name?.lastName || ''}`);
+    } else if (sortBy === 'lastDonationDate') {
+      cmp = new Date(a.lastDonationDate || 0) - new Date(b.lastDonationDate || 0);
+    } else if (sortBy === 'dob') {
+      cmp = new Date(a.dob || 0) - new Date(b.dob || 0);
+    }
+    return order === 'asc' ? cmp : -cmp;
   });
 
   const getStatusColor = (status) => {
@@ -291,38 +320,87 @@ const CampDonorManagement = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full md:max-w-md">
-            <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search by name or donor ID..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-            />
+        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search by name or donor ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+            </div>
+            <div className="flex flex-wrap gap-3 w-full md:w-auto">
+              <select
+                value={bloodGroupFilter}
+                onChange={(e) => setBloodGroupFilter(e.target.value)}
+                className="w-full md:w-auto px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+              >
+                <option value="">All Blood Groups</option>
+                {['A', 'B', 'AB', 'O'].map((bg) => (
+                  <option key={bg} value={bg}>{bg}</option>
+                ))}
+              </select>
+              <select
+                value={eligibilityFilter}
+                onChange={(e) => setEligibilityFilter(e.target.value)}
+                className="w-full md:w-auto px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+              >
+                <option value="">All Status</option>
+                <option value="eligible">Eligible</option>
+                <option value="deferred">Deferred</option>
+                <option value="temp-deferred">Temp Deferred</option>
+              </select>
+            </div>
           </div>
-          <div className="flex gap-3 w-full md:w-auto">
-            <select
-              value={bloodGroupFilter}
-              onChange={(e) => setBloodGroupFilter(e.target.value)}
-              className="w-full md:w-auto px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+          <div className="flex flex-col md:flex-row md:items-end gap-4 pt-4 border-t border-gray-100">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Last Donation From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Last Donation To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Sort By</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
+              >
+                <option value="name">Name</option>
+                <option value="lastDonationDate">Last Donation Date</option>
+                <option value="dob">Date of Birth</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={toggleOrder}
+              className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              <option value="">All Blood Groups</option>
-              {['A', 'B', 'AB', 'O'].map((bg) => (
-                <option key={bg} value={bg}>{bg}</option>
-              ))}
-            </select>
-            <select
-              value={eligibilityFilter}
-              onChange={(e) => setEligibilityFilter(e.target.value)}
-              className="w-full md:w-auto px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+              <ArrowUpDown className="w-4 h-4" />
+              {order === 'asc' ? 'A → Z' : 'Z → A'}
+            </button>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="px-3 py-2 rounded-lg text-sm text-orange-800 hover:bg-orange-50 transition-colors font-medium"
             >
-              <option value="">All Status</option>
-              <option value="eligible">Eligible</option>
-              <option value="deferred">Deferred</option>
-              <option value="temp-deferred">Temp Deferred</option>
-            </select>
+              Reset Filters
+            </button>
           </div>
         </div>
 

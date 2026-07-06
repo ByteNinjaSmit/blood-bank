@@ -24,41 +24,6 @@ export const authController = {
     }
   },
 
-  async startOtpLogin(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { email, password } = ValidateAuth.startOtp(req);
-      const data = await authService.startOtpLogin(email, password);
-      res.json({ success: true, data, requestId: req.id });
-    } catch (e) {
-      next(e);
-    }
-  },
-
-  async verifyOtpLogin(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { email, txnId, code } = ValidateAuth.verifyOtp(req);
-      const pair = await authService.verifyOtpLogin(email, txnId, code, ip(req));
-      setRefreshCookie(res, pair.refreshToken);
-      res.json({
-        success: true,
-        data: { user: pair.user, accessToken: pair.accessToken, expiresIn: pair.expiresIn },
-        requestId: req.id,
-      });
-    } catch (e) {
-      next(e);
-    }
-  },
-
-  async resendOtpLogin(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { email, txnId } = ValidateAuth.resendOtp(req);
-      const data = await authService.resendOtp(email, txnId, 'LOGIN');
-      res.json({ success: true, data, requestId: req.id });
-    } catch (e) {
-      next(e);
-    }
-  },
-
   async startRegister(req: Request, res: Response, next: NextFunction) {
     try {
       const body = ValidateAuth.startRegister(req);

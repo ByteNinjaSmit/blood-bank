@@ -58,6 +58,10 @@ export const ListDonorsQuery = z.object({
   source: z.enum(['inhouse', 'camp']).optional(),
   eligibilityStatus: z.enum(['eligible', 'deferred', 'temp-deferred']).optional(),
   campId: z.string().regex(OBJECT_ID, 'Invalid camp id').optional(),
+  from: blankToUndef(z.coerce.date().optional()),
+  to: blankToUndef(z.coerce.date().optional()),
+  sortBy: z.enum(['createdAt', 'lastDonationDate', 'name', 'dob']).default('createdAt'),
+  order: z.enum(['asc', 'desc']).default('desc'),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(10000).default(25),
 });

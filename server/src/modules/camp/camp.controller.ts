@@ -84,7 +84,7 @@ export const campController = {
   async voluntary(req: Request, res: Response, next: NextFunction) {
     try {
       const { items, pagination } = await campService.voluntary(ValidateCamp.voluntaryQuery(req));
-      res.json({ success: true, data: items, pagination, requestId: req.id });
+      res.json({ success: true, data: { items, pagination }, requestId: req.id });
     } catch (e) {
       next(e);
     }

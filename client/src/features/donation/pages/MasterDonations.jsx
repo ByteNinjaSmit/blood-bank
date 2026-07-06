@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Home, Building2, Droplets, Activity, CheckCircle2, XCircle, Search, Eye, GitCommitHorizontal, Plus, X } from 'lucide-react';
+import { BookOpen, Home, Building2, Droplets, Activity, CheckCircle2, XCircle, Search, Eye, GitCommitHorizontal, Plus, X, ArrowUpDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDonationList, useDonationDetail } from '@/features/donation/queries';
 import DonationTimeline from '../components/DonationTimeline';
@@ -32,7 +32,13 @@ export default function MasterDonations() {
   const [bagTypeFilter, setBagTypeFilter] = useState('');
   const [bloodGroupFilter, setBloodGroupFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [sortBy, setSortBy] = useState('collectedAt');
+  const [order, setOrder] = useState('desc');
   const [excelLoading, setExcelLoading] = useState(false);
+
+  const toggleOrder = () => setOrder((o) => (o === 'desc' ? 'asc' : 'desc'));
 
   const mapMasterDonationsForExport = (items) => {
     return items.map(d => {
@@ -74,6 +80,8 @@ export default function MasterDonations() {
           if (bloodGroupFilter && d.bloodGroup !== bloodGroupFilter) return false;
           const status = d.status || (d.ttiReleaseDecision === 'released' ? 'passed' : d.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
           if (statusFilter && status !== statusFilter) return false;
+          if (fromDate && (!d.collectedAt || new Date(d.collectedAt) < new Date(fromDate))) return false;
+          if (toDate && (!d.collectedAt || new Date(d.collectedAt) > new Date(`${toDate}T23:59:59`))) return false;
           return true;
         });
         dataToExport = mapMasterDonationsForExport(filteredAll);
@@ -167,7 +175,21 @@ export default function MasterDonations() {
     if (bloodGroupFilter && d.bloodGroup !== bloodGroupFilter) return false;
     const status = d.status || (d.ttiReleaseDecision === 'released' ? 'passed' : d.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
     if (statusFilter && status !== statusFilter) return false;
+    if (fromDate && (!d.collectedAt || new Date(d.collectedAt) < new Date(fromDate))) return false;
+    if (toDate && (!d.collectedAt || new Date(d.collectedAt) > new Date(`${toDate}T23:59:59`))) return false;
     return true;
+  });
+
+  filteredItems.sort((a, b) => {
+    let cmp = 0;
+    if (sortBy === 'collectedAt') {
+      cmp = new Date(a.collectedAt || 0) - new Date(b.collectedAt || 0);
+    } else if (sortBy === 'bagNo') {
+      cmp = (a.bagNo || a.donationId || '').localeCompare(b.bagNo || b.donationId || '');
+    } else if (sortBy === 'donorName') {
+      cmp = (a.donorName || '').localeCompare(b.donorName || '');
+    }
+    return order === 'asc' ? cmp : -cmp;
   });
 
   // Stats
@@ -181,14 +203,22 @@ export default function MasterDonations() {
     currentPage * PAGE_SIZE
   );
 
-  function switchTab(key) {
-    setActiveTab(key);
-    setCurrentPage(1);
-    setTrackId(null);
+  function resetFilters() {
     setSearchQuery('');
     setBagTypeFilter('');
     setBloodGroupFilter('');
     setStatusFilter('');
+    setFromDate('');
+    setToDate('');
+    setSortBy('collectedAt');
+    setOrder('desc');
+    setCurrentPage(1);
+  }
+
+  function switchTab(key) {
+    setActiveTab(key);
+    setTrackId(null);
+    resetFilters();
   }
 
   const handleFilterChange = (setter, value) => {
@@ -349,6 +379,54 @@ export default function MasterDonations() {
                 <option value="issued">Issued</option>
               </select>
             </div>
+          </div>
+          <div className="flex flex-col lg:flex-row lg:items-end gap-4 mt-4 pt-4 border-t border-gray-100">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Collected From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => handleFilterChange(setFromDate, e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Collected To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => handleFilterChange(setToDate, e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Sort By</label>
+              <select
+                value={sortBy}
+                onChange={(e) => handleFilterChange(setSortBy, e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-sm"
+              >
+                <option value="collectedAt">Collection Date</option>
+                <option value="bagNo">Bag No</option>
+                <option value="donorName">Donor Name</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={toggleOrder}
+              title="Toggle sort order"
+              className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <ArrowUpDown className="w-4 h-4" />
+              {order === 'desc' ? 'Newest First' : 'Oldest First'}
+            </button>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="px-3 py-2 rounded-lg text-sm text-orange-800 hover:bg-orange-50 transition-colors font-medium"
+            >
+              Reset Filters
+            </button>
           </div>
         </div>
 

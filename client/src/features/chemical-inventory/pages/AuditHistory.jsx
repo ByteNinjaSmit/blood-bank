@@ -2,9 +2,14 @@ import React, { useState } from 'react';
 import { useHistoryList, useChemicalList } from '../queries';
 import { List, Search, User, Clipboard, Plus, Play, CheckCircle, AlertTriangle, Trash } from 'lucide-react';
 
+const ACTION_TYPES = ['PURCHASE', 'OPEN', 'CONSUME', 'ADJUSTMENT', 'EXPIRY_DISCARD', 'DELETE'];
+
 export default function AuditHistory() {
   const [chemicalFilter, setChemicalFilter] = useState('');
   const [lotSearch, setLotSearch] = useState('');
+  const [actionFilter, setActionFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const { data: chemicals } = useChemicalList();
   const { data: logs, isLoading } = useHistoryList({
@@ -59,8 +64,11 @@ export default function AuditHistory() {
   };
 
   const filteredLogs = (logs || []).filter((log) => {
-    if (!lotSearch.trim()) return true;
-    return log.lotId?.lotNumber.toLowerCase().includes(lotSearch.toLowerCase());
+    if (lotSearch.trim() && !log.lotId?.lotNumber?.toLowerCase().includes(lotSearch.toLowerCase())) return false;
+    if (actionFilter && log.action !== actionFilter) return false;
+    if (fromDate && new Date(log.createdAt) < new Date(fromDate)) return false;
+    if (toDate && new Date(log.createdAt) > new Date(`${toDate}T23:59:59`)) return false;
+    return true;
   });
 
   const fieldClass = 'border border-gray-200 rounded px-2.5 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-400';
@@ -105,6 +113,29 @@ export default function AuditHistory() {
               />
             </div>
           </div>
+          <div>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-0.5">Action</label>
+            <select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className={`${fieldClass} w-40`}>
+              <option value="">All Actions</option>
+              {ACTION_TYPES.map((a) => (<option key={a} value={a}>{a.replace(/_/g, ' ')}</option>))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-0.5">From Date</label>
+            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className={fieldClass} />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-0.5">To Date</label>
+            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className={fieldClass} />
+          </div>
+          {(chemicalFilter || lotSearch || actionFilter || fromDate || toDate) && (
+            <button
+              onClick={() => { setChemicalFilter(''); setLotSearch(''); setActionFilter(''); setFromDate(''); setToDate(''); }}
+              className="text-xs font-semibold text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-lg"
+            >
+              Reset
+            </button>
+          )}
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Droplets, Plus, Eye, Activity, Upload, X } from 'lucide-react';
+import { Droplets, Plus, Eye, Activity, Upload, X, Search, ArrowUpDown } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import Modal from '@/components/shared/Modal';
@@ -13,15 +13,37 @@ import { exportCampDonations } from '@/utils/excelExportHelper';
 const CampDonationManagement = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { donations, pagination, loading, error, fetchCampDonations } = useDonation();
+  const { donations: rawDonations, pagination, loading, error, fetchDonations } = useDonation();
   const [campId, setCampId] = useState(null);
   const [viewDonationId, setViewDonationId] = useState(null);
   const [excelLoading, setExcelLoading] = useState(false);
 
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [bagTypeFilter, setBagTypeFilter] = useState('');
+  const [bloodGroupFilter, setBloodGroupFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [sortBy, setSortBy] = useState('collectedAt');
+  const [order, setOrder] = useState('desc');
+
+  const toggleOrder = () => setOrder((o) => (o === 'desc' ? 'asc' : 'desc'));
+  const resetFilters = () => {
+    setSearchQuery('');
+    setBagTypeFilter('');
+    setBloodGroupFilter('');
+    setStatusFilter('');
+    setFromDate('');
+    setToDate('');
+    setSortBy('collectedAt');
+    setOrder('desc');
+  };
+
   const handleExportExcel = async (exportAll = false) => {
     try {
       setExcelLoading(true);
-      await exportCampDonations(donations, "Camp");
+      await exportCampDonations(exportAll ? rawDonations : donations, "Camp");
     } catch (e) {
       toast.error("Failed to generate Excel report");
     } finally {
@@ -38,8 +60,37 @@ const CampDonationManagement = () => {
       return;
     }
     setCampId(id);
-    fetchCampDonations(id);
-  }, [searchParams, navigate]);
+    fetchDonations({
+      campId: id,
+      page: 1,
+      pageSize: 200,
+      fromDate: fromDate || undefined,
+      toDate: toDate || undefined,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, navigate, fromDate, toDate]);
+
+  const donations = rawDonations.filter((d) => {
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const bagNoMatch = (d.bagNo || d.donationId || '').toLowerCase().includes(q);
+      const donorMatch = (d.donorName || '').toLowerCase().includes(q);
+      if (!bagNoMatch && !donorMatch) return false;
+    }
+    if (bagTypeFilter && d.typeOfBag !== bagTypeFilter) return false;
+    if (bloodGroupFilter && d.bloodGroup !== bloodGroupFilter) return false;
+    const status = d.status || (d.ttiReleaseDecision === 'released' ? 'passed' : d.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
+    if (statusFilter && status !== statusFilter) return false;
+    return true;
+  });
+
+  donations.sort((a, b) => {
+    let cmp = 0;
+    if (sortBy === 'collectedAt') cmp = new Date(a.collectedAt || 0) - new Date(b.collectedAt || 0);
+    else if (sortBy === 'bagNo') cmp = (a.bagNo || a.donationId || '').localeCompare(b.bagNo || b.donationId || '');
+    else if (sortBy === 'donorName') cmp = (a.donorName || '').localeCompare(b.donorName || '');
+    return order === 'asc' ? cmp : -cmp;
+  });
 
   const handleViewDonation = (donation) => {
     setViewDonationId(donation._id || donation.id);
@@ -132,6 +183,104 @@ const CampDonationManagement = () => {
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Records</p>
               <p className="text-3xl font-extrabold text-gray-900 mt-1">{donations.length}</p>
             </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search by bag number or donor name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+            </div>
+            <div className="flex flex-wrap gap-3 w-full md:w-auto">
+              <select
+                value={bagTypeFilter}
+                onChange={(e) => setBagTypeFilter(e.target.value)}
+                className="w-full md:w-auto px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+              >
+                <option value="">All Bag Types</option>
+                <option value="SB">Single Bag (SB)</option>
+                <option value="DB">Double Bag (DB)</option>
+                <option value="TB">Triple Bag (TB)</option>
+                <option value="QB">Quadruple Bag (QB)</option>
+              </select>
+              <select
+                value={bloodGroupFilter}
+                onChange={(e) => setBloodGroupFilter(e.target.value)}
+                className="w-full md:w-auto px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+              >
+                <option value="">All Blood Groups</option>
+                {['A', 'B', 'AB', 'O'].map((bg) => (
+                  <option key={bg} value={bg}>{bg}</option>
+                ))}
+              </select>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full md:w-auto px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+              >
+                <option value="">All Statuses</option>
+                <option value="collected">Collected</option>
+                <option value="testing">Testing</option>
+                <option value="passed">Passed</option>
+                <option value="failed">Failed</option>
+                <option value="issued">Issued</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex flex-col md:flex-row md:items-end gap-4 pt-4 border-t border-gray-100">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Collected From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Collected To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Sort By</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
+              >
+                <option value="collectedAt">Collection Date</option>
+                <option value="bagNo">Bag No</option>
+                <option value="donorName">Donor Name</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={toggleOrder}
+              className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <ArrowUpDown className="w-4 h-4" />
+              {order === 'desc' ? 'Newest First' : 'Oldest First'}
+            </button>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="px-3 py-2 rounded-lg text-sm text-orange-800 hover:bg-orange-50 transition-colors font-medium"
+            >
+              Reset Filters
+            </button>
           </div>
         </div>
 

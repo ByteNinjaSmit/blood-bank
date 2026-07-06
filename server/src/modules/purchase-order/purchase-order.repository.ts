@@ -71,6 +71,13 @@ export function createPORepo(): PORepo {
     async list(q) {
       const filter: Record<string, unknown> = { deletedAt: null };
       if (q.vendorId) filter.vendorId = new Types.ObjectId(q.vendorId);
+      if (q.search) filter.poNumber = { $regex: q.search, $options: 'i' };
+      if (q.from || q.to) {
+        const range: Record<string, Date> = {};
+        if (q.from) range.$gte = q.from;
+        if (q.to) range.$lte = q.to;
+        filter.poDate = range;
+      }
       const page = q.page ?? 1;
       const pageSize = q.pageSize ?? 20;
       const skip = (page - 1) * pageSize;

@@ -23,6 +23,8 @@ const Serology = () => {
   const [bags, setBags] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
   const [search, setSearch] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [order, setOrder] = useState("desc");
   const [sortBy, setSortBy] = useState("collectionDate");
 
@@ -35,7 +37,7 @@ const Serology = () => {
     setIsLoading(true);
     try {
       const res = await axios.get(`${API}/api/serology/bags`, {
-        params: { page, limit, search: search || undefined, sortBy, order },
+        params: { page, limit, search: search || undefined, fromDate: fromDate || undefined, toDate: toDate || undefined, sortBy, order },
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       });
@@ -54,7 +56,7 @@ const Serology = () => {
   useEffect(() => {
     fetchBags(1, pagination.limit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, order, sortBy]);
+  }, [search, fromDate, toDate, order, sortBy]);
 
   const openEnterResults = (bag) => {
     setActiveBag(bag);
@@ -179,6 +181,20 @@ const Serology = () => {
                 onChange={(e) => { setSearch(e.target.value); setPagination(p => ({...p, page: 1})); }}
                 placeholder="Search Bag No"
                 className="h-9 px-3 py-2 border rounded-md text-sm"
+              />
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => { setFromDate(e.target.value); setPagination(p => ({...p, page: 1})); }}
+                className="h-9 px-3 py-2 border rounded-md text-sm"
+                title="Collected From"
+              />
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => { setToDate(e.target.value); setPagination(p => ({...p, page: 1})); }}
+                className="h-9 px-3 py-2 border rounded-md text-sm"
+                title="Collected To"
               />
               <select
                 value={order}

@@ -129,6 +129,12 @@ export function createBagInspectionRepo(): BagInspectionRepo {
       if (q.grnId) filter.grnId = new Types.ObjectId(q.grnId);
       if (q.batchNumber) filter.batchNumber = q.batchNumber;
       if (q.decision) filter.decision = q.decision;
+      if (q.fromDate || q.toDate) {
+        const range: Record<string, Date> = {};
+        if (q.fromDate) range.$gte = q.fromDate;
+        if (q.toDate) range.$lte = q.toDate;
+        filter.inspectionDate = range;
+      }
       const page = q.page ?? 1;
       const pageSize = q.pageSize ?? 20;
       const skip = (page - 1) * pageSize;

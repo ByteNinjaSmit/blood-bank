@@ -6,11 +6,6 @@ export const authApi = {
   // Password login (single step)
   login: (data) => apiClient.post(`${BASE}/login`, data).then(unwrap),
 
-  // OTP login (2-step)
-  startOtpLogin: (data) => apiClient.post(`${BASE}/login/start-otp`, data).then(unwrap),
-  verifyOtpLogin: (data) => apiClient.post(`${BASE}/login/verify-otp`, data).then(unwrap),
-  resendOtpLogin: (data) => apiClient.post(`${BASE}/login/resend-otp`, data).then(unwrap),
-
   // Registration OTP flow
   startRegister: (data) => apiClient.post(`${BASE}/register/start-otp`, data).then(unwrap),
   verifyRegister: (data) => apiClient.post(`${BASE}/register/verify-otp`, data).then(unwrap),

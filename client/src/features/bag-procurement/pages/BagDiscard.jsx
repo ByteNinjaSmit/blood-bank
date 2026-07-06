@@ -221,7 +221,14 @@ function ApproveDrawer({ discard, onClose }) {
 export default function BagDiscard() {
   const [showDiscardDrawer, setShowDiscardDrawer] = useState(false);
   const [approveTarget, setApproveTarget] = useState(null);
-  const { data, isLoading } = useBagDiscardList({});
+  const [reasonFilter, setReasonFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const { data, isLoading } = useBagDiscardList({
+    reason: reasonFilter || undefined,
+    fromDate: fromDate || undefined,
+    toDate: toDate || undefined,
+  });
   const { data: stockData } = useBagStockList({});
 
   const discards = data?.items ?? data?.bagDiscards ?? (Array.isArray(data) ? data : []);
@@ -251,7 +258,34 @@ export default function BagDiscard() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Reason</label>
+            <select value={reasonFilter} onChange={(e) => setReasonFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
+              <option value="">All Reasons</option>
+              {DISCARD_REASONS.map((r) => (<option key={r} value={r}>{r.replace(/_/g, ' ')}</option>))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Discard Date From</label>
+            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Discard Date To</label>
+            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          {(reasonFilter || fromDate || toDate) && (
+            <button onClick={() => { setReasonFilter(''); setFromDate(''); setToDate(''); }}
+              className="px-3 py-2 text-sm text-orange-800 hover:bg-orange-50 rounded-lg font-medium">
+              Reset
+            </button>
+          )}
+        </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-100">

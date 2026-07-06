@@ -83,67 +83,7 @@ export const authService = {
     return issuePair(user, ip);
   },
 
-  // ---- OTP login: step 1 (verify password, email a code) ----
-  async startOtpLogin(email: string, password: string) {
-    const user = await authRepo.findUserByEmail(email);
-    if (!user) throw new UnauthorizedError('Invalid credentials');
-    if (user.status !== 'active') throw new ForbiddenError('Account pending admin approval');
-    const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) throw new UnauthorizedError('Invalid credentials');
-
-    const code = sixDigit();
-    const txnId = crypto.randomUUID();
-    await authRepo.upsertOtp({
-      email: user.email,
-      txnId,
-      codeHash: await bcrypt.hash(code, 10),
-      purpose: 'LOGIN',
-      expiresAt: new Date(Date.now() + OTP_TTL_SECONDS * 1000),
-    });
-    await notificationService.send({
-      type: 'LOGIN_OTP',
-      to: user.email,
-      payload: { code, expiresInSeconds: OTP_TTL_SECONDS },
-    });
-    return {
-      txnId,
-      email: user.email,
-      expiresInSeconds: OTP_TTL_SECONDS,
-      resendCooldownSeconds: RESEND_COOLDOWN_SECONDS,
-    };
-  },
-
-  // ---- OTP login: step 2 (verify code, issue tokens) ----
-  async verifyOtpLogin(
-    email: string,
-    txnId: string,
-    code: string,
-    ip?: string,
-  ): Promise<TokenPair> {
-    const otp = await authRepo.findOtp(email, txnId, 'LOGIN');
-    if (!otp) throw new NotFoundError('OTP session');
-    if (otp.expiresAt < new Date()) {
-      await authRepo.deleteOtp(email, txnId);
-      throw new ValidationError('OTP expired. Start again.');
-    }
-    if (otp.attempts >= otp.maxAttempts) {
-      await authRepo.deleteOtp(email, txnId);
-      throw new ValidationError('Too many attempts. Start again.');
-    }
-    const match = await bcrypt.compare(code, otp.codeHash);
-    if (!match) {
-      otp.attempts += 1;
-      await otp.save();
-      throw new UnauthorizedError('Invalid OTP');
-    }
-    await authRepo.deleteOtp(email, txnId);
-    const user = await authRepo.findUserByEmail(email);
-    if (!user) throw new UnauthorizedError('Invalid session');
-    log.info({ userId: user.id }, 'otp login');
-    return issuePair(user, ip);
-  },
-
-  async resendOtp(email: string, txnId: string, purpose: 'LOGIN' | 'REGISTER') {
+  async resendOtp(email: string, txnId: string, purpose: 'REGISTER') {
     const otp = await authRepo.findOtp(email, txnId, purpose);
     if (!otp) throw new NotFoundError('OTP session');
     if (otp.expiresAt < new Date()) throw new ValidationError('OTP expired. Start again.');
@@ -158,7 +98,7 @@ export const authService = {
     otp.lastSentAt = new Date();
     await otp.save();
     await notificationService.send({
-      type: purpose === 'LOGIN' ? 'LOGIN_OTP' : 'REGISTER_OTP',
+      type: 'REGISTER_OTP',
       to: email,
       payload: {
         code,

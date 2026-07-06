@@ -103,14 +103,14 @@ export const authRepo = {
     email: string;
     txnId: string;
     codeHash: string;
-    purpose: 'LOGIN' | 'REGISTER';
+    purpose: 'REGISTER';
     expiresAt: Date;
     payload?: unknown;
   }) {
     await OtpModel.deleteMany({ email: doc.email, purpose: doc.purpose });
     await OtpModel.create({ ...doc, attempts: 0, maxAttempts: 5, lastSentAt: new Date() });
   },
-  async findOtp(email: string, txnId: string, purpose: 'LOGIN' | 'REGISTER') {
+  async findOtp(email: string, txnId: string, purpose: 'REGISTER') {
     return OtpModel.findOne({ email, txnId, purpose });
   },
   async deleteOtp(email: string, txnId: string) {

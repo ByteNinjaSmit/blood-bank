@@ -20,12 +20,15 @@ export default function ComponentMIS() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   const fetchData = async () => {
     try {
       setLoading(true);
       setError("");
       const res = await axios.get(`${API}/api/mis/components`, {
+        params: { fromDate: fromDate || undefined, toDate: toDate || undefined },
         withCredentials: true,
       });
       setData(res.data?.data || null);
@@ -38,7 +41,8 @@ export default function ComponentMIS() {
 
   useEffect(() => {
     fetchData();
-  }, [API]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [API, fromDate, toDate]);
 
   const production = data?.production || [];
   const ageing = data?.ageing || [];
@@ -120,6 +124,13 @@ export default function ComponentMIS() {
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end">
+            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
+              className="px-2 py-1.5 border rounded-md text-sm" title="Collected From" />
+            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
+              className="px-2 py-1.5 border rounded-md text-sm" title="Collected To" />
+            {(fromDate || toDate) && (
+              <button onClick={() => { setFromDate(''); setToDate(''); }} className="text-xs text-red-700 hover:underline">Reset</button>
+            )}
             <Button variant="outline" size="sm" onClick={fetchData}>
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Truck, Plus, X, CheckCircle, Ban, Trash2, Users } from 'lucide-react';
+import { Truck, Plus, X, CheckCircle, Ban, Trash2, Users, Search } from 'lucide-react';
 import {
   useVendorList,
   useCreateVendor,
@@ -156,7 +156,9 @@ function VendorDrawer({ onClose, editVendor }) {
 export default function VendorManagement() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [editVendor, setEditVendor] = useState(null);
-  const { data, isLoading } = useVendorList({});
+  const [search, setSearch] = useState('');
+  const [approvalStatus, setApprovalStatus] = useState('');
+  const { data, isLoading } = useVendorList({ search: search || undefined, approvalStatus: approvalStatus || undefined });
   const updateStatus = useUpdateVendorStatus();
   const deleteVendor = useDeleteVendor();
 
@@ -206,6 +208,38 @@ export default function VendorManagement() {
           <StatCard label="Approved" value={stats.approved} color="text-green-700" />
           <StatCard label="Pending" value={stats.pending} color="text-yellow-600" />
           <StatCard label="Suspended" value={stats.suspended} color="text-orange-600" />
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search vendor name, license or GST..."
+              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
+          </div>
+          <select
+            value={approvalStatus}
+            onChange={(e) => setApprovalStatus(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+          >
+            <option value="">All Statuses</option>
+            <option value="APPROVED">Approved</option>
+            <option value="PENDING">Pending</option>
+            <option value="SUSPENDED">Suspended</option>
+            <option value="BLACKLISTED">Blacklisted</option>
+          </select>
+          {(search || approvalStatus) && (
+            <button
+              onClick={() => { setSearch(''); setApprovalStatus(''); }}
+              className="px-3 py-2 text-sm text-orange-800 hover:bg-orange-50 rounded-lg font-medium"
+            >
+              Reset
+            </button>
+          )}
         </div>
 
         {/* Table */}
