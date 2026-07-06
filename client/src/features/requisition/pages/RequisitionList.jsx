@@ -68,6 +68,19 @@ export default function RequisitionList() {
     s === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-700'
   );
 
+  // Returns the effective display status for a row.
+  // If the backend says 'completed' but some matched units are still unissued,
+  // we show 'approved' so the user knows issuance is still pending.
+  const rowDisplayStatus = (row) => {
+    if (row.status === 'completed') {
+      const hasUnissued = Array.isArray(row.matchedInventory) && row.matchedInventory.some(
+        (mi) => (typeof mi.inventoryId === 'object' ? mi.inventoryId?.status : '') !== 'ISSUED'
+      );
+      if (hasUnissued) return 'approved';
+    }
+    return row.status;
+  };
+
   useEffect(() => {
     hospitalApi.initialize(authorizationToken);
     requisitionApi.initialize(authorizationToken);
@@ -200,14 +213,13 @@ export default function RequisitionList() {
     if (act === 'reject') {
       if (s === 'rejected') return false;
       if (s === 'completed') {
-        const hasMatches = Array.isArray(row.matchedInventory) && row.matchedInventory.length > 0;
-        if (!hasMatches) return false;
-        const hasUnissued = row.matchedInventory.some(
+        const hasUnissued = Array.isArray(row.matchedInventory) && row.matchedInventory.some(
           (mi) => {
             const status = typeof mi.inventoryId === 'object' ? mi.inventoryId?.status : '';
             return status !== 'ISSUED';
           }
         );
+        // Enable reject if still has unissued units (partially or not yet issued)
         return hasUnissued;
       }
       return ['pending', 'matched', 'approved', 'issued'].includes(s);
@@ -988,11 +1000,11 @@ export default function RequisitionList() {
                       <td className="p-3">{row.hospitalId?.name || '—'}</td>
                       <td className="p-3">{row.patient?.name} ({row.patient?.age}/{row.patient?.sex})</td>
                       <td className="p-3">{row.requestedAt ? new Date(row.requestedAt).toLocaleString() : '—'}</td>
-                      <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass(row.status)}`}>{row.status}</span></td>
+                      <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass(rowDisplayStatus(row))}`}>{rowDisplayStatus(row)}</span></td>
                       <td className="p-3">
                         <div className="flex flex-wrap gap-2">
                           <button onClick={() => openView(row)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">View</button>
-                          {row.status === 'completed' && (
+                          {rowDisplayStatus(row) === 'completed' && (
                             <>
                               <button 
                                 onClick={() => handlePrint(row, 'report')} 

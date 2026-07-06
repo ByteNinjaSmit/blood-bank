@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import mongoose, { Types } from 'mongoose';
 import { authenticate } from '@/shared/middlewares/authenticate';
 import { DonationModel } from '@/modules/donation/donation.model';
@@ -32,7 +32,7 @@ const ttiService = createTtiService({
 // 1. GET /inventory
 router.get('/inventory', authenticate, async (req, res, next) => {
   try {
-    const { page, limit, status, componentType, siteId, search, sortBy, order } = req.query as any;
+    const { page, limit, status, componentType, siteId, search, sortBy, order, storageLocation, dispatchType } = req.query as any;
 
     const unitFilter: any = {
       $and: [
@@ -88,6 +88,13 @@ router.get('/inventory', authenticate, async (req, res, next) => {
         ]
       });
     }
+    if (storageLocation) {
+      unitFilter['storageLocation'] = new RegExp(storageLocation, 'i');
+    }
+
+    if (dispatchType === 'THALASSEMIA') {
+      unitFilter['thalassemiaPatient'] = { $exists: true, $ne: null };
+    }
 
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 50;
@@ -134,21 +141,21 @@ router.get('/inventory', authenticate, async (req, res, next) => {
       else if (u.componentType === 'PLATELET_CONCENTRATE') legacyType = 'Platelet';
       else if (u.componentType === 'CRYOPRECIPITATE') legacyType = 'Cryo';
 
-      let hospitalName = '—';
-      let patientName = '—';
+      let hospitalName = 'â€”';
+      let patientName = 'â€”';
       let patientAge = '';
-      let patientSex = '—';
+      let patientSex = 'â€”';
       let requisitionObj: any = null;
 
       if (u.reservedFor && typeof u.reservedFor === 'object') {
         const reqDoc = u.reservedFor as any;
         if (reqDoc.hospitalId && typeof reqDoc.hospitalId === 'object') {
-          hospitalName = reqDoc.hospitalId.name || '—';
+          hospitalName = reqDoc.hospitalId.name || 'â€”';
         }
         if (reqDoc.patientId && typeof reqDoc.patientId === 'object') {
           const patientDoc = reqDoc.patientId;
-          patientName = patientDoc.name || '—';
-          patientSex = patientDoc.sex || '—';
+          patientName = patientDoc.name || 'â€”';
+          patientSex = patientDoc.sex || 'â€”';
           if (patientDoc.dob) {
             const birthDate = new Date(patientDoc.dob);
             const today = new Date();
@@ -172,7 +179,7 @@ router.get('/inventory', authenticate, async (req, res, next) => {
 
       const donObj = donationMap.get(u.donationId);
       const displayBagNo = donObj?.bagNo || u.donationId;
-      const segmentNo = donObj?.segmentNo || u.unitDin || u.unitId || '—';
+      const segmentNo = donObj?.segmentNo || u.unitDin || u.unitId || 'â€”';
       const typeOfBag = donObj?.typeOfBag || 'SB';
 
       if (u.storageLocation) {
@@ -470,6 +477,14 @@ router.get('/discard/get-list', authenticate, async (req, res, next) => {
       unitFilter.updatedAt = {};
       if (fromDate) unitFilter.updatedAt.$gte = new Date(fromDate);
       if (toDate) unitFilter.updatedAt.$lte = new Date(toDate);
+    }
+
+    if (storageLocation) {
+
+    if (dispatchType === 'THALASSEMIA') {
+      unitFilter['thalassemiaPatient'] = { $exists: true, $ne: null };
+    }
+      unitFilter['storageLocation'] = new RegExp(storageLocation, 'i');
     }
 
     const pageNum = parseInt(page) || 1;
@@ -840,6 +855,14 @@ router.get('/serology/bags', authenticate, async (req, res, next) => {
       ttiFilter.donationId = { $in: targetIds };
     }
 
+    if (storageLocation) {
+
+    if (dispatchType === 'THALASSEMIA') {
+      unitFilter['thalassemiaPatient'] = { $exists: true, $ne: null };
+    }
+      unitFilter['storageLocation'] = new RegExp(storageLocation, 'i');
+    }
+
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 10;
     const skipNum = (pageNum - 1) * limitNum;
@@ -917,6 +940,14 @@ router.get('/serology/results', authenticate, async (req, res, next) => {
         end.setUTCHours(23, 59, 59, 999);
         ttiFilter.decidedAt.$lte = end;
       }
+    }
+
+    if (storageLocation) {
+
+    if (dispatchType === 'THALASSEMIA') {
+      unitFilter['thalassemiaPatient'] = { $exists: true, $ne: null };
+    }
+      unitFilter['storageLocation'] = new RegExp(storageLocation, 'i');
     }
 
     const pageNum = parseInt(page) || 1;
