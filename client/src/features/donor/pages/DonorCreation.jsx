@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/store/auth";
 import { toast } from "sonner";
 import axios from "axios";
+import CustomModal from "@/components/CustomModal";
 import {
   Droplets,
   User,
@@ -299,6 +300,8 @@ export default function DonorCreation() {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
+  const [deferralModalOpen, setDeferralModalOpen] = useState(false);
+  const [deferralModalData, setDeferralModalData] = useState(null);
 
   const loadDonorIntoForm = (donor) => {
     const dobDate = donor.dob ? new Date(donor.dob) : null;
@@ -370,13 +373,20 @@ export default function DonorCreation() {
     const isDeferred = d.eligibilityStatus === 'deferred' || d.eligibilityStatus === 'temp-deferred';
     const isUnavailable = d.isAvailableToDonate === false;
 
-    if (isDeferred || isUnavailable) {
-      let errorMsg = `${d.fullName} cannot donate.`;
-      if (isDeferred) errorMsg = `${d.fullName} is deferred.`;
-      if (isUnavailable) {
-        const lastDate = d.lastDonationDate ? new Date(d.lastDonationDate).toLocaleDateString('en-IN') : "N/A";
-        errorMsg = `${d.fullName} cannot donate yet. Last donation: ${lastDate}. Eligible after ${d.daysUntilEligible} days.`;
-      }
+    if (isDeferred) {
+      setDeferralModalData({
+        fullName: d.fullName,
+        eligibilityStatus: d.eligibilityStatus,
+        deferralReason: d.deferralReason || "Medical/vitals check or TTI reactive results",
+        deferralUntil: d.deferralUntil,
+      });
+      setDeferralModalOpen(true);
+      return;
+    }
+
+    if (isUnavailable) {
+      const lastDate = d.lastDonationDate ? new Date(d.lastDonationDate).toLocaleDateString('en-IN') : "N/A";
+      const errorMsg = `${d.fullName} cannot donate yet. Last donation: ${lastDate}. Eligible after ${d.daysUntilEligible} days.`;
       toast.error(errorMsg, { duration: 5000 });
       return;
     }
@@ -2312,6 +2322,73 @@ export default function DonorCreation() {
           </div>
         </div>
       </div>
+      {/* Deferral Warning Modal */}
+      <CustomModal
+        open={deferralModalOpen}
+        onCancel={() => {
+          setDeferralModalOpen(false);
+          setDeferralModalData(null);
+        }}
+        title="Donor Deferral Warning"
+        size="md"
+        hideFooter
+      >
+        {deferralModalData && (
+          <div className="space-y-4 p-2 text-sm">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+              <AlertTriangle className="w-6 h-6 text-red-700 mt-0.5 shrink-0" />
+              <div>
+                <h3 className="font-bold text-red-900 text-sm">Deferred Donor Profile Selected</h3>
+                <p className="text-gray-600 text-xs mt-1">
+                  The selected donor <strong>{deferralModalData.fullName}</strong> is currently deferred and is ineligible to donate.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <div className="text-gray-500 text-xs uppercase font-semibold">Eligibility Status</div>
+                <div className="font-bold text-red-700 capitalize mt-0.5">
+                  {deferralModalData.eligibilityStatus === 'temp-deferred' ? 'Temporarily Deferred' : 'Permanently Deferred'}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-gray-500 text-xs uppercase font-semibold">Reason for Deferral</div>
+                <div className="font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg p-3 mt-1 leading-relaxed">
+                  {deferralModalData.deferralReason}
+                </div>
+              </div>
+
+              {deferralModalData.deferralUntil && (
+                <div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold">Deferred Until</div>
+                  <div className="font-semibold text-gray-800 mt-0.5">
+                    {new Date(deferralModalData.deferralUntil).toLocaleDateString('en-GB', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric'
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeferralModalOpen(false);
+                  setDeferralModalData(null);
+                }}
+                className="px-4 py-2 bg-red-800 hover:bg-red-900 active:bg-red-950 text-white text-xs font-semibold rounded-lg shadow transition-colors"
+              >
+                Acknowledge & Close
+              </button>
+            </div>
+          </div>
+        )}
+      </CustomModal>
     </div>
   );
 }

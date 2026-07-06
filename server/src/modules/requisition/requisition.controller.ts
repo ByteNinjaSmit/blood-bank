@@ -79,6 +79,7 @@ async function enrichRequisition(reqDto: any): Promise<any> {
           expiryDate: unit.expiresAt ? unit.expiresAt.toISOString() : '',
         },
         status: unit.status,
+        issuedAt: unit.issuedAt ? unit.issuedAt.toISOString() : null,
       },
       compatibilityType: mu.compatibilityType.toLowerCase(),
       crossmatchRequired: mu.crossmatchRequired,

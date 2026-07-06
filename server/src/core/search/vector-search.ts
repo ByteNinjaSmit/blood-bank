@@ -114,11 +114,14 @@ export async function textSearch(
       coll.aggregate(pipeline).toArray(),
       coll.aggregate(countPipeline).toArray(),
     ]);
-    return {
-      items,
-      total: (countResult[0] as { total?: number })?.total ?? items.length,
-      source: 'atlas',
-    };
+    if (items.length > 0) {
+      return {
+        items,
+        total: (countResult[0] as { total?: number })?.total ?? items.length,
+        source: 'atlas',
+      };
+    }
+    log.debug({ collection, query }, 'atlas $search returned 0 results, trying $text index');
   } catch {
     log.debug({ collection, query }, 'atlas $search unavailable, trying $text index');
   }
@@ -135,15 +138,32 @@ export async function textSearch(
         .toArray(),
       coll.countDocuments(textClause),
     ]);
-    return { items, total, source: 'text-index' };
+    if (items.length > 0) {
+      return { items, total, source: 'text-index' };
+    }
+    log.debug({ collection, query }, '$text index returned 0 results, falling back to regex');
   } catch {
     log.debug({ collection, query }, '$text index unavailable, falling back to regex');
   }
 
   // Tier 3: Regex fallback
   const fields = opts.searchFields ?? ['name', 'email', 'phone'];
-  const rx = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-  const rxClause = mergeFilters({ $or: fields.map((f) => ({ [f]: rx })) });
+  const terms = query.trim().split(/\s+/).filter(Boolean);
+  
+  let rxClause;
+  if (terms.length > 1) {
+    rxClause = mergeFilters({
+      $and: terms.map(term => ({
+        $or: fields.map(f => ({ [f]: new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }))
+      }))
+    });
+  } else if (terms.length === 1) {
+    const rx = new RegExp(terms[0]!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    rxClause = mergeFilters({ $or: fields.map((f) => ({ [f]: rx })) });
+  } else {
+    rxClause = mergeFilters({});
+  }
+
   const [items, total] = await Promise.all([
     coll.find(rxClause).skip(skip).limit(limit).toArray(),
     coll.countDocuments(rxClause),

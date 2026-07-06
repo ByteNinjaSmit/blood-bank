@@ -8,6 +8,8 @@ import type { DonorService } from '@/modules/donor/donor.service';
 import { UnauthorizedError, ValidationError } from '@/shared/errors';
 import { searchDonors, searchDonorsByVector } from '@/core/search/vector-search';
 import { toDto } from './donor.repository';
+import { DeferralModel } from '@/modules/deferral/deferral.model';
+import mongoose from 'mongoose';
 
 export interface DonorControllers {
   create: (req: Request, res: Response, next: NextFunction) => Promise<void>;
@@ -118,7 +120,25 @@ export function createDonorControllers(service: DonorService): DonorControllers 
           limit,
           skip,
         });
-        const mappedItems = (result.items || []).map((item) => toDto(item));
+        const mappedItems = [];
+        for (const item of (result.items || [])) {
+          const dto = toDto(item);
+          if (dto.eligibilityStatus === 'deferred' || dto.eligibilityStatus === 'temp-deferred') {
+            const activeDeferral = await DeferralModel.findOne({
+              donor: new mongoose.Types.ObjectId(dto.id),
+              liftedAt: null,
+              $or: [
+                { type: 'PERMANENT' },
+                { type: 'TEMPORARY', untilDate: { $gt: new Date() } }
+              ]
+            }).sort({ createdAt: -1 }).lean();
+            if (activeDeferral) {
+              dto.deferralReason = activeDeferral.reason;
+              dto.deferralUntil = activeDeferral.untilDate ? activeDeferral.untilDate.toISOString() : null;
+            }
+          }
+          mappedItems.push(dto);
+        }
         res.json({
           success: true,
           data: { items: mappedItems, total: result.total, source: result.source },

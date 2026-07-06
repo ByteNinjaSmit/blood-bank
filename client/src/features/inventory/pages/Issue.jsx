@@ -78,6 +78,7 @@ const Issue = () => {
   const [storageLocation, setStorageLocation] = useState("SJS [Kopargaon]");
   const [otherLocationName, setOtherLocationName] = useState("");
   const [dispatchType, setDispatchType] = useState("STORAGE"); // STORAGE | THALASSEMIA
+  const [sentDate, setSentDate] = useState(new Date().toISOString().split('T')[0]);
   const [patientDetails, setPatientDetails] = useState({
     firstName: "",
     middleName: "",
@@ -163,7 +164,7 @@ const Issue = () => {
   const [storageLoading, setStorageLoading] = useState(false);
   const [storageViewOpen, setStorageViewOpen] = useState(false);
   const [storageViewItem, setStorageViewItem] = useState(null);
-  const [storagePagination, setStoragePagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [expandedDates, setExpandedDates] = useState(new Set()); // dates open in accordion
 
   // ── Thalassemia tab state ────────────────────────────
   const [thalRows, setThalRows] = useState([]);
@@ -283,6 +284,7 @@ const Issue = () => {
         bags: bagsPayload,
         userId: user?._id || user?.id,
         dispatchType,
+        sentDate: isThalassemia ? null : sentDate,
         thalassemiaPatient: isThalassemia ? {
           ...patientDetails,
           firstName: patientDetails.firstName.trim(),
@@ -301,6 +303,7 @@ const Issue = () => {
       setStorageLocation("SJS [Kopargaon]");
       setOtherLocationName("");
       setDispatchType("STORAGE");
+      setSentDate(new Date().toISOString().split('T')[0]);
       setPatientDetails({
         firstName: "",
         middleName: "",
@@ -328,16 +331,22 @@ const Issue = () => {
   const closeView = () => { setViewOpen(false); setViewItem(null); };
   const fmt = (d) => (d ? new Date(d).toLocaleString() : '—');
 
-  const fetchStorageBags = async (location = storageSubTab, page = storagePagination.page, limit = storagePagination.limit) => {
+  const fetchStorageBags = async (location = storageSubTab) => {
     setStorageLoading(true);
+    setExpandedDates(new Set()); // reset expanded on location change
     try {
       const res = await axios.get(`${API}/api/inventory`, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
-        params: { page, limit, status: 'issued', storageLocation: location, sortBy: 'issuedAt', order: 'desc' },
+        params: { page: 1, limit: 500, status: 'issued', storageLocation: location, sortBy: 'issuedAt', order: 'desc' },
       });
-      setStorageBagRows(Array.isArray(res.data?.data) ? res.data.data : []);
-      setStoragePagination(p => ({ ...p, ...(res.data?.pagination || {}), page }));
+      const data = Array.isArray(res.data?.data) ? res.data.data : [];
+      setStorageBagRows(data);
+      // Auto-expand the most recent date group
+      if (data.length > 0) {
+        const latestDate = new Date(data[0].issuedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        setExpandedDates(new Set([latestDate]));
+      }
     } catch (e) {
       toast.error('Failed to fetch storage bags');
       setStorageBagRows([]);
@@ -346,8 +355,35 @@ const Issue = () => {
     }
   };
 
+  const toggleDateGroup = (dateKey) => {
+    setExpandedDates(prev => {
+      const next = new Set(prev);
+      if (next.has(dateKey)) next.delete(dateKey);
+      else next.add(dateKey);
+      return next;
+    });
+  };
+
+  // Group storage bags by sent date
+  const storageBagsByDate = React.useMemo(() => {
+    const groups = {};
+    storageBagRows.forEach(r => {
+      const dateKey = r.issuedAt
+        ? new Date(r.issuedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+        : 'Unknown Date';
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(r);
+    });
+    // Return as sorted array (most recent first)
+    return Object.entries(groups).sort((a, b) => {
+      const da = a[1][0]?.issuedAt ? new Date(a[1][0].issuedAt) : 0;
+      const db = b[1][0]?.issuedAt ? new Date(b[1][0].issuedAt) : 0;
+      return db - da;
+    });
+  }, [storageBagRows]);
+
   useEffect(() => {
-    if (mainTab === 'storage') fetchStorageBags(storageSubTab, 1);
+    if (mainTab === 'storage') fetchStorageBags(storageSubTab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mainTab, storageSubTab]);
 
@@ -442,7 +478,7 @@ const Issue = () => {
               ))}
               <div className="ml-auto flex items-center pr-4">
                 <button
-                  onClick={() => fetchStorageBags(storageSubTab, 1)}
+                  onClick={() => fetchStorageBags(storageSubTab)}
                   className="text-xs text-gray-500 hover:text-red-700 flex items-center gap-1"
                 >
                   {storageLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : '↻'} Refresh
@@ -450,78 +486,118 @@ const Issue = () => {
               </div>
             </div>
 
-            {/* Summary */}
-            <div className="px-5 py-3 border-b bg-gray-50/50 flex items-center justify-between">
-              <span className="text-sm text-gray-600">
-                Total bags sent to <strong>{storageSubTab}</strong>: {storagePagination.total || storageBagRows.length}
-              </span>
+            {/* Summary bar */}
+            <div className="px-5 py-2.5 border-b bg-gray-50/60 flex items-center gap-2 text-sm text-gray-600">
+              <Warehouse className="w-3.5 h-3.5 text-gray-400" />
+              Total bags sent to <strong className="text-gray-800">{storageSubTab}</strong>:
+              <span className="font-semibold text-red-700">{storageBagRows.length}</span>
+              {storageBagsByDate.length > 0 && (
+                <span className="text-gray-400 ml-1">· {storageBagsByDate.length} date group{storageBagsByDate.length > 1 ? 's' : ''}</span>
+              )}
             </div>
 
-            {/* Table */}
+            {/* Accordion table header (always visible) */}
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bag No</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Segment No</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Component</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Blood Group</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Volume</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Expiry</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sent At</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
-                  {storageLoading ? (
-                    <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">
-                      <Loader2 className="w-5 h-5 animate-spin mx-auto mb-1" /> Loading…
-                    </td></tr>
-                  ) : storageBagRows.length === 0 ? (
-                    <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">
-                      No bags sent to {storageSubTab} yet.
-                    </td></tr>
-                  ) : storageBagRows.map(r => {
-                    const rh = r?.bag?.rh === 'Positive' ? '+' : r?.bag?.rh === 'Negative' ? '-' : r?.bag?.rh || '';
-                    return (
-                      <tr key={r._id} className="hover:bg-red-50/30 transition-colors">
-                        <td className="px-4 py-3 font-mono font-bold text-gray-800 text-xs">{r?.bag?.bagNo || r.bagNo || '—'}</td>
-                        <td className="px-4 py-3 font-mono text-xs text-gray-600">{r.segmentNo || '—'}</td>
-                        <td className="px-4 py-3 text-gray-700">{r?.component?.componentType || '—'}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-800">{r?.bag?.bloodGroup}{rh}</td>
-                        <td className="px-4 py-3 text-gray-600">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</td>
-                        <td className="px-4 py-3 text-gray-600">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '—'}</td>
-                        <td className="px-4 py-3 text-gray-500 text-xs">{r.issuedAt ? new Date(r.issuedAt).toLocaleString() : '—'}</td>
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() => { setStorageViewItem(r); setStorageViewOpen(true); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 text-xs font-medium transition-colors"
+              {storageLoading ? (
+                <div className="px-4 py-12 text-center text-gray-400">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                  <p>Loading storage records…</p>
+                </div>
+              ) : storageBagsByDate.length === 0 ? (
+                <div className="px-4 py-12 text-center text-gray-400">
+                  No bags sent to {storageSubTab} yet.
+                </div>
+              ) : (
+                <table className="min-w-full text-sm">
+                  {/* Column header */}
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      <th className="w-8 px-4 py-3"></th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Sent</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bags Count</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Components</th>
+                      <th className="px-4 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {storageBagsByDate.map(([dateKey, bags]) => {
+                      const isOpen = expandedDates.has(dateKey);
+                      const componentSummary = [...new Set(bags.map(b => b?.component?.componentType).filter(Boolean))].join(', ') || '—';
+                      return (
+                        <React.Fragment key={dateKey}>
+                          {/* Date accordion header row */}
+                          <tr
+                            onClick={() => toggleDateGroup(dateKey)}
+                            className={`border-b cursor-pointer select-none transition-colors ${isOpen ? 'bg-red-50 border-red-100' : 'bg-white hover:bg-gray-50'}`}
                           >
-                            <Eye className="w-3.5 h-3.5" /> View
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                            <td className="px-4 py-3.5 text-gray-400">
+                              <span className={`inline-block transition-transform duration-200 text-xs ${isOpen ? 'rotate-180' : ''}`}>▼</span>
+                            </td>
+                            <td className="px-4 py-3.5 font-semibold text-gray-800">{dateKey}</td>
+                            <td className="px-4 py-3.5">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                                {bags.length} bag{bags.length > 1 ? 's' : ''}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 text-gray-500 text-xs">{componentSummary}</td>
+                            <td className="px-4 py-3.5 text-right text-xs text-gray-400 pr-5">
+                              {isOpen ? 'Collapse ▲' : 'Expand ▼'}
+                            </td>
+                          </tr>
 
-            {/* Storage pagination */}
-            <div className="flex items-center justify-between px-5 py-3 border-t text-sm text-gray-600">
-              <span>Page {storagePagination.page || 1} of {storagePagination.totalPages || 1}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={storagePagination.page <= 1}
-                  onClick={() => { const p = Math.max(1, (storagePagination.page || 1) - 1); fetchStorageBags(storageSubTab, p); }}
-                  className="px-3 py-1 rounded-md disabled:text-gray-300 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed"
-                >Previous</button>
-                <button
-                  disabled={storagePagination.page >= storagePagination.totalPages}
-                  onClick={() => { const p = (storagePagination.page || 1) + 1; fetchStorageBags(storageSubTab, p); }}
-                  className="px-3 py-1 rounded-md disabled:text-gray-300 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed"
-                >Next</button>
-              </div>
+                          {/* Expanded detail rows */}
+                          {isOpen && (
+                            <tr>
+                              <td colSpan={5} className="p-0 border-b border-gray-200">
+                                <div className="bg-gray-50/80 border-t border-gray-100">
+                                  <table className="min-w-full text-sm">
+                                    <thead>
+                                      <tr className="bg-gray-100/80 border-b border-gray-200">
+                                        <th className="px-6 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bag No</th>
+                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Segment No</th>
+                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Component</th>
+                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Blood Group</th>
+                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Volume</th>
+                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Expiry</th>
+                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sent Date</th>
+                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                      {bags.map(r => {
+                                        const rh = r?.bag?.rh === 'Positive' ? '+' : r?.bag?.rh === 'Negative' ? '-' : r?.bag?.rh || '';
+                                        return (
+                                          <tr key={r._id} className="bg-white hover:bg-red-50/20 transition-colors">
+                                            <td className="px-6 py-3 font-mono font-bold text-gray-800 text-xs">{r?.bag?.bagNo || r.bagNo || '—'}</td>
+                                            <td className="px-4 py-3 font-mono text-xs text-gray-500">{r.segmentNo || '—'}</td>
+                                            <td className="px-4 py-3 text-gray-700 font-medium">{r?.component?.componentType || '—'}</td>
+                                            <td className="px-4 py-3 font-bold text-gray-800">{r?.bag?.bloodGroup}{rh}</td>
+                                            <td className="px-4 py-3 text-gray-600">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</td>
+                                            <td className="px-4 py-3 text-gray-600">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '—'}</td>
+                                            <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{r.issuedAt ? new Date(r.issuedAt).toLocaleString() : '—'}</td>
+                                            <td className="px-4 py-3">
+                                              <button
+                                                onClick={() => { setStorageViewItem(r); setStorageViewOpen(true); }}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 text-xs font-medium transition-colors"
+                                              >
+                                                <Eye className="w-3.5 h-3.5" /> View
+                                              </button>
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         )}
@@ -621,7 +697,6 @@ const Issue = () => {
           <div className="p-4 border-b">
             <div className="flex items-center justify-between mb-3">
               <div className="text-sm text-gray-600">Total: {pagination.total || 0}</div>
-              <div className="text-xs text-gray-500">Selected: <span className="font-medium">{allSelectedIds.length}</span></div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
               <div className="flex flex-col">
@@ -667,31 +742,31 @@ const Issue = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3"></th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag No</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segment No</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Component</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue Date</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {isLoading ? (
-                  <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
+                  <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-500">No items found.</td></tr>
+                  <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-500">No items found.</td></tr>
                 ) : (
                   rows.map((r) => (
                     <tr key={r._id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <input type="checkbox" checked={!!selected[r._id]} onChange={() => toggle(r._id)} disabled={status!== 'reserved'} />
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{r?.bag?.bagNo || r.bagNo}</td>
+                      <td className="px-4 py-3 font-mono text-sm font-bold text-gray-900">{r?.bag?.bagNo || r.bagNo}</td>
+                      <td className="px-4 py-3 font-mono text-sm text-gray-700">{r?.segmentNo || '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl} mL</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{r?.issuedAt ? new Date(r.issuedAt).toLocaleDateString() : '—'}</td>
                       <td className="px-4 py-3 text-sm">
                         <button onClick={() => openView(r)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">View</button>
                       </td>
@@ -748,99 +823,123 @@ const Issue = () => {
       </div>
       <CustomModal open={viewOpen} onCancel={closeView} title={status === 'issued' ? 'Issued Component Details' : 'Reserved Component Details'} size="lg" hideFooter>
         {viewItem && (
-          <div className="space-y-4 text-sm">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <div className="text-gray-600">Bag No</div>
-                <div className="font-medium">{viewItem?.bag?.bagNo || viewItem?.bagNo}</div>
-              </div>
-              <div>
-                <div className="text-gray-600">Component</div>
-                <div className="font-medium">{viewItem?.component?.componentType} • {viewItem?.component?.volumeMl} mL</div>
-              </div>
-              <div>
-                <div className="text-gray-600">Blood Group</div>
-                <div className="font-medium">{viewItem?.bag ? `${viewItem.bag.bloodGroup} ${viewItem.bag.rh}` : '—'}</div>
-              </div>
-              <div>
-                <div className="text-gray-600">Expiry</div>
-                <div className="font-medium">{viewItem?.component?.expiryDate ? new Date(viewItem.component.expiryDate).toLocaleDateString() : '—'}</div>
-              </div>
-              <div>
-                <div className="text-gray-600">Status</div>
-                <div className="font-medium capitalize">{viewItem?.status}</div>
-              </div>
-              {viewItem?.storageLocation ? (
+          <div className="space-y-5 text-sm">
+            {/* Donor & Collection Section */}
+            <div className="bg-red-50/50 border border-red-100 rounded-xl p-4">
+              <h4 className="text-xs font-black text-red-800 uppercase tracking-wider mb-3">Donor & Collection Information</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <div className="text-gray-600">Storage Location</div>
-                  <div className="font-medium text-red-800">{viewItem.storageLocation}</div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Donor Name</div>
+                  <div className="font-bold text-gray-800">{viewItem?.bag?.donorName || '—'}</div>
                 </div>
-              ) : viewItem?.thalassemiaPatient ? (
                 <div>
-                  <div className="text-gray-600">Recipient Category</div>
-                  <div className="font-medium text-red-850 font-bold">Thalassemia Recipient</div>
-                </div>
-              ) : viewItem?.hospital && (
-                <div>
-                  <div className="text-gray-600">Hospital</div>
-                  <div className="font-medium">{viewItem.hospital?.name}</div>
-                </div>
-              )}
-              {viewItem?.thalassemiaPatient && (
-                <div className="md:col-span-2 p-3 bg-red-50/50 rounded-lg border border-red-100">
-                  <div className="text-xs font-bold text-red-850 uppercase mb-2">Thalassemia Patient Recipient</div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                    <div>
-                      <div className="text-gray-500">Name</div>
-                      <div className="font-bold text-gray-800">
-                        {viewItem.thalassemiaPatient.firstName} {viewItem.thalassemiaPatient.middleName} {viewItem.thalassemiaPatient.lastName}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-gray-500">Age / Sex</div>
-                      <div className="font-bold text-gray-800">
-                        {viewItem.thalassemiaPatient.age} Yrs / {viewItem.thalassemiaPatient.sex}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-gray-500">Patient Group</div>
-                      <div className="font-bold text-gray-800">{viewItem.thalassemiaPatient.bloodGroup}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-500">Address</div>
-                      <div className="font-bold text-gray-800">{viewItem.thalassemiaPatient.address || '—'}</div>
-                    </div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Donation Date</div>
+                  <div className="font-semibold text-gray-850">
+                    {viewItem?.bag?.donationDate ? new Date(viewItem.bag.donationDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                   </div>
                 </div>
-              )}
-              {((viewItem?.request && viewItem.request.patient) || viewItem?.reservedPatientName) && (
-                <div className="md:col-span-2">
-                  <div className="text-gray-600">Patient</div>
-                  <div className="font-medium">
-                    {viewItem?.request?.patient
-                      ? `${viewItem.request.patient.name} • ${viewItem.request.patient.age}/${viewItem.request.patient.sex}`
-                      : `${viewItem.reservedPatientName} • ${viewItem.reservedPatientAge}/${viewItem.reservedPatientSex}`}
+                <div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Segment No</div>
+                  <div className="font-mono text-gray-700">{viewItem?.bag?.segmentNo || viewItem?.segmentNo || '—'}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Component & Bag Section */}
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+              <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider mb-3">Component & Bag Details</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Bag No</div>
+                  <div className="font-bold text-gray-800 font-mono">{viewItem?.bag?.bagNo || viewItem?.bagNo || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Component Type</div>
+                  <div className="font-bold text-gray-800">
+                    {viewItem?.component?.componentType || '—'} {viewItem?.component?.volumeMl ? `• ${viewItem.component.volumeMl} mL` : ''}
                   </div>
                 </div>
-              )}
-              {viewItem?.reservedAt && (
                 <div>
-                  <div className="text-gray-600">Reserved At</div>
-                  <div className="font-medium">{fmt(viewItem.reservedAt)}</div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Group</div>
+                  <div className="font-bold text-red-700 text-base">
+                    {viewItem?.bag ? `${viewItem.bag.bloodGroup} ${viewItem.bag.rh === 'Positive' ? '+' : viewItem.bag.rh === 'Negative' ? '-' : viewItem.bag.rh}` : '—'}
+                  </div>
                 </div>
-              )}
-              {viewItem?.issuedAt && (
                 <div>
-                  <div className="text-gray-600">Issued At</div>
-                  <div className="font-medium">{fmt(viewItem.issuedAt)}</div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Expiry Date</div>
+                  <div className="font-semibold text-gray-800">
+                    {viewItem?.component?.expiryDate ? new Date(viewItem.component.expiryDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                  </div>
                 </div>
-              )}
-              {viewItem?.issuedBy && (
+              </div>
+            </div>
+
+            {/* Requisition & Issuance Section */}
+            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4">
+              <h4 className="text-xs font-black text-blue-800 uppercase tracking-wider mb-3">Requisition & Issuance Details</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <div className="text-gray-600">Issued By</div>
-                  <div className="font-medium">{String(viewItem.issuedBy)}</div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Current Status</div>
+                  <div className="font-bold text-gray-800 uppercase">{viewItem?.status || '—'}</div>
                 </div>
-              )}
+                <div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Issue / Dispatch Date</div>
+                  <div className="font-bold text-gray-800">
+                    {viewItem?.issuedAt ? new Date(viewItem.issuedAt).toLocaleString() : '—'}
+                  </div>
+                </div>
+                {viewItem?.storageLocation ? (
+                  <div>
+                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Storage Location</div>
+                    <div className="font-bold text-red-800 flex items-center gap-1">
+                      <Warehouse className="w-3.5 h-3.5" /> {viewItem.storageLocation}
+                    </div>
+                  </div>
+                ) : viewItem?.thalassemiaPatient ? (
+                  <div className="md:col-span-2">
+                    <div className="text-gray-500 text-xs uppercase font-semibold mb-1">Thalassemia Patient Recipient</div>
+                    <div className="bg-white border border-red-100 rounded-lg p-3 text-xs grid grid-cols-2 gap-2">
+                      <div>
+                        <div className="text-gray-400">Name</div>
+                        <div className="font-bold text-gray-800">
+                          {viewItem.thalassemiaPatient.firstName} {viewItem.thalassemiaPatient.middleName} {viewItem.thalassemiaPatient.lastName}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-gray-400">Age / Sex</div>
+                        <div className="font-bold text-gray-850">
+                          {viewItem.thalassemiaPatient.age} Yrs / {viewItem.thalassemiaPatient.sex}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {viewItem?.hospital?.name && (
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Hospital / Facility</div>
+                        <div className="font-semibold text-gray-800">{viewItem.hospital.name}</div>
+                      </div>
+                    )}
+                    {((viewItem?.request && viewItem.request.patient) || viewItem?.reservedPatientName) && (
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Patient</div>
+                        <div className="font-semibold text-gray-800">
+                          {viewItem?.request?.patient
+                            ? `${viewItem.request.patient.name} (${viewItem.request.patient.age}/${viewItem.request.patient.sex})`
+                            : `${viewItem.reservedPatientName} (${viewItem.reservedPatientAge}/${viewItem.reservedPatientSex})`}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+                {viewItem?.reservedAt && (
+                  <div>
+                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Reserved At</div>
+                    <div className="text-gray-700">{new Date(viewItem.reservedAt).toLocaleString()}</div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -873,7 +972,7 @@ const Issue = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fadeIn">
                 <div className="flex flex-col">
                   <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 text-gray-500" />
@@ -888,6 +987,18 @@ const Issue = () => {
                     <option value="Anand [Vaijapur]">Anand [Vaijapur]</option>
                     <option value="Others">Others</option>
                   </select>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                    Sent Date
+                  </label>
+                  <input
+                    type="date"
+                    value={sentDate}
+                    onChange={(e) => setSentDate(e.target.value)}
+                    className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm focus:ring-1 focus:ring-red-500"
+                  />
                 </div>
 
                 {storageLocation === "Others" && (

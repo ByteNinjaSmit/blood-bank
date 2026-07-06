@@ -88,12 +88,21 @@ router.get('/inventory', authenticate, async (req, res, next) => {
         ]
       });
     }
-    if (storageLocation) {
-      unitFilter['storageLocation'] = new RegExp(storageLocation, 'i');
-    }
-
-    if (dispatchType === 'THALASSEMIA') {
-      unitFilter['thalassemiaPatient'] = { $exists: true, $ne: null };
+    if (status === 'issued') {
+      if (dispatchType === 'THALASSEMIA') {
+        unitFilter['thalassemiaPatient'] = { $exists: true, $ne: null };
+      } else if (storageLocation) {
+        unitFilter['storageLocation'] = new RegExp(storageLocation, 'i');
+      } else {
+        unitFilter['storageLocation'] = { $eq: null };
+      }
+    } else {
+      if (storageLocation) {
+        unitFilter['storageLocation'] = new RegExp(storageLocation, 'i');
+      }
+      if (dispatchType === 'THALASSEMIA') {
+        unitFilter['thalassemiaPatient'] = { $exists: true, $ne: null };
+      }
     }
 
     const pageNum = parseInt(page) || 1;
@@ -121,12 +130,27 @@ router.get('/inventory', authenticate, async (req, res, next) => {
     const donations = await DonationModel.find({
       donationId: { $in: donationIds },
       $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }]
-    }).select('donationId bagNo segmentNo typeOfBag').lean();
+    }).select('donationId bagNo segmentNo typeOfBag collectedAt donor').lean();
 
-    const donationMap = new Map<string, { bagNo: string; segmentNo?: string | null; typeOfBag?: string }>();
+    const donorIds = donations.map((d: any) => d.donor).filter(Boolean);
+    const donors = await DonorModel.find({ _id: { $in: donorIds } }).select('_id name').lean() as any[];
+    const donorMap = new Map<string, string>();
+    donors.forEach(d => {
+      const fullName = d.name ? [d.name.firstName, d.name.middleName, d.name.lastName].filter(Boolean).join(' ') : 'Unknown';
+      donorMap.set(d._id.toString(), fullName);
+    });
+
+    const donationMap = new Map<string, { bagNo: string; segmentNo?: string | null; typeOfBag?: string; collectedAt?: Date; donorName?: string }>();
     donations.forEach(d => {
       if (d.donationId && d.bagNo) {
-        donationMap.set(d.donationId, { bagNo: d.bagNo, segmentNo: d.segmentNo, typeOfBag: d.typeOfBag || undefined });
+        const donorName = d.donor ? donorMap.get(d.donor.toString()) || 'Unknown' : 'Unknown';
+        donationMap.set(d.donationId, {
+          bagNo: d.bagNo,
+          segmentNo: d.segmentNo,
+          typeOfBag: d.typeOfBag || undefined,
+          collectedAt: d.collectedAt,
+          donorName
+        });
       }
     });
 
@@ -141,21 +165,21 @@ router.get('/inventory', authenticate, async (req, res, next) => {
       else if (u.componentType === 'PLATELET_CONCENTRATE') legacyType = 'Platelet';
       else if (u.componentType === 'CRYOPRECIPITATE') legacyType = 'Cryo';
 
-      let hospitalName = 'â€”';
-      let patientName = 'â€”';
+      let hospitalName = 'Ã¢â‚¬â€';
+      let patientName = 'Ã¢â‚¬â€';
       let patientAge = '';
-      let patientSex = 'â€”';
+      let patientSex = 'Ã¢â‚¬â€';
       let requisitionObj: any = null;
 
       if (u.reservedFor && typeof u.reservedFor === 'object') {
         const reqDoc = u.reservedFor as any;
         if (reqDoc.hospitalId && typeof reqDoc.hospitalId === 'object') {
-          hospitalName = reqDoc.hospitalId.name || 'â€”';
+          hospitalName = reqDoc.hospitalId.name || 'Ã¢â‚¬â€';
         }
         if (reqDoc.patientId && typeof reqDoc.patientId === 'object') {
           const patientDoc = reqDoc.patientId;
-          patientName = patientDoc.name || 'â€”';
-          patientSex = patientDoc.sex || 'â€”';
+          patientName = patientDoc.name || 'Ã¢â‚¬â€';
+          patientSex = patientDoc.sex || 'Ã¢â‚¬â€';
           if (patientDoc.dob) {
             const birthDate = new Date(patientDoc.dob);
             const today = new Date();
@@ -179,7 +203,7 @@ router.get('/inventory', authenticate, async (req, res, next) => {
 
       const donObj = donationMap.get(u.donationId);
       const displayBagNo = donObj?.bagNo || u.donationId;
-      const segmentNo = donObj?.segmentNo || u.unitDin || u.unitId || 'â€”';
+      const segmentNo = donObj?.segmentNo || u.unitDin || u.unitId || 'Ã¢â‚¬â€';
       const typeOfBag = donObj?.typeOfBag || 'SB';
 
       if (u.storageLocation) {
@@ -196,10 +220,14 @@ router.get('/inventory', authenticate, async (req, res, next) => {
         storageLocation: u.storageLocation || undefined,
         thalassemiaPatient: u.thalassemiaPatient || undefined,
         typeOfBag,
+        issuedAt: u.issuedAt ? u.issuedAt.toISOString() : undefined,
         bag: {
           bagNo: displayBagNo,
           bloodGroup: u.aboGroup,
           rh: u.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
+          segmentNo,
+          donationDate: donObj?.collectedAt ? donObj.collectedAt.toISOString() : undefined,
+          donorName: donObj?.donorName || 'Unknown',
         },
         component: {
           componentType: legacyType,
@@ -350,7 +378,7 @@ router.post('/inventory/issue', authenticate, async (req, res, next) => {
 // POST /inventory/send-to-storage
 router.post('/inventory/send-to-storage', authenticate, async (req, res, next) => {
   try {
-    const { location, otherLocationName, bags, userId, dispatchType, thalassemiaPatient } = req.body;
+    const { location, otherLocationName, bags, userId, dispatchType, thalassemiaPatient, sentDate } = req.body;
     const actorId = (req.user as any)?.id || userId;
     const isThalassemia = dispatchType === 'THALASSEMIA';
 
@@ -396,7 +424,7 @@ router.post('/inventory/send-to-storage', authenticate, async (req, res, next) =
 
       const oldStatus = unit.status;
       unit.status = 'ISSUED';
-      unit.issuedAt = new Date();
+      unit.issuedAt = sentDate ? new Date(sentDate) : new Date();
       unit.updatedBy = actorObjId;
 
       if (isThalassemia) {
@@ -479,13 +507,6 @@ router.get('/discard/get-list', authenticate, async (req, res, next) => {
       if (toDate) unitFilter.updatedAt.$lte = new Date(toDate);
     }
 
-    if (storageLocation) {
-
-    if (dispatchType === 'THALASSEMIA') {
-      unitFilter['thalassemiaPatient'] = { $exists: true, $ne: null };
-    }
-      unitFilter['storageLocation'] = new RegExp(storageLocation, 'i');
-    }
 
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 50;
@@ -855,13 +876,6 @@ router.get('/serology/bags', authenticate, async (req, res, next) => {
       ttiFilter.donationId = { $in: targetIds };
     }
 
-    if (storageLocation) {
-
-    if (dispatchType === 'THALASSEMIA') {
-      unitFilter['thalassemiaPatient'] = { $exists: true, $ne: null };
-    }
-      unitFilter['storageLocation'] = new RegExp(storageLocation, 'i');
-    }
 
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 10;
@@ -942,13 +956,6 @@ router.get('/serology/results', authenticate, async (req, res, next) => {
       }
     }
 
-    if (storageLocation) {
-
-    if (dispatchType === 'THALASSEMIA') {
-      unitFilter['thalassemiaPatient'] = { $exists: true, $ne: null };
-    }
-      unitFilter['storageLocation'] = new RegExp(storageLocation, 'i');
-    }
 
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 50;

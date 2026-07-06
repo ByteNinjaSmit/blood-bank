@@ -430,7 +430,7 @@ export default function RequisitionList() {
           <h1 className="text-2xl font-bold text-gray-900">Requisition List</h1>
           <p className="text-gray-600 text-sm">Filter, paginate, and manage requests</p>
         </div>
-      <CustomModal open={viewOpen} onCancel={closeView} title="Requisition Details" size="2xl" hideFooter>
+      <CustomModal open={viewOpen} onCancel={closeView} title="Requisition Details" size="3xl" hideFooter>
         {!viewDoc || viewLoading ? (
           <div className="text-gray-600">Loading…</div>
         ) : (
@@ -529,6 +529,7 @@ export default function RequisitionList() {
                         <th className="p-2">Donor Name</th>
                         <th className="p-2">Day of Donation</th>
                         <th className="p-2">Reserved At</th>
+                        <th className="p-2">Issue Date</th>
                         <th className="p-2">Status</th>
                       </tr>
                     </thead>
@@ -554,6 +555,7 @@ export default function RequisitionList() {
                             <td className="p-2">{mi?.inventoryId?.bagNo?.donorName || '—'}</td>
                             <td className="p-2">{mi?.inventoryId?.bagNo?.collectedAt ? new Date(mi.inventoryId.bagNo.collectedAt).toLocaleDateString() : '—'}</td>
                             <td className="p-2">{mi?.reservedAt ? fmt(mi.reservedAt) : '—'}</td>
+                            <td className="p-2">{mi?.inventoryId?.issuedAt ? fmt(mi.inventoryId.issuedAt) : '—'}</td>
                             <td className="p-2">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${badgeColor}`}>
                                 {label}
