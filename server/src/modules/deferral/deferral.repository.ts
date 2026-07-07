@@ -59,7 +59,7 @@ export interface DeferralRepo {
   findActiveByDonor(donorId: string, now?: Date): Promise<ActiveDeferral[]>;
   listByDonor(donorId: string): Promise<DeferralDto[]>;
   list(filter: ListDeferralsFilter): Promise<{ items: DeferralRegisterEntry[]; total: number }>;
-  lift(id: string, actorId: string): Promise<void>;
+  lift(id: string, actorId: string, reason?: string): Promise<void>;
 }
 
 interface RawDeferral {
@@ -186,12 +186,13 @@ export function createDeferralRepo(): DeferralRepo {
       return { items, total };
     },
 
-    async lift(id, actorId) {
+    async lift(id, actorId, reason) {
       await DeferralModel.updateOne(
         { _id: id },
         {
           liftedAt: new Date(),
           liftedBy: new Types.ObjectId(actorId),
+          liftReason: reason ?? null,
           updatedBy: new Types.ObjectId(actorId),
         },
       );

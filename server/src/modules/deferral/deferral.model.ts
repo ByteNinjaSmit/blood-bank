@@ -22,6 +22,7 @@ const DeferralSchema = new Schema(
     decidedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     liftedAt: { type: Date, default: null },
     liftedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    liftReason: { type: String, trim: true, default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

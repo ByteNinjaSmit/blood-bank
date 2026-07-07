@@ -102,8 +102,9 @@ const MasterDonors = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // For 'all' tab we don't filter by source; for others we pass the source
-  const sourceParam = activeTab === 'all' ? undefined : activeTab;
+  // For 'all' tab we don't filter by source; for others we pass the source.
+  // The 'deferral' tab renders its own register and doesn't use the donor list at all.
+  const sourceParam = (activeTab === 'all' || activeTab === 'deferral') ? undefined : activeTab;
 
   const { data, isLoading, isError } = useDonorList({
     source: sourceParam,
@@ -329,6 +330,10 @@ const MasterDonors = () => {
 
       {/* Body */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+        {activeTab === 'deferral' ? (
+          <DeferralRegister />
+        ) : (
+        <>
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
@@ -494,11 +499,9 @@ const MasterDonors = () => {
                   {items.map((donor) => {
                     const isDeferred = donor.eligibilityStatus === 'deferred' || donor.eligibilityStatus === 'temp-deferred';
                     const donorSource = donor.source || 'inhouse';
-                    const idValue = isDeferred
-                      ? '-'
-                      : activeTab === 'camp'
-                        ? (donor.lastDonationId || 'N/A')
-                        : donor.donorId;
+                    const idValue = activeTab === 'camp'
+                      ? (donor.lastDonationId || donor.donorId || 'N/A')
+                      : (donor.donorId || 'N/A');
 
                     return (
                       <tr key={donor._id || donor.id} className="hover:bg-gray-50 transition-colors">
@@ -616,6 +619,8 @@ const MasterDonors = () => {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
 
       {/* Edit Donor Modal */}

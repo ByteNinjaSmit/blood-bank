@@ -63,7 +63,8 @@ export function createDeferralControllers(repo: DeferralRepo): DeferralControlle
     async lift(req, res, next) {
       try {
         const { id } = ValidateDeferral.idParam(req);
-        await repo.lift(id, actor(req));
+        const { reason } = ValidateDeferral.liftBody(req);
+        await repo.lift(id, actor(req), reason);
         res.status(204).end();
       } catch (e) {
         next(e);

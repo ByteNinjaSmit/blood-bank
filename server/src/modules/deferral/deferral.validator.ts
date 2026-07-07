@@ -32,6 +32,10 @@ export const DeferralIdParam = z.object({
 const blank = <T extends z.ZodTypeAny>(s: T) =>
   z.preprocess((v) => (v === '' || v === null ? undefined : v), s);
 
+export const LiftDeferralBody = z.object({
+  reason: blank(z.string().trim().max(300).optional()),
+});
+
 export const ListDeferralsQuery = z.object({
   search: blank(z.string().trim().max(200).optional()),
   type: blank(z.enum(DEFERRAL_TYPE).optional()),
@@ -53,4 +57,5 @@ export const ValidateDeferral = {
   donorIdParam: (req: Request) => parseOrThrow(DonorIdParam, req.params, 'path params'),
   idParam: (req: Request) => parseOrThrow(DeferralIdParam, req.params, 'path params'),
   listQuery: (req: Request) => parseOrThrow(ListDeferralsQuery, req.query, 'query string'),
+  liftBody: (req: Request) => parseOrThrow(LiftDeferralBody, req.body, 'request body'),
 };

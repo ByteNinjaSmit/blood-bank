@@ -115,14 +115,6 @@ const MODULES = [
     description: "Hospital management system",
   },
   {
-    id: "thalassemia",
-    name: "Thalassemia",
-    icon: <FaHeart className="w-5 h-5" />,
-    permissions: ["read", "write"],
-    href: "/thalassemia",
-    description: "Transfusion-dependent patient registry",
-  },
-  {
     id: "camp",
     name: "Camp",
     icon: <GiCampingTent className="w-6 h-6" />,

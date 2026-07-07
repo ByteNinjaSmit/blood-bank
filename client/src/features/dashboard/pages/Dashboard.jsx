@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CustomModal from "@/components/CustomModal";
 import { downloadExcelReport, formatDate } from "@/utils/excelExportHelper";
-import { useThalassemiaSummary } from "@/features/thalassemia/queries";
 import { apiClient } from "@/core/api-client";
 import { toast } from "sonner";
 import {
@@ -34,7 +33,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Droplets, Users, Package, ClipboardList, Activity, AlertTriangle, TrendingUp, Truck, Calendar as CalendarIcon, Filter, FileSpreadsheet, ClipboardCheck, Heart, Loader2 } from "lucide-react";
+import { Droplets, Users, Package, ClipboardList, Activity, AlertTriangle, TrendingUp, Truck, Calendar as CalendarIcon, Filter, FileSpreadsheet, ClipboardCheck, Loader2 } from "lucide-react";
 
 const number = (v) => (typeof v === "number" ? v : 0);
 
@@ -312,8 +311,6 @@ export default function Dashboard() {
   const [reportChecking, setReportChecking] = useState(false);
   const [reportGenerating, setReportGenerating] = useState(false);
   const [openChemicalsWarning, setOpenChemicalsWarning] = useState(null); // null | array
-
-  const { data: thalassemiaSummary } = useThalassemiaSummary();
 
   useEffect(() => {
     let mounted = true;
@@ -1016,26 +1013,6 @@ export default function Dashboard() {
             <Stat label="Bags Delayed Testing (>24h)" value={alerts.delayedTesting} />
             <Stat label="Components Missing Expiry" value={alerts.missingExpiry} />
             <Stat label="Inactive Donors (>6 months)" value={alerts.inactiveDonors} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Heart className="w-4 h-4 text-rose-600" />
-                Thalassemia Registry
-              </span>
-              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => navigate("/thalassemia")}>
-                View all
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Stat label="Active Patients" value={thalassemiaSummary?.active} />
-            <Stat label="Overdue Transfusions" value={thalassemiaSummary?.overdue} />
-            <Stat label="Due This Week" value={thalassemiaSummary?.dueSoon} />
-            <Stat label="Total Registered" value={thalassemiaSummary?.total} />
           </CardContent>
         </Card>
       </div>
