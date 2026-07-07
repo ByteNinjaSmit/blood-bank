@@ -253,7 +253,11 @@ export default function MatchReviewStep({
                                     required={mi.crossmatchRequired || false}
                                     updating={crossmatchUpdating}
                                     onMark={
-                                      onCrossmatchUpdate && mi.crossmatchRequired && mi.crossmatchStatus === 'pending'
+                                      // Only ask staff to tick a manual crossmatch when the
+                                      // matched unit is a different blood group than the
+                                      // patient (a "compatible" substitute). Same-group
+                                      // ("exact") matches are auto-approved on match.
+                                      onCrossmatchUpdate && mi.crossmatchRequired && mi.crossmatchStatus === 'pending' && mi.compatibilityType !== 'exact'
                                         ? (s) => onCrossmatchUpdate(invId, s)
                                         : null
                                     }

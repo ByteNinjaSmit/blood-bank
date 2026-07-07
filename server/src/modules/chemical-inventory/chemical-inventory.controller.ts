@@ -34,6 +34,12 @@ export interface ChemicalInventoryControllers {
   updatePurchase(req: Request, res: Response, next: NextFunction): Promise<void>;
   updatePurchasePayments(req: Request, res: Response, next: NextFunction): Promise<void>;
 
+  // Damage Register
+  listDamages(req: Request, res: Response, next: NextFunction): Promise<void>;
+  createDamage(req: Request, res: Response, next: NextFunction): Promise<void>;
+  updateDamage(req: Request, res: Response, next: NextFunction): Promise<void>;
+  deleteDamage(req: Request, res: Response, next: NextFunction): Promise<void>;
+
   // Audit Timeline
   listHistory(req: Request, res: Response, next: NextFunction): Promise<void>;
 
@@ -182,7 +188,7 @@ export function createChemicalInventoryControllers(service: ChemicalInventorySer
       try {
         const { id } = ValidateChemicalInventory.idParam(req);
         const body = ValidateChemicalInventory.updateUsage(req);
-        const result = await service.updateUsage(id, body.action, body.quantity, actorId(req));
+        const result = await service.updateUsage(id, body.action, body.quantity, actorId(req), body.unitsRemaining);
         res.json({ success: true, data: result, requestId: req.id });
       } catch (e) { next(e); }
     },
@@ -209,6 +215,38 @@ export function createChemicalInventoryControllers(service: ChemicalInventorySer
         const body = ValidateChemicalInventory.updatePurchasePayments(req);
         const result = await service.updatePurchasePayments(id, body.installments, actorId(req));
         res.json({ success: true, data: result, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+
+    async listDamages(req, res, next) {
+      try {
+        const result = await service.listDamages();
+        res.json({ success: true, data: result, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+
+    async createDamage(req, res, next) {
+      try {
+        const body = ValidateChemicalInventory.createDamage(req);
+        const result = await service.createDamage(body, actorId(req));
+        res.status(201).json({ success: true, data: result, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+
+    async updateDamage(req, res, next) {
+      try {
+        const { id } = ValidateChemicalInventory.idParam(req);
+        const body = ValidateChemicalInventory.updateDamage(req);
+        const result = await service.updateDamage(id, body, actorId(req));
+        res.json({ success: true, data: result, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+
+    async deleteDamage(req, res, next) {
+      try {
+        const { id } = ValidateChemicalInventory.idParam(req);
+        await service.deleteDamage(id, actorId(req));
+        res.json({ success: true, message: 'Damage record deleted and stock restored', requestId: req.id });
       } catch (e) { next(e); }
     },
 

@@ -56,18 +56,20 @@ function MasterLayout() {
     }, [pathname, isMobile, showMobileOverlay, closeMobileOverlay]);
 
     return (
-        <div className="h-screen bg-slate-50 flex overflow-hidden">
-            <Sidebar
-                isOpen={sidebarOpen}
-                onToggle={toggleSidebar}
-                isMobile={isMobile}
-                showMobileOverlay={showMobileOverlay}
-                onCloseMobile={closeMobileOverlay}
-            />
+        <div className="h-screen bg-slate-50 flex overflow-hidden print:h-auto print:block print:overflow-visible">
+            <div className="print:hidden">
+                <Sidebar
+                    isOpen={sidebarOpen}
+                    onToggle={toggleSidebar}
+                    isMobile={isMobile}
+                    showMobileOverlay={showMobileOverlay}
+                    onCloseMobile={closeMobileOverlay}
+                />
+            </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                <header className="flex-shrink-0 bg-white border-b border-slate-200 p-4 shadow-sm sticky top-0 z-30">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:block print:overflow-visible">
+                <header className="flex-shrink-0 bg-white border-b border-slate-200 p-4 shadow-sm sticky top-0 z-30 print:hidden">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             {isMobile && (
@@ -87,8 +89,8 @@ function MasterLayout() {
                                 </button>
                             )}
                             <div className="flex items-center gap-2">
-                                <Link 
-                                    to={'/'} 
+                                <Link
+                                    to={'/'}
                                     className="cursor-pointer text-red-800 hover:text-red-800 transition-colors flex items-center gap-2"
                                 >
                                     <FaHome className="w-5 h-5" />
@@ -102,8 +104,8 @@ function MasterLayout() {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto">
-                    <div className="h-full">
+                <main className="flex-1 overflow-y-auto print:overflow-visible print:block">
+                    <div className="h-full print:h-auto">
                         <Outlet />
                     </div>
                 </main>

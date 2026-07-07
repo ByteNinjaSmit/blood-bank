@@ -18,13 +18,13 @@ class RequisitionPrintService {
         @media print {
           /* Setup absolute page dimensions for the sticker labels */
           @page {
-            size: auto !important;
+            size: 10cm 13cm !important;
             margin: 0 !important;
           }
           
           html, body {
-            width: 8cm !important;
-            height: 7cm !important;
+            width: 10cm !important;
+            height: 13cm !important;
             margin: 0 !important;
             padding: 0 !important;
             background: white !important;
@@ -47,8 +47,8 @@ class RequisitionPrintService {
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            width: 8cm !important;
-            height: 7cm !important;
+            width: 10cm !important;
+            height: 13cm !important;
             margin: 0 !important;
             padding: 0 !important;
             box-sizing: border-box !important;

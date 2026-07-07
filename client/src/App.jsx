@@ -67,6 +67,9 @@ import ExpiryMonitoring from './features/chemical-inventory/pages/ExpiryMonitori
 import Reports from './features/chemical-inventory/pages/Reports';
 import AuditHistory from './features/chemical-inventory/pages/AuditHistory';
 
+// Monthly Statutory Report
+import MonthlyReport from './features/monthly-report/pages/MonthlyReport';
+
 // Requisition
 import RequisitionManagement from './features/requisition/pages/RequisitionManagement';
 import RequisitionList from './features/requisition/pages/RequisitionList';
@@ -153,6 +156,8 @@ const App = () => {
           <Route path="chemical-inventory/expiry" element={<ExpiryMonitoring />} />
           <Route path="chemical-inventory/reports" element={<Reports />} />
           <Route path="chemical-inventory/history" element={<AuditHistory />} />
+
+          <Route path="reports/monthly" element={<MonthlyReport />} />
 
           {/* Serology */}
           <Route path="labs/serology" element={<Serology />} />

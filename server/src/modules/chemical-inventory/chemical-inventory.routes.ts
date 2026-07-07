@@ -132,6 +132,32 @@ router.patch(
   controllers.updateUsage
 );
 
+// Damage Register
+router.get(
+  '/damage',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'store-keeper', 'lab-tech-serology', 'qa-manager']),
+  controllers.listDamages
+);
+router.post(
+  '/damage',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'lab-tech-serology', 'store-keeper']),
+  controllers.createDamage
+);
+router.patch(
+  '/damage/:id',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'lab-tech-serology', 'store-keeper']),
+  controllers.updateDamage
+);
+router.delete(
+  '/damage/:id',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'lab-tech-serology', 'store-keeper']),
+  controllers.deleteDamage
+);
+
 // Purchases
 router.get(
   '/purchase',

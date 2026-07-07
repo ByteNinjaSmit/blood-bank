@@ -71,14 +71,14 @@ export default function VoluntaryCampDonationPage() {
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-3 mb-4">
                                                         <span className="text-[10px] font-black text-[#8B0000] bg-rose-50 px-3 py-1 rounded-full uppercase tracking-widest border border-rose-100">
-                                                            {camp.siteId}
+                                                            {camp.campId}
                                                         </span>
                                                         <span className="text-[10px] font-black text-green-600 bg-green-50 px-3 py-1 rounded-full uppercase tracking-widest border border-green-100">
                                                             Live Now
                                                         </span>
                                                     </div>
                                                     <h3 className="text-3xl font-bold text-gray-900 mb-4 group-hover:text-[#8B0000] transition-colors">{camp.name}</h3>
-                                                    <div className="flex flex-wrap gap-6">
+                                                    <div className="flex flex-wrap gap-6 mb-4">
                                                         <div className="flex items-center gap-2 text-gray-500 font-medium">
                                                             <MapPin size={18} className="text-gray-300" />
                                                             {camp.address}
@@ -86,6 +86,16 @@ export default function VoluntaryCampDonationPage() {
                                                         <div className="flex items-center gap-2 text-gray-500 font-medium">
                                                             <Calendar size={18} className="text-gray-300" />
                                                             {new Date(camp.dateFrom).toLocaleDateString()}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-3">
+                                                        <div className="flex items-center gap-2 bg-rose-50 text-[#8B0000] px-4 py-2 rounded-2xl text-sm font-bold">
+                                                            <Users size={16} />
+                                                            {camp.donorCount ?? 0} {t.onsiteDonorPage.totalDonors}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 bg-rose-50 text-[#8B0000] px-4 py-2 rounded-2xl text-sm font-bold">
+                                                            <Droplets size={16} />
+                                                            {camp.donationCount ?? 0} {t.onsiteDonorPage.totalDonations}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -122,7 +132,7 @@ export default function VoluntaryCampDonationPage() {
                                                     <div className="bg-rose-50 p-3 rounded-2xl">
                                                         <Calendar className="text-[#8B0000] w-6 h-6" />
                                                     </div>
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{camp.siteId}</span>
+                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{camp.campId}</span>
                                                 </div>
                                                 <h4 className="text-xl font-bold text-gray-900 mb-2">{camp.name}</h4>
                                                 <p className="text-gray-500 text-sm mb-6 flex items-center gap-2">
@@ -174,7 +184,7 @@ export default function VoluntaryCampDonationPage() {
                                         </span>
                                     </div>
                                     <h3 className="text-lg font-bold text-gray-900 mb-2">{camp.name}</h3>
-                                    <div className="space-y-2 mb-6">
+                                    <div className="space-y-2 mb-4">
                                         <div className="flex items-center gap-2 text-xs text-gray-500">
                                             <MapPin size={12} /> {camp.address}
                                         </div>
@@ -182,12 +192,16 @@ export default function VoluntaryCampDonationPage() {
                                             <Clock size={12} /> {new Date(camp.dateFrom).toLocaleDateString()}
                                         </div>
                                     </div>
-                                    <Link 
-                                        href={`/onsite-donor/ongoing-camp?campId=${camp._id}`}
-                                        className="text-[10px] font-black text-[#8B0000] uppercase tracking-wider hover:underline"
-                                    >
-                                        {t.onsiteDonorPage.viewRecords} →
-                                    </Link>
+                                    <div className="flex flex-wrap gap-2 mb-6">
+                                        <div className="flex items-center gap-1.5 bg-gray-50 text-gray-600 px-3 py-1.5 rounded-xl text-xs font-bold">
+                                            <Users size={12} />
+                                            {camp.donorCount ?? 0} {t.onsiteDonorPage.totalDonors}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 bg-gray-50 text-gray-600 px-3 py-1.5 rounded-xl text-xs font-bold">
+                                            <Droplets size={12} />
+                                            {camp.donationCount ?? 0} {t.onsiteDonorPage.totalDonations}
+                                        </div>
+                                    </div>
                                 </motion.div>
                             ))}
                         </div>

@@ -44,9 +44,11 @@ export default function RequisitionList() {
   const [printDoc, setPrintDoc] = useState(null);
   const [printLoading, setPrintLoading] = useState(false);
   const [printType, setPrintType] = useState('report');
+  const [printReportPage, setPrintReportPage] = useState('both');
   const [multiLabelModalOpen, setMultiLabelModalOpen] = useState(false);
   const [multiLabelDoc, setMultiLabelDoc] = useState(null);
   const [selectedPrintLabelDoc, setSelectedPrintLabelDoc] = useState(null);
+  const [selectedPrintReportDoc, setSelectedPrintReportDoc] = useState(null);
 
   const [issueModalOpen, setIssueModalOpen] = useState(false);
   const [issueDoc, setIssueDoc] = useState(null);
@@ -82,6 +84,45 @@ export default function RequisitionList() {
       if (hasUnissued) return 'approved';
     }
     return row.status;
+  };
+
+  // Per-component fulfillment: a requested line can be short even when the
+  // overall requisition is "completed" (the components that were in stock
+  // got issued, the ones that weren't stay unavailable forever on this request).
+  const componentFulfillment = (doc, c) => {
+    const matches = Array.isArray(doc?.matchedInventory) ? doc.matchedInventory.filter((mi) => {
+      const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+      const bag = inv?.bagNo || {};
+      const comp = inv?.componentId || {};
+      return comp.componentType === c.componentType && bag.bloodGroup === c.bloodGroup && bag.rh === c.rh;
+    }) : [];
+
+    if (matches.length === 0) {
+      return { label: 'Unavailable', className: 'bg-gray-100 text-gray-600 border border-gray-200' };
+    }
+
+    const allIssued = matches.every((mi) => (typeof mi.inventoryId === 'object' ? mi.inventoryId?.status : '') === 'ISSUED');
+    const short = matches.length < Number(c.units || 0);
+
+    if (short) {
+      return {
+        label: allIssued ? 'Partially Issued' : 'Partially Reserved',
+        className: 'bg-amber-50 text-amber-700 border border-amber-200',
+      };
+    }
+    if (allIssued) return { label: 'Issued', className: 'bg-green-50 text-green-700 border border-green-200' };
+    return { label: 'Reserved', className: 'bg-blue-50 text-blue-700 border border-blue-200' };
+  };
+
+  // Human-readable identifier to reference a requisition in user-facing messages.
+  const getReqLabel = (row) => row?.requestId || row?.requisitionId || row?._id || 'this requisition';
+
+  // Components can only be issued once the requisition has been approved
+  // (or is already mid-issuance) — a "matched" (crossmatched but not yet
+  // approved) requisition must not be issuable.
+  const isApprovedForIssue = (row) => {
+    const status = rowDisplayStatus(row);
+    return status === 'approved' || status === 'issued';
   };
 
   useEffect(() => {
@@ -171,6 +212,10 @@ export default function RequisitionList() {
       if (action === 'issue') {
         const row = data.find(r => r._id === id);
         if (row) {
+          if (!isApprovedForIssue(row)) {
+            toast.error(`Requisition ${getReqLabel(row)} is not approved yet. Please approve the request before issuing.`);
+            return;
+          }
           await handleOpenIssueModal(row);
         }
         return;
@@ -237,7 +282,18 @@ export default function RequisitionList() {
   const bulkAction = async (action) => {
     if (allSelectedIds.length === 0) return;
     const rows = data.filter((r) => allSelectedIds.includes(r._id));
-    const allowed = rows.filter((r) => can(r, action)).map((r) => r._id);
+    let eligibleRows = rows.filter((r) => can(r, action));
+
+    if (action === 'issue') {
+      const blocked = eligibleRows.filter((r) => !isApprovedForIssue(r));
+      if (blocked.length > 0) {
+        const labels = blocked.map(getReqLabel).join(', ');
+        toast.error(`Please approve requisition${blocked.length > 1 ? 's' : ''} ${labels} before issuing.`);
+      }
+      eligibleRows = eligibleRows.filter((r) => isApprovedForIssue(r));
+    }
+
+    const allowed = eligibleRows.map((r) => r._id);
     if (allowed.length === 0) {
       toast.error('No selected rows are eligible for this action');
       return;
@@ -411,17 +467,26 @@ export default function RequisitionList() {
         return;
       }
 
-      setPrintType(type);
-      setPrintDoc(res.data);
-      // Wait for React to render the printable HTML to DOM
-      setTimeout(() => {
-        RequisitionPrintService.print(type);
-      }, 100);
+      // Report/Issue register: open a two-page preview before printing
+      setPrintReportPage('both');
+      setSelectedPrintReportDoc(res.data);
     } catch (e) {
       toast.error('Network error while preparing print');
     } finally {
       setPrintLoading(false);
     }
+  };
+
+  // Prints the issue report; page can be 1, 2, or 'both' so either page can
+  // be reprinted on its own (e.g. a fresh copy of just the reaction record).
+  const printReport = (doc, page) => {
+    setPrintType('report');
+    setPrintReportPage(page);
+    setPrintDoc(doc);
+    setSelectedPrintReportDoc(null);
+    setTimeout(() => {
+      RequisitionPrintService.print('report');
+    }, 100);
   };
 
   return (
@@ -475,10 +540,10 @@ export default function RequisitionList() {
                     <p className="font-medium text-red-950 font-serif leading-relaxed italic">
                       "{viewDoc.rejectionReason}"
                     </p>
-                    {(viewDoc.rejectedAt || viewDoc.rejectedBy || viewDoc.medicalOfficerSignature) && (
+                    {(viewDoc.rejectedAt || viewDoc.rejectedBy) && (
                       <div className="mt-2 text-xs text-red-500/80 flex flex-wrap gap-x-3 gap-y-1 border-t border-red-100 pt-1.5 font-medium">
-                        {(viewDoc.medicalOfficerSignature || viewDoc.rejectedBy) && (
-                          <span>Rejected By: <strong className="text-red-700">{viewDoc.medicalOfficerSignature || viewDoc.rejectedBy?.name || viewDoc.rejectedBy?.username || viewDoc.rejectedBy}</strong></span>
+                        {viewDoc.rejectedBy && (
+                          <span>Rejected By: <strong className="text-red-700">{viewDoc.rejectedBy?.name || viewDoc.rejectedBy?.username || viewDoc.rejectedBy}</strong></span>
                         )}
                         {viewDoc.rejectedAt && (
                           <span>Rejected At: <strong className="text-red-700">{fmt(viewDoc.rejectedAt)}</strong></span>
@@ -500,18 +565,31 @@ export default function RequisitionList() {
                       <th className="p-2">Group</th>
                       <th className="p-2">Rh</th>
                       <th className="p-2">Urgency</th>
+                      <th className="p-2">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {viewDoc.requestedComponents?.map((c, idx) => (
-                      <tr key={idx} className="border-t">
-                        <td className="p-2">{c.componentType}</td>
-                        <td className="p-2">{c.units}</td>
-                        <td className="p-2">{c.bloodGroup}</td>
-                        <td className="p-2">{c.rh}</td>
-                        <td className="p-2 capitalize">{c.urgency}</td>
-                      </tr>
-                    ))}
+                    {viewDoc.requestedComponents?.map((c, idx) => {
+                      const fulfillment = viewDoc.status === 'rejected'
+                        ? null
+                        : componentFulfillment(viewDoc, c);
+                      return (
+                        <tr key={idx} className="border-t">
+                          <td className="p-2">{c.componentType}</td>
+                          <td className="p-2">{c.units}</td>
+                          <td className="p-2">{c.bloodGroup}</td>
+                          <td className="p-2">{c.rh}</td>
+                          <td className="p-2 capitalize">{c.urgency}</td>
+                          <td className="p-2">
+                            {fulfillment && (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${fulfillment.className}`}>
+                                {fulfillment.label}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1085,7 +1163,7 @@ export default function RequisitionList() {
           {printType === 'label' ? (
             <RequisitionLabelTemplate doc={printDoc} />
           ) : (
-            <RequisitionPrintTemplate doc={printDoc} />
+            <RequisitionPrintTemplate doc={printDoc} printPage={printReportPage} />
           )}
         </div>,
         document.body
@@ -1093,25 +1171,25 @@ export default function RequisitionList() {
 
       {/* Requisition Label Print Preview Modal */}
       {selectedPrintLabelDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs no-print select-none">
-          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-2xl relative flex flex-col items-center">
-            <button 
-              onClick={() => setSelectedPrintLabelDoc(null)} 
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-xs no-print select-none py-8">
+          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-2xl relative flex flex-col items-center my-auto">
+            <button
+              onClick={() => setSelectedPrintLabelDoc(null)}
               className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
-            
+
             <h3 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
               Requisition Label Print Preview
             </h3>
 
             {/* Wrapper to contain the CSS scaled label preview on screen */}
-            <div 
-              className="flex items-center justify-center overflow-hidden my-4 border border-dashed border-gray-200 rounded-lg bg-gray-50/50" 
-              style={{ 
-                width: '15.2cm', 
-                height: '13.2cm', 
+            <div
+              className="flex items-center justify-center overflow-hidden my-4 border border-dashed border-gray-200 rounded-lg bg-gray-50/50"
+              style={{
+                width: '11.5cm',
+                height: '14.5cm',
               }}
             >
               <RequisitionLabelTemplate doc={selectedPrintLabelDoc} isPreview={true} />
@@ -1137,6 +1215,57 @@ export default function RequisitionList() {
                 className="px-6 py-2 text-xs font-bold bg-red-800 hover:bg-red-900 text-white rounded-lg shadow-sm flex items-center gap-1.5 transition-colors"
               >
                 Print Label
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Requisition Issue Report Print Preview Modal (shows both pages before printing) */}
+      {selectedPrintReportDoc && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-xs no-print select-none py-8">
+          <div className="bg-white rounded-2xl p-6 max-w-4xl w-full shadow-2xl relative flex flex-col items-center my-auto">
+            <button
+              onClick={() => setSelectedPrintReportDoc(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
+              Issue Report Print Preview
+            </h3>
+
+            {/* Scrollable preview of both pages, stacked with a visual gap between them */}
+            <div className="w-full max-h-[65vh] overflow-y-auto border border-dashed border-gray-200 rounded-lg bg-gray-50/50 p-4">
+              <RequisitionPrintTemplate doc={selectedPrintReportDoc} isPreview={true} />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3 mt-6 w-full justify-end flex-wrap">
+              <button
+                onClick={() => setSelectedPrintReportDoc(null)}
+                className="px-5 py-2 text-xs font-bold border border-gray-300 rounded-lg hover:bg-gray-50 bg-white text-gray-700 shadow-none transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => printReport(selectedPrintReportDoc, 1)}
+                className="px-5 py-2 text-xs font-bold border border-red-200 text-red-800 hover:bg-red-50 rounded-lg shadow-sm transition-colors"
+              >
+                Print Page 1 Only
+              </button>
+              <button
+                onClick={() => printReport(selectedPrintReportDoc, 2)}
+                className="px-5 py-2 text-xs font-bold border border-red-200 text-red-800 hover:bg-red-50 rounded-lg shadow-sm transition-colors"
+              >
+                Print Page 2 Only
+              </button>
+              <button
+                onClick={() => printReport(selectedPrintReportDoc, 'both')}
+                className="px-6 py-2 text-xs font-bold bg-red-800 hover:bg-red-900 text-white rounded-lg shadow-sm flex items-center gap-1.5 transition-colors"
+              >
+                Print Both Pages
               </button>
             </div>
           </div>

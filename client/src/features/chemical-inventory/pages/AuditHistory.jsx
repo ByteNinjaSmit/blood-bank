@@ -177,7 +177,7 @@ export default function AuditHistory() {
                       <p className="text-xs text-gray-600">{log.remarks}</p>
                       <div className="pt-2 border-t border-gray-100/50 flex items-center gap-1.5 text-[10px] text-gray-400 font-semibold">
                         <User className="w-3.5 h-3.5" />
-                        <span>Logged By: {log.createdBy?.name || log.createdBy?.email}</span>
+                        <span>Logged By: {[log.createdBy?.name?.first, log.createdBy?.name?.last].filter(Boolean).join(' ') || log.createdBy?.email || '—'}</span>
                         <span className="mx-1.5">|</span>
                         <span>Quantity Impacted: {log.quantity} unit(s)</span>
                       </div>

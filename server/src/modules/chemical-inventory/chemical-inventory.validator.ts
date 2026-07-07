@@ -41,6 +41,8 @@ export const CreateChemicalBody = z.object({
   unitType: z.enum(['Bottle', 'Kit', 'Card', 'Pack', 'Bag']),
   minStockLevel: z.number().int().nonnegative(),
   reorderLevel: z.number().int().nonnegative(),
+  defaultPackType: z.enum(['ML', 'VIALS', 'BOX', 'TUBE']).optional().default('ML'),
+  defaultUnitsPerPack: z.number().int().positive().optional().default(96),
   isActive: z.boolean().optional().default(true),
 });
 
@@ -57,6 +59,8 @@ export const CreateStockLotItem = z.object({
   costPerUnit: z.number().nonnegative(),
   totalCost: z.number().nonnegative(),
   packSizeMl: z.number().positive().optional().nullable(),
+  packType: z.enum(['ML', 'VIALS', 'BOX', 'TUBE']).optional().default('ML'),
+  unitsPerPack: z.number().int().positive().optional().nullable(),
   cgstAmount: z.number().nonnegative().optional().default(0),
   sgstAmount: z.number().nonnegative().optional().default(0),
   cgstPercent: z.number().nonnegative().optional().default(0),
@@ -77,6 +81,20 @@ export const CreateStockLotBody = z.object({
 export const UpdateUsageBody = z.object({
   action: z.enum(['OPEN', 'CONSUME']),
   quantity: z.number().int().positive().optional().default(1),
+  unitsRemaining: z.number().int().nonnegative().optional(),
+});
+
+// Damage Register Validator
+export const CreateDamageBody = z.object({
+  lotId: z.string().regex(OBJECT_ID, 'Invalid lotId'),
+  quantity: z.number().int().positive(),
+  reason: z.string().trim().min(1).max(500),
+  damagedDate: z.coerce.date().optional(),
+});
+
+export const UpdateDamageBody = z.object({
+  quantity: z.number().int().positive().optional(),
+  reason: z.string().trim().min(1).max(500).optional(),
 });
 
 // List Filters
@@ -122,6 +140,8 @@ export const ValidateChemicalInventory = {
   updateChemical: (req: Request) => parseOrThrow(UpdateChemicalBody, req.body, 'request body'),
   createStockLot: (req: Request) => parseOrThrow(CreateStockLotBody, req.body, 'request body'),
   updateUsage: (req: Request) => parseOrThrow(UpdateUsageBody, req.body, 'request body'),
+  createDamage: (req: Request) => parseOrThrow(CreateDamageBody, req.body, 'request body'),
+  updateDamage: (req: Request) => parseOrThrow(UpdateDamageBody, req.body, 'request body'),
   updatePurchase: (req: Request) => parseOrThrow(UpdatePurchaseBody, req.body, 'request body'),
   updatePurchasePayments: (req: Request) => parseOrThrow(UpdatePurchasePaymentsBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListQuery, req.query, 'query string'),

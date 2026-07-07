@@ -35,6 +35,13 @@ export const chemicalInventoryApi = {
     updateUsage: (id, data) => apiClient.patch(`${V}/lot/${id}/usage`, data).then(unwrap),
   },
 
+  damage: {
+    list:   ()       => apiClient.get(`${V}/damage`).then(unwrap),
+    create: (data)   => apiClient.post(`${V}/damage`, data).then(unwrap),
+    update: (id, d)  => apiClient.patch(`${V}/damage/${id}`, d).then(unwrap),
+    remove: (id)     => apiClient.delete(`${V}/damage/${id}`).then(unwrap),
+  },
+
   purchase: {
     list:           ()         => apiClient.get(`${V}/purchase`).then(unwrap),
     update:         (id, data) => apiClient.patch(`${V}/purchase/${id}`, data).then(unwrap),

@@ -29,6 +29,7 @@ export const defaultRequestedComponent = {
   bloodGroup: 'O',
   rh: 'Positive',
   urgency: 'regular',
+  compatibilityMode: 'UNIVERSAL',
 };
 
 export default function useRequisition(authToken) {
@@ -47,11 +48,8 @@ export default function useRequisition(authToken) {
     hospitalId: '',
     doctorName: '',
     requiredAt: '',
-    medicalOfficerSignature: '',
-    hospitalSeal: '',
     patient: { ...defaultPatient },
     requestedComponents: [ { ...defaultRequestedComponent } ],
-    plateletCompatibilityMode: 'UNIVERSAL',
   });
 
   // Created request state
@@ -72,9 +70,6 @@ export default function useRequisition(authToken) {
         hospitalId: requestDoc.hospitalId?._id || requestDoc.hospitalId || '',
         doctorName: requestDoc.doctorName || requestDoc.clinicianName || '',
         requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 16) : '',
-        medicalOfficerSignature: requestDoc.medicalOfficerSignature || '',
-        hospitalSeal: requestDoc.hospitalSeal || '',
-        plateletCompatibilityMode: requestDoc.plateletCompatibilityMode || 'UNIVERSAL',
         patient: {
           name: requestDoc.patient?.name || '',
           age: requestDoc.patient?.age || '',
@@ -100,6 +95,7 @@ export default function useRequisition(authToken) {
           bloodGroup: rc.bloodGroup,
           rh: rc.rh === 'Positive' || rc.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
           urgency: rc.urgency?.toLowerCase() === 'routine' ? 'regular' : rc.urgency?.toLowerCase() || 'regular',
+          compatibilityMode: rc.compatibilityMode || 'UNIVERSAL',
         })),
       });
     }
@@ -192,10 +188,7 @@ function checkHasChanges(doc, payload) {
   const docRequiredAt = doc.requiredAt ? new Date(doc.requiredAt).getTime() : 0;
   const payRequiredAt = payload.requiredAt ? new Date(payload.requiredAt).getTime() : 0;
   if (docRequiredAt !== payRequiredAt) return true;
-  
-  if ((doc.medicalOfficerSignature || '') !== (payload.medicalOfficerSignature || '')) return true;
-  if ((doc.hospitalSeal || '') !== (payload.hospitalSeal || '')) return true;
-  
+
   // Patient details
   if ((doc.patient?.name || '') !== (payload.patient.name || '')) return true;
   if (Number(doc.patient?.age || 0) !== Number(payload.patient.age || 0)) return true;
@@ -245,6 +238,8 @@ function checkHasChanges(doc, payload) {
     const dcUrgency = dc.urgency?.toLowerCase() === 'routine' ? 'regular' : dc.urgency?.toLowerCase();
     const pcUrgency = pc.urgency?.toLowerCase() === 'routine' ? 'regular' : pc.urgency?.toLowerCase();
     if (dcUrgency !== pcUrgency) return true;
+
+    if ((dc.compatibilityMode || 'UNIVERSAL') !== (pc.compatibilityMode || 'UNIVERSAL')) return true;
   }
   
   return false;
@@ -260,9 +255,6 @@ function checkHasChanges(doc, payload) {
         hospitalId: form.hospitalId,
         doctorName: form.doctorName || undefined,
         requiredAt: form.requiredAt || undefined,
-        medicalOfficerSignature: form.medicalOfficerSignature || undefined,
-        hospitalSeal: form.hospitalSeal || undefined,
-        plateletCompatibilityMode: form.plateletCompatibilityMode || 'UNIVERSAL',
         patient: {
           name: form.patient.name,
           age: Number(form.patient.age),
@@ -288,6 +280,7 @@ function checkHasChanges(doc, payload) {
           bloodGroup: r.bloodGroup,
           rh: r.rh,
           urgency: r.urgency,
+          compatibilityMode: r.compatibilityMode || 'UNIVERSAL',
         })),
       };
 
@@ -446,8 +439,6 @@ function checkHasChanges(doc, payload) {
         hospitalId: form.hospitalId,
         doctorName: form.doctorName || undefined,
         requiredAt: form.requiredAt || undefined,
-        medicalOfficerSignature: form.medicalOfficerSignature || undefined,
-        hospitalSeal: form.hospitalSeal || undefined,
         patient: {
           name: form.patient.name,
           age: Number(form.patient.age),
@@ -473,6 +464,7 @@ function checkHasChanges(doc, payload) {
           bloodGroup: r.bloodGroup,
           rh: r.rh,
           urgency: r.urgency,
+          compatibilityMode: r.compatibilityMode || 'UNIVERSAL',
         })),
       };
       const createRes = await requisitionApi.createRequest(payload);
@@ -521,8 +513,6 @@ function checkHasChanges(doc, payload) {
       hospitalId: form.hospitalId,
       doctorName: form.doctorName || undefined,
       requiredAt: form.requiredAt || undefined,
-      medicalOfficerSignature: form.medicalOfficerSignature || undefined,
-      hospitalSeal: form.hospitalSeal || undefined,
       patient: {
         name: form.patient.name,
         age: Number(form.patient.age),
@@ -548,6 +538,7 @@ function checkHasChanges(doc, payload) {
         bloodGroup: r.bloodGroup,
         rh: r.rh,
         urgency: r.urgency,
+        compatibilityMode: r.compatibilityMode || 'UNIVERSAL',
       })),
     };
     return checkHasChanges(requestDoc, payload);

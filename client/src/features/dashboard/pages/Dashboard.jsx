@@ -387,26 +387,11 @@ export default function Dashboard() {
       const today = new Date();
       const firstOfThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       const lastMonthEnd = new Date(firstOfThisMonth.getTime() - 24 * 60 * 60 * 1000);
-      const lastMonthStart = new Date(lastMonthEnd.getFullYear(), lastMonthEnd.getMonth(), 1);
-      const fromISO = lastMonthStart.toISOString().slice(0, 10);
-      const toISO = lastMonthEnd.toISOString().slice(0, 10);
+      const month = lastMonthEnd.getMonth() + 1;
+      const year = lastMonthEnd.getFullYear();
 
-      const res = await axios.get(`${API}/api/dashboard`, {
-        withCredentials: true,
-        params: { from: fromISO, to: toISO },
-        headers: { Authorization: authorizationToken },
-      });
-      const monthPayload = res.data?.data;
-      if (!monthPayload) throw new Error("No data returned for last month");
-
-      const monthLabel = lastMonthStart.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
-      const period = `${formatDate(lastMonthStart)} to ${formatDate(lastMonthEnd)}`;
-      const sheets = buildDashboardSheets(monthPayload, `Monthly Report - ${monthLabel}`, period);
-      await downloadExcelReport(sheets, `Monthly_Report_${monthLabel.replace(" ", "_")}.xlsx`);
-      toast.success("Monthly report generated");
       setOpenChemicalsWarning(null);
-    } catch (e) {
-      toast.error(e?.response?.data?.message || e.message || "Failed to generate monthly report");
+      navigate(`/reports/monthly?month=${month}&year=${year}`);
     } finally {
       setReportGenerating(false);
     }

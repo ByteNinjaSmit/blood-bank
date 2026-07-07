@@ -18,6 +18,7 @@ export interface RequestedComponentDto {
   aboGroup: AboGroup;
   rhFactor: RhFactor;
   urgency: 'ROUTINE' | 'URGENT' | 'EMERGENCY';
+  compatibilityMode?: 'UNIVERSAL' | 'MAJOR' | 'MINOR';
 }
 
 export interface MatchedUnitDto {
@@ -56,8 +57,6 @@ export interface RequisitionDto {
   patientId: string;
   clinicianName: string;
   doctorName?: string;
-  medicalOfficerSignature?: string;
-  hospitalSeal?: string;
   patient?: RequisitionPatientDto;
   requestedComponents: RequestedComponentDto[];
   matchedUnits: MatchedUnitDto[];
@@ -67,7 +66,6 @@ export interface RequisitionDto {
   rejectionReason?: string;
   rejectedBy?: string;
   rejectedAt?: string;
-  plateletCompatibilityMode?: 'UNIVERSAL' | 'MAJOR' | 'MINOR';
 }
 
 interface RawReq {
@@ -77,8 +75,6 @@ interface RawReq {
   patientId: { toString(): string };
   clinicianName: string;
   doctorName?: string;
-  medicalOfficerSignature?: string;
-  hospitalSeal?: string;
   patient?: RequisitionPatientDto;
   requestedComponents: RequestedComponentDto[];
   matchedUnits: MatchedUnitDto[];
@@ -88,7 +84,6 @@ interface RawReq {
   rejectionReason?: string;
   rejectedBy?: { toString(): string };
   rejectedAt?: Date;
-  plateletCompatibilityMode?: 'UNIVERSAL' | 'MAJOR' | 'MINOR';
 }
 
 function toDto(raw: RawReq): RequisitionDto {
@@ -100,8 +95,6 @@ function toDto(raw: RawReq): RequisitionDto {
     patientId: raw.patientId ? raw.patientId.toString() : '',
     clinicianName: raw.clinicianName || '',
     doctorName: raw.doctorName || raw.clinicianName || '',
-    medicalOfficerSignature: raw.medicalOfficerSignature || '',
-    hospitalSeal: raw.hospitalSeal || '',
     patient: raw.patient ? {
       name: raw.patient.name,
       age: raw.patient.age,
@@ -129,7 +122,6 @@ function toDto(raw: RawReq): RequisitionDto {
     rejectionReason: raw.rejectionReason,
     rejectedBy: raw.rejectedBy ? raw.rejectedBy.toString() : undefined,
     rejectedAt: raw.rejectedAt ? new Date(raw.rejectedAt).toISOString() : undefined,
-    plateletCompatibilityMode: raw.plateletCompatibilityMode || 'UNIVERSAL',
   };
 }
 
@@ -139,12 +131,9 @@ export interface CreateRequisitionInput {
   patientId: string;
   clinicianName: string;
   doctorName?: string;
-  medicalOfficerSignature?: string;
-  hospitalSeal?: string;
   patient?: RequisitionPatientDto;
   requiredAt?: Date;
   requestedComponents: RequestedComponentDto[];
-  plateletCompatibilityMode?: 'UNIVERSAL' | 'MAJOR' | 'MINOR';
 }
 
 export interface ListRequisitionsFilter {

@@ -66,6 +66,8 @@ const ChemicalSchema = new Schema(
     unitType: { type: String, enum: ['Bottle', 'Kit', 'Card', 'Pack', 'Bag'], required: true },
     minStockLevel: { type: Number, required: true, min: 0 },
     reorderLevel: { type: Number, required: true, min: 0 },
+    defaultPackType: { type: String, enum: ['ML', 'VIALS', 'BOX', 'TUBE'], default: 'ML' },
+    defaultUnitsPerPack: { type: Number, default: 96 },
     isActive: { type: Boolean, default: true, index: true },
     deletedAt: { type: Date, default: null, index: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
@@ -136,6 +138,9 @@ const ChemicalStockLotSchema = new Schema(
     costPerUnit: { type: Number, required: true, min: 0 },
     totalCost: { type: Number, required: true, min: 0 },
     packSizeMl: { type: Number, default: null },
+    packType: { type: String, enum: ['ML', 'VIALS', 'BOX', 'TUBE'], default: 'ML' },
+    unitsPerPack: { type: Number, default: null },
+    openBoxUnitsRemaining: { type: Number, default: null },
     cgstAmount: { type: Number, default: 0 },
     sgstAmount: { type: Number, default: 0 },
     cgstPercent: { type: Number, default: 0 },
@@ -162,7 +167,7 @@ const ChemicalStockHistorySchema = new Schema(
     lotId: { type: Schema.Types.ObjectId, ref: 'ChemicalStockLot', required: true, index: true },
     action: {
       type: String,
-      enum: ['PURCHASE', 'OPEN', 'CONSUME', 'ADJUSTMENT', 'EXPIRY_DISCARD', 'DELETE'],
+      enum: ['PURCHASE', 'OPEN', 'CONSUME', 'ADJUSTMENT', 'EXPIRY_DISCARD', 'DELETE', 'DAMAGE'],
       required: true,
       index: true,
     },
@@ -178,3 +183,23 @@ export type ChemicalStockHistoryModel = Model<ChemicalStockHistory>;
 export const ChemicalStockHistoryModel: ChemicalStockHistoryModel =
   (mongoose.models.ChemicalStockHistory as ChemicalStockHistoryModel | undefined) ??
   mongoose.model<ChemicalStockHistory>('ChemicalStockHistory', ChemicalStockHistorySchema);
+
+// ─── Chemical Damage Register ─────────────────────────────────────────────────
+const ChemicalDamageSchema = new Schema(
+  {
+    chemicalId: { type: Schema.Types.ObjectId, ref: 'Chemical', required: true, index: true },
+    lotId: { type: Schema.Types.ObjectId, ref: 'ChemicalStockLot', required: true, index: true },
+    quantity: { type: Number, required: true, min: 1 },
+    reason: { type: String, required: true, trim: true },
+    damagedDate: { type: Date, required: true, default: Date.now },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  },
+  { timestamps: true }
+);
+
+export type ChemicalDamage = InferSchemaType<typeof ChemicalDamageSchema>;
+export type ChemicalDamageModel = Model<ChemicalDamage>;
+export const ChemicalDamageModel: ChemicalDamageModel =
+  (mongoose.models.ChemicalDamage as ChemicalDamageModel | undefined) ??
+  mongoose.model<ChemicalDamage>('ChemicalDamage', ChemicalDamageSchema);

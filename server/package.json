@@ -19,6 +19,7 @@
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:clear": "tsx scripts/clear-db.ts",
+    "chemical:reset-stock": "tsx scripts/reset-chemical-stock.ts",
     "get-otp": "tsx scripts/get-otp.ts"
   },
   "keywords": [],

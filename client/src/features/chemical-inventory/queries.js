@@ -10,6 +10,7 @@ export const chemicalInventoryKeys = {
   lot:          (f)      => [...chemicalInventoryKeys.all, 'lot', f ?? {}],
   history:      (f)      => [...chemicalInventoryKeys.all, 'history', f ?? {}],
   purchase:     ()       => [...chemicalInventoryKeys.all, 'purchase'],
+  damage:       ()       => [...chemicalInventoryKeys.all, 'damage'],
   stats:        ()       => [...chemicalInventoryKeys.all, 'stats'],
   reports:      (t, f)   => [...chemicalInventoryKeys.all, 'reports', t, f ?? {}],
 };
@@ -152,10 +153,44 @@ export function useCreateLot() {
 export function useUpdateUsage() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, action, quantity }) => chemicalInventoryApi.lot.updateUsage(id, { action, quantity }),
+    mutationFn: ({ id, action, quantity, unitsRemaining }) =>
+      chemicalInventoryApi.lot.updateUsage(id, { action, quantity, unitsRemaining }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['chemical-inventory'] });
     },
+  });
+}
+
+// Damage Register Hooks
+export function useDamageList() {
+  return useQuery({
+    queryKey: chemicalInventoryKeys.damage(),
+    queryFn: chemicalInventoryApi.damage.list,
+    staleTime: 10_000,
+  });
+}
+
+export function useCreateDamage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: chemicalInventoryApi.damage.create,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['chemical-inventory'] }),
+  });
+}
+
+export function useUpdateDamage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => chemicalInventoryApi.damage.update(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['chemical-inventory'] }),
+  });
+}
+
+export function useDeleteDamage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: chemicalInventoryApi.damage.remove,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['chemical-inventory'] }),
   });
 }
 

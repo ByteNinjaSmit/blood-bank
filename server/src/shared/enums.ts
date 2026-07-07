@@ -85,6 +85,8 @@ export const PERMISSION = [
   'bag-discard:read',
   'bag-discard:create',
   'bag-discard:approve',
+  'bulk-transfer:read',
+  'bulk-transfer:create',
 ] as const;
 export type Permission = (typeof PERMISSION)[number];
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
-import { Loader2, PackageCheck, Plus, Trash2, Warehouse, MapPin, Eye } from "lucide-react";
+import { Loader2, PackageCheck, Plus, Trash2, Warehouse, MapPin, Eye, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import CustomModal from "@/components/CustomModal";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
@@ -178,6 +178,129 @@ const Issue = () => {
   const [thalViewOpen, setThalViewOpen] = useState(false);
   const [thalViewItem, setThalViewItem] = useState(null);
   const [thalPagination, setThalPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+
+  // ── Bulk Transfer tab state ──────────────────────────
+  const [bulkRows, setBulkRows] = useState([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkViewOpen, setBulkViewOpen] = useState(false);
+  const [bulkViewItem, setBulkViewItem] = useState(null);
+  const [bulkPagination, setBulkPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+
+  const [bulkFormOpen, setBulkFormOpen] = useState(false);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [bulkTransferType, setBulkTransferType] = useState("GIVE_LOAN"); // GIVE_LOAN | TAKE_LOAN
+  const [bulkBloodBankName, setBulkBloodBankName] = useState("");
+  const [bulkBloodBankAddress, setBulkBloodBankAddress] = useState("");
+  const [bulkTransferDate, setBulkTransferDate] = useState(new Date().toISOString().split('T')[0]);
+  // GIVE_LOAN: pick from our own stock, same shape as the "Send to Storage" bag picker
+  const [bulkGiveBags, setBulkGiveBags] = useState([{ componentType: "RBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
+  // TAKE_LOAN: bags coming in from the other bank — manually entered, not yet in our stock
+  const [bulkTakeGroups, setBulkTakeGroups] = useState([{ componentType: "RBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", collectedAt: "", expiresAt: "" }] }]);
+
+  const resetBulkForm = () => {
+    setBulkTransferType("GIVE_LOAN");
+    setBulkBloodBankName("");
+    setBulkBloodBankAddress("");
+    setBulkTransferDate(new Date().toISOString().split('T')[0]);
+    setBulkGiveBags([{ componentType: "RBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
+    setBulkTakeGroups([{ componentType: "RBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", collectedAt: "", expiresAt: "" }] }]);
+  };
+
+  const fetchBulkTransfers = async (page = 1, limit = bulkPagination.limit) => {
+    setBulkLoading(true);
+    try {
+      const res = await axios.get(`${API}/api/v2/bulk-transfer`, {
+        headers: { Authorization: authorizationToken },
+        withCredentials: true,
+        params: { page, limit },
+      });
+      setBulkRows(Array.isArray(res.data?.data) ? res.data.data : []);
+      const p = res.data?.pagination || {};
+      setBulkPagination({ page: p.page || page, limit: p.limit || limit, total: p.total || 0, totalPages: Math.ceil((p.total || 0) / (p.limit || limit)) });
+    } catch (e) {
+      toast.error(e?.response?.data?.message || "Failed to fetch bulk transfers");
+      setBulkRows([]);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (mainTab === 'bulkTransfer') fetchBulkTransfers(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mainTab]);
+
+  const handleBulkTransferSubmit = async () => {
+    if (!bulkBloodBankName.trim() || !bulkBloodBankAddress.trim()) {
+      return toast.warning("Please enter the blood bank name and address");
+    }
+    if (!bulkTransferDate) {
+      return toast.warning("Please select a transfer date");
+    }
+
+    let items = [];
+    if (bulkTransferType === "GIVE_LOAN") {
+      bulkGiveBags.forEach(comp => {
+        comp.groups.forEach(group => {
+          group.selectedBags.forEach(bagId => {
+            const unit = availableUnits.find(u => u._id === bagId);
+            if (unit) {
+              items.push({
+                componentType: comp.componentType,
+                bloodGroup: group.bloodGroup,
+                bagNo: unit.bag?.bagNo || unit.bagNo || '',
+                segmentNo: unit.segmentNo || unit.bag?.segmentNo || undefined,
+                collectedAt: unit.bag?.donationDate || undefined,
+                expiresAt: unit.component?.expiryDate || undefined,
+              });
+            }
+          });
+        });
+      });
+    } else {
+      bulkTakeGroups.forEach(group => {
+        group.bags.forEach(b => {
+          if (b.bagNo.trim()) {
+            items.push({
+              componentType: group.componentType,
+              bloodGroup: group.bloodGroup,
+              bagNo: b.bagNo.trim(),
+              segmentNo: b.segmentNo.trim() || undefined,
+              collectedAt: b.collectedAt || undefined,
+              expiresAt: b.expiresAt || undefined,
+            });
+          }
+        });
+      });
+    }
+
+    if (items.length === 0) {
+      return toast.warning("Please add at least one blood bag");
+    }
+
+    try {
+      setBulkSubmitting(true);
+      await axios.post(`${API}/api/v2/bulk-transfer`, {
+        transferType: bulkTransferType,
+        bloodBankName: bulkBloodBankName.trim(),
+        bloodBankAddress: bulkBloodBankAddress.trim(),
+        transferDate: bulkTransferDate,
+        items,
+      }, {
+        headers: { Authorization: authorizationToken },
+        withCredentials: true,
+      });
+
+      toast.success(bulkTransferType === "GIVE_LOAN" ? "Loan given successfully" : "Loan taken in successfully");
+      setBulkFormOpen(false);
+      resetBulkForm();
+      fetchBulkTransfers(1);
+    } catch (e) {
+      toast.error(e?.response?.data?.message || "Failed to record bulk transfer");
+    } finally {
+      setBulkSubmitting(false);
+    }
+  };
 
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
@@ -447,6 +570,7 @@ const Issue = () => {
               { key: 'issue', label: 'Issue Stock', icon: <PackageCheck className="w-4 h-4" /> },
               { key: 'storage', label: 'Storage', icon: <Warehouse className="w-4 h-4" /> },
               { key: 'thalassemia', label: 'Thalassemia Patients', icon: <MapPin className="w-4 h-4" /> },
+              { key: 'bulkTransfer', label: 'Bulk Transfer', icon: <ArrowLeftRight className="w-4 h-4" /> },
             ].map(tab => (
               <button
                 key={tab.key}
@@ -693,6 +817,106 @@ const Issue = () => {
                 <button
                   disabled={thalPagination.page >= thalPagination.totalPages}
                   onClick={() => { const p = (thalPagination.page || 1) + 1; fetchThalassemia(p); }}
+                  className="px-3 py-1 rounded-md disabled:text-gray-300 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed"
+                >Next</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Bulk Transfer tab ────────────────────────────── */}
+        {mainTab === 'bulkTransfer' && (
+          <div className="bg-white shadow-md rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b bg-gray-50">
+              <div className="flex items-center gap-2">
+                <ArrowLeftRight className="w-4 h-4 text-red-700" />
+                <span className="font-semibold text-gray-800 text-sm">Bulk Transfer Records (Loans)</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-500">Total: {bulkPagination.total || bulkRows.length}</span>
+                <button
+                  onClick={() => fetchBulkTransfers(bulkPagination.page || 1)}
+                  className="text-xs text-gray-500 hover:text-red-700 flex items-center gap-1"
+                >
+                  {bulkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : '↻'} Refresh
+                </button>
+                <Button
+                  onClick={() => { resetBulkForm(); setBulkFormOpen(true); fetchAvailableUnits(); }}
+                  className="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white shadow-sm flex items-center gap-1.5 h-9 px-4 rounded-lg"
+                >
+                  <ArrowLeftRight className="w-4 h-4" /> Send Bulk
+                </Button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Transfer ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Blood Bank</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Address</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Transfer Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bags</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {bulkLoading ? (
+                    <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">
+                      <Loader2 className="w-5 h-5 animate-spin mx-auto mb-1" /> Loading…
+                    </td></tr>
+                  ) : bulkRows.length === 0 ? (
+                    <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">
+                      No bulk transfer records found.
+                    </td></tr>
+                  ) : bulkRows.map(r => (
+                    <tr key={r.id} className="hover:bg-red-50/30 transition-colors">
+                      <td className="px-4 py-3 font-mono text-xs font-bold text-gray-800">{r.transferId}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          r.transferType === 'GIVE_LOAN'
+                            ? 'bg-amber-50 border border-amber-200 text-amber-800'
+                            : 'bg-blue-50 border border-blue-200 text-blue-800'
+                        }`}>
+                          {r.transferType === 'GIVE_LOAN' ? 'Give Loan' : 'Take Loan'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-gray-800">{r.bloodBankName}</td>
+                      <td className="px-4 py-3 text-gray-600 max-w-[220px] truncate" title={r.bloodBankAddress}>{r.bloodBankAddress}</td>
+                      <td className="px-4 py-3 text-gray-600">{r.transferDate ? new Date(r.transferDate).toLocaleDateString() : '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                          {r.items?.length || 0} bag{(r.items?.length || 0) !== 1 ? 's' : ''}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => { setBulkViewItem(r); setBulkViewOpen(true); }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 text-xs font-medium transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Bulk transfer pagination */}
+            <div className="flex items-center justify-between px-5 py-3 border-t text-sm text-gray-600">
+              <span>Page {bulkPagination.page || 1} of {bulkPagination.totalPages || 1}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={bulkPagination.page <= 1}
+                  onClick={() => { const p = Math.max(1, (bulkPagination.page || 1) - 1); fetchBulkTransfers(p); }}
+                  className="px-3 py-1 rounded-md disabled:text-gray-300 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed"
+                >Previous</button>
+                <button
+                  disabled={bulkPagination.page >= bulkPagination.totalPages}
+                  onClick={() => { const p = (bulkPagination.page || 1) + 1; fetchBulkTransfers(p); }}
                   className="px-3 py-1 rounded-md disabled:text-gray-300 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed"
                 >Next</button>
               </div>
@@ -1517,6 +1741,506 @@ const Issue = () => {
             </div>
           );
         })()}
+      </CustomModal>
+
+      {/* ── Bulk Transfer View Modal ──────────────────────── */}
+      <CustomModal open={bulkViewOpen} onCancel={() => { setBulkViewOpen(false); setBulkViewItem(null); }} title="Bulk Transfer Details" size="lg" hideFooter>
+        {bulkViewItem && (
+          <div className="space-y-5 text-sm">
+            <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+              <h4 className="text-xs font-black text-red-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <ArrowLeftRight className="w-3.5 h-3.5" /> Transfer Information
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Transfer ID</div>
+                  <div className="font-bold text-gray-800 font-mono">{bulkViewItem.transferId}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Type</div>
+                  <div className="font-bold text-red-700">{bulkViewItem.transferType === 'GIVE_LOAN' ? 'Give Loan' : 'Take Loan'}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Bank Name</div>
+                  <div className="font-semibold text-gray-800">{bulkViewItem.bloodBankName}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Transfer Date</div>
+                  <div className="text-gray-700">{bulkViewItem.transferDate ? new Date(bulkViewItem.transferDate).toLocaleDateString() : '—'}</div>
+                </div>
+                <div className="md:col-span-2">
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Bank Address</div>
+                  <div className="text-gray-700">{bulkViewItem.bloodBankAddress}</div>
+                </div>
+                {bulkViewItem.notes && (
+                  <div className="md:col-span-2">
+                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Notes</div>
+                    <div className="text-gray-700">{bulkViewItem.notes}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
+              <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider p-4 pb-0">Blood Bags ({bulkViewItem.items?.length || 0})</h4>
+              <div className="overflow-x-auto p-4 pt-3">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-500 text-xs uppercase font-semibold">
+                      <th className="px-3 py-2">Component</th>
+                      <th className="px-3 py-2">Blood Group</th>
+                      <th className="px-3 py-2">Bag No</th>
+                      <th className="px-3 py-2">Segment No</th>
+                      <th className="px-3 py-2">Collected</th>
+                      <th className="px-3 py-2">Expiry</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {(bulkViewItem.items || []).map((it, idx) => (
+                      <tr key={idx} className="bg-white">
+                        <td className="px-3 py-2.5 text-gray-700 font-medium">{it.componentType}</td>
+                        <td className="px-3 py-2.5 font-bold text-gray-800">{it.bloodGroup}</td>
+                        <td className="px-3 py-2.5 font-mono font-bold text-gray-800">{it.bagNo}</td>
+                        <td className="px-3 py-2.5 font-mono text-gray-600">{it.segmentNo || '—'}</td>
+                        <td className="px-3 py-2.5 text-gray-600">{it.collectedAt ? new Date(it.collectedAt).toLocaleDateString() : '—'}</td>
+                        <td className="px-3 py-2.5 text-gray-600">{it.expiresAt ? new Date(it.expiresAt).toLocaleDateString() : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+      </CustomModal>
+
+      {/* ── Send Bulk (Give/Take Loan) Form Modal ─────────── */}
+      <CustomModal open={bulkFormOpen} onCancel={() => setBulkFormOpen(false)} title="Bulk Transfer — Give / Take Loan" size="xl" hideFooter>
+        <div className="space-y-6 text-sm p-2">
+          {/* Give Loan / Take Loan selector */}
+          <div className="flex gap-3">
+            {[
+              { key: 'GIVE_LOAN', label: 'Give Loan' },
+              { key: 'TAKE_LOAN', label: 'Take Loan' },
+            ].map(opt => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setBulkTransferType(opt.key)}
+                className={`flex-1 h-11 rounded-lg text-sm font-bold border-2 transition-colors ${
+                  bulkTransferType === opt.key
+                    ? 'border-red-700 bg-red-50 text-red-800'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex flex-col md:col-span-2">
+              <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Blood Bank Name</label>
+              <input
+                type="text"
+                value={bulkBloodBankName}
+                onChange={(e) => setBulkBloodBankName(e.target.value)}
+                className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm focus:ring-1 focus:ring-red-500 border-gray-300"
+                placeholder="e.g. Red Cross Blood Bank"
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Date</label>
+              <input
+                type="date"
+                value={bulkTransferDate}
+                onChange={(e) => setBulkTransferDate(e.target.value)}
+                className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm focus:ring-1 focus:ring-red-500 border-gray-300"
+              />
+            </div>
+            <div className="flex flex-col md:col-span-3">
+              <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Blood Bank Address</label>
+              <input
+                type="text"
+                value={bulkBloodBankAddress}
+                onChange={(e) => setBulkBloodBankAddress(e.target.value)}
+                className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm focus:ring-1 focus:ring-red-500 border-gray-300"
+                placeholder="Full address"
+              />
+            </div>
+          </div>
+
+          {bulkTransferType === 'GIVE_LOAN' ? (
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Blood Bag Selection By Component (From Our Stock)</h4>
+                <Button
+                  type="button"
+                  onClick={() => setBulkGiveBags([...bulkGiveBags, { componentType: "RBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }])}
+                  variant="outline"
+                  size="sm"
+                  className="text-red-700 border-red-200 hover:bg-red-50 flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Component Section
+                </Button>
+              </div>
+
+              <div className="space-y-6 max-h-[420px] overflow-y-auto pr-1">
+                {bulkGiveBags.map((comp, compIndex) => (
+                  <div key={compIndex} className="p-5 border rounded-xl bg-white shadow-sm border-gray-200 flex flex-col gap-4 relative">
+                    <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-700 uppercase tracking-wider">Component Type</span>
+                        <select
+                          value={comp.componentType}
+                          onChange={(e) => {
+                            const next = [...bulkGiveBags];
+                            next[compIndex].componentType = e.target.value;
+                            next[compIndex].groups = next[compIndex].groups.map(g => ({ ...g, selectedBags: [] }));
+                            setBulkGiveBags(next);
+                          }}
+                          className="h-9 px-3 border rounded-md text-xs bg-white shadow-sm font-bold text-red-800 focus:ring-1 focus:ring-red-500"
+                        >
+                          <option value="RBC">RBC (PRBC)</option>
+                          <option value="FFP">FFP</option>
+                          <option value="Platelet">Platelet (PLATELET_CONCENTRATE)</option>
+                          <option value="Cryo">Cryo (CRYOPRECIPITATE)</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            const next = [...bulkGiveBags];
+                            next[compIndex].groups.push({ bloodGroup: "A+", bagType: "All", selectedBags: [] });
+                            setBulkGiveBags(next);
+                          }}
+                          variant="outline"
+                          size="xs"
+                          className="text-xs text-red-700 border-red-200 hover:bg-red-50 flex items-center gap-1 py-1 px-2.5 h-8 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Add Blood Group
+                        </Button>
+
+                        {bulkGiveBags.length > 1 && (
+                          <Button
+                            type="button"
+                            onClick={() => setBulkGiveBags(bulkGiveBags.filter((_, idx) => idx !== compIndex))}
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-gray-400 hover:text-red-650 hover:bg-red-50 transition-colors border border-gray-200"
+                            title="Remove Component Section"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 pl-2 border-l-2 border-red-100">
+                      {comp.groups.map((group, groupIndex) => {
+                        const matchingAvailableBags = availableUnits.filter(u => {
+                          const unitBg = `${u.bag?.bloodGroup}${u.bag?.rh === 'Positive' ? '+' : '-'}`;
+                          let unitComp = u.component?.componentType;
+                          if (unitComp === 'PRBC' || unitComp === 'RBC') unitComp = 'RBC';
+                          else if (unitComp === 'FFP') unitComp = 'FFP';
+                          else if (unitComp === 'PLATELET_CONCENTRATE' || unitComp === 'Platelet') unitComp = 'Platelet';
+                          else if (unitComp === 'CRYOPRECIPITATE' || unitComp === 'Cryo') unitComp = 'Cryo';
+
+                          const matchesBgAndComp = unitBg === group.bloodGroup && unitComp === comp.componentType;
+                          if (!matchesBgAndComp) return false;
+                          if (group.bagType && group.bagType !== "All") return u.typeOfBag === group.bagType;
+                          return true;
+                        });
+
+                        const selectedDetails = group.selectedBags.map(id => availableUnits.find(u => u._id === id)).filter(Boolean);
+
+                        return (
+                          <div key={groupIndex} className="p-3 border rounded-lg bg-slate-50/50 flex flex-col gap-2 relative">
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                              <div className="md:col-span-2 flex flex-col">
+                                <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Blood Group</label>
+                                <select
+                                  value={group.bloodGroup}
+                                  onChange={(e) => {
+                                    const next = [...bulkGiveBags];
+                                    next[compIndex].groups[groupIndex].bloodGroup = e.target.value;
+                                    next[compIndex].groups[groupIndex].selectedBags = [];
+                                    setBulkGiveBags(next);
+                                  }}
+                                  className="h-9 px-2 border rounded-md text-xs bg-white shadow-sm focus:ring-1 focus:ring-red-500"
+                                >
+                                  {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
+                                    <option key={bg} value={bg}>{bg}</option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div className="md:col-span-2 flex flex-col">
+                                <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Bag Type</label>
+                                <select
+                                  value={group.bagType || "All"}
+                                  onChange={(e) => {
+                                    const next = [...bulkGiveBags];
+                                    next[compIndex].groups[groupIndex].bagType = e.target.value;
+                                    next[compIndex].groups[groupIndex].selectedBags = [];
+                                    setBulkGiveBags(next);
+                                  }}
+                                  className="h-9 px-2 border rounded-md text-xs bg-white shadow-sm focus:ring-1 focus:ring-red-500"
+                                >
+                                  <option value="All">All Types</option>
+                                  <option value="SB">Single (SB)</option>
+                                  <option value="DB">Double (DB)</option>
+                                  <option value="TB">Triple (TB)</option>
+                                  <option value="QB">Quadruple (QB)</option>
+                                </select>
+                              </div>
+
+                              <div className="md:col-span-7 flex flex-col">
+                                <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Select Bags</label>
+                                <MultiBagSelect
+                                  availableBags={matchingAvailableBags}
+                                  selectedBags={group.selectedBags}
+                                  onChange={(selectedIds) => {
+                                    const next = [...bulkGiveBags];
+                                    next[compIndex].groups[groupIndex].selectedBags = selectedIds;
+                                    setBulkGiveBags(next);
+                                  }}
+                                />
+                              </div>
+
+                              <div className="md:col-span-1 flex justify-end">
+                                {comp.groups.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    onClick={() => {
+                                      const next = [...bulkGiveBags];
+                                      next[compIndex].groups = next[compIndex].groups.filter((_, idx) => idx !== groupIndex);
+                                      setBulkGiveBags(next);
+                                    }}
+                                    variant="outline"
+                                    size="xs"
+                                    className="h-9 w-9 p-0 text-gray-400 hover:text-red-650 hover:bg-red-50 transition-colors border border-gray-200"
+                                    title="Remove Blood Group"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+
+                            {selectedDetails.length > 0 && (
+                              <div className="mt-1 p-2 bg-white rounded-lg border border-slate-100 shadow-inner">
+                                <div className="text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Loaded Segment Numbers:</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {selectedDetails.map(bag => (
+                                    <span key={bag._id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-red-50 text-red-805 text-xs border border-red-100 font-medium">
+                                      <span className="font-extrabold">{bag.bagNo}</span>
+                                      <span className="text-red-200">|</span>
+                                      <span>Seg: <strong className="font-extrabold">{bag.segmentNo}</strong></span>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Blood Bags Being Taken In (Enter Manually)</h4>
+                <Button
+                  type="button"
+                  onClick={() => setBulkTakeGroups([...bulkTakeGroups, { componentType: "RBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", collectedAt: "", expiresAt: "" }] }])}
+                  variant="outline"
+                  size="sm"
+                  className="text-red-700 border-red-200 hover:bg-red-50 flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Component / Group
+                </Button>
+              </div>
+
+              <div className="space-y-6 max-h-[420px] overflow-y-auto pr-1">
+                {bulkTakeGroups.map((group, groupIndex) => (
+                  <div key={groupIndex} className="p-5 border rounded-xl bg-white shadow-sm border-gray-200 flex flex-col gap-4 relative">
+                    <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="flex flex-col">
+                          <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Component</label>
+                          <select
+                            value={group.componentType}
+                            onChange={(e) => {
+                              const next = [...bulkTakeGroups];
+                              next[groupIndex].componentType = e.target.value;
+                              setBulkTakeGroups(next);
+                            }}
+                            className="h-9 px-3 border rounded-md text-xs bg-white shadow-sm font-bold text-red-800 focus:ring-1 focus:ring-red-500"
+                          >
+                            <option value="RBC">RBC (PRBC)</option>
+                            <option value="FFP">FFP</option>
+                            <option value="Platelet">Platelet (PLATELET_CONCENTRATE)</option>
+                            <option value="Cryo">Cryo (CRYOPRECIPITATE)</option>
+                          </select>
+                        </div>
+                        <div className="flex flex-col">
+                          <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Blood Group</label>
+                          <select
+                            value={group.bloodGroup}
+                            onChange={(e) => {
+                              const next = [...bulkTakeGroups];
+                              next[groupIndex].bloodGroup = e.target.value;
+                              setBulkTakeGroups(next);
+                            }}
+                            className="h-9 px-2 border rounded-md text-xs bg-white shadow-sm focus:ring-1 focus:ring-red-500"
+                          >
+                            {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
+                              <option key={bg} value={bg}>{bg}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            const next = [...bulkTakeGroups];
+                            next[groupIndex].bags.push({ bagNo: "", segmentNo: "", collectedAt: "", expiresAt: "" });
+                            setBulkTakeGroups(next);
+                          }}
+                          variant="outline"
+                          size="xs"
+                          className="text-xs text-red-700 border-red-200 hover:bg-red-50 flex items-center gap-1 py-1 px-2.5 h-8 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Add Bag
+                        </Button>
+
+                        {bulkTakeGroups.length > 1 && (
+                          <Button
+                            type="button"
+                            onClick={() => setBulkTakeGroups(bulkTakeGroups.filter((_, idx) => idx !== groupIndex))}
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-gray-400 hover:text-red-650 hover:bg-red-50 transition-colors border border-gray-200"
+                            title="Remove Component / Group"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 pl-2 border-l-2 border-red-100">
+                      {group.bags.map((bag, bagIndex) => (
+                        <div key={bagIndex} className="grid grid-cols-2 md:grid-cols-12 gap-3 items-end p-3 rounded-lg bg-slate-50/50 border border-slate-100">
+                          <div className="md:col-span-3 flex flex-col">
+                            <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Bag No</label>
+                            <input
+                              type="text"
+                              value={bag.bagNo}
+                              onChange={(e) => {
+                                const next = [...bulkTakeGroups];
+                                next[groupIndex].bags[bagIndex].bagNo = e.target.value;
+                                setBulkTakeGroups(next);
+                              }}
+                              className="h-9 px-2 border rounded-md text-xs bg-white shadow-sm focus:ring-1 focus:ring-red-500"
+                              placeholder="Bag No"
+                            />
+                          </div>
+                          <div className="md:col-span-3 flex flex-col">
+                            <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Segment No</label>
+                            <input
+                              type="text"
+                              value={bag.segmentNo}
+                              onChange={(e) => {
+                                const next = [...bulkTakeGroups];
+                                next[groupIndex].bags[bagIndex].segmentNo = e.target.value;
+                                setBulkTakeGroups(next);
+                              }}
+                              className="h-9 px-2 border rounded-md text-xs bg-white shadow-sm focus:ring-1 focus:ring-red-500"
+                              placeholder="Segment No"
+                            />
+                          </div>
+                          <div className="md:col-span-3 flex flex-col">
+                            <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Collection Date</label>
+                            <input
+                              type="date"
+                              value={bag.collectedAt}
+                              onChange={(e) => {
+                                const next = [...bulkTakeGroups];
+                                next[groupIndex].bags[bagIndex].collectedAt = e.target.value;
+                                setBulkTakeGroups(next);
+                              }}
+                              className="h-9 px-2 border rounded-md text-xs bg-white shadow-sm focus:ring-1 focus:ring-red-500"
+                            />
+                          </div>
+                          <div className="md:col-span-2 flex flex-col">
+                            <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Expiry Date</label>
+                            <input
+                              type="date"
+                              value={bag.expiresAt}
+                              onChange={(e) => {
+                                const next = [...bulkTakeGroups];
+                                next[groupIndex].bags[bagIndex].expiresAt = e.target.value;
+                                setBulkTakeGroups(next);
+                              }}
+                              className="h-9 px-2 border rounded-md text-xs bg-white shadow-sm focus:ring-1 focus:ring-red-500"
+                            />
+                          </div>
+                          <div className="md:col-span-1 flex justify-end">
+                            {group.bags.length > 1 && (
+                              <Button
+                                type="button"
+                                onClick={() => {
+                                  const next = [...bulkTakeGroups];
+                                  next[groupIndex].bags = next[groupIndex].bags.filter((_, idx) => idx !== bagIndex);
+                                  setBulkTakeGroups(next);
+                                }}
+                                variant="outline"
+                                size="xs"
+                                className="h-9 w-9 p-0 text-gray-400 hover:text-red-650 hover:bg-red-50 transition-colors border border-gray-200"
+                                title="Remove Bag"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2 border-t pt-4 mt-6">
+            <Button onClick={() => setBulkFormOpen(false)} variant="outline" className="h-10 px-4">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkTransferSubmit}
+              disabled={bulkSubmitting || (bulkTransferType === 'GIVE_LOAN' && loadingAvailable)}
+              className="bg-red-800 hover:bg-red-900 text-white font-medium h-10 px-6 shadow-md transition-colors duration-200"
+            >
+              {bulkSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                bulkTransferType === 'GIVE_LOAN' ? "Give Loan" : "Take Loan"
+              )}
+            </Button>
+          </div>
+        </div>
       </CustomModal>
     </div>
   );

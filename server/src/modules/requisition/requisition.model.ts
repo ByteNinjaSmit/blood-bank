@@ -15,6 +15,11 @@ const RequestedComponent = new Schema(
       enum: ['ROUTINE', 'URGENT', 'EMERGENCY'],
       default: 'ROUTINE',
     },
+    compatibilityMode: {
+      type: String,
+      enum: ['UNIVERSAL', 'MAJOR', 'MINOR'],
+      default: 'UNIVERSAL',
+    },
   },
   { _id: false },
 );
@@ -81,8 +86,6 @@ const RequisitionSchema = new Schema(
     doctorName: { type: String, trim: true },
     requiredAt: { type: Date, index: true },
     requestedAt: { type: Date, default: Date.now },
-    medicalOfficerSignature: { type: String, trim: true },
-    hospitalSeal: { type: String, trim: true },
     patient: { type: RequisitionPatientSchema },
     requestedComponents: { type: [RequestedComponent], default: [] },
     matchedUnits: { type: [MatchedUnit], default: [] },
@@ -91,11 +94,6 @@ const RequisitionSchema = new Schema(
       enum: ['PENDING', 'MATCHED', 'CROSSMATCHED', 'APPROVED', 'ISSUED', 'COMPLETED', 'REJECTED'],
       default: 'PENDING',
       index: true,
-    },
-    plateletCompatibilityMode: {
-      type: String,
-      enum: ['UNIVERSAL', 'MAJOR', 'MINOR'],
-      default: 'UNIVERSAL',
     },
     approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     approvedAt: Date,

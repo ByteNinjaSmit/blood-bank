@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, User, HeartHandshake, History, FileCheck, ShieldAlert } from 'lucide-react';
+import { FileText, User, HeartHandshake, History, ShieldAlert } from 'lucide-react';
 import HospitalSelect from '../components/HospitalSelect';
 import PatientForm from '../components/PatientForm';
 import RequestedComponentsList from '../components/RequestedComponentsList';
@@ -63,8 +63,6 @@ export default function RequestCreationStep({
         hospitalId: requestDoc.hospitalId?._id || requestDoc.hospitalId || '',
         doctorName: requestDoc.doctorName || '',
         requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 16) : '',
-        medicalOfficerSignature: requestDoc.medicalOfficerSignature || '',
-        hospitalSeal: requestDoc.hospitalSeal || '',
         patient: {
           name: requestDoc.patient?.name || '',
           age: requestDoc.patient?.age || '',
@@ -310,55 +308,6 @@ export default function RequestCreationStep({
           onRemove={readOnly ? undefined : removeRequestLine}
           readOnly={readOnly}
         />
-        { (displayForm.requestedComponents || []).some((rc) => rc.componentType === 'Platelet') && (
-          <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 flex flex-col gap-2 mt-4">
-            <label className="text-xs font-bold text-orange-950 uppercase tracking-wider">Platelet Compatibility Mode</label>
-            <select
-              className={`w-full md:w-1/3 px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
-              value={displayForm.plateletCompatibilityMode || 'UNIVERSAL'}
-              onChange={(e) => !readOnly && setForm((p) => ({ ...p, plateletCompatibilityMode: e.target.value }))}
-              disabled={readOnly}
-            >
-              <option value="UNIVERSAL">Universal (Platelets can be given to all blood group patients)</option>
-              <option value="MAJOR">Major Compatible (Standard RBC compatibility)</option>
-              <option value="MINOR">Minor Compatible (Standard Plasma/inverse compatibility)</option>
-            </select>
-            <p className="text-xs text-gray-500">
-              Select how platelet matching should behave: Universal (default, compatible with any group), Major Compatible, or Minor Compatible.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Card 6: Authorization */}
-      <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-sm space-y-4">
-        <div className="flex items-center gap-2 border-b pb-2 text-orange-800">
-          <FileCheck className="w-5 h-5" />
-          <h3 className="font-semibold text-gray-800">Authorization & Hospital Seal</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-gray-700 mb-1">Signature of Medical Officer (Typed Name)</label>
-            <input
-              placeholder="Full M.O. Name / Digital Stamp"
-              className={`w-full px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
-              value={displayForm.medicalOfficerSignature}
-              onChange={(e) => !readOnly && setForm((p) => ({ ...p, medicalOfficerSignature: e.target.value }))}
-              disabled={readOnly}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-700 mb-1">Hospital Seal Verification Code / Text</label>
-            <input
-              placeholder="Seal reference number or stamp text"
-              className={`w-full px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
-              value={displayForm.hospitalSeal}
-              onChange={(e) => !readOnly && setForm((p) => ({ ...p, hospitalSeal: e.target.value }))}
-              disabled={readOnly}
-            />
-          </div>
-        </div>
       </div>
 
       <div className="pt-4 border-t border-gray-200 mt-6 flex justify-between items-center">

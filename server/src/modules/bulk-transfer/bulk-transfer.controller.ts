@@ -1,0 +1,43 @@
+import type { NextFunction, Request, Response } from 'express';
+import { ValidateBulkTransfer } from '@/modules/bulk-transfer/bulk-transfer.validator';
+import type { BulkTransferService } from '@/modules/bulk-transfer/bulk-transfer.service';
+import { UnauthorizedError } from '@/shared/errors';
+
+export interface BulkTransferControllers {
+  list(req: Request, res: Response, next: NextFunction): Promise<void>;
+  get(req: Request, res: Response, next: NextFunction): Promise<void>;
+  create(req: Request, res: Response, next: NextFunction): Promise<void>;
+}
+
+export function createBulkTransferControllers(service: BulkTransferService): BulkTransferControllers {
+  const actorId = (req: Request): string => {
+    if (!req.user) throw new UnauthorizedError();
+    return req.user.id;
+  };
+
+  return {
+    async list(req, res, next) {
+      try {
+        const q = ValidateBulkTransfer.listQuery(req);
+        const result = await service.list(q);
+        res.json({ success: true, data: result.items, pagination: { total: result.total, page: result.page, limit: result.limit }, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+
+    async get(req, res, next) {
+      try {
+        const { id } = ValidateBulkTransfer.idParam(req);
+        const data = await service.get(id);
+        res.json({ success: true, data, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+
+    async create(req, res, next) {
+      try {
+        const body = ValidateBulkTransfer.createBody(req);
+        const data = await service.create(body, actorId(req));
+        res.status(201).json({ success: true, data, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+  };
+}

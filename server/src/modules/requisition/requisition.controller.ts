@@ -41,6 +41,30 @@ export interface RequisitionControllers {
   exportExcel: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
+// Self-heals matched units stuck as ABO/Rh-exact + crossmatch PENDING —
+// these should always be auto-approved at match time, but records matched
+// before that behavior existed (or a match call that errored mid-way)
+// can be left behind. Re-checked whenever a requisition is fetched.
+async function autoApproveExactCrossmatches(
+  deps: { requisitions: RequisitionService; crossmatch: CrossmatchService },
+  id: string,
+  actorId: string,
+): Promise<any> {
+  const current = await deps.requisitions.get(id);
+  const pendingExact = (current.matchedUnits || []).filter(
+    (mu: any) => mu.crossmatchRequired && mu.crossmatchStatus === 'PENDING' && mu.compatibilityType === 'EXACT',
+  );
+  if (pendingExact.length === 0) return current;
+
+  for (const mu of pendingExact) {
+    await deps.crossmatch.perform(
+      { requisitionId: id, unitId: mu.unitId, method: 'ELECTRONIC', result: 'COMPATIBLE' },
+      actorId,
+    );
+  }
+  return deps.requisitions.get(id);
+}
+
 async function enrichRequisition(reqDto: any): Promise<any> {
   if (!reqDto) return reqDto;
   const matchedUnits = reqDto.matchedUnits || [];
@@ -125,6 +149,7 @@ async function enrichRequisition(reqDto: any): Promise<any> {
     bloodGroup: rc.aboGroup,
     rh: rc.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
     urgency: rc.urgency?.toLowerCase() === 'routine' ? 'regular' : rc.urgency?.toLowerCase(),
+    compatibilityMode: rc.compatibilityMode || 'UNIVERSAL',
   }));
 
   let rejectedByDoc = null;
@@ -137,8 +162,6 @@ async function enrichRequisition(reqDto: any): Promise<any> {
     _id: reqDto.id || reqDto._id || '',
     requestId: reqDto.requisitionId,
     doctorName: reqDto.doctorName || reqDto.clinicianName,
-    medicalOfficerSignature: reqDto.medicalOfficerSignature || '',
-    hospitalSeal: reqDto.hospitalSeal || '',
     requestedComponents,
     matchedInventory,
     status: reqDto.status?.toLowerCase(),
@@ -217,12 +240,19 @@ export function createRequisitionControllers(deps: {
             else urgency = 'ROUTINE';
           }
 
+          let compatibilityMode = rc.compatibilityMode || 'UNIVERSAL';
+          if (typeof compatibilityMode === 'string') {
+            const upper = compatibilityMode.toUpperCase();
+            compatibilityMode = ['UNIVERSAL', 'MAJOR', 'MINOR'].includes(upper) ? upper : 'UNIVERSAL';
+          }
+
           return {
             componentType,
             units: Number(rc.units || 1),
             aboGroup,
             rhFactor,
             urgency,
+            compatibilityMode,
           };
         });
 
@@ -306,12 +336,19 @@ export function createRequisitionControllers(deps: {
             else urgency = 'ROUTINE';
           }
 
+          let compatibilityMode = rc.compatibilityMode || 'UNIVERSAL';
+          if (typeof compatibilityMode === 'string') {
+            const upper = compatibilityMode.toUpperCase();
+            compatibilityMode = ['UNIVERSAL', 'MAJOR', 'MINOR'].includes(upper) ? upper : 'UNIVERSAL';
+          }
+
           return {
             componentType,
             units: Number(rc.units || 1),
             aboGroup,
             rhFactor,
             urgency,
+            compatibilityMode,
           };
         });
 
@@ -345,8 +382,6 @@ export function createRequisitionControllers(deps: {
             clinicianName,
             doctorName,
             requiredAt: req.body.requiredAt ? new Date(req.body.requiredAt) : undefined,
-            medicalOfficerSignature: req.body.medicalOfficerSignature,
-            hospitalSeal: req.body.hospitalSeal,
             requestedComponents,
             updatedBy: new mongoose.Types.ObjectId(actorId),
           },
@@ -369,6 +404,13 @@ export function createRequisitionControllers(deps: {
       try {
         const { id } = ValidateRequisition.idParam(req);
         const result = await deps.requisitions.match(id, actor(req));
+
+        // Auto-approve crossmatch for ABO/Rh-exact matches. A manual crossmatch
+        // tick is only meaningful when the matched unit is a different blood
+        // group than the patient (a "compatible" substitute) — leaving
+        // same-group units PENDING just blocks issue with a confusing
+        // "Crossmatch not performed" error for the routine case.
+        result.requisition = await autoApproveExactCrossmatches(deps, id, actor(req));
 
         // Check if there are any shortages in result.shortages
         const shortageKeys = Object.keys(result.shortages || {});
@@ -453,7 +495,7 @@ export function createRequisitionControllers(deps: {
     async get(req, res, next) {
       try {
         const { id } = ValidateRequisition.idParam(req);
-        const data = await deps.requisitions.get(id);
+        const data = await autoApproveExactCrossmatches(deps, id, actor(req));
         const enriched = await enrichRequisition(data);
         res.json({ success: true, data: enriched, requestId: req.id });
       } catch (e) {

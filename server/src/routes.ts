@@ -33,8 +33,10 @@ import bagStockRouter from '@/modules/bag-stock/bag-stock.routes';
 import bagInspectionRouter from '@/modules/bag-inspection/bag-inspection.routes';
 import bagIssueRouter from '@/modules/bag-issue/bag-issue.routes';
 import bagDiscardRouter from '@/modules/bag-discard/bag-discard.routes';
+import bulkTransferRouter from '@/modules/bulk-transfer/bulk-transfer.routes';
 import componentRouter from '@/modules/component/component.routes';
 import chemicalInventoryRouter from '@/modules/chemical-inventory/chemical-inventory.routes';
+import monthlyReportRouter from '@/modules/monthly-report/monthly-report.routes';
 import uploadRouter from '@/modules/upload/upload.routes';
 import exportRouter from '@/modules/export/export.routes';
 import { errorMiddleware } from '@/shared/middlewares/error';
@@ -66,8 +68,10 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/bag-inspection', router: bagInspectionRouter },
   { path: '/bag-issue', router: bagIssueRouter },
   { path: '/bag-discard', router: bagDiscardRouter },
+  { path: '/bulk-transfer', router: bulkTransferRouter },
   { path: '/component', router: componentRouter },
   { path: '/chemical-inventory', router: chemicalInventoryRouter },
+  { path: '/monthly-report', router: monthlyReportRouter },
   { path: '/upload', router: uploadRouter },
   { path: '/export', router: exportRouter },
 ];

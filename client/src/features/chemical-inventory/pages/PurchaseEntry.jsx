@@ -150,6 +150,8 @@ export default function PurchaseEntry() {
       chemicalId: '',
       manufacturer: '',
       packSizeMl: '',
+      packType: 'ML',
+      unitsPerPack: 96,
       batchNumber: '',
       expiryDate: '',
       qtyPurchased: '',
@@ -266,6 +268,8 @@ export default function PurchaseEntry() {
         chemicalId: '',
         manufacturer: '',
         packSizeMl: '',
+        packType: 'ML',
+        unitsPerPack: 96,
         batchNumber: '',
         expiryDate: '',
         qtyPurchased: '',
@@ -389,6 +393,8 @@ export default function PurchaseEntry() {
           costPerUnit: rate,
           totalCost: subtotal,
           packSizeMl: item.packSizeMl ? Number(item.packSizeMl) : null,
+          packType: item.packType || 'ML',
+          unitsPerPack: item.packType === 'VIALS' || item.packType === 'BOX' ? Number(item.unitsPerPack) || 96 : null,
           cgstAmount: cgstAmt,
           sgstAmount: sgstAmt,
           cgstPercent,
@@ -413,6 +419,8 @@ export default function PurchaseEntry() {
           chemicalId: '',
           manufacturer: '',
           packSizeMl: '',
+          packType: 'ML',
+          unitsPerPack: 96,
           batchNumber: '',
           expiryDate: '',
           qtyPurchased: '',
@@ -828,7 +836,7 @@ export default function PurchaseEntry() {
                   <tr>
                     <th className="px-1 py-2 text-left text-[11px] font-bold text-gray-500 uppercase w-[18%]">Item Name *</th>
                     <th className="px-1 py-2 text-left text-[11px] font-bold text-gray-500 uppercase w-[15%]">Manufacturer *</th>
-                    <th className="px-1 py-2 text-left text-[11px] font-bold text-gray-500 uppercase w-[9%]">Pack in mL</th>
+                    <th className="px-1 py-2 text-left text-[11px] font-bold text-gray-500 uppercase w-[11%]">Pack Type</th>
                     <th className="px-1 py-2 text-left text-[11px] font-bold text-gray-500 uppercase w-[10%]">Batch No</th>
                     <th className="px-1 py-2 text-left text-[11px] font-bold text-gray-500 uppercase w-[12%]">Expiry Date *</th>
                     <th className="px-1 py-2 text-left text-[11px] font-bold text-gray-500 uppercase w-[7%] text-center">Qty *</th>
@@ -907,16 +915,40 @@ export default function PurchaseEntry() {
                           )}
                         </td>
 
-                        {/* Pack in mL */}
+                        {/* Pack Type */}
                         <td className="px-1 py-1.5">
-                          <input
-                            type="number"
-                            min="1"
-                            value={item.packSizeMl}
-                            onChange={(e) => handleItemChange(idx, 'packSizeMl', e.target.value)}
-                            className={tableInputClass}
-                            placeholder="Pack mL"
-                          />
+                          <div className="space-y-0.5">
+                            <select
+                              value={item.packType || 'ML'}
+                              onChange={(e) => handleItemChange(idx, 'packType', e.target.value)}
+                              className={`${tableInputClass} bg-white`}
+                            >
+                              <option value="ML">mL (Liquid)</option>
+                              <option value="VIALS">Vials</option>
+                              <option value="BOX">Box</option>
+                              <option value="TUBE">Tube</option>
+                            </select>
+                            {item.packType === 'ML' ? (
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.packSizeMl}
+                                onChange={(e) => handleItemChange(idx, 'packSizeMl', e.target.value)}
+                                className={tableInputClass}
+                                placeholder="Pack mL"
+                              />
+                            ) : (item.packType === 'VIALS' || item.packType === 'BOX') ? (
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.unitsPerPack}
+                                onChange={(e) => handleItemChange(idx, 'unitsPerPack', e.target.value)}
+                                className={tableInputClass}
+                                placeholder="Vials/pack"
+                                title="Number of vials in this box (editable)"
+                              />
+                            ) : null}
+                          </div>
                         </td>
 
                         {/* Batch No */}

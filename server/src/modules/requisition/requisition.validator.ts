@@ -22,6 +22,7 @@ const RequestedComponent = z.object({
   aboGroup: z.enum(ABO_GROUP),
   rhFactor: z.enum(RH_FACTOR),
   urgency: z.enum(['ROUTINE', 'URGENT', 'EMERGENCY']).default('ROUTINE'),
+  compatibilityMode: z.enum(['UNIVERSAL', 'MAJOR', 'MINOR']).default('UNIVERSAL'),
 });
 
 const PatientHistory = z.object({
@@ -54,11 +55,8 @@ export const CreateRequisitionBody = z.object({
   clinicianName: z.string().trim().min(1).max(200),
   doctorName: z.string().trim().max(200).optional(),
   requiredAt: z.coerce.date().optional(),
-  medicalOfficerSignature: z.string().trim().optional(),
-  hospitalSeal: z.string().trim().optional(),
   patient: RequisitionPatient.optional(),
   requestedComponents: z.array(RequestedComponent).min(1),
-  plateletCompatibilityMode: z.enum(['UNIVERSAL', 'MAJOR', 'MINOR']).default('UNIVERSAL'),
 });
 
 export const RejectBody = z.object({

@@ -82,16 +82,6 @@ export default function CompleteStep({ requestDoc, completing, onComplete, short
                     {requestDoc.status}
                   </p>
                 </div>
-                <div>
-                  <span className="text-gray-400 text-xs uppercase tracking-wide font-medium block">Medical Officer Signature</span>
-                  <p className="font-semibold text-gray-800 mt-0.5 text-xs italic">{requestDoc.medicalOfficerSignature || '—'}</p>
-                </div>
-                {requestDoc.hospitalSeal && (
-                  <div className="col-span-2">
-                    <span className="text-gray-400 text-xs uppercase tracking-wide font-medium block">Hospital Seal</span>
-                    <p className="font-semibold text-gray-800 mt-0.5 text-xs">{requestDoc.hospitalSeal}</p>
-                  </div>
-                )}
               </div>
             </div>
           </div>

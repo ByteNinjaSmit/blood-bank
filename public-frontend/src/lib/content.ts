@@ -192,6 +192,8 @@ export type ContentData = {
         noOngoing: string;
         noUpcoming: string;
         loadingCamps: string;
+        totalDonors: string;
+        totalDonations: string;
     };
     onsiteRegistrationForm: {
         steps: {
@@ -684,7 +686,9 @@ export const content: Record<'en' | 'mr', ContentData> = {
             completed: "Completed",
             noOngoing: "No ongoing camps at the moment.",
             noUpcoming: "No upcoming camps scheduled.",
-            loadingCamps: "Loading Camps..."
+            loadingCamps: "Loading Camps...",
+            totalDonors: "Total Donors",
+            totalDonations: "Total Donations"
         },
         onsiteRegistrationForm: {
             steps: {
@@ -1175,7 +1179,9 @@ export const content: Record<'en' | 'mr', ContentData> = {
             completed: "पूर्ण झाले",
             noOngoing: "सध्या कोणतेही शिबिर सुरू नाही.",
             noUpcoming: "पुढील कोणतेही शिबिर नियोजित नाही.",
-            loadingCamps: "शिबिरे लोड होत आहेत..."
+            loadingCamps: "शिबिरे लोड होत आहेत...",
+            totalDonors: "एकूण दाते",
+            totalDonations: "एकूण रक्तदान"
         },
         onsiteRegistrationForm: {
             steps: {

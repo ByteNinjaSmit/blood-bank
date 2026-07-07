@@ -8,6 +8,7 @@ import {
   ChemicalStockLotModel,
   ChemicalStockHistoryModel,
   ChemicalPurchaseModel,
+  ChemicalDamageModel,
 } from './chemical-inventory.model';
 import type { ListQuery, SupplierReportQuery } from './chemical-inventory.validator';
 
@@ -31,6 +32,7 @@ export interface ChemicalInventoryRepo {
 
   // Chemical
   listChemicals(): Promise<any[]>;
+  findChemicalById(id: string): Promise<any>;
   createChemical(doc: any & { actorId: string }): Promise<any>;
   updateChemical(id: string, patch: any, actorId: string): Promise<any>;
   deleteChemical(id: string): Promise<any>;
@@ -39,7 +41,15 @@ export interface ChemicalInventoryRepo {
   createStockLot(doc: any & { actorId: string }): Promise<any>;
   findStockLotById(id: string): Promise<any>;
   updateStockLot(id: string, patch: any, actorId: string): Promise<any>;
+  adjustLotAvailable(id: string, delta: number): Promise<any>;
   listStockLots(q: z.infer<typeof ListQuery>): Promise<{ items: any[]; total: number }>;
+
+  // Damage Register
+  listDamages(): Promise<any[]>;
+  createDamage(doc: any & { actorId: string }): Promise<any>;
+  findDamageById(id: string): Promise<any>;
+  updateDamageRecord(id: string, patch: any, actorId: string): Promise<any>;
+  deleteDamageRecord(id: string): Promise<any>;
 
   // Purchase Invoices & Installments
   createChemicalPurchase(doc: any & { actorId: string }): Promise<any>;
@@ -52,7 +62,7 @@ export interface ChemicalInventoryRepo {
   createHistoryLog(log: {
     chemicalId: string;
     lotId: string;
-    action: 'PURCHASE' | 'OPEN' | 'CONSUME' | 'ADJUSTMENT' | 'EXPIRY_DISCARD' | 'DELETE';
+    action: 'PURCHASE' | 'OPEN' | 'CONSUME' | 'ADJUSTMENT' | 'EXPIRY_DISCARD' | 'DELETE' | 'DAMAGE';
     quantity: number;
     remarks?: string;
     actorId: string;
@@ -156,6 +166,10 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
         .lean();
     },
 
+    async findChemicalById(id) {
+      return ChemicalModel.findOne({ _id: new Types.ObjectId(id), deletedAt: null }).lean();
+    },
+
     async createChemical(doc) {
       const actor = new Types.ObjectId(doc.actorId);
       const categoryId = new Types.ObjectId(doc.categoryId);
@@ -167,6 +181,8 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
         unitType: doc.unitType,
         minStockLevel: doc.minStockLevel,
         reorderLevel: doc.reorderLevel,
+        defaultPackType: doc.defaultPackType ?? 'ML',
+        defaultUnitsPerPack: doc.defaultUnitsPerPack ?? 96,
         isActive: doc.isActive,
         createdBy: actor,
         updatedBy: actor,
@@ -213,6 +229,9 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
         costPerUnit: doc.costPerUnit,
         totalCost: doc.totalCost,
         packSizeMl: doc.packSizeMl,
+        packType: doc.packType ?? 'ML',
+        unitsPerPack: doc.unitsPerPack ?? null,
+        openBoxUnitsRemaining: null,
         cgstAmount: doc.cgstAmount,
         sgstAmount: doc.sgstAmount,
         cgstPercent: doc.cgstPercent,
@@ -232,6 +251,14 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
       return ChemicalStockLotModel.findByIdAndUpdate(
         new Types.ObjectId(id),
         { $set: { ...patch, updatedBy: new Types.ObjectId(actorId) } },
+        { new: true }
+      );
+    },
+
+    async adjustLotAvailable(id, delta) {
+      return ChemicalStockLotModel.findByIdAndUpdate(
+        new Types.ObjectId(id),
+        { $inc: { qtyAvailable: delta } },
         { new: true }
       );
     },
@@ -355,6 +382,44 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
         remarks: log.remarks,
         createdBy: new Types.ObjectId(log.actorId),
       });
+    },
+
+    async listDamages() {
+      return ChemicalDamageModel.find({})
+        .populate('chemicalId', 'name unitType')
+        .populate('lotId', 'lotNumber batchNumber packType unitsPerPack qtyAvailable')
+        .populate('createdBy', 'name.first name.last email')
+        .sort({ createdAt: -1 })
+        .lean();
+    },
+
+    async createDamage(doc) {
+      const actor = new Types.ObjectId(doc.actorId);
+      return ChemicalDamageModel.create({
+        chemicalId: new Types.ObjectId(doc.chemicalId),
+        lotId: new Types.ObjectId(doc.lotId),
+        quantity: doc.quantity,
+        reason: doc.reason,
+        damagedDate: doc.damagedDate ?? new Date(),
+        createdBy: actor,
+        updatedBy: actor,
+      });
+    },
+
+    async findDamageById(id) {
+      return ChemicalDamageModel.findOne({ _id: new Types.ObjectId(id) }).lean();
+    },
+
+    async updateDamageRecord(id, patch, actorId) {
+      return ChemicalDamageModel.findByIdAndUpdate(
+        new Types.ObjectId(id),
+        { $set: { ...patch, updatedBy: new Types.ObjectId(actorId) } },
+        { new: true }
+      );
+    },
+
+    async deleteDamageRecord(id) {
+      return ChemicalDamageModel.findByIdAndDelete(new Types.ObjectId(id));
     },
 
     async listHistory(chemicalId, lotId) {
