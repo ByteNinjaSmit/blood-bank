@@ -6,6 +6,7 @@ import { UnauthorizedError } from '@/shared/errors';
 export interface DeferralControllers {
   create: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   listByDonor: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  list: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   lift: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
@@ -31,6 +32,29 @@ export function createDeferralControllers(repo: DeferralRepo): DeferralControlle
         const { donorId } = ValidateDeferral.donorIdParam(req);
         const data = await repo.listByDonor(donorId);
         res.json({ success: true, data, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async list(req, res, next) {
+      try {
+        const filter = ValidateDeferral.listQuery(req);
+        const { items, total } = await repo.list(filter);
+        const totalPages = Math.ceil(total / filter.limit);
+        res.json({
+          success: true,
+          data: items,
+          pagination: {
+            currentPage: filter.page,
+            totalPages,
+            totalCount: total,
+            pageSize: filter.limit,
+            hasNextPage: filter.page < totalPages,
+            hasPrevPage: filter.page > 1,
+          },
+          requestId: req.id,
+        });
       } catch (e) {
         next(e);
       }

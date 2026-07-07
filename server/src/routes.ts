@@ -68,6 +68,7 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/bag-discard', router: bagDiscardRouter },
   { path: '/component', router: componentRouter },
   { path: '/chemical-inventory', router: chemicalInventoryRouter },
+  { path: '/thalassemia-patient', router: thalassemiaPatientRouter },
   { path: '/upload', router: uploadRouter },
   { path: '/export', router: exportRouter },
 ];

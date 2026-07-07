@@ -6,8 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import CustomModal from "@/components/CustomModal";
+import { downloadExcelReport, formatDate } from "@/utils/excelExportHelper";
+import { useThalassemiaSummary } from "@/features/thalassemia/queries";
+import { apiClient } from "@/core/api-client";
+import { toast } from "sonner";
 import {
   ChartContainer,
   ChartTooltip,
@@ -30,9 +34,267 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Droplets, Users, Package, ClipboardList, Activity, AlertTriangle, TrendingUp, Truck, Calendar as CalendarIcon, Filter } from "lucide-react";
+import { Droplets, Users, Package, ClipboardList, Activity, AlertTriangle, TrendingUp, Truck, Calendar as CalendarIcon, Filter, FileSpreadsheet, ClipboardCheck, Heart, Loader2 } from "lucide-react";
 
 const number = (v) => (typeof v === "number" ? v : 0);
+
+const MATRIX_COMPONENTS = [
+  { key: "RBC", label: "Red Blood Cells (RBC)" },
+  { key: "FFP", label: "Fresh Frozen Plasma (FFP)" },
+  { key: "Platelet", label: "Platelets (PLT)" },
+  { key: "Cryo", label: "Cryoprecipitate (CRYO)" },
+];
+
+const MATRIX_BLOOD_GROUPS = [
+  { group: "A", rh: "Positive", label: "A+" },
+  { group: "A", rh: "Negative", label: "A-" },
+  { group: "B", rh: "Positive", label: "B+" },
+  { group: "B", rh: "Negative", label: "B-" },
+  { group: "AB", rh: "Positive", label: "AB+" },
+  { group: "AB", rh: "Negative", label: "AB-" },
+  { group: "O", rh: "Positive", label: "O+" },
+  { group: "O", rh: "Negative", label: "O-" },
+];
+
+const STATUS_LABEL_MAP = {
+  collected: "Collected",
+  "component-separated": "Separated",
+  testing: "Testing",
+  passed: "In Stock",
+  failed: "Failed",
+  quarantined: "Quarantined",
+  issued: "Issued",
+  discarded: "Discarded",
+};
+
+function sheet({ name, subtitle, reportPeriod, headers, rows, alignments }) {
+  return {
+    name,
+    title: "SANJIVANI BLOOD BANK, KOPARGAON",
+    subtitle,
+    reportPeriod,
+    headers,
+    alignments: alignments || headers.map((_, i) => (i === 0 ? "left" : "right")),
+    rows,
+  };
+}
+
+function buildDashboardSheets(data, subtitle, reportPeriod) {
+  const totals = data?.totals || {};
+  const overview = data?.overview || {};
+  const donorDonation = overview.donorDonation || {};
+  const bloodBags = overview.bloodBags || {};
+  const componentsOverview = overview.components || {};
+  const inventoryOverview = overview.inventory || {};
+  const componentAvailability = overview.componentAvailability || {};
+  const hospitalRequests = overview.hospitalRequests || {};
+  const testingSerology = overview.testingSerology || {};
+  const camps = overview.camps || {};
+  const alerts = overview.alerts || {};
+
+  const stockByComponentAndGroup = data?.stockByComponentAndGroup || [];
+  const getMatrixStock = (compKey, group, rh) => {
+    const match = stockByComponentAndGroup.find(
+      (x) => x.componentType === compKey && x.bloodGroup === group && x.rh === rh
+    );
+    return match ? number(match.value) : 0;
+  };
+
+  const matrixHeaders = ["Component Type", ...MATRIX_BLOOD_GROUPS.map((bg) => bg.label), "Total"];
+  const matrixRows = MATRIX_COMPONENTS.map((comp) => {
+    const counts = MATRIX_BLOOD_GROUPS.map((bg) => getMatrixStock(comp.key, bg.group, bg.rh));
+    const rowTotal = counts.reduce((a, b) => a + b, 0);
+    return [comp.label, ...counts, rowTotal];
+  });
+  const groupTotalsRow = [
+    "Group Totals",
+    ...MATRIX_BLOOD_GROUPS.map((bg) =>
+      MATRIX_COMPONENTS.reduce((sum, comp) => sum + getMatrixStock(comp.key, bg.group, bg.rh), 0)
+    ),
+  ];
+  groupTotalsRow.push(groupTotalsRow.slice(1).reduce((a, b) => a + b, 0));
+  matrixRows.push(groupTotalsRow);
+
+  const stockByComponent = data?.stockByComponent || [];
+  const nearExpiryByComponent = data?.nearExpiryByComponent || [];
+  const requestsByStatus = data?.requests?.byStatus || [];
+  const bloodbagStatusPie = data?.bloodbagStatusPie || [];
+  const positivity = data?.positivity || {};
+  const ongoingCamps = data?.ongoingCamps || [];
+  const trends = data?.trends || {};
+
+  const overviewRows = [
+    ["Range Totals", "Donations (range)", number(totals.donations)],
+    ["Range Totals", "In-Stock Units", number(totals.inStock)],
+    ["Range Totals", "Reserved Units", number(totals.reserved)],
+    ["Range Totals", "Issued (range)", number(totals.issued)],
+    ["Range Totals", "Discarded (range)", number(totals.discarded)],
+    ["Range Totals", "Transfusions (range)", number(totals.transfusions)],
+
+    ["Donor & Donation", "Total Donors", number(donorDonation.donors)],
+    ["Donor & Donation", "New Donors (Range)", number(donorDonation.newDonors)],
+    ["Donor & Donation", "Total Donations", number(donorDonation.donations)],
+    ["Donor & Donation", "In-House Donations", number(donorDonation.donationsInHouse)],
+    ["Donor & Donation", "Camp Donations", number(donorDonation.donationsCamp)],
+    ["Donor & Donation", "Male Donors", number(donorDonation.maleDonors)],
+    ["Donor & Donation", "Female Donors", number(donorDonation.femaleDonors)],
+    ["Donor & Donation", "Other Donors", number(donorDonation.otherDonors)],
+    ["Donor & Donation", "First-Time Donors", number(donorDonation.firstTimeDonors)],
+    ["Donor & Donation", "Repeat Donors", number(donorDonation.repeatDonors)],
+
+    ["Blood Bags", "Total Bags Collected", number(bloodBags.bagsCollected)],
+    ["Blood Bags", "Bags Tested", number(bloodBags.bagsTested)],
+    ["Blood Bags", "Bags Passed", number(bloodBags.bagsPassed)],
+    ["Blood Bags", "Bags Failed", number(bloodBags.bagsFailed)],
+    ["Blood Bags", "Pending Testing", number(bloodBags.bagsPending)],
+    ["Blood Bags", "Quarantined", number(bloodBags.bagsQuarantined)],
+
+    ["Components", "Total Components Produced", number(componentsOverview.componentsProduced)],
+    ["Components", "RBC Units Produced", number(componentsOverview.rbcProduced)],
+    ["Components", "Platelet Units Produced", number(componentsOverview.pltProduced)],
+    ["Components", "FFP Units Produced", number(componentsOverview.ffpProduced)],
+    ["Components", "Cryo Units Produced", number(componentsOverview.cryoProduced)],
+
+    ["Inventory", "Total In-Stock Units", number(inventoryOverview.inStock)],
+    ["Inventory", "Reserved Units", number(inventoryOverview.reserved)],
+    ["Inventory", "Issued Units (Range)", number(inventoryOverview.issued)],
+    ["Inventory", "Discarded Units (Range)", number(inventoryOverview.discarded)],
+    ["Inventory", "Near-Expiry Units", number(inventoryOverview.nearExpiryTotal)],
+    ["Inventory", "Expired Units", number(inventoryOverview.expiredUnits)],
+
+    ["Component Availability", "RBC In-Stock", number(componentAvailability.rbcStock)],
+    ["Component Availability", "Platelet In-Stock", number(componentAvailability.pltStock)],
+    ["Component Availability", "FFP In-Stock", number(componentAvailability.ffpStock)],
+    ["Component Availability", "Cryo In-Stock", number(componentAvailability.cryoStock)],
+
+    ["Hospital Requests", "Total Requests", number(hospitalRequests.totalRequests)],
+    ["Hospital Requests", "Pending Requests", number(hospitalRequests.pendingRequests)],
+    ["Hospital Requests", "Matched Requests", number(hospitalRequests.matchedRequests)],
+    ["Hospital Requests", "Approved Requests", number(hospitalRequests.approvedRequests)],
+    ["Hospital Requests", "Issued Requests", number(hospitalRequests.issuedRequests)],
+    ["Hospital Requests", "Completed Requests", number(hospitalRequests.completedRequests)],
+    ["Hospital Requests", "Rejected Requests", number(hospitalRequests.rejectedRequests)],
+    ["Hospital Requests", "Total Units Requested", number(hospitalRequests.totalUnitsRequested)],
+
+    ["Testing & Serology", "Total Tests Performed", number(testingSerology.testsTotal)],
+    ["Testing & Serology", "HIV Reactive", number(testingSerology.hivPos)],
+    ["Testing & Serology", "HBsAg Reactive", number(testingSerology.hbvPos)],
+    ["Testing & Serology", "HCV Reactive", number(testingSerology.hcvPos)],
+    ["Testing & Serology", "VDRL Reactive", number(testingSerology.vdrlPos)],
+    ["Testing & Serology", "MP Reactive", number(testingSerology.mpPos)],
+
+    ["Camps", "Camps Conducted", number(camps.campsConducted)],
+    ["Camps", "Camp Donors", number(camps.campDonors)],
+    ["Camps", "Camp Collections", number(camps.campCollections)],
+    ["Camps", "Camp Serology Failures", number(camps.campFailures)],
+
+    ["Alerts", "Units Expiring Today", number(alerts.expiringToday)],
+    ["Alerts", "Tests Pending", number(alerts.testsPending)],
+    ["Alerts", "Bags Delayed Testing (>24h)", number(alerts.delayedTesting)],
+    ["Alerts", "Components Missing Expiry", number(alerts.missingExpiry)],
+    ["Alerts", "Inactive Donors (>6 months)", number(alerts.inactiveDonors)],
+  ];
+
+  const sheets = [
+    sheet({
+      name: "Overview",
+      subtitle,
+      reportPeriod,
+      headers: ["Category", "Metric", "Value"],
+      rows: overviewRows,
+      alignments: ["left", "left", "right"],
+    }),
+    sheet({
+      name: "Blood Stock Matrix",
+      subtitle: "Real-Time Blood Stock Inventory Matrix (ABO / Rh)",
+      reportPeriod,
+      headers: matrixHeaders,
+      rows: matrixRows,
+      alignments: matrixHeaders.map((_, i) => (i === 0 ? "left" : "center")),
+    }),
+    sheet({
+      name: "BloodBag Status Breakdown",
+      subtitle: "BloodBag Status (Period)",
+      reportPeriod,
+      headers: ["Status", "Count"],
+      rows: bloodbagStatusPie.map((x) => [STATUS_LABEL_MAP[x.status] || x.status, number(x.value)]),
+    }),
+    sheet({
+      name: "Stock by Component",
+      subtitle: "Current In-Stock Units by Component Type",
+      reportPeriod,
+      headers: ["Component", "In-Stock Units"],
+      rows: stockByComponent.map((x) => [x.componentType, number(x.value)]),
+    }),
+    sheet({
+      name: "Near-Expiry by Component",
+      subtitle: "Units Nearing Expiry by Component Type",
+      reportPeriod,
+      headers: ["Component", "Near-Expiry Units"],
+      rows: nearExpiryByComponent.map((x) => [x.componentType, number(x.value)]),
+    }),
+    sheet({
+      name: "Requests by Status",
+      subtitle: "Hospital Requests Grouped by Status",
+      reportPeriod,
+      headers: ["Status", "Count"],
+      rows: requestsByStatus.map((x) => [x.status, number(x.value)]),
+    }),
+    sheet({
+      name: "Test Positivity",
+      subtitle: "Test Results Distribution",
+      reportPeriod,
+      headers: ["Test", "Reactive", "Negative", "Shadeness"],
+      rows: Object.entries(positivity).map(([test, counts]) => [
+        test,
+        number(counts.Reactive),
+        number(counts.Negative),
+        number(counts.Shadeness),
+      ]),
+      alignments: ["left", "right", "right", "right"],
+    }),
+    sheet({
+      name: "Ongoing Camps",
+      subtitle: "Active/Ongoing Donation Camps",
+      reportPeriod,
+      headers: ["Camp Name", "Address", "Donors", "Units", "Staff", "Scheduled From", "Scheduled To"],
+      rows: ongoingCamps.map((c) => [
+        c.name,
+        c.address,
+        number(c.donorsCount),
+        number(c.unitsCount),
+        (c.staff || []).length,
+        c.dateFrom ? new Date(c.dateFrom).toLocaleString() : "-",
+        c.dateTo ? new Date(c.dateTo).toLocaleString() : "-",
+      ]),
+      alignments: ["left", "left", "right", "right", "right", "center", "center"],
+    }),
+    sheet({
+      name: "Donations Trend",
+      subtitle: "Daily Donations Trend",
+      reportPeriod,
+      headers: ["Date", "Donations"],
+      rows: (trends.donations || []).map((d) => [formatDate(d.date), number(d.count ?? d.value)]),
+    }),
+    sheet({
+      name: "Issued Trend",
+      subtitle: "Daily Issued Units Trend",
+      reportPeriod,
+      headers: ["Date", "Issued"],
+      rows: (trends.issued || []).map((d) => [formatDate(d.date), number(d.count ?? d.value)]),
+    }),
+    sheet({
+      name: "Discarded Trend",
+      subtitle: "Daily Discarded Units Trend",
+      reportPeriod,
+      headers: ["Date", "Discarded"],
+      rows: (trends.discarded || []).map((d) => [formatDate(d.date), number(d.count ?? d.value)]),
+    }),
+  ];
+
+  // Drop sheets with zero data rows (keeps the workbook focused on what's actually available)
+  return sheets.filter((s) => s.rows.length > 0);
+}
 
 export default function Dashboard() {
   const { API, authorizationToken } = useAuth();
@@ -43,8 +305,15 @@ export default function Dashboard() {
 
   // Filters: presets and custom range
   const [preset, setPreset] = useState("today"); // 'all' | 'today' | '2d' | '7d' | '30d' | 'custom'
-  const [openCal, setOpenCal] = useState(false);
   const [range, setRange] = useState({ from: null, to: null });
+
+  // Export / Monthly report
+  const [exporting, setExporting] = useState(false);
+  const [reportChecking, setReportChecking] = useState(false);
+  const [reportGenerating, setReportGenerating] = useState(false);
+  const [openChemicalsWarning, setOpenChemicalsWarning] = useState(null); // null | array
+
+  const { data: thalassemiaSummary } = useThalassemiaSummary();
 
   useEffect(() => {
     let mounted = true;
@@ -86,6 +355,86 @@ export default function Dashboard() {
       mounted = false;
     };
   }, [API, authorizationToken, preset, range?.from, range?.to]);
+
+  const reportPeriodLabel = () => {
+    const today = new Date();
+    if (preset === "all") return "All Records";
+    if (preset === "custom" && range?.from && range?.to) {
+      return `${formatDate(range.from)} to ${formatDate(range.to)}`;
+    }
+    if (preset === "today") return formatDate(today);
+    const daysMap = { "2d": 2, "7d": 7, "30d": 30 };
+    const days = daysMap[preset] ?? 7;
+    const from = new Date(today.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
+    return `${formatDate(from)} to ${formatDate(today)}`;
+  };
+
+  const handleExportExcel = async () => {
+    if (!payload) {
+      toast.error("Dashboard data is still loading");
+      return;
+    }
+    setExporting(true);
+    try {
+      const period = reportPeriodLabel();
+      const sheets = buildDashboardSheets(payload, `Dashboard Report - ${period}`, period);
+      await downloadExcelReport(sheets, `Dashboard_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const generateMonthlyReport = async () => {
+    setReportGenerating(true);
+    try {
+      const today = new Date();
+      const firstOfThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const lastMonthEnd = new Date(firstOfThisMonth.getTime() - 24 * 60 * 60 * 1000);
+      const lastMonthStart = new Date(lastMonthEnd.getFullYear(), lastMonthEnd.getMonth(), 1);
+      const fromISO = lastMonthStart.toISOString().slice(0, 10);
+      const toISO = lastMonthEnd.toISOString().slice(0, 10);
+
+      const res = await axios.get(`${API}/api/dashboard`, {
+        withCredentials: true,
+        params: { from: fromISO, to: toISO },
+        headers: { Authorization: authorizationToken },
+      });
+      const monthPayload = res.data?.data;
+      if (!monthPayload) throw new Error("No data returned for last month");
+
+      const monthLabel = lastMonthStart.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+      const period = `${formatDate(lastMonthStart)} to ${formatDate(lastMonthEnd)}`;
+      const sheets = buildDashboardSheets(monthPayload, `Monthly Report - ${monthLabel}`, period);
+      await downloadExcelReport(sheets, `Monthly_Report_${monthLabel.replace(" ", "_")}.xlsx`);
+      toast.success("Monthly report generated");
+      setOpenChemicalsWarning(null);
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e.message || "Failed to generate monthly report");
+    } finally {
+      setReportGenerating(false);
+    }
+  };
+
+  const handleCreateMonthlyReport = async () => {
+    setReportChecking(true);
+    try {
+      const now = new Date();
+      const res = await apiClient.get("/api/v2/chemical-inventory/reports/monthly", {
+        params: { month: now.getMonth() + 1, year: now.getFullYear() },
+      });
+      const rows = res.data?.data || [];
+      const open = rows.filter((r) => number(r.inUse) > 0);
+      if (open.length > 0) {
+        setOpenChemicalsWarning(open);
+        return;
+      }
+      await generateMonthlyReport();
+    } catch (e) {
+      toast.error(e?.message || "Failed to check chemical stock status");
+    } finally {
+      setReportChecking(false);
+    }
+  };
 
   const totals = payload?.totals || {};
   const trends = payload?.trends || {};
@@ -247,37 +596,93 @@ export default function Dashboard() {
                 {opt.label}
               </Button>
             ))}
-            <Popover open={openCal} onOpenChange={setOpenCal}>
-              <PopoverTrigger asChild>
-                <Button variant={preset === "custom" ? "default" : "outline"} size="sm" className="ml-2">
-                  <CalendarIcon className="w-4 h-4 mr-1" />
-                  {range?.from && range?.to
-                    ? `${new Date(range.from).toLocaleDateString()} - ${new Date(range.to).toLocaleDateString()}`
-                    : "Pick range"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="p-2 bg-white shadow-2xl border border-slate-200 rounded-xl z-50"
-                align="start"
-                sideOffset={8}
-              >
-                <Calendar
-                  mode="range"
-                  selected={range}
-                  onSelect={(r) => {
-                    setRange(r || { from: null, to: null });
-                    if (r?.from && r?.to) {
-                      setPreset('custom');
-                    }
-                  }}
-                  disabled={{ after: new Date() }}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
+            <div className="flex items-center gap-2 ml-2">
+              <CalendarIcon className="w-4 h-4 text-slate-400" />
+              <Input
+                type="date"
+                value={range?.from ? new Date(range.from).toISOString().slice(0, 10) : ""}
+                max={range?.to ? new Date(range.to).toISOString().slice(0, 10) : undefined}
+                onChange={(e) => {
+                  const v = e.target.value ? new Date(e.target.value) : null;
+                  setRange((r) => {
+                    const next = { ...r, from: v };
+                    if (v && next.to) setPreset("custom");
+                    return next;
+                  });
+                }}
+                className="h-9 text-sm w-[150px]"
+              />
+              <span className="text-xs text-slate-400">to</span>
+              <Input
+                type="date"
+                value={range?.to ? new Date(range.to).toISOString().slice(0, 10) : ""}
+                min={range?.from ? new Date(range.from).toISOString().slice(0, 10) : undefined}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => {
+                  const v = e.target.value ? new Date(e.target.value) : null;
+                  setRange((r) => {
+                    const next = { ...r, to: v };
+                    if (v && next.from) setPreset("custom");
+                    return next;
+                  });
+                }}
+                className="h-9 text-sm w-[150px]"
+              />
+            </div>
+
+            <div className="ml-auto flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={exporting || loading}>
+                {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />}
+                Export to Excel
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleCreateMonthlyReport} disabled={reportChecking || reportGenerating}>
+                {(reportChecking || reportGenerating) ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ClipboardCheck className="w-4 h-4 mr-2 text-indigo-600" />}
+                {reportChecking ? "Checking..." : reportGenerating ? "Generating..." : "Create Monthly Report"}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      <CustomModal
+        open={Boolean(openChemicalsWarning)}
+        title="Open Chemicals Must Be Closed First"
+        onCancel={() => setOpenChemicalsWarning(null)}
+        hideFooter
+        size="lg"
+      >
+        <div className="space-y-3 text-sm text-slate-700">
+          <p>
+            The chemicals below are currently <strong>open / in-use</strong> and have not been fully consumed.
+            Count physical stock and close them out via Chemical Inventory &rsaquo; Stock Usage before generating
+            this month&apos;s report.
+          </p>
+          <div className="max-h-64 overflow-y-auto border rounded-lg divide-y">
+            {(openChemicalsWarning || []).map((c, i) => (
+              <div key={i} className="flex items-center justify-between px-3 py-2 text-xs">
+                <span className="font-medium">{c.chemicalName}</span>
+                <span className="text-amber-700">{c.inUse} {c.unitType} in use</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setOpenChemicalsWarning(null)}>
+              Close
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setOpenChemicalsWarning(null); navigate("/chemical-inventory/usage"); }}
+            >
+              Go to Stock Usage
+            </Button>
+            <Button size="sm" onClick={handleCreateMonthlyReport} disabled={reportChecking}>
+              {reportChecking ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Recheck
+            </Button>
+          </div>
+        </div>
+      </CustomModal>
       {/* High-level KPIs strip */}
       <Card className="border-slate-100 bg-slate-50/80 backdrop-blur-sm">
         <CardContent className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -613,9 +1018,34 @@ export default function Dashboard() {
             <Stat label="Inactive Donors (>6 months)" value={alerts.inactiveDonors} />
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Heart className="w-4 h-4 text-rose-600" />
+                Thalassemia Registry
+              </span>
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => navigate("/thalassemia")}>
+                View all
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Stat label="Active Patients" value={thalassemiaSummary?.active} />
+            <Stat label="Overdue Transfusions" value={thalassemiaSummary?.overdue} />
+            <Stat label="Due This Week" value={thalassemiaSummary?.dueSoon} />
+            <Stat label="Total Registered" value={thalassemiaSummary?.total} />
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Trends */}
+      {/* Key Analytics */}
+      <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2 uppercase tracking-wider pt-2">
+        <Activity className="w-4 h-4 text-orange-600" />
+        Key Analytics
+      </h2>
+
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <TrendCard title="Donations Trend" dataKey="value" data={donationsTrendData} color="var(--color-donations)" config={{ value: { label: "Donations", color: "#fb923c" } }} />
         <TrendCard title="Issued Trend" dataKey="value" data={issuedTrendData} color="var(--color-issued)" config={{ value: { label: "Issued", color: "#22c55e" } }} />

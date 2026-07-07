@@ -10,6 +10,22 @@ const controllers = createDeferralControllers(repo);
 const router = Router();
 
 router.get(
+  '/',
+  authenticate,
+  requireRole([
+    'system-admin',
+    'bbo',
+    'medical-officer',
+    'counsellor',
+    'phlebotomist',
+    'lab-tech-serology',
+    'auditor',
+  ]),
+  requirePermission('donor:read'),
+  controllers.list,
+);
+
+router.get(
   '/donor/:donorId',
   authenticate,
   requireRole([

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Building2, BookOpen, Users, Activity, CheckCircle2, XCircle, Search, Eye, Edit, Trash2, Plus, ArrowUpDown } from 'lucide-react';
+import { Home, Building2, BookOpen, Users, Activity, CheckCircle2, XCircle, Search, Eye, Edit, Trash2, Plus, ArrowUpDown, AlertOctagon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useDonor, useDonorList } from '@/hooks/useDonor';
@@ -12,11 +12,13 @@ import CustomModal from '@/components/CustomModal';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportMasterDonors } from '@/utils/excelExportHelper';
 import { donorApi } from '@/features/donor/api';
+import DeferralRegister from '@/features/donor/components/DeferralRegister';
 
 const TABS = [
-  { key: 'all',     label: 'Master Donor Register', icon: BookOpen },
-  { key: 'inhouse', label: 'Inhouse Donors', icon: Home },
-  { key: 'camp',    label: 'Camp Donors',    icon: Building2 },
+  { key: 'all',      label: 'Master Donor Register',    icon: BookOpen },
+  { key: 'inhouse',  label: 'Inhouse Donors',            icon: Home },
+  { key: 'camp',     label: 'Camp Donors',               icon: Building2 },
+  { key: 'deferral', label: 'Donor Deferral Register',   icon: AlertOctagon },
 ];
 
 const PAGE_SIZE = 20;

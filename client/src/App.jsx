@@ -47,6 +47,7 @@ import DonorCreation from './features/donor/pages/DonorCreation';
 // User + Hospital
 import UserManage from './features/user/pages/UserManage';
 import { AddHospital, ListHospital } from './features/hospital/pages';
+import ThalassemiaPatients from './features/thalassemia/pages/ThalassemiaPatients';
 
 // Bag Procurement
 import PurchaseOrders from './features/bag-procurement/pages/PurchaseOrders';
@@ -172,6 +173,9 @@ const App = () => {
           {/* Hospital */}
           <Route path="hospital/add" element={<AddHospital />} />
           <Route path="hospital/list" element={<ListHospital />} />
+
+          {/* Thalassemia */}
+          <Route path="thalassemia" element={<ThalassemiaPatients />} />
 
           {/* Requisition */}
           <Route path="requisition" element={<RequisitionManagement />} />

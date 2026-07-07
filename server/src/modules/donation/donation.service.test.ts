@@ -13,6 +13,7 @@ function mockDeferrals(
     create: vi.fn(),
     findActiveByDonor: vi.fn().mockResolvedValue(active),
     listByDonor: vi.fn(),
+    list: vi.fn(),
     lift: vi.fn(),
   };
 }

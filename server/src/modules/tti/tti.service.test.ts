@@ -45,6 +45,7 @@ function mocks(ttiDto: TtiResultDto) {
     create: vi.fn(),
     findActiveByDonor: vi.fn(),
     listByDonor: vi.fn(),
+    list: vi.fn(),
     lift: vi.fn(),
   };
   const donations = {
