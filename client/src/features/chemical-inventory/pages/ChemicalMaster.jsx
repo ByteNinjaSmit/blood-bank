@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, X, Search, Settings } from 'lucide-react';
 import {
-  useChemicalList,
+  useChemicalListWithStock,
   useCategoryList,
   useManufacturerList,
   useCreateChemical,
@@ -34,7 +34,7 @@ export default function ChemicalMaster() {
     reorderLevel: 0,
   });
 
-  const { data: chemicals, isLoading: loadingChems } = useChemicalList();
+  const { data: chemicals, isLoading: loadingChems } = useChemicalListWithStock();
   const { data: categories } = useCategoryList();
   const { data: manufacturers } = useManufacturerList();
   

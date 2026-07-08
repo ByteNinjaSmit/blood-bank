@@ -66,11 +66,21 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
   };
 }
 
+export interface LowBoxBatchDto {
+  stockId: string;
+  bagType: string;
+  batchNumber: string;
+  unopenedBoxes: number;
+  capacityMl: number;
+  expiryDate: string;
+}
+
 export interface BagStockRepo {
   list(q: ListBagStockInput): Promise<{ items: BagStockDto[]; total: number }>;
   findById(id: string): Promise<BagStockDto | null>;
   findByBatchAndType(batchNumber: string, bagType: string): Promise<BagStockDto | null>;
   summary(): Promise<BagStockSummaryItem[]>;
+  lowBoxStock(threshold?: number): Promise<LowBoxBatchDto[]>;
   upsertFromGRN(doc: {
     stockId: string;
     bagType: string;
@@ -155,6 +165,25 @@ export function createBagStockRepo(): BagStockRepo {
         totalIssued: r.totalIssued,
         totalDamaged: r.totalDamaged,
         totalDiscarded: r.totalDiscarded,
+      }));
+    },
+
+    async lowBoxStock(threshold = 3) {
+      const docs = await BagStockModel.find({
+        deletedAt: null,
+        unopenedBoxes: { $lte: threshold },
+        status: { $ne: 'EXPIRED' },
+      })
+        .select('stockId bagType batchNumber unopenedBoxes capacityMl expiryDate')
+        .sort({ unopenedBoxes: 1 })
+        .lean();
+      return docs.map((d) => ({
+        stockId: (d._id as Types.ObjectId).toString(),
+        bagType: d.bagType as string,
+        batchNumber: d.batchNumber as string,
+        unopenedBoxes: (d.unopenedBoxes as number) ?? 0,
+        capacityMl: d.capacityMl as number,
+        expiryDate: (d.expiryDate as Date).toISOString(),
       }));
     },
 

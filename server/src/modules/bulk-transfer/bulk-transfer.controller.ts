@@ -7,6 +7,7 @@ export interface BulkTransferControllers {
   list(req: Request, res: Response, next: NextFunction): Promise<void>;
   get(req: Request, res: Response, next: NextFunction): Promise<void>;
   create(req: Request, res: Response, next: NextFunction): Promise<void>;
+  remove(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export function createBulkTransferControllers(service: BulkTransferService): BulkTransferControllers {
@@ -37,6 +38,14 @@ export function createBulkTransferControllers(service: BulkTransferService): Bul
         const body = ValidateBulkTransfer.createBody(req);
         const data = await service.create(body, actorId(req));
         res.status(201).json({ success: true, data, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+
+    async remove(req, res, next) {
+      try {
+        const { id } = ValidateBulkTransfer.idParam(req);
+        const data = await service.remove(id, actorId(req));
+        res.json({ success: true, data, requestId: req.id });
       } catch (e) { next(e); }
     },
   };

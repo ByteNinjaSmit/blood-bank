@@ -138,7 +138,8 @@ export function createChemicalInventoryControllers(service: ChemicalInventorySer
 
     async listChemicals(req, res, next) {
       try {
-        const result = await service.listChemicals();
+        const withStockOnly = req.query.withStockOnly === 'true';
+        const result = withStockOnly ? await service.listChemicalsWithStock() : await service.listChemicals();
         res.json({ success: true, data: result, requestId: req.id });
       } catch (e) { next(e); }
     },

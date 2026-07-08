@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import axios from "axios";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
-import { Loader2, PackageCheck, Plus, Trash2, Warehouse, MapPin, Eye, ArrowLeftRight } from "lucide-react";
+import { Loader2, PackageCheck, Plus, Trash2, Warehouse, MapPin, Eye, ArrowLeftRight, Printer } from "lucide-react";
 import { toast } from "sonner";
 import CustomModal from "@/components/CustomModal";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportIssues } from "@/utils/excelExportHelper";
+import BulkTransferCoverLetter from "@/features/inventory/components/BulkTransferCoverLetter";
+import TestingCertificate from "@/features/inventory/components/TestingCertificate";
+import BulkTransferInvoice from "@/features/inventory/components/BulkTransferInvoice";
 
 const MultiBagSelect = ({ availableBags, selectedBags, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,6 +26,10 @@ const MultiBagSelect = ({ availableBags, selectedBags, onChange }) => {
     onChange(newSelected);
   };
 
+  const selectedVolumeMl = availableBags
+    .filter((bag) => selectedBags.includes(bag._id))
+    .reduce((sum, bag) => sum + (Number(bag.component?.volumeMl) || 0), 0);
+
   return (
     <div className="w-full">
       <button
@@ -30,7 +38,7 @@ const MultiBagSelect = ({ availableBags, selectedBags, onChange }) => {
         className="w-full h-10 px-3 text-left border rounded-md text-sm bg-white flex items-center justify-between shadow-sm focus:outline-none focus:ring-1 focus:ring-red-500 border-gray-300"
       >
         <span className="truncate">
-          {selectedBags.length === 0 ? "Select blood bags..." : `${selectedBags.length} bag(s) selected`}
+          {selectedBags.length === 0 ? "Select blood bags..." : `${selectedBags.length} bag(s) selected · ${selectedVolumeMl} mL`}
         </span>
         <span className="text-gray-400">{isOpen ? "▲" : "▼"}</span>
       </button>
@@ -56,7 +64,7 @@ const MultiBagSelect = ({ availableBags, selectedBags, onChange }) => {
                     className="rounded text-red-600 focus:ring-red-500 h-4 w-4"
                   />
                   <div className="flex flex-col">
-                    <span>Bag: {bag.bagNo} ({bag.component?.componentType || '—'})</span>
+                    <span>Bag: {bag.bagNo} ({bag.component?.componentType || '—'}) — {bag.component?.volumeMl ? `${bag.component.volumeMl} mL` : 'Vol: —'}</span>
                     <span className="text-xs text-gray-400">Exp: {bag.component?.expiryDate ? new Date(bag.component.expiryDate).toLocaleDateString() : '—'}</span>
                   </div>
                 </label>
@@ -77,7 +85,7 @@ const Issue = () => {
   const [storageOpen, setStorageOpen] = useState(false);
   const [storageLocation, setStorageLocation] = useState("SJS [Kopargaon]");
   const [otherLocationName, setOtherLocationName] = useState("");
-  const [dispatchType, setDispatchType] = useState("STORAGE"); // STORAGE | THALASSEMIA
+  const [dispatchType, setDispatchType] = useState("STORAGE"); // STORAGE | CLINICAL_INDICATION
   const [sentDate, setSentDate] = useState(new Date().toISOString().split('T')[0]);
   const [patientDetails, setPatientDetails] = useState({
     firstName: "",
@@ -87,6 +95,8 @@ const Issue = () => {
     age: "",
     sex: "M",
     bloodGroup: "A+",
+    disease: "THALASSEMIA",
+    otherDiseaseName: "",
   });
   const [storageBags, setStorageBags] = useState([{ componentType: "RBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
   const [availableUnits, setAvailableUnits] = useState([]);
@@ -158,13 +168,12 @@ const Issue = () => {
   const [order, setOrder] = useState("desc");
   const [sortBy, setSortBy] = useState("createdAt");
 
-  const [selected, setSelected] = useState({});
   const [status, setStatus] = useState('issued');
   const [viewOpen, setViewOpen] = useState(false);
   const [viewItem, setViewItem] = useState(null);
 
   // ── Storage tabs state ──────────────────────────────
-  const [mainTab, setMainTab] = useState('issue'); // 'issue' | 'storage' | 'thalassemia'
+  const [mainTab, setMainTab] = useState('issue'); // 'issue' | 'storage' | 'disease'
   const [storageSubTab, setStorageSubTab] = useState('SJS'); // 'SJS' | 'Anand'
   const [storageBagRows, setStorageBagRows] = useState([]);
   const [storageLoading, setStorageLoading] = useState(false);
@@ -195,7 +204,7 @@ const Issue = () => {
   // GIVE_LOAN: pick from our own stock, same shape as the "Send to Storage" bag picker
   const [bulkGiveBags, setBulkGiveBags] = useState([{ componentType: "RBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
   // TAKE_LOAN: bags coming in from the other bank — manually entered, not yet in our stock
-  const [bulkTakeGroups, setBulkTakeGroups] = useState([{ componentType: "RBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", collectedAt: "", expiresAt: "" }] }]);
+  const [bulkTakeGroups, setBulkTakeGroups] = useState([{ componentType: "RBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" }] }]);
 
   const resetBulkForm = () => {
     setBulkTransferType("GIVE_LOAN");
@@ -203,7 +212,7 @@ const Issue = () => {
     setBulkBloodBankAddress("");
     setBulkTransferDate(new Date().toISOString().split('T')[0]);
     setBulkGiveBags([{ componentType: "RBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
-    setBulkTakeGroups([{ componentType: "RBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", collectedAt: "", expiresAt: "" }] }]);
+    setBulkTakeGroups([{ componentType: "RBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" }] }]);
   };
 
   const fetchBulkTransfers = async (page = 1, limit = bulkPagination.limit) => {
@@ -230,6 +239,43 @@ const Issue = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mainTab]);
 
+  // ── Delete a bulk transfer ────────────────────────────
+  // Deleting a GIVE_LOAN transfer puts its bags back into stock (server
+  // restores each linked BloodUnit to RELEASED); deleting a TAKE_LOAN
+  // transfer simply removes those bags from the stock listing, since they
+  // only ever existed as line items on the transfer itself.
+  const [deleteBulkConfirmOpen, setDeleteBulkConfirmOpen] = useState(false);
+  const [deleteBulkTarget, setDeleteBulkTarget] = useState(null);
+  const [deleteBulkSubmitting, setDeleteBulkSubmitting] = useState(false);
+
+  const openDeleteBulkTransferConfirm = (row) => {
+    setDeleteBulkTarget(row);
+    setDeleteBulkConfirmOpen(true);
+  };
+
+  const handleDeleteBulkTransfer = async () => {
+    if (!deleteBulkTarget) return;
+    try {
+      setDeleteBulkSubmitting(true);
+      await axios.delete(`${API}/api/v2/bulk-transfer/${deleteBulkTarget.id}`, {
+        headers: { Authorization: authorizationToken },
+        withCredentials: true,
+      });
+      toast.success(
+        deleteBulkTarget.transferType === 'GIVE_LOAN'
+          ? "Bulk transfer deleted — bags returned to stock"
+          : "Bulk transfer deleted"
+      );
+      setDeleteBulkConfirmOpen(false);
+      setDeleteBulkTarget(null);
+      fetchBulkTransfers(bulkPagination.page || 1);
+    } catch (e) {
+      toast.error(e?.response?.data?.message || "Failed to delete bulk transfer");
+    } finally {
+      setDeleteBulkSubmitting(false);
+    }
+  };
+
   const handleBulkTransferSubmit = async () => {
     if (!bulkBloodBankName.trim() || !bulkBloodBankAddress.trim()) {
       return toast.warning("Please enter the blood bank name and address");
@@ -250,8 +296,10 @@ const Issue = () => {
                 bloodGroup: group.bloodGroup,
                 bagNo: unit.bag?.bagNo || unit.bagNo || '',
                 segmentNo: unit.segmentNo || unit.bag?.segmentNo || undefined,
+                volumeMl: unit.component?.volumeMl || undefined,
                 collectedAt: unit.bag?.donationDate || undefined,
                 expiresAt: unit.component?.expiryDate || undefined,
+                unitId: unit._id || undefined,
               });
             }
           });
@@ -266,6 +314,7 @@ const Issue = () => {
               bloodGroup: group.bloodGroup,
               bagNo: b.bagNo.trim(),
               segmentNo: b.segmentNo.trim() || undefined,
+              volumeMl: b.volumeMl ? Number(b.volumeMl) : undefined,
               collectedAt: b.collectedAt || undefined,
               expiresAt: b.expiresAt || undefined,
             });
@@ -291,15 +340,123 @@ const Issue = () => {
         withCredentials: true,
       });
 
-      toast.success(bulkTransferType === "GIVE_LOAN" ? "Loan given successfully" : "Loan taken in successfully");
+      toast.success(bulkTransferType === "GIVE_LOAN" ? "Loan given successfully — bags removed from stock" : "Loan taken in successfully — bags added to stock");
       setBulkFormOpen(false);
       resetBulkForm();
       fetchBulkTransfers(1);
+      if (bulkTransferType === "GIVE_LOAN") fetchAvailableUnits();
     } catch (e) {
       toast.error(e?.response?.data?.message || "Failed to record bulk transfer");
     } finally {
       setBulkSubmitting(false);
     }
+  };
+
+  // ── Bulk Transfer cover letter (Give Loan) ───────────
+  const [coverLetterPromptOpen, setCoverLetterPromptOpen] = useState(false);
+  const [coverLetterBoxCount, setCoverLetterBoxCount] = useState("");
+  const [coverLetterPrintDoc, setCoverLetterPrintDoc] = useState(null);
+
+  // Per-component litres, computed from each bag's volumeMl — used both in
+  // the View modal summary and inside the printed cover letter.
+  const bulkTransferComponentTotals = (items) => {
+    const totals = {};
+    let totalMl = 0;
+    (items || []).forEach((it) => {
+      const ml = Number(it.volumeMl) || 0;
+      totals[it.componentType] = (totals[it.componentType] || 0) + ml;
+      totalMl += ml;
+    });
+    return { byComponent: totals, totalLitres: totalMl / 1000 };
+  };
+
+  const openCoverLetterPrompt = () => {
+    setCoverLetterBoxCount("");
+    setCoverLetterPromptOpen(true);
+  };
+
+  // Shared print trigger: injects a @media print stylesheet scoped to the
+  // given hidden wrapper id, fires window.print(), then cleans up and
+  // clears whichever print-doc state the caller is driving.
+  const triggerPrint = (wrapperId, styleId, onDone) => {
+    const styleEl = document.createElement('style');
+    styleEl.id = styleId;
+    styleEl.innerHTML = `
+      @media print {
+        #root { display: none !important; }
+        html, body { background: white !important; }
+        #${wrapperId} { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; background: white; }
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-scheme: light !important; }
+      }
+    `;
+    document.head.appendChild(styleEl);
+
+    setTimeout(() => {
+      window.print();
+      const cleanup = () => {
+        const style = document.getElementById(styleId);
+        if (style) style.remove();
+        onDone();
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      setTimeout(cleanup, 1500);
+    }, 150);
+  };
+
+  const handleConfirmCoverLetter = () => {
+    const n = Number(coverLetterBoxCount);
+    if (!coverLetterBoxCount || !Number.isInteger(n) || n <= 0) {
+      return toast.warning("Please enter a valid number of boxes");
+    }
+    setCoverLetterPromptOpen(false);
+    setCoverLetterPrintDoc({ ...bulkViewItem, boxCount: n });
+    triggerPrint('bulk-transfer-cover-letter-print-wrapper', 'bulk-transfer-cover-letter-print-style', () => setCoverLetterPrintDoc(null));
+  };
+
+  // ── Testing Certificate (Give Loan) ───────────────────
+  const [testingCertPromptOpen, setTestingCertPromptOpen] = useState(false);
+  const [testingCertBleedDate, setTestingCertBleedDate] = useState("");
+  const [testingCertBoxCount, setTestingCertBoxCount] = useState("");
+  const [testingCertPrintDoc, setTestingCertPrintDoc] = useState(null);
+
+  const openTestingCertPrompt = () => {
+    setTestingCertBleedDate("");
+    setTestingCertBoxCount("");
+    setTestingCertPromptOpen(true);
+  };
+
+  const handleConfirmTestingCert = () => {
+    const n = Number(testingCertBoxCount);
+    if (!testingCertBleedDate) {
+      return toast.warning("Please enter the bleed date");
+    }
+    if (!testingCertBoxCount || !Number.isInteger(n) || n <= 0) {
+      return toast.warning("Please enter a valid number of boxes");
+    }
+    setTestingCertPromptOpen(false);
+    setTestingCertPrintDoc({ ...bulkViewItem, bleedDate: testingCertBleedDate, boxCount: n });
+    triggerPrint('testing-certificate-print-wrapper', 'testing-certificate-print-style', () => setTestingCertPrintDoc(null));
+  };
+
+  // ── Invoice (Give Loan) ────────────────────────────────
+  const [invoicePromptOpen, setInvoicePromptOpen] = useState(false);
+  const [invoiceRate, setInvoiceRate] = useState("");
+  const [invoicePrintDoc, setInvoicePrintDoc] = useState(null);
+
+  const openInvoicePrompt = () => {
+    setInvoiceRate("");
+    setInvoicePromptOpen(true);
+  };
+
+  const handleConfirmInvoice = () => {
+    const rate = Number(invoiceRate);
+    if (!invoiceRate || rate <= 0) {
+      return toast.warning("Please enter a valid rate per litre");
+    }
+    setInvoicePromptOpen(false);
+    setInvoicePrintDoc({ ...bulkViewItem, ratePerLitre: rate });
+    triggerPrint('bulk-transfer-invoice-print-wrapper', 'bulk-transfer-invoice-print-style', () => setInvoicePrintDoc(null));
   };
 
   const fetchRows = async (page = 1, limit = pagination.limit) => {
@@ -331,30 +488,6 @@ const Issue = () => {
     }
   };
 
-  const toggle = (id) => setSelected((s) => ({ ...s, [id]: !s[id] }));
-  const allSelectedIds = Object.keys(selected).filter((id) => selected[id]);
-
-  const issue = async () => {
-    if (allSelectedIds.length === 0) return toast.warning("Select items to issue");
-    try {
-      setIsLoading(true);
-      await axios.post(`${API}/api/inventory/issue`, {
-        inventoryIds: allSelectedIds,
-        userId: user?._id || user?.id,
-      }, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
-      });
-      toast.success("Issued selected items");
-      setSelected({});
-      fetchRows(pagination.page);
-    } catch (e) {
-      toast.error(e?.response?.data?.message || "Failed to issue");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const fetchAvailableUnits = async () => {
     setLoadingAvailable(true);
     try {
@@ -376,19 +509,25 @@ const Issue = () => {
   };
 
   const handleSendToStorage = async () => {
-    const isThalassemia = dispatchType === "THALASSEMIA";
+    const isClinicalIndication = dispatchType === "CLINICAL_INDICATION";
     let locationVal = null;
-    if (!isThalassemia) {
+    if (!isClinicalIndication) {
       locationVal = storageLocation === 'Others' ? otherLocationName.trim() : storageLocation;
       if (!locationVal) {
         return toast.warning("Please specify a storage location");
       }
     } else {
       if (!patientDetails.firstName.trim() || !patientDetails.lastName.trim()) {
-        return toast.warning("Please enter Thalassemia patient first name and last name");
+        return toast.warning("Please enter the patient's first name and last name");
       }
       if (!patientDetails.age || isNaN(Number(patientDetails.age))) {
         return toast.warning("Please enter a valid age");
+      }
+      if (!patientDetails.disease) {
+        return toast.warning("Please select a disease");
+      }
+      if (patientDetails.disease === "OTHER" && !patientDetails.otherDiseaseName.trim()) {
+        return toast.warning("Please specify the disease name");
       }
     }
 
@@ -416,21 +555,22 @@ const Issue = () => {
         bags: bagsPayload,
         userId: user?._id || user?.id,
         dispatchType,
-        sentDate: isThalassemia ? null : sentDate,
-        thalassemiaPatient: isThalassemia ? {
+        sentDate: isClinicalIndication ? null : sentDate,
+        clinicalIndicationPatient: isClinicalIndication ? {
           ...patientDetails,
           firstName: patientDetails.firstName.trim(),
           middleName: patientDetails.middleName.trim(),
           lastName: patientDetails.lastName.trim(),
           address: patientDetails.address.trim(),
           age: Number(patientDetails.age),
+          otherDiseaseName: patientDetails.disease === "OTHER" ? patientDetails.otherDiseaseName.trim() : "",
         } : null,
       }, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       });
 
-      toast.success(isThalassemia ? "Issued to Thalassemia patient successfully" : "Blood bags sent to storage successfully");
+      toast.success(isClinicalIndication ? "Issued for the clinical indication successfully" : "Blood bags sent to storage successfully");
       setStorageOpen(false);
       setStorageLocation("SJS [Kopargaon]");
       setOtherLocationName("");
@@ -444,6 +584,8 @@ const Issue = () => {
         age: "",
         sex: "M",
         bloodGroup: "A+",
+        disease: "THALASSEMIA",
+        otherDiseaseName: "",
       });
       setStorageBags([{ componentType: "RBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
       fetchRows(pagination.page);
@@ -525,12 +667,12 @@ const Issue = () => {
       const res = await axios.get(`${API}/api/inventory`, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
-        params: { page, limit, status: 'issued', dispatchType: 'THALASSEMIA', sortBy: 'issuedAt', order: 'desc' },
+        params: { page, limit, status: 'issued', dispatchType: 'CLINICAL_INDICATION', sortBy: 'issuedAt', order: 'desc' },
       });
       setThalRows(Array.isArray(res.data?.data) ? res.data.data : []);
       setThalPagination(p => ({ ...p, ...(res.data?.pagination || {}), page }));
     } catch (e) {
-      toast.error('Failed to fetch thalassemia records');
+      toast.error('Failed to fetch clinical indication / disease records');
       setThalRows([]);
     } finally {
       setThalLoading(false);
@@ -538,9 +680,16 @@ const Issue = () => {
   };
 
   useEffect(() => {
-    if (mainTab === 'thalassemia') fetchThalassemia(1);
+    if (mainTab === 'disease') fetchThalassemia(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mainTab]);
+
+  const diseaseLabel = (p) => {
+    if (!p) return '—';
+    if (p.disease === 'THALASSEMIA') return 'Thalassemia';
+    if (p.disease === 'SICKLE_CELL_ANAEMIA') return 'Sickle Cell Anaemia';
+    return p.otherDiseaseName || 'Other';
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -569,7 +718,7 @@ const Issue = () => {
             {[
               { key: 'issue', label: 'Issue Stock', icon: <PackageCheck className="w-4 h-4" /> },
               { key: 'storage', label: 'Storage', icon: <Warehouse className="w-4 h-4" /> },
-              { key: 'thalassemia', label: 'Thalassemia Patients', icon: <MapPin className="w-4 h-4" /> },
+              { key: 'disease', label: 'Clinical Indication / Disease Patients', icon: <MapPin className="w-4 h-4" /> },
               { key: 'bulkTransfer', label: 'Bulk Transfer', icon: <ArrowLeftRight className="w-4 h-4" /> },
             ].map(tab => (
               <button
@@ -735,13 +884,13 @@ const Issue = () => {
           </div>
         )}
 
-        {/* ── Thalassemia Patients tab ─────────────────────── */}
-        {mainTab === 'thalassemia' && (
+        {/* ── Clinical Indication / Disease Patients tab ──── */}
+        {mainTab === 'disease' && (
           <div className="bg-white shadow-md rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3.5 border-b bg-gray-50">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-red-700" />
-                <span className="font-semibold text-gray-800 text-sm">Thalassemia Patient Records</span>
+                <span className="font-semibold text-gray-800 text-sm">Clinical Indication / Disease Patient Records</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-500">Total: {thalPagination.total || thalRows.length}</span>
@@ -759,6 +908,7 @@ const Issue = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Disease</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Age / Sex</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient Blood Group</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bag No</th>
@@ -770,20 +920,21 @@ const Issue = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
                   {thalLoading ? (
-                    <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">
+                    <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">
                       <Loader2 className="w-5 h-5 animate-spin mx-auto mb-1" /> Loading…
                     </td></tr>
                   ) : thalRows.length === 0 ? (
-                    <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">
-                      No thalassemia patient records found.
+                    <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">
+                      No clinical indication / disease patient records found.
                     </td></tr>
                   ) : thalRows.map(r => {
-                    const p = r.thalassemiaPatient || {};
+                    const p = r.clinicalIndicationPatient || {};
                     const fullName = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ') || '—';
                     const rh = r?.bag?.rh === 'Positive' ? '+' : r?.bag?.rh === 'Negative' ? '-' : r?.bag?.rh || '';
                     return (
                       <tr key={r._id} className="hover:bg-red-50/30 transition-colors">
                         <td className="px-4 py-3 font-semibold text-gray-800">{fullName}</td>
+                        <td className="px-4 py-3 text-gray-700">{diseaseLabel(p)}</td>
                         <td className="px-4 py-3 text-gray-600">{p.age || '—'} / {p.sex || '—'}</td>
                         <td className="px-4 py-3 font-bold text-gray-800">{p.bloodGroup || '—'}</td>
                         <td className="px-4 py-3 font-mono text-xs font-bold text-gray-700">{r?.bag?.bagNo || r.bagNo || '—'}</td>
@@ -892,12 +1043,20 @@ const Issue = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => { setBulkViewItem(r); setBulkViewOpen(true); }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 text-xs font-medium transition-colors"
-                        >
-                          <Eye className="w-3.5 h-3.5" /> View
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => { setBulkViewItem(r); setBulkViewOpen(true); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 text-xs font-medium transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" /> View
+                          </button>
+                          <button
+                            onClick={() => openDeleteBulkTransferConfirm(r)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-600 hover:border-red-600 hover:text-white text-xs font-medium transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -982,9 +1141,6 @@ const Issue = () => {
                 <Button onClick={()=>fetchRows(pagination.page)} variant="outline" size="sm" className="h-10" disabled={isLoading}>
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
                 </Button>
-                <Button onClick={issue} size="sm" className="h-10" disabled={isLoading || allSelectedIds.length===0 || status!== 'reserved'}>
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Issue (${allSelectedIds.length})`}
-                </Button>
               </div>
             </div>
           </div>
@@ -1015,7 +1171,7 @@ const Issue = () => {
                       <td className="px-4 py-3 font-mono text-sm text-gray-700">{r?.segmentNo || '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl} mL</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '-'}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{r?.issuedAt ? new Date(r.issuedAt).toLocaleDateString() : '—'}</td>
                       <td className="px-4 py-3 text-sm">
@@ -1146,20 +1302,24 @@ const Issue = () => {
                       <Warehouse className="w-3.5 h-3.5" /> {viewItem.storageLocation}
                     </div>
                   </div>
-                ) : viewItem?.thalassemiaPatient ? (
+                ) : viewItem?.clinicalIndicationPatient ? (
                   <div className="md:col-span-2">
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-1">Thalassemia Patient Recipient</div>
+                    <div className="text-gray-500 text-xs uppercase font-semibold mb-1">Clinical Indication / Disease Patient Recipient</div>
                     <div className="bg-white border border-red-100 rounded-lg p-3 text-xs grid grid-cols-2 gap-2">
                       <div>
                         <div className="text-gray-400">Name</div>
                         <div className="font-bold text-gray-800">
-                          {viewItem.thalassemiaPatient.firstName} {viewItem.thalassemiaPatient.middleName} {viewItem.thalassemiaPatient.lastName}
+                          {viewItem.clinicalIndicationPatient.firstName} {viewItem.clinicalIndicationPatient.middleName} {viewItem.clinicalIndicationPatient.lastName}
                         </div>
+                      </div>
+                      <div>
+                        <div className="text-gray-400">Disease</div>
+                        <div className="font-bold text-gray-800">{diseaseLabel(viewItem.clinicalIndicationPatient)}</div>
                       </div>
                       <div>
                         <div className="text-gray-400">Age / Sex</div>
                         <div className="font-bold text-gray-850">
-                          {viewItem.thalassemiaPatient.age} Yrs / {viewItem.thalassemiaPatient.sex}
+                          {viewItem.clinicalIndicationPatient.age} Yrs / {viewItem.clinicalIndicationPatient.sex}
                         </div>
                       </div>
                     </div>
@@ -1196,9 +1356,9 @@ const Issue = () => {
         )}
       </CustomModal>
 
-      <CustomModal open={storageOpen} onCancel={() => setStorageOpen(false)} title={dispatchType === "THALASSEMIA" ? "Thalassemia Patient Issue Form" : "Send to Storage Form"} size="xl" hideFooter>
+      <CustomModal open={storageOpen} onCancel={() => setStorageOpen(false)} title={dispatchType === "CLINICAL_INDICATION" ? "Issue for Clinical Indication / Disease" : "Send to Storage Form"} size="xl" hideFooter>
         <div className="space-y-6 text-sm p-2">
-          
+
           <div className="flex flex-col md:w-1/2">
             <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
               Select Dispatch / Issue Type
@@ -1209,7 +1369,7 @@ const Issue = () => {
               className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm font-bold text-red-800 focus:ring-1 focus:ring-red-500"
             >
               <option value="STORAGE">Send to Storage</option>
-              <option value="THALASSEMIA">Thalassemia Patient Issue</option>
+              <option value="CLINICAL_INDICATION">Issue for Clinical Indication / Disease</option>
             </select>
           </div>
 
@@ -1270,8 +1430,34 @@ const Issue = () => {
             </>
           ) : (
             <div className="space-y-4 bg-slate-50/50 p-5 rounded-xl border border-slate-200 animate-fadeIn">
-              <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Thalassemia Patient Recipient Details</h3>
-              
+              <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Clinical Indication / Disease Patient Recipient Details</h3>
+
+              <div className="flex flex-col md:w-1/2">
+                <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Disease</label>
+                <select
+                  value={patientDetails.disease}
+                  onChange={(e) => setPatientDetails({ ...patientDetails, disease: e.target.value })}
+                  className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm focus:ring-1 focus:ring-red-500 border-gray-300"
+                >
+                  <option value="THALASSEMIA">Thalassemia</option>
+                  <option value="SICKLE_CELL_ANAEMIA">Sickle Cell Anaemia</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+
+              {patientDetails.disease === "OTHER" && (
+                <div className="flex flex-col md:w-1/2">
+                  <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Specify Disease</label>
+                  <input
+                    type="text"
+                    value={patientDetails.otherDiseaseName}
+                    onChange={(e) => setPatientDetails({ ...patientDetails, otherDiseaseName: e.target.value })}
+                    className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm focus:ring-1 focus:ring-red-500 border-gray-300"
+                    placeholder="Enter the disease name"
+                  />
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex flex-col">
                   <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">First Name</label>
@@ -1493,10 +1679,8 @@ const Issue = () => {
                                 className="h-9 px-2 border rounded-md text-xs bg-white shadow-sm focus:ring-1 focus:ring-red-500"
                               >
                                 <option value="All">All Types</option>
-                                <option value="SB">Single (SB)</option>
                                 <option value="DB">Double (DB)</option>
                                 <option value="TB">Triple (TB)</option>
-                                <option value="QB">Quadruple (QB)</option>
                               </select>
                             </div>
 
@@ -1629,10 +1813,10 @@ const Issue = () => {
       </CustomModal>
 
       {/* ── Thalassemia Patient View Modal ──────────────── */}
-      <CustomModal open={thalViewOpen} onCancel={() => { setThalViewOpen(false); setThalViewItem(null); }} title="Thalassemia Patient Details" size="lg" hideFooter>
+      <CustomModal open={thalViewOpen} onCancel={() => { setThalViewOpen(false); setThalViewItem(null); }} title="Clinical Indication / Disease Patient Details" size="lg" hideFooter>
         {thalViewItem && (() => {
           const r = thalViewItem;
-          const p = r.thalassemiaPatient || {};
+          const p = r.clinicalIndicationPatient || {};
           const fullName = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ') || '—';
           const rh = r?.bag?.rh === 'Positive' ? '+' : r?.bag?.rh === 'Negative' ? '-' : r?.bag?.rh || '';
           const req = r.requisition;
@@ -1651,6 +1835,10 @@ const Issue = () => {
                   <div>
                     <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Group</div>
                     <div className="font-bold text-red-700 text-base">{p.bloodGroup || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Disease</div>
+                    <div className="font-semibold text-gray-800">{diseaseLabel(p)}</div>
                   </div>
                   <div>
                     <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Age</div>
@@ -1743,9 +1931,50 @@ const Issue = () => {
         })()}
       </CustomModal>
 
+      {/* ── Delete Bulk Transfer Confirmation ─────────────── */}
+      <CustomModal
+        open={deleteBulkConfirmOpen}
+        onCancel={() => { setDeleteBulkConfirmOpen(false); setDeleteBulkTarget(null); }}
+        title="Delete Bulk Transfer"
+        size="sm"
+        hideFooter
+      >
+        <div className="space-y-4 text-sm p-1">
+          <p className="text-gray-700">
+            Delete transfer <strong className="font-mono">{deleteBulkTarget?.transferId}</strong>
+            {deleteBulkTarget?.transferType === 'GIVE_LOAN' ? (
+              <> — its {deleteBulkTarget?.items?.length || 0} bag(s) will be <strong>returned to stock</strong>.</>
+            ) : (
+              <> — its {deleteBulkTarget?.items?.length || 0} bag(s) will be removed from the stock listing.</>
+            )}
+          </p>
+          <div className="flex items-center justify-end gap-2 border-t pt-4">
+            <Button onClick={() => { setDeleteBulkConfirmOpen(false); setDeleteBulkTarget(null); }} variant="outline" className="h-10 px-4">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteBulkTransfer}
+              disabled={deleteBulkSubmitting}
+              className="bg-red-700 hover:bg-red-800 text-white font-medium h-10 px-5"
+            >
+              {deleteBulkSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2 inline" /> Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </div>
+        </div>
+      </CustomModal>
+
       {/* ── Bulk Transfer View Modal ──────────────────────── */}
       <CustomModal open={bulkViewOpen} onCancel={() => { setBulkViewOpen(false); setBulkViewItem(null); }} title="Bulk Transfer Details" size="lg" hideFooter>
-        {bulkViewItem && (
+        {bulkViewItem && (() => {
+          const { byComponent, totalLitres } = bulkTransferComponentTotals(bulkViewItem.items);
+          const componentEntries = Object.entries(byComponent);
+          return (
           <div className="space-y-5 text-sm">
             <div className="bg-red-50 border border-red-100 rounded-xl p-4">
               <h4 className="text-xs font-black text-red-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
@@ -1791,6 +2020,7 @@ const Issue = () => {
                       <th className="px-3 py-2">Blood Group</th>
                       <th className="px-3 py-2">Bag No</th>
                       <th className="px-3 py-2">Segment No</th>
+                      <th className="px-3 py-2">Volume</th>
                       <th className="px-3 py-2">Collected</th>
                       <th className="px-3 py-2">Expiry</th>
                     </tr>
@@ -1802,6 +2032,7 @@ const Issue = () => {
                         <td className="px-3 py-2.5 font-bold text-gray-800">{it.bloodGroup}</td>
                         <td className="px-3 py-2.5 font-mono font-bold text-gray-800">{it.bagNo}</td>
                         <td className="px-3 py-2.5 font-mono text-gray-600">{it.segmentNo || '—'}</td>
+                        <td className="px-3 py-2.5 text-gray-600">{it.volumeMl ? `${it.volumeMl} mL` : '—'}</td>
                         <td className="px-3 py-2.5 text-gray-600">{it.collectedAt ? new Date(it.collectedAt).toLocaleDateString() : '—'}</td>
                         <td className="px-3 py-2.5 text-gray-600">{it.expiresAt ? new Date(it.expiresAt).toLocaleDateString() : '—'}</td>
                       </tr>
@@ -1810,9 +2041,186 @@ const Issue = () => {
                 </table>
               </div>
             </div>
+
+            {/* Component totals in litres */}
+            <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+              <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider mb-3">Component Totals (Litres)</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {componentEntries.length === 0 ? (
+                  <div className="col-span-full text-gray-500 text-xs">No volume data recorded for these bags.</div>
+                ) : componentEntries.map(([comp, ml]) => (
+                  <div key={comp} className="bg-white border border-amber-100 rounded-lg px-3 py-2">
+                    <div className="text-gray-500 text-[10px] uppercase font-semibold">{comp}</div>
+                    <div className="font-bold text-gray-800">{(ml / 1000).toFixed(2)} L</div>
+                  </div>
+                ))}
+                <div className="bg-white border border-amber-200 rounded-lg px-3 py-2">
+                  <div className="text-amber-700 text-[10px] uppercase font-semibold">Total</div>
+                  <div className="font-bold text-amber-900">{totalLitres.toFixed(2)} L</div>
+                </div>
+              </div>
+            </div>
+
+            {bulkViewItem.transferType === 'GIVE_LOAN' && (
+              <div className="flex justify-end gap-2 pt-2 border-t flex-wrap">
+                <Button
+                  onClick={openTestingCertPrompt}
+                  variant="outline"
+                  className="border-red-200 text-red-800 hover:bg-red-50 font-medium h-10 px-5 shadow-sm flex items-center gap-2"
+                >
+                  <Printer className="w-4 h-4" /> Print Testing Certificate
+                </Button>
+                <Button
+                  onClick={openInvoicePrompt}
+                  variant="outline"
+                  className="border-red-200 text-red-800 hover:bg-red-50 font-medium h-10 px-5 shadow-sm flex items-center gap-2"
+                >
+                  <Printer className="w-4 h-4" /> Print Invoice
+                </Button>
+                <Button
+                  onClick={openCoverLetterPrompt}
+                  className="bg-red-800 hover:bg-red-900 text-white font-medium h-10 px-5 shadow-sm flex items-center gap-2"
+                >
+                  <Printer className="w-4 h-4" /> Print Cover Letter
+                </Button>
+              </div>
+            )}
           </div>
-        )}
+          );
+        })()}
       </CustomModal>
+
+      {/* ── Cover Letter: Box Count Prompt ────────────────── */}
+      <CustomModal
+        open={coverLetterPromptOpen}
+        onCancel={() => setCoverLetterPromptOpen(false)}
+        title="Enter Box Count"
+        size="sm"
+        hideFooter
+      >
+        <div className="space-y-4 text-sm p-1">
+          <div className="flex flex-col">
+            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Total No. of Boxes</label>
+            <input
+              type="number"
+              min="1"
+              autoFocus
+              value={coverLetterBoxCount}
+              onChange={(e) => setCoverLetterBoxCount(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmCoverLetter(); }}
+              className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm focus:ring-1 focus:ring-red-500 border-gray-300"
+              placeholder="e.g. 5"
+            />
+          </div>
+          <div className="flex items-center justify-end gap-2 border-t pt-4">
+            <Button onClick={() => setCoverLetterPromptOpen(false)} variant="outline" className="h-10 px-4">
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmCoverLetter} className="bg-red-800 hover:bg-red-900 text-white font-medium h-10 px-5">
+              Print
+            </Button>
+          </div>
+        </div>
+      </CustomModal>
+
+      {/* Hidden print wrapper for the cover letter */}
+      {coverLetterPrintDoc && createPortal(
+        <div id="bulk-transfer-cover-letter-print-wrapper" className="hidden print:block">
+          <BulkTransferCoverLetter transfer={coverLetterPrintDoc} boxCount={coverLetterPrintDoc.boxCount} />
+        </div>,
+        document.body
+      )}
+
+      {/* ── Testing Certificate: Bleed Date & Box Count Prompt ──── */}
+      <CustomModal
+        open={testingCertPromptOpen}
+        onCancel={() => setTestingCertPromptOpen(false)}
+        title="Testing Certificate Details"
+        size="sm"
+        hideFooter
+      >
+        <div className="space-y-4 text-sm p-1">
+          <div className="flex flex-col">
+            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Bleed Date</label>
+            <input
+              type="date"
+              autoFocus
+              value={testingCertBleedDate}
+              onChange={(e) => setTestingCertBleedDate(e.target.value)}
+              className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm focus:ring-1 focus:ring-red-500 border-gray-300"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Total No. of Boxes</label>
+            <input
+              type="number"
+              min="1"
+              value={testingCertBoxCount}
+              onChange={(e) => setTestingCertBoxCount(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmTestingCert(); }}
+              className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm focus:ring-1 focus:ring-red-500 border-gray-300"
+              placeholder="e.g. 6"
+            />
+          </div>
+          <div className="flex items-center justify-end gap-2 border-t pt-4">
+            <Button onClick={() => setTestingCertPromptOpen(false)} variant="outline" className="h-10 px-4">
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmTestingCert} className="bg-red-800 hover:bg-red-900 text-white font-medium h-10 px-5">
+              Print
+            </Button>
+          </div>
+        </div>
+      </CustomModal>
+
+      {/* Hidden print wrapper for the testing certificate */}
+      {testingCertPrintDoc && createPortal(
+        <div id="testing-certificate-print-wrapper" className="hidden print:block">
+          <TestingCertificate transfer={testingCertPrintDoc} bleedDate={testingCertPrintDoc.bleedDate} boxCount={testingCertPrintDoc.boxCount} />
+        </div>,
+        document.body
+      )}
+
+      {/* ── Invoice: Rate Per Litre Prompt ─────────────────── */}
+      <CustomModal
+        open={invoicePromptOpen}
+        onCancel={() => setInvoicePromptOpen(false)}
+        title="Invoice Details"
+        size="sm"
+        hideFooter
+      >
+        <div className="space-y-4 text-sm p-1">
+          <div className="flex flex-col">
+            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Rate per Litre (₹)</label>
+            <input
+              type="number"
+              min="0"
+              autoFocus
+              value={invoiceRate}
+              onChange={(e) => setInvoiceRate(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmInvoice(); }}
+              className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm focus:ring-1 focus:ring-red-500 border-gray-300"
+              placeholder="e.g. 1600"
+            />
+          </div>
+          <div className="flex items-center justify-end gap-2 border-t pt-4">
+            <Button onClick={() => setInvoicePromptOpen(false)} variant="outline" className="h-10 px-4">
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmInvoice} className="bg-red-800 hover:bg-red-900 text-white font-medium h-10 px-5">
+              Print
+            </Button>
+          </div>
+        </div>
+      </CustomModal>
+
+      {/* Hidden print wrapper for the invoice */}
+      {invoicePrintDoc && createPortal(
+        <div id="bulk-transfer-invoice-print-wrapper" className="hidden print:block">
+          <BulkTransferInvoice transfer={invoicePrintDoc} ratePerLitre={invoicePrintDoc.ratePerLitre} />
+        </div>,
+        document.body
+      )}
 
       {/* ── Send Bulk (Give/Take Loan) Form Modal ─────────── */}
       <CustomModal open={bulkFormOpen} onCancel={() => setBulkFormOpen(false)} title="Bulk Transfer — Give / Take Loan" size="xl" hideFooter>
@@ -1990,10 +2398,8 @@ const Issue = () => {
                                   className="h-9 px-2 border rounded-md text-xs bg-white shadow-sm focus:ring-1 focus:ring-red-500"
                                 >
                                   <option value="All">All Types</option>
-                                  <option value="SB">Single (SB)</option>
                                   <option value="DB">Double (DB)</option>
                                   <option value="TB">Triple (TB)</option>
-                                  <option value="QB">Quadruple (QB)</option>
                                 </select>
                               </div>
 
@@ -2030,20 +2436,28 @@ const Issue = () => {
                               </div>
                             </div>
 
-                            {selectedDetails.length > 0 && (
-                              <div className="mt-1 p-2 bg-white rounded-lg border border-slate-100 shadow-inner">
-                                <div className="text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Loaded Segment Numbers:</div>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {selectedDetails.map(bag => (
-                                    <span key={bag._id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-red-50 text-red-805 text-xs border border-red-100 font-medium">
-                                      <span className="font-extrabold">{bag.bagNo}</span>
-                                      <span className="text-red-200">|</span>
-                                      <span>Seg: <strong className="font-extrabold">{bag.segmentNo}</strong></span>
-                                    </span>
-                                  ))}
+                            {selectedDetails.length > 0 && (() => {
+                              const groupVolumeMl = selectedDetails.reduce((sum, bag) => sum + (Number(bag.component?.volumeMl) || 0), 0);
+                              return (
+                                <div className="mt-1 p-2 bg-white rounded-lg border border-slate-100 shadow-inner">
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Loaded Segment Numbers:</div>
+                                    <div className="text-[10px] font-bold text-red-700 uppercase tracking-wide">Group Volume: {(groupVolumeMl / 1000).toFixed(2)} L ({groupVolumeMl} mL)</div>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {selectedDetails.map(bag => (
+                                      <span key={bag._id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-red-50 text-red-805 text-xs border border-red-100 font-medium">
+                                        <span className="font-extrabold">{bag.bagNo}</span>
+                                        <span className="text-red-200">|</span>
+                                        <span>Seg: <strong className="font-extrabold">{bag.segmentNo}</strong></span>
+                                        <span className="text-red-200">|</span>
+                                        <span>{bag.component?.volumeMl ? `${bag.component.volumeMl} mL` : 'Vol: —'}</span>
+                                      </span>
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              );
+                            })()}
                           </div>
                         );
                       })}
@@ -2051,6 +2465,22 @@ const Issue = () => {
                   </div>
                 ))}
               </div>
+
+              {(() => {
+                const totalMl = bulkGiveBags.reduce((sum, comp) => sum + comp.groups.reduce((gsum, group) => (
+                  gsum + group.selectedBags.reduce((bsum, bagId) => {
+                    const unit = availableUnits.find(u => u._id === bagId);
+                    return bsum + (Number(unit?.component?.volumeMl) || 0);
+                  }, 0)
+                ), 0), 0);
+                const totalBags = bulkGiveBags.reduce((sum, comp) => sum + comp.groups.reduce((gsum, group) => gsum + group.selectedBags.length, 0), 0);
+                return (
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-900 uppercase tracking-wider">Total Selected: {totalBags} bag{totalBags !== 1 ? 's' : ''}</span>
+                    <span className="text-sm font-black text-amber-900">{(totalMl / 1000).toFixed(2)} L ({totalMl} mL)</span>
+                  </div>
+                );
+              })()}
             </div>
           ) : (
             <div className="border-t pt-4">
@@ -2058,7 +2488,7 @@ const Issue = () => {
                 <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Blood Bags Being Taken In (Enter Manually)</h4>
                 <Button
                   type="button"
-                  onClick={() => setBulkTakeGroups([...bulkTakeGroups, { componentType: "RBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", collectedAt: "", expiresAt: "" }] }])}
+                  onClick={() => setBulkTakeGroups([...bulkTakeGroups, { componentType: "RBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" }] }])}
                   variant="outline"
                   size="sm"
                   className="text-red-700 border-red-200 hover:bg-red-50 flex items-center gap-1"
@@ -2112,7 +2542,7 @@ const Issue = () => {
                           type="button"
                           onClick={() => {
                             const next = [...bulkTakeGroups];
-                            next[groupIndex].bags.push({ bagNo: "", segmentNo: "", collectedAt: "", expiresAt: "" });
+                            next[groupIndex].bags.push({ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" });
                             setBulkTakeGroups(next);
                           }}
                           variant="outline"
@@ -2140,7 +2570,7 @@ const Issue = () => {
                     <div className="space-y-3 pl-2 border-l-2 border-red-100">
                       {group.bags.map((bag, bagIndex) => (
                         <div key={bagIndex} className="grid grid-cols-2 md:grid-cols-12 gap-3 items-end p-3 rounded-lg bg-slate-50/50 border border-slate-100">
-                          <div className="md:col-span-3 flex flex-col">
+                          <div className="md:col-span-2 flex flex-col">
                             <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Bag No</label>
                             <input
                               type="text"
@@ -2154,7 +2584,7 @@ const Issue = () => {
                               placeholder="Bag No"
                             />
                           </div>
-                          <div className="md:col-span-3 flex flex-col">
+                          <div className="md:col-span-2 flex flex-col">
                             <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Segment No</label>
                             <input
                               type="text"
@@ -2168,7 +2598,22 @@ const Issue = () => {
                               placeholder="Segment No"
                             />
                           </div>
-                          <div className="md:col-span-3 flex flex-col">
+                          <div className="md:col-span-2 flex flex-col">
+                            <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Volume (mL)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={bag.volumeMl}
+                              onChange={(e) => {
+                                const next = [...bulkTakeGroups];
+                                next[groupIndex].bags[bagIndex].volumeMl = e.target.value;
+                                setBulkTakeGroups(next);
+                              }}
+                              className="h-9 px-2 border rounded-md text-xs bg-white shadow-sm focus:ring-1 focus:ring-red-500"
+                              placeholder="e.g. 350"
+                            />
+                          </div>
+                          <div className="md:col-span-2 flex flex-col">
                             <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Collection Date</label>
                             <input
                               type="date"
@@ -2181,7 +2626,7 @@ const Issue = () => {
                               className="h-9 px-2 border rounded-md text-xs bg-white shadow-sm focus:ring-1 focus:ring-red-500"
                             />
                           </div>
-                          <div className="md:col-span-2 flex flex-col">
+                          <div className="md:col-span-3 flex flex-col">
                             <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Expiry Date</label>
                             <input
                               type="date"
@@ -2215,9 +2660,29 @@ const Issue = () => {
                         </div>
                       ))}
                     </div>
+
+                    {(() => {
+                      const groupVolumeMl = group.bags.reduce((sum, b) => sum + (Number(b.volumeMl) || 0), 0);
+                      return (
+                        <div className="text-right text-[10px] font-bold text-red-700 uppercase tracking-wide pt-1">
+                          Group Volume: {(groupVolumeMl / 1000).toFixed(2)} L ({groupVolumeMl} mL)
+                        </div>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>
+
+              {(() => {
+                const totalMl = bulkTakeGroups.reduce((sum, group) => sum + group.bags.reduce((bsum, b) => bsum + (Number(b.volumeMl) || 0), 0), 0);
+                const totalBags = bulkTakeGroups.reduce((sum, group) => sum + group.bags.filter(b => b.bagNo.trim()).length, 0);
+                return (
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-900 uppercase tracking-wider">Total Entered: {totalBags} bag{totalBags !== 1 ? 's' : ''}</span>
+                    <span className="text-sm font-black text-amber-900">{(totalMl / 1000).toFixed(2)} L ({totalMl} mL)</span>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

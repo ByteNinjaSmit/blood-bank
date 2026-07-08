@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
+import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { NotFoundError } from '@/shared/errors';
 import type { ListBulkTransferInput } from '@/modules/bulk-transfer/bulk-transfer.validator';
 
@@ -8,8 +9,10 @@ export interface BulkTransferItemDto {
   bloodGroup: string;
   bagNo: string;
   segmentNo?: string;
+  volumeMl?: number;
   collectedAt?: string;
   expiresAt?: string;
+  unitId?: string;
 }
 
 export interface BulkTransferDto {
@@ -38,8 +41,10 @@ function toDto(raw: any): BulkTransferDto {
       bloodGroup: it.bloodGroup,
       bagNo: it.bagNo,
       segmentNo: it.segmentNo || undefined,
+      volumeMl: it.volumeMl || undefined,
       collectedAt: it.collectedAt ? new Date(it.collectedAt).toISOString() : undefined,
       expiresAt: it.expiresAt ? new Date(it.expiresAt).toISOString() : undefined,
+      unitId: it.unitId ? it.unitId.toString() : undefined,
     })),
     notes: raw.notes || undefined,
     createdAt: raw.createdAt ? new Date(raw.createdAt).toISOString() : '',
@@ -52,8 +57,10 @@ export interface CreateBulkTransferItemInput {
   bloodGroup: string;
   bagNo: string;
   segmentNo?: string;
+  volumeMl?: number;
   collectedAt?: Date;
   expiresAt?: Date;
+  unitId?: string;
 }
 
 export interface CreateBulkTransferInput {
@@ -70,6 +77,58 @@ export interface BulkTransferRepo {
   list(f: ListBulkTransferInput): Promise<{ items: BulkTransferDto[]; total: number }>;
   findById(id: string): Promise<BulkTransferDto>;
   create(input: CreateBulkTransferInput, actorId: string): Promise<BulkTransferDto>;
+  remove(id: string, actorId: string): Promise<BulkTransferDto>;
+}
+
+// Bags given on loan leave our stock (ISSUED); deleting that transfer puts
+// them back (RELEASED). Neither transition goes through the formal
+// RESERVED->ISSUE state machine — this mirrors the same direct-status-set
+// pattern the legacy /inventory/issue and /inventory/send-to-storage routes
+// already use for non-clinical stock movements.
+async function markUnitsIssuedForLoan(unitIds: string[], actorId: string): Promise<void> {
+  if (!unitIds.length) return;
+  const actor = new Types.ObjectId(actorId);
+  const now = new Date();
+  for (const id of unitIds) {
+    const unit = await BloodUnitModel.findById(id);
+    if (!unit) continue;
+    const oldStatus = unit.status;
+    unit.status = 'ISSUED';
+    unit.issuedAt = now;
+    unit.updatedBy = actor;
+    unit.statusHistory.push({
+      from: oldStatus,
+      to: 'ISSUED',
+      event: 'BULK_TRANSFER_LOAN_GIVEN',
+      actor,
+      at: now,
+      reason: 'Given on loan via bulk transfer',
+    } as any);
+    await unit.save();
+  }
+}
+
+async function restoreUnitsFromLoan(unitIds: string[], actorId: string): Promise<void> {
+  if (!unitIds.length) return;
+  const actor = new Types.ObjectId(actorId);
+  const now = new Date();
+  for (const id of unitIds) {
+    const unit = await BloodUnitModel.findById(id);
+    if (!unit) continue;
+    const oldStatus = unit.status;
+    unit.status = 'RELEASED';
+    unit.issuedAt = undefined;
+    unit.updatedBy = actor;
+    unit.statusHistory.push({
+      from: oldStatus,
+      to: 'RELEASED',
+      event: 'BULK_TRANSFER_LOAN_DELETED',
+      actor,
+      at: now,
+      reason: 'Bulk transfer (loan) deleted — bag returned to stock',
+    } as any);
+    await unit.save();
+  }
 }
 
 export function createBulkTransferRepo(): BulkTransferRepo {
@@ -105,7 +164,32 @@ export function createBulkTransferRepo(): BulkTransferRepo {
         createdBy: actor,
         updatedBy: actor,
       });
-      return toDto(doc.toObject());
+      const created = doc.toObject();
+
+      if (input.transferType === 'GIVE_LOAN') {
+        const unitIds = input.items.map((it) => it.unitId).filter(Boolean) as string[];
+        await markUnitsIssuedForLoan(unitIds, actorId);
+      }
+
+      return toDto(created);
+    },
+
+    async remove(id, actorId) {
+      const raw = await BulkTransferModel.findOne({ _id: id, deletedAt: null });
+      if (!raw) throw new NotFoundError('BulkTransfer', id);
+
+      if (raw.transferType === 'GIVE_LOAN') {
+        const unitIds = (raw.items || [])
+          .map((it: any) => it.unitId)
+          .filter(Boolean)
+          .map((u: any) => u.toString());
+        await restoreUnitsFromLoan(unitIds, actorId);
+      }
+
+      raw.deletedAt = new Date();
+      raw.updatedBy = new Types.ObjectId(actorId);
+      await raw.save();
+      return toDto(raw.toObject());
     },
   };
 }

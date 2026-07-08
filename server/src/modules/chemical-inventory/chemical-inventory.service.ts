@@ -25,6 +25,7 @@ export interface ChemicalInventoryService {
 
   // Chemical
   listChemicals(): Promise<any[]>;
+  listChemicalsWithStock(): Promise<any[]>;
   createChemical(doc: any, actorId: string): Promise<any>;
   updateChemical(id: string, patch: any, actorId: string): Promise<any>;
   deleteChemical(id: string): Promise<any>;
@@ -121,6 +122,10 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
 
     async listChemicals() {
       return deps.inventory.listChemicals();
+    },
+
+    async listChemicalsWithStock() {
+      return deps.inventory.listChemicalsWithStock();
     },
 
     async createChemical(doc, actorId) {

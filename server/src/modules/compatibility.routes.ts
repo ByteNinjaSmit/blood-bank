@@ -18,6 +18,7 @@ import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { CampModel } from '@/modules/camp/camp.model';
 import { UserModel } from '@/modules/user/user.model';
 import { IssueModel } from '@/modules/issue/issue.model';
+import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 
 const router = Router();
 
@@ -32,7 +33,18 @@ const ttiService = createTtiService({
 // 1. GET /inventory
 router.get('/inventory', authenticate, async (req, res, next) => {
   try {
-    const { page, limit, status, componentType, siteId, search, sortBy, order, storageLocation, dispatchType, bloodGroup, rh, expiryFrom, expiryTo } = req.query as any;
+    const { page, limit, status, componentType, siteId, search, sortBy, order, storageLocation, dispatchType, bloodGroup, rh, expiryFrom, expiryTo, source } = req.query as any;
+
+    // Bags taken in on loan from another blood bank live only in
+    // BulkTransfer (see bulk-transfer module) — they never had a Donation/
+    // BloodUnit record created for them at this bank, so they have no real
+    // unitId. They must NOT leak into pickers that need a real BloodUnit to
+    // act on (Give Loan bag picker, Send to Storage, Issue, Reserve, ...) —
+    // those callers never pass `source`, so the default here is 'own' only.
+    // Only the Stock page explicitly opts into source=all/loan to display
+    // them in the general listing.
+    const wantsOwn = status !== 'in-stock' || source !== 'loan';
+    const wantsLoan = status === 'in-stock' && (source === 'all' || source === 'loan');
 
     const unitFilter: any = {
       $and: [
@@ -101,8 +113,8 @@ router.get('/inventory', authenticate, async (req, res, next) => {
       });
     }
     if (status === 'issued') {
-      if (dispatchType === 'THALASSEMIA') {
-        unitFilter['thalassemiaPatient'] = { $exists: true, $ne: null };
+      if (dispatchType === 'CLINICAL_INDICATION') {
+        unitFilter['clinicalIndicationPatient'] = { $exists: true, $ne: null };
       } else if (storageLocation) {
         unitFilter['storageLocation'] = new RegExp(storageLocation, 'i');
       } else {
@@ -112,8 +124,8 @@ router.get('/inventory', authenticate, async (req, res, next) => {
       if (storageLocation) {
         unitFilter['storageLocation'] = new RegExp(storageLocation, 'i');
       }
-      if (dispatchType === 'THALASSEMIA') {
-        unitFilter['thalassemiaPatient'] = { $exists: true, $ne: null };
+      if (dispatchType === 'CLINICAL_INDICATION') {
+        unitFilter['clinicalIndicationPatient'] = { $exists: true, $ne: null };
       }
     }
 
@@ -124,19 +136,28 @@ router.get('/inventory', authenticate, async (req, res, next) => {
     const sortDir = order === 'asc' ? 1 : -1;
     const sortField = sortBy || 'createdAt';
 
-    const total = await BloodUnitModel.countDocuments(unitFilter);
-    const units = await BloodUnitModel.find(unitFilter)
-      .populate({
-        path: 'reservedFor',
-        populate: [
-          { path: 'hospitalId', select: 'name' },
-          { path: 'patientId', select: 'name dob sex' }
-        ]
-      })
-      .sort({ [sortField]: sortDir })
-      .skip(skipNum)
-      .limit(limitNum)
-      .lean();
+    // When loan rows need to be merged in, fetch the full (bounded) own-unit
+    // set instead of a DB-level page so the two sources can be combined and
+    // re-paginated together in memory.
+    const needsMerge = wantsOwn && wantsLoan;
+
+    let total = 0;
+    let units: any[] = [];
+    if (wantsOwn) {
+      total = await BloodUnitModel.countDocuments(unitFilter);
+      units = await BloodUnitModel.find(unitFilter)
+        .populate({
+          path: 'reservedFor',
+          populate: [
+            { path: 'hospitalId', select: 'name' },
+            { path: 'patientId', select: 'name dob sex' }
+          ]
+        })
+        .sort({ [sortField]: sortDir })
+        .skip(needsMerge ? 0 : skipNum)
+        .limit(needsMerge ? 5000 : limitNum)
+        .lean();
+    }
 
     const donationIds = units.map(u => u.donationId).filter(Boolean);
     const donations = await DonationModel.find({
@@ -232,9 +253,12 @@ router.get('/inventory', authenticate, async (req, res, next) => {
 
       if (u.storageLocation) {
         hospitalName = u.storageLocation;
-      } else if (u.thalassemiaPatient) {
-        const p = u.thalassemiaPatient;
-        hospitalName = `Thalassemia: ${p.firstName} ${p.lastName} (${p.bloodGroup})`;
+      } else if (u.clinicalIndicationPatient) {
+        const p = u.clinicalIndicationPatient;
+        const diseaseLabel = p.disease === 'THALASSEMIA' ? 'Thalassemia'
+          : p.disease === 'SICKLE_CELL_ANAEMIA' ? 'Sickle Cell Anaemia'
+          : (p.otherDiseaseName || 'Other');
+        hospitalName = `${diseaseLabel}: ${p.firstName} ${p.lastName} (${p.bloodGroup})`;
       }
 
       return {
@@ -242,7 +266,7 @@ router.get('/inventory', authenticate, async (req, res, next) => {
         bagNo: displayBagNo,
         segmentNo,
         storageLocation: u.storageLocation || undefined,
-        thalassemiaPatient: u.thalassemiaPatient || undefined,
+        clinicalIndicationPatient: u.clinicalIndicationPatient || undefined,
         typeOfBag,
         issuedAt: u.issuedAt ? u.issuedAt.toISOString() : undefined,
         bag: {
@@ -272,15 +296,92 @@ router.get('/inventory', authenticate, async (req, res, next) => {
         reservedPatientAge: patientAge,
         reservedPatientSex: patientSex,
         requisition: requisitionObj,
+        source: 'OWN',
+        _sortDate: u.createdAt,
       };
     });
 
+    // Bags taken in on loan — flattened out of BulkTransfer items, never a
+    // real Donation/BloodUnit, but shown as "in-stock" like any other bag.
+    let loanRows: any[] = [];
+    if (wantsLoan) {
+      const loanTransfers = await BulkTransferModel.find({ transferType: 'TAKE_LOAN', deletedAt: null }).lean();
+      const searchRegex = search ? new RegExp(search, 'i') : null;
+
+      loanTransfers.forEach((t: any) => {
+        (t.items || []).forEach((it: any, idx: number) => {
+          if (componentType && it.componentType !== componentType) return;
+          if (bloodGroup && it.bloodGroup?.replace(/[+-]/, '') !== bloodGroup) return;
+          if (rh) {
+            const wantsNegative = rh === 'Negative' || rh === 'NEGATIVE';
+            const isNegative = it.bloodGroup?.endsWith('-');
+            if (wantsNegative !== Boolean(isNegative)) return;
+          }
+          if (expiryFrom && it.expiresAt && new Date(it.expiresAt) < new Date(expiryFrom)) return;
+          if (expiryTo && it.expiresAt && new Date(it.expiresAt) > new Date(expiryTo)) return;
+          if (searchRegex && !searchRegex.test(it.bagNo || '') && !searchRegex.test(t.transferId || '')) return;
+
+          const rhLabel = it.bloodGroup?.endsWith('-') ? 'Negative' : 'Positive';
+          const bloodGroupLetter = (it.bloodGroup || '').replace(/[+-]/, '');
+
+          loanRows.push({
+            _id: `LOAN-${t._id.toString()}-${idx}`,
+            bagNo: it.bagNo,
+            segmentNo: it.segmentNo || '—',
+            typeOfBag: 'SB',
+            bag: {
+              bagNo: it.bagNo,
+              bloodGroup: bloodGroupLetter,
+              rh: rhLabel,
+              segmentNo: it.segmentNo || '—',
+              donationDate: it.collectedAt ? new Date(it.collectedAt).toISOString() : undefined,
+              donorName: `Loan: ${t.bloodBankName}`,
+              donationType: 'LOAN',
+            },
+            component: {
+              componentType: it.componentType,
+              volumeMl: it.volumeMl,
+              expiryDate: it.expiresAt ? new Date(it.expiresAt).toISOString() : '',
+            },
+            status: 'in-stock',
+            hospital: { name: `Loan From: ${t.bloodBankName}` },
+            source: 'LOAN',
+            loanTransfer: {
+              transferId: t.transferId,
+              bloodBankName: t.bloodBankName,
+              bloodBankAddress: t.bloodBankAddress,
+              transferDate: t.transferDate ? new Date(t.transferDate).toISOString() : undefined,
+            },
+            _sortDate: t.createdAt,
+          });
+        });
+      });
+    }
+
+    let combined: any[];
+    let combinedTotal: number;
+    if (source === 'loan') {
+      combined = loanRows;
+      combinedTotal = loanRows.length;
+    } else if (needsMerge) {
+      combined = [...data, ...loanRows].sort((a, b) => new Date(b._sortDate || 0).getTime() - new Date(a._sortDate || 0).getTime());
+      combinedTotal = combined.length;
+    } else {
+      combined = data;
+      combinedTotal = total;
+    }
+
+    const pageData = (source === 'loan' || needsMerge)
+      ? combined.slice(skipNum, skipNum + limitNum)
+      : combined;
+    pageData.forEach((row: any) => { delete row._sortDate; });
+
     res.json({
       success: true,
-      data,
+      data: pageData,
       pagination: {
-        total,
-        totalPages: Math.ceil(total / limitNum),
+        total: combinedTotal,
+        totalPages: Math.ceil(combinedTotal / limitNum),
         page: pageNum,
         limit: limitNum,
       }
@@ -407,12 +508,12 @@ router.post('/inventory/issue', authenticate, async (req, res, next) => {
 // POST /inventory/send-to-storage
 router.post('/inventory/send-to-storage', authenticate, async (req, res, next) => {
   try {
-    const { location, otherLocationName, bags, userId, dispatchType, thalassemiaPatient, sentDate } = req.body;
+    const { location, otherLocationName, bags, userId, dispatchType, clinicalIndicationPatient, sentDate } = req.body;
     const actorId = (req.user as any)?.id || userId;
-    const isThalassemia = dispatchType === 'THALASSEMIA';
+    const isClinicalIndication = dispatchType === 'CLINICAL_INDICATION';
 
     let finalLocation = null;
-    if (!isThalassemia) {
+    if (!isClinicalIndication) {
       if (!location) {
         return res.status(400).json({ success: false, message: 'Location is required' });
       }
@@ -421,8 +522,11 @@ router.post('/inventory/send-to-storage', authenticate, async (req, res, next) =
         return res.status(400).json({ success: false, message: 'Location name is required' });
       }
     } else {
-      if (!thalassemiaPatient || !thalassemiaPatient.firstName || !thalassemiaPatient.lastName) {
-        return res.status(400).json({ success: false, message: 'Patient details are required' });
+      if (!clinicalIndicationPatient || !clinicalIndicationPatient.firstName || !clinicalIndicationPatient.lastName || !clinicalIndicationPatient.disease) {
+        return res.status(400).json({ success: false, message: 'Patient details and disease are required' });
+      }
+      if (clinicalIndicationPatient.disease === 'OTHER' && !clinicalIndicationPatient.otherDiseaseName?.trim()) {
+        return res.status(400).json({ success: false, message: 'Please specify the disease name' });
       }
     }
 
@@ -456,20 +560,23 @@ router.post('/inventory/send-to-storage', authenticate, async (req, res, next) =
       unit.issuedAt = sentDate ? new Date(sentDate) : new Date();
       unit.updatedBy = actorObjId;
 
-      if (isThalassemia) {
+      if (isClinicalIndication) {
+        const diseaseLabel = clinicalIndicationPatient.disease === 'THALASSEMIA' ? 'Thalassemia'
+          : clinicalIndicationPatient.disease === 'SICKLE_CELL_ANAEMIA' ? 'Sickle Cell Anaemia'
+          : (clinicalIndicationPatient.otherDiseaseName || 'Other');
         (unit as any).storageLocation = null;
-        (unit as any).thalassemiaPatient = thalassemiaPatient;
+        (unit as any).clinicalIndicationPatient = clinicalIndicationPatient;
         unit.statusHistory.push({
           from: oldStatus,
           to: 'ISSUED',
           event: 'ISSUE',
           actor: actorObjId,
           at: new Date(),
-          reason: `Issued to Thalassemia Patient: ${thalassemiaPatient.firstName} ${thalassemiaPatient.lastName}`,
+          reason: `Issued to ${diseaseLabel} Patient: ${clinicalIndicationPatient.firstName} ${clinicalIndicationPatient.lastName}`,
         } as any);
       } else {
         unit.storageLocation = finalLocation;
-        (unit as any).thalassemiaPatient = null;
+        (unit as any).clinicalIndicationPatient = null;
         unit.statusHistory.push({
           from: oldStatus,
           to: 'ISSUED',
@@ -485,7 +592,7 @@ router.post('/inventory/send-to-storage', authenticate, async (req, res, next) =
 
     await invalidate('inventory:*');
 
-    res.json({ success: true, message: isThalassemia ? 'Blood units successfully issued to Thalassemia patient.' : 'Blood units successfully sent to storage.' });
+    res.json({ success: true, message: isClinicalIndication ? 'Blood units successfully issued for the clinical indication.' : 'Blood units successfully sent to storage.' });
   } catch (e) {
     next(e);
   }
@@ -1072,715 +1179,6 @@ router.post('/serology/results/:id', authenticate, async (req, res, next) => {
     res.json({ success: true, message: 'Serology results saved and finalized successfully' });
   } catch (e) {
     next(e);
-  }
-});
-
-// 6. GET /dashboard
-router.get('/dashboard', authenticate, async (req, res, next) => {
-  try {
-    const user = req.user ? await UserModel.findById(req.user.id).lean() : null;
-    const siteId = user?.campId || null;
-    const now = new Date();
-    const { range, rangeDays, from, to } = req.query || {};
-
-    const toDate = to ? new Date(to as string) : now;
-    toDate.setHours(23, 59, 59, 999);
-
-    let fromDate: Date | null = null;
-    if (from) {
-      const f = new Date(from as string);
-      f.setHours(0, 0, 0, 0);
-      fromDate = f;
-    } else if (typeof rangeDays !== 'undefined' && !Number.isNaN(parseInt(rangeDays as string, 10))) {
-      const days = Math.max(1, parseInt(rangeDays as string, 10));
-      fromDate = new Date(toDate.getTime() - days * 24 * 60 * 60 * 1000);
-    } else if (range && String(range).toLowerCase() === 'today') {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      fromDate = start;
-    } else if (range && ['1d', '2d', '7d', '30d'].includes(String(range).toLowerCase())) {
-      const map: Record<string, number> = { '1d': 1, '2d': 2, '7d': 7, '30d': 30 };
-      const days = map[String(range).toLowerCase()] || 30;
-      fromDate = new Date(toDate.getTime() - days * 24 * 60 * 60 * 1000);
-    } else if (range && String(range).toLowerCase() === 'all') {
-      fromDate = null; // no time filter
-    } else {
-      fromDate = new Date(toDate.getTime() - 7 * 24 * 60 * 60 * 1000); // default to 7 days
-    }
-
-    const siteMatchBag = siteId ? { campId: siteId } : {};
-    const siteMatchComponent = siteId ? { campId: siteId } : {};
-
-    const [donorsTotal, donationsTotal, compInStock, compReserved, compDiscarded, compIssued] =
-      await Promise.all([
-        DonorModel.countDocuments({ deletedAt: null }),
-        DonationModel.countDocuments({ ...siteMatchBag, deletedAt: null }),
-        BloodUnitModel.countDocuments({ status: 'RELEASED', ...siteMatchComponent, deletedAt: null }),
-        BloodUnitModel.countDocuments({ status: 'RESERVED', ...siteMatchComponent, deletedAt: null }),
-        BloodUnitModel.countDocuments({ status: 'DISCARDED', ...siteMatchComponent, deletedAt: null }),
-        BloodUnitModel.countDocuments({ status: 'ISSUED', ...siteMatchComponent, deletedAt: null }),
-      ]);
-
-    const issuedTotal = compIssued;
-
-    const matchDate = (field: string) => (fromDate ? { [field]: { $gte: fromDate, $lte: toDate } } : {});
-
-    const [
-      stockByGroupAgg,
-      stockByComponentAgg,
-      stockByComponentAndGroupAgg,
-      donationsTrendAgg,
-      issuedTrendAgg,
-      discardedTrendAgg,
-    ] = await Promise.all([
-      // Stock by ABO/Rh
-      BloodUnitModel.aggregate([
-        {
-          $match: {
-            status: 'RELEASED',
-            ...(fromDate ? { createdAt: { $gte: fromDate, $lte: toDate } } : {}),
-            ...siteMatchComponent,
-            deletedAt: null
-          }
-        },
-        { $group: { _id: { bloodGroup: '$aboGroup', rhFactor: '$rhFactor' }, count: { $sum: 1 } } },
-      ]),
-      // Stock by component type
-      BloodUnitModel.aggregate([
-        {
-          $match: {
-            status: 'RELEASED',
-            ...(fromDate ? { createdAt: { $gte: fromDate, $lte: toDate } } : {}),
-            ...siteMatchComponent,
-            deletedAt: null
-          }
-        },
-        { $group: { _id: '$componentType', count: { $sum: 1 } } },
-      ]),
-      // Stock by Component and ABO/Rh
-      BloodUnitModel.aggregate([
-        {
-          $match: {
-            status: 'RELEASED',
-            ...(fromDate ? { createdAt: { $gte: fromDate, $lte: toDate } } : {}),
-            ...siteMatchComponent,
-            deletedAt: null
-          }
-        },
-        {
-          $group: {
-            _id: {
-              componentType: '$componentType',
-              bloodGroup: '$aboGroup',
-              rhFactor: '$rhFactor'
-            },
-            count: { $sum: 1 }
-          }
-        }
-      ]),
-      // Donations trend
-      DonationModel.aggregate([
-        {
-          $match: {
-            ...(fromDate ? { collectedAt: { $gte: fromDate, $lte: toDate } } : {}),
-            ...siteMatchBag,
-            deletedAt: null
-          }
-        },
-        {
-          $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$collectedAt' } },
-            value: { $sum: 1 },
-          },
-        },
-      ]),
-      // Issued trend
-      BloodUnitModel.aggregate([
-        {
-          $match: {
-            status: 'ISSUED',
-            ...(fromDate ? { updatedAt: { $gte: fromDate, $lte: toDate } } : {}),
-            ...siteMatchComponent,
-            deletedAt: null
-          }
-        },
-        {
-          $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' } },
-            value: { $sum: 1 },
-          },
-        },
-      ]),
-      // Discarded trend
-      BloodUnitModel.aggregate([
-        {
-          $match: {
-            status: 'DISCARDED',
-            ...(fromDate ? { updatedAt: { $gte: fromDate, $lte: toDate } } : {}),
-            ...siteMatchComponent,
-            deletedAt: null
-          }
-        },
-        {
-          $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' } },
-            value: { $sum: 1 },
-          },
-        },
-      ]),
-    ]);
-
-    const nearExpiryAgg = await BloodUnitModel.aggregate([
-      {
-        $match: {
-          status: 'RELEASED',
-          expiresAt: { $ne: null },
-          ...siteMatchComponent,
-          deletedAt: null
-        }
-      },
-      {
-        $addFields: {
-          daysToExpiry: { $ceil: { $divide: [{ $subtract: ['$expiresAt', now] }, 86400000] } },
-          threshold: {
-            $switch: {
-              branches: [
-                { case: { $in: ['$componentType', ['PLATELET_CONCENTRATE', 'SDP']] }, then: 1 },
-                { case: { $in: ['$componentType', ['PRBC', 'IRRADIATED_PRBC', 'WASHED_PRBC', 'LEUKOREDUCED_PRBC']] }, then: 7 },
-                { case: { $eq: ['$componentType', 'FFP'] }, then: 30 },
-                { case: { $eq: ['$componentType', 'CRYOPRECIPITATE'] }, then: 30 }
-              ],
-              default: 7,
-            },
-          },
-        },
-      },
-      {
-        $match: {
-          $expr: {
-            $and: [{ $gte: ['$daysToExpiry', 0] }, { $lte: ['$daysToExpiry', '$threshold'] }],
-          },
-        },
-      },
-      { $group: { _id: '$componentType', count: { $sum: 1 } } },
-    ]);
-
-    const matchDateHR = fromDate ? { createdAt: { $gte: fromDate, $lte: toDate } } : {};
-
-    const [requestsByStatusAgg, totalUnitsRequestedAgg] = await Promise.all([
-      RequisitionModel.aggregate([
-        { $match: { ...matchDateHR, deletedAt: null } },
-        { $group: { _id: '$status', count: { $sum: 1 } } },
-      ]),
-      RequisitionModel.aggregate([
-        { $match: { ...matchDateHR, deletedAt: null } },
-        { $unwind: '$requestedComponents' },
-        { $group: { _id: null, units: { $sum: '$requestedComponents.units' } } },
-      ]),
-    ]);
-
-    const campDonationIds = await DonationModel.find({
-      campId: { $ne: null },
-      ...(fromDate ? { collectedAt: { $gte: fromDate, $lte: toDate } } : {}),
-      ...siteMatchBag,
-      deletedAt: null
-    }).distinct('donationId');
-
-    const campDonationsForSiteId = siteId ? await DonationModel.find({ campId: siteId, deletedAt: null }).distinct('donationId') : null;
-    const siteMatchTti = campDonationsForSiteId ? { donationId: { $in: campDonationsForSiteId } } : {};
-
-    const [
-      transfusionsInRange,
-      discardsAgg,
-      positivityAgg,
-      bloodUnitStatusAgg,
-      donationsInRange,
-      issuedInRange,
-      discardedInRange,
-      inStockInRange,
-      reservedInRange,
-      campDonorsList,
-      campFailures,
-      bagsPassed,
-      bagsFailed,
-      bagsPending,
-      bagsQuarantined,
-    ] = await Promise.all([
-      TransfusionModel.countDocuments({
-        ...(fromDate ? { createdAt: { $gte: fromDate, $lte: toDate } } : {})
-      }),
-      BloodUnitModel.aggregate([
-        {
-          $match: {
-            status: 'DISCARDED',
-            ...(fromDate ? { updatedAt: { $gte: fromDate, $lte: toDate } } : {}),
-            ...siteMatchComponent,
-            deletedAt: null
-          }
-        },
-        { $group: { _id: '$discardReason', count: { $sum: 1 } } },
-      ]),
-      TtiResultModel.aggregate([
-        ...(siteId ? [
-          {
-            $lookup: {
-              from: 'donations',
-              localField: 'donationId',
-              foreignField: 'donationId',
-              as: 'donation'
-            }
-          },
-          { $unwind: '$donation' },
-          { $match: { 'donation.campId': siteId } }
-        ] : []),
-        { $unwind: '$tests' },
-        ...(fromDate ? [{ $match: { 'tests.performedAt': { $gte: fromDate, $lte: toDate } } }] : []),
-        {
-          $group: {
-            _id: { test: '$tests.testName', result: '$tests.result' },
-            count: { $sum: 1 },
-          },
-        },
-      ]),
-      BloodUnitModel.aggregate([
-        {
-          $match: {
-            ...(fromDate ? { collectedAt: { $gte: fromDate, $lte: toDate } } : {}),
-            ...siteMatchComponent,
-            deletedAt: null
-          }
-        },
-        { $group: { _id: '$status', count: { $sum: 1 } } }
-      ]),
-      DonationModel.countDocuments({
-        ...(fromDate ? { collectedAt: { $gte: fromDate, $lte: toDate } } : {}),
-        ...siteMatchBag,
-        deletedAt: null
-      }),
-      BloodUnitModel.countDocuments({
-        status: 'ISSUED',
-        ...(fromDate ? { updatedAt: { $gte: fromDate, $lte: toDate } } : {}),
-        ...siteMatchComponent,
-        deletedAt: null
-      }),
-      BloodUnitModel.countDocuments({
-        status: 'DISCARDED',
-        ...(fromDate ? { updatedAt: { $gte: fromDate, $lte: toDate } } : {}),
-        ...siteMatchComponent,
-        deletedAt: null
-      }),
-      BloodUnitModel.countDocuments({
-        status: 'RELEASED',
-        ...(fromDate ? { createdAt: { $gte: fromDate, $lte: toDate } } : {}),
-        ...siteMatchComponent,
-        deletedAt: null
-      }),
-      BloodUnitModel.countDocuments({
-        status: 'RESERVED',
-        ...(fromDate ? { updatedAt: { $gte: fromDate, $lte: toDate } } : {}),
-        ...siteMatchComponent,
-        deletedAt: null
-      }),
-      DonationModel.find({
-        campId: { $ne: null },
-        ...(fromDate ? { collectedAt: { $gte: fromDate, $lte: toDate } } : {}),
-        ...siteMatchBag,
-        deletedAt: null
-      }).distinct('donor'),
-      TtiResultModel.countDocuments({
-        donationId: { $in: campDonationIds },
-        releaseDecision: 'reactive'
-      }),
-      TtiResultModel.countDocuments({
-        releaseDecision: 'released',
-        ...(fromDate ? { decidedAt: { $gte: fromDate, $lte: toDate } } : {}),
-        ...siteMatchTti
-      }),
-      TtiResultModel.countDocuments({
-        releaseDecision: 'reactive',
-        ...(fromDate ? { decidedAt: { $gte: fromDate, $lte: toDate } } : {}),
-        ...siteMatchTti
-      }),
-      TtiResultModel.countDocuments({
-        releaseDecision: 'pending',
-        ...(fromDate ? { decidedAt: { $gte: fromDate, $lte: toDate } } : {}),
-        ...siteMatchTti
-      }),
-      TtiResultModel.countDocuments({
-        releaseDecision: 'on-hold',
-        ...(fromDate ? { decidedAt: { $gte: fromDate, $lte: toDate } } : {}),
-        ...siteMatchTti
-      })
-    ]);
-
-    const toLegacyComponentType = (type: string) => {
-      if (type === 'PRBC') return 'RBC';
-      if (type === 'PLATELET_CONCENTRATE') return 'Platelet';
-      if (type === 'CRYOPRECIPITATE') return 'Cryo';
-      return type;
-    };
-
-    const startForSeries = fromDate || new Date(toDate.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const daysBetween = Math.max(1, Math.ceil((toDate.getTime() - startForSeries.getTime()) / 86400000));
-    const dateRange = Array.from({ length: daysBetween }, (_, i) => {
-      const d = new Date(startForSeries.getTime() + i * 86400000);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    });
-
-    const toSeries = (agg: any[]) => {
-      const map = new Map(agg.map((x) => [x._id, x.value]));
-      return dateRange.map((d) => ({ date: d, value: map.get(d) || 0 }));
-    };
-
-    const donationsTrend = toSeries(donationsTrendAgg);
-    const issuedTrend = toSeries(issuedTrendAgg);
-    const discardedTrend = toSeries(discardedTrendAgg);
-
-    const stockByGroup = stockByGroupAgg.map((x) => ({
-      bloodGroup: x._id?.bloodGroup || 'Unknown',
-      rh: x._id?.rhFactor === 'NEGATIVE' ? 'Negative' : 'Positive',
-      value: x.count,
-    }));
-    const stockByComponent = stockByComponentAgg.map((x) => ({
-      componentType: toLegacyComponentType(x._id),
-      value: x.count,
-    }));
-    const stockByComponentAndGroup = stockByComponentAndGroupAgg.map((x) => ({
-      componentType: toLegacyComponentType(x._id?.componentType),
-      bloodGroup: x._id?.bloodGroup || 'Unknown',
-      rh: x._id?.rhFactor === 'NEGATIVE' ? 'Negative' : 'Positive',
-      value: x.count,
-    }));
-    const nearExpiryByComponent = nearExpiryAgg.map((x) => ({
-      componentType: toLegacyComponentType(x._id),
-      value: x.count,
-    }));
-    const requestsByStatus = requestsByStatusAgg.map((x) => ({
-      status: (x._id || 'unknown').toLowerCase(),
-      value: x.count,
-    }));
-    const totalUnitsRequested = totalUnitsRequestedAgg?.[0]?.units || 0;
-
-    const positivity: Record<string, { Reactive: number; Negative: number; Shadeness: number }> = {};
-    positivityAgg.forEach((x) => {
-      let testKey = x._id?.test || 'Unknown';
-      if (testKey === 'HBSAG') testKey = 'HBsAg';
-      else if (testKey === 'SYPHILIS') testKey = 'VDRL';
-      else if (testKey === 'MALARIA') testKey = 'MP';
-
-      let resultKey = x._id?.result || 'Unknown';
-      if (resultKey === 'NEGATIVE') resultKey = 'Negative';
-      else if (resultKey === 'REACTIVE') resultKey = 'Reactive';
-      else if (resultKey === 'INDETERMINATE') resultKey = 'Shadeness';
-
-      if (!positivity[testKey]) {
-        positivity[testKey] = { Reactive: 0, Negative: 0, Shadeness: 0 };
-      }
-      const entry = positivity[testKey];
-      if (entry) {
-        if (resultKey === 'Reactive') entry.Reactive += x.count;
-        else if (resultKey === 'Negative') entry.Negative += x.count;
-        else if (resultKey === 'Shadeness') entry.Shadeness += x.count;
-      }
-    });
-
-    const statusPieMap: Record<string, number> = {
-      collected: 0,
-      'component-separated': 0,
-      testing: 0,
-      passed: 0,
-      failed: 0,
-      quarantined: 0,
-      issued: 0,
-      discarded: 0,
-    };
-    bloodUnitStatusAgg.forEach((x) => {
-      const status = x._id;
-      if (status === 'COLLECTED') statusPieMap.collected += x.count;
-      else if (status === 'IN_TESTING') statusPieMap.testing += x.count;
-      else if (status === 'QUARANTINE') statusPieMap.quarantined += x.count;
-      else if (['RELEASED', 'RESERVED', 'CROSSMATCHED'].includes(status)) statusPieMap.passed += x.count;
-      else if (['ISSUED', 'TRANSFUSED'].includes(status)) statusPieMap.issued += x.count;
-      else if (['DISCARDED', 'EXPIRED'].includes(status)) statusPieMap.discarded += x.count;
-    });
-
-    const bloodbagStatusPie = Object.entries(statusPieMap).map(([status, value]) => ({
-      status,
-      value,
-    }));
-
-    const donationsTrendMap = new Map(donationsTrendAgg.map((x) => [x._id, x.value]));
-    const issuedTrendMap = new Map(issuedTrendAgg.map((x) => [x._id, x.value]));
-    const discardedTrendMap = new Map(discardedTrendAgg.map((x) => [x._id, x.value]));
-
-    const nearExpiryTotal = nearExpiryAgg.reduce((s, x) => s + (x.count || 0), 0);
-
-    const donorDonationCounts = await DonationModel.aggregate([
-      { $match: { deletedAt: null } },
-      { $group: { _id: '$donor', count: { $sum: 1 } } }
-    ]);
-    let firstTimeDonors = 0;
-    let repeatDonors = 0;
-    donorDonationCounts.forEach((d) => {
-      if (d.count === 1) firstTimeDonors++;
-      else if (d.count > 1) repeatDonors++;
-    });
-
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-    const [
-      maleDonors,
-      femaleDonors,
-      otherDonors,
-      donorsFiltered,
-      componentsProducedAgg,
-      campsConducted,
-      expiringToday,
-      testsPending,
-      delayedTesting,
-      missingExpiry,
-      inactiveDonors,
-    ] = await Promise.all([
-      DonorModel.countDocuments({ sex: 'M', deletedAt: null }),
-      DonorModel.countDocuments({ sex: 'F', deletedAt: null }),
-      DonorModel.countDocuments({ sex: 'O', deletedAt: null }),
-      DonorModel.countDocuments({
-        deletedAt: null,
-        ...(fromDate ? { createdAt: { $gte: fromDate, $lte: toDate } } : {}),
-      }),
-      BloodUnitModel.aggregate([
-        {
-          $match: {
-            ...(fromDate ? { createdAt: { $gte: fromDate, $lte: toDate } } : {}),
-            ...siteMatchComponent,
-            deletedAt: null
-          }
-        },
-        { $group: { _id: '$componentType', count: { $sum: 1 } } },
-      ]),
-      CampModel.countDocuments({
-        ...(fromDate ? { dateFrom: { $gte: fromDate, $lte: toDate } } : {})
-      }),
-      BloodUnitModel.countDocuments({
-        status: 'RELEASED',
-        expiresAt: { $gte: startOfToday, $lt: startOfTomorrow },
-        ...siteMatchComponent,
-        deletedAt: null
-      }),
-      TtiResultModel.countDocuments({
-        releaseDecision: 'pending',
-        ...(siteId ? { donationId: { $in: await DonationModel.find({ campId: siteId, deletedAt: null }).distinct('donationId') } } : {})
-      }),
-      TtiResultModel.countDocuments({
-        releaseDecision: 'pending',
-        createdAt: { $lte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-        ...(siteId ? { donationId: { $in: await DonationModel.find({ campId: siteId, deletedAt: null }).distinct('donationId') } } : {})
-      }),
-      BloodUnitModel.countDocuments({
-        status: 'RELEASED',
-        expiresAt: null,
-        ...siteMatchComponent,
-        deletedAt: null
-      }),
-      DonorModel.countDocuments({
-        deletedAt: null,
-        $or: [
-          { lastDonationDate: { $lt: sixMonthsAgo } },
-          { lastDonationDate: null },
-          { lastDonationDate: { $exists: false } }
-        ]
-      }),
-    ]);
-
-    const componentsProducedTotal = (componentsProducedAgg || []).reduce((sum, x) => sum + (x.count || 0), 0);
-    const componentProducedMap = (componentsProducedAgg || []).reduce((acc: any, x) => {
-      acc[toLegacyComponentType(x._id)] = x.count || 0;
-      return acc;
-    }, {});
-
-    const stockByGroupMap = stockByGroup.reduce((acc: any, x) => {
-      const key = `${x.bloodGroup || 'Unknown'}|${x.rh || 'Unknown'}`;
-      acc[key] = x.value || 0;
-      return acc;
-    }, {});
-    const stockFor = (group: string, rh: string) => stockByGroupMap[`${group}|${rh}`] || 0;
-
-    const componentStockMap = stockByComponent.reduce((acc: any, x) => {
-      acc[x.componentType] = x.value || 0;
-      return acc;
-    }, {});
-
-    const requestsStatusMap = requestsByStatus.reduce((acc: any, x) => {
-      acc[x.status] = x.value || 0;
-      return acc;
-    }, {});
-    const totalRequests = requestsByStatus.reduce((sum, x) => sum + (x.value || 0), 0);
-
-    const testsTotal = positivityAgg.reduce((sum, x) => sum + (x.count || 0), 0);
-
-    const [donationsInHouse, donationsCamp] = await Promise.all([
-      DonationModel.countDocuments({
-        campId: null,
-        ...(fromDate ? { collectedAt: { $gte: fromDate, $lte: toDate } } : {}),
-        ...siteMatchBag,
-        deletedAt: null
-      }),
-      DonationModel.countDocuments({
-        campId: { $ne: null },
-        ...(fromDate ? { collectedAt: { $gte: fromDate, $lte: toDate } } : {}),
-        ...siteMatchBag,
-        deletedAt: null
-      })
-    ]);
-
-    const ongoingCampsRaw = await CampModel.find({
-      dateFrom: { $lte: now },
-      dateTo: { $gte: now }
-    }).populate('staff', 'name').lean();
-
-    const ongoingCamps = ongoingCampsRaw.map((c: any) => ({
-      id: c._id.toString(),
-      campId: c.campId,
-      name: c.name,
-      address: c.address,
-      dateFrom: c.dateFrom.toISOString(),
-      dateTo: c.dateTo.toISOString(),
-      staff: c.staff?.map((s: any) => s ? `${s.name?.first || ''} ${s.name?.last || ''}`.trim() : '').filter(Boolean) || [],
-      donorsCount: c.donorData?.length || 0,
-      unitsCount: c.unitData?.length || 0,
-    }));
-
-    const overview = {
-      donorDonation: {
-        donors: donorsTotal,
-        newDonors: donorsFiltered,
-        donations: donationsInRange,
-        donationsInHouse,
-        donationsCamp,
-        maleDonors,
-        femaleDonors,
-        otherDonors,
-        firstTimeDonors,
-        repeatDonors,
-      },
-      bloodBags: {
-        bagsCollected: donationsInRange,
-        bagsTested: testsTotal,
-        bagsPassed: bagsPassed,
-        bagsFailed: bagsFailed,
-        bagsPending: bagsPending,
-        bagsQuarantined: bagsQuarantined,
-      },
-      components: {
-        componentsProduced: componentsProducedTotal,
-        rbcProduced: componentProducedMap.RBC || 0,
-        pltProduced: componentProducedMap.Platelet || 0,
-        ffpProduced: componentProducedMap.FFP || 0,
-        cryoProduced: componentProducedMap.Cryo || 0,
-      },
-      inventory: {
-        inStock:
-          (componentStockMap.RBC || 0) +
-          (componentStockMap.FFP || 0) +
-          (componentStockMap.Platelet || 0) +
-          (componentStockMap.Cryo || 0),
-        reserved: reservedInRange,
-        issued: issuedInRange,
-        discarded: discardedInRange,
-        nearExpiryTotal,
-        expiredUnits: 0,
-      },
-      bloodGroups: {
-        Opos: stockFor('O', 'Positive'),
-        Oneg: stockFor('O', 'Negative'),
-        Apos: stockFor('A', 'Positive'),
-        Aneg: stockFor('A', 'Negative'),
-        Bpos: stockFor('B', 'Positive'),
-        Bneg: stockFor('B', 'Negative'),
-        ABpos: stockFor('AB', 'Positive'),
-        ABneg: stockFor('AB', 'Negative'),
-      },
-      componentAvailability: {
-        rbcStock: componentStockMap.RBC || 0,
-        pltStock: componentStockMap.Platelet || 0,
-        ffpStock: componentStockMap.FFP || 0,
-        cryoStock: componentStockMap.Cryo || 0,
-      },
-      hospitalRequests: {
-        totalRequests,
-        pendingRequests: requestsStatusMap.pending || 0,
-        matchedRequests: requestsStatusMap.matched || 0,
-        approvedRequests: requestsStatusMap.approved || 0,
-        issuedRequests: requestsStatusMap.issued || 0,
-        completedRequests: requestsStatusMap.completed || 0,
-        rejectedRequests: requestsStatusMap.rejected || 0,
-        totalUnitsRequested,
-      },
-      testingSerology: {
-        testsTotal,
-        hivPos: (positivity.HIV && positivity.HIV.Reactive) || 0,
-        hbvPos: (positivity.HBsAg && positivity.HBsAg.Reactive) || 0,
-        hcvPos: (positivity.HCV && positivity.HCV.Reactive) || 0,
-        vdrlPos: (positivity.VDRL && positivity.VDRL.Reactive) || 0,
-        mpPos: (positivity.MP && positivity.MP.Reactive) || 0,
-      },
-      camps: {
-        campsConducted,
-        campDonors: campDonorsList.length,
-        campCollections: campDonationIds.length,
-        campFailures,
-      },
-      alerts: {
-        expiringToday,
-        testsPending,
-        delayedTesting,
-        missingExpiry,
-        inactiveDonors,
-      },
-    };
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        totals: {
-          donors: donorsFiltered,
-          donations: donationsInRange,
-          inStock: inStockInRange,
-          reserved: reservedInRange,
-          issued: issuedInRange,
-          discarded: discardedInRange,
-          transfusions: transfusionsInRange,
-        },
-        stockByGroup,
-        stockByComponent,
-        stockByComponentAndGroup,
-        nearExpiryByComponent,
-        nearExpiryTotal,
-        trends: {
-          donations: donationsTrend,
-          issued: issuedTrend,
-          discarded: discardedTrend,
-        },
-        requests: {
-          byStatus: requestsByStatus,
-          totalUnitsRequested,
-        },
-        transfusionsLast30d: transfusionsInRange,
-        positivity,
-        bloodbagStatusPie,
-        ongoingCamps,
-        overview,
-      },
-    });
-  } catch (err) {
-    next(err);
   }
 });
 

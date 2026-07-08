@@ -15,5 +15,6 @@ const router = Router();
 router.get('/', authenticate, requireRole([...ROLES]), requirePermission('bulk-transfer:read'), controllers.list);
 router.get('/:id', authenticate, requireRole([...ROLES]), requirePermission('bulk-transfer:read'), controllers.get);
 router.post('/', authenticate, requireRole([...ROLES]), requirePermission('bulk-transfer:create'), controllers.create);
+router.delete('/:id', authenticate, requireRole([...ROLES]), requirePermission('bulk-transfer:delete'), controllers.remove);
 
 export default router;

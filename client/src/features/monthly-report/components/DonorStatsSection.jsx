@@ -25,7 +25,11 @@ export default function DonorStatsSection({
       </Section>
 
       <Section title="6. Donor Counselling Before Donation">
-        <NotTracked note={donorCounselling.note} />
+        {donorCounselling.available ? (
+          <div className="text-sm font-medium text-slate-700">Total Donor Counselling = {donorCounselling.count}</div>
+        ) : (
+          <NotTracked note={donorCounselling.note} />
+        )}
       </Section>
 
       <Section title="7. Bulk Transfer (Loan Given / Taken)">
@@ -50,7 +54,12 @@ export default function DonorStatsSection({
       </Section>
 
       <Section title="15. Voluntary Donor Cards Issued">
-        <NotTracked note={donorCards.note} />
+        <div className="text-sm font-medium text-slate-700">Total Donor Cards Issued = {donorCards.totalCount ?? 0}</div>
+        <ReportTable
+          headers={['Component', 'Blood Group', 'Rh', 'Units']}
+          rows={(donorCards.breakdown || []).map((b) => [b.componentType, b.bloodGroup, b.rh, b.count])}
+          alignRight={[3]}
+        />
       </Section>
     </>
   );

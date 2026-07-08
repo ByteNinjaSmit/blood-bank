@@ -24,6 +24,7 @@ export const chemicalInventoryApi = {
 
   chemical: {
     list:   ()       => apiClient.get(`${V}/chemical`).then(unwrap),
+    listWithStock: () => apiClient.get(`${V}/chemical`, { params: { withStockOnly: 'true' } }).then(unwrap),
     create: (data)   => apiClient.post(`${V}/chemical`, data).then(unwrap),
     update: (id, d)  => apiClient.put(`${V}/chemical/${id}`, d).then(unwrap),
     remove: (id)     => apiClient.delete(`${V}/chemical/${id}`).then(unwrap),

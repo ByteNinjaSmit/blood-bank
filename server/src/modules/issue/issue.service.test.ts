@@ -47,7 +47,7 @@ function unitDto(over: Partial<UnitDto> = {}): UnitDto {
     status: 'CROSSMATCHED',
     specialAttributes: [],
     storageLocation: null,
-    thalassemiaPatient: null,
+    clinicalIndicationPatient: null,
     ...over,
   };
 }

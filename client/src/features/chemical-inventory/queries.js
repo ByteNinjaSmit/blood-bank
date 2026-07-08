@@ -7,6 +7,7 @@ export const chemicalInventoryKeys = {
   supplier:     ()       => [...chemicalInventoryKeys.all, 'supplier'],
   manufacturer: ()       => [...chemicalInventoryKeys.all, 'manufacturer'],
   chemical:     ()       => [...chemicalInventoryKeys.all, 'chemical'],
+  chemicalWithStock: ()  => [...chemicalInventoryKeys.all, 'chemical', 'with-stock'],
   lot:          (f)      => [...chemicalInventoryKeys.all, 'lot', f ?? {}],
   history:      (f)      => [...chemicalInventoryKeys.all, 'history', f ?? {}],
   purchase:     ()       => [...chemicalInventoryKeys.all, 'purchase'],
@@ -107,6 +108,15 @@ export function useChemicalList() {
   });
 }
 
+// Only chemicals with at least one stock lot — matches what /chemical-inventory/usage shows.
+export function useChemicalListWithStock() {
+  return useQuery({
+    queryKey: chemicalInventoryKeys.chemicalWithStock(),
+    queryFn: chemicalInventoryApi.chemical.listWithStock,
+    staleTime: 30_000,
+  });
+}
+
 export function useCreateChemical() {
   const qc = useQueryClient();
   return useMutation({
@@ -127,7 +137,10 @@ export function useDeleteChemical() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: chemicalInventoryApi.chemical.remove,
-    onSuccess: () => qc.invalidateQueries({ queryKey: chemicalInventoryKeys.chemical() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: chemicalInventoryKeys.chemical() });
+      qc.invalidateQueries({ queryKey: chemicalInventoryKeys.chemicalWithStock() });
+    },
   });
 }
 

@@ -276,7 +276,7 @@ const Reserve = () => {
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{r?.bag?.bagNo || r.bagNo}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl} mL</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{formatDateDMY(r?.component?.expiryDate)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.hospital?.name || '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{formatDateDMY(r?.reservedUntil)}</td>
@@ -541,7 +541,7 @@ const Reserve = () => {
                   </div>
                   <div>
                     <span className="font-semibold text-gray-500">Volume:</span>
-                    <div className="text-slate-800 mt-0.5 font-medium">{selectedReserve.component?.volumeMl} mL</div>
+                    <div className="text-slate-800 mt-0.5 font-medium">{selectedReserve.component?.volumeMl ? `${selectedReserve.component.volumeMl} mL` : '—'}</div>
                   </div>
                   <div>
                     <span className="font-semibold text-gray-500">Expiry Date:</span>

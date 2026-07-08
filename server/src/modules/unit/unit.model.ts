@@ -6,6 +6,7 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import {
   ABO_GROUP,
+  CLINICAL_DISEASE,
   COMPONENT_TYPE,
   DISCARD_REASON,
   RH_FACTOR,
@@ -60,7 +61,10 @@ const BloodUnitSchema = new Schema(
     issuedTo: { type: Schema.Types.ObjectId, ref: 'Issue' },
     issuedAt: Date,
     storageLocation: { type: String, default: null },
-    thalassemiaPatient: {
+    // A unit issued directly to a named patient for a clinical indication
+    // (Thalassemia / Sickle Cell Anaemia / Other), as opposed to being
+    // sent to storage or matched against a hospital requisition.
+    clinicalIndicationPatient: {
       firstName: String,
       middleName: String,
       lastName: String,
@@ -68,6 +72,8 @@ const BloodUnitSchema = new Schema(
       age: Number,
       sex: String,
       bloodGroup: String,
+      disease: { type: String, enum: CLINICAL_DISEASE },
+      otherDiseaseName: { type: String, trim: true },
     },
 
     transfusedTo: { type: Schema.Types.ObjectId, ref: 'Transfusion' },

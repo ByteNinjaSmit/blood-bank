@@ -31,7 +31,7 @@ export interface UnitDto {
   status: UnitStatus;
   specialAttributes: SpecialNeed[];
   storageLocation: string | null;
-  thalassemiaPatient: {
+  clinicalIndicationPatient: {
     firstName: string;
     middleName: string;
     lastName: string;
@@ -39,6 +39,8 @@ export interface UnitDto {
     age: number;
     sex: string;
     bloodGroup: string;
+    disease?: string;
+    otherDiseaseName?: string;
   } | null;
 }
 
@@ -56,7 +58,7 @@ interface RawUnit {
   status: UnitStatus;
   specialAttributes?: SpecialNeed[];
   storageLocation?: string | null;
-  thalassemiaPatient?: {
+  clinicalIndicationPatient?: {
     firstName: string;
     middleName: string;
     lastName: string;
@@ -64,6 +66,8 @@ interface RawUnit {
     age: number;
     sex: string;
     bloodGroup: string;
+    disease?: string;
+    otherDiseaseName?: string;
   } | null;
 }
 
@@ -82,7 +86,7 @@ function toDto(raw: RawUnit): UnitDto {
     status: raw.status,
     specialAttributes: raw.specialAttributes ?? [],
     storageLocation: raw.storageLocation ?? null,
-    thalassemiaPatient: raw.thalassemiaPatient ?? null,
+    clinicalIndicationPatient: raw.clinicalIndicationPatient ?? null,
   };
 }
 

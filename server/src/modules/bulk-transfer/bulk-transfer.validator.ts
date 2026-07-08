@@ -15,8 +15,10 @@ const BulkTransferItem = z.object({
   bloodGroup: z.string().trim().min(1),
   bagNo: z.string().trim().min(1),
   segmentNo: z.string().trim().optional(),
+  volumeMl: z.coerce.number().positive().optional(),
   collectedAt: z.coerce.date().optional(),
   expiresAt: z.coerce.date().optional(),
+  unitId: z.string().regex(OBJECT_ID).optional(),
 });
 
 export const CreateBulkTransferBody = z.object({

@@ -14,8 +14,14 @@ const BulkTransferItem = new Schema(
     bloodGroup: { type: String, required: true, trim: true },
     bagNo: { type: String, required: true, trim: true },
     segmentNo: { type: String, trim: true },
+    volumeMl: { type: Number },
     collectedAt: { type: Date },
     expiresAt: { type: Date },
+    // Only set for GIVE_LOAN items — the BloodUnit this bag came from, so
+    // it can be taken out of stock when the loan is given and put back
+    // when the transfer is deleted. TAKE_LOAN items never have one; those
+    // bags never had a BloodUnit record at this bank.
+    unitId: { type: Schema.Types.ObjectId, ref: 'BloodUnit' },
   },
   { _id: false },
 );

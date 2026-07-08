@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, User, HeartHandshake, History, ShieldAlert } from 'lucide-react';
+import { FileText, User, HeartHandshake, History, ShieldAlert, CreditCard } from 'lucide-react';
 import HospitalSelect from '../components/HospitalSelect';
 import PatientForm from '../components/PatientForm';
 import RequestedComponentsList from '../components/RequestedComponentsList';
@@ -83,6 +83,7 @@ export default function RequestCreationStep({
           },
         },
         requestedComponents: requestDoc.requestedComponents || [],
+        donorCard: form.donorCard,
       };
     }
     return form;
@@ -308,6 +309,86 @@ export default function RequestCreationStep({
           onRemove={readOnly ? undefined : removeRequestLine}
           readOnly={readOnly}
         />
+      </div>
+
+      {/* Card 6: Donor Card */}
+      <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-sm space-y-4">
+        <div className="flex items-center gap-2 border-b pb-2 text-orange-800">
+          <CreditCard className="w-5 h-5" />
+          <h3 className="font-semibold text-gray-800">Donor Card</h3>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-700 mb-2">
+            Did the person bring a donor card while collecting this blood?
+          </label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="radio"
+                name="donorCardBrought"
+                checked={displayForm.donorCard?.brought === true}
+                onChange={() => !readOnly && setForm((p) => ({ ...p, donorCard: { ...p.donorCard, brought: true } }))}
+                disabled={readOnly}
+              />
+              Yes
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="radio"
+                name="donorCardBrought"
+                checked={!displayForm.donorCard?.brought}
+                onChange={() => !readOnly && setForm((p) => ({ ...p, donorCard: { ...p.donorCard, brought: false } }))}
+                disabled={readOnly}
+              />
+              No
+            </label>
+          </div>
+        </div>
+
+        {displayForm.donorCard?.brought && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Name</label>
+              <input
+                className={`w-full px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+                value={displayForm.donorCard?.name || ''}
+                onChange={(e) => !readOnly && setForm((p) => ({ ...p, donorCard: { ...p.donorCard, name: e.target.value } }))}
+                disabled={readOnly}
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Address</label>
+              <input
+                className={`w-full px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+                value={displayForm.donorCard?.address || ''}
+                onChange={(e) => !readOnly && setForm((p) => ({ ...p, donorCard: { ...p.donorCard, address: e.target.value } }))}
+                disabled={readOnly}
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Blood Group</label>
+              <select
+                className={`w-full px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+                value={displayForm.donorCard?.bloodGroup || 'A+'}
+                onChange={(e) => !readOnly && setForm((p) => ({ ...p, donorCard: { ...p.donorCard, bloodGroup: e.target.value } }))}
+                disabled={readOnly}
+              >
+                {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) => (
+                  <option key={bg} value={bg}>{bg}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Blood Donation Card Number</label>
+              <input
+                className={`w-full px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+                value={displayForm.donorCard?.donationCardNumber || ''}
+                onChange={(e) => !readOnly && setForm((p) => ({ ...p, donorCard: { ...p.donorCard, donationCardNumber: e.target.value } }))}
+                disabled={readOnly}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="pt-4 border-t border-gray-200 mt-6 flex justify-between items-center">

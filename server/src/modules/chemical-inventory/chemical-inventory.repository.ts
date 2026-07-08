@@ -32,6 +32,7 @@ export interface ChemicalInventoryRepo {
 
   // Chemical
   listChemicals(): Promise<any[]>;
+  listChemicalsWithStock(): Promise<any[]>;
   findChemicalById(id: string): Promise<any>;
   createChemical(doc: any & { actorId: string }): Promise<any>;
   updateChemical(id: string, patch: any, actorId: string): Promise<any>;
@@ -160,6 +161,15 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
 
     async listChemicals() {
       return ChemicalModel.find({ deletedAt: null })
+        .populate('categoryId', 'name')
+        .populate('manufacturerId', 'name')
+        .sort({ name: 1 })
+        .lean();
+    },
+
+    async listChemicalsWithStock() {
+      const chemicalIdsWithStock = await ChemicalStockLotModel.distinct('chemicalId', { deletedAt: null });
+      return ChemicalModel.find({ deletedAt: null, _id: { $in: chemicalIdsWithStock } })
         .populate('categoryId', 'name')
         .populate('manufacturerId', 'name')
         .sort({ name: 1 })

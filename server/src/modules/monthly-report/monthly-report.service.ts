@@ -1,5 +1,6 @@
 import { childLogger } from '@/core/logger';
 import type { MonthlyReportRepo } from './monthly-report.repository';
+import type { MonthlyReportInputRepo } from '@/modules/monthly-report-input/monthly-report-input.repository';
 
 const log = childLogger({ module: 'monthly-report-service' });
 
@@ -14,6 +15,7 @@ const PARTIAL_NOTE =
 
 export interface MonthlyReportDeps {
   repo: MonthlyReportRepo;
+  inputs: MonthlyReportInputRepo;
 }
 
 export function createMonthlyReportService(deps: MonthlyReportDeps) {
@@ -35,9 +37,11 @@ export function createMonthlyReportService(deps: MonthlyReportDeps) {
         stockLedger,
         bloodGroupCollection,
         issueByIndication,
+        donorCards,
         chemicalStock,
         bagStock,
         campWise,
+        savedInput,
       ] = await Promise.all([
         deps.repo.getCampsCount(from, to),
         deps.repo.getCollectionStats(from, to),
@@ -50,21 +54,22 @@ export function createMonthlyReportService(deps: MonthlyReportDeps) {
         deps.repo.getStockLedger(from, to),
         deps.repo.getBloodGroupCollection(from, to),
         deps.repo.getIssueByIndication(from, to),
+        deps.repo.getDonorCardsIssued(from, to),
         deps.repo.getChemicalStock(month, year),
         deps.repo.getBagStock(),
         deps.repo.getCampWiseStats(from, to),
+        deps.inputs.findByPeriod(month, year),
       ]);
 
       const missingDataNotes: Array<{ item: string; note: string }> = [
         { item: 'Voluntary vs. replacement collection split', note: 'Inferred from donation type (REPLACEMENT vs. all other donation types) — not a dedicated voluntary/replacement flag.' },
-        { item: 'Donor counselling count', note: NOT_TRACKED },
+        ...(savedInput ? [] : [{ item: 'Donor counselling count', note: NOT_TRACKED }]),
         { item: 'Bulk transfer (loan given / taken to other blood banks)', note: NOT_TRACKED },
         { item: 'Blood bags given to blood storage centres', note: 'Identified by hospital records whose name contains "storage" (e.g. "SJS Storage") — there is no dedicated storage-centre entity type. Add a hospital record for each centre if none appear below.' },
         { item: 'Blood bags issued by disease category', note: PARTIAL_NOTE },
         { item: 'Rejected donors by reason', note: 'Sourced from Deferral records (the system\'s actual donor-rejection log) and bucketed by keyword match on the deferral reason text / deferral source — verify before statutory submission.' },
-        { item: 'ICTC referral counts', note: NOT_TRACKED },
-        { item: 'Voluntary donor cards issued', note: NOT_TRACKED },
-        { item: 'Component issue by clinical indication', note: PARTIAL_NOTE },
+        ...(savedInput ? [] : [{ item: 'ICTC referral counts', note: NOT_TRACKED }]),
+        { item: 'Component issue by clinical indication (free-text categories)', note: PARTIAL_NOTE },
         {
           item: 'Camp-wise deferral count',
           note: 'Deferral records have no direct camp link in the data model — approximated by matching deferrals raised in the period to donors who donated at that camp during the period.',
@@ -88,15 +93,19 @@ export function createMonthlyReportService(deps: MonthlyReportDeps) {
         componentsIssued: { hospitals: componentsIssued.hospitals },
         discards,
         repeatedDonors,
-        donorCounselling: { available: false, note: NOT_TRACKED },
+        donorCounselling: savedInput
+          ? { available: true, count: savedInput.donorCounsellingCount }
+          : { available: false, note: NOT_TRACKED },
         bulkTransfer: { available: false, note: NOT_TRACKED },
         bagsToStorageCentres: { centres: componentsIssued.storageCentres },
         rejectedDonors,
         donorTesting,
         ttiTesting,
-        ictcReferral: { available: false, note: NOT_TRACKED },
+        ictcReferral: savedInput
+          ? { available: true, counts: savedInput.ictcReferral }
+          : { available: false, note: NOT_TRACKED },
         stockLedger,
-        donorCards: { available: false, note: NOT_TRACKED },
+        donorCards,
         bloodGroupCollection,
         issueByIndication,
         chemicalStock,

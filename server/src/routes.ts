@@ -39,6 +39,9 @@ import chemicalInventoryRouter from '@/modules/chemical-inventory/chemical-inven
 import monthlyReportRouter from '@/modules/monthly-report/monthly-report.routes';
 import uploadRouter from '@/modules/upload/upload.routes';
 import exportRouter from '@/modules/export/export.routes';
+import dashboardRouter from '@/modules/dashboard/dashboard.routes';
+import donorCardRouter from '@/modules/donor-card/donor-card.routes';
+import monthlyReportInputRouter from '@/modules/monthly-report-input/monthly-report-input.routes';
 import { errorMiddleware } from '@/shared/middlewares/error';
 
 interface ModuleRoute {
@@ -74,6 +77,9 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/monthly-report', router: monthlyReportRouter },
   { path: '/upload', router: uploadRouter },
   { path: '/export', router: exportRouter },
+  { path: '/dashboard', router: dashboardRouter },
+  { path: '/donor-card', router: donorCardRouter },
+  { path: '/monthly-report-input', router: monthlyReportInputRouter },
 ];
 
 export function registerRoutes(): Router {

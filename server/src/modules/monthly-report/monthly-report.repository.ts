@@ -10,6 +10,7 @@ import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { IssueModel } from '@/modules/issue/issue.model';
+import { DonorCardModel } from '@/modules/donor-card/donor-card.model';
 import { BagStockModel } from '@/modules/bag-stock/bag-stock.model';
 import { ChemicalModel, ChemicalStockLotModel } from '@/modules/chemical-inventory/chemical-inventory.model';
 import { createChemicalInventoryRepo } from '@/modules/chemical-inventory/chemical-inventory.repository';
@@ -140,6 +141,7 @@ export interface MonthlyReportRepo {
   getStockLedger(from: Date, to: Date): Promise<any>;
   getBloodGroupCollection(from: Date, to: Date): Promise<any>;
   getIssueByIndication(from: Date, to: Date): Promise<any>;
+  getDonorCardsIssued(from: Date, to: Date): Promise<any>;
   getChemicalStock(month: number, year: number): Promise<any>;
   getBagStock(): Promise<any>;
   getCampWiseStats(from: Date, to: Date): Promise<any>;
@@ -487,13 +489,38 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
     },
 
     async getIssueByIndication(from, to) {
+      // Clinical-indication issues (Thalassemia / Sickle Cell Anaemia / Other)
+      // go through the direct BloodUnit.clinicalIndicationPatient flow, not a
+      // requisition — so they never appear in IssueModel and must be counted
+      // separately from the free-text-matched grid below.
+      const diseaseUnits = await BloodUnitModel.find({
+        issuedAt: { $gte: from, $lt: to },
+        'clinicalIndicationPatient.firstName': { $exists: true, $nin: [null, ''] },
+      })
+        .select('clinicalIndicationPatient')
+        .lean();
+
+      const emptyBucket = () => ({ count: 0, byBloodGroup: {} as Record<string, number> });
+      const structuredDiseaseCounts = {
+        thalassemia: emptyBucket(),
+        sickleCellAnaemia: emptyBucket(),
+      };
+      for (const u of diseaseUnits as any[]) {
+        const disease = u.clinicalIndicationPatient?.disease;
+        if (disease !== 'THALASSEMIA' && disease !== 'SICKLE_CELL_ANAEMIA') continue;
+        const bucket = disease === 'THALASSEMIA' ? structuredDiseaseCounts.thalassemia : structuredDiseaseCounts.sickleCellAnaemia;
+        bucket.count += 1;
+        const bg = u.clinicalIndicationPatient?.bloodGroup || 'Unknown';
+        bucket.byBloodGroup[bg] = (bucket.byBloodGroup[bg] ?? 0) + 1;
+      }
+
       const issues = await IssueModel.find({
         issuedAt: { $gte: from, $lt: to },
         returnedAt: { $exists: false },
       })
         .select('requisitionId unitId')
         .lean();
-      if (issues.length === 0) return { rows: [] };
+      if (issues.length === 0) return { rows: [], structuredDiseaseCounts };
 
       const reqIds = [...new Set(issues.map((i) => String(i.requisitionId)))];
       const unitIdSet = [...new Set(issues.map((i) => i.unitId))];
@@ -523,7 +550,38 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
       }
 
       const rows = Object.entries(grid).map(([indication, byProduct]) => ({ indication, byProduct }));
-      return { rows };
+      return { rows, structuredDiseaseCounts };
+    },
+
+    async getDonorCardsIssued(from, to) {
+      const cards = await DonorCardModel.find({ createdAt: { $gte: from, $lt: to } })
+        .select('requisitionId')
+        .lean();
+      const totalCount = cards.length;
+      if (totalCount === 0) return { totalCount: 0, breakdown: [] };
+
+      const reqIds = cards.map((c) => c.requisitionId);
+      const issues = await IssueModel.find({ requisitionId: { $in: reqIds } }).select('unitId').lean();
+      const unitIds = [...new Set(issues.map((i) => i.unitId))];
+      if (unitIds.length === 0) return { totalCount, breakdown: [] };
+
+      const units = await BloodUnitModel.find({ unitId: { $in: unitIds } })
+        .select('componentType aboGroup rhFactor')
+        .lean();
+
+      const grid = new Map<string, number>();
+      for (const u of units as any[]) {
+        const rh = u.rhFactor === 'NEGATIVE' ? 'Negative' : 'Positive';
+        const key = `${toProductLabel(u.componentType)}|${u.aboGroup}|${rh}`;
+        grid.set(key, (grid.get(key) ?? 0) + 1);
+      }
+
+      const breakdown = [...grid.entries()].map(([key, count]) => {
+        const [componentType, bloodGroup, rh] = key.split('|');
+        return { componentType, bloodGroup, rh, count };
+      });
+
+      return { totalCount, breakdown };
     },
 
     async getChemicalStock(month, year) {

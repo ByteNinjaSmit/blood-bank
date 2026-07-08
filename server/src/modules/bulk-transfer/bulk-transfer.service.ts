@@ -7,6 +7,7 @@ export interface BulkTransferService {
   list(f: ListBulkTransferInput): Promise<{ items: BulkTransferDto[]; total: number; page: number; limit: number }>;
   get(id: string): Promise<BulkTransferDto>;
   create(input: CreateBulkTransferInput, actorId: string): Promise<BulkTransferDto>;
+  remove(id: string, actorId: string): Promise<BulkTransferDto>;
 }
 
 function generateTransferId(): string {
@@ -37,6 +38,15 @@ export function createBulkTransferService(deps: { bulkTransfers: BulkTransferRep
         'bulk transfer recorded',
       );
       return created;
+    },
+
+    async remove(id, actorId) {
+      const removed = await deps.bulkTransfers.remove(id, actorId);
+      log.info(
+        { transferId: removed.transferId, transferType: removed.transferType, actorId },
+        'bulk transfer deleted',
+      );
+      return removed;
     },
   };
 }

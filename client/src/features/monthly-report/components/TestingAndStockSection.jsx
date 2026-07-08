@@ -20,7 +20,21 @@ export default function TestingAndStockSection({ ttiTesting, ictcReferral, stock
       </Section>
 
       <Section title="13. ICTC Referral">
-        <NotTracked note={ictcReferral.note} />
+        {ictcReferral.available ? (
+          <ReportTable
+            headers={['HIV', 'HBsAg', 'HCV', 'VDRL', 'Malaria']}
+            rows={[[
+              ictcReferral.counts.hiv,
+              ictcReferral.counts.hbsag,
+              ictcReferral.counts.hcv,
+              ictcReferral.counts.vdrl,
+              ictcReferral.counts.malaria,
+            ]]}
+            alignRight={[0, 1, 2, 3, 4]}
+          />
+        ) : (
+          <NotTracked note={ictcReferral.note} />
+        )}
       </Section>
 
       <Section title="14. Blood Collection & Stock Details">

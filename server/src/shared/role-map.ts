@@ -59,7 +59,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'bag-inspection:read', 'bag-inspection:create',
     'bag-issue:read', 'bag-issue:create',
     'bag-discard:read', 'bag-discard:create', 'bag-discard:approve',
-    'bulk-transfer:read', 'bulk-transfer:create',
+    'bulk-transfer:read', 'bulk-transfer:create', 'bulk-transfer:delete',
   ],
   bbo: [
     'donor:read',
@@ -84,7 +84,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'bag-inspection:read', 'bag-inspection:create',
     'bag-issue:read', 'bag-issue:create',
     'bag-discard:read', 'bag-discard:create', 'bag-discard:approve',
-    'bulk-transfer:read', 'bulk-transfer:create',
+    'bulk-transfer:read', 'bulk-transfer:create', 'bulk-transfer:delete',
   ],
   'medical-officer': [
     'donor:read',
@@ -122,7 +122,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'bag-inspection:read', 'bag-inspection:create',
     'bag-issue:read', 'bag-issue:create',
     'bag-discard:read', 'bag-discard:create',
-    'bulk-transfer:read', 'bulk-transfer:create',
+    'bulk-transfer:read', 'bulk-transfer:create', 'bulk-transfer:delete',
   ],
   'issue-counter': ['unit:read', 'unit:issue', 'unit:return', 'requisition:read'],
   'apheresis-tech': ['donor:read', 'donor:create', 'donation:read', 'donation:create'],

@@ -2,6 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import hospitalApi from '@/services/hospitalApi';
 import requisitionApi from '@/services/requisitionApi';
+import { donorCardApi } from '@/features/donor-card/api';
+
+export const defaultDonorCard = {
+  brought: false,
+  name: '',
+  address: '',
+  bloodGroup: 'A+',
+  donationCardNumber: '',
+};
 
 export const defaultPatient = {
   name: '',
@@ -50,6 +59,7 @@ export default function useRequisition(authToken) {
     requiredAt: '',
     patient: { ...defaultPatient },
     requestedComponents: [ { ...defaultRequestedComponent } ],
+    donorCard: { ...defaultDonorCard },
   });
 
   // Created request state
@@ -307,6 +317,23 @@ function checkHasChanges(doc, payload) {
       if (!res.success) return toast.error(res.error || 'Failed to create request');
       setRequestDoc(res.data);
       toast.success(res?.raw?.message || 'Request created');
+
+      // Best-effort — the requisition itself already succeeded, so a donor
+      // card save failure shouldn't block the wizard from proceeding.
+      if (form.donorCard?.brought && res.data?._id) {
+        try {
+          await donorCardApi.create({
+            requisitionId: res.data._id,
+            name: form.donorCard.name,
+            address: form.donorCard.address,
+            bloodGroup: form.donorCard.bloodGroup,
+            donationCardNumber: form.donorCard.donationCardNumber,
+          });
+        } catch {
+          toast.warning('Request created, but saving the donor card details failed.');
+        }
+      }
+
       // auto match immediately after creating the request
       await handleMatch(res.data?._id);
       setCurrentStep(2);

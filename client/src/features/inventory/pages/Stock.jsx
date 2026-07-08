@@ -264,6 +264,7 @@ const Stock = () => {
   const [expiryTo, setExpiryTo] = useState("");
   const [order, setOrder] = useState("desc");
   const [sortBy, setSortBy] = useState("createdAt");
+  const [source, setSource] = useState("all"); // all | own | loan
 
   const buildParams = (page, limit) => ({
     page,
@@ -278,6 +279,10 @@ const Stock = () => {
     expiryTo: expiryTo || undefined,
     sortBy,
     order,
+    // Always send explicitly — the backend only merges in loan-taken bags
+    // when this page opts in; every other screen omits `source` entirely
+    // and must keep seeing real BloodUnit-backed rows only.
+    source,
   });
 
   const fetchRows = async (page = 1, limit = pagination.limit) => {
@@ -322,7 +327,7 @@ const Stock = () => {
   useEffect(() => {
     fetchRows(1, pagination.limit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, componentType, siteId, search, bloodGroup, rh, expiryFrom, expiryTo, order, sortBy]);
+  }, [status, componentType, siteId, search, bloodGroup, rh, expiryFrom, expiryTo, order, sortBy, source]);
 
   return (
     <div className="min-h-screen bg-gray-50 uppercase tracking-tight">
@@ -390,6 +395,21 @@ const Stock = () => {
                     <SelectItem value="in-stock">In Stock</SelectItem>
                     <SelectItem value="reserved">Reserved</SelectItem>
                     <SelectItem value="issued">Issued</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Source (Own Stock vs Taken on Loan) */}
+              <div className="w-40 space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Source</label>
+                <Select value={source} onValueChange={(val) => {setSource(val); setPagination(p=>({...p,page:1}));}}>
+                  <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                    <SelectValue placeholder="Source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Bags</SelectItem>
+                    <SelectItem value="own">Own Collection</SelectItem>
+                    <SelectItem value="loan">Taken On Loan</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -479,12 +499,12 @@ const Stock = () => {
 
               {/* Actions */}
               <div className="flex items-center gap-2 border-l border-gray-200 pl-3 pt-4">
-                {(search || componentType || status !== "in-stock" || bloodGroup || rh || expiryFrom || expiryTo) && (
+                {(search || componentType || status !== "in-stock" || bloodGroup || rh || expiryFrom || expiryTo || source !== "all") && (
                   <button
                     onClick={() => {
                       setSearch(""); setComponentType(""); setStatus("in-stock");
                       setBloodGroup(""); setRh(""); setExpiryFrom(""); setExpiryTo("");
-                      setSortBy("createdAt"); setOrder("desc");
+                      setSortBy("createdAt"); setOrder("desc"); setSource("all");
                       setPagination(p=>({...p,page:1}));
                     }}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-100"
@@ -539,7 +559,14 @@ const Stock = () => {
                 ) : (
                   rows.map((r) => (
                     <tr key={r._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{r?.bag?.bagNo || r.bagNo}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        <div className="flex items-center gap-1.5">
+                          {r?.bag?.bagNo || r.bagNo}
+                          {r.source === 'LOAN' && (
+                            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">Loan</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
                       <td className="px-4 py-3 text-sm text-gray-600 font-medium">
@@ -552,7 +579,7 @@ const Stock = () => {
                           return `${day}/${month}/${year}`;
                         })() : '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl} mL</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-600 font-medium">
                         {r?.component?.expiryDate ? (() => {
                           const d = new Date(r.component.expiryDate);
@@ -720,6 +747,18 @@ const Stock = () => {
 
             <h3 className="text-base font-bold text-gray-800 mb-4">Blood Bag Details</h3>
 
+            {selectedViewItem?.source === 'LOAN' && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl text-sm">
+                <p className="font-bold text-blue-800">This blood bag was taken in on loan.</p>
+                <p className="text-blue-700 text-xs mt-0.5">
+                  From <strong>{selectedViewItem?.loanTransfer?.bloodBankName}</strong>
+                  {selectedViewItem?.loanTransfer?.bloodBankAddress ? `, ${selectedViewItem.loanTransfer.bloodBankAddress}` : ''}
+                  {' '}· Transfer ID: <strong>{selectedViewItem?.loanTransfer?.transferId}</strong>
+                  {selectedViewItem?.loanTransfer?.transferDate ? ` · ${formatDate(selectedViewItem.loanTransfer.transferDate)}` : ''}
+                </p>
+              </div>
+            )}
+
             <div className="space-y-4 text-sm">
               <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-100 rounded-xl">
                 <div className="text-3xl font-black text-red-800 leading-none">
@@ -778,31 +817,55 @@ const Stock = () => {
                 </div>
               </div>
 
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Donor Information</p>
-                <div className="grid grid-cols-5 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
-                  <div>
-                    <p className="text-[10px] text-gray-500">Donor Name</p>
-                    <p className="font-semibold text-gray-800">{selectedViewItem?.bag?.donorName || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500">Donor ID</p>
-                    <p className="font-semibold text-gray-800">{selectedViewItem?.bag?.donorId || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500">Phone</p>
-                    <p className="font-semibold text-gray-800">{selectedViewItem?.bag?.donorPhone || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500">Email</p>
-                    <p className="font-semibold text-gray-800 truncate">{selectedViewItem?.bag?.donorEmail || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500">Donation Type</p>
-                    <p className="font-semibold text-gray-800 capitalize">{selectedViewItem?.bag?.donationType || '—'}</p>
+              {selectedViewItem?.source === 'LOAN' ? (
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Loan Source</p>
+                  <div className="grid grid-cols-3 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
+                    <div>
+                      <p className="text-[10px] text-gray-500">Blood Bank</p>
+                      <p className="font-semibold text-gray-800">{selectedViewItem?.loanTransfer?.bloodBankName || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500">Transfer ID</p>
+                      <p className="font-semibold text-gray-800 font-mono">{selectedViewItem?.loanTransfer?.transferId || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500">Transfer Date</p>
+                      <p className="font-semibold text-gray-800">{formatDate(selectedViewItem?.loanTransfer?.transferDate)}</p>
+                    </div>
+                    <div className="col-span-3">
+                      <p className="text-[10px] text-gray-500">Address</p>
+                      <p className="font-semibold text-gray-800">{selectedViewItem?.loanTransfer?.bloodBankAddress || '—'}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Donor Information</p>
+                  <div className="grid grid-cols-5 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
+                    <div>
+                      <p className="text-[10px] text-gray-500">Donor Name</p>
+                      <p className="font-semibold text-gray-800">{selectedViewItem?.bag?.donorName || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500">Donor ID</p>
+                      <p className="font-semibold text-gray-800">{selectedViewItem?.bag?.donorId || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500">Phone</p>
+                      <p className="font-semibold text-gray-800">{selectedViewItem?.bag?.donorPhone || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500">Email</p>
+                      <p className="font-semibold text-gray-800 truncate">{selectedViewItem?.bag?.donorEmail || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500">Donation Type</p>
+                      <p className="font-semibold text-gray-800 capitalize">{selectedViewItem?.bag?.donationType || '—'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-end mt-6">
@@ -931,7 +994,7 @@ const Stock = () => {
                        selectedPrintItem?.component?.componentType === 'Platelet' ? 'Platelet Concentrate' :
                        selectedPrintItem?.component?.componentType === 'Cryo' ? 'Cryoprecipitate' : 'Blood Component'}
                     </h4>
-                    <p className="text-[8px] font-extrabold text-black leading-none mb-1.5">({selectedPrintItem?.component?.volumeMl} ml)</p>
+                    <p className="text-[8px] font-extrabold text-black leading-none mb-1.5">({selectedPrintItem?.component?.volumeMl ? `${selectedPrintItem.component.volumeMl} ml` : '— ml'})</p>
 
                     <div className="text-[6px] leading-snug font-black text-black uppercase tracking-tight space-y-1.5 mt-1">
                       <p>HIV I & II antibodies / HBs Ag / HCV: Non Reactive.</p>

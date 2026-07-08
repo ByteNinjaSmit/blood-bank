@@ -87,6 +87,7 @@ export const PERMISSION = [
   'bag-discard:approve',
   'bulk-transfer:read',
   'bulk-transfer:create',
+  'bulk-transfer:delete',
 ] as const;
 export type Permission = (typeof PERMISSION)[number];
 
@@ -204,6 +205,9 @@ export const DISCARD_REASON = [
   'LABEL_ERROR',
 ] as const;
 export type DiscardReason = (typeof DISCARD_REASON)[number];
+
+export const CLINICAL_DISEASE = ['THALASSEMIA', 'SICKLE_CELL_ANAEMIA', 'OTHER'] as const;
+export type ClinicalDisease = (typeof CLINICAL_DISEASE)[number];
 
 export const TTI_TEST = [
   'HIV',
