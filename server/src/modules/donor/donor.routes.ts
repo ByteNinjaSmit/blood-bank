@@ -79,5 +79,12 @@ router.delete(
   requirePermission('donor:delete'),
   controllers.remove,
 );
+router.post(
+  '/:id/restore',
+  authenticate,
+  requireRole(['system-admin', 'bbo']),
+  requirePermission('donor:delete'),
+  controllers.restore,
+);
 
 export default router;

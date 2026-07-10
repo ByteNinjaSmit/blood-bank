@@ -6,6 +6,7 @@ import {
   useCreateCamp,
   useUpdateCamp,
   useDeleteCamp,
+  useRestoreCamp,
   useStaffList,
   useCampDonations,
   useCampDonors,
@@ -18,6 +19,7 @@ export {
   useCreateCamp,
   useUpdateCamp,
   useDeleteCamp,
+  useRestoreCamp,
   useStaffList,
   useCampDonations,
   useCampDonors,
@@ -31,12 +33,14 @@ export function useCamp() {
   const createMutation = useCreateCamp();
   const updateMutation = useUpdateCamp();
   const deleteMutation = useDeleteCamp();
+  const restoreMutation = useRestoreCamp();
 
   const loading =
     listQuery.isLoading ||
     createMutation.isPending ||
     updateMutation.isPending ||
-    deleteMutation.isPending;
+    deleteMutation.isPending ||
+    restoreMutation.isPending;
 
   return {
     camps: listQuery.data ?? [],
@@ -65,11 +69,29 @@ export function useCamp() {
     },
     deleteCamp: async (id) => {
       try {
-        await deleteMutation.mutateAsync(id);
-        toast.success('Camp deleted successfully');
+        const result = await deleteMutation.mutateAsync(id);
+        const permanentlyDeleted = Boolean(result?.permanentlyDeleted);
+        toast.success(
+          permanentlyDeleted
+            ? 'Camp permanently deleted'
+            : 'Camp deleted. It remains in the list and can be permanently removed next.',
+        );
+        return { success: true, permanentlyDeleted };
+      } catch (e) {
+        if (e && e.code) {
+          return { success: false, code: e.code, message: e.message };
+        }
+        toast.error(e?.message ?? 'Failed to delete camp');
+        return { success: false };
+      }
+    },
+    restoreCamp: async (id) => {
+      try {
+        await restoreMutation.mutateAsync(id);
+        toast.success('Camp restored');
         return { success: true };
       } catch (e) {
-        toast.error(e?.message ?? 'Failed to delete camp');
+        toast.error(e?.message ?? 'Failed to restore camp');
         return { success: false };
       }
     },

@@ -15,11 +15,11 @@ export default function TestingAndStockSection({ ttiTesting, ictcReferral, stock
 
   return (
     <>
-      <Section title="12. TTI Testing (Tested / Positive)">
+      <Section title="10. TTI Testing (Tested / Positive)">
         <ReportTable headers={['Test', 'Tested', 'Positive']} rows={ttiRows} alignRight={[1, 2]} />
       </Section>
 
-      <Section title="13. ICTC Referral">
+      <Section title="11. ICTC Referral">
         {ictcReferral.available ? (
           <ReportTable
             headers={['HIV', 'HBsAg', 'HCV', 'VDRL', 'Malaria']}
@@ -37,7 +37,7 @@ export default function TestingAndStockSection({ ttiTesting, ictcReferral, stock
         )}
       </Section>
 
-      <Section title="14. Blood Collection & Stock Details">
+      <Section title="12. Blood Collection & Stock Details">
         <ReportTable
           headers={['Product', 'Opening Balance', 'Collection', 'Issued', 'Discard', 'Closing Balance']}
           rows={stockRows}
@@ -45,7 +45,7 @@ export default function TestingAndStockSection({ ttiTesting, ictcReferral, stock
         />
       </Section>
 
-      <Section title="16. Blood Group-wise Collection">
+      <Section title="13. Blood Group-wise Collection">
         <ReportTable headers={['Blood Group', 'Units']} rows={groupRows} alignRight={[1]} />
         <div className="text-sm font-medium text-slate-700">Total = {bloodGroupCollection.total}</div>
       </Section>

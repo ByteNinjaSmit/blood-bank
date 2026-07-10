@@ -88,6 +88,9 @@ export const PERMISSION = [
   'bulk-transfer:read',
   'bulk-transfer:create',
   'bulk-transfer:delete',
+  // Appointments (public-site form submissions)
+  'appointment:read',
+  'appointment:update',
 ] as const;
 export type Permission = (typeof PERMISSION)[number];
 

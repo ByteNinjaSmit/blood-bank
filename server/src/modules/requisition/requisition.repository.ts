@@ -27,10 +27,23 @@ export interface MatchedUnitDto {
   compatibilityType: 'EXACT' | 'COMPATIBLE';
   crossmatchRequired: boolean;
   crossmatchStatus: 'NOT_REQUIRED' | 'PENDING' | 'COMPATIBLE' | 'INCOMPATIBLE';
+  reservedAt?: Date | string;
+  compatibilityResult?: 'MAJOR_COMPATIBLE' | 'MINOR_COMPATIBLE' | 'UNIVERSAL' | null;
+  crossmatchDoneAt?: Date | string | null;
+  crossmatchSeenAt?: Date | string | null;
+  cardNumber?: string | null;
+}
+
+export interface CrossmatchDetails {
+  compatibilityResult?: 'MAJOR_COMPATIBLE' | 'MINOR_COMPATIBLE' | 'UNIVERSAL';
+  crossmatchDoneAt?: Date;
+  crossmatchSeenAt?: Date;
+  cardNumber?: string;
 }
 
 export interface RequisitionPatientDto {
   name: string;
+  address?: string;
   age: number;
   sex: 'M' | 'F' | 'O';
   mrn?: string;
@@ -97,6 +110,7 @@ function toDto(raw: RawReq): RequisitionDto {
     doctorName: raw.doctorName || raw.clinicianName || '',
     patient: raw.patient ? {
       name: raw.patient.name,
+      address: raw.patient.address,
       age: raw.patient.age,
       sex: raw.patient.sex,
       mrn: raw.patient.mrn,
@@ -161,6 +175,7 @@ export interface RequisitionRepo {
     unitId: string,
     status: MatchedUnitDto['crossmatchStatus'],
     actorId: string,
+    details?: CrossmatchDetails,
   ): Promise<RequisitionDto>;
   setStatus(id: string, status: RequisitionStatus, actorId: string): Promise<RequisitionDto>;
   reject(id: string, reason: string, actorId: string): Promise<RequisitionDto>;
@@ -244,15 +259,27 @@ export function createRequisitionRepo(): RequisitionRepo {
       return toDto(updated);
     },
 
-    async setCrossmatchStatus(id, unitId, status, actorId) {
+    async setCrossmatchStatus(id, unitId, status, actorId, details) {
+      const setFields: Record<string, unknown> = {
+        'matchedUnits.$.crossmatchStatus': status,
+        updatedBy: new Types.ObjectId(actorId),
+      };
+      if (details?.compatibilityResult !== undefined) {
+        setFields['matchedUnits.$.compatibilityResult'] = details.compatibilityResult;
+      }
+      if (details?.crossmatchDoneAt !== undefined) {
+        setFields['matchedUnits.$.crossmatchDoneAt'] = details.crossmatchDoneAt;
+      }
+      if (details?.crossmatchSeenAt !== undefined) {
+        setFields['matchedUnits.$.crossmatchSeenAt'] = details.crossmatchSeenAt;
+      }
+      if (details?.cardNumber !== undefined) {
+        setFields['matchedUnits.$.cardNumber'] = details.cardNumber;
+      }
+
       const updated = (await RequisitionModel.findOneAndUpdate(
         { _id: id, 'matchedUnits.unitId': unitId },
-        {
-          $set: {
-            'matchedUnits.$.crossmatchStatus': status,
-            updatedBy: new Types.ObjectId(actorId),
-          },
-        },
+        { $set: setFields },
         { new: true },
       ).lean()) as RawReq | null;
       if (!updated) throw new NotFoundError('Requisition matched unit', `${id}/${unitId}`);

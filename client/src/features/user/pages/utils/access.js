@@ -6,8 +6,10 @@ export function checkAccess(user, moduleAliases = ["users","user management","ad
   return {
     isAdmin,
     canView: isAdmin || !!match?.view,
-    canCreate: isAdmin || !!match?.create,
+    // Backend restricts POST /user and DELETE /user/:id to system-admin only
+    // (user.routes.ts), so these can't be granted via the generic permission flags.
+    canCreate: isAdmin,
     canUpdate: isAdmin || !!match?.update,
-    canDelete: isAdmin || !!match?.delete,
+    canDelete: isAdmin,
   };
 }

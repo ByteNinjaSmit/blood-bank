@@ -150,10 +150,10 @@ const ViewDonorCamp = () => {
                 <Droplets className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900">
                   View Camp Donors
                 </h1>
-                <p className="text-gray-600 mt-1">Manage Donor Records</p>
+                <p className="text-gray-500 text-sm">Manage Donor Records</p>
               </div>
             </div>
             <button className="flex items-center gap-2 px-4 py-2 bg-red-800 text-white hover:bg-red-900 rounded-lg">

@@ -41,30 +41,6 @@ export interface RequisitionControllers {
   exportExcel: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
-// Self-heals matched units stuck as ABO/Rh-exact + crossmatch PENDING —
-// these should always be auto-approved at match time, but records matched
-// before that behavior existed (or a match call that errored mid-way)
-// can be left behind. Re-checked whenever a requisition is fetched.
-async function autoApproveExactCrossmatches(
-  deps: { requisitions: RequisitionService; crossmatch: CrossmatchService },
-  id: string,
-  actorId: string,
-): Promise<any> {
-  const current = await deps.requisitions.get(id);
-  const pendingExact = (current.matchedUnits || []).filter(
-    (mu: any) => mu.crossmatchRequired && mu.crossmatchStatus === 'PENDING' && mu.compatibilityType === 'EXACT',
-  );
-  if (pendingExact.length === 0) return current;
-
-  for (const mu of pendingExact) {
-    await deps.crossmatch.perform(
-      { requisitionId: id, unitId: mu.unitId, method: 'ELECTRONIC', result: 'COMPATIBLE' },
-      actorId,
-    );
-  }
-  return deps.requisitions.get(id);
-}
-
 async function enrichRequisition(reqDto: any): Promise<any> {
   if (!reqDto) return reqDto;
   const matchedUnits = reqDto.matchedUnits || [];
@@ -110,6 +86,10 @@ async function enrichRequisition(reqDto: any): Promise<any> {
       crossmatchRequired: mu.crossmatchRequired,
       crossmatchStatus: mu.crossmatchStatus.toLowerCase(),
       reservedAt: mu.reservedAt,
+      compatibilityResult: mu.compatibilityResult || null,
+      crossmatchDoneAt: mu.crossmatchDoneAt ? new Date(mu.crossmatchDoneAt).toISOString() : null,
+      crossmatchSeenAt: mu.crossmatchSeenAt ? new Date(mu.crossmatchSeenAt).toISOString() : null,
+      cardNumber: mu.cardNumber || null,
     };
   }).filter(Boolean);
 
@@ -137,6 +117,7 @@ async function enrichRequisition(reqDto: any): Promise<any> {
 
   const patientData = reqDto.patient || (patientDoc ? {
     name: patientDoc.name,
+    address: patientDoc.address,
     age: age,
     sex: patientDoc.sex,
     mrn: patientDoc.medicalRecordNumber,
@@ -277,6 +258,7 @@ export function createRequisitionControllers(deps: {
           const createdPatient = await deps.patients.create({
             patientPublicId,
             name: p.name || 'Unnamed Patient',
+            address: p.address,
             dob,
             sex: p.sex || 'M',
             medicalRecordNumber: p.mrn,
@@ -365,6 +347,7 @@ export function createRequisitionControllers(deps: {
           }
           await PatientModel.findByIdAndUpdate(req.body.patientId, {
             name: p.name || 'Unnamed Patient',
+            address: p.address,
             dob,
             sex: p.sex || 'M',
             medicalRecordNumber: p.mrn,
@@ -404,13 +387,6 @@ export function createRequisitionControllers(deps: {
       try {
         const { id } = ValidateRequisition.idParam(req);
         const result = await deps.requisitions.match(id, actor(req));
-
-        // Auto-approve crossmatch for ABO/Rh-exact matches. A manual crossmatch
-        // tick is only meaningful when the matched unit is a different blood
-        // group than the patient (a "compatible" substitute) — leaving
-        // same-group units PENDING just blocks issue with a confusing
-        // "Crossmatch not performed" error for the routine case.
-        result.requisition = await autoApproveExactCrossmatches(deps, id, actor(req));
 
         // Check if there are any shortages in result.shortages
         const shortageKeys = Object.keys(result.shortages || {});
@@ -495,7 +471,7 @@ export function createRequisitionControllers(deps: {
     async get(req, res, next) {
       try {
         const { id } = ValidateRequisition.idParam(req);
-        const data = await autoApproveExactCrossmatches(deps, id, actor(req));
+        const data = await deps.requisitions.get(id);
         const enriched = await enrichRequisition(data);
         res.json({ success: true, data: enriched, requestId: req.id });
       } catch (e) {
@@ -632,15 +608,37 @@ export function createRequisitionControllers(deps: {
     async updateCrossmatchLegacy(req, res, next) {
       try {
         const { id } = req.params;
-        const { inventoryId, crossmatchStatus } = req.body as {
+        const {
+          inventoryId,
+          crossmatchStatus,
+          compatibilityResult,
+          crossmatchDoneAt,
+          crossmatchSeenAt,
+          cardNumber,
+        } = req.body as {
           inventoryId?: string;
           crossmatchStatus?: string;
+          compatibilityResult?: 'MAJOR_COMPATIBLE' | 'MINOR_COMPATIBLE' | 'UNIVERSAL';
+          crossmatchDoneAt?: string;
+          crossmatchSeenAt?: string;
+          cardNumber?: string;
         };
 
         if (!inventoryId || !crossmatchStatus || !['compatible', 'incompatible'].includes(crossmatchStatus)) {
           res.status(400).json({
             success: false,
             message: 'Provide inventoryId and crossmatchStatus (compatible | incompatible)',
+          });
+          return;
+        }
+
+        if (
+          compatibilityResult &&
+          !['MAJOR_COMPATIBLE', 'MINOR_COMPATIBLE', 'UNIVERSAL'].includes(compatibilityResult)
+        ) {
+          res.status(400).json({
+            success: false,
+            message: 'compatibilityResult must be MAJOR_COMPATIBLE, MINOR_COMPATIBLE or UNIVERSAL',
           });
           return;
         }
@@ -681,6 +679,13 @@ export function createRequisitionControllers(deps: {
           return;
         }
 
+        const crossmatchDetails = {
+          compatibilityResult,
+          crossmatchDoneAt: crossmatchDoneAt ? new Date(crossmatchDoneAt) : undefined,
+          crossmatchSeenAt: crossmatchSeenAt ? new Date(crossmatchSeenAt) : undefined,
+          cardNumber,
+        };
+
         if (crossmatchStatus === 'compatible') {
           // Perform standard compatible crossmatch
           await deps.crossmatch.perform(
@@ -689,6 +694,7 @@ export function createRequisitionControllers(deps: {
               unitId: inventoryId,
               method: 'IS',
               result: 'COMPATIBLE',
+              ...crossmatchDetails,
             },
             actorId,
           );
@@ -700,6 +706,7 @@ export function createRequisitionControllers(deps: {
               unitId: inventoryId,
               method: 'IS',
               result: 'INCOMPATIBLE',
+              ...crossmatchDetails,
             },
             actorId,
           );

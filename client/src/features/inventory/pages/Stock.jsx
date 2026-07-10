@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { useAuth } from "@/store/auth";
+import { apiClient } from "@/core/api-client";
 import { Button } from "@/components/ui/button";
 import { Loader2, Boxes, Search, ChevronLeft, ChevronRight, X, RefreshCw, Eye } from "lucide-react";
 import { toast } from "sonner";
@@ -243,7 +242,6 @@ const formatDate = (dateStr) => {
 };
 
 const Stock = () => {
-  const { API, authorizationToken } = useAuth();
   const { data: stockSummaryData } = useStockSummary();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -288,9 +286,7 @@ const Stock = () => {
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`${API}/api/inventory`, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
+      const res = await apiClient.get(`/api/inventory`, {
         params: buildParams(page, limit),
       });
       setRows(Array.isArray(res.data?.data) ? res.data.data : []);
@@ -309,9 +305,7 @@ const Stock = () => {
       let dataToExport = rows;
       if (exportAll) {
         toast.info("Fetching complete stock list for export...");
-        const res = await axios.get(`${API}/api/inventory`, {
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
+        const res = await apiClient.get(`/api/inventory`, {
           params: buildParams(1, 5000),
         });
         dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
@@ -339,14 +333,14 @@ const Stock = () => {
               <Boxes className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Inventory Stock</h1>
-              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Management Portal</p>
+              <h1 className="text-2xl font-bold text-gray-900">Inventory Stock</h1>
+              <p className="text-gray-500 text-sm">Management Portal</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <ComponentStockLines stockSummary={stockSummaryData} />
         {/* Compact Filters Section */}
         <Card className="mb-4 border-red-100 shadow-sm">

@@ -21,6 +21,7 @@ const READ = [
 router.post('/new', authenticate, requireRole([...MANAGE]), campController.create);
 router.put('/update/:id', authenticate, requireRole([...MANAGE]), campController.update);
 router.delete('/delete/:id', authenticate, requireRole([...MANAGE]), campController.remove);
+router.post('/restore/:id', authenticate, requireRole([...MANAGE]), campController.restore);
 router.get('/details/:id', authenticate, requireRole([...READ]), campController.detail);
 router.get('/details', authenticate, requireRole([...READ]), campController.all);
 router.get('/staff-list', authenticate, requireRole([...READ]), campController.staffList);

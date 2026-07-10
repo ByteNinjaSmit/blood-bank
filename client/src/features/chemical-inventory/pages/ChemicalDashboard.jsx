@@ -45,7 +45,7 @@ export default function ChemicalDashboard() {
             <FlaskConical className="w-7 h-7 text-red-700" />
             Chemical & Reagent Inventory
           </h1>
-          <p className="text-sm text-gray-500">Digital register and lifecycle tracker for reagents, ELISA kits, and consumables</p>
+          <p className="text-gray-500 text-sm">Digital register and lifecycle tracker for reagents, ELISA kits, and consumables</p>
         </div>
         <div className="flex gap-3">
           <button

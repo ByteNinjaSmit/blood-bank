@@ -30,3 +30,19 @@ export function useCreateDonation() {
     onSuccess: () => qc.invalidateQueries({ queryKey: donationKeys.all }),
   });
 }
+
+export function useDeleteDonation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: donationApi.remove,
+    onSuccess: () => qc.invalidateQueries({ queryKey: donationKeys.all }),
+  });
+}
+
+export function useRestoreDonation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: donationApi.restore,
+    onSuccess: () => qc.invalidateQueries({ queryKey: donationKeys.all }),
+  });
+}

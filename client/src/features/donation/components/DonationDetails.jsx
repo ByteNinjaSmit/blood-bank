@@ -128,13 +128,13 @@ const DonationDetails = ({ donation }) => {
                   : `${bloodGroup} ${rhSymbol}`}
               </p>
             )}
-            {donation.siteId && (
+            {donation.camp && (
               <p>
-                <span className="font-medium">Site:</span> {donation.siteId.name}
+                <span className="font-medium">Camp:</span> {donation.camp.name}
               </p>
             )}
-            {donation.siteId && donation.siteId.address && (
-              <p className="text-xs text-slate-500">{donation.siteId.address}</p>
+            {donation.camp && donation.camp.address && (
+              <p className="text-xs text-slate-500">{donation.camp.address}</p>
             )}
           </div>
         </div>

@@ -15,7 +15,7 @@ export const ModuleArray = [
   "Site",
   "Hospital",
   "MIS",
-  "Volunteer",
+  "Appointment",
   "Bag Procurement",
   "Chemical Inventory",
   "Master Register"

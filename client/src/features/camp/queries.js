@@ -86,3 +86,11 @@ export function useDeleteCamp() {
     onSuccess: () => qc.invalidateQueries({ queryKey: campKeys.all }),
   });
 }
+
+export function useRestoreCamp() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: campApi.restore,
+    onSuccess: () => qc.invalidateQueries({ queryKey: campKeys.all }),
+  });
+}

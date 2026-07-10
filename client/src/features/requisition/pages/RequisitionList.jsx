@@ -14,6 +14,12 @@ import { Loader2, X } from 'lucide-react';
 
 const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'rejected'];
 
+const COMPATIBILITY_RESULT_LABELS = {
+  MAJOR_COMPATIBLE: 'Major Compatible',
+  MINOR_COMPATIBLE: 'Minor Compatible',
+  UNIVERSAL: 'Universal',
+};
+
 export default function RequisitionList() {
   const navigate = useNavigate();
   const { authorizationToken } = useAuth();
@@ -494,7 +500,7 @@ export default function RequisitionList() {
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <h1 className="text-2xl font-bold text-gray-900">Requisition List</h1>
-          <p className="text-gray-600 text-sm">Filter, paginate, and manage requests</p>
+          <p className="text-gray-500 text-sm">Filter, paginate, and manage requests</p>
         </div>
       <CustomModal open={viewOpen} onCancel={closeView} title="Requisition Details" size="3xl" hideFooter>
         {!viewDoc || viewLoading ? (
@@ -523,6 +529,17 @@ export default function RequisitionList() {
               <div className="md:col-span-2">
                 <div className="text-gray-600">Patient</div>
                 <div className="font-medium">{viewDoc.patient?.name} • {viewDoc.patient?.age}/{viewDoc.patient?.sex} • MRN: {viewDoc.patient?.mrn || '—'}</div>
+                {viewDoc.patient?.address && (
+                  <div className="text-xs text-gray-500 mt-0.5">{viewDoc.patient.address}</div>
+                )}
+              </div>
+              <div>
+                <div className="text-gray-600">Doctor</div>
+                <div className="font-medium">{viewDoc.doctorName || '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Indication for Transfusion</div>
+                <div className="font-medium">{viewDoc.patient?.indication || '—'}</div>
               </div>
             </div>
             {viewDoc.status === 'rejected' && (
@@ -605,9 +622,14 @@ export default function RequisitionList() {
                         <th className="p-2">Bag No</th>
                         <th className="p-2">Segment No</th>
                         <th className="p-2">Blood</th>
+                        <th className="p-2">Quantity (mL)</th>
                         <th className="p-2">Donor Name</th>
                         <th className="p-2">Day of Donation</th>
                         <th className="p-2">Reserved At</th>
+                        <th className="p-2">Compatibility</th>
+                        <th className="p-2">Crossmatch Done At</th>
+                        <th className="p-2">Seen At</th>
+                        <th className="p-2">Card No.</th>
                         <th className="p-2">Issue Date</th>
                         <th className="p-2">Status</th>
                       </tr>
@@ -631,9 +653,14 @@ export default function RequisitionList() {
                             <td className="p-2">{mi?.inventoryId?.bagNo?.bagNo || '—'}</td>
                             <td className="p-2">{mi?.inventoryId?.bagNo?.segmentNo || '—'}</td>
                             <td className="p-2">{mi?.inventoryId?.bagNo ? `${mi.inventoryId.bagNo.bloodGroup} ${mi.inventoryId.bagNo.rh}` : '—'}</td>
+                            <td className="p-2">{mi?.inventoryId?.componentId?.volumeMl ?? '—'}</td>
                             <td className="p-2">{mi?.inventoryId?.bagNo?.donorName || '—'}</td>
                             <td className="p-2">{mi?.inventoryId?.bagNo?.collectedAt ? new Date(mi.inventoryId.bagNo.collectedAt).toLocaleDateString() : '—'}</td>
                             <td className="p-2">{mi?.reservedAt ? fmt(mi.reservedAt) : '—'}</td>
+                            <td className="p-2">{COMPATIBILITY_RESULT_LABELS[mi?.compatibilityResult] || '—'}</td>
+                            <td className="p-2">{mi?.crossmatchDoneAt ? fmt(mi.crossmatchDoneAt) : '—'}</td>
+                            <td className="p-2">{mi?.crossmatchSeenAt ? fmt(mi.crossmatchSeenAt) : '—'}</td>
+                            <td className="p-2">{mi?.cardNumber || '—'}</td>
                             <td className="p-2">{mi?.inventoryId?.issuedAt ? fmt(mi.inventoryId.issuedAt) : '—'}</td>
                             <td className="p-2">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${badgeColor}`}>

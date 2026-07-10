@@ -7,6 +7,8 @@ export interface DonationControllers {
   create: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   list: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   get: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  remove: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  restore: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
 export function createDonationControllers(service: DonationService): DonationControllers {
@@ -117,6 +119,28 @@ export function createDonationControllers(service: DonationService): DonationCon
         const { id } = ValidateDonation.idParam(req);
         const found = await service.get(id);
         res.json({ success: true, data: found, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async remove(req, res, next) {
+      try {
+        const { id } = ValidateDonation.idParam(req);
+        const actorId = actorIdOrThrow(req);
+        const result = await service.remove(id, actorId);
+        res.status(200).json({ success: true, data: result, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async restore(req, res, next) {
+      try {
+        const { id } = ValidateDonation.idParam(req);
+        const actorId = actorIdOrThrow(req);
+        const result = await service.restore(id, actorId);
+        res.status(200).json({ success: true, data: result, requestId: req.id });
       } catch (e) {
         next(e);
       }

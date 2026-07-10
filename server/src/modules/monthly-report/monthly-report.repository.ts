@@ -14,6 +14,7 @@ import { DonorCardModel } from '@/modules/donor-card/donor-card.model';
 import { BagStockModel } from '@/modules/bag-stock/bag-stock.model';
 import { ChemicalModel, ChemicalStockLotModel } from '@/modules/chemical-inventory/chemical-inventory.model';
 import { createChemicalInventoryRepo } from '@/modules/chemical-inventory/chemical-inventory.repository';
+import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 
 const PRODUCT_LABEL: Record<string, string> = {
   WHOLE_BLOOD: 'WB',
@@ -145,6 +146,7 @@ export interface MonthlyReportRepo {
   getChemicalStock(month: number, year: number): Promise<any>;
   getBagStock(): Promise<any>;
   getCampWiseStats(from: Date, to: Date): Promise<any>;
+  getBulkTransferStats(from: Date, to: Date): Promise<any>;
 }
 
 export function createMonthlyReportRepo(): MonthlyReportRepo {
@@ -798,6 +800,71 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
         .sort((a, b) => a.campName.localeCompare(b.campName));
 
       return { rows };
+    },
+
+    async getBulkTransferStats(from, to) {
+      const transfers = await BulkTransferModel.find({
+        transferDate: { $gte: from, $lt: to },
+        deletedAt: null,
+      })
+        .select('transferType bloodBankName transferDate items')
+        .sort({ transferDate: 1 })
+        .lean();
+
+      const rows = (transfers as any[]).map((t) => ({
+        transferType: t.transferType,
+        bloodBankName: t.bloodBankName,
+        transferDate: t.transferDate ? new Date(t.transferDate).toISOString() : '',
+        bagCount: (t.items || []).length,
+        breakdown: Object.entries(
+          (t.items || []).reduce((acc: Record<string, number>, it: any) => {
+            const key = `${it.componentType}|${it.bloodGroup}`;
+            acc[key] = (acc[key] ?? 0) + 1;
+            return acc;
+          }, {}),
+        ).map(([key, count]) => {
+          const [componentType, bloodGroup] = key.split('|');
+          return { componentType, bloodGroup, count };
+        }),
+      }));
+
+      const totals = rows.reduce(
+        (acc, r) => {
+          if (r.transferType === 'GIVE_LOAN') {
+            acc.givenCount += 1;
+            acc.givenBags += r.bagCount;
+          } else {
+            acc.takenCount += 1;
+            acc.takenBags += r.bagCount;
+          }
+          return acc;
+        },
+        { givenCount: 0, givenBags: 0, takenCount: 0, takenBags: 0 },
+      );
+
+      // Aggregate component x blood-group totals across the period, split by
+      // given vs taken, so the report can show "what was sent/received, how much".
+      const byTypeAndGroup = (transferType: 'GIVE_LOAN' | 'TAKE_LOAN') => {
+        const tally: Record<string, number> = {};
+        for (const t of transfers as any[]) {
+          if (t.transferType !== transferType) continue;
+          for (const it of t.items || []) {
+            const key = `${it.componentType}|${it.bloodGroup}`;
+            tally[key] = (tally[key] ?? 0) + 1;
+          }
+        }
+        return Object.entries(tally).map(([key, count]) => {
+          const [componentType, bloodGroup] = key.split('|');
+          return { componentType, bloodGroup, count };
+        });
+      };
+
+      const breakdown = {
+        given: byTypeAndGroup('GIVE_LOAN'),
+        taken: byTypeAndGroup('TAKE_LOAN'),
+      };
+
+      return { rows, totals, breakdown };
     },
   };
 }

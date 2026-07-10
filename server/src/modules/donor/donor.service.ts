@@ -1,4 +1,4 @@
-import { ConflictError } from '@/shared/errors';
+import { AppError, ConflictError, NotFoundError } from '@/shared/errors';
 import { childLogger } from '@/core/logger';
 import { cached, invalidate } from '@/core/cache';
 import type {
@@ -8,6 +8,7 @@ import type {
 } from '@/modules/donor/donor.validator';
 import type { DonorDto, DonorRepo } from '@/modules/donor/donor.repository';
 import { CampModel } from '@/modules/camp/camp.model';
+import { DonationModel } from '@/modules/donation/donation.model';
 
 const MINIMUM_DONOR_WEIGHT_KG = 45;
 const MINIMUM_DONOR_AGE_YEARS = 18;
@@ -21,7 +22,8 @@ export interface DonorService {
   list(
     query: ListDonorsInput,
   ): Promise<{ items: DonorDto[]; total: number; page: number; pageSize: number }>;
-  remove(id: string): Promise<void>;
+  remove(id: string, actorId: string): Promise<{ permanentlyDeleted: boolean }>;
+  restore(id: string, actorId: string): Promise<{ restored: boolean }>;
 }
 
 export function createDonorService(deps: { repo: DonorRepo }): DonorService {
@@ -71,10 +73,46 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
       return { items, total, page: query.page, pageSize: query.pageSize };
     },
 
-    async remove(id) {
+    async remove(id, actorId) {
+      const donor = await deps.repo.findById(id);
+      if (!donor) throw new NotFoundError('Donor', id);
+
+      if (!donor.deletedAt) {
+        // First delete click: soft-delete only. Row stays visible (greyed
+        // out) in Master Register so the clinical record isn't lost.
+        await deps.repo.softDelete(id, actorId);
+        await invalidate(`donor:detail:${id}`);
+        log.warn({ donorId: id, actorId }, 'donor soft-deleted');
+        return { permanentlyDeleted: false };
+      }
+
+      // Second delete click on an already soft-deleted donor: permanent,
+      // irreversible. Still refuse if donation history exists — hard
+      // deleting would orphan clinical records.
+      const hasDonations = await DonationModel.exists({ donor: id, deletedAt: null });
+      if (hasDonations) {
+        throw new AppError(
+          'DONOR_HAS_DONATIONS',
+          'Donor has existing donation records and cannot be permanently deleted',
+          409,
+        );
+      }
       await deps.repo.delete(id);
       await invalidate(`donor:detail:${id}`);
-      log.warn({ donorId: id }, 'donor deleted');
+      log.warn({ donorId: id, actorId }, 'donor permanently deleted');
+      return { permanentlyDeleted: true };
+    },
+
+    async restore(id, actorId) {
+      const donor = await deps.repo.findById(id);
+      if (!donor) throw new NotFoundError('Donor', id);
+      if (!donor.deletedAt) {
+        return { restored: false };
+      }
+      await deps.repo.restore(id, actorId);
+      await invalidate(`donor:detail:${id}`);
+      log.warn({ donorId: id, actorId }, 'donor restored');
+      return { restored: true };
     },
   };
 }

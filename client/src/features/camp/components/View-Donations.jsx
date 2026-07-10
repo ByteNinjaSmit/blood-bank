@@ -101,8 +101,8 @@ const ViewDonations = ({ onBack }) => {
                 <Droplets className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">View Camp Donations</h1>
-                <p className="text-gray-600 mt-1">Manage donation records</p>
+                <h1 className="text-2xl font-bold text-gray-900">View Camp Donations</h1>
+                <p className="text-gray-500 text-sm">Manage donation records</p>
               </div>
             </div>
 

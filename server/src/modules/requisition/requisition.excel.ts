@@ -18,6 +18,32 @@ import {
 } from '@/shared/utils/excelHelper';
 
 /**
+ * Component-type abbreviation used on printed/exported worksheets
+ * (WB/PCV/FFP/RDP), distinct from the fuller labels used elsewhere.
+ */
+function abbreviateComponent(componentType: string): string {
+  switch (componentType) {
+    case 'WHOLE_BLOOD':
+      return 'WB';
+    case 'PRBC':
+    case 'IRRADIATED_PRBC':
+    case 'WASHED_PRBC':
+    case 'LEUKOREDUCED_PRBC':
+      return 'PCV';
+    case 'FFP':
+      return 'FFP';
+    case 'PLATELET_CONCENTRATE':
+      return 'RDP';
+    case 'SDP':
+      return 'SDP';
+    case 'CRYOPRECIPITATE':
+      return 'CRYO';
+    default:
+      return componentType;
+  }
+}
+
+/**
  * Builds a query object matching UI filters
  */
 function buildQuery(filters: any): Record<string, any> {
@@ -179,13 +205,20 @@ async function enrichRequisitions(docs: any[]): Promise<any[]> {
                       : unit.componentType === 'CRYOPRECIPITATE'
                         ? 'Cryo'
                         : unit.componentType,
+                componentAbbrev: abbreviateComponent(unit.componentType),
                 expiryDate: unit.expiresAt ? unit.expiresAt.toISOString() : '',
+                volumeMl: unit.volumeMl,
               },
+              issuedAt: unit.issuedAt ? unit.issuedAt.toISOString() : null,
             },
             compatibilityType: mu.compatibilityType.toLowerCase(),
             crossmatchRequired: mu.crossmatchRequired,
             crossmatchStatus: mu.crossmatchStatus.toLowerCase(),
             reservedAt: mu.reservedAt,
+            compatibilityResult: mu.compatibilityResult || null,
+            crossmatchDoneAt: mu.crossmatchDoneAt ? new Date(mu.crossmatchDoneAt).toISOString() : null,
+            crossmatchSeenAt: mu.crossmatchSeenAt ? new Date(mu.crossmatchSeenAt).toISOString() : null,
+            cardNumber: mu.cardNumber || null,
           };
         })
         .filter(Boolean);
@@ -249,6 +282,19 @@ export async function generateRequisitionExcel(
     reportPeriod = `To ${filters.to}`;
   }
 
+  // Standard report-type / filters-applied metadata block (shown on every sheet's header).
+  const isExportAll = filters.exportAll === 'true' || filters.exportAll === true;
+  const activeFilterParts: string[] = [];
+  if (!isExportAll) {
+    if (filters.status) activeFilterParts.push(`Status: ${filters.status}`);
+    if (filters.hospitalId) activeFilterParts.push(`Hospital ID: ${filters.hospitalId}`);
+    if (filters.patientId) activeFilterParts.push(`Patient ID: ${filters.patientId}`);
+    if (filters.search) activeFilterParts.push(`Search: "${filters.search}"`);
+    if (filters.from || filters.to) activeFilterParts.push(`Date Range: ${reportPeriod}`);
+  }
+  const reportType = activeFilterParts.length > 0 ? 'FILTERED REPORT' : 'FULL REPORT';
+  const filtersApplied = activeFilterParts.length > 0 ? activeFilterParts.join('; ') : undefined;
+
   // Calculate statistics
   const totalCount = enrichedRequests.length;
   const approvedCount = enrichedRequests.filter(r => r.status === 'approved').length;
@@ -309,6 +355,8 @@ export async function generateRequisitionExcel(
       subtitle: `Blood Request Management Report - ${sheetName}`,
       generatedBy: loggedInUser,
       reportPeriod,
+      reportType,
+      filtersApplied,
       numCols: columns.length,
     });
 
@@ -428,6 +476,8 @@ export async function generateRequisitionExcel(
     subtitle: 'Blood Request Management Report - Exhaustive Request Details',
     generatedBy: loggedInUser,
     reportPeriod,
+    reportType,
+    filtersApplied,
     numCols: detailsColumns.length,
   });
 
@@ -550,6 +600,122 @@ export async function generateRequisitionExcel(
   applyPrintFormatting(detailsSheet, detailsTableStart);
   applyFooter(detailsSheet);
 
+  // 7b. Crossmatch & Component Detail Sheet — one row per matched unit
+  // (component-wise), covering the full crossmatch worksheet: hospital,
+  // doctor, indication, recipient name/address, blood group, component
+  // (WB/PCV/FFP/RDP), bags given (component-wise), when required,
+  // crossmatch done-at/seen-at (grouped under "Crossmatching"),
+  // crossmatching & compatibility test result, card number, and
+  // per-unit issue date/time.
+  const COMPATIBILITY_RESULT_LABELS: Record<string, string> = {
+    MAJOR_COMPATIBLE: 'Major Compatible',
+    MINOR_COMPATIBLE: 'Minor Compatible',
+    UNIVERSAL: 'Universal',
+  };
+
+  const xmSheet = workbook.addWorksheet('Crossmatch & Component Detail');
+  const xmColumns = [
+    'Sr No',
+    'Date',
+    'Hospital Name',
+    'Doctor Name',
+    'Indication for Transfusion',
+    "Recipient's Name",
+    "Recipient's Address",
+    'Blood Group',
+    'Component (WB/PCV/FFP/RDP)',
+    'Total Bags Given',
+    'When Required',
+    'Crossmatch Done At',
+    'Seen At',
+    'Crossmatching & Compatibility Test',
+    'Card Number',
+    'Issue Date & Time',
+    'Bag No',
+  ];
+  const xmAlignments: ('left' | 'center' | 'right')[] = [
+    'center', 'center', 'left', 'left', 'left', 'left', 'left', 'center', 'center',
+    'center', 'center', 'center', 'center', 'center', 'center', 'center', 'center',
+  ];
+
+  createProfessionalHeader(xmSheet, {
+    title: 'Sanjivani Blood Bank, Kopargaon',
+    subtitle: 'Crossmatch & Component-wise Issue Worksheet',
+    generatedBy: loggedInUser,
+    reportPeriod,
+    reportType,
+    filtersApplied,
+    numCols: xmColumns.length,
+  });
+
+  // Grouped "Crossmatching" header spanning the Done At / Seen At columns,
+  // rendered as its own row directly above the table header row.
+  const xmGroupRow = 7;
+  const xmTableStart = 8;
+  const doneAtColIdx = xmColumns.indexOf('Crossmatch Done At') + 1;
+  const seenAtColIdx = xmColumns.indexOf('Seen At') + 1;
+
+  const groupRow = xmSheet.getRow(xmGroupRow);
+  groupRow.height = 18;
+  for (let c = 1; c <= xmColumns.length; c++) {
+    groupRow.getCell(c).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF1F5F9' },
+    };
+  }
+  xmSheet.mergeCells(xmGroupRow, doneAtColIdx, xmGroupRow, seenAtColIdx);
+  const groupCell = groupRow.getCell(doneAtColIdx);
+  groupCell.value = 'Crossmatching';
+  groupCell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF1E293B' } };
+  groupCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  let xmSrNo = 1;
+  const xmRows: any[][] = [];
+
+  enrichedRequests.forEach(r => {
+    const matchedInventory = r.matchedInventory || [];
+    if (matchedInventory.length === 0) return;
+
+    // Component-wise bag counts within this requisition.
+    const componentCounts = new Map<string, number>();
+    matchedInventory.forEach((mi: any) => {
+      const abbr = mi.inventoryId?.componentId?.componentAbbrev || '—';
+      componentCounts.set(abbr, (componentCounts.get(abbr) || 0) + 1);
+    });
+
+    matchedInventory.forEach((mi: any) => {
+      const inv = mi.inventoryId;
+      const abbr = inv?.componentId?.componentAbbrev || '—';
+      xmRows.push([
+        xmSrNo++,
+        r.requestedAt ? formatDateTime(r.requestedAt) : '—',
+        r.hospitalId?.name || '—',
+        r.doctorName || '—',
+        r.patient?.indication || '—',
+        r.patient?.name || '—',
+        r.patient?.address || '—',
+        inv?.bagNo ? `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}` : '—',
+        abbr,
+        componentCounts.get(abbr) || 0,
+        r.requiredAt ? formatDateTime(r.requiredAt) : '—',
+        mi.crossmatchDoneAt ? formatDateTime(mi.crossmatchDoneAt) : '—',
+        mi.crossmatchSeenAt ? formatDateTime(mi.crossmatchSeenAt) : '—',
+        COMPATIBILITY_RESULT_LABELS[mi.compatibilityResult] || '—',
+        mi.cardNumber || '—',
+        inv?.issuedAt ? formatDateTime(inv.issuedAt) : '—',
+        inv?.bagNo?.bagNo || '—',
+      ]);
+    });
+  });
+
+  formatTable(xmSheet, xmTableStart, xmColumns, xmRows, xmAlignments);
+  applyPrintFormatting(xmSheet, xmTableStart);
+  if (xmSheet.pageSetup) {
+    xmSheet.pageSetup.printTitlesRow = `${xmGroupRow}:${xmTableStart}`;
+  }
+  applyFooter(xmSheet);
+
   // 8. Hospital Wise Analysis Sheet (Requirement 6)
   const hospSheet = workbook.addWorksheet('Hospital Analysis');
   const hospColumns = [
@@ -569,6 +735,8 @@ export async function generateRequisitionExcel(
     subtitle: 'Hospital-wise Request Statistics & Breakdown',
     generatedBy: loggedInUser,
     reportPeriod,
+    reportType,
+    filtersApplied,
     numCols: hospColumns.length,
   });
 
@@ -657,6 +825,8 @@ export async function generateRequisitionExcel(
     subtitle: 'Blood Group-wise Request Demands Analysis',
     generatedBy: loggedInUser,
     reportPeriod,
+    reportType,
+    filtersApplied,
     numCols: bgColumns.length,
   });
 

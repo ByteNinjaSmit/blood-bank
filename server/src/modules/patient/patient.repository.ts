@@ -7,6 +7,7 @@ export interface PatientDto {
   id: string;
   patientPublicId: string;
   name: string;
+  address?: string;
   aboGroup?: AboGroup;
   rhFactor?: RhFactor;
   groupConfirmationCount: number;
@@ -18,6 +19,7 @@ interface RawPatient {
   _id: { toString(): string };
   patientPublicId: string;
   name: string;
+  address?: string;
   aboGroup?: AboGroup;
   rhFactor?: RhFactor;
   groupConfirmations?: unknown[];
@@ -30,6 +32,7 @@ function toDto(raw: RawPatient): PatientDto {
     id: raw._id.toString(),
     patientPublicId: raw.patientPublicId,
     name: raw.name,
+    address: raw.address,
     aboGroup: raw.aboGroup,
     rhFactor: raw.rhFactor,
     groupConfirmationCount: raw.groupConfirmations?.length ?? 0,
@@ -41,6 +44,7 @@ function toDto(raw: RawPatient): PatientDto {
 export interface CreatePatientInput {
   patientPublicId: string;
   name: string;
+  address?: string;
   dob?: Date;
   sex?: 'M' | 'F' | 'O';
   medicalRecordNumber?: string;

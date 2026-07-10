@@ -445,8 +445,8 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
               <User className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Create Donor</h1>
-              <p className="text-gray-600 mt-1">Register a new blood donor with complete information</p>
+              <h1 className="text-2xl font-bold text-gray-900">Create Donor</h1>
+              <p className="text-gray-500 text-sm">Register a new blood donor with complete information</p>
             </div>
           </div>
         </div>
@@ -968,7 +968,7 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Donor created successfully</h3>
-                <p className="text-sm text-gray-600 mt-1">What would you like to do next?</p>
+                <p className="text-sm text-gray-500">What would you like to do next?</p>
               </div>
             </div>
 

@@ -66,7 +66,6 @@ const CampDonorManagement = () => {
     createDonor,
     updateDonor,
     deleteDonor,
-    forceDeleteDonor
   } = useDonor();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -176,25 +175,12 @@ const CampDonorManagement = () => {
 
         if (result.code === 'DONOR_HAS_DONATIONS') {
           toast.error(result.message || 'Donor has donation history and cannot be deleted.');
-          if (donorAccess.canDelete) {
-            setShowForceModal(true);
-          }
+          setShowForceModal(true);
         } else {
           setDeleteTarget(null);
         }
       }
     });
-  };
-
-  const handleForceDeleteConfirm = async () => {
-    if (!deleteTarget) return;
-    const donor = deleteTarget;
-    const forceResult = await forceDeleteDonor(donor._id);
-    if (forceResult.success) {
-      fetchCampDonors(campId);
-    }
-    setShowForceModal(false);
-    setDeleteTarget(null);
   };
 
   // Filter computation
@@ -281,14 +267,14 @@ const CampDonorManagement = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-gradient-to-br from-orange-700 to-orange-900 rounded-xl shadow-sm">
               <Users className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Camp Donor Management</h1>
-              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Manage donors for this camp</p>
+              <h1 className="text-2xl font-bold text-gray-900">Camp Donor Management</h1>
+              <p className="text-gray-500 text-sm">Manage donors for this camp</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -304,7 +290,7 @@ const CampDonorManagement = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
         
         {/* Stats card */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -568,20 +554,14 @@ const CampDonorManagement = () => {
 
       <CustomModal
         open={showForceModal && !!deleteTarget}
-        title="Force Delete Donor & Related Data"
-        description="This donor has donation history. Force deleting will remove the donor and all related blood bags, components, inventory entries, and discard logs. This action is permanent."
+        title="Cannot Delete Donor"
+        description="This donor has donation history and cannot be deleted. Donation records are clinical data and must be preserved for audit purposes."
         onCancel={() => {
           setShowForceModal(false);
           setDeleteTarget(null);
         }}
-        onConfirm={handleForceDeleteConfirm}
-        confirmText="Force Delete"
-        confirmVariant="danger"
-      >
-        <p className="text-sm text-red-700 font-medium mt-2">
-          Proceed only if you fully understand the impact.
-        </p>
-      </CustomModal>
+        hideFooter
+      />
 
     </div>
   );

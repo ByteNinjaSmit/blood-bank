@@ -41,6 +41,7 @@ export function createMonthlyReportService(deps: MonthlyReportDeps) {
         chemicalStock,
         bagStock,
         campWise,
+        bulkTransferStats,
         savedInput,
       ] = await Promise.all([
         deps.repo.getCampsCount(from, to),
@@ -58,13 +59,18 @@ export function createMonthlyReportService(deps: MonthlyReportDeps) {
         deps.repo.getChemicalStock(month, year),
         deps.repo.getBagStock(),
         deps.repo.getCampWiseStats(from, to),
+        deps.repo.getBulkTransferStats(from, to),
         deps.inputs.findByPeriod(month, year),
       ]);
+
+      // Voluntary Donor Cards Issued must equal the total donor count for the
+      // period (every donor — inhouse and camp — receives a card), not the
+      // count of DonorCard records created by the hospital-side requisition flow.
+      const donorCardsWithTotal = { ...donorCards, totalCount: collection.grandTotal.total };
 
       const missingDataNotes: Array<{ item: string; note: string }> = [
         { item: 'Voluntary vs. replacement collection split', note: 'Inferred from donation type (REPLACEMENT vs. all other donation types) — not a dedicated voluntary/replacement flag.' },
         ...(savedInput ? [] : [{ item: 'Donor counselling count', note: NOT_TRACKED }]),
-        { item: 'Bulk transfer (loan given / taken to other blood banks)', note: NOT_TRACKED },
         { item: 'Blood bags given to blood storage centres', note: 'Identified by hospital records whose name contains "storage" (e.g. "SJS Storage") — there is no dedicated storage-centre entity type. Add a hospital record for each centre if none appear below.' },
         { item: 'Blood bags issued by disease category', note: PARTIAL_NOTE },
         { item: 'Rejected donors by reason', note: 'Sourced from Deferral records (the system\'s actual donor-rejection log) and bucketed by keyword match on the deferral reason text / deferral source — verify before statutory submission.' },
@@ -96,7 +102,7 @@ export function createMonthlyReportService(deps: MonthlyReportDeps) {
         donorCounselling: savedInput
           ? { available: true, count: savedInput.donorCounsellingCount }
           : { available: false, note: NOT_TRACKED },
-        bulkTransfer: { available: false, note: NOT_TRACKED },
+        bulkTransfer: { available: true, ...bulkTransferStats },
         bagsToStorageCentres: { centres: componentsIssued.storageCentres },
         rejectedDonors,
         donorTesting,
@@ -105,7 +111,7 @@ export function createMonthlyReportService(deps: MonthlyReportDeps) {
           ? { available: true, counts: savedInput.ictcReferral }
           : { available: false, note: NOT_TRACKED },
         stockLedger,
-        donorCards,
+        donorCards: donorCardsWithTotal,
         bloodGroupCollection,
         issueByIndication,
         chemicalStock,

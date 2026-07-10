@@ -8,6 +8,7 @@ const OBJECT_ID = /^[a-f0-9]{24}$/i;
 export const CreatePatientBody = z.object({
   patientPublicId: z.string().trim().min(1).max(80),
   name: z.string().trim().min(1).max(200),
+  address: z.string().trim().max(300).optional(),
   dob: z.coerce.date().optional(),
   sex: z.enum(['M', 'F', 'O']).optional(),
   medicalRecordNumber: z.string().trim().max(80).optional(),
@@ -39,6 +40,7 @@ const PatientPregnancy = z.object({
 
 const RequisitionPatient = z.object({
   name: z.string().trim().min(1).max(200),
+  address: z.string().trim().max(300).optional(),
   age: z.coerce.number().int().min(0),
   sex: z.enum(['M', 'F', 'O']),
   mrn: z.string().trim().max(80).optional(),

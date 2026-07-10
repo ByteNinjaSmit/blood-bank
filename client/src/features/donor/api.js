@@ -8,6 +8,7 @@ export const donorApi = {
   create: (data) => apiClient.post(BASE, data).then(unwrap),
   update: (id, data) => apiClient.put(`${BASE}/${id}`, data).then(unwrap),
   remove: (id) => apiClient.delete(`${BASE}/${id}`).then(unwrap),
+  restore: (id) => apiClient.post(`${BASE}/${id}/restore`).then(unwrap),
   // Full-text search (Atlas $search → $text → regex fallback)
   search: (params) => apiClient.get(`${BASE}/search`, { params }).then(unwrap),
   // Vector similarity search (requires 768-dim embedding)

@@ -12,7 +12,7 @@ export default function IssuedDiscardedSection({ componentsIssued, discards }) {
 
   return (
     <>
-      <Section title="3. Blood Components Issued (by Hospital)">
+      <Section title="2. Blood Components Issued (by Hospital)">
         <EntityBreakdown
           entities={componentsIssued.hospitals}
           emptyLabel="No units issued to any hospital for this period."
@@ -21,7 +21,7 @@ export default function IssuedDiscardedSection({ componentsIssued, discards }) {
           Sourced from Requisitions matched and issued/completed this period, not the raw inventory issue log.
         </p>
       </Section>
-      <Section title="4. Blood Components Discarded (by Reason)">
+      <Section title="3. Blood Components Discarded (by Reason)">
         <ReportTable headers={['Reason', 'Quantity', 'Component Breakdown']} rows={discardRows} alignRight={[1]} />
         <p className="text-[11px] text-slate-400">
           Sourced from the Discard register (units with status DISCARDED). Units that simply expired in stock

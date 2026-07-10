@@ -65,6 +65,7 @@ export default function RequestCreationStep({
         requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 16) : '',
         patient: {
           name: requestDoc.patient?.name || '',
+          address: requestDoc.patient?.address || '',
           age: requestDoc.patient?.age || '',
           sex: requestDoc.patient?.sex || 'M',
           mrn: requestDoc.patient?.mrn || '',

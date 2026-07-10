@@ -45,6 +45,7 @@ function DiscardDrawer({ onClose, stockItems }) {
   const [bags, setBags] = useState('');
   const [reason, setReason] = useState('');
   const [reasonDetail, setReasonDetail] = useState('');
+  const [discardDate, setDiscardDate] = useState(() => new Date().toISOString().slice(0, 10));
   const createDiscard = useCreateBagDiscard();
 
   const handleSelectStock = (id) => {
@@ -63,6 +64,7 @@ function DiscardDrawer({ onClose, stockItems }) {
       quantity: totalQty,
       reason,
       reasonDetail,
+      discardDate,
     }).then(onClose).catch(() => { });
   };
 
@@ -109,6 +111,10 @@ function DiscardDrawer({ onClose, stockItems }) {
               </div>
             </div>
             <span className="text-[11px] text-gray-500 mt-1 block">Total Bags to Discard: <strong>{totalQty}</strong> bags</span>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Discard Date *</label>
+            <input required type="date" value={discardDate} onChange={(e) => setDiscardDate(e.target.value)} className={fieldClass} />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Reason *</label>
@@ -247,8 +253,8 @@ export default function BagDiscard() {
               <Trash2 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Bag Discard Register</h1>
-              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Biomedical Waste Tracking</p>
+              <h1 className="text-2xl font-bold text-gray-900">Bag Discard Register</h1>
+              <p className="text-gray-500 text-sm">Biomedical Waste Tracking</p>
             </div>
           </div>
           <button onClick={() => setShowDiscardDrawer(true)}
@@ -258,7 +264,7 @@ export default function BagDiscard() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Reason</label>

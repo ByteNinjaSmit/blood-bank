@@ -196,6 +196,16 @@ body {
   transition-duration: 150ms;
 }
 
+/* Radix floating UI (Select / Dropdown / Popover / Tooltip / …) positions its
+   content by writing an inline `transform: translate(...)` onto this wrapper.
+   The global `* { transition: transform }` above would animate that positioning,
+   making menus slide in from the corner/side instead of opening in place. The
+   intended open/close animation is handled by the content's own animate-in /
+   slide-in-from-* classes — keep the positioning itself instant. */
+[data-radix-popper-content-wrapper] {
+  transition: none !important;
+}
+
 /* Smooth layout transitions */
 .transition-all {
   transition-property: all;

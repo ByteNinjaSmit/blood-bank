@@ -8,7 +8,7 @@ export const bagProcurementApi = {
     get:          (id)          => apiClient.get(`${V}/vendor/${id}`).then(unwrap),
     create:       (data)        => apiClient.post(`${V}/vendor`, data).then(unwrap),
     update:       (id, data)    => apiClient.put(`${V}/vendor/${id}`, data).then(unwrap),
-    updateStatus: (id, status)  => apiClient.patch(`${V}/vendor/${id}/status`, { status }).then(unwrap),
+    updateStatus: (id, status)  => apiClient.patch(`${V}/vendor/${id}/status`, { approvalStatus: status }).then(unwrap),
     remove:       (id)          => apiClient.delete(`${V}/vendor/${id}`).then(unwrap),
   },
 
@@ -56,5 +56,16 @@ export const bagProcurementApi = {
     get:     (id)       => apiClient.get(`${V}/bag-discard/${id}`).then(unwrap),
     create:  (data)     => apiClient.post(`${V}/bag-discard`, data).then(unwrap),
     approve: (id, data) => apiClient.patch(`${V}/bag-discard/${id}/approve`, data).then(unwrap),
+  },
+
+  upload: {
+    file: (file, folder) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiClient.post(`${V}/upload${folder ? `?folder=${folder}` : ''}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }).then(unwrap);
+    },
+    remove: (url) => apiClient.delete(`${V}/upload`, { params: { url } }).then(unwrap),
   },
 };

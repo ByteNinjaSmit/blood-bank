@@ -31,7 +31,7 @@ export default function CampWiseSection({ campWise }) {
   ]);
 
   return (
-    <Section title="20. Camp-wise Donor & Donation Summary">
+    <Section title="19. Camp-wise Donor & Donation Summary">
       <div>
         <div className="text-xs font-semibold text-slate-600 mb-1.5">Overview</div>
         <ReportTable

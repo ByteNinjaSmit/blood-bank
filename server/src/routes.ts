@@ -42,6 +42,8 @@ import exportRouter from '@/modules/export/export.routes';
 import dashboardRouter from '@/modules/dashboard/dashboard.routes';
 import donorCardRouter from '@/modules/donor-card/donor-card.routes';
 import monthlyReportInputRouter from '@/modules/monthly-report-input/monthly-report-input.routes';
+import appointmentRouter from '@/modules/appointment/appointment.routes';
+import misRouter from '@/modules/mis/mis.routes';
 import { errorMiddleware } from '@/shared/middlewares/error';
 
 interface ModuleRoute {
@@ -80,6 +82,8 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/dashboard', router: dashboardRouter },
   { path: '/donor-card', router: donorCardRouter },
   { path: '/monthly-report-input', router: monthlyReportInputRouter },
+  { path: '/appointment', router: appointmentRouter },
+  { path: '/mis', router: misRouter },
 ];
 
 export function registerRoutes(): Router {

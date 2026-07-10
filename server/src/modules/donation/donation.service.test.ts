@@ -57,6 +57,8 @@ function mockDonors(donor: DonorDto | null = donorMatchingMinimum): DonorRepo {
     findById: vi.fn().mockResolvedValue(donor),
     update: vi.fn(),
     list: vi.fn(),
+    softDelete: vi.fn(),
+    restore: vi.fn(),
     delete: vi.fn(),
     findActiveByPhone: vi.fn(),
   };
@@ -88,8 +90,12 @@ function mockDonations(): DonationRepo {
       }),
     ),
     findById: vi.fn(),
+    findRawStatus: vi.fn(),
     list: vi.fn(),
     findLatestByDonor: vi.fn().mockResolvedValue(null),
+    softDelete: vi.fn(),
+    restore: vi.fn(),
+    delete: vi.fn(),
   };
 }
 

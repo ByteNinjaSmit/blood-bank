@@ -8,26 +8,13 @@ import {
 } from '../queries';
 import { usePOList } from '../queries';
 import { formatBloodBagQty } from '../utils/qtyHelper';
-import { apiClient, unwrap } from '@/core/api-client';
+import { bagProcurementApi } from '../api';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportProcurementGRN } from '@/utils/excelExportHelper';
 
-const uploadFile = (file, folder) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  return apiClient.post(`/api/v2/upload${folder ? `?folder=${folder}` : ''}`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  }).then(unwrap);
-};
-
-const deleteFile = (url) => {
-  return apiClient.delete('/api/v2/upload', {
-    params: { url },
-  }).then(unwrap);
-};
+const uploadFile = bagProcurementApi.upload.file;
+const deleteFile = bagProcurementApi.upload.remove;
 
 function IframePreviewModal({ isOpen, url, title, onClose }) {
   if (!isOpen || !url) return null;
@@ -703,8 +690,8 @@ export default function GoodsReceipt() {
               <PackageCheck className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Goods Receipt (GRN)</h1>
-              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Inward Stock Register</p>
+              <h1 className="text-2xl font-bold text-gray-900">Goods Receipt (GRN)</h1>
+              <p className="text-gray-500 text-sm">Inward Stock Register</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -717,7 +704,7 @@ export default function GoodsReceipt() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>

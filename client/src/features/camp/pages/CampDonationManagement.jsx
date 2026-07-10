@@ -148,14 +148,14 @@ const CampDonationManagement = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-gradient-to-br from-orange-700 to-orange-900 rounded-xl shadow-sm">
               <Droplets className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Camp Donation Management</h1>
-              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Manage donations for this camp</p>
+              <h1 className="text-2xl font-bold text-gray-900">Camp Donation Management</h1>
+              <p className="text-gray-500 text-sm">Manage donations for this camp</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -171,7 +171,7 @@ const CampDonationManagement = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
         
         {/* Stats card */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">

@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { TestTube, Loader2, Scissors, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
+import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { formatDateTime } from "@/lib/format-date";
 
 const ComponentSeparate = () => {
-  const { API, authorizationToken, user } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -36,10 +37,7 @@ const ComponentSeparate = () => {
   const fetchBags = async () => {
     setIsLoading(true);
     try {
-      const bagsRes = await axios.get(`${API}/api/v2/component/bags-to-separate`, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
-      });
+      const bagsRes = await apiClient.get(`/api/v2/component/bags-to-separate`);
       console.log("Bags to separate response:", bagsRes.data);
 
       const bagsData = Array.isArray(bagsRes.data?.bags) ? bagsRes.data.bags : [];
@@ -71,20 +69,18 @@ const ComponentSeparate = () => {
       toast.error("Unable to resolve donationId for this bag");
       return;
     }
+    const { remaining } = getBagVolumeStats(activeBag);
+    if (inputVolume > remaining) {
+      toast.error(`Requested volume (${inputVolume}mL) exceeds remaining bag volume (${remaining}mL)`);
+      return;
+    }
     try {
       setIsActionLoading(true);
-      await axios.post(
-        `${API}/api/v2/component/separate`,
-        {
-          donationId,
-          componentType: separateForm.componentType,
-          volumeMl: inputVolume,
-        },
-        {
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
-        }
-      );
+      await apiClient.post(`/api/v2/component/separate`, {
+        donationId,
+        componentType: separateForm.componentType,
+        volumeMl: inputVolume,
+      });
       toast.success("Component separated successfully");
       setShowSeparateModal(false);
       
@@ -107,14 +103,7 @@ const ComponentSeparate = () => {
     }
     try {
       setIsActionLoading(true);
-      await axios.post(
-        `${API}/api/v2/component/separation-completed`,
-        { donationId, signature },
-        {
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
-        }
-      );
+      await apiClient.post(`/api/v2/component/separation-completed`, { donationId, signature });
       toast.success("Marked separation as completed");
       await fetchBags();
     } catch (err) {
@@ -154,7 +143,7 @@ const ComponentSeparate = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Bags to Separate</h1>
-              <p className="text-gray-600 mt-1">Fetch, separate, and complete in a few clicks</p>
+              <p className="text-gray-500 text-sm">Fetch, separate, and complete in a few clicks</p>
             </div>
           </div>
         </div>
@@ -206,7 +195,7 @@ const ComponentSeparate = () => {
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.segmentNo || "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.bloodGroup} {bag.rh}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{bag.collectionDate ? new Date(bag.collectionDate).toLocaleString() : "-"}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{formatDateTime(bag.collectionDate)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">
                         {Array.isArray(bag.components) && bag.components.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
@@ -302,13 +291,16 @@ const ComponentSeparate = () => {
                 onChange={(e) => setSeparateForm((s) => ({ ...s, volumeMl: e.target.value }))}
                 min={1}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Remaining bag volume: {getBagVolumeStats(activeBag).remaining}mL of {getBagVolumeStats(activeBag).total}mL
+              </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowSeparateModal(false)}>Cancel</Button>
-            <Button 
-              onClick={submitSeparate} 
-              disabled={isActionLoading || Number(separateForm.volumeMl) <= 0}
+            <Button
+              onClick={submitSeparate}
+              disabled={isActionLoading || Number(separateForm.volumeMl) <= 0 || Number(separateForm.volumeMl) > getBagVolumeStats(activeBag).remaining}
             >
               {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Separate"}
             </Button>

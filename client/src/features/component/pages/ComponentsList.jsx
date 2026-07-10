@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ArrowLeft, TestTube, Loader2, Filter, Search, ChevronLeft, ChevronRight, Calendar, Package, AlertTriangle, X, Eye } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
+import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
+import { formatDate as formatDateKolkata } from "@/lib/format-date";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,11 +72,7 @@ const ComponentsList = () => {
           ...(state.filters.search && { search: state.filters.search }),
           order: state.filters.order,
         };
-        const response = await axios.get(`${API}/api/v2/component/list`, {
-          params,
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
-        });
+        const response = await apiClient.get(`/api/v2/component/list`, { params });
         if (response.data?.components) {
           dataToExport = flattenComponents(response.data.components);
         }
@@ -143,11 +140,7 @@ const ComponentsList = () => {
 
       console.log("Fetching components with params:", params);
 
-      const response = await axios.get(`${API}/api/v2/component/list`, {
-        params,
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
-      });
+      const response = await apiClient.get(`/api/v2/component/list`, { params });
 
       console.log("Components API response:", response.data);
 
@@ -270,7 +263,7 @@ const ComponentsList = () => {
   // Single responsibility: Format date
   const formatDate = (dateString) => {
     if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString();
+    return formatDateKolkata(dateString);
   };
 
   // Single responsibility: Get status badge class for custom tailwind styling
@@ -337,8 +330,8 @@ const ComponentsList = () => {
                 <Package className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Components Inventory</h1>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                <h1 className="text-2xl font-bold text-gray-900">Components Inventory</h1>
+                <p className="text-gray-500 text-sm">
                   Management Portal
                 </p>
               </div>
@@ -369,7 +362,7 @@ const ComponentsList = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Filters Card */}
         {/* Compact Filters Section */}
         <Card className="mb-4 border-red-50 shadow-sm">

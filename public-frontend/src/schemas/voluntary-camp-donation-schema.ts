@@ -13,7 +13,7 @@ export const voluntaryCampDonationSchema = z.object({
     }, "Donor must be between 18 and 65 years old"),
     bloodGroup: z.string().min(1, "Blood group is required"),
     occupation: z.string().min(1, "Occupation is required"),
-    siteId: z.string().min(1, "Camp selection is required"),
+    campId: z.string().min(1, "Camp selection is required"),
 
     // 2. Contact
     address: z.string().min(5, "Address is too short"),

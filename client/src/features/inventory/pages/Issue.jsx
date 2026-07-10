@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import axios from "axios";
+import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Loader2, PackageCheck, Plus, Trash2, Warehouse, MapPin, Eye, ArrowLeftRight, Printer } from "lucide-react";
@@ -78,7 +78,7 @@ const MultiBagSelect = ({ availableBags, selectedBags, onChange }) => {
 };
 
 const Issue = () => {
-  const { API, authorizationToken, user } = useAuth();
+  const { user } = useAuth();
 
   const [isLoading, setIsLoading] = useState(false);
   const [rows, setRows] = useState([]);
@@ -123,9 +123,7 @@ const Issue = () => {
       let dataToExport = [];
       if (exportAll) {
         // Fetch all issued/matching items without limit (up to 5000)
-        const res = await axios.get(`${API}/api/inventory`, {
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
+        const res = await apiClient.get(`/api/inventory`, {
           params: {
             page: 1,
             limit: 5000,
@@ -218,9 +216,7 @@ const Issue = () => {
   const fetchBulkTransfers = async (page = 1, limit = bulkPagination.limit) => {
     setBulkLoading(true);
     try {
-      const res = await axios.get(`${API}/api/v2/bulk-transfer`, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
+      const res = await apiClient.get(`/api/v2/bulk-transfer`, {
         params: { page, limit },
       });
       setBulkRows(Array.isArray(res.data?.data) ? res.data.data : []);
@@ -257,10 +253,7 @@ const Issue = () => {
     if (!deleteBulkTarget) return;
     try {
       setDeleteBulkSubmitting(true);
-      await axios.delete(`${API}/api/v2/bulk-transfer/${deleteBulkTarget.id}`, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
-      });
+      await apiClient.delete(`/api/v2/bulk-transfer/${deleteBulkTarget.id}`);
       toast.success(
         deleteBulkTarget.transferType === 'GIVE_LOAN'
           ? "Bulk transfer deleted — bags returned to stock"
@@ -329,15 +322,12 @@ const Issue = () => {
 
     try {
       setBulkSubmitting(true);
-      await axios.post(`${API}/api/v2/bulk-transfer`, {
+      await apiClient.post(`/api/v2/bulk-transfer`, {
         transferType: bulkTransferType,
         bloodBankName: bulkBloodBankName.trim(),
         bloodBankAddress: bulkBloodBankAddress.trim(),
         transferDate: bulkTransferDate,
         items,
-      }, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
       });
 
       toast.success(bulkTransferType === "GIVE_LOAN" ? "Loan given successfully — bags removed from stock" : "Loan taken in successfully — bags added to stock");
@@ -462,9 +452,7 @@ const Issue = () => {
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`${API}/api/inventory`, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
+      const res = await apiClient.get(`/api/inventory`, {
         params: {
           page,
           limit,
@@ -491,9 +479,7 @@ const Issue = () => {
   const fetchAvailableUnits = async () => {
     setLoadingAvailable(true);
     try {
-      const res = await axios.get(`${API}/api/inventory`, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
+      const res = await apiClient.get(`/api/inventory`, {
         params: {
           page: 1,
           limit: 5000,
@@ -549,7 +535,7 @@ const Issue = () => {
 
     try {
       setIsLoading(true);
-      await axios.post(`${API}/api/inventory/send-to-storage`, {
+      await apiClient.post(`/api/inventory/send-to-storage`, {
         location: storageLocation,
         otherLocationName: otherLocationName.trim(),
         bags: bagsPayload,
@@ -565,9 +551,6 @@ const Issue = () => {
           age: Number(patientDetails.age),
           otherDiseaseName: patientDetails.disease === "OTHER" ? patientDetails.otherDiseaseName.trim() : "",
         } : null,
-      }, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
       });
 
       toast.success(isClinicalIndication ? "Issued for the clinical indication successfully" : "Blood bags sent to storage successfully");
@@ -609,9 +592,7 @@ const Issue = () => {
     setStorageLoading(true);
     setExpandedDates(new Set()); // reset expanded on location change
     try {
-      const res = await axios.get(`${API}/api/inventory`, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
+      const res = await apiClient.get(`/api/inventory`, {
         params: { page: 1, limit: 500, status: 'issued', storageLocation: location, sortBy: 'issuedAt', order: 'desc' },
       });
       const data = Array.isArray(res.data?.data) ? res.data.data : [];
@@ -664,9 +645,7 @@ const Issue = () => {
   const fetchThalassemia = async (page = thalPagination.page, limit = thalPagination.limit) => {
     setThalLoading(true);
     try {
-      const res = await axios.get(`${API}/api/inventory`, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
+      const res = await apiClient.get(`/api/inventory`, {
         params: { page, limit, status: 'issued', dispatchType: 'CLINICAL_INDICATION', sortBy: 'issuedAt', order: 'desc' },
       });
       setThalRows(Array.isArray(res.data?.data) ? res.data.data : []);
@@ -701,7 +680,7 @@ const Issue = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Issue Stock</h1>
-              <p className="text-gray-600 mt-1">Issue previously reserved components</p>
+              <p className="text-gray-500 text-sm">Issue previously reserved components</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import CustomModal from "@/components/CustomModal";
 import { apiClient } from "@/core/api-client";
-import { downloadExcelReport, formatDate } from "@/utils/excelExportHelper";
+import { downloadExcelReport, formatDate, buildExportMeta } from "@/utils/excelExportHelper";
 import { toast } from "sonner";
 import { Droplets, FileSpreadsheet, Loader2, RefreshCw, ClipboardCheck } from "lucide-react";
 import { useDashboard } from "@/features/dashboard/queries";
@@ -55,12 +55,9 @@ const MATRIX_BLOOD_GROUPS = [
   { group: "O", rh: "Negative", label: "O-" },
 ];
 
-function sheet({ name, subtitle, headers, rows, alignments }) {
+function table({ subtitle, headers, rows, alignments }) {
   return {
-    name,
-    title: "SANJIVANI BLOOD BANK, KOPARGAON",
     subtitle,
-    reportPeriod: formatDate(new Date()),
     headers,
     alignments: alignments || headers.map((_, i) => (i === 0 ? "left" : "right")),
     rows,
@@ -91,7 +88,7 @@ function buildDashboardSheets(data) {
   const hospitalRequisitions = data?.hospitalRequisitions || [];
 
   const sheets = [
-    sheet({
+    table({
       name: "Overview",
       subtitle: "Overall Totals",
       headers: ["Metric", "Value"],
@@ -106,14 +103,14 @@ function buildDashboardSheets(data) {
       ],
       alignments: ["left", "right"],
     }),
-    sheet({
+    table({
       name: "Blood Stock Matrix",
       subtitle: "Real-Time Blood Stock Inventory Matrix (ABO / Rh)",
       headers: matrixHeaders,
       rows: matrixRows,
       alignments: matrixHeaders.map((_, i) => (i === 0 ? "left" : "center")),
     }),
-    sheet({
+    table({
       name: "Donor & Donation",
       subtitle: "Donor & Donation Overview",
       headers: ["Metric", "Value"],
@@ -131,7 +128,7 @@ function buildDashboardSheets(data) {
       }).map(([k, v]) => [k, number(v)]),
       alignments: ["left", "right"],
     }),
-    sheet({
+    table({
       name: "Blood Bags & Components",
       subtitle: "Blood Bag & Component Overview",
       headers: ["Metric", "Value"],
@@ -150,7 +147,7 @@ function buildDashboardSheets(data) {
       }).map(([k, v]) => [k, number(v)]),
       alignments: ["left", "right"],
     }),
-    sheet({
+    table({
       name: "Blood Group Availability",
       subtitle: "In-Stock Units by Blood Group",
       headers: ["Blood Group", "Units"],
@@ -165,7 +162,7 @@ function buildDashboardSheets(data) {
         ["AB-", number(legacy.bloodGroups?.ABneg)],
       ],
     }),
-    sheet({
+    table({
       name: "Hospital Requests",
       subtitle: "Hospital Request Overview",
       headers: ["Metric", "Value"],
@@ -181,13 +178,13 @@ function buildDashboardSheets(data) {
       }).map(([k, v]) => [k, number(v)]),
       alignments: ["left", "right"],
     }),
-    sheet({
+    table({
       name: "Requisitions by Hospital",
       subtitle: "Per-Hospital Requisition Breakdown",
       headers: ["Hospital", "Total Requests", "Total Units"],
       rows: hospitalRequisitions.map((h) => [h.hospitalName, number(h.totalRequests), number(h.totalUnits)]),
     }),
-    sheet({
+    table({
       name: "Testing & Serology",
       subtitle: "Testing & Serology Overview",
       headers: ["Metric", "Value"],
@@ -201,7 +198,7 @@ function buildDashboardSheets(data) {
       }).map(([k, v]) => [k, number(v)]),
       alignments: ["left", "right"],
     }),
-    sheet({
+    table({
       name: "Camp KPIs & Alerts",
       subtitle: "Camp Overview & Exception Alerts",
       headers: ["Metric", "Value"],
@@ -218,7 +215,7 @@ function buildDashboardSheets(data) {
       }).map(([k, v]) => [k, number(v)]),
       alignments: ["left", "right"],
     }),
-    sheet({
+    table({
       name: "Ongoing Camps",
       subtitle: "Active/Ongoing Donation Camps",
       headers: ["Camp Name", "Address", "Donors", "Units", "Staff", "From", "To"],
@@ -228,31 +225,31 @@ function buildDashboardSheets(data) {
       ]),
       alignments: ["left", "left", "right", "right", "right", "center", "center"],
     }),
-    sheet({
+    table({
       name: "BloodBag Status",
       subtitle: "BloodBag Status Breakdown",
       headers: ["Status", "Count"],
       rows: (legacy.bloodbagStatusPie || []).map((s) => [s.status, number(s.value)]),
     }),
-    sheet({
+    table({
       name: "Chemical Low Stock",
       subtitle: "Chemicals at/below reorder level",
       headers: ["Chemical", "Available", "Reorder Level"],
       rows: (chemical.lowStockItems || []).map((c) => [c.name, number(c.available), number(c.reorderLevel)]),
     }),
-    sheet({
+    table({
       name: "Bag Stock",
       subtitle: "Bag Stock by Type",
       headers: ["Bag Type", "Closing Stock", "Received", "Issued", "Damaged", "Discarded"],
       rows: (bagStock.byType || []).map((t) => [t.bagType, number(t.totalClosingStock), number(t.totalReceived), number(t.totalIssued), number(t.totalDamaged), number(t.totalDiscarded)]),
     }),
-    sheet({
+    table({
       name: "Low Box Stock",
       subtitle: "Batches with 3 or fewer unopened boxes",
       headers: ["Batch", "Bag Type", "Boxes Left", "Expiry"],
       rows: (bagStock.lowBoxBatches || []).map((b) => [b.batchNumber, b.bagType, number(b.unopenedBoxes), formatDate(b.expiryDate)]),
     }),
-    sheet({
+    table({
       name: "Bulk Transfer",
       subtitle: "Loan Given / Taken",
       headers: ["Direction", "Total"],
@@ -261,7 +258,7 @@ function buildDashboardSheets(data) {
         ["Taken", number(bulkTransfer.taken?.total)],
       ],
     }),
-    sheet({
+    table({
       name: "Clinical Indication Disease",
       subtitle: "Component Issue by Clinical Indication / Disease",
       headers: ["Disease", "Blood Group", "Units"],
@@ -271,19 +268,19 @@ function buildDashboardSheets(data) {
         ...(diseasePatients.other?.byBloodGroup || []).map((b) => ["Other", b.bloodGroup, number(b.count)]),
       ],
     }),
-    sheet({
+    table({
       name: "Storage Breakdown",
       subtitle: "Units by storage location",
       headers: ["Storage Location", "Units"],
       rows: storage.map((s) => [s.location, number(s.count)]),
     }),
-    sheet({
+    table({
       name: "Discards",
       subtitle: "Bag-level discards by reason",
       headers: ["Reason", "Quantity", "Entries"],
       rows: (discards.bagLevel || []).map((d) => [d.reason, number(d.quantity), number(d.count)]),
     }),
-    sheet({
+    table({
       name: "Deferrals",
       subtitle: "Donor deferrals by reason",
       headers: ["Reason", "Count"],
@@ -292,6 +289,19 @@ function buildDashboardSheets(data) {
   ];
 
   return sheets.filter((s) => s.rows.length > 0);
+}
+
+/** Combines every dashboard table onto a single worksheet, stacked one below
+ * another in the same order they appear on the page, so the exported file
+ * mirrors what's actually shown on screen. */
+function buildDashboardSheet(data, meta) {
+  return {
+    name: "Operational Dashboard",
+    title: "SANJIVANI BLOOD BANK, KOPARGAON",
+    subtitle: "Operational Dashboard — Full Snapshot",
+    tables: buildDashboardSheets(data),
+    ...meta,
+  };
 }
 
 export default function Dashboard() {
@@ -309,8 +319,9 @@ export default function Dashboard() {
     }
     setExporting(true);
     try {
-      const sheets = buildDashboardSheets(payload);
-      await downloadExcelReport(sheets, `Dashboard_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      const meta = buildExportMeta({}, {});
+      const sheet = buildDashboardSheet(payload, meta);
+      await downloadExcelReport([sheet], `Dashboard_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
     } finally {
       setExporting(false);
     }
@@ -389,8 +400,16 @@ export default function Dashboard() {
       {/* Header / Actions */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Operational Dashboard</h1>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-800 rounded-lg">
+                <Droplets className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Operational Dashboard</h1>
+                <p className="text-gray-500 text-sm">Live overview of donors, stock, and issuance</p>
+              </div>
+            </div>
             <div className="ml-auto flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
                 {isFetching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}

@@ -87,7 +87,7 @@ export default function Suppliers() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Supplier Master</h1>
-          <p className="text-sm text-gray-500 font-medium">Manage chemical vendors and medical diagnostics suppliers</p>
+          <p className="text-gray-500 text-sm">Manage chemical vendors and medical diagnostics suppliers</p>
         </div>
         <button
           onClick={() => {

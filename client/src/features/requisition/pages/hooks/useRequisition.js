@@ -14,12 +14,14 @@ export const defaultDonorCard = {
 
 export const defaultPatient = {
   name: '',
+  address: '',
   age: '',
   sex: 'M',
   mrn: '',
   diagnosis: '',
   hb: '',
   indication: '',
+  specialNeeds: [],
   history: {
     previousTransfusions: 0,
     approximateDate: '',
@@ -82,12 +84,14 @@ export default function useRequisition(authToken) {
         requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 16) : '',
         patient: {
           name: requestDoc.patient?.name || '',
+          address: requestDoc.patient?.address || '',
           age: requestDoc.patient?.age || '',
           sex: requestDoc.patient?.sex || 'M',
           mrn: requestDoc.patient?.mrn || '',
           diagnosis: requestDoc.patient?.diagnosis || '',
           hb: requestDoc.patient?.hb || '',
           indication: requestDoc.patient?.indication || '',
+          specialNeeds: Array.isArray(requestDoc.patient?.specialNeeds) ? requestDoc.patient.specialNeeds : [],
           history: {
             previousTransfusions: requestDoc.patient?.history?.previousTransfusions || 0,
             approximateDate: requestDoc.patient?.history?.approximateDate || '',
@@ -207,7 +211,10 @@ function checkHasChanges(doc, payload) {
   if ((doc.patient?.diagnosis || '') !== (payload.patient.diagnosis || '')) return true;
   if (Number(doc.patient?.hb || 0) !== Number(payload.patient.hb || 0)) return true;
   if ((doc.patient?.indication || '') !== (payload.patient.indication || '')) return true;
-  
+  const docSpecialNeeds = [...(doc.patient?.specialNeeds || [])].sort();
+  const paySpecialNeeds = [...(payload.patient.specialNeeds || [])].sort();
+  if (docSpecialNeeds.length !== paySpecialNeeds.length || docSpecialNeeds.some((v, i) => v !== paySpecialNeeds[i])) return true;
+
   // Transfusion history
   if (Number(doc.patient?.history?.previousTransfusions || 0) !== Number(payload.patient.history.previousTransfusions || 0)) return true;
   if ((doc.patient?.history?.approximateDate || '') !== (payload.patient.history.approximateDate || '')) return true;
@@ -267,12 +274,14 @@ function checkHasChanges(doc, payload) {
         requiredAt: form.requiredAt || undefined,
         patient: {
           name: form.patient.name,
+          address: form.patient.address || undefined,
           age: Number(form.patient.age),
           sex: form.patient.sex,
           mrn: form.patient.mrn || undefined,
           diagnosis: form.patient.diagnosis || undefined,
           hb: form.patient.hb ? Number(form.patient.hb) : undefined,
           indication: form.patient.indication || undefined,
+          specialNeeds: form.patient.specialNeeds || [],
           history: {
             previousTransfusions: Number(form.patient.history?.previousTransfusions || 0),
             approximateDate: form.patient.history?.approximateDate || undefined,
@@ -468,12 +477,14 @@ function checkHasChanges(doc, payload) {
         requiredAt: form.requiredAt || undefined,
         patient: {
           name: form.patient.name,
+          address: form.patient.address || undefined,
           age: Number(form.patient.age),
           sex: form.patient.sex,
           mrn: form.patient.mrn || undefined,
           diagnosis: form.patient.diagnosis || undefined,
           hb: form.patient.hb ? Number(form.patient.hb) : undefined,
           indication: form.patient.indication || undefined,
+          specialNeeds: form.patient.specialNeeds || [],
           history: {
             previousTransfusions: Number(form.patient.history?.previousTransfusions || 0),
             approximateDate: form.patient.history?.approximateDate || undefined,
@@ -513,12 +524,16 @@ function checkHasChanges(doc, payload) {
     }
   };
 
-  const handleCrossmatchUpdate = async (inventoryId, status) => {
+  const handleCrossmatchUpdate = async (inventoryId, status, details = {}) => {
     if (!requestDoc?._id || !inventoryId) return false;
     setCrossmatchUpdating(true);
     const res = await requisitionApi.updateCrossmatch(requestDoc._id, {
       inventoryId,
       crossmatchStatus: status,
+      compatibilityResult: details.compatibilityResult,
+      crossmatchDoneAt: details.crossmatchDoneAt,
+      crossmatchSeenAt: details.crossmatchSeenAt,
+      cardNumber: details.cardNumber,
     });
     setCrossmatchUpdating(false);
     if (!res.success) {
@@ -542,6 +557,7 @@ function checkHasChanges(doc, payload) {
       requiredAt: form.requiredAt || undefined,
       patient: {
         name: form.patient.name,
+        address: form.patient.address || undefined,
         age: Number(form.patient.age),
         sex: form.patient.sex,
         mrn: form.patient.mrn || undefined,

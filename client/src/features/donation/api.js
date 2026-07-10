@@ -6,4 +6,6 @@ export const donationApi = {
   list: (params) => apiClient.get(BASE, { params }).then(unwrap),
   detail: (id) => apiClient.get(`${BASE}/${id}`).then(unwrap),
   create: (data) => apiClient.post(BASE, data).then(unwrap),
+  remove: (id) => apiClient.delete(`${BASE}/${id}`).then(unwrap),
+  restore: (id) => apiClient.post(`${BASE}/${id}/restore`).then(unwrap),
 };

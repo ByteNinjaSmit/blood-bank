@@ -17,6 +17,11 @@ export interface PerformCrossmatchInput {
   method: 'IS' | 'AHG' | 'ELECTRONIC';
   phases?: { immediateSpin?: string; coombsAhg?: string };
   result: 'COMPATIBLE' | 'INCOMPATIBLE';
+  // Manual crossmatch worksheet fields (operator-entered, per matched unit).
+  compatibilityResult?: 'MAJOR_COMPATIBLE' | 'MINOR_COMPATIBLE' | 'UNIVERSAL';
+  crossmatchDoneAt?: Date;
+  crossmatchSeenAt?: Date;
+  cardNumber?: string;
 }
 
 export interface CrossmatchService {
@@ -63,6 +68,13 @@ export function createCrossmatchService(deps: {
         actorId,
       );
 
+      const details = {
+        compatibilityResult: input.compatibilityResult,
+        crossmatchDoneAt: input.crossmatchDoneAt,
+        crossmatchSeenAt: input.crossmatchSeenAt,
+        cardNumber: input.cardNumber,
+      };
+
       let unitStatus: string;
       if (input.result === 'COMPATIBLE') {
         const u = await deps.units.applyEvent({
@@ -72,7 +84,7 @@ export function createCrossmatchService(deps: {
           reason: `Crossmatch ${crossmatchId} compatible`,
         });
         unitStatus = u.status;
-        await deps.requisitions.setCrossmatchStatus(req.id, input.unitId, 'COMPATIBLE', actorId);
+        await deps.requisitions.setCrossmatchStatus(req.id, input.unitId, 'COMPATIBLE', actorId, details);
       } else {
         const u = await deps.units.applyEvent({
           unitId: input.unitId,
@@ -81,7 +93,7 @@ export function createCrossmatchService(deps: {
           reason: `Crossmatch ${crossmatchId} incompatible`,
         });
         unitStatus = u.status;
-        await deps.requisitions.setCrossmatchStatus(req.id, input.unitId, 'INCOMPATIBLE', actorId);
+        await deps.requisitions.setCrossmatchStatus(req.id, input.unitId, 'INCOMPATIBLE', actorId, details);
       }
 
       log.info(

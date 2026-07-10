@@ -355,8 +355,8 @@ const ListHospital = () => {
               <Building2 className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Hospital Management</h1>
-              <p className="text-gray-600">Manage and view all registered hospitals</p>
+              <h1 className="text-2xl font-bold text-gray-900">Hospital Management</h1>
+              <p className="text-gray-500 text-sm">Manage and view all registered hospitals</p>
             </div>
           </div>
           <Button

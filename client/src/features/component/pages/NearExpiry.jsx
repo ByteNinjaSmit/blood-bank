@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Clock, AlertTriangle, Filter, Search, ChevronLeft, ChevronRight, Calendar, Package, X, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
+import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { formatDate as formatDateKolkata } from "@/lib/format-date";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComponentDetailsModal } from "@/components/blood-components";
 
@@ -69,11 +70,7 @@ const NearExpiry = () => {
 
       console.log("Fetching near-expiry components with params:", params);
 
-      const response = await axios.get(`${API}/api/v2/component/near-expiry`, {
-        params,
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
-      });
+      const response = await apiClient.get(`/api/v2/component/near-expiry`, { params });
 
       console.log("Near-expiry components API response:", response.data);
 
@@ -193,7 +190,7 @@ const NearExpiry = () => {
   // Single responsibility: Format date
   const formatDate = (dateString) => {
     if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString();
+    return formatDateKolkata(dateString);
   };
 
   // Single responsibility: Get status badge variant
@@ -252,8 +249,8 @@ const NearExpiry = () => {
                 <Clock className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Near-Expiry Components</h1>
-                <p className="text-gray-600 mt-1">
+                <h1 className="text-2xl font-bold text-gray-900">Near-Expiry Components</h1>
+                <p className="text-gray-500 text-sm">
                   Monitor and manage blood components approaching their expiry date
                 </p>
               </div>

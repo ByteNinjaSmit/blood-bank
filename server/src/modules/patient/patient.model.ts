@@ -30,6 +30,7 @@ const PatientSchema = new Schema(
   {
     patientPublicId: { type: String, required: true, unique: true },
     name: { type: String, required: true, trim: true },
+    address: { type: String, trim: true },
     dob: Date,
     sex: { type: String, enum: ['M', 'F', 'O'] },
     medicalRecordNumber: { type: String, index: true },

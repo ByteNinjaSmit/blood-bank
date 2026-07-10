@@ -30,6 +30,35 @@ export const formatDateTime = (d) => {
 };
 
 /**
+ * Builds the standard { reportType, filtersApplied, reportPeriod } trio used
+ * by every export sheet's header. Pass the page's active filter values (as a
+ * label -> value map) plus an optional from/to date range; empty/falsy filter
+ * values are ignored so the description only lists what's actually active.
+ */
+export function buildExportMeta(filters = {}, { fromDate, toDate } = {}) {
+  const activeFilters = Object.entries(filters).filter(([, v]) => v !== undefined && v !== null && v !== '');
+  const isFiltered = activeFilters.length > 0 || Boolean(fromDate) || Boolean(toDate);
+
+  const parts = activeFilters.map(([label, value]) => `${label}: ${value}`);
+  if (fromDate || toDate) {
+    if (fromDate && toDate) parts.push(`Date Range: ${formatDate(fromDate)} to ${formatDate(toDate)}`);
+    else if (fromDate) parts.push(`Date Range: From ${formatDate(fromDate)}`);
+    else parts.push(`Date Range: Until ${formatDate(toDate)}`);
+  }
+
+  let reportPeriod = 'All Records';
+  if (fromDate && toDate) reportPeriod = `${formatDate(fromDate)} to ${formatDate(toDate)}`;
+  else if (fromDate) reportPeriod = `From ${formatDate(fromDate)}`;
+  else if (toDate) reportPeriod = `Until ${formatDate(toDate)}`;
+
+  return {
+    reportType: isFiltered ? 'FILTERED REPORT' : 'FULL REPORT',
+    filtersApplied: parts.length > 0 ? parts.join('; ') : undefined,
+    reportPeriod,
+  };
+}
+
+/**
  * Central utility to trigger binary Excel generation on the backend.
  */
 export async function downloadExcelReport(sheets, filename = 'Report.xlsx') {
@@ -61,7 +90,7 @@ export async function downloadExcelReport(sheets, filename = 'Report.xlsx') {
 // ==========================================
 
 // 1. Camp Donors
-export async function exportCampDonors(items, campName = 'Camp') {
+export async function exportCampDonors(items, campName = 'Camp', meta = {}) {
   const headers = ['Sr No', 'Full Name', 'DOB', 'Sex', 'Phone', 'Blood Group', 'Last Donation', 'Status'];
   const alignments = ['center', 'left', 'center', 'center', 'left', 'center', 'center', 'center'];
   
@@ -94,11 +123,12 @@ export async function exportCampDonors(items, campName = 'Camp') {
     rows,
     alignments,
     stats,
+    ...meta,
   }], `Camp_Donors_${campName.replace(/\s+/g, '_')}.xlsx`);
 }
 
 // 2. Camp Donations
-export async function exportCampDonations(items, campName = 'Camp') {
+export async function exportCampDonations(items, campName = 'Camp', meta = {}) {
   const headers = ['Sr No', 'Bag No', 'Donor Name', 'Bag Type', 'Blood Group', 'Units', 'Fitness', 'Status', 'Collected At'];
   const alignments = ['center', 'center', 'left', 'center', 'center', 'center', 'center', 'center', 'center'];
 
@@ -133,11 +163,12 @@ export async function exportCampDonations(items, campName = 'Camp') {
     rows,
     alignments,
     stats,
+    ...meta,
   }], `Camp_Donations_${campName.replace(/\s+/g, '_')}.xlsx`);
 }
 
 // 3. Component List
-export async function exportComponents(items) {
+export async function exportComponents(items, meta = {}) {
   const headers = ['Sr No', 'Component ID', 'Bag No', 'Component Type', 'Blood Group', 'Volume (mL)', 'Expiry Date', 'Status'];
   const alignments = ['center', 'center', 'center', 'left', 'center', 'center', 'center', 'center'];
 
@@ -165,11 +196,12 @@ export async function exportComponents(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Component_Inventory_Report.xlsx');
 }
 
 // 4. Serology Results
-export async function exportSerologyResults(items) {
+export async function exportSerologyResults(items, meta = {}) {
   const headers = ['Sr No', 'Bag No', 'Segment No', 'Blood Group', 'Collected Date', 'Serology Status', 'Tests & Outcomes'];
   const alignments = ['center', 'center', 'center', 'center', 'center', 'center', 'left'];
 
@@ -201,11 +233,12 @@ export async function exportSerologyResults(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Serology_Lab_Results.xlsx');
 }
 
 // 5. Inventory Stock
-export async function exportStock(items) {
+export async function exportStock(items, meta = {}) {
   const headers = ['Sr No', 'Bag No', 'Component', 'Blood Group', 'Volume', 'Expiry Date', 'Status'];
   const alignments = ['center', 'center', 'left', 'center', 'center', 'center', 'center'];
 
@@ -233,11 +266,12 @@ export async function exportStock(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Inventory_Stock_Report.xlsx');
 }
 
 // 6. Inventory Reserve
-export async function exportReserve(items) {
+export async function exportReserve(items, meta = {}) {
   const headers = ['Sr No', 'Bag No', 'Component', 'Blood Group', 'Volume', 'Expiry', 'Reserved For', 'Reserved Until', 'Patient Name', 'Patient Age', 'Patient Sex'];
   const alignments = ['center', 'center', 'left', 'center', 'center', 'center', 'left', 'center', 'left', 'center', 'center'];
 
@@ -267,11 +301,12 @@ export async function exportReserve(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Reserved_Units_Report.xlsx');
 }
 
 // 7. Inventory Issue
-export async function exportIssues(items) {
+export async function exportIssues(items, meta = {}) {
   const headers = ['Sr No', 'Bag No', 'Component', 'Blood Group', 'Volume', 'Expiry Date', 'Issued To', 'Issued By', 'Issued Date'];
   const alignments = ['center', 'center', 'left', 'center', 'center', 'center', 'left', 'left', 'center'];
 
@@ -299,11 +334,12 @@ export async function exportIssues(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Issued_Units_Report.xlsx');
 }
 
 // 8. Master Donors
-export async function exportMasterDonors(items) {
+export async function exportMasterDonors(items, meta = {}) {
   const headers = ['Sr No', 'Public ID', 'Full Name', 'Source', 'DOB', 'Sex', 'Phone', 'Blood Group', 'Last Donation', 'Status'];
   const alignments = ['center', 'center', 'left', 'center', 'center', 'center', 'left', 'center', 'center', 'center'];
 
@@ -339,11 +375,12 @@ export async function exportMasterDonors(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Master_Donor_Register.xlsx');
 }
 
 // 9. Master Donations
-export async function exportMasterDonations(items) {
+export async function exportMasterDonations(items, meta = {}) {
   const headers = ['Sr No', 'Bag No', 'Donor Name', 'Source', 'Donation Type', 'Blood Group', 'Units Count', 'Fitness Status', 'Collected At'];
   const alignments = ['center', 'center', 'left', 'center', 'center', 'center', 'center', 'center', 'center'];
 
@@ -378,11 +415,12 @@ export async function exportMasterDonations(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Master_Donation_Register.xlsx');
 }
 
 // 10. Procurement Inspection
-export async function exportProcurementInspection(items) {
+export async function exportProcurementInspection(items, meta = {}) {
   const headers = ['Sr No', 'Inspection ID', 'Batch No', 'PO Number', 'Inspection Date', 'Inspector Name', 'Status'];
   const alignments = ['center', 'center', 'center', 'center', 'center', 'left', 'center'];
 
@@ -410,11 +448,12 @@ export async function exportProcurementInspection(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Procurement_Inspection_Report.xlsx');
 }
 
 // 11. Procurement GRN (Goods Receipt)
-export async function exportProcurementGRN(items) {
+export async function exportProcurementGRN(items, meta = {}) {
   const headers = ['Sr No', 'GRN Number', 'GRN Date', 'PO Number', 'Supplier', 'Received Qty', 'Inspection Status'];
   const alignments = ['center', 'center', 'center', 'center', 'left', 'center', 'center'];
 
@@ -440,11 +479,12 @@ export async function exportProcurementGRN(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Goods_Receipt_GRN_Report.xlsx');
 }
 
 // 12. Procurement PO (Purchase Order)
-export async function exportProcurementPO(items) {
+export async function exportProcurementPO(items, meta = {}) {
   const headers = ['Sr No', 'PO Number', 'PO Date', 'Vendor', 'Manufacturer', 'Bill Date'];
   const alignments = ['center', 'center', 'center', 'left', 'left', 'center'];
 
@@ -469,11 +509,12 @@ export async function exportProcurementPO(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Purchase_Orders_Report.xlsx');
 }
 
 // 13. Procurement Issue (Bag Issuance)
-export async function exportProcurementIssue(items) {
+export async function exportProcurementIssue(items, meta = {}) {
   const headers = ['Sr No', 'Bag No', 'Segment No', 'Bag Type', 'Blood Group', 'Batch No', 'Issue Date', 'Status'];
   const alignments = ['center', 'center', 'center', 'center', 'center', 'center', 'center', 'center'];
 
@@ -501,11 +542,12 @@ export async function exportProcurementIssue(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Procurement_Bag_Issuances.xlsx');
 }
 
 // 14. Procurement Inventory (Bag Inventory)
-export async function exportProcurementInventory(items) {
+export async function exportProcurementInventory(items, meta = {}) {
   const headers = ['Sr No', 'Bag ID', 'Capacity (mL)', 'Anticoagulant', 'Status'];
   const alignments = ['center', 'center', 'center', 'center', 'center'];
 
@@ -530,11 +572,12 @@ export async function exportProcurementInventory(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Procurement_Bags_Inventory.xlsx');
 }
 
 // 15. Procurement Discard
-export async function exportProcurementDiscard(items) {
+export async function exportProcurementDiscard(items, meta = {}) {
   const headers = ['Sr No', 'Bag No', 'Component No', 'Type', 'Item Name', 'Reason', 'Discarded Date'];
   const alignments = ['center', 'center', 'center', 'center', 'left', 'left', 'center'];
 
@@ -562,11 +605,12 @@ export async function exportProcurementDiscard(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Discards_And_Wastes_Report.xlsx');
 }
 
 // 16. Chemical Inventory Usage (Reagents)
-export async function exportChemicalUsage(items) {
+export async function exportChemicalUsage(items, meta = {}) {
   const headers = ['Sr No', 'Usage ID', 'Chemical Name', 'Lot Number', 'Quantity Used', 'Used By', 'Usage Date'];
   const alignments = ['center', 'center', 'left', 'center', 'center', 'left', 'center'];
 
@@ -592,11 +636,12 @@ export async function exportChemicalUsage(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Chemical_Reagents_Usage.xlsx');
 }
 
 // 17. Chemical Inventory Purchase
-export async function exportChemicalPurchase(items) {
+export async function exportChemicalPurchase(items, meta = {}) {
   const headers = ['Sr No', 'Invoice Number', 'Purchase Date', 'Supplier Name', 'Chemical Name', 'Quantity', 'Unit Price'];
   const alignments = ['center', 'center', 'center', 'left', 'left', 'center', 'right'];
 
@@ -622,5 +667,6 @@ export async function exportChemicalPurchase(items) {
     rows,
     alignments,
     stats,
+    ...meta,
   }], 'Chemical_Procurement_Purchases.xlsx');
 }

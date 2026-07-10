@@ -32,7 +32,9 @@ export interface DonationDto {
   rhFactor: string;
   unitCount: number;
   campId?: string;
+  camp?: { id: string; name: string; address?: string };
   isFit?: boolean;
+  deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -62,8 +64,12 @@ interface CreateInput {
 export interface DonationRepo {
   createAtomic(c: CreateInput): Promise<DonationWithUnitsDto>;
   findById(id: string): Promise<DonationWithUnitsDto | null>;
+  findRawStatus(id: string): Promise<{ deletedAt: Date | null } | null>;
   list(q: ListDonationsInput): Promise<{ items: DonationDto[]; total: number }>;
   findLatestByDonor(donorId: string): Promise<{ collectedAt: Date; donationType: string } | null>;
+  softDelete(id: string, actorId: string): Promise<void>;
+  restore(id: string, actorId: string): Promise<void>;
+  delete(id: string): Promise<void>;
 }
 
 export function createDonationRepo(): DonationRepo {
@@ -299,9 +305,11 @@ export function createDonationRepo(): DonationRepo {
     async findById(id) {
       const doc = await DonationModel.findById(id)
         .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string } } }>('donor', 'name')
+        .populate<{ campId?: { _id: Types.ObjectId; name?: string; address?: string } }>('campId', 'name address')
         .lean();
       if (!doc) return null;
       const donorDoc = doc.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string } };
+      const campDoc = doc.campId as unknown as { _id: Types.ObjectId; name?: string; address?: string } | undefined;
       const [units, tti] = await Promise.all([
         BloodUnitModel.find({ donationId: doc.donationId })
           .select('unitId componentType volumeMl expiresAt status aboGroup rhFactor')
@@ -367,7 +375,10 @@ export function createDonationRepo(): DonationRepo {
         bloodGroup: tti?.aboGroupConfirmed ?? '',
         rhFactor: tti?.rhFactorConfirmed ?? '',
         unitCount: units.length,
-        campId: doc.campId?.toString(),
+        campId: campDoc?._id?.toString(),
+        camp: campDoc?._id
+          ? { id: campDoc._id.toString(), name: campDoc.name || '', address: campDoc.address }
+          : undefined,
         donorFitness: doc.donorFitness as { isFit: boolean; rejectionReason?: string; rejectedAtStep?: string } | undefined,
         medicalExam: doc.medicalExam as Record<string, unknown> | undefined,
         isFit: doc.donorFitness?.isFit,
@@ -387,19 +398,18 @@ export function createDonationRepo(): DonationRepo {
     },
 
     async list(q) {
-      const filter: Record<string, unknown> = {
-        $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-      };
+      const filter: Record<string, unknown> = {};
+      if (q.deletedOnly) {
+        filter.deletedAt = { $ne: null };
+      } else if (!q.includeDeleted) {
+        filter.deletedAt = null;
+      }
       if (q.donorId) filter.donor = new Types.ObjectId(q.donorId);
       if (q.donationType) filter.donationType = q.donationType;
       if (q.campId) filter.campId = new Types.ObjectId(q.campId);
       if (q.source === 'inhouse') {
         // Match donations with no camp: campId is null, undefined, or the field doesn't exist.
-        const inhouse$or = [{ campId: null }, { campId: { $exists: false } }];
-        // We already have a top-level $or for deletedAt — wrap both in $and.
-        const existing$or = filter.$or;
-        delete filter.$or;
-        filter.$and = [{ $or: existing$or }, { $or: inhouse$or }];
+        filter.$or = [{ campId: null }, { campId: { $exists: false } }];
       }
       if (q.source === 'camp') filter.campId = { $exists: true, $ne: null };
       if (q.fromDate || q.toDate) {
@@ -472,6 +482,7 @@ export function createDonationRepo(): DonationRepo {
             campId: d.campId?.toString(),
             isFit: d.donorFitness?.isFit,
             status,
+            deletedAt: d.deletedAt ? new Date(d.deletedAt as unknown as Date).toISOString() : null,
             createdAt: (d as unknown as { createdAt: Date }).createdAt.toISOString(),
             updatedAt: (d as unknown as { updatedAt: Date }).updatedAt.toISOString(),
           };
@@ -490,6 +501,35 @@ export function createDonationRepo(): DonationRepo {
         .lean();
       if (!doc) return null;
       return { collectedAt: doc.collectedAt, donationType: doc.donationType };
+    },
+
+    async findRawStatus(id) {
+      const doc = await DonationModel.findById(id).select('deletedAt').lean();
+      if (!doc) return null;
+      return { deletedAt: (doc.deletedAt as unknown as Date) ?? null };
+    },
+
+    async softDelete(id, actorId) {
+      const result = await DonationModel.updateOne(
+        { _id: id },
+        { deletedAt: new Date(), updatedBy: new Types.ObjectId(actorId) },
+      );
+      if (result.matchedCount === 0) throw new NotFoundError('Donation', id);
+    },
+
+    async restore(id, actorId) {
+      const result = await DonationModel.updateOne(
+        { _id: id },
+        { deletedAt: null, updatedBy: new Types.ObjectId(actorId) },
+      );
+      if (result.matchedCount === 0) throw new NotFoundError('Donation', id);
+    },
+
+    // Permanent, irreversible removal — only reached once a donation has
+    // already been soft-deleted (see donation.service.ts remove()).
+    async delete(id) {
+      const result = await DonationModel.deleteOne({ _id: id });
+      if (result.deletedCount === 0) throw new NotFoundError('Donation', id);
     },
   };
 }

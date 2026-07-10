@@ -1,5 +1,6 @@
 import { Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatDateTime } from "@/lib/format-date";
 
 const DiscardTable = ({ items = [], isLoading, onView }) => {
   return (
@@ -46,7 +47,7 @@ const DiscardTable = ({ items = [], isLoading, onView }) => {
                   {item.reason}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
-                  {item.discardedAt}
+                  {formatDateTime(item.discardedAt)}
                 </td>
                 <td className="px-4 py-3 text-sm">
                     <Button

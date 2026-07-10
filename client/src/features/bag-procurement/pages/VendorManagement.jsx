@@ -16,10 +16,9 @@ const STATUS_BADGE = {
 };
 
 const EMPTY_FORM = {
-  vendorName: '', contactPerson: '', phone: '', email: '',
-  address: '', city: '', state: '', pincode: '',
-  drugLicenseNo: '', gstNo: '', manufacturerName: '',
-  contractStartDate: '', contractEndDate: '',
+  name: '', contactPerson: '', contactPhone: '', email: '',
+  address: '', drugLicenseNo: '', gstNo: '', manufacturer: '',
+  contractStart: '', contractEnd: '',
 };
 
 function StatCard({ label, value, color }) {
@@ -72,22 +71,22 @@ function VendorDrawer({ onClose, editVendor }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Vendor Name *</label>
-              <input required value={form.vendorName} onChange={set('vendorName')}
+              <input required value={form.name} onChange={set('name')}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Manufacturer</label>
-              <input value={form.manufacturerName} onChange={set('manufacturerName')}
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Manufacturer *</label>
+              <input required value={form.manufacturer} onChange={set('manufacturer')}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Contact Person</label>
-              <input value={form.contactPerson} onChange={set('contactPerson')}
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Contact Person *</label>
+              <input required value={form.contactPerson} onChange={set('contactPerson')}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Phone</label>
-              <input value={form.phone} onChange={set('phone')}
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Phone *</label>
+              <input required value={form.contactPhone} onChange={set('contactPhone')}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
@@ -96,23 +95,8 @@ function VendorDrawer({ onClose, editVendor }) {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div className="col-span-2">
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Address</label>
-              <input value={form.address} onChange={set('address')}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">City</label>
-              <input value={form.city} onChange={set('city')}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">State</label>
-              <input value={form.state} onChange={set('state')}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Pincode</label>
-              <input value={form.pincode} onChange={set('pincode')}
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Address *</label>
+              <input required value={form.address} onChange={set('address')}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
@@ -121,18 +105,18 @@ function VendorDrawer({ onClose, editVendor }) {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">GST No</label>
-              <input value={form.gstNo} onChange={set('gstNo')}
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">GST No *</label>
+              <input required value={form.gstNo} onChange={set('gstNo')}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Contract Start</label>
-              <input type="date" value={form.contractStartDate} onChange={set('contractStartDate')}
+              <input type="date" value={form.contractStart} onChange={set('contractStart')}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Contract End</label>
-              <input type="date" value={form.contractEndDate} onChange={set('contractEndDate')}
+              <input type="date" value={form.contractEnd} onChange={set('contractEnd')}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
           </div>
@@ -166,9 +150,9 @@ export default function VendorManagement() {
 
   const stats = {
     total:      vendors.length,
-    approved:   vendors.filter((v) => v.status === 'APPROVED').length,
-    pending:    vendors.filter((v) => v.status === 'PENDING').length,
-    suspended:  vendors.filter((v) => v.status === 'SUSPENDED').length,
+    approved:   vendors.filter((v) => v.approvalStatus === 'APPROVED').length,
+    pending:    vendors.filter((v) => v.approvalStatus === 'PENDING').length,
+    suspended:  vendors.filter((v) => v.approvalStatus === 'SUSPENDED').length,
   };
 
   const handleStatus = (id, status) => updateStatus.mutate({ id, status });
@@ -188,8 +172,8 @@ export default function VendorManagement() {
               <Truck className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Vendor Management</h1>
-              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Blood Bag Suppliers</p>
+              <h1 className="text-2xl font-bold text-gray-900">Vendor Management</h1>
+              <p className="text-gray-500 text-sm">Blood Bag Suppliers</p>
             </div>
           </div>
           <button
@@ -201,7 +185,7 @@ export default function VendorManagement() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <StatCard label="Total Vendors" value={stats.total} color="text-gray-900" />
@@ -264,25 +248,25 @@ export default function VendorManagement() {
                   <tr><td colSpan={7} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
                 ) : vendors.map((v) => (
                   <tr key={v._id} className="hover:bg-orange-50/30 transition-colors">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{v.vendorName}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{v.manufacturerName || '—'}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{v.name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{v.manufacturer || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 font-mono">{v.drugLicenseNo}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 font-mono">{v.gstNo || '—'}</td>
-                    <td className="px-4 py-3"><StatusBadge status={v.status} /></td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(v.contractEndDate)}</td>
+                    <td className="px-4 py-3"><StatusBadge status={v.approvalStatus} /></td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(v.contractEnd)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
                         <button onClick={() => openEdit(v)}
                           className="px-2.5 py-1 text-xs font-medium text-orange-700 border border-orange-200 rounded-md hover:bg-orange-50">
                           Edit
                         </button>
-                        {v.status !== 'APPROVED' && (
+                        {v.approvalStatus !== 'APPROVED' && (
                           <button onClick={() => handleStatus(v._id, 'APPROVED')}
                             className="p-1.5 text-green-600 hover:bg-green-50 rounded-md" title="Approve">
                             <CheckCircle className="w-4 h-4" />
                           </button>
                         )}
-                        {v.status === 'APPROVED' && (
+                        {v.approvalStatus === 'APPROVED' && (
                           <button onClick={() => handleStatus(v._id, 'SUSPENDED')}
                             className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-md" title="Suspend">
                             <Ban className="w-4 h-4" />

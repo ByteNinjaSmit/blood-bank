@@ -13,7 +13,7 @@ import {
   TestTube,
   UserCheck,
 } from "lucide-react"
-import { Link, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAuth } from "@/store/auth"
 import { toast } from "sonner"
@@ -153,7 +153,13 @@ export default function BloodBankDoctorLoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label htmlFor="password" className="text-sm font-medium text-gray-700 block">Password</label>
-                <Link href="#" className="text-sm font-medium text-red-800 hover:text-red-900">Forgot password?</Link>
+                <button
+                  type="button"
+                  onClick={() => toast.info('Contact your system administrator to reset your password.')}
+                  className="text-sm font-medium text-red-800 hover:text-red-900"
+                >
+                  Forgot password?
+                </button>
               </div>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">

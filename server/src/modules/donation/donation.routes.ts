@@ -69,4 +69,19 @@ router.post(
   controllers.create,
 );
 
+router.delete(
+  '/:id',
+  authenticate,
+  requireRole(['system-admin', 'bbo']),
+  requirePermission('donation:delete'),
+  controllers.remove,
+);
+router.post(
+  '/:id/restore',
+  authenticate,
+  requireRole(['system-admin', 'bbo']),
+  requirePermission('donation:delete'),
+  controllers.restore,
+);
+
 export default router;

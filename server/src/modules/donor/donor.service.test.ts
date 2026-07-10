@@ -35,6 +35,8 @@ function mockRepo(overrides: Partial<DonorRepo> = {}): DonorRepo {
     findById: vi.fn().mockResolvedValue(dto),
     update: vi.fn().mockResolvedValue(dto),
     list: vi.fn().mockResolvedValue({ items: [dto], total: 1 }),
+    softDelete: vi.fn().mockResolvedValue(undefined),
+    restore: vi.fn().mockResolvedValue(undefined),
     delete: vi.fn().mockResolvedValue(undefined),
     findActiveByPhone: vi.fn().mockResolvedValue(null),
     ...overrides,

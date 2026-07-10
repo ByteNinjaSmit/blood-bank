@@ -60,10 +60,13 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'bag-issue:read', 'bag-issue:create',
     'bag-discard:read', 'bag-discard:create', 'bag-discard:approve',
     'bulk-transfer:read', 'bulk-transfer:create', 'bulk-transfer:delete',
+    'appointment:read', 'appointment:update',
   ],
   bbo: [
     'donor:read',
+    'donor:delete',
     'donation:read',
+    'donation:delete',
     'unit:read',
     'unit:release',
     'unit:discard',
@@ -85,6 +88,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'bag-issue:read', 'bag-issue:create',
     'bag-discard:read', 'bag-discard:create', 'bag-discard:approve',
     'bulk-transfer:read', 'bulk-transfer:create', 'bulk-transfer:delete',
+    'appointment:read', 'appointment:update',
   ],
   'medical-officer': [
     'donor:read',
@@ -99,7 +103,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'adverse-reaction:record',
     'report:read',
   ],
-  counsellor: ['donor:read', 'donor:update', 'tti:read'],
+  counsellor: ['donor:read', 'donor:update', 'tti:read', 'appointment:read', 'appointment:update'],
   phlebotomist: [
     'donor:read', 'donor:create', 'donor:update', 'donation:read', 'donation:create',
     'bag-stock:read', 'bag-issue:read',
@@ -144,7 +148,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'report:read',
     'lookback:run',
   ],
-  'camp-organiser': ['donor:read', 'donor:create', 'donation:read'],
+  'camp-organiser': ['donor:read', 'donor:create', 'donation:read', 'appointment:read'],
   'hospital-user': ['requisition:read', 'requisition:create', 'unit:read', 'report:read'],
 };
 

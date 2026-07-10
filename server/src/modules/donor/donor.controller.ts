@@ -17,6 +17,7 @@ export interface DonorControllers {
   get: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   list: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   remove: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  restore: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   search: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   vectorSearch: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
@@ -98,9 +99,20 @@ export function createDonorControllers(service: DonorService): DonorControllers 
     async remove(req, res, next) {
       try {
         const { id } = Validate.idParam(req);
-        actorIdOrThrow(req);
-        await service.remove(id);
-        res.status(204).end();
+        const actorId = actorIdOrThrow(req);
+        const result = await service.remove(id, actorId);
+        res.status(200).json({ success: true, data: result, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async restore(req, res, next) {
+      try {
+        const { id } = Validate.idParam(req);
+        const actorId = actorIdOrThrow(req);
+        const result = await service.restore(id, actorId);
+        res.status(200).json({ success: true, data: result, requestId: req.id });
       } catch (e) {
         next(e);
       }

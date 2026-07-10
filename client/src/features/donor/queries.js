@@ -63,6 +63,14 @@ export function useDeleteDonor() {
   });
 }
 
+export function useRestoreDonor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: donorApi.restore,
+    onSuccess: () => qc.invalidateQueries({ queryKey: donorKeys.all }),
+  });
+}
+
 export function useVectorSearch() {
   return useMutation({ mutationFn: donorApi.vectorSearch });
 }

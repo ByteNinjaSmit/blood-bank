@@ -47,8 +47,6 @@ function OnGoingCampRegistrationForm() {
     const [camps, setCamps] = useState<any[]>([])
     const [loadingCamps, setLoadingCamps] = useState(true)
 
-    const selectedCamp = camps.find((c: any) => c._id === formData.siteId)
-
     const [formData, setFormData] = useState({
         // 1. Identity
         firstName: '',
@@ -93,11 +91,13 @@ function OnGoingCampRegistrationForm() {
         freeFromSkinDisease: 'yes',
         freeFromScars: 'yes',
 
-        siteId: campIdParam || ''
+        campId: campIdParam || ''
     })
 
+    const selectedCamp = camps.find((c: any) => c._id === formData.campId)
+
     const STEPS = [
-        { id: 1, title: t.onsiteRegistrationForm.steps.identity, icon: User, fields: ['firstName', 'middleName', 'lastName', 'sex', 'dob', 'age', 'bloodGroup', 'occupation', 'siteId'] },
+        { id: 1, title: t.onsiteRegistrationForm.steps.identity, icon: User, fields: ['firstName', 'middleName', 'lastName', 'sex', 'dob', 'age', 'bloodGroup', 'occupation', 'campId'] },
         { id: 2, title: t.onsiteRegistrationForm.steps.contact, icon: MapPin, fields: ['address', 'mobile', 'pincode', 'email'] },
         { id: 3, title: t.onsiteRegistrationForm.steps.history, icon: History, fields: ['isFirstTime', 'isRepeated', 'lastDonationDate', 'totalDonations', 'emergencyConsent'] },
         { id: 4, title: t.onsiteRegistrationForm.steps.vitals, icon: Activity, fields: ['weight', 'hb', 'temp', 'pulse', 'bp', 'o2Level'] },
@@ -114,7 +114,7 @@ function OnGoingCampRegistrationForm() {
                         const now = new Date()
                         return new Date(c.dateFrom) <= now && new Date(c.dateTo) >= now
                     })
-                    if (ongoing) setFormData(prev => ({ ...prev, siteId: ongoing._id }))
+                    if (ongoing) setFormData(prev => ({ ...prev, campId: ongoing._id }))
                 }
             }
             setLoadingCamps(false)
@@ -123,7 +123,7 @@ function OnGoingCampRegistrationForm() {
     }, [campIdParam])
 
     useEffect(() => {
-        if (campIdParam) setFormData(prev => ({ ...prev, siteId: campIdParam }))
+        if (campIdParam) setFormData(prev => ({ ...prev, campId: campIdParam }))
     }, [campIdParam])
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -281,12 +281,12 @@ function OnGoingCampRegistrationForm() {
                                     ) : (
                                         <FormSelect
                                             label={t.onsiteRegistrationForm.fields.camp}
-                                            name="siteId"
-                                            value={formData.siteId}
+                                            name="campId"
+                                            value={formData.campId}
                                             onChange={handleInputChange}
                                             placeholder={loadingCamps ? "Loading..." : t.onsiteRegistrationForm.placeholders.select}
                                             options={camps.map(c => ({ value: c._id, label: `${c.name} (${new Date(c.dateFrom).toLocaleDateString()})` }))}
-                                            error={fieldErrors.siteId}
+                                            error={fieldErrors.campId}
                                         />
                                     )}
 

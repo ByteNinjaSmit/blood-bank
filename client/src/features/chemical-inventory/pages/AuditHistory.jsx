@@ -81,7 +81,7 @@ export default function AuditHistory() {
           <List className="w-7 h-7 text-red-700" />
           Stock Movement Audit History
         </h1>
-        <p className="text-sm text-gray-500 font-medium">Complete trail of stock lot creation, opens, consumption, and adjustments</p>
+        <p className="text-gray-500 text-sm">Complete trail of stock lot creation, opens, consumption, and adjustments</p>
       </div>
 
       {/* Filter and Search Panel */}

@@ -108,8 +108,8 @@ export default function CampReports() {
               <PieIcon className="w-5 h-5" />
             </div>
             <div>
-              <CardTitle>Camp Reports</CardTitle>
-              <p className="text-sm text-slate-600">
+              <CardTitle className="text-2xl font-bold text-gray-900">Camp Reports</CardTitle>
+              <p className="text-gray-500 text-sm">
                 Overall camp performance with drill-down to individual camp details
               </p>
             </div>

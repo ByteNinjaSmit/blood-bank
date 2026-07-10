@@ -1,19 +1,34 @@
 "use client"
 
-import React, { useState, useMemo } from "react"
+import React, { useEffect, useState, useMemo } from "react"
 import { Plus, Eye, Edit, Trash2, Filter, X, Search, ChevronDown, MapPin, Users, Phone, Calendar, Droplets, ArrowUpDown } from "lucide-react"
-import { useNavigate, Link } from "react-router-dom"
+import { useNavigate, useLocation, Link } from "react-router-dom"
 import { apiClient } from "@/core/api-client"
 import { toast } from "sonner"
 
 import Loader from "@/components/utils/Spinner"
 import { PageHeader } from "@/components/Header"
 import CampEditModal from "./CampEditModal"
+import CustomModal from "@/components/CustomModal"
 import { useCamp } from "@/hooks/useCamp"
 
 const CampList = ({ OnBack }) => {
-  const { camps, loading, fetchCamps, updateCamp, deleteCamp } = useCamp()
+  const { camps, loading, fetchCamps, updateCamp, deleteCamp, restoreCamp } = useCamp()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Camp-Registration lands here first (so the list is one back-step away),
+  // then we immediately forward into the just-created camp's detail view.
+  useEffect(() => {
+    const openCampId = location.state?.openCampId
+    if (openCampId) {
+      // Scrub the state off this history entry first, so pressing Back later
+      // from the detail page lands here without re-triggering the redirect.
+      navigate(location.pathname, { replace: true, state: null })
+      navigate(`/camp-details?id=${openCampId}`)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state])
 
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -22,6 +37,10 @@ const CampList = ({ OnBack }) => {
   const [toDate, setToDate] = useState("")
   const [sortBy, setSortBy] = useState("dateFrom")
   const [order, setOrder] = useState("desc")
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showPermanentDeleteModal, setShowPermanentDeleteModal] = useState(false)
+  const [showForceModal, setShowForceModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const toggleOrder = () => setOrder((o) => (o === "desc" ? "asc" : "desc"))
 
@@ -71,7 +90,7 @@ const CampList = ({ OnBack }) => {
     const filtered = camps.filter((camp) => {
       const matchesSearch =
         (camp.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (camp.campId || camp.siteId || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (camp.campId || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (camp.description || "").toLowerCase().includes(searchTerm.toLowerCase())
 
       const status = getProgressStatus(camp)
@@ -93,9 +112,50 @@ const CampList = ({ OnBack }) => {
     return filtered
   }, [camps, searchTerm, statusFilter, fromDate, toDate, sortBy, order])
 
-  const handleDelete = async (camp) => {
-    if (!window.confirm(`Are you sure you want to delete "${camp.name}"?`)) return
-    await deleteCamp(camp._id)
+  const handleDelete = (camp) => {
+    setDeleteTarget(camp)
+    if (camp.deletedAt) {
+      setShowPermanentDeleteModal(true)
+    } else {
+      setShowDeleteModal(true)
+    }
+  }
+
+  // First click: soft-delete only. The camp stays in the list, greyed out.
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    await deleteCamp(deleteTarget._id)
+    setShowDeleteModal(false)
+    setDeleteTarget(null)
+  }
+
+  const handleRecoverConfirm = async () => {
+    if (!deleteTarget) return
+    await restoreCamp(deleteTarget._id)
+    setShowPermanentDeleteModal(false)
+    setDeleteTarget(null)
+  }
+
+  // Second click (on an already soft-deleted camp): permanent, irreversible removal.
+  const handlePermanentDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    const result = await deleteCamp(deleteTarget._id)
+
+    if (result.success) {
+      setShowPermanentDeleteModal(false)
+      setDeleteTarget(null)
+      return
+    }
+
+    if (result.code === 'CONFLICT') {
+      toast.error(result.message || 'Camp has donation records and cannot be permanently deleted.')
+      setShowPermanentDeleteModal(false)
+      setShowForceModal(true)
+    } else {
+      if (result.message) toast.error(result.message)
+      setShowPermanentDeleteModal(false)
+      setDeleteTarget(null)
+    }
   }
 
   const getStatusBadge = (status) => {
@@ -234,8 +294,8 @@ const CampList = ({ OnBack }) => {
             <Droplets className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Create Blood Donation Camp</h1>
-            <p className="text-gray-600 text-sm sm:text-base">Set up a new blood donation camp location</p>
+            <h1 className="text-2xl font-bold text-gray-900">Blood Donation Camps</h1>
+            <p className="text-gray-500 text-sm">Manage and monitor all your blood donation camps</p>
           </div>
         </div>
         <Link to={"/camp-registration"}>
@@ -362,15 +422,22 @@ const CampList = ({ OnBack }) => {
             {filteredCamps.map((camp) => (
               <div
                 key={camp._id}
-                className="bg-white rounded-xl shadow-md border border-slate-200 hover:shadow-lg transition-shadow overflow-hidden"
+                className={`rounded-xl shadow-md border border-slate-200 transition-shadow overflow-hidden ${
+                  camp.deletedAt ? "bg-slate-100 opacity-60" : "bg-white hover:shadow-lg"
+                }`}
               >
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-6 border-b border-slate-100">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-50 text-orange-700 border border-red-200">
-                        {camp.campId || camp.siteId || "N/A"}
+                        {camp.campId || "N/A"}
                       </span>
                       {getStatusBadge(getProgressStatus(camp))}
+                      {camp.deletedAt && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-200 text-slate-500">
+                          Deleted
+                        </span>
+                      )}
                     </div>
                     <h3 className="text-xl font-bold text-slate-900">{camp.name}</h3>
                     <p className="text-slate-600 text-sm mt-1">{camp.description}</p>
@@ -429,7 +496,7 @@ const CampList = ({ OnBack }) => {
                     <MapPin className="w-5 h-5 text-orange-700 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Site</p>
-                      <p className="text-sm font-medium text-slate-900 mt-1">{camp.campId || camp.siteId || "N/A"}</p>
+                      <p className="text-sm font-medium text-slate-900 mt-1">{camp.campId || "N/A"}</p>
                     </div>
                   </div>
                 </div>
@@ -456,10 +523,10 @@ const CampList = ({ OnBack }) => {
                   <button
                     onClick={() => handleDelete(camp)}
                     className="inline-flex items-center gap-2 px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg font-medium transition-colors border border-red-200"
-                    title="Delete"
+                    title={camp.deletedAt ? "Permanently Delete" : "Delete"}
                   >
                     <Trash2 className="w-4 h-4" />
-                    Delete
+                    {camp.deletedAt ? "Delete Permanently" : "Delete"}
                   </button>
                 </div>
               </div>
@@ -483,6 +550,54 @@ const CampList = ({ OnBack }) => {
         onToggleStaff={toggleStaffInEdit}
         onClose={closeEdit}
         onSubmit={handleEditSubmit}
+      />
+
+      {/* Delete confirmation modal (first click — soft delete only) */}
+      <CustomModal
+        open={showDeleteModal && !!deleteTarget}
+        title="Delete Camp"
+        description={`Delete camp "${deleteTarget?.name || ""}"? The camp will be marked deleted and greyed out here, but kept in the list. You can permanently remove it later.`}
+        onCancel={() => {
+          setShowDeleteModal(false)
+          setDeleteTarget(null)
+        }}
+        onConfirm={handleDeleteConfirm}
+        confirmText="Delete"
+        confirmVariant="danger"
+      />
+
+      {/* Permanent delete confirmation (second click on an already-deleted camp) */}
+      <CustomModal
+        open={showPermanentDeleteModal && !!deleteTarget}
+        title="Permanently Delete Camp"
+        description={`This will permanently delete camp "${deleteTarget?.name || ""}". This action is NOT recoverable.`}
+        onCancel={() => {
+          setShowPermanentDeleteModal(false)
+          setDeleteTarget(null)
+        }}
+        onConfirm={handlePermanentDeleteConfirm}
+        confirmText="Permanently Delete"
+        confirmVariant="danger"
+      >
+        <button
+          type="button"
+          onClick={handleRecoverConfirm}
+          className="w-full px-3 py-2 rounded-lg border border-green-300 bg-green-50 text-green-700 text-sm font-medium hover:bg-green-100 transition-colors"
+        >
+          Recover Camp Instead
+        </button>
+      </CustomModal>
+
+      {/* Informational modal: camps with donation history cannot be permanently deleted */}
+      <CustomModal
+        open={showForceModal && !!deleteTarget}
+        title="Cannot Permanently Delete Camp"
+        description="This camp has donation records and cannot be permanently deleted. Donation records are clinical data and must be preserved for audit purposes."
+        onCancel={() => {
+          setShowForceModal(false)
+          setDeleteTarget(null)
+        }}
+        hideFooter
       />
     </div>
   )

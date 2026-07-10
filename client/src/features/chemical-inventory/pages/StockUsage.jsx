@@ -16,7 +16,7 @@ export default function StockUsage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Stock Usage Logic</h1>
-        <p className="text-sm text-gray-500 font-medium">
+        <p className="text-gray-500 text-sm">
           {activeTab === 'usage'
             ? 'Start chemical units (Available ➔ In Use) and complete them (In Use ➔ Consumed)'
             : 'Register and manage damaged chemical stock — deleting a record restores its quantity to available stock'}

@@ -4,9 +4,10 @@
 
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
-import { ConflictError, NotFoundError } from '@/shared/errors';
+import { AppError, ConflictError, NotFoundError } from '@/shared/errors';
 import { checkEligibility, yearsBetween } from '@/modules/donor/donor.eligibility';
 import { deriveUnits } from './donation.unit-derivation';
+import { BloodUnitModel } from '@/modules/unit/unit.model';
 import type {
   CreateDonationInput,
   ListDonationsInput,
@@ -30,6 +31,8 @@ export interface DonationService {
     pageSize: number;
   }>;
   get(id: string): Promise<DonationWithUnitsDto>;
+  remove(id: string, actorId: string): Promise<{ permanentlyDeleted: boolean }>;
+  restore(id: string, actorId: string): Promise<{ restored: boolean }>;
 }
 
 export function createDonationService(deps: {
@@ -179,6 +182,48 @@ export function createDonationService(deps: {
       const found = await deps.donations.findById(id);
       if (!found) throw new NotFoundError('Donation', id);
       return found;
+    },
+
+    async remove(id, actorId) {
+      const status = await deps.donations.findRawStatus(id);
+      if (!status) throw new NotFoundError('Donation', id);
+
+      if (!status.deletedAt) {
+        // First delete click: soft-delete only. Row stays visible (greyed
+        // out) in Master Register so the clinical record isn't lost.
+        await deps.donations.softDelete(id, actorId);
+        log.warn({ donationId: id, actorId }, 'donation soft-deleted');
+        return { permanentlyDeleted: false };
+      }
+
+      // Second delete click on an already soft-deleted donation: permanent,
+      // irreversible. Refuse if blood units were ever derived from it —
+      // hard deleting would orphan those clinical records.
+      const donation = await deps.donations.findById(id);
+      const hasUnits = donation
+        ? await BloodUnitModel.exists({ donationId: donation.donationId })
+        : false;
+      if (hasUnits) {
+        throw new AppError(
+          'DONATION_HAS_UNITS',
+          'Donation has blood units derived from it and cannot be permanently deleted',
+          409,
+        );
+      }
+      await deps.donations.delete(id);
+      log.warn({ donationId: id, actorId }, 'donation permanently deleted');
+      return { permanentlyDeleted: true };
+    },
+
+    async restore(id, actorId) {
+      const status = await deps.donations.findRawStatus(id);
+      if (!status) throw new NotFoundError('Donation', id);
+      if (!status.deletedAt) {
+        return { restored: false };
+      }
+      await deps.donations.restore(id, actorId);
+      log.warn({ donationId: id, actorId }, 'donation restored');
+      return { restored: true };
     },
   };
 }

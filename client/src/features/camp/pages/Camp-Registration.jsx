@@ -121,14 +121,19 @@ const CampRegistration = () => {
     })
   }
 
-  const handleStepChange = (step) => {
-    if (!validateStep(step - 1)) {
+  const handleStepChange = (step, fromStep) => {
+    // Only gate forward navigation — going back should never be blocked by
+    // validation on the step being left.
+    if (step > fromStep && !validateStep(fromStep)) {
       return false
     }
   }
 
   const handleSubmit = async () => {
-    if (!validateStep(3)) return
+    if (!validateForm()) {
+      toast.error("Please fill all required fields correctly")
+      return
+    }
 
     setIsSubmitting(true)
     try {
@@ -145,6 +150,7 @@ const CampRegistration = () => {
         })
 
       if (response.status === 201) {
+        const created = response.data.data
         toast.success(response.data.message || "Camp created successfully")
         setFormData({
           siteId: "",
@@ -156,10 +162,15 @@ const CampRegistration = () => {
           dateFrom: "",
           dateTo: "",
         })
-        navigate("/camp-listing")
+        // Land on the camp list first (so it's one back-step away), then
+        // Camp-Listing forwards straight into the camp we just created.
+        navigate("/camp-listing", { state: { openCampId: created?._id } })
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Error creating camp")
+      // apiClient's response interceptor throws a plain ApiError (not a raw
+      // axios error), so the real validation reason lives on error.message —
+      // error.response is never set here.
+      toast.error(error.message || "Error creating camp")
     } finally {
       setIsSubmitting(false)
     }
@@ -175,8 +186,8 @@ const CampRegistration = () => {
               <Droplets className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Create Blood Donation Camp</h1>
-              <p className="text-gray-600 text-sm sm:text-base">Set up a new blood donation camp location</p>
+              <h1 className="text-2xl font-bold text-gray-900">Create Blood Donation Camp</h1>
+              <p className="text-gray-500 text-sm">Set up a new blood donation camp location</p>
             </div>
           </div>
         </div>

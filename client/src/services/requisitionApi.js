@@ -51,11 +51,15 @@ class RequisitionApiService {
     return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/reject`, { rejectionReason }));
   }
 
-  async updateCrossmatch(requestId, { inventoryId, crossmatchStatus }) {
+  async updateCrossmatch(requestId, { inventoryId, crossmatchStatus, compatibilityResult, crossmatchDoneAt, crossmatchSeenAt, cardNumber }) {
     return this._wrap(
       await apiService.patch(`${this.baseUrl}/${requestId}/crossmatch`, {
         inventoryId,
         crossmatchStatus,
+        compatibilityResult,
+        crossmatchDoneAt,
+        crossmatchSeenAt,
+        cardNumber,
       })
     );
   }

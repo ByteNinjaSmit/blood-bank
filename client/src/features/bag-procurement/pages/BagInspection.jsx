@@ -4,26 +4,13 @@ import { useBagInspectionList, useCreateBagInspection, useUpdateBagInspectionRep
 import { useGRNList } from '../queries';
 import { useDonationList } from '@/features/donation/queries';
 import { useAuth } from '@/store/auth';
-import { apiClient, unwrap } from '@/core/api-client';
+import { bagProcurementApi } from '../api';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportProcurementInspection } from '@/utils/excelExportHelper';
 
-const uploadFile = (file, folder) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  return apiClient.post(`/api/v2/upload${folder ? `?folder=${folder}` : ''}`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  }).then(unwrap);
-};
-
-const deleteFile = (url) => {
-  return apiClient.delete('/api/v2/upload', {
-    params: { url },
-  }).then(unwrap);
-};
+const uploadFile = bagProcurementApi.upload.file;
+const deleteFile = bagProcurementApi.upload.remove;
 
 function IframePreviewModal({ isOpen, url, title, onClose }) {
   if (!isOpen || !url) return null;
@@ -1216,8 +1203,8 @@ export default function BagInspection() {
               <ClipboardCheck className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Bag Quality Inspection</h1>
-              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Incoming Batch QC</p>
+              <h1 className="text-2xl font-bold text-gray-900">Bag Quality Inspection</h1>
+              <p className="text-gray-500 text-sm">Incoming Batch QC</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1230,7 +1217,7 @@ export default function BagInspection() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Batch No</label>

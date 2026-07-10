@@ -30,8 +30,17 @@ export const campController = {
   async remove(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = ValidateCamp.idParam(req);
-      await campService.remove(id, actor(req));
-      res.status(204).end();
+      const data = await campService.remove(id, actor(req));
+      res.status(200).json({ success: true, data, requestId: req.id });
+    } catch (e) {
+      next(e);
+    }
+  },
+  async restore(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = ValidateCamp.idParam(req);
+      const data = await campService.restore(id, actor(req));
+      res.status(200).json({ success: true, data, requestId: req.id });
     } catch (e) {
       next(e);
     }

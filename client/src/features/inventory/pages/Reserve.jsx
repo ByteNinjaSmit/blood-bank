@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Loader2, Hand, X } from "lucide-react";
@@ -36,7 +36,7 @@ const formatDateTimeDMY = (dateStr) => {
 };
 
 const Reserve = () => {
-  const { API, authorizationToken, user } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -65,9 +65,7 @@ const Reserve = () => {
       let dataToExport = [];
       if (exportAll) {
         // Fetch all reserved items without limit (up to 5000)
-        const res = await axios.get(`${API}/api/inventory`, {
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
+        const res = await apiClient.get(`/api/inventory`, {
           params: {
             page: 1,
             limit: 5000,
@@ -114,9 +112,7 @@ const Reserve = () => {
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`${API}/api/inventory`, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
+      const res = await apiClient.get(`/api/inventory`, {
         params: {
           page,
           limit,
@@ -151,14 +147,10 @@ const Reserve = () => {
     setUnreserveModalOpen(false);
     setIsLoading(true);
     try {
-      const res = await axios.post(
-        `${API}/api/inventory/unreserve`,
-        { inventoryIds: [targetUnreserveId], userId: user?._id },
-        {
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
-        }
-      );
+      const res = await apiClient.post(`/api/inventory/unreserve`, {
+        inventoryIds: [targetUnreserveId],
+        userId: user?._id,
+      });
       if (res.data?.success) {
         toast.success("Blood bag successfully unreserved and returned to stock.");
         fetchRows(pagination.page);
@@ -192,7 +184,7 @@ const Reserve = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Reserved Stock</h1>
-              <p className="text-gray-600 mt-1">Viewing only currently reserved components</p>
+              <p className="text-gray-500 text-sm">Viewing only currently reserved components</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

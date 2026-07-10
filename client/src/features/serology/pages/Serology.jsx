@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Microscope, TestTube } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { formatDateTime } from "@/lib/format-date";
 
 const DEFAULT_TESTS = [
   { key: "HIV", label: "HIV" },
@@ -16,7 +17,7 @@ const DEFAULT_TESTS = [
 ];
 
 const Serology = () => {
-  const { API, authorizationToken, user } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -36,10 +37,8 @@ const Serology = () => {
   const fetchBags = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`${API}/api/serology/bags`, {
+      const res = await apiClient.get(`/api/serology/bags`, {
         params: { page, limit, search: search || undefined, fromDate: fromDate || undefined, toDate: toDate || undefined, sortBy, order },
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
       });
       const data = res.data?.data || [];
       const pg = res.data?.pagination || {};
@@ -82,18 +81,11 @@ const Serology = () => {
 
     try {
       setIsSubmitting(true);
-      await axios.post(
-        `${API}/api/serology/results/${activeBag._id}`,
-        {
-          testResults: tests,
-          technicianId: user?._id || user?.id,
-          updatedBy: user?._id || user?.id,
-        },
-        {
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
-        }
-      );
+      await apiClient.post(`/api/serology/results/${activeBag._id}`, {
+        testResults: tests,
+        technicianId: user?._id || user?.id,
+        updatedBy: user?._id || user?.id,
+      });
       toast.success("Serology results saved");
       setShowModal(false);
       setActiveBag(null);
@@ -123,7 +115,7 @@ const Serology = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Serology</h1>
-              <p className="text-gray-600 mt-1">Manage serology testing and update results</p>
+              <p className="text-gray-500 text-sm">Manage serology testing and update results</p>
             </div>
           </div>
           {/* Pagination Controls */}
@@ -244,7 +236,7 @@ const Serology = () => {
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.segmentNo || "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.bloodGroup} {bag.rh}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag?.siteId?.name || "-"}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{bag.collectionDate ? new Date(bag.collectionDate).toLocaleString() : "-"}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{formatDateTime(bag.collectionDate)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{statusBadge(bag.status)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">
                         {Array.isArray(bag.testResults) && bag.testResults.length > 0 ? (

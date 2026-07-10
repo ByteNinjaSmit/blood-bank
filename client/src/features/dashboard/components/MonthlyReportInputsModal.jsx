@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CustomModal from "@/components/CustomModal";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/core/api-client";
+import { apiClient, unwrap } from "@/core/api-client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -14,11 +14,54 @@ const ICTC_FIELDS = [
   { key: "malaria", label: "Malaria" },
 ];
 
+const EMPTY_ICTC = { hiv: "", hbsag: "", hcv: "", vdrl: "", malaria: "" };
+
 export default function MonthlyReportInputsModal({ open, onClose, month, year, donorCountHint }) {
   const navigate = useNavigate();
   const [donorCounselling, setDonorCounselling] = useState("");
-  const [ictc, setIctc] = useState({ hiv: 0, hbsag: 0, hcv: 0, vdrl: 0, malaria: 0 });
+  const [ictc, setIctc] = useState(EMPTY_ICTC);
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Load whatever was saved for this period last time, so reopening the
+  // modal (e.g. to regenerate the report) doesn't force re-typing the same figures.
+  useEffect(() => {
+    if (!open || !month || !year) return;
+    let cancelled = false;
+    setLoading(true);
+    apiClient
+      .get("/api/v2/monthly-report-input", { params: { month, year } })
+      .then(unwrap)
+      .then((data) => {
+        if (cancelled) return;
+        if (data) {
+          setDonorCounselling(data.donorCounsellingCount ? String(data.donorCounsellingCount) : "");
+          setIctc({
+            hiv: data.ictcReferral?.hiv ? String(data.ictcReferral.hiv) : "",
+            hbsag: data.ictcReferral?.hbsag ? String(data.ictcReferral.hbsag) : "",
+            hcv: data.ictcReferral?.hcv ? String(data.ictcReferral.hcv) : "",
+            vdrl: data.ictcReferral?.vdrl ? String(data.ictcReferral.vdrl) : "",
+            malaria: data.ictcReferral?.malaria ? String(data.ictcReferral.malaria) : "",
+          });
+        } else {
+          setDonorCounselling("");
+          setIctc(EMPTY_ICTC);
+        }
+      })
+      .catch(() => {
+        // No saved inputs yet for this period (or fetch failed) — start blank.
+        if (!cancelled) {
+          setDonorCounselling("");
+          setIctc(EMPTY_ICTC);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, month, year]);
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -27,7 +70,13 @@ export default function MonthlyReportInputsModal({ open, onClose, month, year, d
         month,
         year,
         donorCounsellingCount: Number(donorCounselling) || 0,
-        ictcReferral: ictc,
+        ictcReferral: {
+          hiv: Number(ictc.hiv) || 0,
+          hbsag: Number(ictc.hbsag) || 0,
+          hcv: Number(ictc.hcv) || 0,
+          vdrl: Number(ictc.vdrl) || 0,
+          malaria: Number(ictc.malaria) || 0,
+        },
       });
       onClose();
       navigate(`/reports/monthly?month=${month}&year=${year}`);
@@ -41,6 +90,11 @@ export default function MonthlyReportInputsModal({ open, onClose, month, year, d
   return (
     <CustomModal open={open} onCancel={onClose} title="Monthly Report — Manual Inputs" hideFooter size="lg">
       <div className="space-y-5 text-sm">
+        {loading && (
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading previously saved inputs for this period…
+          </div>
+        )}
         <div>
           <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">
             Total Donor Counselling Before Donation
@@ -50,7 +104,9 @@ export default function MonthlyReportInputsModal({ open, onClose, month, year, d
             min="0"
             value={donorCounselling}
             onChange={(e) => setDonorCounselling(e.target.value)}
+            onFocus={(e) => e.target.select()}
             placeholder={donorCountHint != null ? String(donorCountHint) : undefined}
+            disabled={loading}
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
           />
           <p className="text-[11px] text-gray-400 mt-1">
@@ -69,7 +125,9 @@ export default function MonthlyReportInputsModal({ open, onClose, month, year, d
                   type="number"
                   min="0"
                   value={ictc[f.key]}
-                  onChange={(e) => setIctc((p) => ({ ...p, [f.key]: Number(e.target.value) || 0 }))}
+                  onChange={(e) => setIctc((p) => ({ ...p, [f.key]: e.target.value }))}
+                  onFocus={(e) => e.target.select()}
+                  disabled={loading}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
                 />
               </div>

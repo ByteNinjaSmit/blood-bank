@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { useAuth } from "@/store/auth";
+import { apiClient } from "@/core/api-client";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -18,7 +17,6 @@ const daysUntil = (dateStr) => {
 };
 
 const InventoryNearExpiry = () => {
-  const { API, authorizationToken } = useAuth();
 
   const [isLoading, setIsLoading] = useState(false);
   const [rows, setRows] = useState([]);
@@ -34,9 +32,7 @@ const InventoryNearExpiry = () => {
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`${API}/api/inventory`, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
+      const res = await apiClient.get(`/api/inventory`, {
         params: {
           page,
           limit,
@@ -72,7 +68,7 @@ const InventoryNearExpiry = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Near-Expiry Components</h1>
-            <p className="text-gray-600 mt-1">In-stock components expiring within the selected window</p>
+            <p className="text-gray-500 text-sm">In-stock components expiring within the selected window</p>
           </div>
         </div>
 

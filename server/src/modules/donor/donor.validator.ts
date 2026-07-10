@@ -60,6 +60,9 @@ export const ListDonorsQuery = z.object({
   campId: z.string().regex(OBJECT_ID, 'Invalid camp id').optional(),
   from: blankToUndef(z.coerce.date().optional()),
   to: blankToUndef(z.coerce.date().optional()),
+  // Recycle Bin uses deletedOnly=true to list soft-deleted donors; Master
+  // Register never sets it, so soft-deleted donors stay hidden there.
+  deletedOnly: z.coerce.boolean().optional().default(false),
   sortBy: z.enum(['createdAt', 'lastDonationDate', 'name', 'dob']).default('createdAt'),
   order: z.enum(['asc', 'desc']).default('desc'),
   page: z.coerce.number().int().min(1).default(1),

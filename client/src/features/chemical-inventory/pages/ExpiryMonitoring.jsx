@@ -60,7 +60,7 @@ export default function ExpiryMonitoring() {
           <Calendar className="w-7 h-7 text-red-700" />
           Expiry Monitoring Dashboard
         </h1>
-        <p className="text-sm text-gray-500 font-medium">Daily monitoring of reagent lot expirations and warning alerts</p>
+        <p className="text-gray-500 text-sm">Daily monitoring of reagent lot expirations and warning alerts</p>
       </div>
 
       {/* Filter and Search Panel */}

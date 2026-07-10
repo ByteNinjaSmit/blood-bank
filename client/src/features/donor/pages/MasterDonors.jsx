@@ -26,7 +26,7 @@ const PAGE_SIZE = 20;
 const MasterDonors = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { createDonor, updateDonor, deleteDonor, forceDeleteDonor } = useDonor();
+  const { createDonor, updateDonor, deleteDonor } = useDonor();
   const donorAccess = checkAccess(user, ["donor", "donors", "donor management"]);
 
   const [activeTab, setActiveTab] = useState('inhouse');
@@ -97,7 +97,6 @@ const MasterDonors = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showForceModal, setShowForceModal] = useState(false);
   const [selectedDonor, setSelectedDonor] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -194,37 +193,13 @@ const MasterDonors = () => {
     setShowDeleteModal(true);
   };
 
+  // Soft-delete only. The donor moves to Recycle Bin and disappears from
+  // this register; it can be recovered from there.
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
-    const donor = deleteTarget;
-    const result = await deleteDonor(donor._id);
-
-    if (result.success) {
-      setShowDeleteModal(false);
-      setDeleteTarget(null);
-      return;
-    }
-
-    if (result.code === 'DONOR_HAS_DONATIONS') {
-      toast.error(result.message || 'Donor has donation history and cannot be deleted.');
-      if (donorAccess.canDelete) {
-        setShowDeleteModal(false);
-        setShowForceModal(true);
-      }
-    } else {
-      setShowDeleteModal(false);
-      setDeleteTarget(null);
-    }
-  };
-
-  const handleForceDeleteConfirm = async () => {
-    if (!deleteTarget) return;
-    const donor = deleteTarget;
-    const forceResult = await forceDeleteDonor(donor._id);
-    if (forceResult.success) {
-      setShowForceModal(false);
-      setDeleteTarget(null);
-    }
+    await deleteDonor(deleteTarget._id);
+    setShowDeleteModal(false);
+    setDeleteTarget(null);
   };
 
   const calculateAge = (dob) => {
@@ -678,11 +653,11 @@ const MasterDonors = () => {
         }}
       />
 
-      {/* Delete confirmation modal */}
+      {/* Delete confirmation modal — soft delete only, donor moves to Recycle Bin */}
       <CustomModal
         open={showDeleteModal && !!deleteTarget}
         title="Delete Donor"
-        description={`Are you sure you want to delete donor ${(deleteTarget && (`${deleteTarget?.name?.firstName || ''} ${deleteTarget?.name?.lastName || ''}`.trim() || deleteTarget?.donorId)) || ''}? This action cannot be undone.`}
+        description={`Delete donor ${(deleteTarget && (`${deleteTarget?.name?.firstName || ''} ${deleteTarget?.name?.lastName || ''}`.trim() || deleteTarget?.donorId)) || ''}? It will be moved to the Recycle Bin, where it can be restored or permanently removed.`}
         onCancel={() => {
           setShowDeleteModal(false);
           setDeleteTarget(null);
@@ -691,24 +666,6 @@ const MasterDonors = () => {
         confirmText="Delete"
         confirmVariant="danger"
       />
-
-      {/* Force delete confirmation modal */}
-      <CustomModal
-        open={showForceModal && !!deleteTarget}
-        title="Force Delete Donor & Related Data"
-        description="This donor has donation history. Force deleting will remove the donor and all related blood bags, components, inventory entries, and discard logs. This action is permanent."
-        onCancel={() => {
-          setShowForceModal(false);
-          setDeleteTarget(null);
-        }}
-        onConfirm={handleForceDeleteConfirm}
-        confirmText="Force Delete"
-        confirmVariant="danger"
-      >
-        <p className="text-sm text-red-700 font-medium mt-2">
-          Proceed only if you fully understand the impact.
-        </p>
-      </CustomModal>
     </div>
   );
 };

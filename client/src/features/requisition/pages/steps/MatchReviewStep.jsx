@@ -19,11 +19,10 @@ function CompatBadge({ type }) {
   );
 }
 
-function CrossmatchBadge({ status, required, onMark, updating }) {
+function CrossmatchStatusBadge({ status, required }) {
   if (!required || status === 'not-required') {
     return <span className="text-xs text-gray-400">N/A</span>;
   }
-
   const badges = {
     pending: (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800 border border-amber-200">
@@ -41,30 +40,93 @@ function CrossmatchBadge({ status, required, onMark, updating }) {
       </span>
     ),
   };
+  return badges[status] || badges.pending;
+}
+
+// Manual crossmatch worksheet — shown for every component (no auto-compatible
+// shortcut for exact ABO/Rh matches). The operator must explicitly pick the
+// compatibility type; there is no default selection.
+const COMPATIBILITY_RESULT_LABELS = {
+  MAJOR_COMPATIBLE: 'Major Compatible',
+  MINOR_COMPATIBLE: 'Minor Compatible',
+  UNIVERSAL: 'Universal',
+};
+
+function CrossmatchWorksheet({ invId, onSave, updating }) {
+  const [compatibility, setCompatibility] = useState('');
+  const [doneAt, setDoneAt] = useState('');
+  const [seenAt, setSeenAt] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+
+  const canSave = compatibility && doneAt && seenAt;
+
+  const handleSave = () => {
+    if (!canSave) return;
+    onSave(invId, 'compatible', {
+      compatibilityResult: compatibility,
+      crossmatchDoneAt: new Date(doneAt).toISOString(),
+      crossmatchSeenAt: new Date(seenAt).toISOString(),
+      cardNumber: cardNumber || undefined,
+    });
+  };
 
   return (
-    <div className="flex items-center gap-2">
-      {badges[status] || badges.pending}
-      {status === 'pending' && onMark && (
-        <div className="flex gap-1">
-          <button
-            type="button"
-            disabled={updating}
-            onClick={() => onMark('compatible')}
-            className="px-2 py-0.5 text-xs rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+    <div className="mt-2 p-3 rounded-lg border border-amber-200 bg-amber-50/50 space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="col-span-2">
+          <label className="block text-2xs font-medium text-gray-600 mb-0.5">Compatibility</label>
+          <select
+            value={compatibility}
+            onChange={(e) => setCompatibility(e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
           >
-            ✓
-          </button>
-          <button
-            type="button"
-            disabled={updating}
-            onClick={() => onMark('incompatible')}
-            className="px-2 py-0.5 text-xs rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-          >
-            ✗
-          </button>
+            <option value="">— Select —</option>
+            <option value="MAJOR_COMPATIBLE">Major Compatible</option>
+            <option value="MINOR_COMPATIBLE">Minor Compatible</option>
+            <option value="UNIVERSAL">Universal</option>
+          </select>
         </div>
-      )}
+        <div>
+          <label className="block text-2xs font-medium text-gray-600 mb-0.5">Crossmatch Done At</label>
+          <input
+            type="datetime-local"
+            value={doneAt}
+            onChange={(e) => setDoneAt(e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+          />
+        </div>
+        <div>
+          <label className="block text-2xs font-medium text-gray-600 mb-0.5">Seen At</label>
+          <input
+            type="datetime-local"
+            value={seenAt}
+            onChange={(e) => setSeenAt(e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+          />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-2xs font-medium text-gray-600 mb-0.5">Card Number (if used)</label>
+          <input
+            type="text"
+            value={cardNumber}
+            onChange={(e) => setCardNumber(e.target.value)}
+            placeholder="e.g. Gel card ID"
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+          />
+        </div>
+      </div>
+      <button
+        type="button"
+        disabled={!canSave || updating}
+        onClick={handleSave}
+        className={`w-full px-3 py-1.5 text-xs font-semibold rounded-md ${
+          canSave && !updating
+            ? 'bg-orange-800 text-white hover:bg-orange-900 cursor-pointer'
+            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+        }`}
+      >
+        {updating ? 'Saving…' : 'Save Crossmatch'}
+      </button>
     </div>
   );
 }
@@ -190,7 +252,7 @@ export default function MatchReviewStep({
                     <div className="px-3 py-2 bg-gray-50 border-b flex items-center gap-2">
                       <span className="font-medium text-sm text-gray-800">{compType}</span>
                       <span className="text-xs text-gray-500">({items.length} unit{items.length > 1 ? 's' : ''})</span>
-                      {compType === 'RBC' && (
+                      {items.some((mi) => mi.crossmatchRequired) && (
                         <span className="ml-auto text-xs text-red-600 font-medium flex items-center gap-1">
                           🔬 Crossmatch Required
                         </span>
@@ -247,23 +309,28 @@ export default function MatchReviewStep({
                                 <td className="p-2">
                                   <CompatBadge type={mi.compatibilityType || 'exact'} />
                                 </td>
-                                <td className="p-2">
-                                  <CrossmatchBadge
+                                <td className="p-2 align-top">
+                                  <CrossmatchStatusBadge
                                     status={mi.crossmatchStatus || 'not-required'}
                                     required={mi.crossmatchRequired || false}
-                                    updating={crossmatchUpdating}
-                                    onMark={
-                                      // Only ask staff to tick a manual crossmatch when the
-                                      // matched unit is a different blood group than the
-                                      // patient (a "compatible" substitute). Same-group
-                                      // ("exact") matches are auto-approved on match.
-                                      onCrossmatchUpdate && mi.crossmatchRequired && mi.crossmatchStatus === 'pending' && mi.compatibilityType !== 'exact'
-                                        ? (s) => onCrossmatchUpdate(invId, s)
-                                        : null
-                                    }
                                   />
+                                  {mi.crossmatchRequired && mi.crossmatchStatus === 'pending' && onCrossmatchUpdate && (
+                                    <CrossmatchWorksheet
+                                      invId={invId}
+                                      onSave={onCrossmatchUpdate}
+                                      updating={crossmatchUpdating}
+                                    />
+                                  )}
+                                  {mi.crossmatchRequired && mi.crossmatchStatus !== 'pending' && mi.compatibilityResult && (
+                                    <div className="mt-1.5 text-2xs text-gray-500 space-y-0.5">
+                                      <div>Compatibility: <span className="font-medium">{COMPATIBILITY_RESULT_LABELS[mi.compatibilityResult] || mi.compatibilityResult}</span></div>
+                                      {mi.crossmatchDoneAt && <div>Done At: {new Date(mi.crossmatchDoneAt).toLocaleString()}</div>}
+                                      {mi.crossmatchSeenAt && <div>Seen At: {new Date(mi.crossmatchSeenAt).toLocaleString()}</div>}
+                                      {mi.cardNumber && <div>Card #: {mi.cardNumber}</div>}
+                                    </div>
+                                  )}
                                 </td>
-                                <td className="p-2 text-xs text-gray-500">
+                                <td className="p-2 text-xs text-gray-500 align-top">
                                   {mi?.reservedAt ? new Date(mi.reservedAt).toLocaleString() : '—'}
                                 </td>
                               </tr>

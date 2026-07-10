@@ -390,8 +390,8 @@ export default function PurchaseOrders() {
               <FileText className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Purchase Orders</h1>
-              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Blood Bag Procurement</p>
+              <h1 className="text-2xl font-bold text-gray-900">Purchase Orders</h1>
+              <p className="text-gray-500 text-sm">Blood Bag Procurement</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -404,7 +404,7 @@ export default function PurchaseOrders() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <StatCard label="Total POs" value={stats.total} color="text-gray-900" />
         </div>

@@ -9,15 +9,27 @@ import {
   applyFooter,
 } from '@/shared/utils/excelHelper';
 
+export interface ExportSubTable {
+  subtitle: string;
+  headers: string[];
+  rows: any[][];
+  alignments?: ('left' | 'center' | 'right')[];
+}
+
 export interface ExportSheetData {
   name?: string;
   title?: string;
   subtitle?: string;
   reportPeriod?: string;
+  reportType?: string;
+  filtersApplied?: string;
   stats?: { label: string; value: number }[];
-  headers: string[];
-  rows: any[][];
+  headers?: string[];
+  rows?: any[][];
   alignments?: ('left' | 'center' | 'right')[];
+  /** When set, renders multiple mini-tables stacked one below another on the
+   * same worksheet instead of a single headers/rows table. */
+  tables?: ExportSubTable[];
 }
 
 export const exportControllers = {
@@ -53,16 +65,26 @@ export const exportControllers = {
           title,
           subtitle,
           reportPeriod = 'All Records',
+          reportType,
+          filtersApplied,
           stats = [],
           headers,
           rows,
           alignments,
+          tables,
         } = sheetData;
 
-        // Skip sheets with invalid headers/rows structures
-        if (!headers || !Array.isArray(headers) || !rows || !Array.isArray(rows)) {
+        const hasTables = Array.isArray(tables) && tables.length > 0;
+        const hasSingleTable = !!headers && Array.isArray(headers) && !!rows && Array.isArray(rows);
+
+        // Skip sheets with neither a single table nor a stacked-tables structure
+        if (!hasTables && !hasSingleTable) {
           return;
         }
+
+        const numCols = hasTables
+          ? Math.max(...tables.map((t) => t.headers.length))
+          : headers!.length;
 
         const sheet = workbook.addWorksheet(name || 'Sheet');
 
@@ -72,20 +94,46 @@ export const exportControllers = {
           subtitle: subtitle || 'Report',
           generatedBy: userName,
           reportPeriod,
-          numCols: headers.length,
+          reportType,
+          filtersApplied,
+          numCols,
         });
 
+        let currentRow = 7;
+
         // 2. Create Summary Table if stats exist
-        let currentTableRow = 7;
         if (stats.length > 0) {
-          currentTableRow = createSummaryTable(sheet, 7, 'REPORT SUMMARY', stats);
+          currentRow = createSummaryTable(sheet, currentRow, 'REPORT SUMMARY', stats);
         }
 
-        // 3. Populate and format data table
-        formatTable(sheet, currentTableRow, headers, rows, alignments);
+        if (hasTables) {
+          // Stack every mini-table one below another, each preceded by its
+          // own bold subtitle label so the sheet reads like the page it
+          // mirrors (multiple sections, clearly separated).
+          for (const t of tables) {
+            if (!t.rows || t.rows.length === 0) continue;
 
-        // 4. Configure print layout options
-        applyPrintFormatting(sheet, currentTableRow);
+            const labelRow = sheet.getRow(currentRow);
+            labelRow.height = 22;
+            const labelCell = labelRow.getCell(1);
+            labelCell.value = t.subtitle;
+            labelCell.font = { name: 'Segoe UI', size: 11.5, bold: true, color: { argb: 'FF1E293B' } };
+            labelCell.alignment = { horizontal: 'left', vertical: 'middle' };
+            currentRow += 1;
+
+            const tableStart = currentRow;
+            formatTable(sheet, tableStart, t.headers, t.rows, t.alignments);
+            currentRow = tableStart + t.rows.length + 2; // +1 header row, +1 spacing row
+          }
+
+          applyPrintFormatting(sheet, 7);
+        } else {
+          // 3. Populate and format single data table
+          formatTable(sheet, currentRow, headers!, rows!, alignments);
+
+          // 4. Configure print layout options
+          applyPrintFormatting(sheet, currentRow);
+        }
 
         // 5. Add footer info
         applyFooter(sheet);

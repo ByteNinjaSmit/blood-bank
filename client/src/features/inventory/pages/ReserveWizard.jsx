@@ -126,6 +126,7 @@ export default function ReserveWizard() {
           diagnosis: form.patient.diagnosis || undefined,
           hb: form.patient.hb ? Number(form.patient.hb) : undefined,
           indication: form.patient.indication || undefined,
+          specialNeeds: form.patient.specialNeeds || [],
           history: {
             previousTransfusions: Number(form.patient.history?.previousTransfusions || 0),
             approximateDate: form.patient.history?.approximateDate || undefined,

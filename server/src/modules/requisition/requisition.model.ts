@@ -36,6 +36,17 @@ const MatchedUnit = new Schema(
       default: 'PENDING',
     },
     reservedAt: { type: Date, default: Date.now },
+    // Manual crossmatch worksheet fields — operator-entered, never
+    // auto-derived from ABO/Rh classification. Applies to every component
+    // type (not just RBC); left null until the lab tech actually records it.
+    compatibilityResult: {
+      type: String,
+      enum: ['MAJOR_COMPATIBLE', 'MINOR_COMPATIBLE', 'UNIVERSAL'],
+      default: null,
+    },
+    crossmatchDoneAt: { type: Date, default: null },
+    crossmatchSeenAt: { type: Date, default: null },
+    cardNumber: { type: String, trim: true, default: null },
   },
   { _id: false },
 );
@@ -65,6 +76,7 @@ const PatientPregnancySchema = new Schema(
 const RequisitionPatientSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
+    address: { type: String, trim: true },
     age: { type: Number, required: true },
     sex: { type: String, enum: ['M', 'F', 'O'], required: true },
     mrn: { type: String, trim: true },

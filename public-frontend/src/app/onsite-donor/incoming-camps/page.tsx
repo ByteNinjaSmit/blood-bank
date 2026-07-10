@@ -30,7 +30,7 @@ const CampCard = ({ camp, t }: { camp: any, t: any }) => (
                                 {t.incomingCampsPage.confirmed}
                             </span>
                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-3 py-1 rounded-full">
-                                {camp.siteId}
+                                {camp.campId}
                             </span>
                         </div>
                         <h3 className="text-2xl font-bold text-gray-900">{camp.name}</h3>

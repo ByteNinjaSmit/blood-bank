@@ -158,8 +158,8 @@ const AddHospital = () => {
             <Building2 className="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Add New Hospital</h1>
-            <p className="text-gray-600">Register a new hospital in the system</p>
+            <h1 className="text-2xl font-bold text-gray-900">Add New Hospital</h1>
+            <p className="text-gray-500 text-sm">Register a new hospital in the system</p>
           </div>
         </div>
       </div>

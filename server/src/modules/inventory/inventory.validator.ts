@@ -56,6 +56,7 @@ export const PatientValidator = z.object({
   diagnosis: z.string().trim().optional(),
   indication: z.string().trim().optional(),
   hb: z.coerce.number().optional(),
+  specialNeeds: z.array(z.enum(SPECIAL_NEED)).optional().default([]),
   history: PatientHistoryValidator.optional(),
   pregnancy: PatientPregnancyValidator.optional(),
 });

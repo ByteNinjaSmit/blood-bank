@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import mongoose, { Types } from 'mongoose';
 import { authenticate } from '@/shared/middlewares/authenticate';
+import { requireRole, requirePermission } from '@/shared/middlewares/rbac';
 import { DonationModel } from '@/modules/donation/donation.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
@@ -1136,7 +1137,14 @@ router.get('/serology/results', authenticate, async (req, res, next) => {
 });
 
 // 5. POST /serology/results/:id
-router.post('/serology/results/:id', authenticate, async (req, res, next) => {
+// Records tests and finalizes (releases/quarantines) in one call, so it needs
+// both the tti:edit and tti:release gates enforced on the split /tti routes.
+router.post(
+  '/serology/results/:id',
+  authenticate,
+  requireRole(['system-admin', 'lab-tech-serology']),
+  requirePermission(['tti:edit', 'tti:release']),
+  async (req, res, next) => {
   try {
     const { id } = req.params;
     const { testResults, technicianId } = req.body;

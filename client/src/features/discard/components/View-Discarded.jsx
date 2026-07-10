@@ -1,7 +1,7 @@
 import React, { useEffect } from "react"
 import { useState } from "react"
 import { AlertTriangle, Search, Calendar, X, ChevronLeft, ChevronRight, Loader2, Layers, Plus, FileText, Image as ImageIcon } from "lucide-react"
-import axios from "axios"
+import { apiClient } from "@/core/api-client"
 import { useAuth } from "@/store/auth"
 import MasterLoader from "@/components/Loader"
 import DiscardTable from "./DiscardTable"
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown"
 import { exportProcurementDiscard } from "@/utils/excelExportHelper"
 import { toast } from "sonner"
+import { formatDateTime } from "@/lib/format-date"
 
 const DISCARD_REASONS = [
   'EXPIRED',
@@ -85,10 +86,7 @@ function CreateDiscardModal({ isOpen, onClose, onSuccess, API, token }) {
     
     const delayDebounce = setTimeout(async () => {
       try {
-        const response = await axios.get(`${API}/api/donation/lookup/${bagNo.trim()}`, {
-          headers: { Authorization: token },
-          withCredentials: true
-        });
+        const response = await apiClient.get(`/api/donation/lookup/${bagNo.trim()}`);
         if (response.data?.success && response.data?.data) {
           const { lotNo, segmentNo: segNo } = response.data.data;
           setBatchNo(lotNo || '');
@@ -111,16 +109,13 @@ function CreateDiscardModal({ isOpen, onClose, onSuccess, API, token }) {
     }
     setIsSubmitting(true);
     try {
-      const response = await axios.post(`${API}/api/discard/create`, {
+      const response = await apiClient.post(`/api/discard/create`, {
         bagNo,
         batchNo: batchNo || undefined,
         segmentNo: segmentNo || undefined,
         reason,
         description: description || undefined,
         ttiResults: reason === 'TTI_POSITIVE' ? serology : undefined,
-      }, {
-        headers: { Authorization: token },
-        withCredentials: true
       });
       if (response.data?.success) {
         toast.success(response.data.message || 'Discard recorded successfully');
@@ -522,10 +517,7 @@ const ViewDiscarded = () => {
             setExcelLoading(true);
             let rawData = [];
             if (exportAll) {
-                const response = await axios.get(`${API}/api/discard/get-list`, {
-                    headers: {
-                        Authorization: authorizationToken,
-                    },
+                const response = await apiClient.get(`/api/discard/get-list`, {
                     params: {
                         page: 1,
                         limit: 5000,
@@ -536,7 +528,6 @@ const ViewDiscarded = () => {
                         sortBy,
                         order,
                     },
-                    withCredentials: true,
                 });
                 rawData = response?.data?.data || [];
             } else {
@@ -582,12 +573,8 @@ const ViewDiscarded = () => {
             };
 
 
-            const response = await axios.get(`${API}/api/discard/get-list`, {
-                headers: {
-                    Authorization: authorizationToken,
-                },
+            const response = await apiClient.get(`/api/discard/get-list`, {
                 params,
-                withCredentials: true,
             });
 
             if (response.status === 200) {
@@ -605,10 +592,8 @@ const ViewDiscarded = () => {
     const getBatchDiscards = async () => {
         setIsBatchLoading(true);
         try {
-            const response = await axios.get(`${API}/api/v2/bag-inspection`, {
-                headers: { Authorization: authorizationToken },
+            const response = await apiClient.get(`/api/v2/bag-inspection`, {
                 params: { decision: 'REJECTED', pageSize: 200 },
-                withCredentials: true
             });
             setBatchDiscards(response.data?.data?.items || response.data?.data || []);
         } catch (e) {
@@ -674,8 +659,8 @@ const ViewDiscarded = () => {
                             <AlertTriangle className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold text-gray-900">View Discarded Items</h1>
-                            <p className="text-xs text-gray-500 uppercase tracking-wide">Management Portal</p>
+                            <h1 className="text-2xl font-bold text-gray-900">View Discarded Items</h1>
+                            <p className="text-gray-500 text-sm">Management Portal</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -719,7 +704,7 @@ const ViewDiscarded = () => {
             </div>
 
             {/* Content Container - Compact Spacing */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                 {activeTab === 'unit' ? (
                     <>
                         {/* Compact Filters Section */}
@@ -926,7 +911,7 @@ const ViewDiscarded = () => {
                                         </div>
                                         <div className="text-sm text-slate-600">
                                             <div className="mb-1"><strong>Reason:</strong> {item.reason}</div>
-                                            <div><strong>Discarded:</strong> {item.discardedAt}</div>
+                                            <div><strong>Discarded:</strong> {formatDateTime(item.discardedAt)}</div>
                                         </div>
                                         <div className="flex items-center gap-2 pt-2">
                                             <button

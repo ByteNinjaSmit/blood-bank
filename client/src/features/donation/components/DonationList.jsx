@@ -4,6 +4,8 @@ import Table from '@/components/shared/Table';
 import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { useDonation } from '@/hooks/useDonation';
+import { exportMasterDonations } from '@/utils/excelExportHelper';
+import { toast } from 'sonner';
 
 const DonationList = ({
   onAddDonation,
@@ -85,9 +87,16 @@ const DonationList = ({
     }
   };
 
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    console.log('Export donations');
+  const handleExport = async () => {
+    if (!donations || donations.length === 0) {
+      toast.error('No donations to export');
+      return;
+    }
+    try {
+      await exportMasterDonations(donations);
+    } catch {
+      toast.error('Failed to export donations');
+    }
   };
 
   if (loading) {

@@ -542,7 +542,7 @@ export default function PurchaseEntry() {
             <h1 className="text-2xl font-bold text-gray-900">
               {showForm ? 'Purchase Stock Entry' : 'Chemical Purchase History'}
             </h1>
-            <p className="text-sm text-gray-500 font-semibold font-medium">
+            <p className="text-gray-500 text-sm">
               {showForm
                 ? 'Log new chemical purchases and build stock records'
                 : 'Track chemical purchase invoices, total costs, and payment installments'}

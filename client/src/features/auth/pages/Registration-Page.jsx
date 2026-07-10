@@ -518,9 +518,8 @@ export default function RegisterPage() {
                                         id="publicId"
                                         name="publicId"
                                         type="text"
-                                        required
                                         disabled={true}
-                                        value={formData.publicId}
+                                        value={formData.publicId || ''}
                                         onChange={handleChange}
                                         className="block w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-4 border-2 border-gray-200 rounded-xl sm:rounded-2xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-800 text-sm sm:text-base"
                                         placeholder="Auto-generated ID"

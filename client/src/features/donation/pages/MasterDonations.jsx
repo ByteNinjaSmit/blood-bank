@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Home, Building2, Droplets, Activity, CheckCircle2, XCircle, Search, Eye, GitCommitHorizontal, Plus, X, ArrowUpDown } from 'lucide-react';
+import { BookOpen, Home, Building2, Droplets, Activity, CheckCircle2, XCircle, Search, Eye, GitCommitHorizontal, Trash2, Plus, X, ArrowUpDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useDonationList, useDonationDetail } from '@/features/donation/queries';
+import { useDonationList, useDonationDetail, useDeleteDonation } from '@/features/donation/queries';
 import DonationTimeline from '../components/DonationTimeline';
 import DonationDetails from '../components/DonationDetails';
 import Modal from '@/components/shared/Modal';
+import CustomModal from '@/components/CustomModal';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportMasterDonations } from '@/utils/excelExportHelper';
 import { donationApi } from '@/features/donation/api';
+import { useAuth } from '@/store/auth';
+import { checkAccess } from '@/features/user/pages/utils/access';
 
 const TABS = [
   { key: 'all',     label: 'Master Donation Register', icon: BookOpen },
@@ -20,12 +23,17 @@ const PAGE_SIZE = 20;
 
 export default function MasterDonations() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const donationAccess = checkAccess(user, ["donation", "donations", "donation management"]);
+  const deleteMutation = useDeleteDonation();
 
   const [activeTab, setActiveTab] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [trackId, setTrackId] = useState(null);
   const [viewDonationId, setViewDonationId] = useState(null);
   const [searchedDonation, setSearchedDonation] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -225,6 +233,29 @@ export default function MasterDonations() {
     setter(value);
     setCurrentPage(1);
     setTrackId(null);
+  };
+
+  const handleDelete = (donation) => {
+    if (!donationAccess.canDelete) {
+      toast.error('You do not have permission to delete donations.');
+      return;
+    }
+    setDeleteTarget(donation);
+    setShowDeleteModal(true);
+  };
+
+  // Soft-delete only. The donation moves to Recycle Bin and disappears from
+  // this register; it can be recovered from there.
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success('Donation deleted and moved to Recycle Bin');
+    } catch (e) {
+      toast.error(e?.message ?? 'Failed to delete donation');
+    }
+    setShowDeleteModal(false);
+    setDeleteTarget(null);
   };
 
   const getStatusColor = (status) => {
@@ -519,6 +550,15 @@ export default function MasterDonations() {
                             >
                               <GitCommitHorizontal className="w-3.5 h-3.5" />
                             </button>
+                            {donationAccess.canDelete && (
+                              <button
+                                onClick={() => handleDelete(d)}
+                                title="Delete Donation"
+                                className="p-1 rounded-lg border border-red-200 text-red-600 hover:text-red-800 hover:bg-red-50 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -609,6 +649,20 @@ export default function MasterDonations() {
           <div className="py-16 text-center text-gray-400 text-sm">Donation not found.</div>
         )}
       </Modal>
+
+      {/* Delete confirmation modal — soft delete only, donation moves to Recycle Bin */}
+      <CustomModal
+        open={showDeleteModal && !!deleteTarget}
+        title="Delete Donation"
+        description={`Delete donation ${deleteTarget?.bagNo || deleteTarget?.donationId || ''}? It will be moved to the Recycle Bin, where it can be restored or permanently removed.`}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        confirmText="Delete"
+        confirmVariant="danger"
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import { CampModel } from './camp.model';
 import { CampDonationModel } from './camp-donation.model';
 import { UserModel } from '@/modules/user/user.model';
+import { NotFoundError } from '@/shared/errors';
 
 export interface VoluntaryFilter {
   search?: string;
@@ -25,6 +26,24 @@ export const campRepo = {
     return CampModel.findById(id);
   },
 
+  async softDelete(id: string, actorId: string) {
+    const result = await CampModel.updateOne(
+      { _id: id },
+      { deletedAt: new Date(), lastUpdatedBy: actorId },
+    );
+    if (result.matchedCount === 0) throw new NotFoundError('Camp', id);
+  },
+
+  async restore(id: string, actorId: string) {
+    const result = await CampModel.updateOne(
+      { _id: id },
+      { deletedAt: null, lastUpdatedBy: actorId },
+    );
+    if (result.matchedCount === 0) throw new NotFoundError('Camp', id);
+  },
+
+  // Permanent, irreversible removal — only reached once a camp has already
+  // been soft-deleted (see camp.service.ts remove()).
   async deleteById(id: string) {
     await CampModel.findByIdAndDelete(id);
   },
@@ -32,7 +51,7 @@ export const campRepo = {
   async detail(id: string) {
     return CampModel.findById(id)
       .select(
-        'campId name description address contactInfo dateFrom dateTo createdBy lastUpdatedBy staff createdAt donorData unitData',
+        'campId name description address contactInfo dateFrom dateTo createdBy lastUpdatedBy staff createdAt donorData unitData deletedAt',
       )
       .populate('createdBy', 'name phone email')
       .populate('lastUpdatedBy', 'name phone email')
@@ -43,7 +62,7 @@ export const campRepo = {
   async campList() {
     return CampModel.find()
       .select(
-        'campId name description address contactInfo dateFrom dateTo createdAt createdBy staff',
+        'campId name description address contactInfo dateFrom dateTo createdAt createdBy staff deletedAt',
       )
       .populate('createdBy', 'name')
       .populate('staff', 'name')

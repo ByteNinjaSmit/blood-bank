@@ -29,6 +29,8 @@ import {
   FlaskConical,
   Delete,
   Trash,
+  TrendingUp,
+  RotateCcw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/store/auth';
@@ -402,26 +404,26 @@ const MODULES = [
   // },
   {
     id: "appointments",
-    name: "Volunteer",
+    name: "Appointment",
     icon: <Calendar className="w-5 h-5" />,
     permissions: ["read"],
     subModules: [
       {
-        name: "Volunteer List",
+        name: "Donor Appointment",
         icon: <List className="w-5 h-5" />,
-        href: "/appointments",
+        href: "/appointments/donors",
         permissions: ["read"],
-        description: "View public donation volunteers",
+        description: "Public site appointment form submissions",
       },
       {
-        name: "Camp Volunteer List",
+        name: "Camp Donor Appointment",
         icon: <GiCampingTent className="w-5 h-5" />,
-        href: "/camp-volunteers",
+        href: "/appointments/camps",
         permissions: ["read"],
-        description: "View onsite camp donation volunteers",
+        description: "Camp-wise appointments for ongoing/upcoming camps",
       },
     ],
-    description: "Manage donor volunteers",
+    description: "Manage donor appointments",
   },
   {
     id: "mis",
@@ -472,6 +474,13 @@ const MODULES = [
         icon: <FaBoxOpen className="w-5 h-5" />,
       },
       {
+        name: "Issue MIS",
+        href: "/mis/issues",
+        permissions: ["read"],
+        description: "Hospital requests and issuance status",
+        icon: <FaHospital className="w-5 h-5" />,
+      },
+      {
         name: "Discard MIS",
         href: "/mis/discards",
         permissions: ["read"],
@@ -505,6 +514,20 @@ const MODULES = [
         permissions: ["read"],
         description: "Top-level MIS KPIs",
         icon: <BarChart3 className="w-5 h-5" />,
+      },
+      {
+        name: "Analytics MIS",
+        href: "/mis/analytics",
+        permissions: ["read"],
+        description: "Predictive analysis and demand forecasting",
+        icon: <TrendingUp className="w-5 h-5" />,
+      },
+      {
+        name: "Recycle Bin",
+        href: "/mis/recycle-bin",
+        permissions: ["read"],
+        description: "Deleted donors and donations — restore or view",
+        icon: <RotateCcw className="w-5 h-5" />,
       },
     ],
     description: "Management Information System",
@@ -836,10 +859,10 @@ const Sidebar = ({
                 {module.subModules && module.subModules.length > 0 && shouldDisplayOpen && (
                   <div
                     className={`
-                      overflow-hidden transition-all duration-300 ease-in-out
+                      transition-all duration-300 ease-in-out
                       ${expandedModules.has(module.id)
-                        ? "max-h-96 opacity-100"
-                        : "max-h-0 opacity-0"
+                        ? "max-h-[28rem] opacity-100 overflow-y-auto"
+                        : "max-h-0 opacity-0 overflow-hidden"
                       }
                     `}
                   >

@@ -63,7 +63,7 @@ export default function Reports() {
       <div className="flex items-center justify-between gap-4 print:hidden">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Inventory Reports</h1>
-          <p className="text-sm text-gray-500 font-medium">Export monthly registers, supplier logs, and consumption analytics</p>
+          <p className="text-gray-500 text-sm">Export monthly registers, supplier logs, and consumption analytics</p>
         </div>
         <div className="flex gap-2">
           <button

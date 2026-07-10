@@ -40,6 +40,7 @@ export interface DonorDto {
   isAvailableToDonate?: boolean;
   daysUntilEligible?: number;
   source?: 'inhouse' | 'camp';
+  deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -119,6 +120,7 @@ export function toDto(raw: any): any {
     lastDonationDate: raw.lastDonationDate ? (raw.lastDonationDate instanceof Date ? raw.lastDonationDate.toISOString() : new Date(raw.lastDonationDate).toISOString()) : undefined,
     isAvailableToDonate,
     daysUntilEligible,
+    deletedAt: raw.deletedAt ? (raw.deletedAt instanceof Date ? raw.deletedAt.toISOString() : new Date(raw.deletedAt).toISOString()) : null,
     createdAt: raw.createdAt ? (raw.createdAt instanceof Date ? raw.createdAt.toISOString() : new Date(raw.createdAt).toISOString()) : new Date().toISOString(),
     updatedAt: raw.updatedAt ? (raw.updatedAt instanceof Date ? raw.updatedAt.toISOString() : new Date(raw.updatedAt).toISOString()) : new Date().toISOString(),
   };
@@ -129,6 +131,8 @@ export interface DonorRepo {
   findById(id: string): Promise<DonorDto | null>;
   update(id: string, patch: UpdateDonorInput, actorId: string): Promise<DonorDto>;
   list(input: ListDonorsInput): Promise<{ items: DonorDto[]; total: number }>;
+  softDelete(id: string, actorId: string): Promise<void>;
+  restore(id: string, actorId: string): Promise<void>;
   delete(id: string): Promise<void>;
   findActiveByPhone(phone: string): Promise<DonorDto | null>;
 }
@@ -321,6 +325,11 @@ export function createDonorRepo(): DonorRepo {
 
     async list(input) {
       const filter: Record<string, unknown> = {};
+      if (input.deletedOnly) {
+        filter.deletedAt = { $ne: null };
+      } else {
+        filter.deletedAt = null;
+      }
       if (input.bloodGroup) filter.bloodGroup = input.bloodGroup;
       if (input.rh) filter.rh = input.rh === 'Positive' ? 'POSITIVE' : input.rh === 'Negative' ? 'NEGATIVE' : input.rh;
       if (input.city) filter['address.city'] = input.city;
@@ -416,11 +425,25 @@ export function createDonorRepo(): DonorRepo {
       };
     },
 
+    async softDelete(id, actorId) {
+      const result = await DonorModel.updateOne(
+        { _id: id },
+        { deletedAt: new Date(), updatedBy: new Types.ObjectId(actorId) },
+      );
+      if (result.matchedCount === 0) throw new NotFoundError('Donor', id);
+    },
+
+    async restore(id, actorId) {
+      const result = await DonorModel.updateOne(
+        { _id: id },
+        { deletedAt: null, updatedBy: new Types.ObjectId(actorId) },
+      );
+      if (result.matchedCount === 0) throw new NotFoundError('Donor', id);
+    },
+
+    // Permanent, irreversible removal — only reached once a donor has
+    // already been soft-deleted (see donor.service.ts remove()).
     async delete(id) {
-      // Soft delete is the long-term goal (see CLAUDE.md). The legacy
-      // Donor model has no deletedAt field yet — for now we mirror the
-      // existing controller's behaviour and hard-delete. Replace when
-      // the Donor schema migrates to the new shape.
       const result = await DonorModel.deleteOne({ _id: id });
       if (result.deletedCount === 0) throw new NotFoundError('Donor', id);
     },

@@ -20,7 +20,7 @@ export default function IndicationSection({ issueByIndication, bagsToStorageCent
 
   return (
     <>
-      <Section title="8. Blood Bags Given to Blood Storage Centres">
+      <Section title="14. Blood Bags Given to Blood Storage Centres">
         <EntityBreakdown
           entities={bagsToStorageCentres.centres}
           emptyLabel='No hospital record with "storage" in its name (e.g. "SJS Storage") received units this period.'
@@ -31,7 +31,7 @@ export default function IndicationSection({ issueByIndication, bagsToStorageCent
         </p>
       </Section>
 
-      <Section title="9 & 17. Component Issue by Clinical Indication / Disease">
+      <Section title="15. Component Issue by Clinical Indication / Disease">
         <div className="flex gap-6 text-sm font-medium text-slate-700">
           <span>Thalassemia = {structured.thalassemia.count}</span>
           <span>Sickle Cell Anaemia = {structured.sickleCellAnaemia.count}</span>

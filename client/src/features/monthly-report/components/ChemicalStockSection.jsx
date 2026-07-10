@@ -55,7 +55,7 @@ export default function ChemicalStockSection({ chemicalStock, bagStock }) {
 
   return (
     <>
-      <Section title="18. Blood Grouping Chemicals Stock">
+      <Section title="16. Blood Grouping Chemicals Stock">
         <ReportTable
           headers={['Chemical', 'Opening', 'Received', 'Used', 'Damage', 'Closing']}
           rows={reagentRows}
@@ -70,7 +70,7 @@ export default function ChemicalStockSection({ chemicalStock, bagStock }) {
         )}
       </Section>
 
-      <Section title="19a. ELISA Kits Stock">
+      <Section title="17. ELISA Kits Stock">
         <ReportTable
           headers={['Kit', 'Opening', 'Received', 'Used', 'Damage', 'Closing', 'Remaining Boxes & Vials']}
           rows={elisaRows}
@@ -85,7 +85,7 @@ export default function ChemicalStockSection({ chemicalStock, bagStock }) {
         )}
       </Section>
 
-      <Section title="19b. Blood Bag Stock (by Batch)">
+      <Section title="18. Blood Bag Stock (by Batch)">
         <ReportTable
           headers={['Bag Type', 'Opening', 'Received', 'Used', 'Damage', 'Closing']}
           rows={bagRows}

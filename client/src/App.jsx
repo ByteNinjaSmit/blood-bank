@@ -19,7 +19,6 @@ import Dashboard from './features/dashboard/pages/Dashboard';
 import CampRegistration from './features/camp/pages/Camp-Registration';
 import CampListing from './features/camp/pages/Camp-Listing';
 import CampDetails from './features/camp/pages/CampDetails';
-import CampVolunteerList from './features/camp/pages/CampVolunteerList';
 import CampDonorManagement from './features/camp/pages/CampDonorManagement';
 import CampDonationManagement from './features/camp/pages/CampDonationManagement';
 import CampReports from './features/camp/pages/CampReports';
@@ -75,7 +74,8 @@ import RequisitionManagement from './features/requisition/pages/RequisitionManag
 import RequisitionList from './features/requisition/pages/RequisitionList';
 
 // Appointment
-import AppointmentList from './features/appointment/pages/AppointmentList';
+import DonorAppointmentList from './features/appointment/pages/DonorAppointmentList';
+import CampDonorAppointmentList from './features/appointment/pages/CampDonorAppointmentList';
 
 // MIS
 import DonorMIS from './features/mis/pages/DonorMIS';
@@ -90,6 +90,8 @@ import TestingMIS from './features/mis/pages/TestingMIS';
 import ExceptionMIS from './features/mis/pages/ExceptionMIS';
 import RegulatoryMIS from './features/mis/pages/RegulatoryMIS';
 import ExecutiveMIS from './features/mis/pages/ExecutiveMIS';
+import AnalyticsMIS from './features/mis/pages/AnalyticsMIS';
+import RecycleBin from './features/mis/pages/RecycleBin';
 
 // Error
 import NotFound from './page/Error-Page';
@@ -124,7 +126,6 @@ const App = () => {
           <Route path="camp-donors" element={<CampDonorManagement />} />
           <Route path="camp-donation" element={<CampDonationManagement />} />
           <Route path="camp-reports" element={<CampReports />} />
-          <Route path="camp-volunteers" element={<CampVolunteerList />} />
 
           {/* Component */}
           <Route path="component/list" element={<ComponentsList />} />
@@ -169,7 +170,8 @@ const App = () => {
           <Route path="master-register/donor-creation" element={<DonorCreation />} />
 
           {/* Appointments */}
-          <Route path="appointments" element={<AppointmentList />} />
+          <Route path="appointments/donors" element={<DonorAppointmentList />} />
+          <Route path="appointments/camps" element={<CampDonorAppointmentList />} />
 
           {/* Admin */}
           <Route path="admin/user-manage" element={<UserManage />} />
@@ -196,6 +198,8 @@ const App = () => {
           <Route path="mis/exceptions" element={<ExceptionMIS />} />
           <Route path="mis/regulatory" element={<RegulatoryMIS />} />
           <Route path="mis/executive" element={<ExecutiveMIS />} />
+          <Route path="mis/analytics" element={<AnalyticsMIS />} />
+          <Route path="mis/recycle-bin" element={<RecycleBin />} />
 
           <Route path="*" element={<NotFound />} />
         </Route>

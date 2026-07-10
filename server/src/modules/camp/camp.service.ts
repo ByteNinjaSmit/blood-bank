@@ -88,10 +88,44 @@ export const campService = {
     if (camp.createdBy?.toString() !== actorId) {
       throw new ForbiddenError('Only the camp creator may delete it');
     }
+
+    if (!camp.deletedAt) {
+      // First delete click: soft-delete only. Row stays visible (greyed
+      // out) in the camp list so donation history tied to it isn't lost.
+      await campRepo.softDelete(id, actorId);
+      await auditService.record({ actorId, action: 'DELETE', entityType: 'Camp', entityId: id });
+      await invalidate(CAMP_LIST_KEY);
+      log.warn({ campId: id, actorId }, 'camp soft-deleted');
+      return { permanentlyDeleted: false };
+    }
+
+    // Second delete click on an already soft-deleted camp: permanent,
+    // irreversible. Refuse if donations were ever recorded against it.
+    const hasDonations = await DonationModel.exists({ campId: id, deletedAt: null });
+    if (hasDonations) {
+      throw new ConflictError('Camp has donation records and cannot be permanently deleted');
+    }
     await campRepo.deleteById(id);
     await auditService.record({ actorId, action: 'DELETE', entityType: 'Camp', entityId: id });
     await invalidate(CAMP_LIST_KEY);
-    log.warn({ campId: id, actorId }, 'camp deleted');
+    log.warn({ campId: id, actorId }, 'camp permanently deleted');
+    return { permanentlyDeleted: true };
+  },
+
+  async restore(id: string, actorId: string) {
+    const camp = await campRepo.findRaw(id);
+    if (!camp) throw new NotFoundError('Camp', id);
+    if (camp.createdBy?.toString() !== actorId) {
+      throw new ForbiddenError('Only the camp creator may restore it');
+    }
+    if (!camp.deletedAt) {
+      return { restored: false };
+    }
+    await campRepo.restore(id, actorId);
+    await auditService.record({ actorId, action: 'UPDATE', entityType: 'Camp', entityId: id });
+    await invalidate(CAMP_LIST_KEY);
+    log.warn({ campId: id, actorId }, 'camp restored');
+    return { restored: true };
   },
 
   async detail(id: string) {

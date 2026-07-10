@@ -36,9 +36,19 @@ export default function Stepper({
     const isLastStep = currentStep === totalSteps
 
     const updateStep = (newStep) => {
+        // onStepChange can return `false` to veto a forward transition (e.g.
+        // failed per-step validation) — only onFinalStepCompleted has no such
+        // gate since Complete is a terminal action, not a navigation step.
+        // Backward moves are never blocked; the consumer gets the previous
+        // step as a second argument so it can tell direction apart.
+        if (newStep > totalSteps) {
+            setCurrentStep(newStep)
+            onFinalStepCompleted()
+            return
+        }
+        if (newStep > currentStep && onStepChange(newStep, currentStep) === false) return
+        if (newStep <= currentStep) onStepChange(newStep, currentStep)
         setCurrentStep(newStep)
-        if (newStep > totalSteps) onFinalStepCompleted()
-        else onStepChange(newStep)
     }
 
     const handleBack = () => {

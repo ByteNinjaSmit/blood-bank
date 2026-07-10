@@ -139,8 +139,8 @@ export default function BagInventory() {
               <Warehouse className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Blood Bag Stock Register</h1>
-              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Inventory Overview</p>
+              <h1 className="text-2xl font-bold text-gray-900">Blood Bag Stock Register</h1>
+              <p className="text-gray-500 text-sm">Inventory Overview</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -149,7 +149,7 @@ export default function BagInventory() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">

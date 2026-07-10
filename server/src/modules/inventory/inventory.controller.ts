@@ -98,6 +98,7 @@ export function createInventoryControllers(service: InventoryService): Inventory
             aboGroup: it.bloodGroup,
             rhFactor: rh,
             urgency: 'ROUTINE',
+            specialNeeds: body.patient.specialNeeds ?? [],
           };
         });
 
@@ -161,7 +162,7 @@ export function createInventoryControllers(service: InventoryService): Inventory
           const selection = selectUnits(formattedCandidates as any, {
             recipient: { aboGroup: rc.aboGroup as any, rhFactor: rc.rhFactor as any },
             component: rc.componentType as any,
-            specialNeeds: [],
+            specialNeeds: rc.specialNeeds ?? [],
             unitsRequired: rc.units,
           });
 
@@ -215,7 +216,7 @@ export function createInventoryControllers(service: InventoryService): Inventory
           const selection = selectUnits(formattedCandidates as any, {
             recipient: { aboGroup: rc.aboGroup as any, rhFactor: rc.rhFactor as any },
             component: rc.componentType as any,
-            specialNeeds: [],
+            specialNeeds: rc.specialNeeds ?? [],
             unitsRequired: rc.units,
           });
 

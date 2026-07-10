@@ -181,7 +181,7 @@ const CampDetails = () => {
                 <Droplets className="w-6 h-6 text-orange-800" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900">Camp Management</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Camp Management</h1>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <span className="truncate" title={camp.name}>{camp.name}</span>
                   <span>•</span>
@@ -265,7 +265,7 @@ const CampDetails = () => {
           </div>
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-800" title="Internal camp identifier">
-              ID: <span className="font-mono">{camp.siteId}</span>
+              ID: <span className="font-mono">{camp.campId}</span>
             </span>
             <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-800" title="Start and end dates">
               <Clock className="inline w-3 h-3 mr-1" />{formatDateTime(camp.dateFrom)} → {formatDateTime(camp.dateTo)}

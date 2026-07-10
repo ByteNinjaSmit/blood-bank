@@ -10,6 +10,10 @@ export interface HeaderOptions {
   generatedBy: string;
   reportPeriod: string;
   numCols: number;
+  /** 'FULL REPORT' (default) or 'FILTERED REPORT' */
+  reportType?: string;
+  /** Human-readable description of active filters, shown only when reportType is filtered */
+  filtersApplied?: string;
 }
 
 export interface SummaryItem {
@@ -34,7 +38,7 @@ export function formatDateTime(date: Date | string): string {
  * Creates a professional title header at the top of a worksheet.
  */
 export function createProfessionalHeader(sheet: ExcelJS.Worksheet, options: HeaderOptions): void {
-  const { title, subtitle, generatedBy, reportPeriod, numCols } = options;
+  const { title, subtitle, generatedBy, reportPeriod, numCols, reportType, filtersApplied } = options;
 
   // Title Row (Row 2)
   const titleRow = sheet.getRow(2);
@@ -79,16 +83,34 @@ export function createProfessionalHeader(sheet: ExcelJS.Worksheet, options: Head
   metaCell.alignment = { horizontal: 'center', vertical: 'middle' };
   sheet.mergeCells(4, 1, 4, numCols);
 
+  // Report Type / Filters Row (Row 5)
+  const isFiltered = (reportType || '').toUpperCase().includes('FILTER');
+  const typeRow = sheet.getRow(5);
+  typeRow.height = 20;
+  const typeCell = typeRow.getCell(1);
+  typeCell.value = isFiltered
+    ? `Report Type: FILTERED REPORT   |   Filters Applied: ${filtersApplied || 'N/A'}`
+    : `Report Type: ${(reportType || 'FULL REPORT').toUpperCase()}`;
+  typeCell.font = {
+    name: 'Segoe UI',
+    size: 9.5,
+    bold: true,
+    italic: !isFiltered,
+    color: { argb: isFiltered ? 'FFB45309' : 'FF64748B' }, // Amber 700 when filtered, Slate 500 otherwise
+  };
+  typeCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.mergeCells(5, 1, 5, numCols);
+
   // Add decorative bottom border under header block
   for (let c = 1; c <= numCols; c++) {
-    const cell = metaRow.getCell(c);
+    const cell = typeRow.getCell(c);
     cell.border = {
       bottom: { style: 'medium', color: { argb: 'FFCBD5E1' } }, // Slate 300
     };
   }
 
-  // Row 5 is left blank as spacing
-  sheet.getRow(5).height = 12;
+  // Row 6 is left blank as spacing
+  sheet.getRow(6).height = 12;
 }
 
 /**

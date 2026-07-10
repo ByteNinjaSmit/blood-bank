@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { useAuth } from "@/store/auth";
+import { apiClient } from "@/core/api-client";
 import { Button } from "@/components/ui/button";
 import { Loader2, Microscope, Search, Calendar, X, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
@@ -8,12 +7,12 @@ import { useNavigate } from "react-router-dom";
 import CustomModal from "@/components/CustomModal";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { formatDateTime } from "@/lib/format-date";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportSerologyResults } from "@/utils/excelExportHelper";
 
 const SerologyResults = () => {
-  const { API, authorizationToken } = useAuth();
   const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -35,19 +34,17 @@ const SerologyResults = () => {
       let dataToExport = [];
       if (exportAll) {
         // Fetch all serology results without limit (up to 5000)
-        const res = await axios.get(`${API}/api/serology/results`, {
-          params: { 
-            page: 1, 
-            limit: 5000, 
-            search: filters.search || undefined, 
+        const res = await apiClient.get(`/api/serology/results`, {
+          params: {
+            page: 1,
+            limit: 5000,
+            search: filters.search || undefined,
             status: filters.status === "all" ? undefined : filters.status,
             fromDate: filters.fromDate || undefined,
             toDate: filters.toDate || undefined,
-            sortBy, 
-            order 
+            sortBy,
+            order
           },
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
         });
         const data = Array.isArray(res.data?.data) ? res.data.data : [];
         dataToExport = mapSerologyForExport(data);
@@ -83,19 +80,17 @@ const SerologyResults = () => {
   const fetchBags = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`${API}/api/serology/results`, {
-        params: { 
-          page, 
-          limit, 
-          search: filters.search || undefined, 
+      const res = await apiClient.get(`/api/serology/results`, {
+        params: {
+          page,
+          limit,
+          search: filters.search || undefined,
           status: filters.status === "all" ? undefined : filters.status,
           fromDate: filters.fromDate || undefined,
           toDate: filters.toDate || undefined,
-          sortBy, 
-          order 
+          sortBy,
+          order
         },
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
       });
       const data = Array.isArray(res.data?.data) ? res.data.data : [];
       setBags(data);
@@ -167,7 +162,7 @@ const SerologyResults = () => {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">Serology Results</h1>
-                  <p className="text-gray-600 mt-1">View finalized or recorded serology results</p>
+                  <p className="text-gray-500 text-sm">View finalized or recorded serology results</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -312,7 +307,7 @@ const SerologyResults = () => {
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">{bag.bagNo}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{bag.segmentNo || "-"}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{formatBlood(bag.bloodGroup, bag.rh)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{bag.collectionDate ? new Date(bag.collectionDate).toLocaleString() : "-"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{formatDateTime(bag.collectionDate)}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{statusBadge(bag.status)}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">
                           {Array.isArray(bag.testResults) && bag.testResults.length > 0 ? (
@@ -471,7 +466,7 @@ const SerologyResults = () => {
                   <p><span className="font-medium">Blood Group:</span> {formatBlood(selectedBag.bloodGroup, selectedBag.rh)}</p>
                   <p>
                     <span className="font-medium">Collection Date:</span>{" "}
-                    {selectedBag.collectionDate ? new Date(selectedBag.collectionDate).toLocaleString() : "-"}
+                    {formatDateTime(selectedBag.collectionDate)}
                   </p>
                 </div>
                 <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1.5">
@@ -483,7 +478,7 @@ const SerologyResults = () => {
                   {selectedBag.updatedAt && (
                     <p>
                       <span className="font-medium">Last Updated:</span>{" "}
-                      {new Date(selectedBag.updatedAt).toLocaleString()}
+                      {formatDateTime(selectedBag.updatedAt)}
                     </p>
                   )}
                 </div>
