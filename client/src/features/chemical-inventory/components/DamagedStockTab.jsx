@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Plus, AlertTriangle, Pencil, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLotList, useDamageList, useCreateDamage, useUpdateDamage, useDeleteDamage } from '../queries';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportDamagedChemicalStock } from '@/utils/excelExportHelper';
 
 function lotLabel(lot) {
   const name = lot.chemicalId?.name || 'Unknown chemical';
@@ -257,9 +259,27 @@ export default function DamagedStockTab() {
     return fullName || user.email || '—';
   };
 
+  const [excelLoading, setExcelLoading] = useState(false);
+  const handleExportExcel = async () => {
+    const items = damages || [];
+    if (items.length === 0) {
+      toast.info('No damage records to export');
+      return;
+    }
+    try {
+      setExcelLoading(true);
+      await exportDamagedChemicalStock(items);
+    } catch (e) {
+      toast.error('Failed to generate Excel report');
+    } finally {
+      setExcelLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
         <button
           onClick={() => setShowRegisterModal(true)}
           className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-800 text-white text-sm font-semibold rounded-lg hover:bg-red-900 transition-colors shadow-sm"

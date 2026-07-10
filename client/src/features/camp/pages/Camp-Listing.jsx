@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState, useMemo } from "react"
-import { Plus, Eye, Edit, Trash2, Filter, X, Search, ChevronDown, MapPin, Users, Phone, Calendar, Droplets, ArrowUpDown } from "lucide-react"
+import { Plus, Eye, Edit, Trash2, Filter, X, Search, ChevronDown, MapPin, Users, Phone, Calendar, Droplets, ArrowUpDown, FileSpreadsheet } from "lucide-react"
 import { useNavigate, useLocation, Link } from "react-router-dom"
 import { apiClient } from "@/core/api-client"
 import { toast } from "sonner"
@@ -11,9 +11,12 @@ import { PageHeader } from "@/components/Header"
 import CampEditModal from "./CampEditModal"
 import CustomModal from "@/components/CustomModal"
 import { useCamp } from "@/hooks/useCamp"
+import { useAuth } from "@/store/auth"
+import { exportCampsExcel } from "@/features/camp/campExcelExport"
 
 const CampList = ({ OnBack }) => {
   const { camps, loading, fetchCamps, updateCamp, deleteCamp, restoreCamp } = useCamp()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -43,6 +46,12 @@ const CampList = ({ OnBack }) => {
   const [deleteTarget, setDeleteTarget] = useState(null)
 
   const toggleOrder = () => setOrder((o) => (o === "desc" ? "asc" : "desc"))
+
+  const handleExportExcel = () => {
+    const generatedBy = user?.name ? [user.name.first, user.name.last].filter(Boolean).join(' ') : (user?.username || 'System User')
+    exportCampsExcel(filteredCamps, generatedBy)
+    toast.success('Camp report downloaded successfully!')
+  }
 
   const [staffList, setStaffList] = useState([])
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -298,12 +307,22 @@ const CampList = ({ OnBack }) => {
             <p className="text-gray-500 text-sm">Manage and monitor all your blood donation camps</p>
           </div>
         </div>
-        <Link to={"/camp-registration"}>
-          <button className="bg-orange-800 cursor-pointer hover:bg-red-900 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors">
-            <Plus className="w-4 h-4" />
-            New Camp
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="bg-white cursor-pointer hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-green-700" />
+            Export to Excel
           </button>
-        </Link>
+          <Link to={"/camp-registration"}>
+            <button className="bg-orange-800 cursor-pointer hover:bg-red-900 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors">
+              <Plus className="w-4 h-4" />
+              New Camp
+            </button>
+          </Link>
+        </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

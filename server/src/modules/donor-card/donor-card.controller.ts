@@ -6,6 +6,7 @@ import { UnauthorizedError } from '@/shared/errors';
 export interface DonorCardControllers {
   create: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   list: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  getByRequisition: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
 export function createDonorCardControllers(repo: DonorCardRepo): DonorCardControllers {
@@ -29,6 +30,16 @@ export function createDonorCardControllers(repo: DonorCardRepo): DonorCardContro
       try {
         const data = await repo.list();
         res.json({ success: true, data, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async getByRequisition(req, res, next) {
+      try {
+        const { requisitionId } = ValidateDonorCard.requisitionIdParam(req);
+        const [data] = await repo.findByRequisitionIds([requisitionId]);
+        res.json({ success: true, data: data || null, requestId: req.id });
       } catch (e) {
         next(e);
       }

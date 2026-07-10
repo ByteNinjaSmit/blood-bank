@@ -56,7 +56,6 @@ function CrossmatchWorksheet({ invId, onSave, updating }) {
   const [compatibility, setCompatibility] = useState('');
   const [doneAt, setDoneAt] = useState('');
   const [seenAt, setSeenAt] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
 
   const canSave = compatibility && doneAt && seenAt;
 
@@ -66,19 +65,18 @@ function CrossmatchWorksheet({ invId, onSave, updating }) {
       compatibilityResult: compatibility,
       crossmatchDoneAt: new Date(doneAt).toISOString(),
       crossmatchSeenAt: new Date(seenAt).toISOString(),
-      cardNumber: cardNumber || undefined,
     });
   };
 
   return (
-    <div className="mt-2 p-3 rounded-lg border border-amber-200 bg-amber-50/50 space-y-2">
-      <div className="grid grid-cols-2 gap-2">
-        <div className="col-span-2">
-          <label className="block text-2xs font-medium text-gray-600 mb-0.5">Compatibility</label>
+    <div className="mt-2 p-3 rounded-lg border border-amber-300 bg-white space-y-2 max-w-2xl">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Compatibility <span className="text-red-600">*</span></label>
           <select
             value={compatibility}
             onChange={(e) => setCompatibility(e.target.value)}
-            className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white"
           >
             <option value="">— Select —</option>
             <option value="MAJOR_COMPATIBLE">Major Compatible</option>
@@ -87,31 +85,21 @@ function CrossmatchWorksheet({ invId, onSave, updating }) {
           </select>
         </div>
         <div>
-          <label className="block text-2xs font-medium text-gray-600 mb-0.5">Crossmatch Done At</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Crossmatch Done At <span className="text-red-600">*</span></label>
           <input
             type="datetime-local"
             value={doneAt}
             onChange={(e) => setDoneAt(e.target.value)}
-            className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white"
           />
         </div>
         <div>
-          <label className="block text-2xs font-medium text-gray-600 mb-0.5">Seen At</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Seen At <span className="text-red-600">*</span></label>
           <input
             type="datetime-local"
             value={seenAt}
             onChange={(e) => setSeenAt(e.target.value)}
-            className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
-          />
-        </div>
-        <div className="col-span-2">
-          <label className="block text-2xs font-medium text-gray-600 mb-0.5">Card Number (if used)</label>
-          <input
-            type="text"
-            value={cardNumber}
-            onChange={(e) => setCardNumber(e.target.value)}
-            placeholder="e.g. Gel card ID"
-            className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white"
           />
         </div>
       </div>
@@ -294,46 +282,55 @@ export default function MatchReviewStep({
                               mismatchWarning = `${patGroupText} patient is receiving ${bagGroupText} ${compType}`;
                             }
 
+                            const showWorksheet = mi.crossmatchRequired && mi.crossmatchStatus === 'pending' && !!onCrossmatchUpdate;
+                            const showSavedResult = mi.crossmatchRequired && mi.crossmatchStatus !== 'pending' && !!mi.compatibilityResult;
+
                             return (
-                              <tr key={invId} className="border-t hover:bg-gray-50 transition-colors">
-                                <td className="p-2 font-mono text-xs font-bold text-gray-800">{bagNo}</td>
-                                <td className="p-2 font-mono text-xs font-bold text-gray-800">{segmentNo}</td>
-                                <td className="p-2">
-                                  <div className="font-semibold">{blood}</div>
-                                  {mismatchWarning && (
-                                    <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1 mt-1.5 font-bold w-max flex items-center gap-1.5 shadow-sm">
-                                      <span className="text-amber-500 text-sm">⚠️</span> {mismatchWarning}
-                                    </div>
-                                  )}
-                                </td>
-                                <td className="p-2">
-                                  <CompatBadge type={mi.compatibilityType || 'exact'} />
-                                </td>
-                                <td className="p-2 align-top">
-                                  <CrossmatchStatusBadge
-                                    status={mi.crossmatchStatus || 'not-required'}
-                                    required={mi.crossmatchRequired || false}
-                                  />
-                                  {mi.crossmatchRequired && mi.crossmatchStatus === 'pending' && onCrossmatchUpdate && (
-                                    <CrossmatchWorksheet
-                                      invId={invId}
-                                      onSave={onCrossmatchUpdate}
-                                      updating={crossmatchUpdating}
+                              <React.Fragment key={invId}>
+                                <tr className="border-t hover:bg-gray-50 transition-colors">
+                                  <td className="p-2 font-mono text-xs font-bold text-gray-800">{bagNo}</td>
+                                  <td className="p-2 font-mono text-xs font-bold text-gray-800">{segmentNo}</td>
+                                  <td className="p-2">
+                                    <div className="font-semibold">{blood}</div>
+                                    {mismatchWarning && (
+                                      <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1 mt-1.5 font-bold w-max flex items-center gap-1.5 shadow-sm">
+                                        <span className="text-amber-500 text-sm">⚠️</span> {mismatchWarning}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="p-2">
+                                    <CompatBadge type={mi.compatibilityType || 'exact'} />
+                                  </td>
+                                  <td className="p-2 align-top">
+                                    <CrossmatchStatusBadge
+                                      status={mi.crossmatchStatus || 'not-required'}
+                                      required={mi.crossmatchRequired || false}
                                     />
-                                  )}
-                                  {mi.crossmatchRequired && mi.crossmatchStatus !== 'pending' && mi.compatibilityResult && (
-                                    <div className="mt-1.5 text-2xs text-gray-500 space-y-0.5">
-                                      <div>Compatibility: <span className="font-medium">{COMPATIBILITY_RESULT_LABELS[mi.compatibilityResult] || mi.compatibilityResult}</span></div>
-                                      {mi.crossmatchDoneAt && <div>Done At: {new Date(mi.crossmatchDoneAt).toLocaleString()}</div>}
-                                      {mi.crossmatchSeenAt && <div>Seen At: {new Date(mi.crossmatchSeenAt).toLocaleString()}</div>}
-                                      {mi.cardNumber && <div>Card #: {mi.cardNumber}</div>}
-                                    </div>
-                                  )}
-                                </td>
-                                <td className="p-2 text-xs text-gray-500 align-top">
-                                  {mi?.reservedAt ? new Date(mi.reservedAt).toLocaleString() : '—'}
-                                </td>
-                              </tr>
+                                    {showSavedResult && (
+                                      <div className="mt-1.5 text-2xs text-gray-500 space-y-0.5">
+                                        <div>Compatibility: <span className="font-medium">{COMPATIBILITY_RESULT_LABELS[mi.compatibilityResult] || mi.compatibilityResult}</span></div>
+                                        {mi.crossmatchDoneAt && <div>Done At: {new Date(mi.crossmatchDoneAt).toLocaleString()}</div>}
+                                        {mi.crossmatchSeenAt && <div>Seen At: {new Date(mi.crossmatchSeenAt).toLocaleString()}</div>}
+                                        {mi.cardNumber && <div>Card #: {mi.cardNumber}</div>}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="p-2 text-xs text-gray-500 align-top">
+                                    {mi?.reservedAt ? new Date(mi.reservedAt).toLocaleString() : '—'}
+                                  </td>
+                                </tr>
+                                {showWorksheet && (
+                                  <tr className="border-t-0 bg-amber-50/30">
+                                    <td colSpan={6} className="p-2">
+                                      <CrossmatchWorksheet
+                                        invId={invId}
+                                        onSave={onCrossmatchUpdate}
+                                        updating={crossmatchUpdating}
+                                      />
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
                             );
                           })}
                         </tbody>

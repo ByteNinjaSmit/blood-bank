@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate as formatDateKolkata } from "@/lib/format-date";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComponentDetailsModal } from "@/components/blood-components";
+import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
+import { exportNearExpiryComponents } from "@/utils/excelExportHelper";
 
 const COMPONENT_TYPES = [
   { value: "RBC", label: "Red Blood Cells" },
@@ -29,6 +31,8 @@ const STATUS_OPTIONS = [
 const NearExpiry = () => {
   const { API, authorizationToken } = useAuth();
   const navigate = useNavigate();
+
+  const [excelLoading, setExcelLoading] = useState(false);
 
   // State management following SOLID principles
   const [state, setState] = useState({
@@ -171,6 +175,39 @@ const NearExpiry = () => {
     }));
   };
 
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      let dataToExport = [];
+      if (exportAll) {
+        const params = {
+          page: 1,
+          limit: 5000,
+          days: state.filters.days,
+          ...(state.filters.componentType && { componentType: state.filters.componentType }),
+          ...(state.filters.status && { status: state.filters.status }),
+          ...(state.filters.search && { search: state.filters.search }),
+        };
+        const response = await apiClient.get(`/api/v2/component/near-expiry`, { params });
+        dataToExport = response.data?.components || [];
+      } else {
+        dataToExport = state.components;
+      }
+
+      if (dataToExport.length === 0) {
+        toast.info("No near-expiry components to export");
+        return;
+      }
+
+      await exportNearExpiryComponents(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
+
   // Single responsibility: Open component details modal
   const handleViewDetails = (componentId) => {
     setModalState({
@@ -255,6 +292,7 @@ const NearExpiry = () => {
                 </p>
               </div>
             </div>
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
           </div>
         </div>
       </div>
@@ -385,7 +423,7 @@ const NearExpiry = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Component ID
+                      Bag Number
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Type
@@ -403,9 +441,6 @@ const NearExpiry = () => {
                       Days Left
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Bag Number
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Blood Group
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -416,7 +451,7 @@ const NearExpiry = () => {
                 <tbody className="bg-white divide-y divide-gray-100">
                   {state.isLoading ? (
                     <tr>
-                      <td colSpan="9" className="px-4 py-8 text-center">
+                      <td colSpan="8" className="px-4 py-8 text-center">
                         <div className="inline-flex items-center gap-2 text-gray-500">
                           <Loader2 className="w-5 h-5 animate-spin" />
                           Loading near-expiry components...
@@ -425,7 +460,7 @@ const NearExpiry = () => {
                     </tr>
                   ) : state.components.length === 0 ? (
                     <tr>
-                      <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
                         <div className="flex flex-col items-center gap-2">
                           <AlertTriangle className="w-12 h-12 text-yellow-500" />
                           <p className="text-lg font-medium">No near-expiry components found</p>
@@ -443,7 +478,7 @@ const NearExpiry = () => {
                       return (
                         <tr key={`${component.componentId}-${idx}`} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                            {component.componentId}
+                            {component.bagNo || "-"}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-700">
                             <Badge variant="outline">{component.type}</Badge>
@@ -474,9 +509,6 @@ const NearExpiry = () => {
                               <Clock className="w-3 h-3 mr-1" />
                               {daysUntilExpiry} {daysUntilExpiry === 1 ? "day" : "days"}
                             </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
-                            {component.bagNo || "-"}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-700">
                             {component.bloodGroup || "-"}

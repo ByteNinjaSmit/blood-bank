@@ -43,11 +43,15 @@ const ComponentsList = () => {
           list.push({
             componentId: comp.componentId || comp._id || `${bag.bagNo}-${type.toUpperCase()}`,
             bagNo: bag.bagNo,
+            segmentNo: bag.segmentNo || '—',
             componentType: type.toUpperCase(),
             bloodGroup: bag.bloodGroup || (bag.bag ? `${bag.bag.bloodGroup} ${bag.bag.rh || ''}` : '—'),
             volumeMl: comp.volumeMl ?? '—',
             expiryDate: comp.expiryDate,
             status: comp.componentStatus || comp.status || 'prepared',
+            site: bag.site || '—',
+            createdAt: bag.createdAt,
+            storageLocation: comp.storageLocation || 'Main Fridge',
           });
         }
       });
@@ -531,6 +535,9 @@ const ComponentsList = () => {
                       Bag Number
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Segment No
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Red Blood Cells (RBC)
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -559,7 +566,7 @@ const ComponentsList = () => {
                 <tbody className="bg-white divide-y divide-gray-100">
                   {state.isLoading ? (
                     <tr>
-                      <td colSpan="9" className="px-4 py-8 text-center">
+                      <td colSpan="10" className="px-4 py-8 text-center">
                         <div className="inline-flex items-center gap-2 text-gray-500">
                           <Loader2 className="w-5 h-5 animate-spin" />
                           Loading components inventory...
@@ -568,7 +575,7 @@ const ComponentsList = () => {
                     </tr>
                   ) : state.components.length === 0 ? (
                     <tr>
-                      <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan="10" className="px-4 py-8 text-center text-gray-500">
                         No blood bag groups found.
                       </td>
                     </tr>
@@ -578,6 +585,9 @@ const ComponentsList = () => {
                         <td className="px-4 py-3 text-sm font-semibold text-gray-900">
                           {bag.bagNo}
                         </td>
+                        <td className="px-4 py-3 text-sm font-mono text-gray-700">
+                          {bag.segmentNo || "-"}
+                        </td>
                         {/* RBC column */}
                         <td className="px-4 py-3 text-sm">
                           {bag.rbc.status === "prepared" ? (
@@ -586,6 +596,7 @@ const ComponentsList = () => {
                                 {getStatusLabel(bag.rbc.componentStatus)}
                               </Badge>
                               <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.rbc.volumeMl} mL</span>
+                              <span className="text-[9px] text-gray-500">{bag.rbc.storageLocation || "Main Fridge"}</span>
                               {isExpired(bag.rbc.expiryDate) && (
                                 <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
                                   <AlertTriangle className="w-2.5 h-2.5" /> Expired
@@ -611,6 +622,7 @@ const ComponentsList = () => {
                                 {getStatusLabel(bag.ffp.componentStatus)}
                               </Badge>
                               <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.ffp.volumeMl} mL</span>
+                              <span className="text-[9px] text-gray-500">{bag.ffp.storageLocation || "Main Fridge"}</span>
                               {isExpired(bag.ffp.expiryDate) && (
                                 <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
                                   <AlertTriangle className="w-2.5 h-2.5" /> Expired
@@ -636,6 +648,7 @@ const ComponentsList = () => {
                                 {getStatusLabel(bag.platelet.componentStatus)}
                               </Badge>
                               <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.platelet.volumeMl} mL</span>
+                              <span className="text-[9px] text-gray-500">{bag.platelet.storageLocation || "Main Fridge"}</span>
                               {isExpired(bag.platelet.expiryDate) && (
                                 <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
                                   <AlertTriangle className="w-2.5 h-2.5" /> Expired
@@ -661,6 +674,7 @@ const ComponentsList = () => {
                                 {getStatusLabel(bag.cryo.componentStatus)}
                               </Badge>
                               <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.cryo.volumeMl} mL</span>
+                              <span className="text-[9px] text-gray-500">{bag.cryo.storageLocation || "Main Fridge"}</span>
                               {isExpired(bag.cryo.expiryDate) && (
                                 <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
                                   <AlertTriangle className="w-2.5 h-2.5" /> Expired

@@ -7,7 +7,7 @@ import { Loader2, PackageCheck, Plus, Trash2, Warehouse, MapPin, Eye, ArrowLeftR
 import { toast } from "sonner";
 import CustomModal from "@/components/CustomModal";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
-import { exportIssues } from "@/utils/excelExportHelper";
+import { exportIssues, exportStorageBags, exportClinicalIndicationIssues, exportBulkTransfers } from "@/utils/excelExportHelper";
 import BulkTransferCoverLetter from "@/features/inventory/components/BulkTransferCoverLetter";
 import TestingCertificate from "@/features/inventory/components/TestingCertificate";
 import BulkTransferInvoice from "@/features/inventory/components/BulkTransferInvoice";
@@ -117,9 +117,41 @@ const Issue = () => {
     }));
   };
 
+  // Exports whichever tab is currently active (Issue Stock / Storage /
+  // Clinical Indication / Bulk Transfer) — each tab has its own data shape
+  // and its own export mapper, but they share this one button.
   const handleExportExcel = async (exportAll = false) => {
     try {
       setExcelLoading(true);
+
+      if (mainTab === 'storage') {
+        const dataToExport = storageBagRows;
+        if (dataToExport.length === 0) return toast.info("No storage records to export");
+        await exportStorageBags(dataToExport);
+        return;
+      }
+
+      if (mainTab === 'disease') {
+        let dataToExport = thalRows;
+        if (exportAll) {
+          const res = await apiClient.get(`/api/inventory`, {
+            params: { page: 1, limit: 5000, status: 'issued', dispatchType: 'CLINICAL_INDICATION' },
+          });
+          dataToExport = Array.isArray(res.data?.data) ? res.data.data : thalRows;
+        }
+        if (dataToExport.length === 0) return toast.info("No clinical indication records to export");
+        await exportClinicalIndicationIssues(dataToExport);
+        return;
+      }
+
+      if (mainTab === 'bulkTransfer') {
+        const dataToExport = bulkRows;
+        if (dataToExport.length === 0) return toast.info("No bulk transfer records to export");
+        await exportBulkTransfers(dataToExport);
+        return;
+      }
+
+      // 'issue' tab (default)
       let dataToExport = [];
       if (exportAll) {
         // Fetch all issued/matching items without limit (up to 5000)
@@ -1135,14 +1167,15 @@ const Issue = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Storage / Destination</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {isLoading ? (
-                  <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
+                  <tr><td colSpan="9" className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-500">No items found.</td></tr>
+                  <tr><td colSpan="9" className="px-4 py-8 text-center text-gray-500">No items found.</td></tr>
                 ) : (
                   rows.map((r) => (
                     <tr key={r._id} className="hover:bg-gray-50">
@@ -1153,6 +1186,7 @@ const Issue = () => {
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '-'}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{r?.issuedAt ? new Date(r.issuedAt).toLocaleDateString() : '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{r?.storageLocation || r?.hospital?.name || '—'}</td>
                       <td className="px-4 py-3 text-sm">
                         <button onClick={() => openView(r)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">View</button>
                       </td>

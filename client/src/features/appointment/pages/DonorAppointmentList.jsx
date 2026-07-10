@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { CalendarCheck, Search, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAppointmentList, useAppointmentSummary, useUpdateAppointmentStatus } from '../queries';
+import { appointmentApi } from '../api';
 import { formatDate, formatDateTime } from '@/lib/format-date';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportAppointments } from '@/utils/excelExportHelper';
 
 const STATUS_BADGE = {
   pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -98,6 +102,27 @@ export default function DonorAppointmentList() {
 
   const handleStatus = (id, next) => updateStatus.mutate({ id, status: next });
 
+  const [excelLoading, setExcelLoading] = useState(false);
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      let dataToExport = appointments;
+      if (exportAll) {
+        const res = await appointmentApi.list({ page: 1, limit: 5000, status: status || undefined, search: search || undefined });
+        dataToExport = res?.items ?? appointments;
+      }
+      if (dataToExport.length === 0) {
+        toast.info('No appointments to export');
+        return;
+      }
+      await exportAppointments(dataToExport);
+    } catch (e) {
+      toast.error('Failed to generate Excel report');
+    } finally {
+      setExcelLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-100 shadow-sm">
@@ -111,6 +136,7 @@ export default function DonorAppointmentList() {
               <p className="text-gray-500 text-sm">Public Site Form Submissions</p>
             </div>
           </div>
+          <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
         </div>
       </div>
 

@@ -4,6 +4,9 @@ import { ArrowLeft, MapPin, Calendar, Users, Search } from 'lucide-react';
 import { useCampList } from '@/features/camp/queries';
 import { useVoluntaryDonations } from '@/features/camp/queries';
 import { formatDate, formatDateTime } from '@/lib/format-date';
+import { toast } from 'sonner';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportCampAppointments } from '@/utils/excelExportHelper';
 
 const STATUS_BADGE = {
   PENDING: 'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -47,6 +50,22 @@ function CampCard({ camp, phase, onClick }) {
 function CampAppointmentsTable({ camp, onBack }) {
   const { data, isLoading } = useVoluntaryDonations({ campId: camp._id, limit: 200, sortBy: 'createdAt', sortOrder: 'desc' });
   const items = data?.items ?? [];
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const handleExportExcel = async () => {
+    if (items.length === 0) {
+      toast.info('No appointments to export');
+      return;
+    }
+    try {
+      setExcelLoading(true);
+      await exportCampAppointments(items, camp.name);
+    } catch (e) {
+      toast.error('Failed to generate Excel report');
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -59,8 +78,11 @@ function CampAppointmentsTable({ camp, onBack }) {
           <h2 className="text-lg font-bold text-gray-900">{camp.name}</h2>
           <p className="text-sm text-gray-500">{camp.address}</p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Users className="w-4 h-4" /> {items.length} appointment(s)
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Users className="w-4 h-4" /> {items.length} appointment(s)
+          </div>
+          <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
         </div>
       </div>
 

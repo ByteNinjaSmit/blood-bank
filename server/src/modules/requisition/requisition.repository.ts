@@ -50,6 +50,7 @@ export interface RequisitionPatientDto {
   diagnosis?: string;
   indication?: string;
   hb?: number;
+  specialNeeds?: string[];
   history?: {
     previousTransfusions: number;
     approximateDate?: string;
@@ -74,6 +75,7 @@ export interface RequisitionDto {
   requestedComponents: RequestedComponentDto[];
   matchedUnits: MatchedUnitDto[];
   status: RequisitionStatus;
+  requiredAt?: string;
   requestedAt?: string;
   createdAt: string;
   rejectionReason?: string;
@@ -92,6 +94,7 @@ interface RawReq {
   requestedComponents: RequestedComponentDto[];
   matchedUnits: MatchedUnitDto[];
   status: RequisitionStatus;
+  requiredAt?: Date;
   requestedAt?: Date;
   createdAt: Date;
   rejectionReason?: string;
@@ -117,6 +120,7 @@ function toDto(raw: RawReq): RequisitionDto {
       diagnosis: raw.patient.diagnosis,
       indication: raw.patient.indication,
       hb: raw.patient.hb,
+      specialNeeds: Array.isArray(raw.patient.specialNeeds) ? raw.patient.specialNeeds : [],
       history: raw.patient.history ? {
         previousTransfusions: raw.patient.history.previousTransfusions ?? 0,
         approximateDate: raw.patient.history.approximateDate || '',
@@ -131,6 +135,7 @@ function toDto(raw: RawReq): RequisitionDto {
     requestedComponents: raw.requestedComponents || [],
     matchedUnits: raw.matchedUnits || [],
     status: raw.status,
+    requiredAt: raw.requiredAt ? new Date(raw.requiredAt).toISOString() : undefined,
     requestedAt: raw.requestedAt ? new Date(raw.requestedAt).toISOString() : raw.createdAt ? new Date(raw.createdAt).toISOString() : '',
     createdAt: raw.createdAt ? new Date(raw.createdAt).toISOString() : '',
     rejectionReason: raw.rejectionReason,

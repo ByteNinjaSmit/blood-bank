@@ -169,16 +169,20 @@ export async function exportCampDonations(items, campName = 'Camp', meta = {}) {
 
 // 3. Component List
 export async function exportComponents(items, meta = {}) {
-  const headers = ['Sr No', 'Component ID', 'Bag No', 'Component Type', 'Blood Group', 'Volume (mL)', 'Expiry Date', 'Status'];
-  const alignments = ['center', 'center', 'center', 'left', 'center', 'center', 'center', 'center'];
+  const headers = ['Sr No', 'Component ID', 'Bag No', 'Segment No', 'Component Type', 'Blood Group', 'Volume (mL)', 'Site', 'Created At', 'Storage Location', 'Expiry Date', 'Status'];
+  const alignments = ['center', 'center', 'center', 'center', 'left', 'center', 'center', 'left', 'center', 'center', 'center', 'center'];
 
   const rows = items.map((r, i) => [
     i + 1,
     r.componentId || r._id || '—',
     r.bagNo || r.bag?.bagNo || '—',
+    r.segmentNo || '—',
     r.componentType || '—',
     r.bloodGroup || (r.bag ? `${r.bag.bloodGroup} ${r.bag.rh || ''}` : '—'),
     r.volumeMl ?? '—',
+    r.site || '—',
+    formatDate(r.createdAt),
+    r.storageLocation || 'Main Fridge',
     formatDate(r.expiryDate),
     (r.status || '—').toUpperCase(),
   ]);
@@ -198,6 +202,45 @@ export async function exportComponents(items, meta = {}) {
     stats,
     ...meta,
   }], 'Component_Inventory_Report.xlsx');
+}
+
+// 3b. Near-Expiry Components
+export async function exportNearExpiryComponents(items, meta = {}) {
+  const headers = ['Sr No', 'Bag No', 'Component Type', 'Blood Group', 'Volume (mL)', 'Status', 'Expiry Date', 'Days Left'];
+  const alignments = ['center', 'center', 'left', 'center', 'center', 'center', 'center', 'center'];
+
+  const daysUntil = (d) => {
+    if (!d) return '—';
+    const diff = Math.ceil((new Date(d) - new Date()) / (1000 * 60 * 60 * 24));
+    return diff;
+  };
+
+  const rows = items.map((r, i) => [
+    i + 1,
+    r.bagNo || '—',
+    r.type || '—',
+    r.bloodGroup || '—',
+    r.volumeMl ?? '—',
+    (r.status || '—').toUpperCase(),
+    formatDate(r.expiryDate),
+    daysUntil(r.expiryDate),
+  ]);
+
+  const stats = [
+    { label: 'Total Near-Expiry', value: items.length },
+    { label: 'Expiring In ≤3 Days', value: items.filter(r => Number(daysUntil(r.expiryDate)) <= 3).length },
+  ];
+
+  await downloadExcelReport([{
+    name: 'Near-Expiry Components',
+    title: 'SANJIVANI BLOOD BANK, KOPARGAON',
+    subtitle: 'Near-Expiry Blood Components Report',
+    headers,
+    rows,
+    alignments,
+    stats,
+    ...meta,
+  }], 'Near_Expiry_Components_Report.xlsx');
 }
 
 // 4. Serology Results
@@ -239,17 +282,20 @@ export async function exportSerologyResults(items, meta = {}) {
 
 // 5. Inventory Stock
 export async function exportStock(items, meta = {}) {
-  const headers = ['Sr No', 'Bag No', 'Component', 'Blood Group', 'Volume', 'Expiry Date', 'Status'];
-  const alignments = ['center', 'center', 'left', 'center', 'center', 'center', 'center'];
+  const headers = ['Sr No', 'Bag No', 'Segment No', 'Component', 'Blood Group', 'Volume', 'Collection Date', 'Expiry Date', 'Status', 'Storage / Destination'];
+  const alignments = ['center', 'center', 'center', 'left', 'center', 'center', 'center', 'center', 'center', 'left'];
 
   const rows = items.map((r, i) => [
     i + 1,
     r?.bag?.bagNo || r.bagNo || '—',
+    r?.bag?.segmentNo || r.segmentNo || '—',
     r?.component?.componentType || '—',
     r?.bag?.bloodGroup ? `${r.bag.bloodGroup} ${r.bag.rh || ''}` : '—',
     r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—',
+    formatDate(r?.bag?.donationDate),
     formatDate(r?.component?.expiryDate),
     (r.status || '—').toUpperCase(),
+    r.status === 'in-stock' ? (r.storageLocation || 'Main Fridge') : (r.hospital?.name || r.storageLocation || '—'),
   ]);
 
   const stats = [
@@ -336,6 +382,107 @@ export async function exportIssues(items, meta = {}) {
     stats,
     ...meta,
   }], 'Issued_Units_Report.xlsx');
+}
+
+// 7b. Storage Transfers (Issue Stock > Storage tab)
+export async function exportStorageBags(items, meta = {}) {
+  const headers = ['Sr No', 'Bag No', 'Segment No', 'Component', 'Blood Group', 'Volume', 'Expiry Date', 'Storage Location', 'Sent Date'];
+  const alignments = ['center', 'center', 'center', 'left', 'center', 'center', 'center', 'left', 'center'];
+
+  const rows = items.map((r, i) => [
+    i + 1,
+    r?.bag?.bagNo || r.bagNo || '—',
+    r.segmentNo || '—',
+    r?.component?.componentType || '—',
+    r?.bag?.bloodGroup ? `${r.bag.bloodGroup} ${r.bag.rh === 'Positive' ? '+' : r.bag.rh === 'Negative' ? '-' : ''}`.trim() : '—',
+    r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—',
+    formatDate(r?.component?.expiryDate),
+    r.storageLocation || r?.hospital?.name || '—',
+    formatDateTime(r.issuedAt),
+  ]);
+
+  const stats = [{ label: 'Total Bags Sent to Storage', value: items.length }];
+
+  await downloadExcelReport([{
+    name: 'Storage Transfers',
+    title: 'SANJIVANI BLOOD BANK, KOPARGAON',
+    subtitle: 'Bags Sent to Storage Register',
+    headers,
+    rows,
+    alignments,
+    stats,
+    ...meta,
+  }], 'Storage_Transfers_Report.xlsx');
+}
+
+// 7c. Clinical Indication / Disease Patient Issues (Issue Stock > Disease tab)
+export async function exportClinicalIndicationIssues(items, meta = {}) {
+  const headers = ['Sr No', 'Patient Name', 'Disease', 'Age', 'Sex', 'Patient Blood Group', 'Bag No', 'Component', 'Blood Group', 'Issued At'];
+  const alignments = ['center', 'left', 'left', 'center', 'center', 'center', 'center', 'left', 'center', 'center'];
+
+  const rows = items.map((r, i) => {
+    const p = r.clinicalIndicationPatient || {};
+    const fullName = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ') || '—';
+    const disease = p.disease === 'THALASSEMIA' ? 'Thalassemia' : p.disease === 'SICKLE_CELL_ANAEMIA' ? 'Sickle Cell Anaemia' : (p.otherDiseaseName || p.disease || '—');
+    return [
+      i + 1,
+      fullName,
+      disease,
+      p.age ?? '—',
+      p.sex || '—',
+      p.bloodGroup || '—',
+      r?.bag?.bagNo || r.bagNo || '—',
+      r?.component?.componentType || '—',
+      r?.bag?.bloodGroup ? `${r.bag.bloodGroup} ${r.bag.rh === 'Positive' ? '+' : r.bag.rh === 'Negative' ? '-' : ''}`.trim() : '—',
+      formatDateTime(r.issuedAt),
+    ];
+  });
+
+  const stats = [{ label: 'Total Clinical Indication Issues', value: items.length }];
+
+  await downloadExcelReport([{
+    name: 'Clinical Indication Issues',
+    title: 'SANJIVANI BLOOD BANK, KOPARGAON',
+    subtitle: 'Clinical Indication / Disease Patient Issue Register',
+    headers,
+    rows,
+    alignments,
+    stats,
+    ...meta,
+  }], 'Clinical_Indication_Issues_Report.xlsx');
+}
+
+// 7d. Bulk Transfers / Loans (Issue Stock > Bulk Transfer tab)
+export async function exportBulkTransfers(items, meta = {}) {
+  const headers = ['Sr No', 'Transfer ID', 'Type', 'Blood Bank', 'Address', 'Transfer Date', 'Bags Count'];
+  const alignments = ['center', 'center', 'center', 'left', 'left', 'center', 'center'];
+
+  const rows = items.map((r, i) => [
+    i + 1,
+    r.transferId || '—',
+    r.transferType === 'GIVE_LOAN' ? 'Give Loan' : 'Take Loan',
+    r.bloodBankName || '—',
+    r.bloodBankAddress || '—',
+    formatDate(r.transferDate),
+    r.items?.length || 0,
+  ]);
+
+  const stats = [
+    { label: 'Total Transfers', value: items.length },
+    { label: 'Given on Loan', value: items.filter(r => r.transferType === 'GIVE_LOAN').length },
+    { label: 'Taken on Loan', value: items.filter(r => r.transferType === 'TAKE_LOAN').length },
+  ];
+
+  await downloadExcelReport([{
+    name: 'Bulk Transfers',
+    title: 'SANJIVANI BLOOD BANK, KOPARGAON',
+    subtitle: 'Bulk Transfer (Loan) Register',
+    headers,
+    rows,
+    alignments,
+    stats,
+    ...meta,
+  }], 'Bulk_Transfers_Report.xlsx');
 }
 
 // 8. Master Donors
@@ -607,6 +754,217 @@ export async function exportProcurementDiscard(items, meta = {}) {
     stats,
     ...meta,
   }], 'Discards_And_Wastes_Report.xlsx');
+}
+
+// 14b. Vendor Management
+export async function exportVendors(items, meta = {}) {
+  const headers = ['Sr No', 'Vendor Name', 'Manufacturer', 'Contact Person', 'Phone', 'Email', 'Address', 'Drug License No', 'GST No', 'Status', 'Contract End'];
+  const alignments = ['center', 'left', 'left', 'left', 'center', 'left', 'left', 'center', 'center', 'center', 'center'];
+
+  const rows = items.map((r, i) => [
+    i + 1,
+    r.name || '—',
+    r.manufacturer || '—',
+    r.contactPerson || '—',
+    r.contactPhone || '—',
+    r.email || '—',
+    r.address || '—',
+    r.drugLicenseNo || '—',
+    r.gstNo || '—',
+    r.approvalStatus || '—',
+    formatDate(r.contractEnd),
+  ]);
+
+  const stats = [
+    { label: 'Total Vendors', value: items.length },
+    { label: 'Approved', value: items.filter(r => r.approvalStatus === 'APPROVED').length },
+  ];
+
+  await downloadExcelReport([{
+    name: 'Vendors',
+    title: 'SANJIVANI BLOOD BANK, KOPARGAON',
+    subtitle: 'Blood Bag Vendor Register',
+    headers,
+    rows,
+    alignments,
+    stats,
+    ...meta,
+  }], 'Vendor_Register.xlsx');
+}
+
+// 15b. Bag Procurement Discard Register (empty bag stock, not blood units)
+export async function exportBagDiscardRegister(items, meta = {}) {
+  const headers = ['Sr No', 'Discard ID', 'Bag Type', 'Batch No', 'Quantity', 'Reason', 'Discard Date', 'Approved By', 'Disposal Date', 'Status'];
+  const alignments = ['center', 'center', 'left', 'center', 'center', 'left', 'center', 'left', 'center', 'center'];
+
+  const rows = items.map((r, i) => [
+    i + 1,
+    r.discardId || r._id?.slice(-8).toUpperCase() || '—',
+    r.bagType || '—',
+    r.stock?.batchNo || r.batchNo || '—',
+    r.quantity ?? '—',
+    (r.reason || '—').replace(/_/g, ' '),
+    formatDate(r.discardDate || r.createdAt),
+    r.approvedBy?.name || '—',
+    formatDate(r.disposalDate),
+    r.status || '—',
+  ]);
+
+  const stats = [
+    { label: 'Total Discard Records', value: items.length },
+    { label: 'Pending Approval', value: items.filter(r => r.status === 'PENDING_APPROVAL').length },
+  ];
+
+  await downloadExcelReport([{
+    name: 'Bag Discard Register',
+    title: 'SANJIVANI BLOOD BANK, KOPARGAON',
+    subtitle: 'Empty Bag Discard & Biomedical Waste Register',
+    headers,
+    rows,
+    alignments,
+    stats,
+    ...meta,
+  }], 'Bag_Discard_Register.xlsx');
+}
+
+// 15c. Damaged Chemical Stock Register
+export async function exportDamagedChemicalStock(items, meta = {}) {
+  const headers = ['Sr No', 'Chemical', 'Lot Number', 'Batch Number', 'Quantity', 'Reason', 'Damaged Date', 'Registered By'];
+  const alignments = ['center', 'left', 'center', 'center', 'center', 'left', 'center', 'left'];
+
+  const rows = items.map((r, i) => [
+    i + 1,
+    r.chemicalId?.name || '—',
+    r.lotId?.lotNumber || '—',
+    r.lotId?.batchNumber || '—',
+    r.quantity ?? '—',
+    r.reason || '—',
+    formatDate(r.damagedDate),
+    r.createdBy ? [r.createdBy.name?.first, r.createdBy.name?.last].filter(Boolean).join(' ') || r.createdBy.email : '—',
+  ]);
+
+  const stats = [
+    { label: 'Total Damage Records', value: items.length },
+    { label: 'Total Units Damaged', value: items.reduce((sum, r) => sum + (r.quantity || 0), 0) },
+  ];
+
+  await downloadExcelReport([{
+    name: 'Damaged Stock',
+    title: 'SANJIVANI BLOOD BANK, KOPARGAON',
+    subtitle: 'Damaged Chemical Stock Register',
+    headers,
+    rows,
+    alignments,
+    stats,
+    ...meta,
+  }], 'Damaged_Chemical_Stock_Register.xlsx');
+}
+
+// 15d. Chemical Master List
+export async function exportChemicalMaster(items, meta = {}) {
+  const headers = ['Sr No', 'Chemical Name', 'Category', 'Manufacturer', 'Unit Type', 'Min Stock', 'Reorder Level', 'Status'];
+  const alignments = ['center', 'left', 'left', 'left', 'center', 'center', 'center', 'center'];
+
+  const rows = items.map((r, i) => [
+    i + 1,
+    r.name || '—',
+    r.categoryId?.name || '—',
+    r.manufacturerId?.name || '—',
+    r.unitType || '—',
+    r.minStockLevel ?? '—',
+    r.reorderLevel ?? '—',
+    r.isActive === false ? 'Inactive' : 'Active',
+  ]);
+
+  const stats = [
+    { label: 'Total Chemicals', value: items.length },
+  ];
+
+  await downloadExcelReport([{
+    name: 'Chemical Master',
+    title: 'SANJIVANI BLOOD BANK, KOPARGAON',
+    subtitle: 'Chemical Master List',
+    headers,
+    rows,
+    alignments,
+    stats,
+    ...meta,
+  }], 'Chemical_Master_List.xlsx');
+}
+
+// 15f. Camp Donor Appointments (voluntary donations submitted at a camp)
+export async function exportCampAppointments(items, campName = 'Camp', meta = {}) {
+  const headers = ['Sr No', 'Full Name', 'Mobile', 'Blood Group', 'Age', 'Sex', 'Weight (kg)', 'Hb (g%)', 'BP', 'Pulse', 'Status', 'Submitted On'];
+  const alignments = ['center', 'left', 'center', 'center', 'center', 'center', 'center', 'center', 'center', 'center', 'center', 'center'];
+
+  const rows = items.map((r, i) => [
+    i + 1,
+    [r.firstName, r.middleName, r.lastName].filter(Boolean).join(' ') || '—',
+    r.mobile || '—',
+    r.bloodGroup || '—',
+    r.age ?? '—',
+    r.sex || '—',
+    r.weight ?? '—',
+    r.hb ?? '—',
+    r.bp || '—',
+    r.pulse ?? '—',
+    (r.status || '—').toUpperCase(),
+    formatDateTime(r.createdAt),
+  ]);
+
+  const stats = [
+    { label: 'Total Appointments', value: items.length },
+    { label: 'Donated', value: items.filter(r => r.status === 'DONATED').length },
+  ];
+
+  await downloadExcelReport([{
+    name: 'Camp Appointments',
+    title: 'SANJIVANI BLOOD BANK, KOPARGAON',
+    subtitle: `Camp Donor Appointments - ${campName}`,
+    headers,
+    rows,
+    alignments,
+    stats,
+    ...meta,
+  }], `Camp_Appointments_${campName.replace(/\s+/g, '_')}.xlsx`);
+}
+
+// 15e. Donor Appointments (public site form submissions)
+export async function exportAppointments(items, meta = {}) {
+  const headers = ['Sr No', 'Full Name', 'Gender', 'Mobile No', 'Email', 'Blood Group', 'Age', 'Address', 'Preferred Date', 'Status', 'Source', 'Submitted On'];
+  const alignments = ['center', 'left', 'center', 'center', 'left', 'center', 'center', 'left', 'center', 'center', 'center', 'center'];
+
+  const rows = items.map((r, i) => [
+    i + 1,
+    r.fullName || '—',
+    r.gender || '—',
+    r.mobileNo || '—',
+    r.email || '—',
+    r.bloodGroup || '—',
+    r.age ?? '—',
+    r.address || '—',
+    formatDate(r.appointmentDate),
+    (r.status || '—').toUpperCase(),
+    r.source || '—',
+    formatDateTime(r.createdAt),
+  ]);
+
+  const stats = [
+    { label: 'Total Appointments', value: items.length },
+    { label: 'Confirmed', value: items.filter(r => r.status === 'confirmed').length },
+    { label: 'Pending', value: items.filter(r => r.status === 'pending').length },
+  ];
+
+  await downloadExcelReport([{
+    name: 'Appointments',
+    title: 'SANJIVANI BLOOD BANK, KOPARGAON',
+    subtitle: 'Donor Appointment Register',
+    headers,
+    rows,
+    alignments,
+    stats,
+    ...meta,
+  }], 'Donor_Appointments_Report.xlsx');
 }
 
 // 16. Chemical Inventory Usage (Reagents)

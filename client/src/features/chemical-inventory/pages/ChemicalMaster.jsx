@@ -10,6 +10,8 @@ import {
 } from '../queries';
 import { useAuth } from '@/store/auth';
 import { toast } from 'sonner';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportChemicalMaster } from '@/utils/excelExportHelper';
 
 export default function ChemicalMaster() {
   const { user } = useAuth();
@@ -109,6 +111,22 @@ export default function ChemicalMaster() {
 
   const fieldClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400';
 
+  const [excelLoading, setExcelLoading] = useState(false);
+  const handleExportExcel = async () => {
+    if (filteredChemicals.length === 0) {
+      toast.info('No chemicals to export');
+      return;
+    }
+    try {
+      setExcelLoading(true);
+      await exportChemicalMaster(filteredChemicals);
+    } catch (e) {
+      toast.error('Failed to generate Excel report');
+    } finally {
+      setExcelLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6 space-y-6">
       {/* Header */}
@@ -118,6 +136,7 @@ export default function ChemicalMaster() {
           <p className="text-gray-500 text-sm">Configure chemical specifications, unit types, and reorder levels</p>
         </div>
         <div className="flex gap-3">
+          <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
           {isAdmin && (
             <button
               onClick={() => setShowCategoryDrawer(true)}

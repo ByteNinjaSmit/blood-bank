@@ -970,7 +970,7 @@ async function mapTtiBags(ttis: any[]) {
       segmentNo: (d as any).segmentNo || segmentNo,
       bloodGroup: t.aboGroupConfirmed || uList[0]?.aboGroup || 'O',
       rh: t.rhFactorConfirmed === 'NEGATIVE' ? 'Negative' : 'Positive',
-      siteId: d.campId ? { name: (d.campId as any).name } : null,
+      siteId: { name: d.campId ? (d.campId as any).name : 'Inhouse' },
       collectionDate: d.collectedAt.toISOString(),
       status: t.releaseDecision === 'released' ? 'passed' : t.releaseDecision === 'reactive' ? 'failed' : 'pending',
       testResults

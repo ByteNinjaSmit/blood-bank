@@ -47,6 +47,7 @@ const RequisitionPatient = z.object({
   diagnosis: z.string().trim().optional(),
   indication: z.string().trim().optional(),
   hb: z.coerce.number().optional(),
+  specialNeeds: z.array(z.enum(SPECIAL_NEED)).optional(),
   history: PatientHistory.optional(),
   pregnancy: PatientPregnancy.optional(),
 });

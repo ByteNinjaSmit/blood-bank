@@ -71,15 +71,6 @@ router.post(
   requirePermission('requisition:create'),
   controllers.createPatient,
 );
-// Excel export (must be BEFORE /:id to avoid route conflict)
-router.get(
-  '/export-excel',
-  authenticate,
-  requireRole([...CLINICAL_READ]),
-  requirePermission('requisition:read'),
-  controllers.exportExcel,
-);
-
 // Compatibility info (must be BEFORE /:id to avoid route conflict)
 router.get(
   '/compatibility-info',

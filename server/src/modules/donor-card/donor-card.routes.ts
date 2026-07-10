@@ -21,6 +21,13 @@ const CLINICAL_READ = [
 const router = Router();
 
 router.get('/', authenticate, requireRole([...CLINICAL_READ]), requirePermission('requisition:read'), controllers.list);
+router.get(
+  '/by-requisition/:requisitionId',
+  authenticate,
+  requireRole([...CLINICAL_READ]),
+  requirePermission('requisition:read'),
+  controllers.getByRequisition,
+);
 router.post(
   '/',
   authenticate,

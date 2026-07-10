@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Truck, Plus, X, CheckCircle, Ban, Trash2, Users, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   useVendorList,
   useCreateVendor,
@@ -7,6 +8,8 @@ import {
   useUpdateVendorStatus,
   useDeleteVendor,
 } from '../queries';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportVendors } from '@/utils/excelExportHelper';
 
 const STATUS_BADGE = {
   APPROVED:    'bg-green-50 text-green-700 border-green-200',
@@ -162,6 +165,22 @@ export default function VendorManagement() {
 
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
+  const [excelLoading, setExcelLoading] = useState(false);
+  const handleExportExcel = async () => {
+    if (vendors.length === 0) {
+      toast.info('No vendors to export');
+      return;
+    }
+    try {
+      setExcelLoading(true);
+      await exportVendors(vendors);
+    } catch (e) {
+      toast.error('Failed to generate Excel report');
+    } finally {
+      setExcelLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -176,12 +195,15 @@ export default function VendorManagement() {
               <p className="text-gray-500 text-sm">Blood Bag Suppliers</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowDrawer(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm"
-          >
-            <Plus className="w-4 h-4" /> Add Vendor
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+            <button
+              onClick={() => setShowDrawer(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm"
+            >
+              <Plus className="w-4 h-4" /> Add Vendor
+            </button>
+          </div>
         </div>
       </div>
 

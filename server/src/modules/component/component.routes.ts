@@ -119,7 +119,8 @@ router.get('/list', authenticate, async (req, res, next) => {
           status: 'prepared',
           componentStatus: legacyStatus,
           volumeMl: u.volumeMl,
-          expiryDate: u.expiresAt ? u.expiresAt.toISOString() : ''
+          expiryDate: u.expiresAt ? u.expiresAt.toISOString() : '',
+          storageLocation: u.storageLocation || 'Main Fridge',
         };
       };
 
@@ -130,6 +131,7 @@ router.get('/list', authenticate, async (req, res, next) => {
       return {
         id: d._id.toString(),
         bagNo: (d as any).bagNo || d.donationId,
+        segmentNo: (d as any).segmentNo || '',
         bloodGroup,
         site: d.campId ? (d.campId as any).name : 'Inhouse',
         createdAt: d.createdAt ? d.createdAt.toISOString() : d.collectedAt.toISOString(),
@@ -548,7 +550,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
         status: legacyStatus,
         volumeMl: u.volumeMl,
         expiryDate: u.expiresAt ? u.expiresAt.toISOString() : '',
-        storageLocation: 'Main Fridge',
+        storageLocation: u.storageLocation || 'Main Fridge',
         lotNo: u.productCode
       };
     };

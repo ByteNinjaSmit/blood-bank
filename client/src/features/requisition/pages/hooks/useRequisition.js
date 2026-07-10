@@ -77,8 +77,37 @@ export default function useRequisition(authToken) {
   const canProceedToMatch = useMemo(() => !!requestDoc?._id, [requestDoc]);
 
   useEffect(() => {
-    if (requestDoc) {
-      setForm({
+    if (!requestDoc) return;
+
+    // Donor card lives in a separate collection (not embedded on the
+    // requisition), so it has to be fetched independently. Without this,
+    // the form reset below (which replaces the whole `form` object) would
+    // silently wipe out whatever the user entered/toggled — "Yes" flipping
+    // back to "No" right after Create/Update.
+    let cancelled = false;
+    (async () => {
+      let donorCard = { ...defaultDonorCard };
+      try {
+        const found = await donorCardApi.getByRequisition(requestDoc._id);
+        if (found) {
+          donorCard = {
+            brought: true,
+            name: found.name || '',
+            address: found.address || '',
+            bloodGroup: found.bloodGroup || 'A+',
+            donationCardNumber: found.donationCardNumber || '',
+          };
+        }
+      } catch {
+        // no card saved yet, or lookup failed — fall back to defaults
+      }
+      if (!cancelled) {
+        setForm((prev) => ({ ...prev, donorCard }));
+      }
+    })();
+
+    setForm((prev) => ({
+        ...prev,
         hospitalId: requestDoc.hospitalId?._id || requestDoc.hospitalId || '',
         doctorName: requestDoc.doctorName || requestDoc.clinicianName || '',
         requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 16) : '',
@@ -111,8 +140,11 @@ export default function useRequisition(authToken) {
           urgency: rc.urgency?.toLowerCase() === 'routine' ? 'regular' : rc.urgency?.toLowerCase() || 'regular',
           compatibilityMode: rc.compatibilityMode || 'UNIVERSAL',
         })),
-      });
-    }
+    }));
+
+    return () => {
+      cancelled = true;
+    };
   }, [requestDoc]);
 
   useEffect(() => {
@@ -262,6 +294,24 @@ function checkHasChanges(doc, payload) {
   return false;
 }
 
+  // Best-effort — the requisition itself already succeeded, so a donor
+  // card save failure shouldn't block the wizard from proceeding. Uses an
+  // upsert on the server, so this is safe to call again on later edits.
+  const saveDonorCardIfNeeded = async (requisitionId) => {
+    if (!form.donorCard?.brought || !requisitionId) return;
+    try {
+      await donorCardApi.create({
+        requisitionId,
+        name: form.donorCard.name,
+        address: form.donorCard.address,
+        bloodGroup: form.donorCard.bloodGroup,
+        donationCardNumber: form.donorCard.donationCardNumber,
+      });
+    } catch {
+      toast.warning('Request saved, but saving the donor card details failed.');
+    }
+  };
+
   const handleCreate = async () => {
     try {
       // validation minimal
@@ -316,6 +366,7 @@ function checkHasChanges(doc, payload) {
         if (!res.success) return toast.error(res.error || 'Failed to update request');
         setRequestDoc(res.data);
         toast.success('Changes updated');
+        await saveDonorCardIfNeeded(res.data?._id);
         // auto match immediately after updating the request
         await handleMatch(res.data?._id);
         setCurrentStep(2);
@@ -327,21 +378,7 @@ function checkHasChanges(doc, payload) {
       setRequestDoc(res.data);
       toast.success(res?.raw?.message || 'Request created');
 
-      // Best-effort — the requisition itself already succeeded, so a donor
-      // card save failure shouldn't block the wizard from proceeding.
-      if (form.donorCard?.brought && res.data?._id) {
-        try {
-          await donorCardApi.create({
-            requisitionId: res.data._id,
-            name: form.donorCard.name,
-            address: form.donorCard.address,
-            bloodGroup: form.donorCard.bloodGroup,
-            donationCardNumber: form.donorCard.donationCardNumber,
-          });
-        } catch {
-          toast.warning('Request created, but saving the donor card details failed.');
-        }
-      }
+      await saveDonorCardIfNeeded(res.data?._id);
 
       // auto match immediately after creating the request
       await handleMatch(res.data?._id);
@@ -533,7 +570,6 @@ function checkHasChanges(doc, payload) {
       compatibilityResult: details.compatibilityResult,
       crossmatchDoneAt: details.crossmatchDoneAt,
       crossmatchSeenAt: details.crossmatchSeenAt,
-      cardNumber: details.cardNumber,
     });
     setCrossmatchUpdating(false);
     if (!res.success) {
@@ -564,6 +600,7 @@ function checkHasChanges(doc, payload) {
         diagnosis: form.patient.diagnosis || undefined,
         hb: form.patient.hb ? Number(form.patient.hb) : undefined,
         indication: form.patient.indication || undefined,
+        specialNeeds: form.patient.specialNeeds || [],
         history: {
           previousTransfusions: Number(form.patient.history?.previousTransfusions || 0),
           approximateDate: form.patient.history?.approximateDate || undefined,

@@ -15,7 +15,6 @@ import type { CrossmatchService } from '@/modules/crossmatch/crossmatch.service'
 import type { IssueService } from '@/modules/issue/issue.service';
 import type { PatientRepo } from '@/modules/patient/patient.repository';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
-import { generateRequisitionExcel } from '@/modules/requisition/requisition.excel';
 import {
   compatibleAboGroups,
   requiresCrossmatch,
@@ -38,7 +37,6 @@ export interface RequisitionControllers {
   issueAll: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   getCompatibilityInfoLegacy: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   updateCrossmatchLegacy: (req: Request, res: Response, next: NextFunction) => Promise<void>;
-  exportExcel: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
 async function enrichRequisition(reqDto: any): Promise<any> {
@@ -264,7 +262,7 @@ export function createRequisitionControllers(deps: {
             medicalRecordNumber: p.mrn,
             aboGroup,
             rhFactor,
-            specialNeeds: [],
+            specialNeeds: Array.isArray(p.specialNeeds) ? p.specialNeeds : [],
           }, actorId);
 
           req.body.patientId = createdPatient.id;
@@ -334,23 +332,51 @@ export function createRequisitionControllers(deps: {
           };
         });
 
-        // Update patient if details are sent directly in body.patient
-        if (req.body.patientId && req.body.patient) {
-          const p = req.body.patient;
-          let dob: Date | undefined = undefined;
-          if (p.age) {
-            const ageNum = Number(p.age);
-            if (!isNaN(ageNum)) {
-              dob = new Date();
-              dob.setFullYear(dob.getFullYear() - ageNum);
+        // Normalize the embedded patient snapshot (mirrors create's shape) so
+        // edits made after the initial create — address, diagnosis,
+        // indication, hb, special needs, history, pregnancy — actually
+        // persist. This used to be silently dropped: the update below never
+        // wrote `patient` at all.
+        const p = req.body.patient;
+        const normalizedPatient = p
+          ? {
+              name: p.name || 'Unnamed Patient',
+              address: p.address || undefined,
+              age: Number(p.age),
+              sex: p.sex || 'M',
+              mrn: p.mrn || undefined,
+              diagnosis: p.diagnosis || undefined,
+              indication: p.indication || undefined,
+              hb: p.hb !== undefined && p.hb !== '' ? Number(p.hb) : undefined,
+              specialNeeds: Array.isArray(p.specialNeeds) ? p.specialNeeds : [],
+              history: {
+                previousTransfusions: Number(p.history?.previousTransfusions || 0),
+                approximateDate: p.history?.approximateDate || undefined,
+                presenceOfReaction: p.history?.presenceOfReaction || 'None',
+              },
+              pregnancy: {
+                numPregnancies: Number(p.pregnancy?.numPregnancies || 0),
+                numMiscarriages: Number(p.pregnancy?.numMiscarriages || 0),
+                numChildrenWithHemolyticDisease: Number(p.pregnancy?.numChildrenWithHemolyticDisease || 0),
+              },
             }
+          : undefined;
+
+        // Keep the linked Patient record (separate collection) in sync too.
+        const existing = await RequisitionModel.findById(id).select('patientId').lean() as any;
+        if (existing?.patientId && normalizedPatient) {
+          let dob: Date | undefined = undefined;
+          if (normalizedPatient.age) {
+            dob = new Date();
+            dob.setFullYear(dob.getFullYear() - normalizedPatient.age);
           }
-          await PatientModel.findByIdAndUpdate(req.body.patientId, {
-            name: p.name || 'Unnamed Patient',
-            address: p.address,
+          await PatientModel.findByIdAndUpdate(existing.patientId, {
+            name: normalizedPatient.name,
+            address: normalizedPatient.address,
             dob,
-            sex: p.sex || 'M',
-            medicalRecordNumber: p.mrn,
+            sex: normalizedPatient.sex,
+            medicalRecordNumber: normalizedPatient.mrn,
+            specialNeeds: normalizedPatient.specialNeeds,
           });
         }
 
@@ -365,6 +391,7 @@ export function createRequisitionControllers(deps: {
             clinicianName,
             doctorName,
             requiredAt: req.body.requiredAt ? new Date(req.body.requiredAt) : undefined,
+            ...(normalizedPatient ? { patient: normalizedPatient } : {}),
             requestedComponents,
             updatedBy: new mongoose.Types.ObjectId(actorId),
           },
@@ -829,41 +856,6 @@ export function createRequisitionControllers(deps: {
         });
       } catch (err) {
         next(err);
-      }
-    },
-
-    async exportExcel(req, res, next) {
-      try {
-        const actorId = actor(req);
-        const user = await UserModel.findById(actorId).lean();
-        const userName = user
-          ? [user.name?.first, user.name?.last].filter(Boolean).join(' ') || user.email
-          : 'System User';
-
-        const filters = {
-          search: req.query.search,
-          status: req.query.status,
-          hospitalId: req.query.hospitalId,
-          from: req.query.from,
-          to: req.query.to,
-          exportAll: req.query.exportAll,
-        };
-
-        const workbook = await generateRequisitionExcel(filters, userName);
-
-        res.setHeader(
-          'Content-Type',
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        );
-        res.setHeader(
-          'Content-Disposition',
-          'attachment; filename=Blood_Request_Management_Report.xlsx'
-        );
-
-        await workbook.xlsx.write(res);
-        res.end();
-      } catch (e) {
-        next(e);
       }
     },
   };

@@ -246,6 +246,10 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
                         <span className="text-sm font-semibold text-gray-900">{state.component.bloodBag.bagNo}</span>
                       </div>
                       <div>
+                        <span className="block font-medium text-gray-500">Segment Number</span>
+                        <span className="text-sm font-semibold text-gray-900">{state.component.bloodBag.segmentNo || "-"}</span>
+                      </div>
+                      <div>
                         <span className="block font-medium text-gray-500">Blood Group</span>
                         <span className="text-sm font-semibold text-red-700">{state.component.bloodBag.bloodGroup}</span>
                       </div>

@@ -7,11 +7,17 @@ import DonationDetails from '../components/DonationDetails';
 import Modal from '@/components/shared/Modal';
 import CustomModal from '@/components/CustomModal';
 import { toast } from 'sonner';
-import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
-import { exportMasterDonations } from '@/utils/excelExportHelper';
+import { exportDonationRegister } from '@/features/donation/donationRegisterExport';
 import { donationApi } from '@/features/donation/api';
 import { useAuth } from '@/store/auth';
 import { checkAccess } from '@/features/user/pages/utils/access';
+import RegisterExportDropdown from '@/features/donor/components/RegisterExportDropdown';
+
+const DONATION_REGISTERS = [
+  { key: 'all', label: 'Master Donation Register (All)' },
+  { key: 'inhouse', label: 'Inhouse Donation Register' },
+  { key: 'camp', label: 'Camp Donation Register' },
+];
 
 const TABS = [
   { key: 'all',     label: 'Master Donation Register', icon: BookOpen },
@@ -48,61 +54,20 @@ export default function MasterDonations() {
 
   const toggleOrder = () => setOrder((o) => (o === 'desc' ? 'asc' : 'desc'));
 
-  const mapMasterDonationsForExport = (items) => {
-    return items.map(d => {
-      const status = d.status || (d.ttiReleaseDecision === 'released' ? 'passed' : d.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
-      return {
-        bagNo: d.bagNo || d.donationId,
-        donorName: d.donorName || '—',
-        donorSource: d.campId ? 'camp' : 'inhouse',
-        donationType: d.donationType || '—',
-        bloodGroup: d.bloodGroup ? `${d.bloodGroup} ${d.rhFactor === 'Positive' ? '+' : d.rhFactor === 'Negative' ? '-' : ''}`.trim() : '—',
-        unitsCount: d.unitCount ?? 1,
-        fitnessStatus: d.isFit === true ? 'fit' : d.isFit === false ? 'unfit' : 'pending',
-        collectedAt: d.collectedAt,
-      };
-    });
-  };
-
-  const handleExportExcel = async (exportAll = false) => {
+  const handleExportRegister = async (register, scope) => {
     try {
       setExcelLoading(true);
-      let dataToExport = [];
-      if (exportAll) {
-        // Fetch all matching donations matching filters but without pagination (limit 5000)
-        const res = await donationApi.list({
-          source: sourceParam,
-          page: 1,
-          pageSize: 5000,
-        });
-        const allFetched = res?.items ?? [];
-        // Filter them using the exact same filters on client-side
-        const filteredAll = allFetched.filter((d) => {
-          if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
-            const bagNoMatch = (d.bagNo || d.donationId || '').toLowerCase().includes(q);
-            const donorMatch = (d.donorName || '').toLowerCase().includes(q);
-            if (!bagNoMatch && !donorMatch) return false;
-          }
-          if (bagTypeFilter && d.typeOfBag !== bagTypeFilter) return false;
-          if (bloodGroupFilter && d.bloodGroup !== bloodGroupFilter) return false;
-          const status = d.status || (d.ttiReleaseDecision === 'released' ? 'passed' : d.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
-          if (statusFilter && status !== statusFilter) return false;
-          if (fromDate && (!d.collectedAt || new Date(d.collectedAt) < new Date(fromDate))) return false;
-          if (toDate && (!d.collectedAt || new Date(d.collectedAt) > new Date(`${toDate}T23:59:59`))) return false;
-          return true;
-        });
-        dataToExport = mapMasterDonationsForExport(filteredAll);
-      } else {
-        dataToExport = mapMasterDonationsForExport(filteredItems);
-      }
-
-      if (dataToExport.length === 0) {
-        toast.info("No donations to export");
-        return;
-      }
-
-      await exportMasterDonations(dataToExport);
+      const generatedBy = user?.name ? [user.name.first, user.name.last].filter(Boolean).join(' ') : (user?.username || 'System User');
+      const filters = {
+        search: searchQuery.trim() || undefined,
+        bagType: bagTypeFilter || undefined,
+        bloodGroup: bloodGroupFilter || undefined,
+        status: statusFilter || undefined,
+        from: fromDate || undefined,
+        to: toDate || undefined,
+      };
+      await exportDonationRegister(register, scope, filters, generatedBy);
+      toast.success('Register exported successfully!');
     } catch (e) {
       console.error(e);
       toast.error("Failed to generate Excel report");
@@ -301,7 +266,7 @@ export default function MasterDonations() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+              <RegisterExportDropdown onExport={handleExportRegister} isLoading={excelLoading} registers={DONATION_REGISTERS} />
               <button
                 onClick={() => navigate('/master-register/donor-creation')}
                 className="flex items-center gap-2 px-4 py-2 bg-orange-800 text-white rounded-lg text-sm font-semibold hover:bg-orange-900 transition-colors"

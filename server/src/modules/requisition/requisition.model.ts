@@ -2,7 +2,7 @@
 // patient. Drives the match → crossmatch → issue flow.
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
-import { ABO_GROUP, COMPONENT_TYPE, RH_FACTOR } from '@/shared/enums';
+import { ABO_GROUP, COMPONENT_TYPE, RH_FACTOR, SPECIAL_NEED } from '@/shared/enums';
 
 const RequestedComponent = new Schema(
   {
@@ -83,6 +83,7 @@ const RequisitionPatientSchema = new Schema(
     diagnosis: { type: String, trim: true },
     indication: { type: String, trim: true },
     hb: { type: Number },
+    specialNeeds: { type: [String], enum: SPECIAL_NEED, default: [] },
     history: { type: PatientHistorySchema, default: () => ({}) },
     pregnancy: { type: PatientPregnancySchema, default: () => ({}) },
   },

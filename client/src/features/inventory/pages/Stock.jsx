@@ -532,13 +532,14 @@ const Stock = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
                   <th className="pl-4 pr-1 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Storage / Destination</th>
                   <th className="pl-1 pr-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan="8" className="px-4 py-8 text-center">
+                    <td colSpan="9" className="px-4 py-8 text-center">
                         <div className="inline-flex items-center gap-2 text-gray-500">
                         <Loader2 className="w-5 h-5 animate-spin" /> Loading stock...
                         </div>
@@ -546,7 +547,7 @@ const Stock = () => {
                   </tr>
                 ) : rows.length === 0 ? (
                     <tr>
-                    <td colSpan="8" className="px-4 py-12 text-center text-gray-500 font-medium">
+                    <td colSpan="9" className="px-4 py-12 text-center text-gray-500 font-medium">
                         No inventory items found matching the selection.
                     </td>
                   </tr>
@@ -596,6 +597,11 @@ const Stock = () => {
                         >
                             {r.status}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {r.status === "in-stock"
+                          ? (r.storageLocation || "Main Fridge")
+                          : (r.hospital?.name || r.storageLocation || "—")}
                       </td>
                       <td className="pl-1 pr-4 py-3 text-sm text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -810,6 +816,57 @@ const Stock = () => {
                   </div>
                 </div>
               </div>
+
+              {selectedViewItem?.status === 'in-stock' ? (
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Storage</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
+                    <div>
+                      <p className="text-[10px] text-gray-500">Storage Location</p>
+                      <p className="font-semibold text-gray-800">{selectedViewItem?.storageLocation || 'Main Fridge'}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
+                    {selectedViewItem?.status === 'reserved' ? 'Reservation Details' : 'Issue Details'}
+                  </p>
+                  <div className="grid grid-cols-3 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
+                    <div>
+                      <p className="text-[10px] text-gray-500">Destination / Hospital</p>
+                      <p className="font-semibold text-gray-800">{selectedViewItem?.hospital?.name || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500">Patient</p>
+                      <p className="font-semibold text-gray-800">
+                        {selectedViewItem?.reservedPatientName || '—'}
+                        {selectedViewItem?.reservedPatientAge ? ` (${selectedViewItem.reservedPatientAge}Y / ${selectedViewItem.reservedPatientSex || '—'})` : ''}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500">Requisition ID</p>
+                      <p className="font-semibold text-gray-800">{selectedViewItem?.requisition?.requisitionId || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500">Doctor</p>
+                      <p className="font-semibold text-gray-800">{selectedViewItem?.requisition?.doctorName || '—'}</p>
+                    </div>
+                    {selectedViewItem?.status === 'reserved' && (
+                      <div>
+                        <p className="text-[10px] text-gray-500">Reserved Until</p>
+                        <p className="font-semibold text-gray-800">{formatDate(selectedViewItem?.reservedUntil)}</p>
+                      </div>
+                    )}
+                    {selectedViewItem?.status === 'issued' && (
+                      <div>
+                        <p className="text-[10px] text-gray-500">Issued At</p>
+                        <p className="font-semibold text-gray-800">{formatDate(selectedViewItem?.issuedAt)}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {selectedViewItem?.source === 'LOAN' ? (
                 <div>

@@ -11,6 +11,7 @@ import RequisitionLabelTemplate from './components/RequisitionLabelTemplate';
 import RequisitionPrintService from '@/services/requisitionPrintService';
 import { RejectRequestModal } from '@/components/shared';
 import { Loader2, X } from 'lucide-react';
+import { exportRequisitionsExcel } from '@/features/requisition/requisitionExcelExport';
 
 const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'rejected'];
 
@@ -22,7 +23,7 @@ const COMPATIBILITY_RESULT_LABELS = {
 
 export default function RequisitionList() {
   const navigate = useNavigate();
-  const { authorizationToken } = useAuth();
+  const { authorizationToken, user } = useAuth();
 
   const [hospitals, setHospitals] = useState([]);
   const [filters, setFilters] = useState({
@@ -355,24 +356,11 @@ export default function RequisitionList() {
         to: filters.to,
       };
 
-      const res = await requisitionApi.exportExcel(params);
-      if (res.error) {
-        toast.error(res.error || 'Failed to generate Excel report');
-        return;
-      }
-
-      // Trigger browser download of the blob
-      const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const dateStr = new Date().toISOString().slice(0, 10);
-      a.download = `Sanjivani_Blood_Requests_Report_${exportAll ? 'All' : 'Filtered'}_${dateStr}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const generatedBy = user?.name ? [user.name.first, user.name.last].filter(Boolean).join(' ') : (user?.username || 'System User');
+      await exportRequisitionsExcel(params, generatedBy);
       toast.success('Excel report downloaded successfully!');
     } catch (e) {
-      toast.error('Network error during excel generation');
+      toast.error(e?.message || 'Failed to generate Excel report');
     } finally {
       setExcelLoading(false);
     }

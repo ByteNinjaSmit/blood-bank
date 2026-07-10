@@ -39,16 +39,27 @@ export interface DonorCardRepo {
 
 export function createDonorCardRepo(): DonorCardRepo {
   return {
+    // Upsert keyed on requisitionId — a requisition has at most one donor
+    // card record, and the wizard may save this step more than once (e.g.
+    // creating the request, then editing it again before matching).
     async create(input, actorId) {
-      const doc = await DonorCardModel.create({
-        requisitionId: new Types.ObjectId(input.requisitionId),
-        name: input.name,
-        address: input.address,
-        bloodGroup: input.bloodGroup,
-        donationCardNumber: input.donationCardNumber,
-        createdBy: new Types.ObjectId(actorId),
-      });
-      return toDto(doc.toObject());
+      const doc = await DonorCardModel.findOneAndUpdate(
+        { requisitionId: new Types.ObjectId(input.requisitionId) },
+        {
+          $set: {
+            name: input.name,
+            address: input.address,
+            bloodGroup: input.bloodGroup,
+            donationCardNumber: input.donationCardNumber,
+          },
+          $setOnInsert: {
+            requisitionId: new Types.ObjectId(input.requisitionId),
+            createdBy: new Types.ObjectId(actorId),
+          },
+        },
+        { upsert: true, new: true },
+      );
+      return toDto(doc!.toObject());
     },
 
     async list() {

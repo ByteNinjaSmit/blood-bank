@@ -22,7 +22,7 @@ export default function RequestedComponentsList({ items, onItemChange, onAdd, on
       </div>
       <div className="space-y-3">
         {items.map((r, idx) => (
-          <div key={idx} className="grid grid-cols-2 md:grid-cols-7 gap-3 items-end p-3 rounded-lg border border-gray-100 bg-gray-50/40">
+          <div key={idx} className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end p-3 rounded-lg border border-gray-100 bg-gray-50/40">
             <div>
               <label className="block text-sm text-gray-700 mb-1">Component <span className="text-red-600">*</span></label>
               <select
@@ -76,19 +76,6 @@ export default function RequestedComponentsList({ items, onItemChange, onAdd, on
                 disabled={readOnly}
               >
                 {URGENCY.map((u) => (<option key={u} value={u}>{u}</option>))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">Compatibility Mode</label>
-              <select
-                className={`w-full px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
-                value={r.compatibilityMode || 'UNIVERSAL'}
-                onChange={(e) => !readOnly && onItemChange(idx, { compatibilityMode: e.target.value })}
-                disabled={readOnly}
-              >
-                <option value="UNIVERSAL">Universal</option>
-                <option value="MAJOR">Major Compatible</option>
-                <option value="MINOR">Minor Compatible</option>
               </select>
             </div>
             <div className="flex items-center">

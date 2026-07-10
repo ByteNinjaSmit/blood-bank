@@ -12,6 +12,10 @@ export const CreateDonorCardBody = z.object({
   donationCardNumber: z.string().trim().min(1).max(100),
 });
 
+export const RequisitionIdParam = z.object({
+  requisitionId: z.string().regex(OBJECT_ID, 'Invalid requisition id'),
+});
+
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {
   const r = schema.safeParse(value);
   if (!r.success) throw new ValidationError(`Invalid ${where}`, r.error.issues);
@@ -20,4 +24,5 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T
 
 export const ValidateDonorCard = {
   createBody: (req: Request) => parseOrThrow(CreateDonorCardBody, req.body, 'request body'),
+  requisitionIdParam: (req: Request) => parseOrThrow(RequisitionIdParam, req.params, 'path params'),
 };

@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Trash2, Plus, X, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { useBagDiscardList, useCreateBagDiscard, useApproveBagDiscard } from '../queries';
 import { useBagStockList } from '../queries';
 import { formatBloodBagQty, calcTotalBags } from '../utils/qtyHelper';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportBagDiscardRegister } from '@/utils/excelExportHelper';
 
 const STATUS_BADGE = {
   PENDING_APPROVAL: 'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -239,6 +242,22 @@ export default function BagDiscard() {
 
   const discards = data?.items ?? data?.bagDiscards ?? (Array.isArray(data) ? data : []);
   const stockItems = stockData?.items ?? stockData?.bagStocks ?? (Array.isArray(stockData) ? stockData : []);
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const handleExportExcel = async () => {
+    if (discards.length === 0) {
+      toast.info('No discard records to export');
+      return;
+    }
+    try {
+      setExcelLoading(true);
+      await exportBagDiscardRegister(discards);
+    } catch (e) {
+      toast.error('Failed to generate Excel report');
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   const fmtDate = (d) => d
     ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -257,10 +276,13 @@ export default function BagDiscard() {
               <p className="text-gray-500 text-sm">Biomedical Waste Tracking</p>
             </div>
           </div>
-          <button onClick={() => setShowDiscardDrawer(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">
-            <Plus className="w-4 h-4" /> Create Discard
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+            <button onClick={() => setShowDiscardDrawer(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">
+              <Plus className="w-4 h-4" /> Create Discard
+            </button>
+          </div>
         </div>
       </div>
 
