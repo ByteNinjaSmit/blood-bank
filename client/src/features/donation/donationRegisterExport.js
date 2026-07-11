@@ -17,6 +17,16 @@ function fmtDateTime(d) {
   return `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
 }
 
+// rhFactor arrives as 'POSITIVE'/'NEGATIVE' (current schema) or legacy
+// 'Positive'/'Negative' — normalize case so the Rh Typing column doesn't
+// silently fall back to '—'.
+function rhSign(rhFactor) {
+  const rh = String(rhFactor || '').toUpperCase();
+  if (rh === 'POSITIVE') return '+';
+  if (rh === 'NEGATIVE') return '-';
+  return '—';
+}
+
 function statusOf(d) {
   return d.status || (d.ttiReleaseDecision === 'released' ? 'passed' : d.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
 }
@@ -45,7 +55,7 @@ const COMPONENT_STATUS_LABELS = {
 };
 
 const COLUMNS = [
-  'S.No', 'Bag No', 'Donor Name', 'Donation Type', 'Bag Type', 'Blood Group',
+  'S.No', 'Bag No', 'Donor Name', 'Donation Type', 'Bag Type', 'Blood Group', 'Rh Typing',
   'Units Count', 'Fitness Status', 'Collection Date & Time', 'TTI Status',
   'HIV 1 & 2', 'HBs', 'HCV', 'VDRL', 'M.P.',
   'Components Prepared (Type: Volume mL)',
@@ -64,7 +74,8 @@ function donationRow(d, i) {
     d.donorName || '—',
     d.donationType || '—',
     d.typeOfBag || '—',
-    d.bloodGroup ? `${d.bloodGroup} ${d.rhFactor === 'Positive' ? '+' : d.rhFactor === 'Negative' ? '-' : ''}`.trim() : '—',
+    d.bloodGroup || '—',
+    rhSign(d.rhFactor),
     d.unitCount ?? 1,
     d.isFit === true ? 'Fit' : d.isFit === false ? 'Unfit' : 'Pending',
     fmtDateTime(d.collectedAt),
