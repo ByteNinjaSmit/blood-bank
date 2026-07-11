@@ -87,23 +87,14 @@ export async function downloadExcelReport(sheets, filename = 'Report.xlsx') {
       if (filtersApplied) statsParts.push(`Filters — ${filtersApplied}`);
       const statsLine = statsParts.length ? statsParts.join('     ·     ') : undefined;
 
-      // Auto column widths from header + cell content (min 10, max 45).
-      const colWidths = headers.map((h, c) => {
-        let maxLen = String(h ?? '').length;
-        rows.forEach((r) => {
-          const v = r[c];
-          if (v != null) maxLen = Math.max(maxLen, String(v).length);
-        });
-        return { wch: Math.min(45, Math.max(10, maxLen + 2)) };
-      });
-
+      // Column widths + row heights are auto-fit to content inside
+      // buildStyledSheet (no colWidths override passed here).
       const ws = buildStyledSheet(rows, {
         title,
         subtitle,
         reportPeriod,
         statsLine,
         columns: headers,
-        colWidths,
         groupHeader,
         totalRowIndexes,
         formatDateTime,

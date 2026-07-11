@@ -132,8 +132,58 @@ export function buildStyledSheet(rows, {
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   ws['!merges'] = merges;
-  ws['!cols'] = colWidths || columns.map(() => ({ wch: 18 }));
-  ws['!rows'] = aoa.map((_, i) => (i === 0 ? { hpt: 26 } : i < headerRowIndex ? { hpt: 18 } : { hpt: 20 }));
+
+  // Auto-fit column widths to the longest cell (header or data) in each
+  // column — mimics double-clicking a column border in Excel. A caller may
+  // still pass an explicit `colWidths` override. Title/subtitle/meta/stats
+  // rows are merged across all columns, so they don't force any single column
+  // wide. Width is capped so a very long address grows the column to a
+  // readable size and then wraps (the row height grows to match, below).
+  const MIN_WCH = 6;
+  const MAX_WCH = 60;
+  const autoCols = columns.map((h, c) => {
+    let maxLen = String(h ?? '').length;
+    rows.forEach((row) => {
+      const v = row[c];
+      if (v == null) return;
+      const longestLine = String(v).split('\n').reduce((m, line) => Math.max(m, line.length), 0);
+      if (longestLine > maxLen) maxLen = longestLine;
+    });
+    return { wch: Math.min(MAX_WCH, Math.max(MIN_WCH, maxLen + 2)) };
+  });
+  const finalCols = colWidths || autoCols;
+  ws['!cols'] = finalCols;
+
+  // Auto-fit row heights: when a cell's text is longer than its (capped)
+  // column width it wraps onto multiple lines, so grow the row to keep every
+  // line visible instead of clipping it — this is why long addresses were
+  // previously invisible in fixed-height rows.
+  const LINE_HT = 15;
+  const MAX_ROW_HT = 300;
+  const rowLineCount = (row) => {
+    let maxLines = 1;
+    columns.forEach((_, c) => {
+      const v = row[c];
+      if (v == null) return;
+      const wch = finalCols[c]?.wch || 18;
+      const lines = String(v).split('\n').reduce(
+        (sum, seg) => sum + Math.max(1, Math.ceil(seg.length / wch)),
+        0,
+      );
+      if (lines > maxLines) maxLines = lines;
+    });
+    return maxLines;
+  };
+  const dataRowHeights = rows.map((row) => ({
+    hpt: Math.min(MAX_ROW_HT, Math.max(20, rowLineCount(row) * LINE_HT + 4)),
+  }));
+  const headerLines = rowLineCount(columns);
+  ws['!rows'] = aoa.map((_, i) => {
+    if (i === 0) return { hpt: 26 };
+    if (i < headerRowIndex) return { hpt: 18 };
+    if (i === headerRowIndex) return { hpt: Math.max(22, headerLines * LINE_HT + 4) };
+    return dataRowHeights[i - dataStartRow] || { hpt: 20 };
+  });
 
   for (let c = 0; c < numCols; c++) {
     setCellStyle(ws, 0, c, TITLE_STYLE);
