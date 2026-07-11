@@ -64,10 +64,11 @@ router.get(
   requirePermission('donor:read'),
   async (req, res, next) => {
     try {
-      const { source, search, bloodGroup, rh, eligibilityStatus, from, to, sortBy, order } = req.query as any;
+      const { source, search, bloodGroup, rh, eligibilityStatus, from, to, sortBy, order, campId } = req.query as any;
       const { items } = await repo.list({
         deletedOnly: false,
         source: source || undefined,
+        campId: campId || undefined,
         search: search || undefined,
         bloodGroup: bloodGroup || undefined,
         rh: rh || undefined,

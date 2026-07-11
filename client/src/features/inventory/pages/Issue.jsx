@@ -52,19 +52,6 @@ const Issue = () => {
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
   const [excelLoading, setExcelLoading] = useState(false);
 
-  const mapIssuesForExport = (data) => {
-    return data.map(r => ({
-      bagNo: r?.bag?.bagNo || r.bagNo,
-      componentType: r?.component?.componentType,
-      bloodGroup: r?.bag?.bloodGroup ? `${r.bag.bloodGroup} ${r.bag.rh === 'Positive' ? '+' : r.bag.rh === 'Negative' ? '-' : ''}`.trim() : '—',
-      volumeMl: r?.component?.volumeMl,
-      expiryDate: r?.component?.expiryDate,
-      issuedToHospital: r?.hospital?.name || '—',
-      issuedBy: r?.issuedBy || '—',
-      issuedAt: r?.issuedAt || r?.updatedAt,
-    }));
-  };
-
   // Exports a specific register (Issue Stock / Storage / Clinical Indication /
   // Bulk Transfer), regardless of which tab is currently active — each
   // register re-fetches its own data fresh from its own endpoint.
@@ -76,8 +63,11 @@ const Issue = () => {
       if (registerKey === 'storage') {
         let dataToExport;
         if (exportAll) {
+          // storageLocation=ALL asks the backend for every storage transfer
+          // (SJS + Anand + any other site) — omitting the param entirely
+          // would instead match the plain Issue Stock definition (storageLocation: null).
           const res = await apiClient.get(`/api/inventory`, {
-            params: { page: 1, limit: 5000, status: 'issued', sortBy: 'issuedAt', order: 'desc' },
+            params: { page: 1, limit: 5000, status: 'issued', storageLocation: 'ALL', sortBy: 'issuedAt', order: 'desc' },
           });
           dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
         } else {
@@ -126,8 +116,7 @@ const Issue = () => {
           order,
         },
       });
-      const data = Array.isArray(res.data?.data) ? res.data.data : [];
-      const dataToExport = mapIssuesForExport(data);
+      const dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
 
       if (dataToExport.length === 0) {
         toast.info("No items to export");

@@ -33,7 +33,7 @@ function progressStatus(camp) {
 const COLUMNS = [
   'Sr No', 'Camp ID', 'Name', 'Description', 'Address', 'Status',
   'Start Date', 'End Date', 'Phone', 'Email', 'Staff Assigned',
-  'Donors Registered', 'Units Collected', 'Deleted',
+  'Donors Registered', 'Total Donations', 'Units Collected', 'Deleted',
 ];
 
 export function exportCampsExcel(camps, generatedBy) {
@@ -49,8 +49,9 @@ export function exportCampsExcel(camps, generatedBy) {
     camp.contactInfo?.phone || '—',
     camp.contactInfo?.email || '—',
     staffNames(camp.staff),
-    Array.isArray(camp.donorData) ? camp.donorData.length : (camp.donorData ?? 0),
-    Array.isArray(camp.unitData) ? camp.unitData.length : (camp.unitData ?? 0),
+    camp.donorCount ?? 0,
+    camp.donationCount ?? 0,
+    camp.unitCount ?? 0,
     camp.deletedAt ? 'Yes' : 'No',
   ]);
 

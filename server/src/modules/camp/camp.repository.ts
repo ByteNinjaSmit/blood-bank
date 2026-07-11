@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import { CampModel } from './camp.model';
 import { CampDonationModel } from './camp-donation.model';
 import { UserModel } from '@/modules/user/user.model';
+import { DonationModel } from '@/modules/donation/donation.model';
 import { NotFoundError } from '@/shared/errors';
 
 export interface VoluntaryFilter {
@@ -60,14 +61,32 @@ export const campRepo = {
   },
 
   async campList() {
-    return CampModel.find()
+    // donorData/unitData are ObjectId-only ref arrays (cheap to select, unlike
+    // populating full Donor/BloodUnit docs) — selected only to derive counts
+    // for the listing/export, then stripped before returning.
+    const camps = await CampModel.find()
       .select(
-        'campId name description address contactInfo dateFrom dateTo createdAt createdBy staff deletedAt',
+        'campId name description address contactInfo dateFrom dateTo createdAt createdBy staff deletedAt donorData unitData',
       )
       .populate('createdBy', 'name')
       .populate('staff', 'name')
       .sort({ createdAt: -1 })
       .lean();
+
+    const campIds = camps.map((c) => c._id);
+    const donationCounts = await DonationModel.aggregate([
+      { $match: { campId: { $in: campIds }, deletedAt: null } },
+      { $group: { _id: '$campId', count: { $sum: 1 } } },
+    ]);
+    const donationCountMap = new Map(donationCounts.map((d) => [d._id.toString(), d.count as number]));
+
+    return camps.map((c) => {
+      const donorCount = c.donorData?.length ?? 0;
+      const unitCount = c.unitData?.length ?? 0;
+      const donationCount = donationCountMap.get(c._id.toString()) ?? 0;
+      const { donorData, unitData, ...rest } = c;
+      return { ...rest, donorCount, unitCount, donationCount };
+    });
   },
 
   async all() {

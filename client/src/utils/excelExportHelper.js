@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { buildStyledSheet, XLSX } from '@/utils/xlsxStyleHelper';
+import { buildStyledSheet, buildMultiTableSheet, XLSX } from '@/utils/xlsxStyleHelper';
 
 /**
  * Formats a date string/object to DD/MM/YYYY
@@ -107,7 +107,55 @@ export async function downloadExcelReport(sheets, filename = 'Report.xlsx') {
     });
 
     XLSX.writeFile(wb, filename);
-    toast.success('Excel report downloaded successfully!');
+    const reportLabel = sheets?.[0]?.subtitle || sheets?.[0]?.name || 'Excel report';
+    toast.success(`"${reportLabel}" downloaded successfully!`);
+  } catch (e) {
+    toast.error(e.message || 'Failed to generate Excel report');
+    console.error(e);
+  }
+}
+
+/**
+ * Same shell as downloadExcelReport, but each sheet stacks several
+ * independent tables one below another (via buildMultiTableSheet) instead of
+ * one flat table — e.g. the Storage register, where every send date/location
+ * gets its own titled table in the same sheet.
+ * `sheet.blocks` = [{ label, rows }]; `sheet.headers` are shared across blocks.
+ */
+export async function downloadMultiTableExcelReport(sheets, filename = 'Report.xlsx') {
+  try {
+    const wb = XLSX.utils.book_new();
+
+    (sheets || []).forEach((sheet, idx) => {
+      const {
+        name = `Sheet${idx + 1}`,
+        title = 'SANJIVANI BLOOD BANK, KOPARGAON',
+        subtitle = '',
+        headers = [],
+        blocks = [],
+        stats = [],
+        reportPeriod = 'All Records',
+        filtersApplied,
+      } = sheet;
+
+      const statsParts = (stats || []).map((s) => `${s.label}: ${s.value}`);
+      if (filtersApplied) statsParts.push(`Filters — ${filtersApplied}`);
+      const statsLine = statsParts.length ? statsParts.join('     ·     ') : undefined;
+
+      const ws = buildMultiTableSheet(blocks, {
+        title,
+        subtitle,
+        reportPeriod,
+        statsLine,
+        columns: headers,
+        formatDateTime,
+      });
+      XLSX.utils.book_append_sheet(wb, ws, String(name).slice(0, 31));
+    });
+
+    XLSX.writeFile(wb, filename);
+    const reportLabel = sheets?.[0]?.subtitle || sheets?.[0]?.name || 'Excel report';
+    toast.success(`"${reportLabel}" downloaded successfully!`);
   } catch (e) {
     toast.error(e.message || 'Failed to generate Excel report');
     console.error(e);
@@ -413,65 +461,141 @@ export async function exportReserve(items, meta = {}) {
   }], 'Reserved_Units_Report.xlsx');
 }
 
-// 7. Inventory Issue
+// 7. Inventory Issue (Issue Stock tab) — grouped by issue date, one table per
+// date stacked in the same sheet (same design as the Storage register): a
+// bold "Issued on <date> — N bag(s)" banner, then the column header row, then
+// that date's rows.
 export async function exportIssues(items, meta = {}) {
-  const headers = ['Sr No', 'Bag No', 'Component', 'Blood Group', 'Volume', 'Expiry Date', 'Issued To', 'Issued By', 'Issued Date'];
-  const alignments = ['center', 'center', 'left', 'center', 'center', 'center', 'left', 'left', 'center'];
+  const headers = [
+    'Sr No', 'Bag No', 'Segment No', 'Component', 'Blood Group', 'Volume',
+    'Collection Date', 'Expiry Date', 'Patient Name & Address',
+    'Hospital & Doctor', 'Issue Date & Time',
+  ];
 
-  const rows = items.map((r, i) => [
-    i + 1,
-    r.bagNo || '—',
-    r.componentType || '—',
-    r.bloodGroup || '—',
-    r.volumeMl ? `${r.volumeMl} mL` : '—',
-    formatDate(r.expiryDate),
-    r.issuedToHospital || r.hospitalName || '—',
-    r.issuedBy || '—',
-    formatDateTime(r.issuedAt),
-  ]);
+  const groups = new Map();
+  items.forEach((r) => {
+    const dateKey = r.issuedAt ? formatDate(r.issuedAt) : 'Unknown Date';
+    if (!groups.has(dateKey)) groups.set(dateKey, []);
+    groups.get(dateKey).push(r);
+  });
+
+  // Most recent issue date first.
+  const sortedGroups = [...groups.entries()].sort((a, b) => {
+    const da = a[1][0]?.issuedAt ? new Date(a[1][0].issuedAt) : 0;
+    const db = b[1][0]?.issuedAt ? new Date(b[1][0].issuedAt) : 0;
+    return db - da;
+  });
+
+  const blocks = sortedGroups.map(([dateKey, groupItems]) => ({
+    label: `Issued on ${dateKey} — ${groupItems.length} bag${groupItems.length > 1 ? 's' : ''}`,
+    rows: groupItems.map((r, i) => {
+      const rh = r?.bag?.rh === 'Positive' ? '+' : r?.bag?.rh === 'Negative' ? '-' : '';
+      const patientName = r.reservedPatientName || r?.requisition?.patient?.name;
+      const patientAddress = r?.requisition?.patient?.address;
+      const hospitalName = r?.hospital?.name;
+      const doctorName = r?.requisition?.doctorName;
+
+      const patientCell = patientName || patientAddress
+        ? [patientName || '—', patientAddress].filter(Boolean).join('\n')
+        : '—';
+      const hospitalCell = hospitalName || doctorName
+        ? [hospitalName || '—', doctorName ? `Dr. ${doctorName}` : null].filter(Boolean).join('\n')
+        : '—';
+
+      return [
+        i + 1,
+        r?.bag?.bagNo || r.bagNo || '—',
+        r.segmentNo || r?.bag?.segmentNo || '—',
+        r?.component?.componentType || '—',
+        r?.bag?.bloodGroup ? `${r.bag.bloodGroup} ${rh}`.trim() : '—',
+        r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—',
+        formatDate(r?.bag?.donationDate),
+        formatDate(r?.component?.expiryDate),
+        patientCell,
+        hospitalCell,
+        formatDateTime(r.issuedAt),
+      ];
+    }),
+  }));
 
   const stats = [
     { label: 'Total Issued Bags', value: items.length },
+    { label: 'Issue Dates', value: blocks.length },
   ];
 
-  await downloadExcelReport([{
+  await downloadMultiTableExcelReport([{
     name: 'Issued Units',
     title: 'SANJIVANI BLOOD BANK, KOPARGAON',
     subtitle: 'Issued Blood Units Ledger',
     headers,
-    rows,
-    alignments,
+    blocks,
     stats,
     ...meta,
   }], 'Issued_Units_Report.xlsx');
 }
 
-// 7b. Storage Transfers (Issue Stock > Storage tab)
+// 7b. Storage Transfers (Issue Stock > Storage tab) — grouped by location
+// first (SJS, then Anand, then any other site — matching the Storage tab's
+// own sub-tabs), and within each location one table per send date, stacked
+// in the same sheet (mirrors the date accordion on the Storage tab), e.g.:
+//   Sent to SJS [Kopargaon] on 07 Jul 2026 — 2 bag(s)   [table]
+//   Sent to SJS [Kopargaon] on 06 Jul 2026 — 3 bag(s)   [table]
+//   Sent to Anand on 07 Jul 2026 — 1 bag(s)             [table]
+const STORAGE_LOCATION_PRIORITY = ['SJS', 'Anand'];
+function storageLocationRank(location) {
+  const idx = STORAGE_LOCATION_PRIORITY.findIndex((p) => location?.toLowerCase().includes(p.toLowerCase()));
+  return idx === -1 ? STORAGE_LOCATION_PRIORITY.length : idx;
+}
+
 export async function exportStorageBags(items, meta = {}) {
   const headers = ['Sr No', 'Bag No', 'Segment No', 'Component', 'Blood Group', 'Volume', 'Expiry Date', 'Storage Location', 'Sent Date'];
-  const alignments = ['center', 'center', 'center', 'left', 'center', 'center', 'center', 'left', 'center'];
 
-  const rows = items.map((r, i) => [
-    i + 1,
-    r?.bag?.bagNo || r.bagNo || '—',
-    r.segmentNo || '—',
-    r?.component?.componentType || '—',
-    r?.bag?.bloodGroup ? `${r.bag.bloodGroup} ${r.bag.rh === 'Positive' ? '+' : r.bag.rh === 'Negative' ? '-' : ''}`.trim() : '—',
-    r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—',
-    formatDate(r?.component?.expiryDate),
-    r.storageLocation || r?.hospital?.name || '—',
-    formatDateTime(r.issuedAt),
-  ]);
+  const groups = new Map();
+  items.forEach((r) => {
+    const location = r.storageLocation || r?.hospital?.name || 'Unknown Location';
+    const dateKey = r.issuedAt ? formatDate(r.issuedAt) : 'Unknown Date';
+    const groupKey = `${location}__${dateKey}`;
+    if (!groups.has(groupKey)) groups.set(groupKey, { dateKey, location, items: [] });
+    groups.get(groupKey).items.push(r);
+  });
 
-  const stats = [{ label: 'Total Bags Sent to Storage', value: items.length }];
+  // Group by location (SJS, then Anand, then anything else), most recent
+  // transfer date first within each location.
+  const sortedGroups = [...groups.values()].sort((a, b) => {
+    const locRank = storageLocationRank(a.location) - storageLocationRank(b.location);
+    if (locRank !== 0) return locRank;
+    if (a.location !== b.location) return a.location.localeCompare(b.location);
+    const da = a.items[0]?.issuedAt ? new Date(a.items[0].issuedAt) : 0;
+    const db = b.items[0]?.issuedAt ? new Date(b.items[0].issuedAt) : 0;
+    return db - da;
+  });
 
-  await downloadExcelReport([{
+  const blocks = sortedGroups.map(({ dateKey, location, items: groupItems }) => ({
+    label: `Sent to ${location} on ${dateKey} — ${groupItems.length} bag${groupItems.length > 1 ? 's' : ''}`,
+    rows: groupItems.map((r, i) => [
+      i + 1,
+      r?.bag?.bagNo || r.bagNo || '—',
+      r.segmentNo || '—',
+      r?.component?.componentType || '—',
+      r?.bag?.bloodGroup ? `${r.bag.bloodGroup} ${r.bag.rh === 'Positive' ? '+' : r.bag.rh === 'Negative' ? '-' : ''}`.trim() : '—',
+      r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—',
+      formatDate(r?.component?.expiryDate),
+      location,
+      formatDateTime(r.issuedAt),
+    ]),
+  }));
+
+  const stats = [
+    { label: 'Total Bags Sent to Storage', value: items.length },
+    { label: 'Transfer Batches', value: blocks.length },
+  ];
+
+  await downloadMultiTableExcelReport([{
     name: 'Storage Transfers',
     title: 'SANJIVANI BLOOD BANK, KOPARGAON',
     subtitle: 'Bags Sent to Storage Register',
     headers,
-    rows,
-    alignments,
+    blocks,
     stats,
     ...meta,
   }], 'Storage_Transfers_Report.xlsx');
@@ -514,34 +638,55 @@ export async function exportClinicalIndicationIssues(items, meta = {}) {
   }], 'Clinical_Indication_Issues_Report.xlsx');
 }
 
-// 7d. Bulk Transfers / Loans (Issue Stock > Bulk Transfer tab)
+// 7d. Bulk Transfers / Loans (Issue Stock > Bulk Transfer tab) — Give Loan and
+// Take Loan kept in separate sections (Given first, then Taken), each
+// transfer date-ordered (most recent first). Every individual transfer (one
+// blood bank, one date) gets its own sub-table listing the bags/components
+// that moved, with a heading naming the direction, blood bank, address and
+// date, e.g.:
+//   Loan Given — City Blood Bank, Nashik — 07 Jul 2026 — 3 bag(s) (BT-...)  [table]
+//   Loan Taken — Red Cross Blood Bank, Pune — 05 Jul 2026 — 2 bag(s) (BT-...) [table]
 export async function exportBulkTransfers(items, meta = {}) {
-  const headers = ['Sr No', 'Transfer ID', 'Type', 'Blood Bank', 'Address', 'Transfer Date', 'Bags Count'];
-  const alignments = ['center', 'center', 'center', 'left', 'left', 'center', 'center'];
+  const headers = ['Sr No', 'Bag No', 'Segment No', 'Component', 'Blood Group', 'Volume', 'Collected Date', 'Expiry Date'];
 
-  const rows = items.map((r, i) => [
-    i + 1,
-    r.transferId || '—',
-    r.transferType === 'GIVE_LOAN' ? 'Give Loan' : 'Take Loan',
-    r.bloodBankName || '—',
-    r.bloodBankAddress || '—',
-    formatDate(r.transferDate),
-    r.items?.length || 0,
-  ]);
+  const typeLabel = (t) => (t === 'GIVE_LOAN' ? 'Loan Given' : 'Loan Taken');
+
+  const byDateDesc = (a, b) => new Date(b.transferDate) - new Date(a.transferDate);
+  const giveTransfers = items.filter((r) => r.transferType === 'GIVE_LOAN').sort(byDateDesc);
+  const takeTransfers = items.filter((r) => r.transferType === 'TAKE_LOAN').sort(byDateDesc);
+
+  const toBlock = (r) => {
+    const bagCount = r.items?.length || 0;
+    return {
+      label: `${typeLabel(r.transferType)} — ${r.bloodBankName || 'Unknown Blood Bank'}, ${r.bloodBankAddress || '—'} — ${formatDate(r.transferDate)} — ${bagCount} bag${bagCount === 1 ? '' : 's'} (${r.transferId || '—'})`,
+      rows: (r.items || []).map((it, i) => [
+        i + 1,
+        it.bagNo || '—',
+        it.segmentNo || '—',
+        it.componentType || '—',
+        it.bloodGroup || '—',
+        it.volumeMl ? `${it.volumeMl} mL` : '—',
+        formatDate(it.collectedAt),
+        formatDate(it.expiresAt),
+      ]),
+    };
+  };
+
+  const blocks = [...giveTransfers.map(toBlock), ...takeTransfers.map(toBlock)];
 
   const stats = [
     { label: 'Total Transfers', value: items.length },
-    { label: 'Given on Loan', value: items.filter(r => r.transferType === 'GIVE_LOAN').length },
-    { label: 'Taken on Loan', value: items.filter(r => r.transferType === 'TAKE_LOAN').length },
+    { label: 'Given on Loan', value: giveTransfers.length },
+    { label: 'Taken on Loan', value: takeTransfers.length },
+    { label: 'Total Bags', value: items.reduce((sum, r) => sum + (r.items?.length || 0), 0) },
   ];
 
-  await downloadExcelReport([{
+  await downloadMultiTableExcelReport([{
     name: 'Bulk Transfers',
     title: 'SANJIVANI BLOOD BANK, KOPARGAON',
     subtitle: 'Bulk Transfer (Loan) Register',
     headers,
-    rows,
-    alignments,
+    blocks,
     stats,
     ...meta,
   }], 'Bulk_Transfers_Report.xlsx');

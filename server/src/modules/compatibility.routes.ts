@@ -60,7 +60,12 @@ router.get('/inventory', authenticate, async (req, res, next) => {
       }
       else if (status === 'issued') unitFilter.status = 'ISSUED';
     } else {
-      unitFilter.status = { $in: ['RELEASED', 'RESERVED', 'CROSSMATCHED', 'ISSUED'] };
+      // No explicit status was requested — default to real active stock only
+      // (RELEASED/RESERVED/CROSSMATCHED). ISSUED bags include ones sent to
+      // storage or given on loan and must never appear in an unfiltered
+      // listing; callers that specifically want issued/storage/loan bags
+      // must pass status=issued explicitly.
+      unitFilter.status = { $in: ['RELEASED', 'RESERVED', 'CROSSMATCHED'] };
     }
 
     if (componentType) {
@@ -116,10 +121,20 @@ router.get('/inventory', authenticate, async (req, res, next) => {
     if (status === 'issued') {
       if (dispatchType === 'CLINICAL_INDICATION') {
         unitFilter['clinicalIndicationPatient'] = { $exists: true, $ne: null };
+      } else if (storageLocation === 'ALL') {
+        // Storage register "All Locations" export: any storage transfer,
+        // regardless of which site — must NOT fall through to the
+        // storageLocation:null branch below, which means genuinely issued
+        // (non-storage) stock, not "every storage location".
+        unitFilter['storageLocation'] = { $ne: null };
       } else if (storageLocation) {
         unitFilter['storageLocation'] = new RegExp(storageLocation, 'i');
       } else {
+        // No storage/clinical filter requested — this is the plain Issue
+        // Stock register: issued bags that were neither sent to storage nor
+        // issued for a clinical indication.
         unitFilter['storageLocation'] = { $eq: null };
+        unitFilter['clinicalIndicationPatient'] = { $in: [null, undefined] };
       }
     } else {
       if (storageLocation) {
@@ -211,21 +226,21 @@ router.get('/inventory', authenticate, async (req, res, next) => {
       else if (u.componentType === 'PLATELET_CONCENTRATE') legacyType = 'Platelet';
       else if (u.componentType === 'CRYOPRECIPITATE') legacyType = 'Cryo';
 
-      let hospitalName = 'Ã¢â‚¬â€';
-      let patientName = 'Ã¢â‚¬â€';
+      let hospitalName = '—';
+      let patientName = '—';
       let patientAge = '';
-      let patientSex = 'Ã¢â‚¬â€';
+      let patientSex = '—';
       let requisitionObj: any = null;
 
       if (u.reservedFor && typeof u.reservedFor === 'object') {
         const reqDoc = u.reservedFor as any;
         if (reqDoc.hospitalId && typeof reqDoc.hospitalId === 'object') {
-          hospitalName = reqDoc.hospitalId.name || 'Ã¢â‚¬â€';
+          hospitalName = reqDoc.hospitalId.name || '—';
         }
         if (reqDoc.patientId && typeof reqDoc.patientId === 'object') {
           const patientDoc = reqDoc.patientId;
-          patientName = patientDoc.name || 'Ã¢â‚¬â€';
-          patientSex = patientDoc.sex || 'Ã¢â‚¬â€';
+          patientName = patientDoc.name || '—';
+          patientSex = patientDoc.sex || '—';
           if (patientDoc.dob) {
             const birthDate = new Date(patientDoc.dob);
             const today = new Date();
@@ -249,7 +264,7 @@ router.get('/inventory', authenticate, async (req, res, next) => {
 
       const donObj = donationMap.get(u.donationId);
       const displayBagNo = donObj?.bagNo || u.donationId;
-      const segmentNo = donObj?.segmentNo || u.unitDin || u.unitId || 'Ã¢â‚¬â€';
+      const segmentNo = donObj?.segmentNo || u.unitDin || u.unitId || '—';
       const typeOfBag = donObj?.typeOfBag || 'SB';
 
       if (u.storageLocation) {
@@ -444,18 +459,29 @@ router.post('/inventory/issue', authenticate, async (req, res, next) => {
     }
 
     const actorObjId = new Types.ObjectId(actorId);
+    const skipped: string[] = [];
 
     for (const id of inventoryIds) {
-      let unit = await BloodUnitModel.findById(id);
-      if (!unit) {
-        unit = await BloodUnitModel.findOne({ unitId: id });
+      let lookup = await BloodUnitModel.findById(id).select('_id').lean();
+      if (!lookup) {
+        lookup = await BloodUnitModel.findOne({ unitId: id }).select('_id').lean();
       }
-      if (!unit) continue;
+      if (!lookup) continue;
 
-      const oldStatus = unit.status;
-      unit.status = 'ISSUED';
-      unit.issuedAt = new Date();
-      unit.updatedBy = actorObjId;
+      // Atomically claim the unit: only bags currently RELEASED (real available
+      // stock) may be issued. This prevents issuing a bag that was concurrently
+      // sent to storage / given on loan / reserved by someone else.
+      const claimed = await BloodUnitModel.findOneAndUpdate(
+        { _id: lookup._id, status: 'RELEASED' },
+        { status: 'ISSUED', issuedAt: new Date(), updatedBy: actorObjId },
+        { new: true },
+      );
+      if (!claimed) {
+        skipped.push(id);
+        continue;
+      }
+      const unit = claimed;
+      const oldStatus = 'RELEASED';
 
       let requisitionId = unit.reservedFor;
       let patientId: any = null;
@@ -500,7 +526,13 @@ router.post('/inventory/issue', authenticate, async (req, res, next) => {
 
     await invalidate('inventory:*');
 
-    res.json({ success: true, message: 'Blood units successfully issued.' });
+    res.json({
+      success: true,
+      message: skipped.length > 0
+        ? `Blood units successfully issued. ${skipped.length} bag(s) were skipped because they were no longer in stock.`
+        : 'Blood units successfully issued.',
+      skipped,
+    });
   } catch (e) {
     next(e);
   }
@@ -549,17 +581,32 @@ router.post('/inventory/send-to-storage', authenticate, async (req, res, next) =
       return res.status(400).json({ success: false, message: 'No blood bags selected' });
     }
 
-    for (const id of unitIds) {
-      let unit = await BloodUnitModel.findById(id);
-      if (!unit) {
-        unit = await BloodUnitModel.findOne({ unitId: id });
-      }
-      if (!unit) continue;
+    const skipped: string[] = [];
 
-      const oldStatus = unit.status;
-      unit.status = 'ISSUED';
-      unit.issuedAt = sentDate ? new Date(sentDate) : new Date();
-      unit.updatedBy = actorObjId;
+    for (const id of unitIds) {
+      let lookup = await BloodUnitModel.findById(id).select('_id').lean();
+      if (!lookup) {
+        lookup = await BloodUnitModel.findOne({ unitId: id }).select('_id').lean();
+      }
+      if (!lookup) continue;
+
+      // Atomically claim the bag: only units currently RELEASED (real
+      // available stock) may be sent to storage / disease-issue. This closes
+      // the race where a bag reserved/issued/loaned out concurrently could
+      // still be pulled into storage and keep dangling links to that
+      // reservation, or where a stale picker could resurrect a bag that has
+      // already left stock.
+      const claimed = await BloodUnitModel.findOneAndUpdate(
+        { _id: lookup._id, status: 'RELEASED' },
+        { status: 'ISSUED', issuedAt: sentDate ? new Date(sentDate) : new Date(), updatedBy: actorObjId },
+        { new: true },
+      );
+      if (!claimed) {
+        skipped.push(id);
+        continue;
+      }
+      const unit = claimed;
+      const oldStatus = 'RELEASED';
 
       if (isClinicalIndication) {
         const diseaseLabel = clinicalIndicationPatient.disease === 'THALASSEMIA' ? 'Thalassemia'
@@ -593,7 +640,14 @@ router.post('/inventory/send-to-storage', authenticate, async (req, res, next) =
 
     await invalidate('inventory:*');
 
-    res.json({ success: true, message: isClinicalIndication ? 'Blood units successfully issued for the clinical indication.' : 'Blood units successfully sent to storage.' });
+    const baseMessage = isClinicalIndication ? 'Blood units successfully issued for the clinical indication.' : 'Blood units successfully sent to storage.';
+    res.json({
+      success: true,
+      message: skipped.length > 0
+        ? `${baseMessage} ${skipped.length} bag(s) were skipped because they were no longer in stock.`
+        : baseMessage,
+      skipped,
+    });
   } catch (e) {
     next(e);
   }

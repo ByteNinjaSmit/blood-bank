@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { MapPin, Phone, Mail, Users, Calendar, Droplets, Plus, Activity, Clock, ArrowLeft, Trash2, FolderOpen } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { MapPin, Phone, Mail, Users, Calendar, Droplets, Plus, Activity, Clock, ArrowLeft, Trash2, FolderOpen, FileSpreadsheet, ChevronDown, Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
@@ -7,14 +7,62 @@ import { useCampDetail } from '@/hooks/useCamp';
 import EnhancedLoader from '@/components/utils/Spinner';
 import Modal from '@/components/shared/Modal';
 import { toast } from 'sonner';
+import { donorApi } from '@/features/donor/api';
+import { donationApi } from '@/features/donation/api';
+import { useAuth } from '@/store/auth';
+import { exportCampDonorRegister } from '@/features/donor/donorRegisterExport';
+import { exportCampDonationRegister } from '@/features/donation/donationRegisterExport';
 
 const CampDetails = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const campId = searchParams.get('id');
   const { data: camp, isLoading: loading, error: queryError } = useCampDetail(campId);
+  const { user } = useAuth();
   const [drafts, setDrafts] = React.useState([]);
   const [showDraftsModal, setShowDraftsModal] = React.useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const generatedBy = user?.name ? [user.name.first, user.name.last].filter(Boolean).join(' ') : (user?.username || 'System User');
+
+  // Both exports below share the exact same columns, colours and layout as
+  // the Master Donor / Master Donation registers (via the same helper
+  // functions those pages use) — just pre-filtered to this camp, with the
+  // sheet tab and file named "<Donor|Donation> Register — <camp name>".
+  const handleExportCampDonors = async () => {
+    setExportMenuOpen(false);
+    setExporting(true);
+    try {
+      const { items } = await donorApi.list({ campId, pageSize: 1 });
+      if (!items || items.length === 0) {
+        toast.info('No donors registered at this camp yet');
+        return;
+      }
+      await exportCampDonorRegister(campId, camp?.name || 'Camp', generatedBy);
+    } catch (e) {
+      toast.error(e?.message || 'Failed to export donor data');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportCampDonations = async () => {
+    setExportMenuOpen(false);
+    setExporting(true);
+    try {
+      const { items } = await donationApi.list({ campId, pageSize: 1 });
+      if (!items || items.length === 0) {
+        toast.info('No donations recorded at this camp yet');
+        return;
+      }
+      await exportCampDonationRegister(campId, camp?.name || 'Camp', generatedBy);
+    } catch (e) {
+      toast.error(e?.message || 'Failed to export donation data');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     const rawDrafts = localStorage.getItem("blood_bank_donor_creation_drafts");
@@ -206,6 +254,43 @@ const CampDetails = () => {
               >
                 <Activity className="w-4 h-4 mr-2" /> Donations
               </Button>
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  onClick={() => setExportMenuOpen((o) => !o)}
+                  disabled={exporting}
+                  title="Export this camp's donor or donation register to Excel"
+                >
+                  {exporting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="w-4 h-4 mr-2 text-green-700" />
+                  )}
+                  Export Excel
+                  <ChevronDown className={`w-3.5 h-3.5 ml-1.5 transition-transform ${exportMenuOpen ? 'rotate-180' : ''}`} />
+                </Button>
+                {exportMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setExportMenuOpen(false)}></div>
+                    <div className="absolute right-0 mt-1.5 w-56 rounded-lg bg-white shadow-lg ring-1 ring-black/5 z-20 overflow-hidden divide-y divide-gray-100">
+                      <button
+                        type="button"
+                        onClick={handleExportCampDonors}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left font-medium"
+                      >
+                        <Users className="w-4 h-4 text-orange-700 flex-shrink-0" /> Donor Data
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleExportCampDonations}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left font-medium"
+                      >
+                        <Activity className="w-4 h-4 text-orange-700 flex-shrink-0" /> Donation Data
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
               <Button
                 variant="outline"
                 onClick={() => navigate(`/master-register/donor-creation?campId=${campId}`)}

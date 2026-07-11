@@ -205,3 +205,26 @@ export async function exportRegisterChoice(register, scope, filters, generatedBy
   const sheetLabel = register === 'camp' ? 'Camp Donors' : register === 'inhouse' ? 'Inhouse Donors' : 'Master Donor Register';
   return exportDonorRegister(register, sheetLabel, scope, filters, generatedBy);
 }
+
+// Donor register for one specific camp — identical columns, colours and
+// layout to the Master Donor Register, just pre-filtered to a single camp
+// and titled/named after that camp instead of "Master Donor Register".
+export async function exportCampDonorRegister(campId, campName, generatedBy) {
+  const rows = await fetchDonorRegisterRows(undefined, { campId });
+  const wb = XLSX.utils.book_new();
+  const { highlightRowIndexes, redCells, greenCells } = donorReactiveHighlights(rows);
+  const sheetTabName = `${campName} Donor Register`.slice(0, 31);
+  const ws = buildTitledSheet(rows.map(donorRegisterRow), {
+    title: 'Sanjivani Blood Bank, Kopargaon',
+    subtitle: `${campName} — Donor Register`,
+    generatedBy,
+    reportScope: 'All Records',
+    columns: DONOR_REGISTER_COLUMNS,
+    highlightRowIndexes,
+    redCells,
+    greenCells,
+  });
+  XLSX.utils.book_append_sheet(wb, ws, sheetTabName);
+  const dateStr = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `${campName.replace(/\s+/g, '_')}_Donor_Register_${dateStr}.xlsx`);
+}

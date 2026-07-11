@@ -99,3 +99,34 @@ export async function exportDonationRegister(register, scope, filters, generated
   const dateStr = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(wb, `${sheetLabel.replace(/\s+/g, '_')}_Register_${dateStr}.xlsx`);
 }
+
+// Donation register for one specific camp — identical columns, colours and
+// layout to the Master Donation Register, just pre-filtered to a single camp
+// and titled/named after that camp instead of "Master Donation Register".
+export async function exportCampDonationRegister(campId, campName, generatedBy) {
+  const res = await donationApi.list({ campId, page: 1, pageSize: 5000 });
+  const rows = res?.items ?? [];
+
+  const highlightRowIndexes = [];
+  const redCells = [];
+  rows.forEach((d, i) => {
+    if (statusOf(d) === 'failed') {
+      highlightRowIndexes.push(i);
+      redCells.push({ r: i, c: TTI_STATUS_COL });
+    }
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = buildSheet(rows.map(donationRow), {
+    title: 'Sanjivani Blood Bank, Kopargaon',
+    subtitle: `${campName} — Donation Register`,
+    generatedBy,
+    reportScope: 'All Records',
+    highlightRowIndexes,
+    redCells,
+  });
+  const sheetTabName = `${campName} Donation Register`.slice(0, 31);
+  XLSX.utils.book_append_sheet(wb, ws, sheetTabName);
+  const dateStr = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `${campName.replace(/\s+/g, '_')}_Donation_Register_${dateStr}.xlsx`);
+}

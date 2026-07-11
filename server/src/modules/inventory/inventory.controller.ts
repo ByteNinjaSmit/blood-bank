@@ -223,7 +223,7 @@ export function createInventoryControllers(service: InventoryService): Inventory
           for (const sel of selection.selected) {
             const nextStatus = 'RESERVED';
             const unitDoc = await BloodUnitModel.findOneAndUpdate(
-              { unitId: sel.unit.unitId },
+              { unitId: sel.unit.unitId, status: 'RELEASED' },
               {
                 status: nextStatus,
                 reservedFor: requisition._id,
