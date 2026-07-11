@@ -226,8 +226,8 @@ const DonationList = ({
                   : (typeof donation.donor === 'string' ? donation.donor : '-'));
               const bloodGroup = donation.bloodGroup || '-';
               const rhSymbol = donation.rhFactor
-                ? (donation.rhFactor === 'POSITIVE' ? '+' : '-')
-                : (donation.rh === 'Positive' ? '+' : donation.rh === 'Negative' ? '-' : '');
+                ? (donation.rhFactor === 'POSITIVE' || donation.rhFactor === 'Positive' ? '+' : '-')
+                : (donation.rh === 'Positive' || donation.rh === 'POSITIVE' ? '+' : donation.rh === 'Negative' || donation.rh === 'NEGATIVE' ? '-' : '');
               const isFit = donation.isFit !== undefined
                 ? donation.isFit
                 : (donation.donorFitness?.isFit !== undefined ? donation.donorFitness.isFit : true);

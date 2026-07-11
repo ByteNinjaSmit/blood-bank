@@ -25,7 +25,7 @@ export default function DonorEditModal({ isOpen, donor, onSubmit, onClose, loadi
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
             <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-800 font-medium">
-              {donor.bloodGroup} {donor.rh === 'Positive' ? '+' : '-'}
+              {donor.bloodGroup} {donor.rh === 'Positive' || donor.rh === 'POSITIVE' ? '+' : donor.rh === 'Negative' || donor.rh === 'NEGATIVE' ? '-' : ''}
             </span>
             {donor.lastDonationDate && (
               <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700">

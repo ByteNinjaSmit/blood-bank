@@ -103,7 +103,7 @@ export default function DonorRegisterTable({
                     <td className="px-4 py-3 text-gray-600">{donor.sex}</td>
                     <td className="px-4 py-3 text-gray-600">{donor.phone}</td>
                     <td className="px-4 py-3 font-semibold text-gray-800">
-                      {donor.bloodGroup} {donor.rh === 'Positive' ? '+' : '-'}
+                      {donor.bloodGroup} {donor.rh === 'Positive' || donor.rh === 'POSITIVE' ? '+' : donor.rh === 'Negative' || donor.rh === 'NEGATIVE' ? '-' : ''}
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
                       {donor.lastDonationDate

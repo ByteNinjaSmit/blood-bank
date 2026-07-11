@@ -244,7 +244,7 @@ export default function DeferralRegister() {
                       </td>
                       <td className="px-4 py-3 text-gray-800 font-medium">{entry.donor?.name || '-'}</td>
                       <td className="px-4 py-3 font-semibold text-gray-800">
-                        {entry.donor?.bloodGroup} {entry.donor?.rh === 'Positive' ? '+' : entry.donor?.rh === 'Negative' ? '-' : ''}
+                        {entry.donor?.bloodGroup} {entry.donor?.rh === 'Positive' || entry.donor?.rh === 'POSITIVE' ? '+' : entry.donor?.rh === 'Negative' || entry.donor?.rh === 'NEGATIVE' ? '-' : ''}
                       </td>
                       <td className="px-4 py-3 text-gray-600">{entry.donor?.phone || '-'}</td>
                       <td className="px-4 py-3">

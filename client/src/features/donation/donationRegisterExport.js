@@ -22,8 +22,8 @@ function fmtDateTime(d) {
 // silently fall back to '—'.
 function rhSign(rhFactor) {
   const rh = String(rhFactor || '').toUpperCase();
-  if (rh === 'POSITIVE') return '+';
-  if (rh === 'NEGATIVE') return '-';
+  if (rh === 'POSITIVE') return 'Positive';
+  if (rh === 'NEGATIVE') return 'Negative';
   return '—';
 }
 

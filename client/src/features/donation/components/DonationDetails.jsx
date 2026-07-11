@@ -21,8 +21,8 @@ const DonationDetails = ({ donation }) => {
   const collectionDate = donation.collectedAt || donation.collectionDate;
   const bloodGroup = donation.bloodGroup || 'N/A';
   const rhSymbol = donation.rhFactor 
-    ? (donation.rhFactor === 'POSITIVE' ? '+' : '-') 
-    : (donation.rh === 'Positive' ? '+' : donation.rh === 'Negative' ? '-' : '');
+    ? (donation.rhFactor === 'POSITIVE' || donation.rhFactor === 'Positive' ? '+' : '-') 
+    : (donation.rh === 'Positive' || donation.rh === 'POSITIVE' ? '+' : donation.rh === 'Negative' || donation.rh === 'NEGATIVE' ? '-' : '');
   const status = donation.status || 
                  (donation.ttiReleaseDecision === 'released' ? 'passed' : donation.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
   const isFit = donation.isFit !== undefined 
@@ -128,7 +128,7 @@ const DonationDetails = ({ donation }) => {
               <p>
                 <span className="font-medium">Donor Blood Group:</span>{' '}
                 {donation.donor?.bloodGroup 
-                  ? `${donation.donor.bloodGroup} ${donation.donor.rh === 'Positive' ? '+' : '-'}`
+                  ? `${donation.donor.bloodGroup} ${donation.donor.rh === 'Positive' || donation.donor.rh === 'POSITIVE' ? '+' : '-'}`
                   : `${bloodGroup} ${rhSymbol}`}
               </p>
             )}

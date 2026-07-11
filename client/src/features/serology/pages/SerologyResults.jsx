@@ -22,7 +22,7 @@ const SerologyResults = () => {
   const mapSerologyForExport = (bagsList) => {
     return bagsList.map(bag => ({
       ...bag,
-      bloodGroup: bag.bloodGroup ? `${bag.bloodGroup} ${bag.rh === 'Positive' ? '+' : bag.rh === 'Negative' ? '-' : ''}`.trim() : '—',
+      bloodGroup: bag.bloodGroup ? `${bag.bloodGroup} ${bag.rh === 'Positive' || bag.rh === 'POSITIVE' ? '+' : bag.rh === 'Negative' || bag.rh === 'NEGATIVE' ? '-' : ''}`.trim() : '—',
       collectedAt: bag.collectionDate,
       tests: Array.isArray(bag.testResults) ? bag.testResults.map(t => ({ testName: t.test, result: t.result })) : [],
     }));

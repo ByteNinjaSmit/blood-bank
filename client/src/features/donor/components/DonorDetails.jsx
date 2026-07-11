@@ -109,7 +109,7 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
               <div className="w-4 h-4 bg-red-500 rounded-full"></div>
               <div>
                 <p className="text-sm font-medium text-gray-700">Blood Group</p>
-                <p className="text-gray-900">{donor.bloodGroup} {donor.rh === "Positive" ? "+" : "-"}</p>
+                <p className="text-gray-900">{donor.bloodGroup} {donor.rh === "Positive" || donor.rh === "POSITIVE" ? "+" : donor.rh === "Negative" || donor.rh === "NEGATIVE" ? "-" : ""}</p>
               </div>
             </div>
           </div>

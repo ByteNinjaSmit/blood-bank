@@ -41,7 +41,7 @@ export const ListDeferralsQuery = z.object({
   type: blank(z.enum(DEFERRAL_TYPE).optional()),
   status: blank(z.enum(['active', 'lifted', 'all']).optional().default('active')),
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(200).default(20),
+  limit: z.coerce.number().int().min(1).max(10000).default(20),
   sortBy: z.enum(['createdAt', 'untilDate']).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
