@@ -45,8 +45,9 @@ const COMPONENT_STATUS_LABELS = {
 };
 
 const COLUMNS = [
-  'Bag No', 'Donor Name', 'Donation Type', 'Bag Type', 'Blood Group',
+  'S.No', 'Bag No', 'Donor Name', 'Donation Type', 'Bag Type', 'Blood Group',
   'Units Count', 'Fitness Status', 'Collection Date & Time', 'TTI Status',
+  'HIV 1 & 2', 'HBs', 'HCV', 'VDRL', 'M.P.',
   'Components Prepared (Type: Volume mL)',
 ];
 
@@ -56,8 +57,9 @@ function componentsStr(d) {
     .join('\n') || '—';
 }
 
-function donationRow(d) {
+function donationRow(d, i) {
   return [
+    i + 1,
     d.bagNo || d.donationId || '—',
     d.donorName || '—',
     d.donationType || '—',
@@ -67,11 +69,61 @@ function donationRow(d) {
     d.isFit === true ? 'Fit' : d.isFit === false ? 'Unfit' : 'Pending',
     fmtDateTime(d.collectedAt),
     (statusOf(d) || '—').toUpperCase(),
+    d.ttiTests?.HIV || '—',
+    d.ttiTests?.HBSAG || '—',
+    d.ttiTests?.HCV || '—',
+    d.ttiTests?.SYPHILIS || '—',
+    d.ttiTests?.MALARIA || '—',
     componentsStr(d),
   ];
 }
 
 const TTI_STATUS_COL = COLUMNS.indexOf('TTI Status');
+
+// A TTI marker is reactive when it's positive/reactive (but not the common
+// "Non-Reactive"/"Negative" wordings).
+function isReactiveTti(v) {
+  if (v == null) return false;
+  const s = String(v).toUpperCase();
+  if (s.includes('NON')) return false; // Non-Reactive
+  return s.includes('REACTIVE') || s === 'POSITIVE' || s === 'POS';
+}
+
+// Column indexes of the five TTI markers in COLUMNS, in the same order
+// donationRow emits them (HIV, HBs, HCV, VDRL, M.P.).
+const DONATION_TTI_COLS = [
+  COLUMNS.indexOf('HIV 1 & 2'),
+  COLUMNS.indexOf('HBs'),
+  COLUMNS.indexOf('HCV'),
+  COLUMNS.indexOf('VDRL'),
+  COLUMNS.indexOf('M.P.'),
+];
+
+function donationTtiValues(d) {
+  return [d.ttiTests?.HIV, d.ttiTests?.HBSAG, d.ttiTests?.HCV, d.ttiTests?.SYPHILIS, d.ttiTests?.MALARIA];
+}
+
+// Builds { highlightRowIndexes, redCells } for a donation row set: any
+// donation with a reactive marker gets a yellow row and each reactive marker
+// cell (plus the overall TTI Status cell) goes red.
+function donationReactiveHighlights(rows) {
+  const highlightRowIndexes = [];
+  const redCells = [];
+  rows.forEach((d, i) => {
+    let anyReactive = statusOf(d) === 'failed';
+    donationTtiValues(d).forEach((val, m) => {
+      if (isReactiveTti(val)) {
+        anyReactive = true;
+        redCells.push({ r: i, c: DONATION_TTI_COLS[m] });
+      }
+    });
+    if (anyReactive) {
+      highlightRowIndexes.push(i);
+      redCells.push({ r: i, c: TTI_STATUS_COL });
+    }
+  });
+  return { highlightRowIndexes, redCells };
+}
 
 function buildSheet(rows, { title, subtitle, generatedBy, reportScope, highlightRowIndexes, redCells }) {
   return buildStyledSheet(rows, {
@@ -93,15 +145,7 @@ export async function exportDonationRegister(register, scope, filters, generated
   const rows = scope === 'filtered' ? allItems.filter((d) => matchesFilters(d, filters)) : allItems;
 
   const sheetLabel = register === 'camp' ? 'Camp Donations' : register === 'inhouse' ? 'Inhouse Donations' : 'Master Donation Register';
-  // TTI-reactive donations → yellow row + red TTI Status cell.
-  const highlightRowIndexes = [];
-  const redCells = [];
-  rows.forEach((d, i) => {
-    if (statusOf(d) === 'failed') {
-      highlightRowIndexes.push(i);
-      redCells.push({ r: i, c: TTI_STATUS_COL });
-    }
-  });
+  const { highlightRowIndexes, redCells } = donationReactiveHighlights(rows);
   const wb = XLSX.utils.book_new();
   const ws = buildSheet(rows.map(donationRow), {
     title: 'Sanjivani Blood Bank, Kopargaon',
@@ -123,14 +167,7 @@ export async function exportCampDonationRegister(campId, campName, generatedBy) 
   const res = await donationApi.list({ campId, page: 1, pageSize: 5000 });
   const rows = res?.items ?? [];
 
-  const highlightRowIndexes = [];
-  const redCells = [];
-  rows.forEach((d, i) => {
-    if (statusOf(d) === 'failed') {
-      highlightRowIndexes.push(i);
-      redCells.push({ r: i, c: TTI_STATUS_COL });
-    }
-  });
+  const { highlightRowIndexes, redCells } = donationReactiveHighlights(rows);
 
   const wb = XLSX.utils.book_new();
   const ws = buildSheet(rows.map(donationRow), {

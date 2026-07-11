@@ -46,44 +46,48 @@ const DonationDetails = ({ donation }) => {
   return (
     <div className="space-y-6 text-sm text-slate-800">
       {/* Summary */}
-      <div className="relative rounded-lg bg-white/70 border border-slate-100 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-6 sm:pt-4">
-        <div className="absolute top-3 right-4 text-right hidden sm:block">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Donation ID</span>
-          <span className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded shadow-sm">{donation.donationId}</span>
-        </div>
-        <div>
-          <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide mb-1">
+      <div className="rounded-lg bg-white/70 border border-slate-100 p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">
             Donation overview
           </p>
-          <div className="sm:hidden mb-2 text-left">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Donation ID:</span>
-            <span className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded shadow-sm">{donation.donationId}</span>
-          </div>
-          <h3 className="text-lg font-semibold text-slate-900">
-            Bag {bagNo}
-          </h3>
-          <p className="text-xs text-slate-500 mt-1">
-            Collected on {formatDateTime(collectionDate)}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 text-xs">
-          <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-800 font-medium">
-            {bloodGroup} {rhSymbol}
-          </span>
-          {status && (
-            <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700 font-medium">
-              Status: {status}
+          <span className="inline-flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+              Donation ID
             </span>
-          )}
-          <span
-            className={`px-2 py-1 rounded-full font-medium ${
-              isFit
-                ? 'bg-green-100 text-green-800'
-                : 'bg-red-100 text-red-800'
-            }`}
-          >
-            Fitness: {isFit ? 'Fit' : 'Unfit'}
+            <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-1 rounded-md shadow-sm whitespace-nowrap">
+              {donation.donationId || '—'}
+            </span>
           </span>
+        </div>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">
+              Bag {bagNo}
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Collected on {formatDateTime(collectionDate)}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-800 font-medium">
+              {bloodGroup} {rhSymbol}
+            </span>
+            {status && (
+              <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700 font-medium">
+                Status: {status}
+              </span>
+            )}
+            <span
+              className={`px-2 py-1 rounded-full font-medium ${
+                isFit
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-red-100 text-red-800'
+              }`}
+            >
+              Fitness: {isFit ? 'Fit' : 'Unfit'}
+            </span>
+          </div>
         </div>
       </div>
 

@@ -66,9 +66,7 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
             <h3 className="text-xl font-semibold text-gray-900">
               {donor.name?.firstName} {donor.name?.middleName} {donor.name?.lastName}
             </h3>
-            {donor.eligibilityStatus !== "deferred" && donor.eligibilityStatus !== "temp-deferred" && (
-              <p className="text-gray-600">{donor.donorId}</p>
-            )}
+            <p className="text-gray-600">{donor.donorId}</p>
             <div className="flex items-center gap-2 mt-2">
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(donor.eligibilityStatus)}`}>
                 {getStatusText(donor.eligibilityStatus)}

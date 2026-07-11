@@ -52,7 +52,7 @@ function isReactiveTti(v) {
 
 // Column indexes of the five TTI markers in DONOR_REGISTER_COLUMNS, in the
 // same order donorRegisterRow emits them (HIV, HBs, HCV, VDRL, M.P.).
-const DONOR_TTI_COLS = [14, 15, 16, 17, 18];
+const DONOR_TTI_COLS = [15, 16, 17, 18, 19];
 
 function donorTtiValues(d) {
   return [d.tti?.HIV, d.tti?.HBSAG, d.tti?.HCV, d.tti?.SYPHILIS, d.tti?.MALARIA];
@@ -90,7 +90,7 @@ async function fetchDonorRegisterRows(source, filters) {
 }
 
 const DONOR_REGISTER_COLUMNS = [
-  'Donor ID', 'Name', 'Address', 'Sex', 'Phone', 'Blood Group',
+  'S.No', 'Donor ID', 'Name', 'Address', 'Sex', 'Phone', 'Blood Group',
   'Blood Bag No', 'Date of Collection', 'Date of Expiry',
   'Weight (Kg)', 'Pulse (BPM)', 'Hb (Gm%)', 'Rh Typing', 'Atypical Antibody',
   'HIV 1 & 2', 'HBs', 'HCV', 'VDRL', 'M.P.',
@@ -100,7 +100,7 @@ const DONOR_REGISTER_COLUMNS = [
 
 const EMERGENCY_COL = DONOR_REGISTER_COLUMNS.indexOf('Will Donate in Emergency');
 
-function donorRegisterRow(d) {
+function donorRegisterRow(d, i) {
   const componentsStr = (d.components || [])
     .map((c) => `${c.componentType}: ${c.volumeMl ?? '—'} mL`)
     .join('\n') || '—';
@@ -112,6 +112,7 @@ function donorRegisterRow(d) {
     .join('\n') || '—';
 
   return [
+    i + 1,
     d.donorId || '—',
     d.name || '—',
     d.address || '—',
@@ -160,14 +161,15 @@ async function exportDonorRegister(source, sheetLabel, scope, filters, generated
 }
 
 const DEFERRAL_COLUMNS = [
-  'Donor ID', 'Name', 'Blood Group', 'Phone', 'Type', 'Reason', 'Deferred On', 'Until Date', 'Status',
+  'S.No', 'Donor ID', 'Name', 'Blood Group', 'Phone', 'Type', 'Reason', 'Deferred On', 'Until Date', 'Status',
 ];
 
-function deferralRow(entry) {
+function deferralRow(entry, i) {
   const lifted = Boolean(entry.liftedAt);
   const expired = !lifted && entry.type !== 'PERMANENT' && entry.untilDate && new Date(entry.untilDate) <= new Date();
   const status = lifted ? 'Lifted' : expired ? 'Period Ended' : 'Active';
   return [
+    i + 1,
     entry.donor?.donorId || '—',
     entry.donor?.name || '—',
     entry.donor?.bloodGroup ? `${entry.donor.bloodGroup} ${entry.donor.rh === 'Positive' ? '+' : entry.donor.rh === 'Negative' ? '-' : ''}` : '—',

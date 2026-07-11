@@ -228,24 +228,13 @@ const DonorForm = ({
   };
 
   const handleFormSubmit = (data) => {
-    const isDef = data.eligibilityStatus === 'deferred' || data.eligibilityStatus === 'temp-deferred';
-    let generatedId = data.donorId;
-    if (!generatedId) {
-      const prefix = isDef ? 'DFR' : 'DNR';
-      const now = new Date();
-      const yy = String(now.getFullYear()).slice(-2);
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const dd = String(now.getDate()).padStart(2, '0');
-      const hh = String(now.getHours()).padStart(2, '0');
-      const min = String(now.getMinutes()).padStart(2, '0');
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      generatedId = `${prefix}-${yy}-${mm}-${dd}-${hh}-${min}-${rand}`;
-    }
+    // donorId is assigned by the server at registration time (unique,
+    // format DNR-YYYYMMDD-XXXXXX) regardless of eligibilityStatus.
+    const { donorId: _donorId, ...dataWithoutDonorId } = data;
 
     // Transform data to match API structure
     const transformedData = {
-      ...data,
-      donorId: generatedId,
+      ...dataWithoutDonorId,
       name: {
         firstName: data.firstName,
         middleName: data.middleName,

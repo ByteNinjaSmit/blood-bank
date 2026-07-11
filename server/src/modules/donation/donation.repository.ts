@@ -38,6 +38,14 @@ export interface DonationDto {
   createdAt: string;
   updatedAt: string;
   components?: Array<{ componentType: string; volumeMl: number; status: string }>;
+  ttiTests?: {
+    HIV: string | null;
+    HBSAG: string | null;
+    HCV: string | null;
+    SYPHILIS: string | null;
+    MALARIA: string | null;
+  };
+  ttiReason?: string | null;
 }
 
 export interface DonationWithUnitsDto extends DonationDto {
@@ -435,7 +443,7 @@ export function createDonationRepo(): DonationRepo {
         }).select('donationId componentType volumeMl status').lean(),
         TtiResultModel.find({
           donationId: { $in: docs.map((d) => d.donationId) }
-        }).select('donationId aboGroupConfirmed rhFactorConfirmed releaseDecision').lean()
+        }).select('donationId aboGroupConfirmed rhFactorConfirmed releaseDecision tests decisionNotes').lean()
       ]);
 
       const unitMap = new Map<string, typeof unitDocs>();
@@ -474,6 +482,11 @@ export function createDonationRepo(): DonationRepo {
             else if (tti.releaseDecision === 'pending') status = 'testing';
           }
 
+          const testMap: Record<string, string> = {};
+          (tti?.tests || []).forEach((t) => {
+            testMap[t.testName] = t.result;
+          });
+
           return {
             id: d._id.toString(),
             donationId: d.donationId,
@@ -501,6 +514,14 @@ export function createDonationRepo(): DonationRepo {
               volumeMl: u.volumeMl,
               status: legacyComponentStatus(u.status),
             })),
+            ttiTests: {
+              HIV: testMap['HIV'] || null,
+              HBSAG: testMap['HBSAG'] || null,
+              HCV: testMap['HCV'] || null,
+              SYPHILIS: testMap['SYPHILIS'] || null,
+              MALARIA: testMap['MALARIA'] || null,
+            },
+            ttiReason: tti?.decisionNotes || null,
           };
         }),
         total,

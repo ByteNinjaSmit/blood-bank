@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { AppError, ConflictError, NotFoundError } from '@/shared/errors';
 import { childLogger } from '@/core/logger';
 import { cached, invalidate } from '@/core/cache';
@@ -38,7 +39,10 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
           existingDonorId: existing.id,
         });
       }
-      const created = await deps.repo.create(input, actorId);
+      const created = await deps.repo.create(
+        { ...input, donorId: generateDonorId() },
+        actorId,
+      );
       if (input.campId) {
         await CampModel.findByIdAndUpdate(input.campId, {
           $addToSet: { donorData: created.id }
@@ -133,4 +137,16 @@ function assertEligibilityBasics(input: { weightKg: number; dob: Date }): void {
 
 function yearsBetween(from: Date, to: Date): number {
   return (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+}
+
+// Every donor — including deferred ones — gets one of these, assigned at
+// registration time regardless of eligibilityStatus. Format mirrors
+// donation.service.ts's generateDonationId: PREFIX-YYYYMMDD-XXXXXX.
+function generateDonorId(): string {
+  const now = new Date();
+  const yyyy = now.getUTCFullYear();
+  const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(now.getUTCDate()).padStart(2, '0');
+  const rand = new Types.ObjectId().toHexString().slice(-6).toUpperCase();
+  return `DNR-${yyyy}${mm}${dd}-${rand}`;
 }

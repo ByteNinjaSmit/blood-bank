@@ -48,8 +48,6 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
     })() : "",
   })
 
-  const isDeferred = formData.eligibilityStatus === "deferred" || formData.eligibilityStatus === "temp-deferred"
-
   useEffect(() => {
     donorIdInputRef.current?.focus()
   }, [])
@@ -339,20 +337,9 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
 
     setLoading(true)
     try {
-      let generatedId = formData.donorId;
-      if (!generatedId) {
-        const prefix = isDeferred ? 'DFR' : 'DNR';
-        const now = new Date();
-        const yy = String(now.getFullYear()).slice(-2);
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const hh = String(now.getHours()).padStart(2, '0');
-        const min = String(now.getMinutes()).padStart(2, '0');
-        const rand = Math.floor(1000 + Math.random() * 9000);
-        generatedId = `${prefix}-${yy}-${mm}-${dd}-${hh}-${min}-${rand}`;
-      }
+      // donorId is assigned by the server at registration time (unique,
+      // format DNR-YYYYMMDD-XXXXXX) regardless of eligibilityStatus.
       const donorData = {
-        donorId: generatedId,
         name: {
           firstName: formData.firstName,
           middleName: formData.middleName,
