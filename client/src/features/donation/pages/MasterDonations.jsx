@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import DonationDetails from '../components/DonationDetails';
 import Modal from '@/components/shared/Modal';
 import CustomModal from '@/components/CustomModal';
-import RegisterExportDropdown from '@/features/donor/components/RegisterExportDropdown';
+import RegisterExportDropdown from '@/components/shared/RegisterExportDropdown';
 import { DONATION_REGISTERS, TABS } from './master-donations/constants';
 import { tabEmptyText } from './master-donations/donationRegister.utils';
 import { useDonationRegister } from './master-donations/useDonationRegister';

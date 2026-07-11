@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import DonorDetails from '@/features/donor/components/DonorDetails';
 import CustomModal from '@/components/CustomModal';
 import DeferralRegister from '@/features/donor/components/DeferralRegister';
-import RegisterExportDropdown from '@/features/donor/components/RegisterExportDropdown';
+import RegisterExportDropdown from '@/components/shared/RegisterExportDropdown';
 import { TABS } from './master-donors/constants';
 import { tabEmptyText } from './master-donors/donorRegister.utils';
 import { useDonorRegister } from './master-donors/useDonorRegister';
@@ -12,6 +12,13 @@ import DonorStatsCards from './master-donors/DonorStatsCards';
 import DonorFilterBar from './master-donors/DonorFilterBar';
 import DonorRegisterTable from './master-donors/DonorRegisterTable';
 import DonorEditModal from './master-donors/DonorEditModal';
+
+const DONOR_REGISTERS = [
+  { key: 'all', label: 'Master Donor Register (All)' },
+  { key: 'inhouse', label: 'Inhouse Donor Register' },
+  { key: 'camp', label: 'Camp Donor Register' },
+  { key: 'deferral', label: 'Donor Deferral Register' },
+];
 
 const MasterDonors = () => {
   const navigate = useNavigate();
@@ -39,7 +46,7 @@ const MasterDonors = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <RegisterExportDropdown onExport={reg.handleExportRegister} isLoading={reg.excelLoading} />
+              <RegisterExportDropdown onExport={reg.handleExportRegister} isLoading={reg.excelLoading} registers={DONOR_REGISTERS} />
               <button
                 onClick={() => navigate('/master-register/donor-creation')}
                 className="flex items-center gap-2 px-4 py-2 bg-orange-800 text-white rounded-lg text-sm font-semibold hover:bg-orange-900 transition-colors"

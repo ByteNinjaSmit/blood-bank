@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, PackageCheck, Plus, Trash2, Warehouse, MapPin, Eye, ArrowLeftRight, Printer } from "lucide-react";
 import { toast } from "sonner";
 import CustomModal from "@/components/CustomModal";
-import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
+import RegisterExportDropdown from "@/components/shared/RegisterExportDropdown";
 import { exportIssues, exportStorageBags, exportClinicalIndicationIssues, exportBulkTransfers } from "@/utils/excelExportHelper";
 import BulkTransferCoverLetter from "@/features/inventory/components/BulkTransferCoverLetter";
 import TestingCertificate from "@/features/inventory/components/TestingCertificate";
@@ -17,6 +17,13 @@ import BulkTransferTab from "./issue-tabs/BulkTransferTab";
 import IssueStockTab from "./issue-tabs/IssueStockTab";
 import SendToStorageModal from "./issue-tabs/SendToStorageModal";
 import BulkTransferFormModal from "./issue-tabs/BulkTransferFormModal";
+
+const ISSUE_REGISTERS = [
+  { key: 'issue', label: 'Issue Stock Register' },
+  { key: 'storage', label: 'Storage Register', filteredLabel: 'Current Location', allLabel: 'All Locations' },
+  { key: 'disease', label: 'Clinical Indication / Disease Register' },
+  { key: 'bulkTransfer', label: 'Bulk Transfer Register', filteredLabel: 'Current Page', allLabel: 'All Records' },
+];
 
 const Issue = () => {
   const { user } = useAuth();
@@ -58,63 +65,69 @@ const Issue = () => {
     }));
   };
 
-  // Exports whichever tab is currently active (Issue Stock / Storage /
-  // Clinical Indication / Bulk Transfer) — each tab has its own data shape
-  // and its own export mapper, but they share this one button.
-  const handleExportExcel = async (exportAll = false) => {
+  // Exports a specific register (Issue Stock / Storage / Clinical Indication /
+  // Bulk Transfer), regardless of which tab is currently active — each
+  // register re-fetches its own data fresh from its own endpoint.
+  const handleExportRegister = async (registerKey, scope) => {
+    const exportAll = scope === 'all';
     try {
       setExcelLoading(true);
 
-      if (mainTab === 'storage') {
-        const dataToExport = storageBagRows;
+      if (registerKey === 'storage') {
+        let dataToExport;
+        if (exportAll) {
+          const res = await apiClient.get(`/api/inventory`, {
+            params: { page: 1, limit: 5000, status: 'issued', sortBy: 'issuedAt', order: 'desc' },
+          });
+          dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
+        } else {
+          const res = await apiClient.get(`/api/inventory`, {
+            params: { page: 1, limit: 500, status: 'issued', storageLocation: storageSubTab, sortBy: 'issuedAt', order: 'desc' },
+          });
+          dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
+        }
         if (dataToExport.length === 0) return toast.info("No storage records to export");
         await exportStorageBags(dataToExport);
         return;
       }
 
-      if (mainTab === 'disease') {
-        let dataToExport = thalRows;
-        if (exportAll) {
-          const res = await apiClient.get(`/api/inventory`, {
-            params: { page: 1, limit: 5000, status: 'issued', dispatchType: 'CLINICAL_INDICATION' },
-          });
-          dataToExport = Array.isArray(res.data?.data) ? res.data.data : thalRows;
-        }
+      if (registerKey === 'disease') {
+        const res = await apiClient.get(`/api/inventory`, {
+          params: { page: 1, limit: exportAll ? 5000 : thalPagination.limit, status: 'issued', dispatchType: 'CLINICAL_INDICATION', sortBy: 'issuedAt', order: 'desc' },
+        });
+        const dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
         if (dataToExport.length === 0) return toast.info("No clinical indication records to export");
         await exportClinicalIndicationIssues(dataToExport);
         return;
       }
 
-      if (mainTab === 'bulkTransfer') {
-        const dataToExport = bulkRows;
+      if (registerKey === 'bulkTransfer') {
+        const res = await apiClient.get(`/api/v2/bulk-transfer`, {
+          params: { page: 1, limit: exportAll ? 5000 : bulkPagination.limit },
+        });
+        const dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
         if (dataToExport.length === 0) return toast.info("No bulk transfer records to export");
         await exportBulkTransfers(dataToExport);
         return;
       }
 
-      // 'issue' tab (default)
-      let dataToExport = [];
-      if (exportAll) {
-        // Fetch all issued/matching items without limit (up to 5000)
-        const res = await apiClient.get(`/api/inventory`, {
-          params: {
-            page: 1,
-            limit: 5000,
-            status,
-            componentType: componentType || undefined,
-            search: search || undefined,
-            bloodGroup: bloodGroup || undefined,
-            expiryFrom: expiryFrom || undefined,
-            expiryTo: expiryTo || undefined,
-            sortBy,
-            order,
-          },
-        });
-        const data = Array.isArray(res.data?.data) ? res.data.data : [];
-        dataToExport = mapIssuesForExport(data);
-      } else {
-        dataToExport = mapIssuesForExport(rows);
-      }
+      // 'issue' register (default)
+      const res = await apiClient.get(`/api/inventory`, {
+        params: {
+          page: 1,
+          limit: exportAll ? 5000 : pagination.limit,
+          status,
+          componentType: componentType || undefined,
+          search: search || undefined,
+          bloodGroup: bloodGroup || undefined,
+          expiryFrom: expiryFrom || undefined,
+          expiryTo: expiryTo || undefined,
+          sortBy,
+          order,
+        },
+      });
+      const data = Array.isArray(res.data?.data) ? res.data.data : [];
+      const dataToExport = mapIssuesForExport(data);
 
       if (dataToExport.length === 0) {
         toast.info("No items to export");
@@ -660,7 +673,7 @@ const Issue = () => {
             <Button onClick={() => { setStorageOpen(true); fetchAvailableUnits(); }} className="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white shadow-sm flex items-center gap-1.5 h-10 px-4 rounded-lg">
               <Warehouse className="w-4 h-4" /> Send to Storage
             </Button>
-            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+            <RegisterExportDropdown onExport={handleExportRegister} isLoading={excelLoading} registers={ISSUE_REGISTERS} />
           </div>
         </div>
 

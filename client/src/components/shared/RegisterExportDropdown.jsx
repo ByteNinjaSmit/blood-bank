@@ -1,19 +1,12 @@
 import React, { useState } from 'react';
 
-const DEFAULT_REGISTERS = [
-  { key: 'all', label: 'Master Donor Register (All)' },
-  { key: 'inhouse', label: 'Inhouse Donor Register' },
-  { key: 'camp', label: 'Camp Donor Register' },
-  { key: 'deferral', label: 'Donor Deferral Register' },
-];
-
 /**
- * Export dropdown for master registers (donor or donation) — lets the user
- * pick which register to generate (kept as separate reports, e.g. Inhouse /
- * Camp / Deferral) and whether to export the currently filtered view or all
- * records.
+ * Export dropdown for pages with multiple registers/tabs — lists each
+ * register as its own section (e.g. Issue Stock / Storage / Bulk Transfer)
+ * with its own Filtered View / All Records buttons, so any register can be
+ * exported regardless of which tab is currently active.
  */
-export default function RegisterExportDropdown({ onExport, isLoading = false, registers = DEFAULT_REGISTERS }) {
+export default function RegisterExportDropdown({ onExport, isLoading = false, registers }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handlePick = (register, scope) => {
@@ -57,7 +50,7 @@ export default function RegisterExportDropdown({ onExport, isLoading = false, re
                   <svg className="w-3.5 h-3.5 mr-2.5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                   </svg>
-                  Filtered View
+                  {r.filteredLabel || 'Filtered View'}
                 </button>
                 <button
                   type="button"
@@ -67,7 +60,7 @@ export default function RegisterExportDropdown({ onExport, isLoading = false, re
                   <svg className="w-3.5 h-3.5 mr-2.5 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
                   </svg>
-                  All Records
+                  {r.allLabel || 'All Records'}
                 </button>
               </div>
             ))}
