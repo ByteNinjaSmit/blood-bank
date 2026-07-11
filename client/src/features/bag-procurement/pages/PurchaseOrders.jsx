@@ -336,6 +336,7 @@ export default function PurchaseOrders() {
         vendorName: vendorName,
         manufacturer: o.manufacturer,
         billDate: o.billDate,
+        lineItems: o.lineItems ?? [],
       };
     });
   };

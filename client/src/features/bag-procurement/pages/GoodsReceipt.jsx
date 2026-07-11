@@ -594,11 +594,13 @@ export default function GoodsReceipt() {
       const receivedQty = (g.batchLines ?? []).reduce((sum, b) => sum + (b.quantityReceived || 0), 0);
       return {
         grnNumber: g.grnNumber,
+        invoiceNo: g.invoiceNo,
         receivedDate: g.receivedDate || g.createdAt,
         poNumber: po?.poNumber || '—',
         vendorName: vendorName,
         receivedQty: receivedQty,
         status: g.status,
+        batchLines: g.batchLines ?? [],
       };
     });
   };

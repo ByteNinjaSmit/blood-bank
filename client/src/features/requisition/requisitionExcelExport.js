@@ -154,26 +154,29 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
         const abbr = abbreviateComponent(rc.componentType);
         requestedCounts.set(abbr, (requestedCounts.get(abbr) || 0) + (rc.units || 1));
       });
-      // One serial number per requisition; multiple component lines share it
-      // (blank on the 2nd+ lines).
+      // One serial number per requisition. Patient-level details (date,
+      // hospital, doctor, indication, recipient name/address, when required,
+      // card number) are shown only on the first line; each component gets its
+      // own line below with only the component/bag-specific columns filled.
       requested.forEach((rc, i) => {
+        const first = i === 0;
         const abbr = rc ? abbreviateComponent(rc.componentType) : '—';
         xmRows.push([
-          i === 0 ? xmSrNo : '',
-          r.requestedAt ? fmtDateTime(r.requestedAt) : '—',
-          r.hospitalId?.name || '—',
-          r.doctorName || '—',
-          r.patient?.indication || '—',
-          r.patient?.name || '—',
-          r.patient?.address || '—',
+          first ? xmSrNo : '',
+          first ? (r.requestedAt ? fmtDateTime(r.requestedAt) : '—') : '',
+          first ? (r.hospitalId?.name || '—') : '',
+          first ? (r.doctorName || '—') : '',
+          first ? (r.patient?.indication || '—') : '',
+          first ? (r.patient?.name || '—') : '',
+          first ? (r.patient?.address || '—') : '',
           rc ? `${rc.bloodGroup}${rc.rh === 'Positive' ? '+' : rc.rh === 'Negative' ? '-' : ''}` : '—',
           abbr,
           rc ? (requestedCounts.get(abbr) || 0) : 0,
-          r.requiredAt ? fmtDateTime(r.requiredAt) : '—',
+          first ? (r.requiredAt ? fmtDateTime(r.requiredAt) : '—') : '',
           'Not Matched Yet',
           'Not Matched Yet',
           'Not Matched Yet',
-          '—',
+          first ? '—' : '',
           '—',
           '—',
         ]);
@@ -188,27 +191,32 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
       componentCounts.set(abbr, (componentCounts.get(abbr) || 0) + 1);
     });
 
-    // One serial number per requisition; each matched unit gets its own line
-    // but only the first shows the serial number.
+    // One serial number per requisition. Patient-level details (date,
+    // hospital, doctor, indication, recipient name/address, when required,
+    // card number) are shown only on the first line; each matched bag gets its
+    // own line below with only the per-bag columns filled (blood group,
+    // component, total bags of that component, crossmatch done-at/seen-at,
+    // compatibility test, issue date/time, bag no).
     matchedInventory.forEach((mi, i) => {
+      const first = i === 0;
       const inv = mi.inventoryId;
       const abbr = abbreviateComponent(inv?.componentId?.componentType);
       xmRows.push([
-        i === 0 ? xmSrNo : '',
-        r.requestedAt ? fmtDateTime(r.requestedAt) : '—',
-        r.hospitalId?.name || '—',
-        r.doctorName || '—',
-        r.patient?.indication || '—',
-        r.patient?.name || '—',
-        r.patient?.address || '—',
+        first ? xmSrNo : '',
+        first ? (r.requestedAt ? fmtDateTime(r.requestedAt) : '—') : '',
+        first ? (r.hospitalId?.name || '—') : '',
+        first ? (r.doctorName || '—') : '',
+        first ? (r.patient?.indication || '—') : '',
+        first ? (r.patient?.name || '—') : '',
+        first ? (r.patient?.address || '—') : '',
         inv?.bagNo ? `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}` : '—',
         abbr,
         componentCounts.get(abbr) || 0,
-        r.requiredAt ? fmtDateTime(r.requiredAt) : '—',
+        first ? (r.requiredAt ? fmtDateTime(r.requiredAt) : '—') : '',
         mi.crossmatchDoneAt ? fmtDateTime(mi.crossmatchDoneAt) : '—',
         mi.crossmatchSeenAt ? fmtDateTime(mi.crossmatchSeenAt) : '—',
         COMPATIBILITY_RESULT_LABELS[mi.compatibilityResult] || '—',
-        mi.cardNumber || '—',
+        first ? (mi.cardNumber || '—') : '',
         inv?.issuedAt ? fmtDateTime(inv.issuedAt) : '—',
         inv?.bagNo?.bagNo || '—',
       ]);
