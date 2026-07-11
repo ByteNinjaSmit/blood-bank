@@ -47,7 +47,6 @@ async function fetchAllRequisitions(filters) {
   const items = [];
   let page = 1;
   const limit = 1000;
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const res = await requisitionApi.listRequests({ ...filters, page, limit });
     if (!res.success) throw new Error(res.error || 'Failed to fetch requisitions');
@@ -76,22 +75,26 @@ function buildAllRequestsRows(records) {
   let srNo = 1;
   records.forEach((r) => {
     const components = r.requestedComponents || [];
+    // One serial number per requisition. When a requisition has multiple
+    // components they each get their own line, but only the first line shows
+    // the serial number (subsequent component lines leave it blank).
     if (components.length === 0) {
       rows.push([
-        srNo++, r.requestId || '—', r.hospitalId?.name || '—', r.patient?.name || '—',
+        srNo, r.requestId || '—', r.hospitalId?.name || '—', r.patient?.name || '—',
         r.patient?.age ?? '—', r.patient?.sex || '—', '—', '—', '—',
         r.requestedAt ? fmtDateTime(r.requestedAt) : '—', (r.status || '—').toUpperCase(),
       ]);
     } else {
-      components.forEach((rc) => {
+      components.forEach((rc, i) => {
         rows.push([
-          srNo++, r.requestId || '—', r.hospitalId?.name || '—', r.patient?.name || '—',
+          i === 0 ? srNo : '', r.requestId || '—', r.hospitalId?.name || '—', r.patient?.name || '—',
           r.patient?.age ?? '—', r.patient?.sex || '—', `${rc.bloodGroup}${rc.rh === 'Positive' ? '+' : rc.rh === 'Negative' ? '-' : rc.rh}`,
           rc.componentType || '—', rc.units || 0,
           r.requestedAt ? fmtDateTime(r.requestedAt) : '—', (r.status || '—').toUpperCase(),
         ]);
       });
     }
+    srNo++;
   });
   return rows;
 }
@@ -151,10 +154,12 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
         const abbr = abbreviateComponent(rc.componentType);
         requestedCounts.set(abbr, (requestedCounts.get(abbr) || 0) + (rc.units || 1));
       });
-      requested.forEach((rc) => {
+      // One serial number per requisition; multiple component lines share it
+      // (blank on the 2nd+ lines).
+      requested.forEach((rc, i) => {
         const abbr = rc ? abbreviateComponent(rc.componentType) : '—';
         xmRows.push([
-          xmSrNo++,
+          i === 0 ? xmSrNo : '',
           r.requestedAt ? fmtDateTime(r.requestedAt) : '—',
           r.hospitalId?.name || '—',
           r.doctorName || '—',
@@ -173,6 +178,7 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
           '—',
         ]);
       });
+      xmSrNo++;
       return;
     }
 
@@ -182,11 +188,13 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
       componentCounts.set(abbr, (componentCounts.get(abbr) || 0) + 1);
     });
 
-    matchedInventory.forEach((mi) => {
+    // One serial number per requisition; each matched unit gets its own line
+    // but only the first shows the serial number.
+    matchedInventory.forEach((mi, i) => {
       const inv = mi.inventoryId;
       const abbr = abbreviateComponent(inv?.componentId?.componentType);
       xmRows.push([
-        xmSrNo++,
+        i === 0 ? xmSrNo : '',
         r.requestedAt ? fmtDateTime(r.requestedAt) : '—',
         r.hospitalId?.name || '—',
         r.doctorName || '—',
@@ -205,6 +213,7 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
         inv?.bagNo?.bagNo || '—',
       ]);
     });
+    xmSrNo++;
   });
 
   const xmSheet = buildSheet(xmRows, {

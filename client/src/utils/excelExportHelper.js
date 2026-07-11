@@ -1,5 +1,5 @@
-import { apiClient } from '@/core/api-client';
 import { toast } from 'sonner';
+import { buildStyledSheet, XLSX } from '@/utils/xlsxStyleHelper';
 
 /**
  * Formats a date string/object to DD/MM/YYYY
@@ -59,25 +59,59 @@ export function buildExportMeta(filters = {}, { fromDate, toDate } = {}) {
 }
 
 /**
- * Central utility to trigger binary Excel generation on the backend.
+ * Central utility that renders one or more styled worksheets fully in the
+ * browser (via xlsx-js-style) — the same "proper heading + colored table"
+ * design used by the requisition and master donor/donation exports, with no
+ * server round-trip. Each `sheet` is { name, title, subtitle, headers, rows,
+ * stats, reportPeriod, filtersApplied, groupHeader, totalRowIndexes }.
  */
 export async function downloadExcelReport(sheets, filename = 'Report.xlsx') {
   try {
-    toast.info('Generating Excel report...');
-    const response = await apiClient.post('/api/v2/export/excel', {
-      filename,
-      sheets,
-    }, { responseType: 'blob' });
+    const wb = XLSX.utils.book_new();
 
-    const blob = new Blob([response.data], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    (sheets || []).forEach((sheet, idx) => {
+      const {
+        name = `Sheet${idx + 1}`,
+        title = 'SANJIVANI BLOOD BANK, KOPARGAON',
+        subtitle = '',
+        headers = [],
+        rows = [],
+        stats = [],
+        reportPeriod = 'All Records',
+        filtersApplied,
+        groupHeader,
+        totalRowIndexes,
+      } = sheet;
+
+      const statsParts = (stats || []).map((s) => `${s.label}: ${s.value}`);
+      if (filtersApplied) statsParts.push(`Filters — ${filtersApplied}`);
+      const statsLine = statsParts.length ? statsParts.join('     ·     ') : undefined;
+
+      // Auto column widths from header + cell content (min 10, max 45).
+      const colWidths = headers.map((h, c) => {
+        let maxLen = String(h ?? '').length;
+        rows.forEach((r) => {
+          const v = r[c];
+          if (v != null) maxLen = Math.max(maxLen, String(v).length);
+        });
+        return { wch: Math.min(45, Math.max(10, maxLen + 2)) };
+      });
+
+      const ws = buildStyledSheet(rows, {
+        title,
+        subtitle,
+        reportPeriod,
+        statsLine,
+        columns: headers,
+        colWidths,
+        groupHeader,
+        totalRowIndexes,
+        formatDateTime,
+      });
+      XLSX.utils.book_append_sheet(wb, ws, String(name).slice(0, 31));
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+
+    XLSX.writeFile(wb, filename);
     toast.success('Excel report downloaded successfully!');
   } catch (e) {
     toast.error(e.message || 'Failed to generate Excel report');
