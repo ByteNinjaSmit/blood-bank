@@ -7,6 +7,7 @@ import { BarChart3, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
 import { useExecutiveMis } from "../queries";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 
@@ -64,6 +65,7 @@ export default function ExecutiveMIS() {
       { Metric: "Issue per Donation", Value: ratios.issuePerDonation },
       { Metric: "Discard Rate", Value: ratios.discardRate + "%" },
     ]), "Executive Summary");
+    autoFitWorkbook(wb);
     XLSX.writeFile(wb, "executive_mis.xlsx");
   };
 

@@ -9,6 +9,7 @@ import { Layers, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
 import { useComponentMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -42,6 +43,7 @@ export default function ComponentMIS() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(production.map(p => ({ Component: p._id, Count: p.count, AvgVolume: p.avgVolume }))), "Production");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ageing.map(a => ({ AgeBucket: a._id, Count: a.count }))), "Ageing");
+    autoFitWorkbook(wb);
     XLSX.writeFile(wb, "component_mis.xlsx");
   };
 

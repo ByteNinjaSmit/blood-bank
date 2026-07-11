@@ -8,6 +8,7 @@ import { TrendingUp, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
 import { useAnalyticsMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -61,6 +62,7 @@ export default function AnalyticsMIS() {
       { Metric: "Current Stock", Value: currentStock },
       { Metric: "Shortage Risk", Value: shortageRisk },
     ]), "Analytics");
+    autoFitWorkbook(wb);
     XLSX.writeFile(wb, "analytics_mis.xlsx");
   };
 

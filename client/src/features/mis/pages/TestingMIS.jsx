@@ -9,6 +9,7 @@ import { FlaskConical, RefreshCw, FileText, FileSpreadsheet } from "lucide-react
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
 import { useSerologyMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -40,6 +41,7 @@ export default function TestingMIS() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(failures.map(f => ({ Test: f._id, PositiveCount: f.count }))), "Failures");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(overall.map(o => ({ Status: o._id, Count: o.count }))), "Overall");
+    autoFitWorkbook(wb);
     XLSX.writeFile(wb, "serology_mis.xlsx");
   };
 

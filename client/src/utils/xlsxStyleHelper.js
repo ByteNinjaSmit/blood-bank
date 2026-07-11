@@ -209,4 +209,60 @@ export function buildStyledSheet(rows, {
   return ws;
 }
 
+/**
+ * Auto-fit column widths (and wrap-aware row heights) on an already-built
+ * worksheet. For exports that assemble sheets directly with SheetJS
+ * (`json_to_sheet` / `aoa_to_sheet`) instead of `buildStyledSheet` — e.g. the
+ * MIS pages — so long values (addresses, names, reasons) size the column to
+ * fit instead of being clipped, matching the double-click auto-fit behaviour.
+ */
+export function autoFitColumns(ws, { minWch = 6, maxWch = 60 } = {}) {
+  if (!ws || !ws['!ref']) return ws;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+
+  const cellText = (r, c) => {
+    const cell = ws[XLSX.utils.encode_cell({ r, c })];
+    if (!cell) return '';
+    return cell.w != null ? String(cell.w) : cell.v != null ? String(cell.v) : '';
+  };
+
+  const cols = [];
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    let maxLen = 0;
+    for (let r = range.s.r; r <= range.e.r; r++) {
+      const longest = cellText(r, c).split('\n').reduce((m, line) => Math.max(m, line.length), 0);
+      if (longest > maxLen) maxLen = longest;
+    }
+    cols[c - range.s.c] = { wch: Math.min(maxWch, Math.max(minWch, maxLen + 2)) };
+  }
+  ws['!cols'] = cols;
+
+  const LINE_HT = 15;
+  const MAX_ROW_HT = 300;
+  const rows = [];
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    let maxLines = 1;
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const text = cellText(r, c);
+      if (!text) continue;
+      const wch = cols[c - range.s.c]?.wch || 18;
+      const lines = text.split('\n').reduce((sum, seg) => sum + Math.max(1, Math.ceil(seg.length / wch)), 0);
+      if (lines > maxLines) maxLines = lines;
+    }
+    rows[r - range.s.r] = { hpt: Math.min(MAX_ROW_HT, Math.max(16, maxLines * LINE_HT + 2)) };
+  }
+  ws['!rows'] = rows;
+  return ws;
+}
+
+/**
+ * Auto-fits every sheet in a workbook. Call once right before
+ * `XLSX.writeFile(wb, ...)` in exports that build sheets directly.
+ */
+export function autoFitWorkbook(wb) {
+  if (!wb || !wb.SheetNames) return wb;
+  wb.SheetNames.forEach((name) => autoFitColumns(wb.Sheets[name]));
+  return wb;
+}
+
 export { XLSX };

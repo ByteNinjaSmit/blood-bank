@@ -9,6 +9,7 @@ import { Users, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
 import { useDonorMis } from "../queries";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 
@@ -78,6 +79,7 @@ export default function DonorMIS() {
       LastDonation: d.lastDonationDate ? formatDate(d.lastDonationDate) : "",
     })));
     XLSX.utils.book_append_sheet(wb, wsDonors, "Donors");
+    autoFitWorkbook(wb);
     XLSX.writeFile(wb, "donor_mis.xlsx");
   };
 

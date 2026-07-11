@@ -9,6 +9,7 @@ import { Activity, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
 import { useDonationMis } from "../queries";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 
@@ -56,6 +57,7 @@ export default function DonationMIS() {
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), "Summary");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(breakdowns.byBloodGroup?.map(g => ({ BloodGroup: g._id, Count: g.count })) || []), "Blood Groups");
+    autoFitWorkbook(wb);
     XLSX.writeFile(wb, "donation_mis.xlsx");
   };
 

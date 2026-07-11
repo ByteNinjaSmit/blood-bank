@@ -9,6 +9,7 @@ import { Trash2, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
 import { useDiscardMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -39,6 +40,7 @@ export default function DiscardMIS() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(discards.map(d => ({ Reason: d._id, Count: d.count }))), "Reasons");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(typeWise.map(t => ({ Type: t._id, Count: t.count }))), "Types");
+    autoFitWorkbook(wb);
     XLSX.writeFile(wb, "discard_mis.xlsx");
   };
 

@@ -9,6 +9,7 @@ import { Scale, RefreshCw, FileText, FileSpreadsheet, CheckCircle, AlertTriangle
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
 import { useRegulatoryMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -62,6 +63,7 @@ export default function RegulatoryMIS() {
       { Metric: "Units Discarded", Value: number(data?.discarded) },
     ]), "Regulatory Data");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(testingByDisease.map(d => ({ Test: d.test, ReactiveCount: d.count }))), "By Disease");
+    autoFitWorkbook(wb);
     XLSX.writeFile(wb, "regulatory_mis.xlsx");
   };
 

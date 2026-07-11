@@ -9,6 +9,7 @@ import { Tent, RefreshCw, FileText, FileSpreadsheet, MapPin } from "lucide-react
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
 import { useCampMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -44,6 +45,7 @@ export default function CampMIS() {
       "Collected Bags": c.totalBags, "Discarded Bags": c.discardedBags, "Serology Failures": c.serologyFailures,
     })));
     XLSX.utils.book_append_sheet(wb, ws, "Camps");
+    autoFitWorkbook(wb);
     XLSX.writeFile(wb, "camp_mis.xlsx");
   };
 

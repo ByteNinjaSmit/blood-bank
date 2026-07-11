@@ -9,6 +9,7 @@ import { Droplet, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
 import { useBagMis } from "../queries";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 
@@ -48,6 +49,7 @@ export default function BagMIS() {
       BagNo: b.bagNo, DonorID: b.donor?.donorId || "-", BloodGroup: b.bloodGroup || "-",
       Component: b.componentType, CollectionDate: formatDate(b.collectionDate), Status: b.status,
     }))), "Bags");
+    autoFitWorkbook(wb);
     XLSX.writeFile(wb, "blood_bag_mis.xlsx");
   };
 

@@ -9,6 +9,7 @@ import { Package, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
 import { useInventoryMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -65,6 +66,7 @@ export default function InventoryMIS() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data_.map(item => ({
       BloodGroup: item._id.group, Rh: item._id.rh, Component: item._id.type, Count: item.count,
     }))), "Details");
+    autoFitWorkbook(wb);
     XLSX.writeFile(wb, "inventory_mis.xlsx");
   };
 

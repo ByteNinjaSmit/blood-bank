@@ -9,6 +9,7 @@ import { AlertTriangle, RefreshCw, FileText, FileSpreadsheet, Clock, Calendar } 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
 import { useAuditMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -46,6 +47,7 @@ export default function ExceptionMIS() {
   const exportExcel = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.map(r => ({ Exception: r.label, Count: r.value }))), "Exceptions");
+    autoFitWorkbook(wb);
     XLSX.writeFile(wb, "exception_mis.xlsx");
   };
 
