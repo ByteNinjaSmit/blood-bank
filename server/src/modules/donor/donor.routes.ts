@@ -178,6 +178,7 @@ router.get(
           components,
           eligibilityStatus: donor.eligibilityStatus,
           lastDonationDate: donor.lastDonationDate,
+          emergencyDonationWillingness: donor.emergencyDonationWillingness || '',
           source: donor.source,
         };
       });

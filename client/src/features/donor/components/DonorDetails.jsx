@@ -171,6 +171,16 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
                 }
               </p>
             </div>
+            <div className="md:col-span-2">
+              <p className="text-sm font-medium text-gray-700">Will you donate if we call in emergency?</p>
+              {donor.emergencyDonationWillingness === 'Yes' ? (
+                <span className="inline-flex mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-300">Yes</span>
+              ) : donor.emergencyDonationWillingness === 'No' ? (
+                <span className="inline-flex mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">No</span>
+              ) : (
+                <p className="text-gray-900">Not specified</p>
+              )}
+            </div>
           </div>
         </div>
 

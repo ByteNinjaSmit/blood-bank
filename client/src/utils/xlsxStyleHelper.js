@@ -55,6 +55,23 @@ const STATS_STYLE = {
   alignment: { horizontal: 'center', vertical: 'center' },
   fill: { fgColor: { rgb: 'FEF2F2' } },
 };
+// Whole-row highlight for TTI-reactive donors/donations — yellow fill.
+const HIGHLIGHT_ROW_STYLE = {
+  ...DATA_STYLE,
+  fill: { fgColor: { rgb: 'FEF08A' } },
+};
+// The reactive marker cell itself — solid red, bold white text.
+const RED_CELL_STYLE = {
+  ...DATA_STYLE,
+  font: { bold: true, sz: 9.5, color: { rgb: 'FFFFFF' }, name: 'Calibri' },
+  fill: { fgColor: { rgb: 'DC2626' } },
+};
+// Affirmative cell (e.g. "Yes" to emergency donation) — green highlight.
+const GREEN_CELL_STYLE = {
+  ...DATA_STYLE,
+  font: { bold: true, sz: 9.5, color: { rgb: 'FFFFFF' }, name: 'Calibri' },
+  fill: { fgColor: { rgb: '16A34A' } },
+};
 
 function setCellStyle(ws, r, c, style) {
   const addr = XLSX.utils.encode_cell({ r, c });
@@ -89,6 +106,9 @@ export function buildStyledSheet(rows, {
   groupHeader,
   colWidths,
   totalRowIndexes = [],
+  highlightRowIndexes = [],
+  redCells = [],
+  greenCells = [],
   formatDateTime,
 }) {
   const fmt = formatDateTime || ((d) => new Date(d).toLocaleString());
@@ -195,10 +215,19 @@ export function buildStyledSheet(rows, {
   }
 
   const totalRowSet = new Set(totalRowIndexes);
+  const highlightRowSet = new Set(highlightRowIndexes);
+  const redCellSet = new Set(redCells.map((rc) => `${rc.r}:${rc.c}`));
+  const greenCellSet = new Set(greenCells.map((rc) => `${rc.r}:${rc.c}`));
   rows.forEach((row, i) => {
     const r = dataStartRow + i;
-    const style = totalRowSet.has(i) ? TOTAL_ROW_STYLE : (i % 2 === 1 ? DATA_STYLE_ALT : DATA_STYLE);
+    const baseStyle = totalRowSet.has(i)
+      ? TOTAL_ROW_STYLE
+      : highlightRowSet.has(i)
+        ? HIGHLIGHT_ROW_STYLE
+        : (i % 2 === 1 ? DATA_STYLE_ALT : DATA_STYLE);
     for (let c = 0; c < numCols; c++) {
+      const key = `${i}:${c}`;
+      const style = redCellSet.has(key) ? RED_CELL_STYLE : greenCellSet.has(key) ? GREEN_CELL_STYLE : baseStyle;
       setCellStyle(ws, r, c, style);
     }
   });

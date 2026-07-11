@@ -55,13 +55,17 @@ function donationRow(d) {
   ];
 }
 
-function buildSheet(rows, { title, subtitle, generatedBy, reportScope }) {
+const TTI_STATUS_COL = COLUMNS.indexOf('TTI Status');
+
+function buildSheet(rows, { title, subtitle, generatedBy, reportScope, highlightRowIndexes, redCells }) {
   return buildStyledSheet(rows, {
     title,
     subtitle,
     generatedBy,
     reportPeriod: reportScope,
     columns: COLUMNS,
+    highlightRowIndexes,
+    redCells,
     formatDateTime: fmtDateTime,
   });
 }
@@ -73,12 +77,23 @@ export async function exportDonationRegister(register, scope, filters, generated
   const rows = scope === 'filtered' ? allItems.filter((d) => matchesFilters(d, filters)) : allItems;
 
   const sheetLabel = register === 'camp' ? 'Camp Donations' : register === 'inhouse' ? 'Inhouse Donations' : 'Master Donation Register';
+  // TTI-reactive donations → yellow row + red TTI Status cell.
+  const highlightRowIndexes = [];
+  const redCells = [];
+  rows.forEach((d, i) => {
+    if (statusOf(d) === 'failed') {
+      highlightRowIndexes.push(i);
+      redCells.push({ r: i, c: TTI_STATUS_COL });
+    }
+  });
   const wb = XLSX.utils.book_new();
   const ws = buildSheet(rows.map(donationRow), {
     title: 'Sanjivani Blood Bank, Kopargaon',
     subtitle: `${sheetLabel} — Donation Register`,
     generatedBy,
     reportScope: scope === 'filtered' ? 'Filtered View' : 'All Records',
+    highlightRowIndexes,
+    redCells,
   });
   XLSX.utils.book_append_sheet(wb, ws, sheetLabel.slice(0, 31));
   const dateStr = new Date().toISOString().slice(0, 10);

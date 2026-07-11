@@ -26,7 +26,7 @@ const COMPONENT_STATUS_LABELS = {
   expired: 'Expired',
 };
 
-function buildTitledSheet(rows, { title, subtitle, generatedBy, reportScope, columns, colWidths }) {
+function buildTitledSheet(rows, { title, subtitle, generatedBy, reportScope, columns, colWidths, highlightRowIndexes, redCells, greenCells }) {
   return buildStyledSheet(rows, {
     title,
     subtitle,
@@ -34,8 +34,51 @@ function buildTitledSheet(rows, { title, subtitle, generatedBy, reportScope, col
     reportPeriod: reportScope,
     columns,
     colWidths,
+    highlightRowIndexes,
+    redCells,
+    greenCells,
     formatDateTime: fmtDateTime,
   });
+}
+
+// A TTI marker is reactive when it's positive/reactive (but not the common
+// "Non-Reactive"/"Negative" wordings).
+function isReactiveTti(v) {
+  if (v == null) return false;
+  const s = String(v).toUpperCase();
+  if (s.includes('NON')) return false; // Non-Reactive
+  return s.includes('REACTIVE') || s === 'POSITIVE' || s === 'POS';
+}
+
+// Column indexes of the five TTI markers in DONOR_REGISTER_COLUMNS, in the
+// same order donorRegisterRow emits them (HIV, HBs, HCV, VDRL, M.P.).
+const DONOR_TTI_COLS = [14, 15, 16, 17, 18];
+
+function donorTtiValues(d) {
+  return [d.tti?.HIV, d.tti?.HBSAG, d.tti?.HCV, d.tti?.SYPHILIS, d.tti?.MALARIA];
+}
+
+// Builds { highlightRowIndexes, redCells } for a donor row set: any donor with
+// a reactive marker gets a yellow row and each reactive marker cell goes red.
+function donorReactiveHighlights(donors) {
+  const highlightRowIndexes = [];
+  const redCells = [];
+  const greenCells = [];
+  donors.forEach((d, i) => {
+    let anyReactive = false;
+    donorTtiValues(d).forEach((val, m) => {
+      if (isReactiveTti(val)) {
+        anyReactive = true;
+        redCells.push({ r: i, c: DONOR_TTI_COLS[m] });
+      }
+    });
+    if (anyReactive) highlightRowIndexes.push(i);
+    // "Yes" to emergency donation → green cell.
+    if (String(d.emergencyDonationWillingness).toUpperCase() === 'YES') {
+      greenCells.push({ r: i, c: EMERGENCY_COL });
+    }
+  });
+  return { highlightRowIndexes, redCells, greenCells };
 }
 
 // Donor register — one row per donor, enriched server-side with their most
@@ -52,8 +95,10 @@ const DONOR_REGISTER_COLUMNS = [
   'Weight (Kg)', 'Pulse (BPM)', 'Hb (Gm%)', 'Rh Typing', 'Atypical Antibody',
   'HIV 1 & 2', 'HBs', 'HCV', 'VDRL', 'M.P.',
   'Components Prepared (Type: Volume mL)', 'Component Status', 'Status Date',
-  'Eligibility Status', 'Last Donation Date',
+  'Eligibility Status', 'Last Donation Date', 'Will Donate in Emergency',
 ];
+
+const EMERGENCY_COL = DONOR_REGISTER_COLUMNS.indexOf('Will Donate in Emergency');
 
 function donorRegisterRow(d) {
   const componentsStr = (d.components || [])
@@ -91,18 +136,23 @@ function donorRegisterRow(d) {
     statusDateStr,
     d.eligibilityStatus || '—',
     d.lastDonationDate ? fmtDate(d.lastDonationDate) : '—',
+    d.emergencyDonationWillingness || '—',
   ];
 }
 
 async function exportDonorRegister(source, sheetLabel, scope, filters, generatedBy) {
   const rows = await fetchDonorRegisterRows(source === 'all' ? undefined : source, scope === 'filtered' ? filters : {});
   const wb = XLSX.utils.book_new();
+  const { highlightRowIndexes, redCells, greenCells } = donorReactiveHighlights(rows);
   const ws = buildTitledSheet(rows.map(donorRegisterRow), {
     title: 'Sanjivani Blood Bank, Kopargaon',
     subtitle: `${sheetLabel} — Donor Register`,
     generatedBy,
     reportScope: scope === 'filtered' ? 'Filtered View' : 'All Records',
     columns: DONOR_REGISTER_COLUMNS,
+    highlightRowIndexes,
+    redCells,
+    greenCells,
   });
   XLSX.utils.book_append_sheet(wb, ws, sheetLabel.slice(0, 31));
   const dateStr = new Date().toISOString().slice(0, 10);

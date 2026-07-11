@@ -6,6 +6,7 @@ import type {
 import { NotFoundError } from '@/shared/errors';
 import { DonorModel } from './donor.model';
 import { DonationModel } from '@/modules/donation/donation.model';
+import { DeferralModel } from '@/modules/deferral/deferral.model';
 import { CampModel } from '@/modules/camp/camp.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
@@ -37,6 +38,7 @@ export interface DonorDto {
   eligibilityStatus?: 'eligible' | 'deferred' | 'temp-deferred';
   lastDonationDate?: string;
   lastDonationId?: string;
+  emergencyDonationWillingness?: string;
   isAvailableToDonate?: boolean;
   daysUntilEligible?: number;
   ttiReactive?: boolean;
@@ -62,6 +64,7 @@ interface RawDonor {
   rh: DonorDto['rh'];
   eligibilityStatus?: DonorDto['eligibilityStatus'];
   lastDonationDate?: Date;
+  emergencyDonationWillingness?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -119,6 +122,7 @@ export function toDto(raw: any): any {
     rh: raw.rh === 'POSITIVE' ? 'Positive' : raw.rh === 'NEGATIVE' ? 'Negative' : raw.rh,
     eligibilityStatus: raw.eligibilityStatus,
     lastDonationDate: raw.lastDonationDate ? (raw.lastDonationDate instanceof Date ? raw.lastDonationDate.toISOString() : new Date(raw.lastDonationDate).toISOString()) : undefined,
+    emergencyDonationWillingness: raw.emergencyDonationWillingness || '',
     isAvailableToDonate,
     daysUntilEligible,
     deletedAt: raw.deletedAt ? (raw.deletedAt instanceof Date ? raw.deletedAt.toISOString() : new Date(raw.deletedAt).toISOString()) : null,
@@ -194,6 +198,25 @@ async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto[]> {
       { id: d.lastDonationId.toString(), date: d.lastDonationDate, ttiReactive: Boolean(d.ttiReactive) },
     ]),
   );
+
+  // Derive each donor's eligibility from their currently-active deferrals so
+  // the register always reflects reality — even for donors deferred (e.g. TTI
+  // reactive) before the stored eligibilityStatus field was kept in sync.
+  const nowTs = new Date();
+  const activeDeferrals = (await DeferralModel.find({
+    donor: { $in: donorIds },
+    liftedAt: null,
+    $or: [{ type: 'PERMANENT' }, { type: 'TEMPORARY', untilDate: { $gt: nowTs } }],
+  })
+    .select('donor type')
+    .lean()) as Array<{ donor: { toString(): string }; type: string }>;
+  const deferralStatusMap = new Map<string, 'deferred' | 'temp-deferred'>();
+  activeDeferrals.forEach((d) => {
+    const key = d.donor.toString();
+    if (d.type === 'PERMANENT') deferralStatusMap.set(key, 'deferred');
+    else if (deferralStatusMap.get(key) !== 'deferred') deferralStatusMap.set(key, 'temp-deferred');
+  });
+
   return dtos.map(dto => {
     const dbDonation = donationMap.get(dto.id);
     let effectiveDate = dto.lastDonationDate;
@@ -223,13 +246,21 @@ async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto[]> {
       }
     }
 
+    const deferStatus = deferralStatusMap.get(dto.id);
+    const ttiReactive = Boolean(dbDonation?.ttiReactive);
+    // A TTI-reactive donor is permanently deferred; otherwise fall back to any
+    // active deferral, then the stored status. Never show eligible when the
+    // donor is reactive or under an active deferral.
+    const effectiveEligibility = ttiReactive ? 'deferred' : (deferStatus || dto.eligibilityStatus);
+
     return {
       ...dto,
       lastDonationId: dbDonation?.id,
       lastDonationDate: effectiveDate,
-      isAvailableToDonate,
+      isAvailableToDonate: (ttiReactive || deferStatus) ? false : isAvailableToDonate,
       daysUntilEligible,
-      ttiReactive: Boolean(dbDonation?.ttiReactive),
+      ttiReactive,
+      eligibilityStatus: effectiveEligibility,
     };
   });
 }

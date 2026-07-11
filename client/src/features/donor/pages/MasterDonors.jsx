@@ -15,7 +15,7 @@ import DonorEditModal from './master-donors/DonorEditModal';
 
 const MasterDonors = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('inhouse');
+  const [activeTab, setActiveTab] = useState('all');
   const reg = useDonorRegister(activeTab);
 
   const switchTab = (key) => {

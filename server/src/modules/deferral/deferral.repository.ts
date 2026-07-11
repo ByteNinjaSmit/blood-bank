@@ -84,6 +84,25 @@ function toDto(raw: RawDeferral): DeferralDto {
   };
 }
 
+// Keeps the donor's own eligibilityStatus in sync with their active
+// deferrals: any active PERMANENT → 'deferred', any active TEMPORARY →
+// 'temp-deferred', otherwise 'eligible'. Called on create/lift so a
+// TTI-reactive permanent deferral immediately marks the donor deferred in
+// the register and blocks future donations.
+async function syncDonorEligibility(donorId: string, now = new Date()): Promise<void> {
+  const active = (await DeferralModel.find({
+    donor: new Types.ObjectId(donorId),
+    liftedAt: null,
+    $or: [{ type: 'PERMANENT' }, { type: 'TEMPORARY', untilDate: { $gt: now } }],
+  }).lean()) as RawDeferral[];
+
+  let status: 'eligible' | 'deferred' | 'temp-deferred' = 'eligible';
+  if (active.some((d) => d.type === 'PERMANENT')) status = 'deferred';
+  else if (active.length > 0) status = 'temp-deferred';
+
+  await DonorModel.updateOne({ _id: new Types.ObjectId(donorId) }, { eligibilityStatus: status });
+}
+
 export function createDeferralRepo(): DeferralRepo {
   return {
     async create(input, actorId) {
@@ -99,6 +118,7 @@ export function createDeferralRepo(): DeferralRepo {
         createdBy: actor,
         updatedBy: actor,
       });
+      await syncDonorEligibility(input.donor);
       return toDto(doc.toObject() as RawDeferral);
     },
 
@@ -196,6 +216,9 @@ export function createDeferralRepo(): DeferralRepo {
           updatedBy: new Types.ObjectId(actorId),
         },
       );
+      // Recompute the donor's eligibility now that this deferral is inactive.
+      const lifted = (await DeferralModel.findById(id).select('donor').lean()) as { donor?: { toString(): string } } | null;
+      if (lifted?.donor) await syncDonorEligibility(lifted.donor.toString());
     },
   };
 }

@@ -339,6 +339,7 @@ export default function DonorCreation() {
       occupation: donor.occupation || "",
       lastDonationDate: lddISO,
       lastDonationDateDisplay: lddDisplay,
+      emergencyDonationWillingness: donor.emergencyDonationWillingness || "",
     }));
   };
 
@@ -763,6 +764,7 @@ export default function DonorCreation() {
         eligibilityStatus: (repeatedDonation === "Yes" && selectedDonor) ? (selectedDonor.eligibilityStatus || "eligible") : "eligible",
         occupation: formData.occupation || undefined,
         lastDonationDate: formData.lastDonationDate ? new Date(formData.lastDonationDate).toISOString() : undefined,
+        emergencyDonationWillingness: formData.emergencyDonationWillingness || undefined,
       };
 
       if (repeatedDonation === "Yes" && selectedDonor) {
@@ -799,6 +801,7 @@ export default function DonorCreation() {
           pincode: cleanStr(formData.pincode) !== cleanStr(address.pincode),
           occupation: cleanStr(formData.occupation) !== cleanStr(selectedDonor.occupation),
           lastDonationDate: getISODateOnly(formData.lastDonationDate) !== getISODateOnly(selectedDonor.lastDonationDate),
+          emergencyDonationWillingness: cleanStr(formData.emergencyDonationWillingness) !== cleanStr(selectedDonor.emergencyDonationWillingness),
         };
 
         const hasChanged = Object.values(diffs).some((hasChanged) => hasChanged);
@@ -878,6 +881,7 @@ export default function DonorCreation() {
         eligibilityStatus: formData.donorIsFit ? "eligible" : (formData.deferralReasonObj?.days === 0 ? "deferred" : "temp-deferred"),
         occupation: formData.occupation || undefined,
         lastDonationDate: formData.lastDonationDate ? new Date(formData.lastDonationDate).toISOString() : undefined,
+        emergencyDonationWillingness: formData.emergencyDonationWillingness || undefined,
       };
 
       let registeredDonorId = "";

@@ -88,9 +88,12 @@ export default function DonationRegisterTable({
                     </td>
                     <td className="px-4 py-3 text-center text-gray-700 font-medium">{d.unitCount}</td>
                     <td className="px-4 py-3">
-                      {d.isFit === true  && <span className="px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200 font-medium">Fit</span>}
-                      {d.isFit === false && <span className="px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-200 font-medium">Unfit</span>}
-                      {d.isFit == null   && <span className="text-gray-400 text-xs">—</span>}
+                      {/* A TTI-reactive donation is Unfit regardless of the stored fitness flag. */}
+                      {isReactive
+                        ? <span className="px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-200 font-medium">Unfit</span>
+                        : d.isFit === true  ? <span className="px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200 font-medium">Fit</span>
+                        : d.isFit === false ? <span className="px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-200 font-medium">Unfit</span>
+                        : <span className="text-gray-400 text-xs">—</span>}
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
                       {new Date(d.collectedAt).toLocaleDateString('en-IN', {

@@ -81,6 +81,8 @@ export async function downloadExcelReport(sheets, filename = 'Report.xlsx') {
         filtersApplied,
         groupHeader,
         totalRowIndexes,
+        highlightRowIndexes,
+        redCells,
       } = sheet;
 
       const statsParts = (stats || []).map((s) => `${s.label}: ${s.value}`);
@@ -97,6 +99,8 @@ export async function downloadExcelReport(sheets, filename = 'Report.xlsx') {
         columns: headers,
         groupHeader,
         totalRowIndexes,
+        highlightRowIndexes,
+        redCells,
         formatDateTime,
       });
       XLSX.utils.book_append_sheet(wb, ws, String(name).slice(0, 31));
@@ -285,9 +289,28 @@ export async function exportSerologyResults(items, meta = {}) {
   const headers = ['Sr No', 'Bag No', 'Segment No', 'Blood Group', 'Collected Date', 'Serology Status', 'Tests & Outcomes'];
   const alignments = ['center', 'center', 'center', 'center', 'center', 'center', 'left'];
 
+  // A test/status is reactive when it isn't negative/non-reactive/pending.
+  const isReactiveVal = (v) => {
+    if (v == null) return false;
+    const s = String(v).toUpperCase();
+    if (s.includes('NON')) return false; // Non-Reactive
+    return s.includes('REACTIVE') || s === 'POSITIVE' || s === 'UNFIT';
+  };
+
+  const STATUS_COL = 5;
+  const TESTS_COL = 6;
+  const highlightRowIndexes = [];
+  const redCells = [];
+
   const rows = items.map((r, i) => {
-    const testRuns = r.tests || r.testRuns || [];
-    const testOutcomes = testRuns.map(t => `${t.testName || t.name}: ${t.result || 'PENDING'}`).join(', ') || 'No Tests Run';
+    const testRuns = r.tests || r.testRuns || r.testResults || [];
+    const testOutcomes = testRuns.map(t => `${t.testName || t.name || t.test}: ${t.result || 'PENDING'}`).join(', ') || 'No Tests Run';
+    const anyReactive = isReactiveVal(r.status) || testRuns.some((t) => isReactiveVal(t.result));
+    if (anyReactive) {
+      highlightRowIndexes.push(i);
+      redCells.push({ r: i, c: STATUS_COL });
+      redCells.push({ r: i, c: TESTS_COL });
+    }
     return [
       i + 1,
       r.bagNo || '—',
@@ -313,6 +336,8 @@ export async function exportSerologyResults(items, meta = {}) {
     rows,
     alignments,
     stats,
+    highlightRowIndexes,
+    redCells,
     ...meta,
   }], 'Serology_Lab_Results.xlsx');
 }

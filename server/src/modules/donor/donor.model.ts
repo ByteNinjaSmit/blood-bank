@@ -38,6 +38,8 @@ const DonorSchema = new Schema(
       index: true,
     },
     lastDonationDate: { type: Date, index: true },
+    // Donor's answer to "Will you donate if we call in emergency?" (Yes/No).
+    emergencyDonationWillingness: { type: String, enum: ['Yes', 'No', ''], default: '' },
     // 768-dim dense vector for Atlas Vector Search (populated by embedding job).
     // select:false keeps it out of normal queries; sparse avoids wasted index space.
     embedding: { type: [Number], default: null, select: false },

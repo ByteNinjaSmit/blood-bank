@@ -44,6 +44,7 @@ export const CreateDonorBody = z.object({
   eligibilityStatus: blankToUndef(z.enum(['eligible', 'deferred', 'temp-deferred']).optional()),
   campId: blankToUndef(z.string().regex(OBJECT_ID, 'Invalid camp id').optional()),
   lastDonationDate: blankToUndef(z.coerce.date().optional()),
+  emergencyDonationWillingness: blankToUndef(z.enum(['Yes', 'No']).optional()),
 });
 export type CreateDonorInput = z.infer<typeof CreateDonorBody>;
 
