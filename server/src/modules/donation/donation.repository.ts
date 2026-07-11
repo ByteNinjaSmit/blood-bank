@@ -37,6 +37,7 @@ export interface DonationDto {
   deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  components?: Array<{ componentType: string; volumeMl: number; status: string }>;
 }
 
 export interface DonationWithUnitsDto extends DonationDto {
@@ -431,26 +432,36 @@ export function createDonationRepo(): DonationRepo {
         BloodUnitModel.find({
           donationId: { $in: docs.map((d) => d.donationId) },
           deletedAt: null
-        }).select('donationId status').lean(),
+        }).select('donationId componentType volumeMl status').lean(),
         TtiResultModel.find({
           donationId: { $in: docs.map((d) => d.donationId) }
         }).select('donationId aboGroupConfirmed rhFactorConfirmed releaseDecision').lean()
       ]);
 
-      const unitMap = new Map<string, string[]>();
+      const unitMap = new Map<string, typeof unitDocs>();
       for (const u of unitDocs) {
         if (!unitMap.has(u.donationId)) {
           unitMap.set(u.donationId, []);
         }
-        unitMap.get(u.donationId)!.push(u.status);
+        unitMap.get(u.donationId)!.push(u);
       }
+
+      // Legacy status label used across the donor/donation register exports.
+      const legacyComponentStatus = (status: string) => {
+        if (status === 'RESERVED' || status === 'CROSSMATCHED') return 'reserved';
+        if (status === 'ISSUED' || status === 'TRANSFUSED') return 'utilized';
+        if (status === 'DISCARDED') return 'discarded';
+        if (status === 'EXPIRED') return 'expired';
+        return 'in-stock';
+      };
 
       const ttiMap = new Map(ttiResults.map((t) => [t.donationId, t]));
       return {
         items: docs.map((d) => {
           const donorDoc = d.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string }; bloodGroup?: string; rh?: string };
           const tti = ttiMap.get(d.donationId);
-          const statuses = unitMap.get(d.donationId) || [];
+          const units = unitMap.get(d.donationId) || [];
+          const statuses = units.map((u) => u.status);
 
           let status = 'collected';
           if (d.donorFitness?.isFit === false) {
@@ -485,6 +496,11 @@ export function createDonationRepo(): DonationRepo {
             deletedAt: d.deletedAt ? new Date(d.deletedAt as unknown as Date).toISOString() : null,
             createdAt: (d as unknown as { createdAt: Date }).createdAt.toISOString(),
             updatedAt: (d as unknown as { updatedAt: Date }).updatedAt.toISOString(),
+            components: units.map((u) => ({
+              componentType: u.componentType,
+              volumeMl: u.volumeMl,
+              status: legacyComponentStatus(u.status),
+            })),
           };
         }),
         total,

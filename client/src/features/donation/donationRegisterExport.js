@@ -36,10 +36,25 @@ function matchesFilters(d, filters) {
   return true;
 }
 
+const COMPONENT_STATUS_LABELS = {
+  'in-stock': 'In Stock',
+  reserved: 'Reserved',
+  utilized: 'Utilized',
+  discarded: 'Discarded',
+  expired: 'Expired',
+};
+
 const COLUMNS = [
   'Bag No', 'Donor Name', 'Donation Type', 'Bag Type', 'Blood Group',
   'Units Count', 'Fitness Status', 'Collection Date & Time', 'TTI Status',
+  'Components Prepared (Type: Volume mL)',
 ];
+
+function componentsStr(d) {
+  return (d.components || [])
+    .map((c) => `${c.componentType}: ${c.volumeMl ?? '—'} mL (${COMPONENT_STATUS_LABELS[c.status] || c.status})`)
+    .join('\n') || '—';
+}
 
 function donationRow(d) {
   return [
@@ -52,6 +67,7 @@ function donationRow(d) {
     d.isFit === true ? 'Fit' : d.isFit === false ? 'Unfit' : 'Pending',
     fmtDateTime(d.collectedAt),
     (statusOf(d) || '—').toUpperCase(),
+    componentsStr(d),
   ];
 }
 

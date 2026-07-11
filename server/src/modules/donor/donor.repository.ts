@@ -450,6 +450,23 @@ export function createDonorRepo(): DonorRepo {
         filter.createdAt = range;
       }
 
+      // Donors deferred at registration (temp or permanent) who never went on
+      // to actually donate are noise here — they belong only in the Donor
+      // Deferral Register. A donor who *did* donate and was deferred later
+      // (e.g. TTI reactive lookback) still has a donation on record, so they
+      // still show up in this list.
+      if (!input.deletedOnly) {
+        const donatedDonorIds = await DonationModel.distinct('donor');
+        filter.$and = ((filter.$and as unknown[]) || []).concat([
+          {
+            $or: [
+              { eligibilityStatus: { $nin: ['deferred', 'temp-deferred'] } },
+              { _id: { $in: donatedDonorIds } },
+            ],
+          },
+        ]);
+      }
+
       const sortField = input.sortBy === 'name' ? 'name.firstName' : input.sortBy;
       const sortDir = input.order === 'asc' ? 1 : -1;
 
