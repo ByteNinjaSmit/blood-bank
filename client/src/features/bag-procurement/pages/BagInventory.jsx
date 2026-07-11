@@ -62,10 +62,18 @@ export default function BagInventory() {
         - (s.issuedQty ?? 0) - (s.damagedQty ?? 0) - (s.discardedQty ?? 0);
       const zeroStock  = closing === 0;
       const statusVal = zeroStock ? 'OUT_OF_STOCK' : (s.unopenedBoxes === 0 ? 'LOW_STOCK' : 'AVAILABLE');
+      const totalBoxes = Math.floor((s.receivedQty ?? 0) / 45);
       return {
-        bagId: s.batchNumber || s.batchNo || s.id || s._id,
-        capacityMl: s.bagType || '—',
-        anticoagulant: `${s.unopenedBoxes} Box (${closing} bags remaining)`,
+        bagType: s.bagType || '—',
+        batchNo: s.batchNumber || s.batchNo || s.id || s._id,
+        expiryDate: s.expiryDate,
+        totalBoxes,
+        openedBoxes: Math.max(0, totalBoxes - (s.unopenedBoxes ?? 0)),
+        unopenedBoxes: s.unopenedBoxes ?? 0,
+        remainingBags: closing,
+        issuedQty: s.issuedQty ?? 0,
+        discardedQty: s.discardedQty ?? 0,
+        damagedQty: s.damagedQty ?? 0,
         status: statusVal,
       };
     });

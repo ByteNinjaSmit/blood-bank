@@ -198,34 +198,31 @@ export default function PurchaseEntry() {
         return;
       }
 
-      // Flatten invoice purchase records to item level
-      const flattened = [];
-      rawPurchases.forEach((p) => {
-        const invoiceItems = p.items || [];
-        if (invoiceItems.length === 0) {
-          flattened.push({
-            invoiceNumber: p.invoiceNumber || '—',
-            purchaseDate: p.purchaseDate,
-            supplierName: p.supplierId?.name || '—',
-            chemicalName: '—',
-            quantity: 0,
-            unitPrice: 0,
-          });
-        } else {
-          invoiceItems.forEach((item) => {
-            flattened.push({
-              invoiceNumber: p.invoiceNumber || '—',
-              purchaseDate: p.purchaseDate,
-              supplierName: p.supplierId?.name || '—',
-              chemicalName: item.chemicalId?.name || '—',
-              quantity: item.qtyPurchased || 0,
-              unitPrice: item.costPerUnit || 0,
-            });
-          });
-        }
-      });
+      // Map to invoice-level records with nested items (expanded to
+      // multi-line-under-single-serial inside the export helper).
+      const dataToExport = rawPurchases.map((p) => ({
+        invoiceNumber: p.invoiceNumber || '—',
+        purchaseDate: p.purchaseDate,
+        supplierName: p.supplierId?.name || '—',
+        totalAmount: p.totalAmount || 0,
+        paidAmount: p.paidAmount || 0,
+        balance: Math.max(0, (p.totalAmount || 0) - (p.paidAmount || 0)),
+        paymentStatus: p.paymentStatus || '—',
+        items: (p.items || []).map((item) => ({
+          chemicalName: item.chemicalId?.name || '—',
+          manufacturer: item.manufacturer || '—',
+          packType: item.packType || '—',
+          batchNumber: item.batchNumber || '—',
+          expiryDate: item.expiryDate,
+          quantity: item.qtyPurchased || 0,
+          unitPrice: item.costPerUnit || 0,
+          cgstAmount: item.cgstAmount || 0,
+          sgstAmount: item.sgstAmount || 0,
+          itemTotal: item.totalAmount || 0,
+        })),
+      }));
 
-      await exportChemicalPurchase(flattened);
+      await exportChemicalPurchase(dataToExport);
     } catch (e) {
       console.error(e);
       toast.error("Failed to generate Excel report");

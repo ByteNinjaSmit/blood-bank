@@ -218,15 +218,28 @@ export default function BagIssuance() {
   });
 
   const mapIssuanceForExport = (items) => {
-    return items.map(iss => ({
-      bagNo: iss.bagSerialNumber ?? iss.bagSerialNo ?? '—',
-      segmentNo: iss.segmentNo ?? '—',
-      bagType: iss.bagType || '—',
-      bloodGroup: iss.bloodGroup ?? '—',
-      batchNo: iss.batchNumber ?? iss.batchNo ?? '—',
-      issueDate: iss.issueDate || iss.createdAt,
-      status: iss.status === 'DAMAGED' ? 'DISCARDED' : (iss.status || 'ISSUED'),
-    }));
+    return items.map(iss => {
+      const donor = typeof iss.donorId === 'object' && iss.donorId ? iss.donorId : null;
+      const donation = typeof iss.donationId === 'object' && iss.donationId ? iss.donationId : null;
+      const donorName = donor
+        ? [donor.name?.firstName, donor.name?.middleName, donor.name?.lastName].filter(Boolean).join(' ')
+        : '';
+      return {
+        bagNo: iss.bagSerialNumber ?? iss.bagSerialNo ?? '—',
+        segmentNo: iss.segmentNo ?? '—',
+        bagType: iss.bagType || '—',
+        bloodGroup: iss.bloodGroup ?? '—',
+        batchNo: iss.batchNumber ?? iss.batchNo ?? '—',
+        collectionRoom: iss.collectionRoom || '—',
+        issueDate: iss.issueDate || iss.createdAt,
+        status: iss.status === 'DAMAGED' ? 'DISCARDED' : (iss.status || 'ISSUED'),
+        donorName: donorName || '—',
+        donorBloodGroup: donor ? `${donor.bloodGroup ?? ''} ${donor.rh ?? ''}`.trim() || '—' : '—',
+        donorPhone: donor?.phone || '—',
+        donationId: donation?.donationId || '—',
+        notes: iss.notes || '—',
+      };
+    });
   };
 
   const handleExportExcel = async (exportAll = false) => {

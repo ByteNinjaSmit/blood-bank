@@ -125,20 +125,33 @@ export async function downloadExcelReport(sheets, filename = 'Report.xlsx') {
 
 // 1. Camp Donors
 export async function exportCampDonors(items, campName = 'Camp', meta = {}) {
-  const headers = ['Sr No', 'Full Name', 'DOB', 'Sex', 'Phone', 'Blood Group', 'Last Donation', 'Status'];
-  const alignments = ['center', 'left', 'center', 'center', 'left', 'center', 'center', 'center'];
-  
+  const headers = ['Sr No', 'Full Name', 'DOB', 'Age', 'Sex', 'Phone', 'Email', 'Blood Group', 'Last Donation', 'Status'];
+
+  const ageFromDob = (dob) => {
+    if (!dob) return '—';
+    const b = new Date(dob);
+    if (Number.isNaN(b.getTime())) return '—';
+    const now = new Date();
+    let age = now.getFullYear() - b.getFullYear();
+    const m = now.getMonth() - b.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+    return age >= 0 ? age : '—';
+  };
+
   const rows = items.map((r, i) => {
-    const fullName = r.name 
+    const fullName = r.name
       ? (typeof r.name === 'object' ? [r.name.firstName, r.name.middleName, r.name.lastName].filter(Boolean).join(' ') : r.name)
       : '—';
+    const bg = r.rh ? `${r.bloodGroup ?? ''} ${r.rh}`.trim() : (r.bloodGroup || '—');
     return [
       i + 1,
       fullName,
       formatDate(r.dob),
+      ageFromDob(r.dob),
       r.sex || '—',
       r.phone || '—',
-      r.bloodGroup || '—',
+      r.email || '—',
+      bg || '—',
       formatDate(r.lastDonationDate),
       (r.status || 'Active').toUpperCase(),
     ];
@@ -146,7 +159,7 @@ export async function exportCampDonors(items, campName = 'Camp', meta = {}) {
 
   const stats = [
     { label: 'Total Donors', value: items.length },
-    { label: 'Deals/Temporary Deferrals', value: items.filter(r => r.status?.toLowerCase() === 'deferred').length },
+    { label: 'Temporary/Deferred', value: items.filter(r => r.status?.toLowerCase() === 'deferred').length },
   ];
 
   await downloadExcelReport([{
@@ -155,7 +168,6 @@ export async function exportCampDonors(items, campName = 'Camp', meta = {}) {
     subtitle: `Camp Donor Registry - ${campName}`,
     headers,
     rows,
-    alignments,
     stats,
     ...meta,
   }], `Camp_Donors_${campName.replace(/\s+/g, '_')}.xlsx`);
@@ -602,18 +614,38 @@ export async function exportMasterDonations(items, meta = {}) {
 
 // 10. Procurement Inspection
 export async function exportProcurementInspection(items, meta = {}) {
-  const headers = ['Sr No', 'Inspection ID', 'Batch No', 'PO Number', 'Inspection Date', 'Inspector Name', 'Status'];
-  const alignments = ['center', 'center', 'center', 'center', 'center', 'left', 'center'];
+  const yn = (v) => (v === true ? 'Yes' : v === false ? 'No' : '—');
+  const headers = [
+    'Sr No', 'Inspection ID', 'Batch No', 'PO Number', 'Bag No', 'Segment No', 'Blood Group',
+    'Sample Size', 'Testing Type', 'Testing Lab', 'Inspection Date', 'Inspector', 'Decision / Status',
+    'Seal Intact', 'No Leakage', 'Tube Integrity', 'Needle Condition OK', 'Label Present', 'Sterility Check', 'Packaging Condition',
+  ];
 
-  const rows = items.map((r, i) => [
-    i + 1,
-    r.inspectionId || r._id || '—',
-    r.batchNo || '—',
-    r.poNumber || '—',
-    formatDate(r.inspectionDate),
-    r.inspectorName || '—',
-    (r.status || '—').toUpperCase(),
-  ]);
+  const rows = items.map((r, i) => {
+    const c = r.physicalChecks || {};
+    return [
+      i + 1,
+      r.inspectionId || r._id || '—',
+      r.batchNo || '—',
+      r.poNumber || '—',
+      r.bagNo || '—',
+      r.segmentNo || '—',
+      r.bloodGroup || '—',
+      r.sampleSize ?? '—',
+      r.testingType || '—',
+      r.testingLab || '—',
+      formatDate(r.inspectionDate),
+      r.inspectorName || '—',
+      (r.status || '—').toUpperCase(),
+      yn(c.sealIntact),
+      yn(c.noLeakage),
+      yn(c.tubeIntegrity),
+      yn(c.needleCondition),
+      yn(c.labelPresence),
+      yn(c.sterilityCheck),
+      yn(c.packagingCondition),
+    ];
+  });
 
   const stats = [
     { label: 'Total Inspected Batches', value: items.length },
@@ -627,7 +659,6 @@ export async function exportProcurementInspection(items, meta = {}) {
     subtitle: 'Blood Bags Procurement Inspection Log',
     headers,
     rows,
-    alignments,
     stats,
     ...meta,
   }], 'Procurement_Inspection_Report.xlsx');
@@ -635,18 +666,32 @@ export async function exportProcurementInspection(items, meta = {}) {
 
 // 11. Procurement GRN (Goods Receipt)
 export async function exportProcurementGRN(items, meta = {}) {
-  const headers = ['Sr No', 'GRN Number', 'GRN Date', 'PO Number', 'Supplier', 'Received Qty', 'Inspection Status'];
-  const alignments = ['center', 'center', 'center', 'center', 'left', 'center', 'center'];
+  const headers = ['Sr No', 'GRN Number', 'Invoice No', 'GRN Date', 'PO Number', 'Supplier', 'Total Received Qty', 'Status', 'Bag Type', 'Capacity (mL)', 'Anticoagulant', 'Batch No', 'Mfg Date', 'Expiry Date', 'Qty Received'];
 
-  const rows = items.map((r, i) => [
-    i + 1,
-    r.grnNumber || r.grnNo || '—',
-    formatDate(r.grnDate || r.receivedDate),
-    r.poNumber || '—',
-    r.supplierName || r.vendorName || '—',
-    r.receivedQty || r.quantityReceived || 0,
-    (r.status || r.inspectionStatus || '—').toUpperCase(),
-  ]);
+  // Each GRN expands into one row per batch line, sharing a single serial no.
+  const rows = [];
+  items.forEach((r, i) => {
+    const batchLines = (r.batchLines && r.batchLines.length) ? r.batchLines : [null];
+    batchLines.forEach((b, j) => {
+      rows.push([
+        j === 0 ? i + 1 : '',
+        r.grnNumber || r.grnNo || '—',
+        r.invoiceNo || '—',
+        formatDate(r.grnDate || r.receivedDate),
+        r.poNumber || '—',
+        r.supplierName || r.vendorName || '—',
+        r.receivedQty || r.quantityReceived || 0,
+        (r.status || r.inspectionStatus || '—').toUpperCase(),
+        b?.bagType || '—',
+        b?.capacityMl ?? '—',
+        b?.anticoagulant || '—',
+        b?.batchNumber || '—',
+        formatDate(b?.manufacturingDate),
+        formatDate(b?.expiryDate),
+        b?.quantityReceived ?? '—',
+      ]);
+    });
+  });
 
   const stats = [
     { label: 'Total Receipts (GRN)', value: items.length },
@@ -658,7 +703,6 @@ export async function exportProcurementGRN(items, meta = {}) {
     subtitle: 'Goods Receipt Note (GRN) Procurement ledger',
     headers,
     rows,
-    alignments,
     stats,
     ...meta,
   }], 'Goods_Receipt_GRN_Report.xlsx');
@@ -666,17 +710,27 @@ export async function exportProcurementGRN(items, meta = {}) {
 
 // 12. Procurement PO (Purchase Order)
 export async function exportProcurementPO(items, meta = {}) {
-  const headers = ['Sr No', 'PO Number', 'PO Date', 'Vendor', 'Manufacturer', 'Bill Date'];
-  const alignments = ['center', 'center', 'center', 'left', 'left', 'center'];
+  const headers = ['Sr No', 'PO Number', 'PO Date', 'Vendor', 'Manufacturer', 'Bill Date', 'Bag Type', 'Capacity (mL)', 'Anticoagulant', 'Qty Ordered'];
 
-  const rows = items.map((r, i) => [
-    i + 1,
-    r.poNumber || '—',
-    formatDate(r.poDate),
-    r.vendorName || r.vendorId?.name || r.vendorId || '—',
-    r.manufacturer || '—',
-    formatDate(r.billDate),
-  ]);
+  // Each PO expands into one row per line item, sharing a single serial no.
+  const rows = [];
+  items.forEach((r, i) => {
+    const lineItems = (r.lineItems && r.lineItems.length) ? r.lineItems : [null];
+    lineItems.forEach((it, j) => {
+      rows.push([
+        j === 0 ? i + 1 : '',
+        r.poNumber || '—',
+        formatDate(r.poDate),
+        r.vendorName || r.vendorId?.name || r.vendorId || '—',
+        r.manufacturer || '—',
+        formatDate(r.billDate),
+        it?.bagType || '—',
+        it?.capacityMl ?? '—',
+        it?.anticoagulant || '—',
+        it?.quantityOrdered ?? '—',
+      ]);
+    });
+  });
 
   const stats = [
     { label: 'Total Purchase Orders', value: items.length },
@@ -688,7 +742,6 @@ export async function exportProcurementPO(items, meta = {}) {
     subtitle: 'Procurement Purchase Orders ledger',
     headers,
     rows,
-    alignments,
     stats,
     ...meta,
   }], 'Purchase_Orders_Report.xlsx');
@@ -696,22 +749,32 @@ export async function exportProcurementPO(items, meta = {}) {
 
 // 13. Procurement Issue (Bag Issuance)
 export async function exportProcurementIssue(items, meta = {}) {
-  const headers = ['Sr No', 'Bag No', 'Segment No', 'Bag Type', 'Blood Group', 'Batch No', 'Issue Date', 'Status'];
-  const alignments = ['center', 'center', 'center', 'center', 'center', 'center', 'center', 'center'];
+  const headers = [
+    'Sr No', 'Bag No', 'Segment No', 'Batch No', 'Bag Type', 'Blood Group', 'Collection Room',
+    'Issue Date', 'Status', 'Donor Name', 'Donor Blood Group', 'Donor Phone', 'Donation ID', 'Notes',
+  ];
 
   const rows = items.map((r, i) => [
     i + 1,
     r.bagNo || '—',
     r.segmentNo || '—',
+    r.batchNo || '—',
     r.bagType || '—',
     r.bloodGroup || '—',
-    r.batchNo || '—',
+    r.collectionRoom || '—',
     formatDateTime(r.issueDate),
     (r.status || 'ISSUED').toUpperCase(),
+    r.donorName || '—',
+    r.donorBloodGroup || '—',
+    r.donorPhone || '—',
+    r.donationId || '—',
+    r.notes || '—',
   ]);
 
   const stats = [
     { label: 'Total Issuances', value: items.length },
+    { label: 'Issued', value: items.filter(r => r.status?.toUpperCase() === 'ISSUED').length },
+    { label: 'Used', value: items.filter(r => r.status?.toUpperCase() === 'USED').length },
     { label: 'Total Discarded', value: items.filter(r => r.status?.toUpperCase() === 'DISCARDED').length },
   ];
 
@@ -721,7 +784,6 @@ export async function exportProcurementIssue(items, meta = {}) {
     subtitle: 'Procurement Blood Bag Issuances Log',
     headers,
     rows,
-    alignments,
     stats,
     ...meta,
   }], 'Procurement_Bag_Issuances.xlsx');
@@ -729,20 +791,31 @@ export async function exportProcurementIssue(items, meta = {}) {
 
 // 14. Procurement Inventory (Bag Inventory)
 export async function exportProcurementInventory(items, meta = {}) {
-  const headers = ['Sr No', 'Bag ID', 'Capacity (mL)', 'Anticoagulant', 'Status'];
-  const alignments = ['center', 'center', 'center', 'center', 'center'];
+  const headers = [
+    'Sr No', 'Bag Type', 'Batch No', 'Expiry Date', 'Total Ordered (Boxes)', 'Opened Boxes',
+    'Unopened Boxes', 'Remaining Stock (Bags)', 'Issued', 'Discarded', 'Damaged', 'Status',
+  ];
 
   const rows = items.map((r, i) => [
     i + 1,
-    r.bagId || r.unitId || r._id || '—',
-    r.capacityMl || r.capacity || '—',
-    r.anticoagulant || '—',
-    (r.status || 'Available').toUpperCase(),
+    r.bagType || '—',
+    r.batchNo || r.bagId || r._id || '—',
+    formatDate(r.expiryDate),
+    r.totalBoxes ?? '—',
+    r.openedBoxes ?? '—',
+    r.unopenedBoxes ?? '—',
+    r.remainingBags ?? '—',
+    r.issuedQty ?? 0,
+    r.discardedQty ?? 0,
+    r.damagedQty ?? 0,
+    (r.status || 'Available').toUpperCase().replace(/_/g, ' '),
   ]);
 
   const stats = [
-    { label: 'Total Stocked Bags', value: items.length },
+    { label: 'Total Stock Records', value: items.length },
     { label: 'Available', value: items.filter(r => r.status?.toLowerCase() === 'available' || r.status?.toLowerCase() === 'in-stock').length },
+    { label: 'Out of Stock', value: items.filter(r => r.status?.toUpperCase() === 'OUT_OF_STOCK').length },
+    { label: 'Total Remaining Bags', value: items.reduce((sum, r) => sum + (r.remainingBags ?? 0), 0) },
   ];
 
   await downloadExcelReport([{
@@ -751,7 +824,6 @@ export async function exportProcurementInventory(items, meta = {}) {
     subtitle: 'Procurement Unused Blood Bags Ledger',
     headers,
     rows,
-    alignments,
     stats,
     ...meta,
   }], 'Procurement_Bags_Inventory.xlsx');
@@ -1003,21 +1075,36 @@ export async function exportAppointments(items, meta = {}) {
 
 // 16. Chemical Inventory Usage (Reagents)
 export async function exportChemicalUsage(items, meta = {}) {
-  const headers = ['Sr No', 'Usage ID', 'Chemical Name', 'Lot Number', 'Quantity Used', 'Used By', 'Usage Date'];
-  const alignments = ['center', 'center', 'left', 'center', 'center', 'left', 'center'];
+  const headers = [
+    'Sr No', 'Chemical / Reagent', 'Category', 'Lot Number', 'Batch Number', 'Invoice Number',
+    'Expiry Date', 'Total Purchased', 'Available', 'In Use', 'Consumed', 'Usage %',
+  ];
 
-  const rows = items.map((r, i) => [
-    i + 1,
-    r.usageId || r._id || '—',
-    r.chemicalName || r.chemicalId?.name || '—',
-    r.lotNumber || '—',
-    r.quantityUsed || r.quantity || 0,
-    r.usedBy || '—',
-    formatDate(r.usageDate || r.createdAt),
-  ]);
+  const rows = items.map((r, i) => {
+    const total = r.qtyPurchased || 0;
+    const consumed = r.qtyConsumed || 0;
+    const usagePct = total > 0 ? `${Math.round((consumed / total) * 100)}%` : '—';
+    return [
+      i + 1,
+      r.chemicalName || r.chemicalId?.name || '—',
+      r.category || '—',
+      r.lotNumber || '—',
+      r.batchNumber || '—',
+      r.invoiceNumber || '—',
+      formatDate(r.expiryDate),
+      total,
+      r.qtyAvailable ?? 0,
+      r.qtyInUse ?? 0,
+      consumed,
+      usagePct,
+    ];
+  });
 
   const stats = [
-    { label: 'Total Usages Recorded', value: items.length },
+    { label: 'Total Lots', value: items.length },
+    { label: 'Total Available', value: items.reduce((s, r) => s + (r.qtyAvailable ?? 0), 0) },
+    { label: 'Total In Use', value: items.reduce((s, r) => s + (r.qtyInUse ?? 0), 0) },
+    { label: 'Total Consumed', value: items.reduce((s, r) => s + (r.qtyConsumed ?? 0), 0) },
   ];
 
   await downloadExcelReport([{
@@ -1026,7 +1113,6 @@ export async function exportChemicalUsage(items, meta = {}) {
     subtitle: 'Chemical Reagents Usage Ledger',
     headers,
     rows,
-    alignments,
     stats,
     ...meta,
   }], 'Chemical_Reagents_Usage.xlsx');
@@ -1034,21 +1120,45 @@ export async function exportChemicalUsage(items, meta = {}) {
 
 // 17. Chemical Inventory Purchase
 export async function exportChemicalPurchase(items, meta = {}) {
-  const headers = ['Sr No', 'Invoice Number', 'Purchase Date', 'Supplier Name', 'Chemical Name', 'Quantity', 'Unit Price'];
-  const alignments = ['center', 'center', 'center', 'left', 'left', 'center', 'right'];
+  const headers = [
+    'Sr No', 'Invoice Number', 'Purchase Date', 'Supplier Name', 'Item Name', 'Manufacturer',
+    'Pack Type', 'Batch No', 'Expiry Date', 'Qty', 'Rate (₹)', 'CGST (₹)', 'SGST (₹)',
+    'Item Total (₹)', 'Invoice Total (₹)', 'Paid (₹)', 'Balance (₹)', 'Payment Status',
+  ];
+  const money = (v) => (v || v === 0 ? Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—');
 
-  const rows = items.map((r, i) => [
-    i + 1,
-    r.invoiceNumber || '—',
-    formatDate(r.purchaseDate),
-    r.supplierName || '—',
-    r.chemicalName || r.name || '—',
-    r.quantity || 0,
-    r.unitPrice !== undefined ? `₹${r.unitPrice.toLocaleString('en-IN')}` : '—',
-  ]);
+  const rows = [];
+  items.forEach((r, i) => {
+    const lineItems = (r.items && r.items.length) ? r.items : [{}];
+    lineItems.forEach((it, j) => {
+      rows.push([
+        j === 0 ? i + 1 : '',
+        j === 0 ? (r.invoiceNumber || '—') : '',
+        j === 0 ? formatDate(r.purchaseDate) : '',
+        j === 0 ? (r.supplierName || '—') : '',
+        it.chemicalName || '—',
+        it.manufacturer || '—',
+        it.packType || '—',
+        it.batchNumber || '—',
+        it.expiryDate ? formatDate(it.expiryDate) : '—',
+        it.quantity ?? 0,
+        money(it.unitPrice),
+        money(it.cgstAmount),
+        money(it.sgstAmount),
+        money(it.itemTotal),
+        j === 0 ? money(r.totalAmount) : '',
+        j === 0 ? money(r.paidAmount) : '',
+        j === 0 ? money(r.balance) : '',
+        j === 0 ? (r.paymentStatus || '—') : '',
+      ]);
+    });
+  });
 
   const stats = [
-    { label: 'Total Purchases', value: items.length },
+    { label: 'Total Invoices', value: items.length },
+    { label: 'Total Amount', value: `₹${money(items.reduce((s, r) => s + (r.totalAmount || 0), 0))}` },
+    { label: 'Total Paid', value: `₹${money(items.reduce((s, r) => s + (r.paidAmount || 0), 0))}` },
+    { label: 'Total Balance', value: `₹${money(items.reduce((s, r) => s + (r.balance || 0), 0))}` },
   ];
 
   await downloadExcelReport([{
@@ -1057,7 +1167,6 @@ export async function exportChemicalPurchase(items, meta = {}) {
     subtitle: 'Chemical Reagents Procurement purchase ledger',
     headers,
     rows,
-    alignments,
     stats,
     ...meta,
   }], 'Chemical_Procurement_Purchases.xlsx');

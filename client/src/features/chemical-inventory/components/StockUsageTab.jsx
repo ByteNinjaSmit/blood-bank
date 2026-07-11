@@ -141,10 +141,15 @@ export default function StockUsageTab() {
       const dataToExport = rawLots.map(lot => ({
         _id: lot._id,
         chemicalName: lot.chemicalId?.name || '—',
+        category: lot.chemicalId?.categoryId?.name || '—',
         lotNumber: lot.lotNumber || '—',
-        quantity: lot.qtyConsumed,
-        usedBy: `Avail: ${lot.qtyAvailable} | In Use: ${lot.qtyInUse}`,
-        createdAt: lot.createdAt || lot.expiryDate,
+        batchNumber: lot.batchNumber || '—',
+        invoiceNumber: lot.invoiceNumber || '—',
+        expiryDate: lot.expiryDate,
+        qtyPurchased: lot.qtyPurchased ?? 0,
+        qtyAvailable: lot.qtyAvailable ?? 0,
+        qtyInUse: lot.qtyInUse ?? 0,
+        qtyConsumed: lot.qtyConsumed ?? 0,
       }));
 
       await exportChemicalUsage(dataToExport);

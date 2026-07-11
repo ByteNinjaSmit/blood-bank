@@ -1150,9 +1150,16 @@ export default function BagInspection() {
       inspectionId: ins.inspectionId || ins._id,
       batchNo: ins.batchNumber,
       poNumber: ins.grn?.poNumber || ins.poNumber || '—',
+      bagNo: ins.bagNo,
+      segmentNo: ins.segmentNo,
+      bloodGroup: ins.bloodGroup,
+      sampleSize: ins.sampleSize,
+      testingType: ins.testingType,
+      testingLab: ins.testingLab === 'Other' ? (ins.customTestingLab || 'Other') : ins.testingLab,
       inspectionDate: ins.inspectionDate || ins.createdAt,
       inspectorName: ins.inspectedBy?.name || ins.inspectorName || '—',
       status: ins.decision || ins.status || '—',
+      physicalChecks: ins.physicalChecks || {},
     }));
   };
 
