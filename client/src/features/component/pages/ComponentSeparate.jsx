@@ -24,16 +24,6 @@ const ComponentSeparate = () => {
   const [signatureText, setSignatureText] = useState("");
   const [readyToSignBags, setReadyToSignBags] = useState([]);
 
-  const getBagVolumeStats = (bag) => {
-    if (!bag) return { used: 0, total: 0, remaining: 0 };
-    const total = bag.volumeGmMl || 0;
-    const used = Array.isArray(bag.components)
-      ? bag.components.reduce((acc, c) => acc + (Number(c.volumeMl) || 0), 0)
-      : 0;
-    const remaining = total - used;
-    return { used, total, remaining };
-  };
-
   const fetchBags = async () => {
     setIsLoading(true);
     try {
@@ -69,9 +59,8 @@ const ComponentSeparate = () => {
       toast.error("Unable to resolve donationId for this bag");
       return;
     }
-    const { remaining } = getBagVolumeStats(activeBag);
-    if (inputVolume > remaining) {
-      toast.error(`Requested volume (${inputVolume}mL) exceeds remaining bag volume (${remaining}mL)`);
+    if (!(inputVolume > 0)) {
+      toast.error("Please enter a valid volume");
       return;
     }
     try {
@@ -291,16 +280,13 @@ const ComponentSeparate = () => {
                 onChange={(e) => setSeparateForm((s) => ({ ...s, volumeMl: e.target.value }))}
                 min={1}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Remaining bag volume: {getBagVolumeStats(activeBag).remaining}mL of {getBagVolumeStats(activeBag).total}mL
-              </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowSeparateModal(false)}>Cancel</Button>
             <Button
               onClick={submitSeparate}
-              disabled={isActionLoading || Number(separateForm.volumeMl) <= 0 || Number(separateForm.volumeMl) > getBagVolumeStats(activeBag).remaining}
+              disabled={isActionLoading || Number(separateForm.volumeMl) <= 0}
             >
               {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Separate"}
             </Button>

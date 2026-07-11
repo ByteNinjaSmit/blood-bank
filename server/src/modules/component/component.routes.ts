@@ -261,19 +261,6 @@ router.post('/separate', authenticate, async (req, res, next) => {
     if (requestedVolume <= 0) {
       return res.status(400).json({ success: false, message: 'Volume must be greater than zero' });
     }
-    const bagVolume = donation.medicalExam?.volumeMl || 350;
-    const separatedUnits = await BloodUnitModel.find({
-      donationId: resolvedDonationId,
-      componentType: { $ne: 'WHOLE_BLOOD' },
-      deletedAt: null,
-    }).lean();
-    const usedVolume = separatedUnits.reduce((acc, u) => acc + (Number(u.volumeMl) || 0), 0);
-    if (usedVolume + requestedVolume > bagVolume) {
-      return res.status(400).json({
-        success: false,
-        message: `Requested volume (${requestedVolume}mL) exceeds remaining bag volume (${bagVolume - usedVolume}mL of ${bagVolume}mL total)`,
-      });
-    }
 
     const SHELF_DAYS: Record<string, number> = {
       WHOLE_BLOOD: 35,
