@@ -39,6 +39,7 @@ export interface DonorDto {
   lastDonationId?: string;
   isAvailableToDonate?: boolean;
   daysUntilEligible?: number;
+  ttiReactive?: boolean;
   source?: 'inhouse' | 'camp';
   deletedAt?: string | null;
   createdAt: string;
@@ -148,18 +149,49 @@ async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto[]> {
       },
     },
     { $sort: { collectedAt: -1, createdAt: -1 } },
+    // Join each donation's TTI result to flag donors with any reactive result.
+    {
+      $lookup: {
+        from: 'ttiresults',
+        localField: 'donationId',
+        foreignField: 'donationId',
+        as: 'tti',
+      },
+    },
     {
       $group: {
         _id: '$donor',
         lastDonationId: { $first: '$_id' },
         lastDonationDate: { $first: '$collectedAt' },
+        ttiReactive: {
+          $max: {
+            $cond: [
+              {
+                $gt: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: '$tti',
+                        as: 't',
+                        cond: { $eq: ['$$t.releaseDecision', 'reactive'] },
+                      },
+                    },
+                  },
+                  0,
+                ],
+              },
+              1,
+              0,
+            ],
+          },
+        },
       },
     },
   ]);
   const donationMap = new Map(
     donations.map(d => [
       d._id.toString(),
-      { id: d.lastDonationId.toString(), date: d.lastDonationDate },
+      { id: d.lastDonationId.toString(), date: d.lastDonationDate, ttiReactive: Boolean(d.ttiReactive) },
     ]),
   );
   return dtos.map(dto => {
@@ -197,6 +229,7 @@ async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto[]> {
       lastDonationDate: effectiveDate,
       isAvailableToDonate,
       daysUntilEligible,
+      ttiReactive: Boolean(dbDonation?.ttiReactive),
     };
   });
 }

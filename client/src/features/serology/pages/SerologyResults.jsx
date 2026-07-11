@@ -302,8 +302,15 @@ const SerologyResults = () => {
                       <td colSpan="7" className="px-4 py-8 text-center text-gray-500">No results found.</td>
                     </tr>
                   ) : (
-                    bags.map((bag, idx) => (
-                      <tr key={`${bag.bagNo}-${idx}`} className="hover:bg-gray-50">
+                    bags.map((bag, idx) => {
+                      // Highlight the whole row when any TTI test is not
+                      // negative (reactive / positive / indeterminate).
+                      const hasReactive = Array.isArray(bag.testResults) && bag.testResults.some((t) => {
+                        const n = String(t.result).toUpperCase();
+                        return n && n !== "NEGATIVE" && n !== "PENDING" && n !== "-";
+                      });
+                      return (
+                      <tr key={`${bag.bagNo}-${idx}`} className={hasReactive ? "bg-yellow-100 hover:bg-yellow-200/70" : "hover:bg-gray-50"}>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">{bag.bagNo}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{bag.segmentNo || "-"}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{formatBlood(bag.bloodGroup, bag.rh)}</td>
@@ -344,7 +351,8 @@ const SerologyResults = () => {
                           </Button>
                         </td>
                       </tr>
-                    ))
+                      );
+                    })
                   )}
                 </tbody>
               </table>

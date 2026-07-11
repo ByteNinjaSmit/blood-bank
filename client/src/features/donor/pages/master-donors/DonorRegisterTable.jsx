@@ -55,16 +55,23 @@ export default function DonorRegisterTable({
                 const idValue = activeTab === 'camp'
                   ? (donor.lastDonationId || donor.donorId || 'N/A')
                   : (donor.donorId || 'N/A');
+                // Donor has at least one reactive TTI result → highlight row.
+                const isReactive = donor.ttiReactive === true;
 
                 return (
-                  <tr key={donor._id || donor.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={donor._id || donor.id} className={`transition-colors ${isReactive ? 'bg-yellow-100 hover:bg-yellow-200/70' : 'hover:bg-gray-50'}`}>
                     {activeTab === 'all' && (
                       <td className="px-4 py-3 font-mono text-xs text-gray-700 font-medium">
                         {idValue}
                       </td>
                     )}
                     <td className="px-4 py-3 text-gray-800 font-medium">
-                      {donor.name?.firstName} {donor.name?.middleName || ''} {donor.name?.lastName}
+                      <div>{donor.name?.firstName} {donor.name?.middleName || ''} {donor.name?.lastName}</div>
+                      {isReactive && (
+                        <span className="mt-1 inline-flex px-2 py-0.5 rounded-full text-2xs font-bold bg-red-600 text-white border border-red-700 uppercase tracking-wide">
+                          TTI Reactive
+                        </span>
+                      )}
                     </td>
                     {activeTab === 'all' && (
                       <td className="px-4 py-3">

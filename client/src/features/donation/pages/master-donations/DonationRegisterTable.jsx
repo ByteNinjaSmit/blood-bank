@@ -46,9 +46,21 @@ export default function DonationRegisterTable({
             <tbody className="divide-y divide-gray-100">
               {displayedItems.map((d) => {
                 const isCamp = !!d.campId;
+                // TTI reactive (not negative/released) → highlight the row.
+                const isReactive = d.ttiReleaseDecision === 'reactive' || d.status === 'failed';
+                const rowCls = isReactive
+                  ? 'bg-yellow-100 hover:bg-yellow-200/70'
+                  : trackId === d.id ? 'bg-orange-50 hover:bg-gray-50' : 'hover:bg-gray-50';
                 return (
-                  <tr key={d.id} className={`hover:bg-gray-50 transition-colors ${trackId === d.id ? 'bg-orange-50' : ''}`}>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-700 font-medium">{d.bagNo || d.donationId}</td>
+                  <tr key={d.id} className={`transition-colors ${rowCls}`}>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-700 font-medium">
+                      <div>{d.bagNo || d.donationId}</div>
+                      {isReactive && (
+                        <span className="mt-1 inline-flex px-2 py-0.5 rounded-full text-2xs font-bold bg-red-600 text-white border border-red-700 uppercase tracking-wide">
+                          TTI Reactive
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-gray-800 font-medium">
                       {d.donorName || <span className="text-gray-400 text-xs">—</span>}
                     </td>
