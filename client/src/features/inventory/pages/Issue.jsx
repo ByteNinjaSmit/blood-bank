@@ -11,6 +11,10 @@ import { exportIssues, exportStorageBags, exportClinicalIndicationIssues, export
 import BulkTransferCoverLetter from "@/features/inventory/components/BulkTransferCoverLetter";
 import TestingCertificate from "@/features/inventory/components/TestingCertificate";
 import BulkTransferInvoice from "@/features/inventory/components/BulkTransferInvoice";
+import StorageTab from "./issue-tabs/StorageTab";
+import DiseaseTab from "./issue-tabs/DiseaseTab";
+import BulkTransferTab from "./issue-tabs/BulkTransferTab";
+import IssueStockTab from "./issue-tabs/IssueStockTab";
 
 const MultiBagSelect = ({ availableBags, selectedBags, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -196,7 +200,8 @@ const Issue = () => {
   const [expiryFrom, setExpiryFrom] = useState("");
   const [expiryTo, setExpiryTo] = useState("");
   const [order, setOrder] = useState("desc");
-  const [sortBy, setSortBy] = useState("createdAt");
+  // sortBy is fixed (used in fetch params); no UI control changes it.
+  const [sortBy] = useState("createdAt");
 
   const [status, setStatus] = useState('issued');
   const [viewOpen, setViewOpen] = useState(false);
@@ -519,7 +524,7 @@ const Issue = () => {
         },
       });
       setAvailableUnits(Array.isArray(res.data?.data) ? res.data.data : []);
-    } catch (e) {
+    } catch {
       toast.error("Failed to fetch available blood units for storage");
     } finally {
       setLoadingAvailable(false);
@@ -618,7 +623,6 @@ const Issue = () => {
 
   const openView = (item) => { setViewItem(item); setViewOpen(true); };
   const closeView = () => { setViewOpen(false); setViewItem(null); };
-  const fmt = (d) => (d ? new Date(d).toLocaleString() : '—');
 
   const fetchStorageBags = async (location = storageSubTab) => {
     setStorageLoading(true);
@@ -634,7 +638,7 @@ const Issue = () => {
         const latestDate = new Date(data[0].issuedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         setExpandedDates(new Set([latestDate]));
       }
-    } catch (e) {
+    } catch {
       toast.error('Failed to fetch storage bags');
       setStorageBagRows([]);
     } finally {
@@ -682,7 +686,7 @@ const Issue = () => {
       });
       setThalRows(Array.isArray(res.data?.data) ? res.data.data : []);
       setThalPagination(p => ({ ...p, ...(res.data?.pagination || {}), page }));
-    } catch (e) {
+    } catch {
       toast.error('Failed to fetch clinical indication / disease records');
       setThalRows([]);
     } finally {
@@ -750,495 +754,60 @@ const Issue = () => {
 
         {/* ── Storage tab ──────────────────────────────────── */}
         {mainTab === 'storage' && (
-          <div className="bg-white shadow-md rounded-xl overflow-hidden">
-            {/* Sub-tabs */}
-            <div className="flex gap-0 border-b border-gray-200 bg-gray-50">
-              {[
-                { key: 'SJS', label: 'SJS — Kopargaon' },
-                { key: 'Anand', label: 'Anand' },
-              ].map(sub => (
-                <button
-                  key={sub.key}
-                  onClick={() => setStorageSubTab(sub.key)}
-                  className={`px-6 py-3.5 text-sm font-semibold border-b-2 transition-all ${
-                    storageSubTab === sub.key
-                      ? 'border-red-700 text-red-700 bg-white'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 bg-gray-50'
-                  }`}
-                >
-                  {sub.label}
-                </button>
-              ))}
-              <div className="ml-auto flex items-center pr-4">
-                <button
-                  onClick={() => fetchStorageBags(storageSubTab)}
-                  className="text-xs text-gray-500 hover:text-red-700 flex items-center gap-1"
-                >
-                  {storageLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : '↻'} Refresh
-                </button>
-              </div>
-            </div>
-
-            {/* Summary bar */}
-            <div className="px-5 py-2.5 border-b bg-gray-50/60 flex items-center gap-2 text-sm text-gray-600">
-              <Warehouse className="w-3.5 h-3.5 text-gray-400" />
-              Total bags sent to <strong className="text-gray-800">{storageSubTab}</strong>:
-              <span className="font-semibold text-red-700">{storageBagRows.length}</span>
-              {storageBagsByDate.length > 0 && (
-                <span className="text-gray-400 ml-1">· {storageBagsByDate.length} date group{storageBagsByDate.length > 1 ? 's' : ''}</span>
-              )}
-            </div>
-
-            {/* Accordion table header (always visible) */}
-            <div className="overflow-x-auto">
-              {storageLoading ? (
-                <div className="px-4 py-12 text-center text-gray-400">
-                  <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                  <p>Loading storage records…</p>
-                </div>
-              ) : storageBagsByDate.length === 0 ? (
-                <div className="px-4 py-12 text-center text-gray-400">
-                  No bags sent to {storageSubTab} yet.
-                </div>
-              ) : (
-                <table className="min-w-full text-sm">
-                  {/* Column header */}
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="w-8 px-4 py-3"></th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Sent</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bags Count</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Components</th>
-                      <th className="px-4 py-3"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {storageBagsByDate.map(([dateKey, bags]) => {
-                      const isOpen = expandedDates.has(dateKey);
-                      const componentSummary = [...new Set(bags.map(b => b?.component?.componentType).filter(Boolean))].join(', ') || '—';
-                      return (
-                        <React.Fragment key={dateKey}>
-                          {/* Date accordion header row */}
-                          <tr
-                            onClick={() => toggleDateGroup(dateKey)}
-                            className={`border-b cursor-pointer select-none transition-colors ${isOpen ? 'bg-red-50 border-red-100' : 'bg-white hover:bg-gray-50'}`}
-                          >
-                            <td className="px-4 py-3.5 text-gray-400">
-                              <span className={`inline-block transition-transform duration-200 text-xs ${isOpen ? 'rotate-180' : ''}`}>▼</span>
-                            </td>
-                            <td className="px-4 py-3.5 font-semibold text-gray-800">{dateKey}</td>
-                            <td className="px-4 py-3.5">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                                {bags.length} bag{bags.length > 1 ? 's' : ''}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3.5 text-gray-500 text-xs">{componentSummary}</td>
-                            <td className="px-4 py-3.5 text-right text-xs text-gray-400 pr-5">
-                              {isOpen ? 'Collapse ▲' : 'Expand ▼'}
-                            </td>
-                          </tr>
-
-                          {/* Expanded detail rows */}
-                          {isOpen && (
-                            <tr>
-                              <td colSpan={5} className="p-0 border-b border-gray-200">
-                                <div className="bg-gray-50/80 border-t border-gray-100">
-                                  <table className="min-w-full text-sm">
-                                    <thead>
-                                      <tr className="bg-gray-100/80 border-b border-gray-200">
-                                        <th className="px-6 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bag No</th>
-                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Segment No</th>
-                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Component</th>
-                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Blood Group</th>
-                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Volume</th>
-                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Expiry</th>
-                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sent Date</th>
-                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                      {bags.map(r => {
-                                        const rh = r?.bag?.rh === 'Positive' ? '+' : r?.bag?.rh === 'Negative' ? '-' : r?.bag?.rh || '';
-                                        return (
-                                          <tr key={r._id} className="bg-white hover:bg-red-50/20 transition-colors">
-                                            <td className="px-6 py-3 font-mono font-bold text-gray-800 text-xs">{r?.bag?.bagNo || r.bagNo || '—'}</td>
-                                            <td className="px-4 py-3 font-mono text-xs text-gray-500">{r.segmentNo || '—'}</td>
-                                            <td className="px-4 py-3 text-gray-700 font-medium">{r?.component?.componentType || '—'}</td>
-                                            <td className="px-4 py-3 font-bold text-gray-800">{r?.bag?.bloodGroup}{rh}</td>
-                                            <td className="px-4 py-3 text-gray-600">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</td>
-                                            <td className="px-4 py-3 text-gray-600">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '—'}</td>
-                                            <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{r.issuedAt ? new Date(r.issuedAt).toLocaleString() : '—'}</td>
-                                            <td className="px-4 py-3">
-                                              <button
-                                                onClick={() => { setStorageViewItem(r); setStorageViewOpen(true); }}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 text-xs font-medium transition-colors"
-                                              >
-                                                <Eye className="w-3.5 h-3.5" /> View
-                                              </button>
-                                            </td>
-                                          </tr>
-                                        );
-                                      })}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
+          <StorageTab
+            storageSubTab={storageSubTab}
+            setStorageSubTab={setStorageSubTab}
+            storageLoading={storageLoading}
+            storageBagRows={storageBagRows}
+            storageBagsByDate={storageBagsByDate}
+            expandedDates={expandedDates}
+            toggleDateGroup={toggleDateGroup}
+            fetchStorageBags={fetchStorageBags}
+            onViewBag={(r) => { setStorageViewItem(r); setStorageViewOpen(true); }}
+          />
         )}
 
         {/* ── Clinical Indication / Disease Patients tab ──── */}
         {mainTab === 'disease' && (
-          <div className="bg-white shadow-md rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b bg-gray-50">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-red-700" />
-                <span className="font-semibold text-gray-800 text-sm">Clinical Indication / Disease Patient Records</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-500">Total: {thalPagination.total || thalRows.length}</span>
-                <button
-                  onClick={() => fetchThalassemia(1)}
-                  className="text-xs text-gray-500 hover:text-red-700 flex items-center gap-1"
-                >
-                  {thalLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : '↻'} Refresh
-                </button>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Disease</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Age / Sex</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient Blood Group</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bag No</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Component</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Blood Group</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Issued At</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
-                  {thalLoading ? (
-                    <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">
-                      <Loader2 className="w-5 h-5 animate-spin mx-auto mb-1" /> Loading…
-                    </td></tr>
-                  ) : thalRows.length === 0 ? (
-                    <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">
-                      No clinical indication / disease patient records found.
-                    </td></tr>
-                  ) : thalRows.map(r => {
-                    const p = r.clinicalIndicationPatient || {};
-                    const fullName = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ') || '—';
-                    const rh = r?.bag?.rh === 'Positive' ? '+' : r?.bag?.rh === 'Negative' ? '-' : r?.bag?.rh || '';
-                    return (
-                      <tr key={r._id} className="hover:bg-red-50/30 transition-colors">
-                        <td className="px-4 py-3 font-semibold text-gray-800">{fullName}</td>
-                        <td className="px-4 py-3 text-gray-700">{diseaseLabel(p)}</td>
-                        <td className="px-4 py-3 text-gray-600">{p.age || '—'} / {p.sex || '—'}</td>
-                        <td className="px-4 py-3 font-bold text-gray-800">{p.bloodGroup || '—'}</td>
-                        <td className="px-4 py-3 font-mono text-xs font-bold text-gray-700">{r?.bag?.bagNo || r.bagNo || '—'}</td>
-                        <td className="px-4 py-3 text-gray-700">{r?.component?.componentType || '—'}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-800">{r?.bag?.bloodGroup}{rh}</td>
-                        <td className="px-4 py-3 text-gray-500 text-xs">{r.issuedAt ? new Date(r.issuedAt).toLocaleString() : '—'}</td>
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() => { setThalViewItem(r); setThalViewOpen(true); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 text-xs font-medium transition-colors"
-                          >
-                            <Eye className="w-3.5 h-3.5" /> View
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Thalassemia pagination */}
-            <div className="flex items-center justify-between px-5 py-3 border-t text-sm text-gray-600">
-              <span>Page {thalPagination.page || 1} of {thalPagination.totalPages || 1}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={thalPagination.page <= 1}
-                  onClick={() => { const p = Math.max(1, (thalPagination.page || 1) - 1); fetchThalassemia(p); }}
-                  className="px-3 py-1 rounded-md disabled:text-gray-300 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed"
-                >Previous</button>
-                <button
-                  disabled={thalPagination.page >= thalPagination.totalPages}
-                  onClick={() => { const p = (thalPagination.page || 1) + 1; fetchThalassemia(p); }}
-                  className="px-3 py-1 rounded-md disabled:text-gray-300 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed"
-                >Next</button>
-              </div>
-            </div>
-          </div>
+          <DiseaseTab
+            thalRows={thalRows}
+            thalLoading={thalLoading}
+            thalPagination={thalPagination}
+            fetchThalassemia={fetchThalassemia}
+            diseaseLabel={diseaseLabel}
+            onViewBag={(r) => { setThalViewItem(r); setThalViewOpen(true); }}
+          />
         )}
 
         {/* ── Bulk Transfer tab ────────────────────────────── */}
         {mainTab === 'bulkTransfer' && (
-          <div className="bg-white shadow-md rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b bg-gray-50">
-              <div className="flex items-center gap-2">
-                <ArrowLeftRight className="w-4 h-4 text-red-700" />
-                <span className="font-semibold text-gray-800 text-sm">Bulk Transfer Records (Loans)</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-500">Total: {bulkPagination.total || bulkRows.length}</span>
-                <button
-                  onClick={() => fetchBulkTransfers(bulkPagination.page || 1)}
-                  className="text-xs text-gray-500 hover:text-red-700 flex items-center gap-1"
-                >
-                  {bulkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : '↻'} Refresh
-                </button>
-                <Button
-                  onClick={() => { resetBulkForm(); setBulkFormOpen(true); fetchAvailableUnits(); }}
-                  className="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white shadow-sm flex items-center gap-1.5 h-9 px-4 rounded-lg"
-                >
-                  <ArrowLeftRight className="w-4 h-4" /> Send Bulk
-                </Button>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Transfer ID</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Blood Bank</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Address</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Transfer Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bags</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
-                  {bulkLoading ? (
-                    <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">
-                      <Loader2 className="w-5 h-5 animate-spin mx-auto mb-1" /> Loading…
-                    </td></tr>
-                  ) : bulkRows.length === 0 ? (
-                    <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">
-                      No bulk transfer records found.
-                    </td></tr>
-                  ) : bulkRows.map(r => (
-                    <tr key={r.id} className="hover:bg-red-50/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs font-bold text-gray-800">{r.transferId}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                          r.transferType === 'GIVE_LOAN'
-                            ? 'bg-amber-50 border border-amber-200 text-amber-800'
-                            : 'bg-blue-50 border border-blue-200 text-blue-800'
-                        }`}>
-                          {r.transferType === 'GIVE_LOAN' ? 'Give Loan' : 'Take Loan'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-gray-800">{r.bloodBankName}</td>
-                      <td className="px-4 py-3 text-gray-600 max-w-[220px] truncate" title={r.bloodBankAddress}>{r.bloodBankAddress}</td>
-                      <td className="px-4 py-3 text-gray-600">{r.transferDate ? new Date(r.transferDate).toLocaleDateString() : '—'}</td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                          {r.items?.length || 0} bag{(r.items?.length || 0) !== 1 ? 's' : ''}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => { setBulkViewItem(r); setBulkViewOpen(true); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 text-xs font-medium transition-colors"
-                          >
-                            <Eye className="w-3.5 h-3.5" /> View
-                          </button>
-                          <button
-                            onClick={() => openDeleteBulkTransferConfirm(r)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-600 hover:border-red-600 hover:text-white text-xs font-medium transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" /> Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Bulk transfer pagination */}
-            <div className="flex items-center justify-between px-5 py-3 border-t text-sm text-gray-600">
-              <span>Page {bulkPagination.page || 1} of {bulkPagination.totalPages || 1}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={bulkPagination.page <= 1}
-                  onClick={() => { const p = Math.max(1, (bulkPagination.page || 1) - 1); fetchBulkTransfers(p); }}
-                  className="px-3 py-1 rounded-md disabled:text-gray-300 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed"
-                >Previous</button>
-                <button
-                  disabled={bulkPagination.page >= bulkPagination.totalPages}
-                  onClick={() => { const p = (bulkPagination.page || 1) + 1; fetchBulkTransfers(p); }}
-                  className="px-3 py-1 rounded-md disabled:text-gray-300 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed"
-                >Next</button>
-              </div>
-            </div>
-          </div>
+          <BulkTransferTab
+            bulkRows={bulkRows}
+            bulkLoading={bulkLoading}
+            bulkPagination={bulkPagination}
+            fetchBulkTransfers={fetchBulkTransfers}
+            onSendBulk={() => { resetBulkForm(); setBulkFormOpen(true); fetchAvailableUnits(); }}
+            onViewTransfer={(r) => { setBulkViewItem(r); setBulkViewOpen(true); }}
+            onDeleteTransfer={openDeleteBulkTransferConfirm}
+          />
         )}
 
         {/* ── Issue Stock tab ──────────────────────────────── */}
         {mainTab === 'issue' && (
-        <div className="bg-white shadow-md rounded-xl overflow-hidden">
-          <div className="p-4 border-b">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm text-gray-600">Total: {pagination.total || 0}</div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-600 mb-1">Status</label>
-                <select value={status} onChange={(e)=>{setStatus(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
-                  <option value="issued">Issued</option>
-                  <option value="reserved">Reserved</option>
-                </select>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-600 mb-1">Component</label>
-                <select value={componentType} onChange={(e)=>{setComponentType(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
-                  <option value="">All</option>
-                  <option value="RBC">RBC</option>
-                  <option value="FFP">FFP</option>
-                  <option value="Platelet">Platelet</option>
-                  <option value="Cryo">Cryo</option>
-                </select>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-600 mb-1">Blood Group</label>
-                <select value={bloodGroup} onChange={(e)=>{setBloodGroup(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
-                  <option value="">All</option>
-                  <option value="A">A</option>
-                  <option value="B">B</option>
-                  <option value="AB">AB</option>
-                  <option value="O">O</option>
-                </select>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-600 mb-1">Search Bag No</label>
-                <input value={search} onChange={(e)=>{setSearch(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm" placeholder="Bag ID" />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-600 mb-1">Expiry From</label>
-                <input type="date" value={expiryFrom} onChange={(e)=>{setExpiryFrom(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm" />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-600 mb-1">Expiry To</label>
-                <input type="date" value={expiryTo} onChange={(e)=>{setExpiryTo(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm" />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-600 mb-1">Order</label>
-                <select value={order} onChange={(e)=>{setOrder(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
-                  <option value="desc">Newest First</option>
-                  <option value="asc">Oldest First</option>
-                </select>
-              </div>
-              <div className="flex items-end gap-2">
-                <Button onClick={()=>fetchRows(pagination.page)} variant="outline" size="sm" className="h-10" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag No</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segment No</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Component</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Storage / Destination</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {isLoading ? (
-                  <tr><td colSpan="9" className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
-                ) : rows.length === 0 ? (
-                  <tr><td colSpan="9" className="px-4 py-8 text-center text-gray-500">No items found.</td></tr>
-                ) : (
-                  rows.map((r) => (
-                    <tr key={r._id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-mono text-sm font-bold text-gray-900">{r?.bag?.bagNo || r.bagNo}</td>
-                      <td className="px-4 py-3 font-mono text-sm text-gray-700">{r?.segmentNo || '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{r?.issuedAt ? new Date(r.issuedAt).toLocaleDateString() : '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.storageLocation || r?.hospital?.name || '—'}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <button onClick={() => openView(r)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">View</button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t text-sm">
-            <div className="flex items-center gap-2">
-              <span>Rows per page:</span>
-              <select
-                value={pagination.limit}
-                onChange={(e) => {
-                  const newLimit = Number(e.target.value);
-                  setPagination(p => ({ ...p, limit: newLimit, page: 1 }));
-                  fetchRows(1, newLimit);
-                }}
-                className="border rounded-md px-2 py-1"
-              >
-                {[5,10,20,50].map(n => <option key={n} value={n}>{n}</option>)}
-              </select>
-            </div>
-            <div className="flex items-center gap-3 mt-3 sm:mt-0">
-              <button
-                onClick={() => {
-                  const page = Math.max(1, (pagination.page || 1) - 1);
-                  setPagination(p => ({ ...p, page }));
-                  fetchRows(page);
-                }}
-                disabled={(pagination.page || 1) === 1}
-                className={`px-3 py-1 rounded-md ${((pagination.page || 1) === 1) ? "text-gray-400 cursor-not-allowed" : "text-red-600 hover:bg-red-50"}`}
-              >
-                Previous
-              </button>
-              <span className="text-slate-700">Page {pagination.page || 1} of {pagination.totalPages || 1}</span>
-              <button
-                onClick={() => {
-                  const page = Math.min(pagination.totalPages || 1, (pagination.page || 1) + 1);
-                  setPagination(p => ({ ...p, page }));
-                  fetchRows(page);
-                }}
-                disabled={(pagination.page || 1) >= (pagination.totalPages || 1)}
-                className={`px-3 py-1 rounded-md ${((pagination.page || 1) >= (pagination.totalPages || 1)) ? "text-gray-400 cursor-not-allowed" : "text-red-600 hover:bg-red-50"}`}
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        </div>
+          <IssueStockTab
+            status={status} setStatus={setStatus}
+            componentType={componentType} setComponentType={setComponentType}
+            bloodGroup={bloodGroup} setBloodGroup={setBloodGroup}
+            search={search} setSearch={setSearch}
+            expiryFrom={expiryFrom} setExpiryFrom={setExpiryFrom}
+            expiryTo={expiryTo} setExpiryTo={setExpiryTo}
+            order={order} setOrder={setOrder}
+            pagination={pagination} setPagination={setPagination}
+            rows={rows}
+            isLoading={isLoading}
+            fetchRows={fetchRows}
+            onView={openView}
+          />
         )}
       </div>
       <CustomModal open={viewOpen} onCancel={closeView} title={status === 'issued' ? 'Issued Component Details' : 'Reserved Component Details'} size="lg" hideFooter>
