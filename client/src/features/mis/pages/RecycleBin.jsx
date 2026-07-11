@@ -15,6 +15,14 @@ const formatDate = (value) =>
     ? new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
     : 'N/A';
 
+const formatBloodGroup = (bloodGroup, rhFactor) => {
+  if (!bloodGroup) return '';
+  const baseGroup = bloodGroup.replace(/[\s+−-]+$/, '');
+  const rh = String(rhFactor || '').toUpperCase();
+  const sign = rh === 'POSITIVE' ? ' +' : rh === 'NEGATIVE' ? ' −' : '';
+  return `${baseGroup}${sign}`;
+};
+
 export default function RecycleBin() {
   const [activeTab, setActiveTab] = useState('donor');
   const [restoreTarget, setRestoreTarget] = useState(null);
@@ -213,7 +221,7 @@ export default function RecycleBin() {
                         </td>
                         <td className="px-4 py-3 font-semibold text-gray-800">
                           {d.bloodGroup
-                            ? `${d.bloodGroup}${d.rhFactor === 'Positive' ? ' +' : d.rhFactor === 'Negative' ? ' −' : ''}`
+                            ? formatBloodGroup(d.bloodGroup, d.rhFactor)
                             : <span className="text-gray-400 font-normal text-xs">—</span>}
                         </td>
                         <td className="px-4 py-3 text-center text-gray-700 font-medium">{d.unitCount}</td>

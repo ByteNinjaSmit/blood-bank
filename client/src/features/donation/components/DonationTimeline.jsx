@@ -1,6 +1,14 @@
 import React from 'react';
 import { CheckCircle2, XCircle, Clock, Droplets, TestTube, Scissors, Package, Building2, User } from 'lucide-react';
 
+const formatBloodGroup = (bloodGroup, rhFactor) => {
+  if (!bloodGroup) return '';
+  const baseGroup = bloodGroup.replace(/[\s+−-]+$/, '');
+  const rh = String(rhFactor || '').toUpperCase();
+  const sign = rh === 'POSITIVE' ? ' +' : rh === 'NEGATIVE' ? ' −' : '';
+  return `${baseGroup}${sign}`;
+};
+
 const UNIT_STATUS_ORDER = [
   'COLLECTED', 'IN_TESTING', 'QUARANTINE', 'RELEASED',
   'RESERVED', 'CROSSMATCHED', 'ISSUED', 'TRANSFUSED',
@@ -175,7 +183,7 @@ export default function DonationTimeline({ donation }) {
           </span>
           {donation.bloodGroup && (
             <span className="px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-200 font-medium">
-              {donation.bloodGroup}{donation.rhFactor === 'Positive' ? ' +' : donation.rhFactor === 'Negative' ? ' −' : ''}
+              {formatBloodGroup(donation.bloodGroup, donation.rhFactor)}
             </span>
           )}
         </div>
