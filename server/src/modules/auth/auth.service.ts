@@ -127,6 +127,13 @@ export const authService = {
     const publicId = await userRepo.nextPublicId();
     const code = sixDigit();
     const txnId = crypto.randomUUID();
+
+    // Log OTP to console in development so it can be retrieved without email SMTP
+    if (env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log(`\n[DEV] Registration OTP for ${input.email}: ${code}\n`);
+    }
+
     await authRepo.upsertOtp({
       email: input.email.toLowerCase(),
       txnId,
