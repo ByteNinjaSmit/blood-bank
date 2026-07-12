@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { buildStyledSheet, buildMultiTableSheet, XLSX } from '@/utils/xlsxStyleHelper';
+import { buildStyledSheet, buildMultiTableSheet, buildDashboardMultiTableSheet, XLSX } from '@/utils/xlsxStyleHelper';
 
 /**
  * Formats a date string/object to DD/MM/YYYY
@@ -83,26 +83,35 @@ export async function downloadExcelReport(sheets, filename = 'Report.xlsx') {
         totalRowIndexes,
         highlightRowIndexes,
         redCells,
+        tables,
+        generatedBy,
       } = sheet;
 
       const statsParts = (stats || []).map((s) => `${s.label}: ${s.value}`);
       if (filtersApplied) statsParts.push(`Filters — ${filtersApplied}`);
       const statsLine = statsParts.length ? statsParts.join('     ·     ') : undefined;
 
-      // Column widths + row heights are auto-fit to content inside
-      // buildStyledSheet (no colWidths override passed here).
-      const ws = buildStyledSheet(rows, {
-        title,
-        subtitle,
-        reportPeriod,
-        statsLine,
-        columns: headers,
-        groupHeader,
-        totalRowIndexes,
-        highlightRowIndexes,
-        redCells,
-        formatDateTime,
-      });
+      const ws = tables
+        ? buildDashboardMultiTableSheet(tables, {
+            title,
+            subtitle,
+            generatedBy,
+            reportPeriod,
+            formatDateTime,
+          })
+        : buildStyledSheet(rows, {
+            title,
+            subtitle,
+            generatedBy,
+            reportPeriod,
+            statsLine,
+            columns: headers,
+            groupHeader,
+            totalRowIndexes,
+            highlightRowIndexes,
+            redCells,
+            formatDateTime,
+          });
       XLSX.utils.book_append_sheet(wb, ws, String(name).slice(0, 31));
     });
 

@@ -55,8 +55,9 @@ const MATRIX_BLOOD_GROUPS = [
   { group: "O", rh: "Negative", label: "O-" },
 ];
 
-function table({ subtitle, headers, rows, alignments }) {
+function table({ name, subtitle, headers, rows, alignments }) {
   return {
+    name,
     subtitle,
     headers,
     alignments: alignments || headers.map((_, i) => (i === 0 ? "left" : "right")),
