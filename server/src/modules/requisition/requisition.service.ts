@@ -17,7 +17,7 @@ import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { PatientRepo } from '@/modules/patient/patient.repository';
 import type { CrossmatchService } from '@/modules/crossmatch/crossmatch.service';
 import type { IssueService } from '@/modules/issue/issue.service';
-import { normalizeRequestedComponents, toLegacyComponentType } from '@/modules/requisition/requisition.mapper';
+import { normalizeRequestedComponents } from '@/modules/requisition/requisition.mapper';
 
 export interface MatchShortageDto {
   componentType: string;
@@ -233,7 +233,7 @@ export function createRequisitionService(deps: {
         const requiredCount = rc.units;
         const availableCount = Math.max(0, requiredCount - missingCount);
         formattedShortages.push({
-          componentType: toLegacyComponentType(rc.componentType),
+          componentType: rc.componentType,
           bloodGroup: rc.aboGroup,
           rh: rc.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
           required: requiredCount,
@@ -389,9 +389,7 @@ export function createRequisitionService(deps: {
         const compType = releasedUnit.componentType;
         const compatibleGroups = compatibleAboGroups(patientAbo, compType);
         const rhOnlyNegative =
-          (['PRBC', 'WHOLE_BLOOD', 'LEUKOREDUCED_PRBC', 'WASHED_PRBC', 'IRRADIATED_PRBC'] as string[]).includes(
-            compType,
-          ) && patientRh === 'NEGATIVE';
+          (['PRBC', 'WB'] as string[]).includes(compType) && patientRh === 'NEGATIVE';
 
         const alreadyMatchedIds = updatedReq.matchedUnits.map((mu) => mu.unitId);
         const replacement = await deps.units.findBestReplacement({

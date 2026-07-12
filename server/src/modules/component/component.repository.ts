@@ -14,14 +14,12 @@ import { DonorModel } from '@/modules/donor/donor.model';
 import type { UnitRepo } from '@/modules/unit/unit.repository';
 import { NotFoundError, ConflictError, ValidationError } from '@/shared/errors';
 import {
-  toLegacyComponentType,
-  toInternalComponentType,
   toLegacyUnitStatus,
   mapSerologyTests,
   hasLeftBank,
-  SHELF_DAYS,
-  PRODUCT_CODES,
 } from '@/modules/component/component.mapper';
+import { getShelfDays, PRODUCT_CODE } from '@/shared/component-type';
+import type { ComponentType } from '@/shared/enums';
 
 export interface ComponentListFilters {
   page?: number;
@@ -128,7 +126,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       const { page, limit, type, status, expiryBefore, fromDate, toDate, search, order } = filters;
 
       const unitFilter: any = { deletedAt: null, status: { $ne: 'COLLECTED' } };
-      if (type) unitFilter.componentType = toInternalComponentType(type);
+      if (type) unitFilter.componentType = type;
       if (status) {
         if (status === 'in-stock') unitFilter.status = 'RELEASED';
         else if (status === 'reserved') unitFilter.status = 'RESERVED';
@@ -213,10 +211,10 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
           canEdit: !hasLeftBank(units),
           editReason: (d as any).lastEditReason || undefined,
           lastEditedAt: (d as any).lastEditedAt ? new Date((d as any).lastEditedAt).toISOString() : undefined,
-          rbc: componentSlot(units, ['PRBC', 'WHOLE_BLOOD'], tti),
+          rbc: componentSlot(units, ['PRBC', 'WB'], tti),
           ffp: componentSlot(units, ['FFP'], tti),
-          platelet: componentSlot(units, ['PLATELET_CONCENTRATE', 'SDP'], tti),
-          cryo: componentSlot(units, ['CRYOPRECIPITATE'], tti),
+          platelet: componentSlot(units, ['RDP', 'SDP'], tti),
+          cryo: componentSlot(units, ['CRYO'], tti),
         };
       });
 
@@ -274,7 +272,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
             rpmSecondSpin: separation?.rpmSecondSpin || '',
             separationTime: separation?.separationTime ? separation.separationTime.toISOString() : '',
             components: units.map((u) => ({
-              componentType: toLegacyComponentType(u.componentType),
+              componentType: u.componentType,
               volumeMl: u.volumeMl,
             })),
           };
@@ -287,8 +285,8 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       if (!donation) throw new NotFoundError('Donation', donationId);
       const resolvedDonationId = donation.donationId;
 
-      const mappedType = toInternalComponentType(componentType);
-      const productCode = PRODUCT_CODES[mappedType] || mappedType;
+      const mappedType = componentType as ComponentType;
+      const productCode = PRODUCT_CODE[mappedType] ?? mappedType;
 
       const existing = await BloodUnitModel.findOne({
         donationId: resolvedDonationId,
@@ -300,12 +298,12 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       const requestedVolume = Number(volumeMl) || 250;
       if (requestedVolume <= 0) throw new ValidationError('Volume must be greater than zero');
 
-      const shelfDays = SHELF_DAYS[mappedType] || 35;
+      const shelfDays = getShelfDays(mappedType);
       const expiresAt = new Date(donation.collectedAt);
       expiresAt.setDate(expiresAt.getDate() + shelfDays);
 
       await BloodUnitModel.updateOne(
-        { donationId: resolvedDonationId, componentType: 'WHOLE_BLOOD', deletedAt: null },
+        { donationId: resolvedDonationId, componentType: 'WB', deletedAt: null },
         { deletedAt: new Date(), deletedBy: new Types.ObjectId(actorId) },
       );
 
@@ -389,7 +387,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       const cutoff = new Date(Date.now() + daysNum * 86_400_000);
       const unitFilter: any = { deletedAt: null, expiresAt: { $gt: new Date(), $lte: cutoff } };
 
-      if (componentType) unitFilter.componentType = toInternalComponentType(componentType);
+      if (componentType) unitFilter.componentType = componentType;
       if (status) {
         if (status === 'in-stock') unitFilter.status = 'RELEASED';
         else if (status === 'reserved') unitFilter.status = 'RESERVED';
@@ -435,7 +433,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         return {
           id: u._id.toString(),
           componentId: u.unitId,
-          type: toLegacyComponentType(u.componentType),
+          type: u.componentType,
           volumeMl: u.volumeMl,
           status: toLegacyUnitStatus(u.status, tti?.releaseDecision),
           expiryDate: u.expiresAt.toISOString(),
@@ -485,7 +483,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         if (!u) return { status: 'unprepared' };
         return {
           componentId: u.unitId,
-          componentType: toLegacyComponentType(u.componentType),
+          componentType: u.componentType,
           status: toLegacyUnitStatus(u.status, tti?.releaseDecision),
           volumeMl: u.volumeMl,
           expiryDate: u.expiresAt ? u.expiresAt.toISOString() : '',
@@ -536,10 +534,10 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
             ? new Date((donationDoc as any).lastEditedAt).toISOString()
             : undefined,
         },
-        rbc: findComp(['PRBC', 'WHOLE_BLOOD']),
+        rbc: findComp(['PRBC', 'WB']),
         ffp: findComp(['FFP']),
-        platelet: findComp(['PLATELET_CONCENTRATE', 'SDP']),
-        cryo: findComp(['CRYOPRECIPITATE']),
+        platelet: findComp(['RDP', 'SDP']),
+        cryo: findComp(['CRYO']),
       };
     },
 
@@ -590,7 +588,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       const unitsById = new Map(existingUnits.map((u) => [u.unitId, u]));
 
       // Guard against two edited slots landing on the same component type.
-      const mappedTypes = components.map((c) => toInternalComponentType(c.componentType));
+      const mappedTypes = components.map((c) => c.componentType as ComponentType);
       if (new Set(mappedTypes).size !== mappedTypes.length) {
         throw new ValidationError('Each component type may only appear once per bag');
       }
@@ -611,8 +609,8 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         const newType = mappedTypes[i]!;
         if (newType !== unit.componentType) {
           unit.componentType = newType as any;
-          unit.productCode = PRODUCT_CODES[newType] || newType;
-          const shelfDays = SHELF_DAYS[newType] || 35;
+          unit.productCode = PRODUCT_CODE[newType] ?? newType;
+          const shelfDays = getShelfDays(newType, unit.specialAttributes as any);
           const expiresAt = new Date(donation.collectedAt);
           expiresAt.setDate(expiresAt.getDate() + shelfDays);
           unit.expiresAt = expiresAt;

@@ -5,17 +5,17 @@ import { deriveUnits } from './donation.unit-derivation';
 const COLLECTED = new Date('2026-05-30T00:00:00Z');
 
 describe('unit derivation defaults', () => {
-  it('whole blood produces WHOLE_BLOOD', () => {
+  it('whole blood donation produces a WB unit', () => {
     const units = deriveUnits({
       donationId: 'D-001',
       donationType: 'WHOLE_BLOOD',
       collectedAt: COLLECTED,
     });
-    expect(units.map((u) => u.componentType)).toEqual(['WHOLE_BLOOD']);
+    expect(units.map((u) => u.componentType)).toEqual(['WB']);
     expect(units.every((u) => u.unitId.startsWith('D-001-'))).toBe(true);
   });
 
-  it('WHOLE_BLOOD expires 35 days after collection', () => {
+  it('WB expires 35 days after collection', () => {
     const [wb] = deriveUnits({
       donationId: 'D-001',
       donationType: 'WHOLE_BLOOD',

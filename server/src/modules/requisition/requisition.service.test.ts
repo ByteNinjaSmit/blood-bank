@@ -124,7 +124,7 @@ describe('requisition-service.match', () => {
     const { requisition, shortages } = await svc.match(REQ_ID, 'actor');
     expect(requisition.matchedUnits).toHaveLength(1);
     expect(shortages).toEqual([
-      { componentType: 'RBC', bloodGroup: 'A', rh: 'Positive', required: 2, available: 1, compatibleGroupsSearched: ['A'] },
+      { componentType: 'PRBC', bloodGroup: 'A', rh: 'Positive', required: 2, available: 1, compatibleGroupsSearched: ['A'] },
     ]);
   });
 

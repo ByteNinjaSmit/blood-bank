@@ -88,7 +88,7 @@ export function compatibleAboGroups(
       }
     case 'CRYO':
       return ABO_CRYO_PREF[recipient];
-    case 'WHOLE_BLOOD':
+    case 'WB':
       // Whole blood ABO must match recipient exactly (carries both RBC and plasma).
       return [recipient];
   }
@@ -111,7 +111,7 @@ export function isRhAcceptable(
 ): boolean {
   switch (rbcFamily(component)) {
     case 'RBC':
-    case 'WHOLE_BLOOD':
+    case 'WB':
       if (recipient === 'NEGATIVE') return donor === 'NEGATIVE';
       return true;
     case 'PLASMA':
@@ -127,7 +127,7 @@ export function isRhAcceptable(
  * need a serological crossmatch between donor unit and recipient sample.
  */
 export function requiresCrossmatch(component: ComponentType): boolean {
-  return rbcFamily(component) === 'RBC' || rbcFamily(component) === 'WHOLE_BLOOD';
+  return rbcFamily(component) === 'RBC' || rbcFamily(component) === 'WB';
 }
 
 /**
@@ -136,7 +136,7 @@ export function requiresCrossmatch(component: ComponentType): boolean {
 export function strictness(component: ComponentType): Strictness {
   switch (rbcFamily(component)) {
     case 'RBC':
-    case 'WHOLE_BLOOD':
+    case 'WB':
       return 'HIGH';
     case 'PLASMA':
       return 'MEDIUM';
@@ -178,23 +178,20 @@ export function classify(
 // Internal: group components into compatibility families.
 // ---------------------------------------------------------------------
 
-type Family = 'RBC' | 'PLASMA' | 'PLATELET' | 'CRYO' | 'WHOLE_BLOOD';
+type Family = 'RBC' | 'PLASMA' | 'PLATELET' | 'CRYO' | 'WB';
 
 function rbcFamily(component: ComponentType): Family {
   switch (component) {
     case 'PRBC':
-    case 'IRRADIATED_PRBC':
-    case 'WASHED_PRBC':
-    case 'LEUKOREDUCED_PRBC':
       return 'RBC';
     case 'FFP':
       return 'PLASMA';
-    case 'PLATELET_CONCENTRATE':
+    case 'RDP':
     case 'SDP':
       return 'PLATELET';
-    case 'CRYOPRECIPITATE':
+    case 'CRYO':
       return 'CRYO';
-    case 'WHOLE_BLOOD':
-      return 'WHOLE_BLOOD';
+    case 'WB':
+      return 'WB';
   }
 }

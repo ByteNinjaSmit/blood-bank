@@ -3,6 +3,7 @@
 // move under locale config later).
 
 import type { ComponentType, DonationType } from '@/shared/enums';
+import { getShelfDays, PRODUCT_CODE } from '@/shared/component-type';
 
 export interface UnitTemplate {
   componentType: ComponentType;
@@ -11,18 +12,6 @@ export interface UnitTemplate {
   shelfLifeDays?: number;
 }
 
-const SHELF_DAYS: Readonly<Record<ComponentType, number>> = {
-  WHOLE_BLOOD: 35,
-  PRBC: 42,
-  FFP: 365,
-  PLATELET_CONCENTRATE: 5,
-  SDP: 5,
-  CRYOPRECIPITATE: 365,
-  IRRADIATED_PRBC: 14,
-  WASHED_PRBC: 1,
-  LEUKOREDUCED_PRBC: 42,
-};
-
 /**
  * Default components produced per donation type when no explicit
  * separation plan is given. Phlebotomist or lab tech can override
@@ -30,26 +19,26 @@ const SHELF_DAYS: Readonly<Record<ComponentType, number>> = {
  */
 const DEFAULT_TEMPLATES: Readonly<Record<DonationType, ReadonlyArray<UnitTemplate>>> = {
   WHOLE_BLOOD: [
-    { componentType: 'WHOLE_BLOOD', volumeMl: 350, shelfLifeDays: SHELF_DAYS.WHOLE_BLOOD },
+    { componentType: 'WB', volumeMl: 350, shelfLifeDays: getShelfDays('WB') },
   ],
-  PLATELETPHERESIS: [{ componentType: 'SDP', volumeMl: 250, shelfLifeDays: SHELF_DAYS.SDP }],
-  PLASMAPHERESIS: [{ componentType: 'FFP', volumeMl: 600, shelfLifeDays: SHELF_DAYS.FFP }],
+  PLATELETPHERESIS: [{ componentType: 'SDP', volumeMl: 250, shelfLifeDays: getShelfDays('SDP') }],
+  PLASMAPHERESIS: [{ componentType: 'FFP', volumeMl: 600, shelfLifeDays: getShelfDays('FFP') }],
   DOUBLE_RED_CELL: [
-    { componentType: 'PRBC', volumeMl: 250, shelfLifeDays: SHELF_DAYS.PRBC },
-    { componentType: 'PRBC', volumeMl: 250, shelfLifeDays: SHELF_DAYS.PRBC },
+    { componentType: 'PRBC', volumeMl: 250, shelfLifeDays: getShelfDays('PRBC') },
+    { componentType: 'PRBC', volumeMl: 250, shelfLifeDays: getShelfDays('PRBC') },
   ],
   AUTOLOGOUS: [
-    { componentType: 'WHOLE_BLOOD', volumeMl: 450, shelfLifeDays: SHELF_DAYS.WHOLE_BLOOD },
+    { componentType: 'WB', volumeMl: 450, shelfLifeDays: getShelfDays('WB') },
   ],
   DIRECTED: [
     {
-      componentType: 'WHOLE_BLOOD',
+      componentType: 'WB',
       volumeMl: 350,
-      shelfLifeDays: SHELF_DAYS.WHOLE_BLOOD,
+      shelfLifeDays: getShelfDays('WB'),
     },
   ],
   REPLACEMENT: [
-    { componentType: 'WHOLE_BLOOD', volumeMl: 350, shelfLifeDays: SHELF_DAYS.WHOLE_BLOOD },
+    { componentType: 'WB', volumeMl: 350, shelfLifeDays: getShelfDays('WB') },
   ],
 };
 
@@ -61,18 +50,6 @@ export interface DerivedUnit {
   collectedAt: Date;
   expiresAt: Date;
 }
-
-const PRODUCT_CODES: Readonly<Record<ComponentType, string>> = {
-  WHOLE_BLOOD: 'WB',
-  PRBC: 'PRBC',
-  FFP: 'FFP',
-  PLATELET_CONCENTRATE: 'PC',
-  SDP: 'SDP',
-  CRYOPRECIPITATE: 'CRYO',
-  IRRADIATED_PRBC: 'IRR-PRBC',
-  WASHED_PRBC: 'WASH-PRBC',
-  LEUKOREDUCED_PRBC: 'LR-PRBC',
-};
 
 export interface DeriveUnitsInput {
   donationId: string;
@@ -89,10 +66,10 @@ export function deriveUnits(input: DeriveUnitsInput): DerivedUnit[] {
   }
 
   return templates.map((t, idx) => {
-    const shelfLifeDays = t.shelfLifeDays ?? SHELF_DAYS[t.componentType];
+    const shelfLifeDays = t.shelfLifeDays ?? getShelfDays(t.componentType);
     const expiresAt = new Date(input.collectedAt);
     expiresAt.setDate(expiresAt.getDate() + shelfLifeDays);
-    const productCode = PRODUCT_CODES[t.componentType];
+    const productCode = PRODUCT_CODE[t.componentType];
     return {
       unitId: `${input.donationId}-${productCode}-${idx + 1}`,
       productCode,
@@ -104,4 +81,4 @@ export function deriveUnits(input: DeriveUnitsInput): DerivedUnit[] {
   });
 }
 
-export const __testing = { DEFAULT_TEMPLATES, SHELF_DAYS, PRODUCT_CODES };
+export const __testing = { DEFAULT_TEMPLATES };

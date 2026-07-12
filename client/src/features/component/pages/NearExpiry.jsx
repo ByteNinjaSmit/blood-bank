@@ -13,13 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComponentDetailsModal } from "@/components/blood-components";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportNearExpiryComponents } from "@/utils/excelExportHelper";
-
-const COMPONENT_TYPES = [
-  { value: "RBC", label: "Red Blood Cells" },
-  { value: "FFP", label: "Fresh Frozen Plasma" },
-  { value: "Platelet", label: "Platelets" },
-  { value: "Cryo", label: "Cryoprecipitate" },
-];
+import { COMPONENT_TYPES } from "@/constants/component-types";
 
 const STATUS_OPTIONS = [
   { value: "in-stock", label: "In Stock" },

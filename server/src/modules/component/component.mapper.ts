@@ -2,29 +2,7 @@
 // list/near-expiry/detail views. No I/O — kept separate from the
 // repository so the legacy-shape translation is unit-testable and
 // isn't duplicated per-endpoint like it was in the original monolith.
-import type { ComponentType, UnitStatus } from '@/shared/enums';
-
-export type LegacyComponentType = 'RBC' | 'FFP' | 'Platelet' | 'Cryo' | string;
-
-const TO_INTERNAL_TYPE: Record<string, ComponentType> = {
-  RBC: 'PRBC',
-  Platelet: 'PLATELET_CONCENTRATE',
-  Cryo: 'CRYOPRECIPITATE',
-};
-
-const TO_LEGACY_TYPE: Record<string, LegacyComponentType> = {
-  PRBC: 'RBC',
-  PLATELET_CONCENTRATE: 'Platelet',
-  CRYOPRECIPITATE: 'Cryo',
-};
-
-export function toInternalComponentType(legacyType: string): ComponentType {
-  return (TO_INTERNAL_TYPE[legacyType] ?? legacyType) as ComponentType;
-}
-
-export function toLegacyComponentType(internalType: string): LegacyComponentType {
-  return TO_LEGACY_TYPE[internalType] ?? internalType;
-}
+import type { UnitStatus } from '@/shared/enums';
 
 export type LegacyUnitStatus =
   | 'in-stock'
@@ -66,23 +44,6 @@ export function toLegacyUnitStatus(
       return 'in-stock';
   }
 }
-
-export const SHELF_DAYS: Readonly<Record<string, number>> = {
-  WHOLE_BLOOD: 35,
-  PRBC: 42,
-  FFP: 365,
-  PLATELET_CONCENTRATE: 5,
-  CRYOPRECIPITATE: 365,
-};
-
-export const PRODUCT_CODES: Readonly<Record<string, string>> = {
-  WHOLE_BLOOD: 'WB',
-  PRBC: 'PRBC',
-  FFP: 'FFP',
-  PLATELET_CONCENTRATE: 'PC',
-  SDP: 'SDP',
-  CRYOPRECIPITATE: 'CRYO',
-};
 
 // Fixed mandatory TTI panel, in report order, with the legacy test-name
 // labels already used elsewhere (discard register, serology views).

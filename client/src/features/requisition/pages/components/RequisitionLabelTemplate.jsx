@@ -1,4 +1,5 @@
 import React from 'react';
+import { COMPONENT_PRINT_LABEL } from '@/constants/component-types';
 
 export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
   if (!doc) return null;
@@ -117,10 +118,7 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                 {/* Center: Component Details */}
                 <div className="flex-1 px-2 flex flex-col justify-start pt-2 select-none text-left font-bold uppercase tracking-tight text-black text-[7.5px] leading-tight space-y-1 min-w-0">
                   <h4 className="text-[12.5px] font-black leading-none text-black uppercase mb-1.5">
-                    {comp.componentType === 'RBC' ? 'Packed Red Blood Cells I.P' :
-                     comp.componentType === 'FFP' ? 'Fresh Frozen Plasma' :
-                     comp.componentType === 'Platelet' ? 'Platelet Concentrate' :
-                     comp.componentType === 'Cryo' ? 'Cryoprecipitate' : comp.componentType || 'Blood Component'}
+                    {COMPONENT_PRINT_LABEL[comp.componentType] || comp.componentType || 'Blood Component'}
                   </h4>
                   <div className="grid grid-cols-[auto_1fr] gap-x-1.5 gap-y-1 font-extrabold">
                     <span>Donor ID</span><span>: {bag.bagNo || doc.requestId}</span>

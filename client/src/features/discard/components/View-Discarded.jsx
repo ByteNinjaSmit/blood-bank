@@ -14,6 +14,7 @@ import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown"
 import { exportProcurementDiscard } from "@/utils/excelExportHelper"
 import { toast } from "sonner"
 import { formatDateTime } from "@/lib/format-date"
+import { COMPONENT_LABEL } from "@/constants/component-types"
 
 const DISCARD_REASONS = [
   'EXPIRED',
@@ -31,13 +32,12 @@ const DISCARD_REASONS = [
   'LABEL_ERROR',
 ];
 
+// bag-inspection testingType includes two bag-state values (EMPTY/OTHER)
+// alongside the 6 canonical component types, so it can't be a straight
+// re-export of COMPONENT_LABEL.
 const TESTING_TYPE_LABELS = {
   EMPTY: 'Empty Bag (QC)',
-  WB: 'Whole Blood',
-  PRBC: 'PRBC',
-  FFP: 'FFP',
-  PC: 'Platelet Concentrate',
-  CRYO: 'Cryoprecipitate',
+  ...COMPONENT_LABEL,
   OTHER: 'Other',
 };
 

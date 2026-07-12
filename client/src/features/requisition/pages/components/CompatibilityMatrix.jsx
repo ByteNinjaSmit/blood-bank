@@ -12,7 +12,7 @@ const GROUPS = ['O', 'A', 'B', 'AB'];
 
 const COMPONENTS = [
   {
-    key: 'RBC', label: 'RBC (Red Blood Cells)',
+    key: 'PRBC', label: 'PRBC (Packed Red Blood Cells)',
     aboRule: 'Strict ABO', rhRule: 'Strict — Rh− → only Rh−', crossmatch: 'Required',
     strictness: 'High', strictColor: 'text-red-700 bg-red-50',
     note: 'Rh+ patient can receive Rh+ or Rh−. Rh− patient must receive Rh− only.',
@@ -24,13 +24,13 @@ const COMPONENTS = [
     note: 'Plasma must be given only to patients of the exact same blood group.',
   },
   {
-    key: 'Platelet', label: 'Platelets',
+    key: 'RDP', label: 'RDP (Random Donor Platelets)',
     aboRule: 'Variable (Selectable)', rhRule: 'Preferred (not mandatory)', crossmatch: 'No',
     strictness: 'Low', strictColor: 'text-blue-700 bg-blue-50',
     note: 'Select compatibility rules using the buttons below. Default is Universal (any blood group patient).',
   },
   {
-    key: 'Cryo', label: 'Cryoprecipitate',
+    key: 'CRYO', label: 'Cryoprecipitate',
     aboRule: 'Optional (any acceptable)', rhRule: 'Ignored', crossmatch: 'No',
     strictness: 'Very Low', strictColor: 'text-green-700 bg-green-50',
     note: 'Same-group preferred per SOP. Any ABO group is acceptable in real-world practice.',
@@ -81,16 +81,16 @@ function MatrixTable({ matrix, recipientGroup }) {
 
 export default function CompatibilityMatrix({ recipientGroup }) {
   const [open, setOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('RBC');
+  const [activeTab, setActiveTab] = useState('PRBC');
   const [plateletMode, setPlateletMode] = useState('UNIVERSAL');
 
   const active = COMPONENTS.find((c) => c.key === activeTab);
 
   const getMatrix = (key) => {
-    if (key === 'RBC') return ABO_RBC;
+    if (key === 'PRBC') return ABO_RBC;
     if (key === 'FFP') return ABO_FFP;
-    if (key === 'Cryo') return ABO_CRYO;
-    if (key === 'Platelet') {
+    if (key === 'CRYO') return ABO_CRYO;
+    if (key === 'RDP') {
       if (plateletMode === 'MAJOR') return ABO_PLATELET_MAJOR;
       if (plateletMode === 'MINOR') return ABO_PLATELET_MINOR;
       return ABO_PLATELET_UNIVERSAL;
@@ -165,7 +165,7 @@ export default function CompatibilityMatrix({ recipientGroup }) {
                 </div>
               </div>
 
-              {activeTab === 'Platelet' && (
+              {activeTab === 'RDP' && (
                 <div className="flex flex-col md:flex-row md:items-center gap-3 p-4 rounded-xl bg-orange-50/50 border border-orange-100 text-sm shadow-inner">
                   <span className="font-bold text-orange-955 uppercase tracking-wide text-xs">Compatibility Mode:</span>
                   <div className="flex gap-2">

@@ -11,7 +11,6 @@ import { HospitalModel } from '@/modules/hospital/hospital.model';
 import { PatientModel } from '@/modules/patient/patient.model';
 import { DonorModel } from '@/modules/donor/donor.model';
 import { UserModel } from '@/modules/user/user.model';
-import { toLegacyComponentType } from '@/modules/requisition/requisition.mapper';
 
 export async function enrichRequisition(reqDto: any): Promise<any> {
   if (!reqDto) return reqDto;
@@ -58,7 +57,7 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
             segmentNo: donation?.segmentNo || unit.unitDin || unit.unitId || '—',
           },
           componentId: {
-            componentType: toLegacyComponentType(unit.componentType),
+            componentType: unit.componentType,
             expiryDate: unit.expiresAt ? unit.expiresAt.toISOString() : '',
             volumeMl: unit.volumeMl,
           },
@@ -110,7 +109,7 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
       : undefined);
 
   const requestedComponents = (reqDto.requestedComponents || []).map((rc: any) => ({
-    componentType: toLegacyComponentType(rc.componentType),
+    componentType: rc.componentType,
     units: rc.units,
     bloodGroup: rc.aboGroup,
     rh: rc.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',

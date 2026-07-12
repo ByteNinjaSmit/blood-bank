@@ -12,6 +12,7 @@ import RequisitionPrintService from '@/services/requisitionPrintService';
 import { RejectRequestModal } from '@/components/shared';
 import { Loader2, X } from 'lucide-react';
 import { exportRequisitionsExcel } from '@/features/requisition/requisitionExcelExport';
+import { COMPONENT_TYPES } from '@/constants/component-types';
 
 const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'rejected'];
 
@@ -1000,12 +1001,9 @@ export default function RequisitionList() {
               <label className="block text-sm text-gray-700 mb-1">Component</label>
               <select className="w-full px-3 py-2 border rounded-lg" value={filters.componentType} onChange={(e) => setFilters((p) => ({ ...p, componentType: e.target.value }))}>
                 <option value="">All</option>
-                <option value="PRBC">PRBC</option>
-                <option value="FFP">FFP</option>
-                <option value="PLATELET_CONCENTRATE">Platelet Concentrate</option>
-                <option value="SDP">SDP</option>
-                <option value="CRYOPRECIPITATE">Cryoprecipitate</option>
-                <option value="WHOLE_BLOOD">Whole Blood</option>
+                {COMPONENT_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>{type.value}</option>
+                ))}
               </select>
             </div>
           </div>

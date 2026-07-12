@@ -97,13 +97,6 @@ export interface StockOverviewDto {
   stockMatrix: Array<{ componentType: string; bloodGroup: string; rh: string; count: number }>;
 }
 
-const LEGACY_COMPONENT_LABEL: Record<string, string> = {
-  PRBC: 'RBC',
-  PLATELET_CONCENTRATE: 'Platelet',
-  CRYOPRECIPITATE: 'Cryo',
-  FFP: 'FFP',
-};
-
 export interface OngoingCampDto {
   id: string;
   campId: string;
@@ -282,7 +275,7 @@ export function createDashboardRepo(deps: {
       ]);
 
       const stockMatrix = matrixAgg.map((r: any) => ({
-        componentType: LEGACY_COMPONENT_LABEL[r._id.componentType] ?? r._id.componentType,
+        componentType: r._id.componentType,
         bloodGroup: r._id.bloodGroup,
         rh: r._id.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
         count: r.count,
@@ -390,10 +383,10 @@ export function createDashboardRepo(deps: {
               threshold: {
                 $switch: {
                   branches: [
-                    { case: { $in: ['$componentType', ['PLATELET_CONCENTRATE', 'SDP']] }, then: 1 },
-                    { case: { $in: ['$componentType', ['PRBC', 'IRRADIATED_PRBC', 'WASHED_PRBC', 'LEUKOREDUCED_PRBC']] }, then: 7 },
+                    { case: { $in: ['$componentType', ['RDP', 'SDP']] }, then: 1 },
+                    { case: { $eq: ['$componentType', 'PRBC'] }, then: 7 },
                     { case: { $eq: ['$componentType', 'FFP'] }, then: 30 },
-                    { case: { $eq: ['$componentType', 'CRYOPRECIPITATE'] }, then: 30 },
+                    { case: { $eq: ['$componentType', 'CRYO'] }, then: 30 },
                   ],
                   default: 7,
                 },
@@ -446,7 +439,7 @@ export function createDashboardRepo(deps: {
       });
 
       const componentProducedMap = componentsProducedAgg.reduce((acc: any, x: any) => {
-        acc[LEGACY_COMPONENT_LABEL[x._id] ?? x._id] = x.count || 0;
+        acc[x._id] = x.count || 0;
         return acc;
       }, {});
       const componentsProducedTotal = componentsProducedAgg.reduce((s: number, x: any) => s + (x.count || 0), 0);
@@ -460,12 +453,12 @@ export function createDashboardRepo(deps: {
       const stockFor = (group: string, rh: string) => stockByGroupMap[`${group}|${rh}`] || 0;
 
       const componentStockMap = stockByComponentAgg.reduce((acc: any, x: any) => {
-        acc[LEGACY_COMPONENT_LABEL[x._id] ?? x._id] = x.count || 0;
+        acc[x._id] = x.count || 0;
         return acc;
       }, {});
 
       const nearExpiryByComponent = nearExpiryAgg.map((x: any) => ({
-        componentType: LEGACY_COMPONENT_LABEL[x._id] ?? x._id,
+        componentType: x._id,
         value: x.count,
       }));
       const nearExpiryTotal = nearExpiryAgg.reduce((s: number, x: any) => s + (x.count || 0), 0);
@@ -563,10 +556,10 @@ export function createDashboardRepo(deps: {
         },
         components: {
           componentsProduced: componentsProducedTotal,
-          rbcProduced: componentProducedMap.RBC || 0,
-          pltProduced: componentProducedMap.Platelet || 0,
+          rbcProduced: componentProducedMap.PRBC || 0,
+          pltProduced: componentProducedMap.RDP || 0,
           ffpProduced: componentProducedMap.FFP || 0,
-          cryoProduced: componentProducedMap.Cryo || 0,
+          cryoProduced: componentProducedMap.CRYO || 0,
         },
         inventory: {
           inStock: inStockTotal,
@@ -587,10 +580,10 @@ export function createDashboardRepo(deps: {
           ABneg: stockFor('AB', 'Negative'),
         },
         componentAvailability: {
-          rbcStock: componentStockMap.RBC || 0,
-          pltStock: componentStockMap.Platelet || 0,
+          rbcStock: componentStockMap.PRBC || 0,
+          pltStock: componentStockMap.RDP || 0,
           ffpStock: componentStockMap.FFP || 0,
-          cryoStock: componentStockMap.Cryo || 0,
+          cryoStock: componentStockMap.CRYO || 0,
         },
         hospitalRequests: {
           totalRequests,
@@ -683,7 +676,7 @@ export function createDashboardRepo(deps: {
       ]);
 
       const breakdown = rows.map((r: any) => ({
-        componentType: LEGACY_COMPONENT_LABEL[r._id.componentType] ?? r._id.componentType,
+        componentType: r._id.componentType,
         bloodGroup: r._id.bloodGroup,
         rh: r._id.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
         count: r.count,

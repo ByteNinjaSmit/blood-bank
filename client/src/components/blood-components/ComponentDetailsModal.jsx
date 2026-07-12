@@ -362,12 +362,14 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
                   Components Breakdown
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* RBC Component Card */}
-                  {renderComponentCard("Red Blood Cells (RBC)", state.component.rbc)}
+                  {/* PRBC Component Card */}
+                  {renderComponentCard("Packed Red Blood Cells (PRBC)", state.component.prbc)}
                   {/* FFP Component Card */}
                   {renderComponentCard("Fresh Frozen Plasma (FFP)", state.component.ffp)}
-                  {/* Platelets Component Card */}
-                  {renderComponentCard("Platelets", state.component.platelet)}
+                  {/* RDP Component Card */}
+                  {renderComponentCard("Random Donor Platelets (RDP)", state.component.rdp)}
+                  {/* SDP Component Card */}
+                  {renderComponentCard("Single Donor Platelets (SDP)", state.component.sdp)}
                   {/* Cryo Component Card */}
                   {renderComponentCard("Cryoprecipitate", state.component.cryo)}
                 </div>

@@ -14,13 +14,7 @@ import { ComponentDetailsModal, ComponentEditModal } from "@/components/blood-co
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportComponents } from "@/utils/excelExportHelper";
 import { checkAccess } from "@/atoms/static";
-
-const COMPONENT_TYPES = [
-  { value: "RBC", label: "Red Blood Cells" },
-  { value: "FFP", label: "Fresh Frozen Plasma" },
-  { value: "Platelet", label: "Platelets" },
-  { value: "Cryo", label: "Cryoprecipitate" },
-];
+import { COMPONENT_TYPES } from "@/constants/component-types";
 
 const STATUS_OPTIONS = [
   { value: "in-stock", label: "In Stock" },
@@ -44,7 +38,7 @@ const ComponentsList = () => {
   const flattenComponents = (bags) => {
     return bags
       .map(bag => {
-        const components = ['rbc', 'ffp', 'platelet', 'cryo']
+        const components = ['prbc', 'ffp', 'rdp', 'sdp', 'cryo']
           .map(type => {
             const comp = bag[type];
             if (!comp || comp.status !== 'prepared') return null;
@@ -576,13 +570,16 @@ const ComponentsList = () => {
                       Segment No
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Red Blood Cells (RBC)
+                      Packed Red Blood Cells (PRBC)
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Fresh Frozen Plasma (FFP)
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Platelets
+                      Random Donor Platelets (RDP)
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Single Donor Platelets (SDP)
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Cryoprecipitate
@@ -607,7 +604,7 @@ const ComponentsList = () => {
                 <tbody className="bg-white divide-y divide-gray-100">
                   {state.isLoading ? (
                     <tr>
-                      <td colSpan="11" className="px-4 py-8 text-center">
+                      <td colSpan="12" className="px-4 py-8 text-center">
                         <div className="inline-flex items-center gap-2 text-gray-500">
                           <Loader2 className="w-5 h-5 animate-spin" />
                           Loading components inventory...
@@ -616,7 +613,7 @@ const ComponentsList = () => {
                     </tr>
                   ) : state.components.length === 0 ? (
                     <tr>
-                      <td colSpan="11" className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan="12" className="px-4 py-8 text-center text-gray-500">
                         No blood bag groups found.
                       </td>
                     </tr>
@@ -629,21 +626,21 @@ const ComponentsList = () => {
                         <td className="px-4 py-3 text-sm font-mono text-gray-700">
                           {bag.segmentNo || "-"}
                         </td>
-                        {/* RBC column */}
+                        {/* PRBC column */}
                         <td className="px-4 py-3 text-sm">
-                          {bag.rbc.status === "prepared" ? (
+                          {bag.prbc.status === "prepared" ? (
                             <div className="flex flex-col gap-0.5">
-                              <Badge variant="outline" className={`w-fit text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${getStatusBadgeClass(bag.rbc.componentStatus)}`}>
-                                {getStatusLabel(bag.rbc.componentStatus)}
+                              <Badge variant="outline" className={`w-fit text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${getStatusBadgeClass(bag.prbc.componentStatus)}`}>
+                                {getStatusLabel(bag.prbc.componentStatus)}
                               </Badge>
-                              <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.rbc.volumeMl} mL</span>
-                              <span className="text-[9px] text-gray-500">{bag.rbc.storageLocation || "Main Fridge"}</span>
-                              {isExpired(bag.rbc.expiryDate) && (
+                              <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.prbc.volumeMl} mL</span>
+                              <span className="text-[9px] text-gray-500">{bag.prbc.storageLocation || "Main Fridge"}</span>
+                              {isExpired(bag.prbc.expiryDate) && (
                                 <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
                                   <AlertTriangle className="w-2.5 h-2.5" /> Expired
                                 </span>
                               )}
-                              {isNearExpiry(bag.rbc.expiryDate) && !isExpired(bag.rbc.expiryDate) && (
+                              {isNearExpiry(bag.prbc.expiryDate) && !isExpired(bag.prbc.expiryDate) && (
                                 <span className="text-[9px] text-yellow-600 flex items-center gap-0.5 mt-0.5">
                                   <AlertTriangle className="w-2.5 h-2.5" /> Near Expiry
                                 </span>
@@ -681,21 +678,47 @@ const ComponentsList = () => {
                             </Badge>
                           )}
                         </td>
-                        {/* Platelets column */}
+                        {/* RDP column */}
                         <td className="px-4 py-3 text-sm">
-                          {bag.platelet.status === "prepared" ? (
+                          {bag.rdp.status === "prepared" ? (
                             <div className="flex flex-col gap-0.5">
-                              <Badge variant="outline" className={`w-fit text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${getStatusBadgeClass(bag.platelet.componentStatus)}`}>
-                                {getStatusLabel(bag.platelet.componentStatus)}
+                              <Badge variant="outline" className={`w-fit text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${getStatusBadgeClass(bag.rdp.componentStatus)}`}>
+                                {getStatusLabel(bag.rdp.componentStatus)}
                               </Badge>
-                              <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.platelet.volumeMl} mL</span>
-                              <span className="text-[9px] text-gray-500">{bag.platelet.storageLocation || "Main Fridge"}</span>
-                              {isExpired(bag.platelet.expiryDate) && (
+                              <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.rdp.volumeMl} mL</span>
+                              <span className="text-[9px] text-gray-500">{bag.rdp.storageLocation || "Main Fridge"}</span>
+                              {isExpired(bag.rdp.expiryDate) && (
                                 <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
                                   <AlertTriangle className="w-2.5 h-2.5" /> Expired
                                 </span>
                               )}
-                              {isNearExpiry(bag.platelet.expiryDate) && !isExpired(bag.platelet.expiryDate) && (
+                              {isNearExpiry(bag.rdp.expiryDate) && !isExpired(bag.rdp.expiryDate) && (
+                                <span className="text-[9px] text-yellow-600 flex items-center gap-0.5 mt-0.5">
+                                  <AlertTriangle className="w-2.5 h-2.5" /> Near Expiry
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="w-fit text-[9px] font-medium text-gray-400 border-gray-200 bg-gray-50/50 uppercase tracking-wider">
+                              Unprepared
+                            </Badge>
+                          )}
+                        </td>
+                        {/* SDP column */}
+                        <td className="px-4 py-3 text-sm">
+                          {bag.sdp?.status === "prepared" ? (
+                            <div className="flex flex-col gap-0.5">
+                              <Badge variant="outline" className={`w-fit text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${getStatusBadgeClass(bag.sdp.componentStatus)}`}>
+                                {getStatusLabel(bag.sdp.componentStatus)}
+                              </Badge>
+                              <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.sdp.volumeMl} mL</span>
+                              <span className="text-[9px] text-gray-500">{bag.sdp.storageLocation || "Main Fridge"}</span>
+                              {isExpired(bag.sdp.expiryDate) && (
+                                <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
+                                  <AlertTriangle className="w-2.5 h-2.5" /> Expired
+                                </span>
+                              )}
+                              {isNearExpiry(bag.sdp.expiryDate) && !isExpired(bag.sdp.expiryDate) && (
                                 <span className="text-[9px] text-yellow-600 flex items-center gap-0.5 mt-0.5">
                                   <AlertTriangle className="w-2.5 h-2.5" /> Near Expiry
                                 </span>

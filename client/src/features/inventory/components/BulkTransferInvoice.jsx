@@ -1,10 +1,12 @@
 import React from 'react';
 
 const COMPONENT_MATERIAL = {
-  RBC: 'Packed Red Blood Cells',
+  WB: 'Whole Blood',
+  PRBC: 'Packed Red Blood Cells',
   FFP: 'Fresh Frozen Plasma',
-  Platelet: 'Platelet Concentrate',
-  Cryo: 'Cryoprecipitate',
+  RDP: 'Platelet Concentrate',
+  SDP: 'Single Donor Platelets',
+  CRYO: 'Cryoprecipitate',
 };
 
 const ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',

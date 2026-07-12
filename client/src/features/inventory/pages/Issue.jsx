@@ -46,7 +46,7 @@ const Issue = () => {
     disease: "THALASSEMIA",
     otherDiseaseName: "",
   });
-  const [storageBags, setStorageBags] = useState([{ componentType: "RBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
+  const [storageBags, setStorageBags] = useState([{ componentType: "PRBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
   const [availableUnits, setAvailableUnits] = useState([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
@@ -176,17 +176,17 @@ const Issue = () => {
   const [bulkBloodBankAddress, setBulkBloodBankAddress] = useState("");
   const [bulkTransferDate, setBulkTransferDate] = useState(new Date().toISOString().split('T')[0]);
   // GIVE_LOAN: pick from our own stock, same shape as the "Send to Storage" bag picker
-  const [bulkGiveBags, setBulkGiveBags] = useState([{ componentType: "RBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
+  const [bulkGiveBags, setBulkGiveBags] = useState([{ componentType: "PRBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
   // TAKE_LOAN: bags coming in from the other bank — manually entered, not yet in our stock
-  const [bulkTakeGroups, setBulkTakeGroups] = useState([{ componentType: "RBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" }] }]);
+  const [bulkTakeGroups, setBulkTakeGroups] = useState([{ componentType: "PRBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" }] }]);
 
   const resetBulkForm = () => {
     setBulkTransferType("GIVE_LOAN");
     setBulkBloodBankName("");
     setBulkBloodBankAddress("");
     setBulkTransferDate(new Date().toISOString().split('T')[0]);
-    setBulkGiveBags([{ componentType: "RBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
-    setBulkTakeGroups([{ componentType: "RBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" }] }]);
+    setBulkGiveBags([{ componentType: "PRBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
+    setBulkTakeGroups([{ componentType: "PRBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" }] }]);
   };
 
   const fetchBulkTransfers = async (page = 1, limit = bulkPagination.limit) => {
@@ -546,7 +546,7 @@ const Issue = () => {
         disease: "THALASSEMIA",
         otherDiseaseName: "",
       });
-      setStorageBags([{ componentType: "RBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
+      setStorageBags([{ componentType: "PRBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
       fetchRows(pagination.page);
     } catch (e) {
       toast.error(e?.response?.data?.message || "Failed to issue blood units");

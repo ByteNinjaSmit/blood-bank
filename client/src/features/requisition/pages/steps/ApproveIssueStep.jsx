@@ -72,7 +72,7 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
               <span className="text-lg">⚠️</span>
               <div>
                 <p className="font-semibold">Crossmatch Pending</p>
-                <p>{pendingCrossmatch.length} RBC unit(s) still have pending crossmatch. RBC units must be compatible to issue, but other components can be issued now.</p>
+                <p>{pendingCrossmatch.length} PRBC unit(s) still have pending crossmatch. PRBC units must be compatible to issue, but other components can be issued now.</p>
               </div>
             </div>
           )}
@@ -81,7 +81,7 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
               <span className="text-lg">🚫</span>
               <div>
                 <p className="font-semibold">Crossmatch Incompatible</p>
-                <p>{incompatibleCrossmatch.length} RBC unit(s) marked incompatible. Replace these units before issuing them.</p>
+                <p>{incompatibleCrossmatch.length} PRBC unit(s) marked incompatible. Replace these units before issuing them.</p>
               </div>
             </div>
           )}

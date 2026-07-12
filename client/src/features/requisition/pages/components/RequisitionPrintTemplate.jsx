@@ -1,13 +1,14 @@
 import React from 'react';
 
+// Print abbreviations (as used on the paper crossmatch form) keyed by the
+// canonical componentType short codes.
 const COMPONENT_LABELS = {
-  RBC: 'PCV',
+  WB: 'WB',
   PRBC: 'PCV',
   FFP: 'FFP',
-  Platelet: 'PLT',
-  PLATELET_CONCENTRATE: 'PLT',
-  Cryo: 'CRYO',
-  CRYOPRECIPITATE: 'CRYO',
+  RDP: 'RDP',
+  SDP: 'SDP',
+  CRYO: 'CRYO',
 };
 
 export default function RequisitionPrintTemplate({ doc, isPreview = false, printPage = 'both' }) {

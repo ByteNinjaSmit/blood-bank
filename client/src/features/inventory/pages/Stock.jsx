@@ -9,11 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useStockSummary } from "@/features/inventory/queries";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportStock } from "@/utils/excelExportHelper";
+import { COMPONENT_TYPES, COMPONENT_PRINT_LABEL } from "@/constants/component-types";
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
+// Stock summary tracks only the separated/derived products (not WB itself).
 const COMPONENT_THEMES = {
-  RBC: {
+  PRBC: {
     bgClass: 'bg-red-50/20 border-red-100',
     titleClass: 'text-red-800 border-red-200',
     labelClass: 'bg-red-700 text-white',
@@ -29,7 +31,7 @@ const COMPONENT_THEMES = {
     activeText: 'text-amber-900',
     activeBgLabel: 'text-amber-700',
   },
-  Platelets: {
+  RDP: {
     bgClass: 'bg-yellow-50/20 border-yellow-100',
     titleClass: 'text-yellow-800 border-yellow-200',
     labelClass: 'bg-yellow-700 text-white',
@@ -37,7 +39,15 @@ const COMPONENT_THEMES = {
     activeText: 'text-yellow-900',
     activeBgLabel: 'text-yellow-700',
   },
-  Cryo: {
+  SDP: {
+    bgClass: 'bg-purple-50/20 border-purple-100',
+    titleClass: 'text-purple-800 border-purple-200',
+    labelClass: 'bg-purple-700 text-white',
+    activeBubble: 'border-purple-300 bg-purple-50 text-purple-800',
+    activeText: 'text-purple-900',
+    activeBgLabel: 'text-purple-700',
+  },
+  CRYO: {
     bgClass: 'bg-blue-50/20 border-blue-100',
     titleClass: 'text-blue-800 border-blue-200',
     labelClass: 'bg-blue-700 text-white',
@@ -50,24 +60,21 @@ const COMPONENT_THEMES = {
 function ComponentStockLines({ stockSummary }) {
   const initialStock = () => ({ 'A+': 0, 'A-': 0, 'B+': 0, 'B-': 0, 'AB+': 0, 'AB-': 0, 'O+': 0, 'O-': 0 });
   const stocks = {
-    RBC: initialStock(),
+    PRBC: initialStock(),
     FFP: initialStock(),
-    Platelets: initialStock(),
-    Cryo: initialStock(),
+    RDP: initialStock(),
+    SDP: initialStock(),
+    CRYO: initialStock(),
   };
 
   if (stockSummary && Array.isArray(stockSummary)) {
     stockSummary.forEach((s) => {
-      let type = s.componentType;
-      if (type === 'PRBC' || type === 'RBC') type = 'RBC';
-      else if (type === 'FFP') type = 'FFP';
-      else if (type === 'PLATELET_CONCENTRATE' || type === 'Platelet' || type === 'PLATELET') type = 'Platelets';
-      else if (type === 'CRYOPRECIPITATE' || type === 'Cryo' || type === 'CRYO') type = 'Cryo';
-      else return;
-      
+      const type = s.componentType;
+      if (!stocks[type]) return;
+
       const rh = s.rhFactor === 'POSITIVE' || s.rhFactor === 'Positive' ? '+' : s.rhFactor === 'NEGATIVE' || s.rhFactor === 'Negative' ? '-' : '';
       const key = `${s.aboGroup}${rh}`;
-      if (stocks[type] && stocks[type][key] !== undefined) {
+      if (stocks[type][key] !== undefined) {
         stocks[type][key] += s.count;
       }
     });
@@ -370,10 +377,9 @@ const Stock = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Components</SelectItem>
-                    <SelectItem value="RBC">RBC</SelectItem>
-                    <SelectItem value="FFP">FFP</SelectItem>
-                    <SelectItem value="Platelet">Platelet</SelectItem>
-                    <SelectItem value="Cryo">Cryo</SelectItem>
+                    {COMPONENT_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>{type.value}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1040,10 +1046,7 @@ const Stock = () => {
                   {/* Center: Component Name, Volume, Test Results, and both separation specifications */}
                   <div className="flex-1 px-1.5 flex flex-col justify-start pt-2 select-none text-left min-w-0">
                     <h4 className="text-[10.5px] font-black leading-tight text-black uppercase">
-                      {selectedPrintItem?.component?.componentType === 'RBC' ? 'Packed Red Blood Cells I.P' :
-                       selectedPrintItem?.component?.componentType === 'FFP' ? 'Fresh Frozen Plasma' :
-                       selectedPrintItem?.component?.componentType === 'Platelet' ? 'Platelet Concentrate' :
-                       selectedPrintItem?.component?.componentType === 'Cryo' ? 'Cryoprecipitate' : 'Blood Component'}
+                      {COMPONENT_PRINT_LABEL[selectedPrintItem?.component?.componentType] || 'Blood Component'}
                     </h4>
                     <p className="text-[8px] font-extrabold text-black leading-none mb-1.5">({selectedPrintItem?.component?.volumeMl ? `${selectedPrintItem.component.volumeMl} ml` : '— ml'})</p>
 

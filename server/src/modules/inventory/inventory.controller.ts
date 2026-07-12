@@ -19,13 +19,6 @@ function rand(): string {
   return new mongoose.Types.ObjectId().toHexString().slice(-6).toUpperCase();
 }
 
-function itTypeToLegacy(type: string): string {
-  if (type === 'PRBC') return 'RBC';
-  if (type === 'PLATELET_CONCENTRATE') return 'Platelet';
-  if (type === 'CRYOPRECIPITATE') return 'Cryo';
-  return type;
-}
-
 export interface InventoryControllers {
   select: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   reserve: (req: Request, res: Response, next: NextFunction) => Promise<void>;
@@ -83,10 +76,7 @@ export function createInventoryControllers(service: InventoryService): Inventory
 
         // 2. Map items/requestedComponents
         const requestedComponents = body.items.map((it) => {
-          let compType = it.componentType;
-          if (compType === 'RBC') compType = 'PRBC';
-          else if (compType === 'Platelet') compType = 'PLATELET_CONCENTRATE';
-          else if (compType === 'Cryo') compType = 'CRYOPRECIPITATE';
+          const compType = it.componentType;
 
           let rh = it.rh;
           if (rh === 'Positive') rh = 'POSITIVE';
@@ -168,7 +158,7 @@ export function createInventoryControllers(service: InventoryService): Inventory
 
           if (selection.shortage > 0) {
             shortages.push({
-              componentType: itTypeToLegacy(rc.componentType),
+              componentType: rc.componentType,
               required: rc.units,
               available: selection.selected.length,
             });
@@ -269,7 +259,7 @@ export function createInventoryControllers(service: InventoryService): Inventory
                 rh: unitDoc.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
               },
               component: {
-                componentType: itTypeToLegacy(unitDoc.componentType),
+                componentType: unitDoc.componentType,
                 expiryDate: unitDoc.expiresAt.toISOString(),
               }
             });

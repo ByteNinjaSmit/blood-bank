@@ -308,11 +308,11 @@ async function main() {
     if (type === 'PLATELETPHERESIS') return ['SDP'];
     if (type === 'PLASMAPHERESIS') return ['FFP'];
     if (type === 'DOUBLE_RED_CELL') return ['PRBC', 'PRBC'];
-    return chance(0.3) ? ['PRBC', 'FFP', 'PLATELET_CONCENTRATE'] : ['PRBC', 'FFP'];
+    return chance(0.3) ? ['PRBC', 'FFP', 'RDP'] : ['PRBC', 'FFP'];
   };
   const expiryFor = (comp: string, from: Date) => {
-    if (comp === 'PLATELET_CONCENTRATE' || comp === 'SDP') return new Date(from.getTime() + days(5));
-    if (comp === 'FFP' || comp === 'CRYOPRECIPITATE') return new Date(from.getTime() + days(365));
+    if (comp === 'RDP' || comp === 'SDP') return new Date(from.getTime() + days(5));
+    if (comp === 'FFP' || comp === 'CRYO') return new Date(from.getTime() + days(365));
     return new Date(from.getTime() + days(35));
   };
   const hist = (to: string, actor: typeof admin, reason = 'seed') => [{ to, event: 'SEED', actor, at: new Date(), reason }];
@@ -338,7 +338,7 @@ async function main() {
         unitId: `UNIT-2026-${pad(unitSeq++, 5)}`,
         donationId: don.donationId, componentType: comp,
         aboGroup: donor.bloodGroup, rhFactor: donor.rh,
-        volumeMl: comp === 'FFP' ? 220 : comp === 'SDP' ? 250 : comp.includes('PLATELET') ? 60 : 280,
+        volumeMl: comp === 'FFP' ? 220 : comp === 'SDP' ? 250 : comp === 'RDP' ? 60 : 280,
         collectedAt, expiresAt, status, statusHistory: hist(status, admin),
         specialAttributes: special,
         campId: don.campId ?? undefined,
@@ -383,7 +383,7 @@ async function main() {
   const usedUnit = new Set<string>();
   const releasedRBC = () => units.filter((u) => u.status === 'RELEASED' && !usedUnit.has(u.unitId));
   const REQ_STATUS_NONCHAIN = ['PENDING', 'MATCHED', 'APPROVED', 'REJECTED', 'CROSSMATCHED'] as const;
-  const COMPONENTS_REQ = ['PRBC', 'FFP', 'PLATELET_CONCENTRATE'] as const;
+  const COMPONENTS_REQ = ['PRBC', 'FFP', 'RDP'] as const;
 
   let xmSeq = 1, issSeq = 1, txnSeq = 1, arSeq = 1, chainsDone = 0;
   const reqDocs: InstanceType<typeof RequisitionModel>[] = [];
@@ -420,7 +420,7 @@ async function main() {
 
     if (doChain && candidate) {
       usedUnit.add(candidate.unitId);
-      const isRBC = candidate.componentType.includes('PRBC') || candidate.componentType === 'WHOLE_BLOOD';
+      const isRBC = candidate.componentType === 'PRBC' || candidate.componentType === 'WB';
       if (isRBC) {
         await CrossmatchModel.create({
           crossmatchId: `XM-2026-${pad(xmSeq++)}`, requisitionId: req._id, unitId: candidate.unitId,

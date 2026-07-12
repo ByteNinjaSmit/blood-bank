@@ -413,10 +413,10 @@ async function main() {
     });
 
     const collectedAt = d.doc.collectedAt as Date;
-    const comps = d.bag === 'DB' ? ['PRBC', 'FFP'] : ['PRBC', 'FFP', 'PLATELET_CONCENTRATE'];
-    const volumes: Record<string, number> = d.bag === 'DB' ? { PRBC: 220, FFP: 130 } : { PRBC: 200, FFP: 100, PLATELET_CONCENTRATE: 50 };
+    const comps = d.bag === 'DB' ? ['PRBC', 'FFP'] : ['PRBC', 'FFP', 'RDP'];
+    const volumes: Record<string, number> = d.bag === 'DB' ? { PRBC: 220, FFP: 130 } : { PRBC: 200, FFP: 100, RDP: 50 };
     for (const comp of comps) {
-      const expiresAt = comp === 'PLATELET_CONCENTRATE' ? new Date(collectedAt.getTime() + days(5))
+      const expiresAt = comp === 'RDP' ? new Date(collectedAt.getTime() + days(5))
         : comp === 'FFP' ? new Date(collectedAt.getTime() + days(365))
         : new Date(collectedAt.getTime() + days(35));
       const unit = await BloodUnitModel.create({
@@ -444,7 +444,7 @@ async function main() {
   console.log('hospitals:', hospitals.length);
 
   // ── 7. REQUISITIONS (20): 10 issued+completed, 10 approved+completed (no issue) ─
-  const COMPONENTS_REQ = ['PRBC', 'FFP', 'PLATELET_CONCENTRATE'] as const;
+  const COMPONENTS_REQ = ['PRBC', 'FFP', 'RDP'] as const;
   function makePatient(seq: number, abo: ABO, rh: RH) {
     const sex = chance(0.5) ? 'M' : 'F';
     const fn = sex === 'M' ? choice(MALE) : choice(FEMALE);
@@ -475,7 +475,7 @@ async function main() {
     const abo = aboPick(); const rh = rhPick();
     const patient = await makePatient(patSeq++, abo, rh);
     const single = i < 6; // 6 single-component, 4 multi-component
-    const wantComps = single ? [choice(COMPONENTS_REQ)] : (chance(0.5) ? ['PRBC', 'FFP'] : ['PRBC', 'FFP', 'PLATELET_CONCENTRATE']);
+    const wantComps = single ? [choice(COMPONENTS_REQ)] : (chance(0.5) ? ['PRBC', 'FFP'] : ['PRBC', 'FFP', 'RDP']);
 
     const requestedComponents = wantComps.map((c) => ({ componentType: c, units: 1, aboGroup: abo, rhFactor: rh, urgency: choice(['ROUTINE', 'URGENT', 'EMERGENCY'] as const) }));
     const matchedForReq: Array<{ unit: InstanceType<typeof BloodUnitModel>; compType: string }> = [];
@@ -531,7 +531,7 @@ async function main() {
     const abo = aboPick(); const rh = rhPick();
     const patient = await makePatient(patSeq++, abo, rh);
     const single = i < 6;
-    const wantComps = single ? [choice(COMPONENTS_REQ)] : (chance(0.5) ? ['PRBC', 'FFP'] : ['PRBC', 'FFP', 'PLATELET_CONCENTRATE']);
+    const wantComps = single ? [choice(COMPONENTS_REQ)] : (chance(0.5) ? ['PRBC', 'FFP'] : ['PRBC', 'FFP', 'RDP']);
     const requestedComponents = wantComps.map((c) => ({ componentType: c, units: 1, aboGroup: abo, rhFactor: rh, urgency: choice(['ROUTINE', 'URGENT', 'EMERGENCY'] as const) }));
 
     // Reference (but do not consume) matching RELEASED units for the "matched" display.
@@ -623,10 +623,10 @@ async function main() {
         releaseDecision: 'released', decidedBy: bbo._id, decidedAt: new Date(collectedAt.getTime() + days(2)), ...audit,
       });
 
-      const comps = bagKind === 'DB' ? ['PRBC', 'FFP'] : ['PRBC', 'FFP', 'PLATELET_CONCENTRATE'];
-      const volumes: Record<string, number> = bagKind === 'DB' ? { PRBC: 220, FFP: 130 } : { PRBC: 200, FFP: 100, PLATELET_CONCENTRATE: 50 };
+      const comps = bagKind === 'DB' ? ['PRBC', 'FFP'] : ['PRBC', 'FFP', 'RDP'];
+      const volumes: Record<string, number> = bagKind === 'DB' ? { PRBC: 220, FFP: 130 } : { PRBC: 200, FFP: 100, RDP: 50 };
       for (const comp of comps) {
-        const expiresAt = comp === 'PLATELET_CONCENTRATE' ? new Date(collectedAt.getTime() + days(5))
+        const expiresAt = comp === 'RDP' ? new Date(collectedAt.getTime() + days(5))
           : comp === 'FFP' ? new Date(collectedAt.getTime() + days(365))
           : new Date(collectedAt.getTime() + days(35));
         const unit = await BloodUnitModel.create({
@@ -661,7 +661,7 @@ async function main() {
   for (let i = 0; i < 8; i++) {
     const abo = aboPick(); const rh = rhPick();
     const single = i < 5;
-    const wantComps = single ? [choice(COMPONENTS_REQ)] : (chance(0.5) ? ['PRBC', 'FFP'] : ['PRBC', 'FFP', 'PLATELET_CONCENTRATE']);
+    const wantComps = single ? [choice(COMPONENTS_REQ)] : (chance(0.5) ? ['PRBC', 'FFP'] : ['PRBC', 'FFP', 'RDP']);
     const matchedForReq: Array<{ unit: InstanceType<typeof BloodUnitModel>; compType: string }> = [];
     for (const c of wantComps) {
       const u = availableUnit(c, abo, rh, usedForReserve);

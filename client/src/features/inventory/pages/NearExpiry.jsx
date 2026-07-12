@@ -3,6 +3,7 @@ import { apiClient } from "@/core/api-client";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { COMPONENT_TYPES } from "@/constants/component-types";
 
 const daysFromNow = (n) => {
   const d = new Date();
@@ -82,10 +83,9 @@ const InventoryNearExpiry = () => {
                 <label className="text-xs text-gray-600 mb-1">Component</label>
                 <select value={componentType} onChange={(e)=>{setComponentType(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
                   <option value="">All</option>
-                  <option value="RBC">RBC</option>
-                  <option value="FFP">FFP</option>
-                  <option value="Platelet">Platelet</option>
-                  <option value="Cryo">Cryo</option>
+                  {COMPONENT_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>{type.value}</option>
+                  ))}
                 </select>
               </div>
               <div className="flex flex-col">

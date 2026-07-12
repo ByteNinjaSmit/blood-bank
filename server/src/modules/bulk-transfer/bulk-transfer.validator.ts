@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Request } from 'express';
 import { ValidationError } from '@/shared/errors';
+import { COMPONENT_TYPE } from '@/shared/enums';
 
 const OBJECT_ID = /^[a-f0-9]{24}$/i;
 
@@ -11,7 +12,7 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T
 }
 
 const BulkTransferItem = z.object({
-  componentType: z.string().trim().min(1),
+  componentType: z.enum(COMPONENT_TYPE),
   bloodGroup: z.string().trim().min(1),
   bagNo: z.string().trim().min(1),
   segmentNo: z.string().trim().optional(),

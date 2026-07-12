@@ -29,7 +29,7 @@ const BagInspectionSchema = new Schema(
     observation: { type: String, trim: true },
     decision: { type: String, enum: INSPECTION_DECISION, required: true, index: true },
     rejectionReason: { type: String, trim: true },
-    testingType: { type: String, enum: ['EMPTY', 'WB', 'PRBC', 'FFP', 'PC', 'CRYO', 'OTHER'] },
+    testingType: { type: String, enum: ['EMPTY', 'WB', 'PRBC', 'FFP', 'RDP', 'SDP', 'CRYO', 'OTHER'] },
     testingStatus: { type: String, enum: ['SENT', 'REPORT_RECEIVED'] },
     sentDate: { type: Date },
     reportDate: { type: Date },

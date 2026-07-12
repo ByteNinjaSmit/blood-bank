@@ -61,7 +61,7 @@ describe('Rh rules', () => {
   });
   it('FFP + Cryo: Rh ignored', () => {
     expect(isRhAcceptable('NEGATIVE', 'POSITIVE', 'FFP')).toBe(true);
-    expect(isRhAcceptable('NEGATIVE', 'POSITIVE', 'CRYOPRECIPITATE')).toBe(true);
+    expect(isRhAcceptable('NEGATIVE', 'POSITIVE', 'CRYO')).toBe(true);
   });
   it('Platelets: Rh preferred not mandatory', () => {
     expect(isRhAcceptable('NEGATIVE', 'POSITIVE', 'SDP')).toBe(true);
@@ -71,11 +71,10 @@ describe('Rh rules', () => {
 describe('Crossmatch requirement', () => {
   it('required for RBC + WB only', () => {
     expect(requiresCrossmatch('PRBC')).toBe(true);
-    expect(requiresCrossmatch('IRRADIATED_PRBC')).toBe(true);
-    expect(requiresCrossmatch('WHOLE_BLOOD')).toBe(true);
+    expect(requiresCrossmatch('WB')).toBe(true);
     expect(requiresCrossmatch('FFP')).toBe(false);
     expect(requiresCrossmatch('SDP')).toBe(false);
-    expect(requiresCrossmatch('CRYOPRECIPITATE')).toBe(false);
+    expect(requiresCrossmatch('CRYO')).toBe(false);
   });
 });
 
@@ -84,7 +83,7 @@ describe('Strictness label', () => {
     ['PRBC', 'HIGH'],
     ['FFP', 'MEDIUM'], // FFP clinical strictness label is still MEDIUM
     ['SDP', 'LOW'],
-    ['CRYOPRECIPITATE', 'VERY_LOW'],
+    ['CRYO', 'VERY_LOW'],
   ] as const)('%s -> %s', (component, expected) => {
     expect(strictness(component)).toBe(expected);
   });

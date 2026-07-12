@@ -3,18 +3,22 @@ import React from 'react';
 // Full descriptive phrase per component, matching the wording used on the
 // paper cover letter (e.g. "human plasma which is component of whole blood").
 const COMPONENT_DESCRIPTION = {
-  RBC: 'packed red blood cells which is component of whole blood',
+  WB: 'whole blood',
+  PRBC: 'packed red blood cells which is component of whole blood',
   FFP: 'human plasma which is component of whole blood',
-  Platelet: 'platelet concentrate which is component of whole blood',
-  Cryo: 'cryoprecipitate which is component of whole blood',
+  RDP: 'platelet concentrate which is component of whole blood',
+  SDP: 'single donor platelets which is component of whole blood',
+  CRYO: 'cryoprecipitate which is component of whole blood',
 };
 
 // Short noun used in "we are sending this X to ..."
 const COMPONENT_NAME = {
-  RBC: 'blood',
+  WB: 'blood',
+  PRBC: 'blood',
   FFP: 'plasma',
-  Platelet: 'platelets',
-  Cryo: 'cryoprecipitate',
+  RDP: 'platelets',
+  SDP: 'platelets',
+  CRYO: 'cryoprecipitate',
 };
 
 export default function BulkTransferCoverLetter({ transfer, boxCount }) {

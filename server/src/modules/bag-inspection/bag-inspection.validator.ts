@@ -34,7 +34,7 @@ export const CreateBagInspectionBody = z.object({
   observation: z.string().trim().max(2000).optional(),
   decision: z.enum(INSPECTION_DECISION),
   rejectionReason: z.string().trim().max(1000).optional(),
-  testingType: z.enum(['EMPTY', 'WB', 'PRBC', 'FFP', 'PC', 'CRYO', 'OTHER']).optional(),
+  testingType: z.enum(['EMPTY', 'WB', 'PRBC', 'FFP', 'RDP', 'SDP', 'CRYO', 'OTHER']).optional(),
   testingStatus: z.enum(['SENT', 'REPORT_RECEIVED']).optional(),
   sentDate: z.coerce.date().optional(),
   testingLab: z.string().trim().max(200).optional(),

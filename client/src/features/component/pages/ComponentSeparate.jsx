@@ -7,6 +7,11 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/format-date";
+import { COMPONENT_LABEL } from "@/constants/component-types";
+
+// Component separation from a whole-blood donation only ever yields these four
+// derived products — WB and SDP (apheresis platelets) are never re-selected here.
+const SEPARABLE_COMPONENT_TYPES = ["PRBC", "FFP", "RDP", "CRYO"];
 
 const ComponentSeparate = () => {
   const { user } = useAuth();
@@ -18,7 +23,7 @@ const ComponentSeparate = () => {
   const [showSeparateModal, setShowSeparateModal] = useState(false);
   const [activeBag, setActiveBag] = useState(null);
   const [separateForm, setSeparateForm] = useState({
-    componentType: "RBC",
+    componentType: "PRBC",
     volumeMl: "",
     rpmFirstSpin: "",
     rpmSecondSpin: "",
@@ -26,17 +31,10 @@ const ComponentSeparate = () => {
   });
   const [pendingComponents, setPendingComponents] = useState([]);
 
-  const COMPONENT_LABELS = {
-    RBC: "Red Blood Cells",
-    FFP: "Fresh Frozen Plasma",
-    Platelet: "Platelets",
-    Cryo: "Cryoprecipitate",
-  };
-
   const availableComponentTypes = (bag) => {
     const all = (bag?.typeOfBag === "TB" || bag?.typeOfBag === "QB")
-      ? ["RBC", "FFP", "Platelet", "Cryo"]
-      : ["RBC", "FFP"];
+      ? SEPARABLE_COMPONENT_TYPES
+      : ["PRBC", "FFP"];
     const alreadyPrepared = new Set(
       (Array.isArray(bag?.components) ? bag.components : [])
         .map((c) => c.componentType?.toUpperCase())
@@ -78,8 +76,8 @@ const ComponentSeparate = () => {
 
   const openSeparate = (bag) => {
     const firstAvailable = ((bag?.typeOfBag === "TB" || bag?.typeOfBag === "QB")
-      ? ["RBC", "FFP", "Platelet", "Cryo"]
-      : ["RBC", "FFP"])[0];
+      ? SEPARABLE_COMPONENT_TYPES
+      : ["PRBC", "FFP"])[0];
     setActiveBag(bag);
     setPendingComponents([]);
     setSeparateForm({
@@ -355,7 +353,7 @@ const ComponentSeparate = () => {
                     <option value="">All components added</option>
                   )}
                   {availableComponentTypes(activeBag).map((t) => (
-                    <option key={t} value={t}>{COMPONENT_LABELS[t]}</option>
+                    <option key={t} value={t}>{COMPONENT_LABEL[t]}</option>
                   ))}
                 </select>
               </div>
@@ -385,7 +383,7 @@ const ComponentSeparate = () => {
                 {pendingComponents.map((item, idx) => (
                   <div key={`${item.componentType}-${idx}`} className="flex items-center justify-between px-3 py-2 text-sm">
                     <span className="text-gray-800">
-                      {COMPONENT_LABELS[item.componentType] || item.componentType}
+                      {COMPONENT_LABEL[item.componentType] || item.componentType}
                       <span className="text-gray-500"> — {item.volumeMl} mL</span>
                     </span>
                     <button

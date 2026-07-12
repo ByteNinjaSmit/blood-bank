@@ -1,8 +1,9 @@
 import React from 'react';
 import { Section, ReportTable } from './ReportTable';
+import { COMPONENT_TYPES } from '@/constants/component-types';
 
 const GROUP_LABELS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-const PRODUCTS = ['PCV', 'FFP', 'RDP', 'Cryo', 'WB'];
+const PRODUCTS = COMPONENT_TYPES.map((c) => c.value);
 
 export default function CampWiseSection({ campWise }) {
   const rows = campWise?.rows || [];

@@ -7,29 +7,10 @@ const COMPATIBILITY_RESULT_LABELS = {
   UNIVERSAL: 'Universal',
 };
 
+// componentType is already one of the 6 canonical short codes (WB, PRBC,
+// FFP, RDP, SDP, CRYO) coming from the backend, so no translation is needed.
 function abbreviateComponent(componentType) {
-  switch (componentType) {
-    case 'WHOLE_BLOOD':
-      return 'WB';
-    case 'RBC':
-    case 'PRBC':
-    case 'IRRADIATED_PRBC':
-    case 'WASHED_PRBC':
-    case 'LEUKOREDUCED_PRBC':
-      return 'PCV';
-    case 'FFP':
-      return 'FFP';
-    case 'Platelet':
-    case 'PLATELET_CONCENTRATE':
-      return 'RDP';
-    case 'SDP':
-      return 'SDP';
-    case 'Cryo':
-    case 'CRYOPRECIPITATE':
-      return 'CRYO';
-    default:
-      return componentType || '—';
-  }
+  return componentType || '—';
 }
 
 function fmtDateTime(d) {
@@ -122,14 +103,14 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
 
   // Crossmatch & Component Detail — one row per matched unit, covering the
   // full crossmatch worksheet: hospital, doctor, indication, recipient
-  // name/address, blood group, component (WB/PCV/FFP/RDP), bags given
+  // name/address, blood group, component (WB/PRBC/FFP/RDP/SDP/CRYO), bags given
   // (component-wise), when required, crossmatch done-at/seen-at (grouped
   // under "Crossmatching"), compatibility result, card number, and
   // per-unit issue date/time. Created FIRST so it's the sheet Excel opens
   // to by default — it used to be the 7th tab and easy to miss.
   const xmColumns = [
     'Sr No', 'Date', 'Hospital Name', 'Doctor Name', 'Indication for Transfusion',
-    "Recipient's Name", "Recipient's Address", 'Blood Group', 'Component (WB/PCV/FFP/RDP)',
+    "Recipient's Name", "Recipient's Address", 'Blood Group', 'Component (WB/PRBC/FFP/RDP/SDP/CRYO)',
     'Total Bags Given', 'When Required', 'Crossmatch Done At', 'Seen At',
     'Crossmatching & Compatibility Test', 'Card Number', 'Issue Date & Time', 'Bag No',
   ];

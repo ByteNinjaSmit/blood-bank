@@ -35,7 +35,7 @@ export const defaultPatient = {
 };
 
 export const defaultRequestedComponent = {
-  componentType: 'RBC',
+  componentType: 'PRBC',
   units: 1,
   bloodGroup: 'O',
   rh: 'Positive',
@@ -133,7 +133,7 @@ export default function useRequisition(authToken) {
           },
         },
         requestedComponents: (requestDoc.requestedComponents || []).map((rc) => ({
-          componentType: rc.componentType === 'PRBC' ? 'RBC' : rc.componentType === 'PLATELET_CONCENTRATE' ? 'Platelet' : rc.componentType === 'CRYOPRECIPITATE' ? 'Cryo' : rc.componentType,
+          componentType: rc.componentType,
           units: rc.units,
           bloodGroup: rc.bloodGroup,
           rh: rc.rh === 'Positive' || rc.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
@@ -266,17 +266,7 @@ function checkHasChanges(doc, payload) {
     const dc = docComponents[i];
     const pc = payComponents[i];
     
-    let dcType = dc.componentType;
-    if (dcType === 'PRBC') dcType = 'RBC';
-    if (dcType === 'PLATELET_CONCENTRATE') dcType = 'Platelet';
-    if (dcType === 'CRYOPRECIPITATE') dcType = 'Cryo';
-    
-    let pcType = pc.componentType;
-    if (pcType === 'PRBC') pcType = 'RBC';
-    if (pcType === 'PLATELET_CONCENTRATE') pcType = 'Platelet';
-    if (pcType === 'CRYOPRECIPITATE') pcType = 'Cryo';
-    
-    if (dcType !== pcType) return true;
+    if (dc.componentType !== pc.componentType) return true;
     if (Number(dc.units) !== Number(pc.units)) return true;
     if (dc.bloodGroup !== pc.bloodGroup) return true;
     

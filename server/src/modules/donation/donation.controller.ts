@@ -70,7 +70,7 @@ export function createDonationControllers(service: DonationService): DonationCon
 
           const typeOfBag = legacy.typeOfBag || 'SB';
           const volume = legacy.medicalExamination?.volumeGmMl ? Number(legacy.medicalExamination.volumeGmMl) : (typeOfBag === 'SB' ? 350 : 450);
-          const unitTemplates = [{ componentType: 'WHOLE_BLOOD', volumeMl: volume }];
+          const unitTemplates = [{ componentType: 'WB', volumeMl: volume }];
 
           const campId = (legacy.siteId && legacy.siteId !== 'null') ? legacy.siteId : undefined;
 

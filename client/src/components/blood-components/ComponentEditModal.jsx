@@ -6,12 +6,14 @@ import CustomModal from "@/components/CustomModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/lib/format-date";
+import { COMPONENT_LABEL } from "@/constants/component-types";
 
 const TYPES = [
-  { key: "rbc", label: "Red Blood Cells (RBC)", type: "RBC" },
+  { key: "prbc", label: "Packed Red Blood Cells (PRBC)", type: "PRBC" },
   { key: "ffp", label: "Fresh Frozen Plasma (FFP)", type: "FFP" },
-  { key: "platelet", label: "Platelets", type: "Platelet" },
-  { key: "cryo", label: "Cryoprecipitate", type: "Cryo" },
+  { key: "rdp", label: "Random Donor Platelets (RDP)", type: "RDP" },
+  { key: "sdp", label: "Single Donor Platelets (SDP)", type: "SDP" },
+  { key: "cryo", label: "Cryoprecipitate", type: "CRYO" },
 ];
 const COMPONENT_TYPE_OPTIONS = TYPES.map((t) => t.type);
 
@@ -170,7 +172,7 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
                     onChange={(e) => setField(key, "componentType", e.target.value)}
                   >
                     {COMPONENT_TYPE_OPTIONS.map((t) => (
-                      <option key={t} value={t}>{t}</option>
+                      <option key={t} value={t}>{COMPONENT_LABEL[t] || t}</option>
                     ))}
                   </select>
                 </div>

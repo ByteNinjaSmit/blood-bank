@@ -27,10 +27,7 @@ export function normalizeRequestedComponents(
   raw: RawRequestedComponent[] | undefined,
 ): NormalizedRequestedComponent[] {
   return (raw || []).map((rc) => {
-    let componentType = rc.componentType || 'PRBC';
-    if (componentType === 'RBC') componentType = 'PRBC';
-    if (componentType === 'Platelet') componentType = 'PLATELET_CONCENTRATE';
-    if (componentType === 'Cryo') componentType = 'CRYOPRECIPITATE';
+    const componentType = rc.componentType || 'PRBC';
 
     const aboGroup = rc.aboGroup || rc.bloodGroup || 'O';
 
@@ -66,11 +63,4 @@ export function normalizeRequestedComponents(
       compatibilityMode: compatibilityMode as 'UNIVERSAL' | 'MAJOR' | 'MINOR',
     };
   });
-}
-
-export function toLegacyComponentType(internalType: string): string {
-  if (internalType === 'PRBC') return 'RBC';
-  if (internalType === 'PLATELET_CONCENTRATE') return 'Platelet';
-  if (internalType === 'CRYOPRECIPITATE') return 'Cryo';
-  return internalType;
 }

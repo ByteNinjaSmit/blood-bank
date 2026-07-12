@@ -140,17 +140,10 @@ export type AboGroup = (typeof ABO_GROUP)[number];
 export const RH_FACTOR = ['POSITIVE', 'NEGATIVE'] as const;
 export type RhFactor = (typeof RH_FACTOR)[number];
 
-export const COMPONENT_TYPE = [
-  'WHOLE_BLOOD',
-  'PRBC', // packed red blood cells
-  'FFP', // fresh frozen plasma
-  'PLATELET_CONCENTRATE', // PRP-derived or buffy-coat-derived
-  'SDP', // single-donor platelets (apheresis)
-  'CRYOPRECIPITATE',
-  'IRRADIATED_PRBC',
-  'WASHED_PRBC',
-  'LEUKOREDUCED_PRBC',
-] as const;
+// Canonical component-type codes. IRRADIATED_PRBC/WASHED_PRBC/LEUKOREDUCED_PRBC
+// (former separate component types) collapse into plain PRBC + the matching
+// SpecialNeed flag (irradiated/washed/leukoreduced) — see shared/component-type.ts.
+export const COMPONENT_TYPE = ['WB', 'PRBC', 'FFP', 'RDP', 'SDP', 'CRYO'] as const;
 export type ComponentType = (typeof COMPONENT_TYPE)[number];
 
 export const UNIT_STATUS = [

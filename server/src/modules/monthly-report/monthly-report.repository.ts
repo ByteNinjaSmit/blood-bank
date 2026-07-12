@@ -16,18 +16,9 @@ import { ChemicalModel, ChemicalStockLotModel } from '@/modules/chemical-invento
 import { createChemicalInventoryRepo } from '@/modules/chemical-inventory/chemical-inventory.repository';
 import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 
-const PRODUCT_LABEL: Record<string, string> = {
-  WHOLE_BLOOD: 'WB',
-  PRBC: 'PCV',
-  IRRADIATED_PRBC: 'PCV',
-  WASHED_PRBC: 'PCV',
-  LEUKOREDUCED_PRBC: 'PCV',
-  FFP: 'FFP',
-  PLATELET_CONCENTRATE: 'RDP',
-  SDP: 'RDP',
-  CRYOPRECIPITATE: 'Cryo',
-};
-const PRODUCTS = ['PCV', 'FFP', 'RDP', 'Cryo', 'WB'] as const;
+// Stored `componentType` values are already the canonical report codes
+// (WB/PRBC/FFP/RDP/SDP/CRYO) post-migration, so no translation is needed.
+const PRODUCTS = ['WB', 'PRBC', 'FFP', 'RDP', 'SDP', 'CRYO'] as const;
 
 const DISCARD_LABEL: Record<string, string> = {
   EXPIRED: 'Expired',
@@ -79,7 +70,7 @@ const GROUP_LABELS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const
 const STORAGE_CENTRE_PATTERN = /storage/i;
 
 function toProductLabel(componentType: string): string {
-  return PRODUCT_LABEL[componentType] ?? 'Other';
+  return (PRODUCTS as readonly string[]).includes(componentType) ? componentType : 'Other';
 }
 
 function toGroupLabel(aboGroup?: string, rhFactor?: string): string {
@@ -438,10 +429,7 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
     async getStockLedger(from, to) {
       const rows: any[] = [];
       for (const product of PRODUCTS) {
-        const componentTypes = Object.entries(PRODUCT_LABEL)
-          .filter(([, label]) => label === product)
-          .map(([type]) => type);
-        const filterBase = { componentType: { $in: componentTypes }, deletedAt: null };
+        const filterBase = { componentType: product, deletedAt: null };
 
         const [createdBefore, issuedBefore, discardedBefore, collection, issued, discard] = await Promise.all([
           BloodUnitModel.countDocuments({ ...filterBase, collectedAt: { $lt: from } }),

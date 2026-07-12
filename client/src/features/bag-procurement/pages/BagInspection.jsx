@@ -97,7 +97,7 @@ const TESTING_TYPE_LABELS = {
   WB: 'Whole Blood (WB)',
   PRBC: 'Packed Red Blood Cells (PRBC / PCV)',
   FFP: 'Fresh Frozen Plasma (FFP)',
-  PC: 'Platelet Concentrate (PC / RDP)',
+  RDP: 'Random Donor Platelets (RDP)',
   CRYO: 'Cryoprecipitate',
   OTHER: 'Other Blood Bag',
 };
@@ -303,7 +303,7 @@ function InspectionDrawer({ onClose, grns }) {
                 <option value="WB">Whole Blood (WB)</option>
                 <option value="PRBC">Packed Red Blood Cells (PRBC / PCV)</option>
                 <option value="FFP">Fresh Frozen Plasma (FFP)</option>
-                <option value="PC">Platelet Concentrate (PC / RDP)</option>
+                <option value="RDP">Random Donor Platelets (RDP)</option>
                 <option value="CRYO">Cryoprecipitate</option>
                 <option value="OTHER">Other Blood Bag</option>
               </select>

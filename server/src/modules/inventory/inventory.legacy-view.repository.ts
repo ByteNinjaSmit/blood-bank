@@ -85,10 +85,7 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       }
 
       if (componentType) {
-        if (componentType === 'RBC') unitFilter.componentType = 'PRBC';
-        else if (componentType === 'Platelet') unitFilter.componentType = 'PLATELET_CONCENTRATE';
-        else if (componentType === 'Cryo') unitFilter.componentType = 'CRYOPRECIPITATE';
-        else unitFilter.componentType = componentType;
+        unitFilter.componentType = componentType;
       }
 
       if (siteId) unitFilter.campId = new Types.ObjectId(siteId);
@@ -217,10 +214,7 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         else if (u.status === 'RESERVED') legacyStatus = 'reserved';
         else if (u.status === 'ISSUED') legacyStatus = 'issued';
 
-        let legacyType: string = u.componentType;
-        if (u.componentType === 'PRBC') legacyType = 'RBC';
-        else if (u.componentType === 'PLATELET_CONCENTRATE') legacyType = 'Platelet';
-        else if (u.componentType === 'CRYOPRECIPITATE') legacyType = 'Cryo';
+        const legacyType: string = u.componentType;
 
         let hospitalName = '—';
         let patientName = '—';

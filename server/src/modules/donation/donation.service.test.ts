@@ -102,7 +102,7 @@ function mockDonations(): DonationRepo {
 }
 
 describe('donation-service.register', () => {
-  it('registers a fit whole-blood donation and derives 1 WHOLE_BLOOD unit', async () => {
+  it('registers a fit whole-blood donation and derives 1 WB unit', async () => {
     const svc = createDonationService({
       donations: mockDonations(),
       donors: mockDonors(),
@@ -111,7 +111,7 @@ describe('donation-service.register', () => {
     const result = await svc.register(baseInput(), 'actor-id');
     expect(result.units).toHaveLength(1);
     expect(result.units.map((u) => u.componentType).sort()).toEqual([
-      'WHOLE_BLOOD',
+      'WB',
     ]);
     expect(result.ttiReleaseDecision).toBe('pending');
   });

@@ -3,6 +3,7 @@ import { Warehouse, MapPin, Plus, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CustomModal from '@/components/CustomModal';
 import MultiBagSelect from './MultiBagSelect';
+import { COMPONENT_TYPES } from '@/constants/component-types';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -228,7 +229,7 @@ export default function SendToStorageModal({
             <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Blood Bag Selection By Component</h4>
             <Button
               type="button"
-              onClick={() => setStorageBags([...storageBags, { componentType: "RBC", groups: [{ bloodGroup: "A+", selectedBags: [] }] }])}
+              onClick={() => setStorageBags([...storageBags, { componentType: "PRBC", groups: [{ bloodGroup: "A+", selectedBags: [] }] }])}
               variant="outline"
               size="sm"
               className="text-red-700 border-red-200 hover:bg-red-50 flex items-center gap-1"
@@ -256,10 +257,9 @@ export default function SendToStorageModal({
                       }}
                       className="h-9 px-3 border rounded-md text-xs bg-white shadow-sm font-bold text-red-800 focus:ring-1 focus:ring-red-500"
                     >
-                      <option value="RBC">RBC (PRBC)</option>
-                      <option value="FFP">FFP</option>
-                      <option value="Platelet">Platelet (PLATELET_CONCENTRATE)</option>
-                      <option value="Cryo">Cryo (CRYOPRECIPITATE)</option>
+                      {COMPONENT_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>{type.value} ({type.label})</option>
+                      ))}
                     </select>
                   </div>
 
@@ -299,13 +299,7 @@ export default function SendToStorageModal({
                     // Filter available units to match this blood group AND component type AND bag type
                     const matchingAvailableBags = availableUnits.filter(u => {
                       const unitBg = `${u.bag?.bloodGroup}${u.bag?.rh === 'Positive' ? '+' : '-'}`;
-
-                      let unitComp = u.component?.componentType;
-                      // Map database componentType names
-                      if (unitComp === 'PRBC' || unitComp === 'RBC') unitComp = 'RBC';
-                      else if (unitComp === 'FFP') unitComp = 'FFP';
-                      else if (unitComp === 'PLATELET_CONCENTRATE' || unitComp === 'Platelet') unitComp = 'Platelet';
-                      else if (unitComp === 'CRYOPRECIPITATE' || unitComp === 'Cryo') unitComp = 'Cryo';
+                      const unitComp = u.component?.componentType;
 
                       const matchesBgAndComp = unitBg === group.bloodGroup && unitComp === comp.componentType;
                       if (!matchesBgAndComp) return false;

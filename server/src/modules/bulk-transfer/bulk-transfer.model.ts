@@ -7,10 +7,11 @@
 // happened at this bank).
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
+import { COMPONENT_TYPE } from '@/shared/enums';
 
 const BulkTransferItem = new Schema(
   {
-    componentType: { type: String, required: true, trim: true },
+    componentType: { type: String, enum: COMPONENT_TYPE, required: true, trim: true },
     bloodGroup: { type: String, required: true, trim: true },
     bagNo: { type: String, required: true, trim: true },
     segmentNo: { type: String, trim: true },

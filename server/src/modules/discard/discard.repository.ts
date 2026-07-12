@@ -9,7 +9,6 @@ import { TtiResultModel } from '@/modules/tti/tti.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { invalidate } from '@/core/cache';
 import { NotFoundError, ValidationError } from '@/shared/errors';
-import { toLegacyComponentType } from '@/modules/component/component.mapper';
 
 export interface DiscardListFilters {
   page?: number;
@@ -139,8 +138,8 @@ export function createDiscardRepo(): DiscardRepo {
           id: u._id.toString(),
           bagNo: donation?.bagNo || u.donationId,
           componentId: u.unitId,
-          componentType: toLegacyComponentType(u.componentType),
-          itemType: u.componentType === 'WHOLE_BLOOD' ? 'Bag' : 'Component',
+          componentType: u.componentType,
+          itemType: u.componentType === 'WB' ? 'Bag' : 'Component',
           reason: u.discardReason || 'QC_FAIL',
           description: u.discardNotes || '',
           discardedAt: discardHistory ? discardHistory.at.toISOString() : u.updatedAt.toISOString(),

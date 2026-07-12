@@ -3,24 +3,30 @@ import React from 'react';
 // Full descriptive name per component, used for "{X} Type: {value}" and
 // swapped into the body copy wherever the paper certificate says "plasma".
 const COMPONENT_TYPE_LABEL = {
-  RBC: 'Blood Type',
+  WB: 'Blood Type',
+  PRBC: 'Blood Type',
   FFP: 'Plasma Type',
-  Platelet: 'Platelet Type',
-  Cryo: 'Cryo Type',
+  RDP: 'Platelet Type',
+  SDP: 'Platelet Type',
+  CRYO: 'Cryo Type',
 };
 
 const COMPONENT_VALUE = {
-  RBC: 'Packed Red Blood Cells',
+  WB: 'Whole Blood',
+  PRBC: 'Packed Red Blood Cells',
   FFP: 'Normal Human Plasma',
-  Platelet: 'Platelet Concentrate',
-  Cryo: 'Cryoprecipitate',
+  RDP: 'Platelet Concentrate',
+  SDP: 'Single Donor Platelets',
+  CRYO: 'Cryoprecipitate',
 };
 
 const COMPONENT_NOUN = {
-  RBC: 'blood',
+  WB: 'blood',
+  PRBC: 'blood',
   FFP: 'plasma',
-  Platelet: 'platelets',
-  Cryo: 'cryoprecipitate',
+  RDP: 'platelets',
+  SDP: 'platelets',
+  CRYO: 'cryoprecipitate',
 };
 
 const TESTS = [

@@ -38,10 +38,10 @@ import {
 const number = (v) => (typeof v === "number" ? v : 0);
 
 const MATRIX_COMPONENTS = [
-  { key: "RBC", label: "Red Blood Cells (RBC)", theme: "text-rose-700 bg-rose-50 border-rose-200" },
+  { key: "PRBC", label: "Packed Red Blood Cells (PRBC)", theme: "text-rose-700 bg-rose-50 border-rose-200" },
   { key: "FFP", label: "Fresh Frozen Plasma (FFP)", theme: "text-sky-700 bg-sky-50 border-sky-200" },
-  { key: "Platelet", label: "Platelets (PLT)", theme: "text-amber-700 bg-amber-50 border-amber-200" },
-  { key: "Cryo", label: "Cryoprecipitate (CRYO)", theme: "text-indigo-700 bg-indigo-50 border-indigo-200" },
+  { key: "RDP", label: "Random Donor Platelets (RDP)", theme: "text-amber-700 bg-amber-50 border-amber-200" },
+  { key: "CRYO", label: "Cryoprecipitate (CRYO)", theme: "text-indigo-700 bg-indigo-50 border-indigo-200" },
 ];
 
 const MATRIX_BLOOD_GROUPS = [
@@ -141,8 +141,8 @@ function buildDashboardSheets(data) {
         "Bags Pending": legacy.bloodBags?.bagsPending,
         "Bags Quarantined": legacy.bloodBags?.bagsQuarantined,
         "Components Produced": legacy.components?.componentsProduced,
-        "RBC Produced": legacy.components?.rbcProduced,
-        "Platelet Produced": legacy.components?.pltProduced,
+        "PRBC Produced": legacy.components?.prbcProduced,
+        "RDP Produced": legacy.components?.rdpProduced,
         "FFP Produced": legacy.components?.ffpProduced,
         "Cryo Produced": legacy.components?.cryoProduced,
       }).map(([k, v]) => [k, number(v)]),

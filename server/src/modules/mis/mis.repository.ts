@@ -12,18 +12,9 @@ import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { IssueModel } from '@/modules/issue/issue.model';
 import { BagStockModel } from '@/modules/bag-stock/bag-stock.model';
 
-const PRODUCT_LABEL: Record<string, string> = {
-  WHOLE_BLOOD: 'WB',
-  PRBC: 'PCV',
-  IRRADIATED_PRBC: 'PCV',
-  WASHED_PRBC: 'PCV',
-  LEUKOREDUCED_PRBC: 'PCV',
-  FFP: 'FFP',
-  PLATELET_CONCENTRATE: 'RDP',
-  SDP: 'RDP',
-  CRYOPRECIPITATE: 'Cryo',
-};
-const toProductLabel = (t: string) => PRODUCT_LABEL[t] ?? t;
+// Stored `componentType` values are already the canonical report codes
+// (WB/PRBC/FFP/RDP/SDP/CRYO) post-migration, so no translation is needed.
+const toProductLabel = (t: string) => t;
 
 const DISCARD_LABEL: Record<string, string> = {
   EXPIRED: 'Expired',
@@ -311,7 +302,7 @@ export function createMisRepo(): MisRepo {
     },
 
     async getComponentStats(fromDate, toDate) {
-      const filter: Record<string, unknown> = { componentType: { $ne: 'WHOLE_BLOOD' } };
+      const filter: Record<string, unknown> = { componentType: { $ne: 'WB' } };
       if (fromDate || toDate) {
         const range: Record<string, Date> = {};
         if (fromDate) range.$gte = fromDate;
@@ -470,7 +461,7 @@ export function createMisRepo(): MisRepo {
     async getRegulatoryStats() {
       const [collection, production, issued, discarded, ttiResults] = await Promise.all([
         DonationModel.countDocuments({ deletedAt: null }),
-        BloodUnitModel.countDocuments({ componentType: { $ne: 'WHOLE_BLOOD' } }),
+        BloodUnitModel.countDocuments({ componentType: { $ne: 'WB' } }),
         BloodUnitModel.countDocuments({ status: { $in: ['ISSUED', 'TRANSFUSED'] } }),
         BloodUnitModel.countDocuments({ status: 'DISCARDED' }),
         TtiResultModel.find().select('tests').lean(),
