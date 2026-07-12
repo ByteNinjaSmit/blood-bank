@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/store/auth";
+import { useCampMis } from "@/features/mis/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,32 +12,10 @@ import { Button } from "@/components/ui/button";
 const number = (v) => (typeof v === "number" ? v : 0);
 
 export default function CampReports() {
-  const { API } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [camps, setCamps] = useState([]);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const res = await axios.get(`${API}/api/mis/camps`, { withCredentials: true });
-        if (!mounted) return;
-        setCamps(res.data?.data || []);
-      } catch (e) {
-        if (!mounted) return;
-        setError(e?.response?.data?.message || e.message || "Failed to load camp reports");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [API]);
+  const { data, isLoading: loading, error: queryError } = useCampMis();
+  const camps = useMemo(() => data ?? [], [data]);
+  const error = queryError?.message;
 
   const summary = useMemo(() => {
     const totalCamps = camps.length;

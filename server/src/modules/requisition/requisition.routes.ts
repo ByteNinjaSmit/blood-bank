@@ -19,7 +19,6 @@ const crossmatches = createCrossmatchRepo();
 const issues = createIssueRepo();
 const tti = createTtiRepo();
 
-const requisitionService = createRequisitionService({ requisitions, units, patients });
 const crossmatchService = createCrossmatchService({ crossmatches, requisitions, units });
 const issueService = createIssueService({
   issues,
@@ -28,6 +27,13 @@ const issueService = createIssueService({
   patients,
   crossmatches,
   tti,
+});
+const requisitionService = createRequisitionService({
+  requisitions,
+  units,
+  patients,
+  crossmatch: crossmatchService,
+  issue: issueService,
 });
 
 const controllers = createRequisitionControllers({
@@ -71,13 +77,6 @@ router.post(
   requirePermission('requisition:create'),
   controllers.createPatient,
 );
-// Compatibility info (must be BEFORE /:id to avoid route conflict)
-router.get(
-  '/compatibility-info',
-  authenticate,
-  controllers.getCompatibilityInfoLegacy,
-);
-
 router.post(
   '/',
   authenticate,

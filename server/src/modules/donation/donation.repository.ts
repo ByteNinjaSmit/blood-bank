@@ -79,6 +79,8 @@ export interface DonationRepo {
   softDelete(id: string, actorId: string): Promise<void>;
   restore(id: string, actorId: string): Promise<void>;
   delete(id: string): Promise<void>;
+  /** Batch/segment lookup by bag number, for the discard-entry form. */
+  lookupByBagNo(bagNo: string): Promise<{ lotNo: string; segmentNo: string } | null>;
 }
 
 export function createDonationRepo(): DonationRepo {
@@ -567,6 +569,18 @@ export function createDonationRepo(): DonationRepo {
     async delete(id) {
       const result = await DonationModel.deleteOne({ _id: id });
       if (result.deletedCount === 0) throw new NotFoundError('Donation', id);
+    },
+
+    async lookupByBagNo(bagNo) {
+      const donation = await DonationModel.findOne({
+        $or: [{ donationId: bagNo }, { bagNo }],
+        deletedAt: null,
+      }).lean();
+      if (!donation) return null;
+      return {
+        lotNo: (donation as any).lotNo || '',
+        segmentNo: (donation as any).segmentNo || '',
+      };
     },
   };
 }

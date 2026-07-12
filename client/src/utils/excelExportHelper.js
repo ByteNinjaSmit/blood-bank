@@ -80,6 +80,7 @@ export async function downloadExcelReport(sheets, filename = 'Report.xlsx') {
         reportPeriod = 'All Records',
         filtersApplied,
         groupHeader,
+        groupHeaders,
         totalRowIndexes,
         highlightRowIndexes,
         redCells,
@@ -107,6 +108,7 @@ export async function downloadExcelReport(sheets, filename = 'Report.xlsx') {
             statsLine,
             columns: headers,
             groupHeader,
+            groupHeaders,
             totalRowIndexes,
             highlightRowIndexes,
             redCells,
@@ -265,29 +267,59 @@ export async function exportCampDonations(items, campName = 'Camp', meta = {}) {
   }], `Camp_Donations_${campName.replace(/\s+/g, '_')}.xlsx`);
 }
 
-// 3. Component List
+// 3. Component List — one row per BAG. Each bag's prepared components are
+// stacked on their own line within a single "Components" cell so bag-level
+// details (blood group, site, RPM, time, serology) show only once per row
+// instead of repeating per component.
 export async function exportComponents(items, meta = {}) {
-  const headers = ['Sr No', 'Component ID', 'Bag No', 'Segment No', 'Component Type', 'Blood Group', 'Volume (mL)', 'Site', 'Created At', 'Storage Location', 'Expiry Date', 'Status'];
-  const alignments = ['center', 'center', 'center', 'center', 'left', 'center', 'center', 'left', 'center', 'center', 'center', 'center'];
+  const headers = [
+    'Sr No', 'Bag No', 'Segment No', 'Components', 'Blood Group', 'Site',
+    '1st Spin', '2nd Spin',
+    'Collection Time', 'Separation Time',
+    'Created At',
+    'Serological Test Report',
+  ];
+  const alignments = ['center', 'center', 'center', 'left', 'center', 'left', 'center', 'center', 'center', 'center', 'center', 'center'];
+
+  const componentLines = (components) =>
+    (Array.isArray(components) ? components : [])
+      .map((c) => `${c.type} — ${c.volumeMl} mL (${c.storageLocation || 'Main Fridge'}, Exp ${formatDate(c.expiryDate)}, ${(c.status || '').toUpperCase()})`)
+      .join('\n');
+
+  // Overall serology verdict for the bag: any Reactive test wins, then any
+  // Shadeness (indeterminate), otherwise Negative (or Not Tested if the
+  // panel hasn't been run at all).
+  const overallSerology = (tests) => {
+    if (!Array.isArray(tests) || tests.length === 0) return 'Not Tested';
+    if (tests.some((t) => t.result === 'Reactive')) return 'Reactive';
+    if (tests.some((t) => t.result === 'Shadeness')) return 'Shadeness';
+    if (tests.every((t) => t.result === 'Not Tested')) return 'Not Tested';
+    return 'Negative';
+  };
 
   const rows = items.map((r, i) => [
     i + 1,
-    r.componentId || r._id || '—',
-    r.bagNo || r.bag?.bagNo || '—',
+    r.bagNo || '—',
     r.segmentNo || '—',
-    r.componentType || '—',
-    r.bloodGroup || (r.bag ? `${r.bag.bloodGroup} ${r.bag.rh || ''}` : '—'),
-    r.volumeMl ?? '—',
+    componentLines(r.components),
+    r.bloodGroup || '—',
     r.site || '—',
+    r.rpmFirstSpin || '—',
+    r.rpmSecondSpin || '—',
+    r.collectionTime ? formatDateTime(r.collectionTime) : '—',
+    r.separationTime ? formatDateTime(r.separationTime) : '—',
     formatDate(r.createdAt),
-    r.storageLocation || 'Main Fridge',
-    formatDate(r.expiryDate),
-    (r.status || '—').toUpperCase(),
+    overallSerology(r.serologyTests),
   ]);
 
   const stats = [
-    { label: 'Total Components', value: items.length },
-    { label: 'In Stock', value: items.filter(r => r.status?.toLowerCase() === 'in-stock' || r.status?.toLowerCase() === 'available').length },
+    { label: 'Total Bags', value: items.length },
+    { label: 'Total Components', value: items.reduce((sum, r) => sum + (Array.isArray(r.components) ? r.components.length : 0), 0) },
+  ];
+
+  const groupHeaders = [
+    { label: 'RPM', startCol: 6, endCol: 7, dark: true },
+    { label: 'TIME', startCol: 8, endCol: 9, dark: true },
   ];
 
   await downloadExcelReport([{
@@ -297,6 +329,7 @@ export async function exportComponents(items, meta = {}) {
     headers,
     rows,
     alignments,
+    groupHeaders,
     stats,
     ...meta,
   }], 'Component_Inventory_Report.xlsx');

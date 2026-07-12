@@ -1,31 +1,10 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
 import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
-import { createTtiRepo } from '@/modules/tti/tti.repository';
-import { createUnitRepo } from '@/modules/unit/unit.repository';
-import { createDeferralRepo } from '@/modules/deferral/deferral.repository';
-import { createDonationRepo } from '@/modules/donation/donation.repository';
-import { createLookbackRepo } from '@/modules/lookback/lookback.repository';
-import { createLookbackService } from '@/modules/lookback/lookback.service';
-import { createTtiService } from '@/modules/tti/tti.service';
+import { ttiService } from '@/modules/tti/tti.instance';
 import { createTtiControllers } from '@/modules/tti/tti.controller';
-import { createBagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
-import { env } from '@/core/config/env';
 
-const units = createUnitRepo();
-const lookback = createLookbackService({ lookback: createLookbackRepo(), units });
-
-const service = createTtiService({
-  tti: createTtiRepo(),
-  units,
-  deferrals: createDeferralRepo(),
-  donations: createDonationRepo(),
-  bagStock: createBagStockRepo(),
-  // Reactive result auto-triggers recall + alerts the configured inbox.
-  lookback,
-  counsellorEmail: env.ADMIN_EMAIL,
-});
-const controllers = createTtiControllers(service);
+const controllers = createTtiControllers(ttiService);
 
 const router = Router();
 

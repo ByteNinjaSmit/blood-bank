@@ -38,6 +38,17 @@ const DonorFitnessSchema = new Schema(
   { _id: false },
 );
 
+// Centrifuge spin log + separation timestamp, captured on the component
+// Separate screen. One physical separation event per bag/donation.
+const SeparationSchema = new Schema(
+  {
+    rpmFirstSpin: { type: String, trim: true },
+    rpmSecondSpin: { type: String, trim: true },
+    separationTime: { type: Date },
+  },
+  { _id: false },
+);
+
 const DonationSchema = new Schema(
   {
     donationId: { type: String, required: true, unique: true },
@@ -52,9 +63,15 @@ const DonationSchema = new Schema(
     phlebotomistId: { type: Schema.Types.ObjectId, ref: 'User' },
     medicalExam: MedicalExamSchema,
     donorFitness: DonorFitnessSchema,
+    separation: SeparationSchema,
     questionnaireFlags: { type: Map, of: Boolean },
     typeOfBag: { type: String, enum: ['SB', 'DB', 'TB', 'QB'], default: 'SB' },
     notes: { type: String, trim: true },
+    // Last correction made to this bag's separated components/spin log
+    // after the fact, via the Component List edit screen.
+    lastEditReason: { type: String, trim: true },
+    lastEditedAt: { type: Date },
+    lastEditedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     deletedAt: { type: Date, default: null, index: true },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },

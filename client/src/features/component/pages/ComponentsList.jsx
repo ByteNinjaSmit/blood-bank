@@ -36,29 +36,43 @@ const ComponentsList = () => {
 
   const [excelLoading, setExcelLoading] = useState(false);
 
+  // One row per BAG (not per component) — each bag's prepared components
+  // are collected into a single `components` array so the export can list
+  // them on stacked lines under one serial number/row, instead of
+  // repeating the bag-level details (blood group, site, RPM, time,
+  // serology) once per component.
   const flattenComponents = (bags) => {
-    const list = [];
-    bags.forEach(bag => {
-      ['rbc', 'ffp', 'platelet', 'cryo'].forEach(type => {
-        const comp = bag[type];
-        if (comp && comp.status === 'prepared') {
-          list.push({
-            componentId: comp.componentId || comp._id || `${bag.bagNo}-${type.toUpperCase()}`,
-            bagNo: bag.bagNo,
-            segmentNo: bag.segmentNo || '—',
-            componentType: type.toUpperCase(),
-            bloodGroup: bag.bloodGroup || (bag.bag ? `${bag.bag.bloodGroup} ${bag.bag.rh || ''}` : '—'),
-            volumeMl: comp.volumeMl ?? '—',
-            expiryDate: comp.expiryDate,
-            status: comp.componentStatus || comp.status || 'prepared',
-            site: bag.site || '—',
-            createdAt: bag.createdAt,
-            storageLocation: comp.storageLocation || 'Main Fridge',
-          });
-        }
-      });
-    });
-    return list;
+    return bags
+      .map(bag => {
+        const components = ['rbc', 'ffp', 'platelet', 'cryo']
+          .map(type => {
+            const comp = bag[type];
+            if (!comp || comp.status !== 'prepared') return null;
+            return {
+              type: type.toUpperCase(),
+              volumeMl: comp.volumeMl ?? '—',
+              expiryDate: comp.expiryDate,
+              status: comp.componentStatus || comp.status || 'prepared',
+              storageLocation: comp.storageLocation || 'Main Fridge',
+            };
+          })
+          .filter(Boolean);
+
+        return {
+          bagNo: bag.bagNo,
+          segmentNo: bag.segmentNo || '—',
+          bloodGroup: bag.bloodGroup || (bag.bag ? `${bag.bag.bloodGroup} ${bag.bag.rh || ''}` : '—'),
+          site: bag.site || '—',
+          createdAt: bag.createdAt,
+          rpmFirstSpin: bag.rpmFirstSpin,
+          rpmSecondSpin: bag.rpmSecondSpin,
+          collectionTime: bag.collectionTime,
+          separationTime: bag.separationTime,
+          serologyTests: bag.serologyTests,
+          components,
+        };
+      })
+      .filter(bag => bag.components.length > 0);
   };
 
   const handleExportExcel = async (exportAll = false) => {
@@ -582,6 +596,9 @@ const ComponentsList = () => {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Created
                     </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Edited
+                    </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
@@ -590,7 +607,7 @@ const ComponentsList = () => {
                 <tbody className="bg-white divide-y divide-gray-100">
                   {state.isLoading ? (
                     <tr>
-                      <td colSpan="10" className="px-4 py-8 text-center">
+                      <td colSpan="11" className="px-4 py-8 text-center">
                         <div className="inline-flex items-center gap-2 text-gray-500">
                           <Loader2 className="w-5 h-5 animate-spin" />
                           Loading components inventory...
@@ -599,7 +616,7 @@ const ComponentsList = () => {
                     </tr>
                   ) : state.components.length === 0 ? (
                     <tr>
-                      <td colSpan="10" className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan="11" className="px-4 py-8 text-center text-gray-500">
                         No blood bag groups found.
                       </td>
                     </tr>
@@ -725,6 +742,15 @@ const ComponentsList = () => {
                         <td className="px-4 py-3 text-sm text-gray-700">
                           {formatDate(bag.createdAt)}
                         </td>
+                        <td className="px-4 py-3 text-xs text-gray-500">
+                          {bag.lastEditedAt ? (
+                            <span title={bag.editReason || ""}>
+                              Edited on {formatDate(bag.lastEditedAt)}
+                            </span>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-center">
                           <div className="flex items-center justify-center gap-1.5">
                             <Button
@@ -736,7 +762,7 @@ const ComponentsList = () => {
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
-                            {canEdit && (
+                            {canEdit && bag.canEdit && (
                               <Button
                                 variant="outline"
                                 size="sm"

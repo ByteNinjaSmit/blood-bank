@@ -18,6 +18,7 @@ export const UNIT_EVENT = [
   'BEGIN_TESTING',
   'AWAIT_TTI', // testing finished, results recorded but not yet released
   'RELEASE', // TTI cleared + grouping confirmed
+  'SEPARATION_COMPLETE', // component separation signed off; TTI still pending
   'RESERVE',
   'UNRESERVE',
   'CROSSMATCH_PASS',
@@ -34,6 +35,12 @@ type Transition = { from: UnitStatus; event: UnitEvent; to: UnitStatus };
 
 const TRANSITIONS: ReadonlyArray<Transition> = [
   { from: 'COLLECTED', event: 'BEGIN_TESTING', to: 'IN_TESTING' },
+  // Component-separation sign-off, TTI still pending -> QUARANTINE.
+  // (If TTI is already released by the time separation completes, that
+  // case chains BEGIN_TESTING -> AWAIT_TTI -> RELEASE instead — there is
+  // deliberately no COLLECTED -> RELEASED shortcut; the TTI gate must
+  // always be walked, never bypassed.)
+  { from: 'COLLECTED', event: 'SEPARATION_COMPLETE', to: 'QUARANTINE' },
   { from: 'COLLECTED', event: 'DISCARD', to: 'DISCARDED' },
   { from: 'COLLECTED', event: 'EXPIRE', to: 'EXPIRED' },
 

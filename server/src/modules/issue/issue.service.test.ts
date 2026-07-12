@@ -87,10 +87,14 @@ function deps(opts: {
     inStockSummary: vi.fn(),
     findExpiredUnitIds: vi.fn(),
     findNearExpiry: vi.fn(),
+    findBestReplacement: vi.fn(),
+    allIssued: vi.fn(),
+    findDonationsWithIssuedUnit: vi.fn(),
   };
   const patients: PatientRepo = {
     create: vi.fn(),
     findById: vi.fn().mockResolvedValue(opts.patient ?? patientDto()),
+    updateSnapshot: vi.fn(),
   };
   const crossmatches = {
     record: vi.fn(),

@@ -118,6 +118,7 @@ export interface UnitRepo {
     event: UnitEvent,
     actorId: string,
     fromStatuses: UnitStatus[],
+    reason?: string,
   ): Promise<number>;
   selectable(filter: {
     componentType: ComponentType;
@@ -141,6 +142,29 @@ export interface UnitRepo {
       expiresAt: string;
     }>
   >;
+  /**
+   * Best available RELEASED replacement for a unit that just failed
+   * crossmatch: same component type, a compatible ABO group, matching
+   * Rh constraint, not already matched to this requisition, prioritizing
+   * an exact ABO/Rh match over merely-compatible, then FEFO.
+   */
+  findBestReplacement(input: {
+    componentType: ComponentType;
+    excludeUnitIds: string[];
+    compatibleAboGroups: AboGroup[];
+    rhFilter?: RhFactor;
+    patientAbo: AboGroup;
+    patientRh: RhFactor;
+  }): Promise<{ unitId: string; aboGroup: AboGroup; rhFactor: RhFactor } | null>;
+  /** True if every given unitId currently has status ISSUED. */
+  allIssued(unitIds: string[]): Promise<boolean>;
+  /**
+   * Donation ids (out of the given set) that have at least one unit which
+   * has ever left the bank (status history shows an ISSUE event, or the
+   * unit is currently ISSUED/TRANSFUSED/RETURNED_UNUSED) — used to lock
+   * TTI results and component edits once a component is out the door.
+   */
+  findDonationsWithIssuedUnit(donationIds: string[]): Promise<Set<string>>;
 }
 
 export function createUnitRepo(): UnitRepo {
@@ -200,7 +224,7 @@ export function createUnitRepo(): UnitRepo {
       return toDto(updated);
     },
 
-    async applyEventToDonation(donationId, event, actorId, fromStatuses) {
+    async applyEventToDonation(donationId, event, actorId, fromStatuses, reason) {
       const actor = new Types.ObjectId(actorId);
       let changed = 0;
 
@@ -222,7 +246,7 @@ export function createUnitRepo(): UnitRepo {
                   status: next,
                   updatedBy: actor,
                   $push: {
-                    statusHistory: { from: u.status, to: next, event, actor, at: new Date() },
+                    statusHistory: { from: u.status, to: next, event, actor, at: new Date(), reason },
                   },
                 },
                 { session },
@@ -246,7 +270,7 @@ export function createUnitRepo(): UnitRepo {
               status: next,
               updatedBy: actor,
               $push: {
-                statusHistory: { from: u.status, to: next, event, actor, at: new Date() },
+                statusHistory: { from: u.status, to: next, event, actor, at: new Date(), reason },
               },
             },
           );
@@ -309,6 +333,54 @@ export function createUnitRepo(): UnitRepo {
         rhFactor: r.rhFactor,
         expiresAt: r.expiresAt.toISOString(),
       }));
+    },
+
+    async findBestReplacement({ componentType, excludeUnitIds, compatibleAboGroups, rhFilter, patientAbo, patientRh }) {
+      const now = new Date();
+      const matches = await BloodUnitModel.aggregate([
+        {
+          $match: {
+            status: 'RELEASED',
+            unitId: { $nin: excludeUnitIds },
+            componentType,
+            aboGroup: { $in: compatibleAboGroups },
+            ...(rhFilter ? { rhFactor: rhFilter } : { rhFactor: { $in: ['POSITIVE', 'NEGATIVE'] } }),
+            expiresAt: { $gte: now },
+            $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+          },
+        },
+        {
+          $addFields: {
+            _matchPriority: {
+              $cond: [{ $and: [{ $eq: ['$aboGroup', patientAbo] }, { $eq: ['$rhFactor', patientRh] }] }, 0, 1],
+            },
+          },
+        },
+        { $sort: { _matchPriority: 1, expiresAt: 1, createdAt: 1 } },
+        { $limit: 1 },
+      ]);
+      if (matches.length === 0) return null;
+      const rep = matches[0];
+      return { unitId: rep.unitId, aboGroup: rep.aboGroup, rhFactor: rep.rhFactor };
+    },
+
+    async allIssued(unitIds) {
+      const units = await BloodUnitModel.find({ unitId: { $in: unitIds } }).select('status').lean();
+      return units.every((u) => u.status === 'ISSUED');
+    },
+
+    async findDonationsWithIssuedUnit(donationIds) {
+      if (donationIds.length === 0) return new Set();
+      const units = await BloodUnitModel.find({
+        donationId: { $in: donationIds },
+        $or: [
+          { status: { $in: ['ISSUED', 'TRANSFUSED', 'RETURNED_UNUSED'] } },
+          { 'statusHistory.to': 'ISSUED' },
+        ],
+      })
+        .select('donationId')
+        .lean();
+      return new Set(units.map((u) => u.donationId));
     },
 
     async inStockSummary() {

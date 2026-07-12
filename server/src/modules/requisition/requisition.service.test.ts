@@ -4,6 +4,8 @@ import type { RequisitionRepo, RequisitionDto } from '@/modules/requisition/requ
 import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { PatientRepo, PatientDto } from '@/modules/patient/patient.repository';
 import type { SelectableUnit } from '@/shared/compatibility/fefo';
+import type { CrossmatchService } from '@/modules/crossmatch/crossmatch.service';
+import type { IssueService } from '@/modules/issue/issue.service';
 
 vi.mock('@/modules/issue/issue.model', () => ({
   IssueModel: {
@@ -70,11 +72,15 @@ function deps(opts: { candidates?: SelectableUnit[]; pat?: PatientDto; req?: Req
     inStockSummary: vi.fn(),
     findExpiredUnitIds: vi.fn(),
     findNearExpiry: vi.fn(),
+    findBestReplacement: vi.fn(),
+    allIssued: vi.fn(),
+    findDonationsWithIssuedUnit: vi.fn(),
   };
   const requisitions: RequisitionRepo = {
     list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     create: vi.fn().mockResolvedValue(opts.req ?? reqDto()),
     findById: vi.fn().mockResolvedValue(opts.req ?? reqDto()),
+    updateDetails: vi.fn(),
     setMatched: vi
       .fn()
       .mockImplementation(async (_id, matched) =>
@@ -83,12 +89,21 @@ function deps(opts: { candidates?: SelectableUnit[]; pat?: PatientDto; req?: Req
     setCrossmatchStatus: vi.fn(),
     setStatus: vi.fn(),
     reject: vi.fn().mockResolvedValue(reqDto({ status: 'REJECTED' })),
+    removeMatchedUnit: vi.fn(),
+    pushMatchedUnit: vi.fn(),
   };
   const patients: PatientRepo = {
     create: vi.fn(),
     findById: vi.fn().mockResolvedValue(opts.pat ?? patient()),
+    updateSnapshot: vi.fn(),
   };
-  return { units, requisitions, patients };
+  const crossmatch: CrossmatchService = {
+    perform: vi.fn(),
+  };
+  const issue: IssueService = {
+    issue: vi.fn(),
+  };
+  return { units, requisitions, patients, crossmatch, issue };
 }
 
 describe('requisition-service.match', () => {
@@ -98,7 +113,7 @@ describe('requisition-service.match', () => {
     const { requisition, shortages } = await svc.match(REQ_ID, 'actor');
     expect(d.units.applyEvent).toHaveBeenCalledTimes(2);
     expect(requisition.matchedUnits).toHaveLength(2);
-    expect(Object.keys(shortages)).toHaveLength(0);
+    expect(shortages).toHaveLength(0);
     expect(requisition.matchedUnits[0]!.crossmatchRequired).toBe(true);
     expect(requisition.matchedUnits[0]!.crossmatchStatus).toBe('PENDING');
   });
@@ -108,7 +123,9 @@ describe('requisition-service.match', () => {
     const svc = createRequisitionService(d);
     const { requisition, shortages } = await svc.match(REQ_ID, 'actor');
     expect(requisition.matchedUnits).toHaveLength(1);
-    expect(shortages['PRBC-APOSITIVE']).toBe(1);
+    expect(shortages).toEqual([
+      { componentType: 'RBC', bloodGroup: 'A', rh: 'Positive', required: 2, available: 1, compatibleGroupsSearched: ['A'] },
+    ]);
   });
 
   it('marks O-unit-for-A-patient as COMPATIBLE not EXACT', async () => {

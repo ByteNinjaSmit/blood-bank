@@ -62,6 +62,22 @@ export const CreateRequisitionBody = z.object({
   requestedComponents: z.array(RequestedComponent).min(1),
 });
 
+// Update reuses the create patient shape but keeps the legacy fallback
+// defaults (name/sex) since older clients may omit them on edit.
+const UpdateRequisitionPatient = RequisitionPatient.extend({
+  name: z.string().trim().optional().default('Unnamed Patient'),
+  sex: z.enum(['M', 'F', 'O']).optional().default('M'),
+});
+
+export const UpdateRequisitionBody = z.object({
+  hospitalId: z.string().regex(OBJECT_ID),
+  clinicianName: z.string().trim().optional(),
+  doctorName: z.string().trim().max(200).optional(),
+  requiredAt: z.coerce.date().optional(),
+  patient: UpdateRequisitionPatient.optional(),
+  requestedComponents: z.array(RequestedComponent).min(1),
+});
+
 export const RejectBody = z.object({
   reason: z.string().trim().min(1).max(300).optional(),
   rejectionReason: z.string().trim().min(1).max(300).optional(),
@@ -72,6 +88,19 @@ export const RejectBody = z.object({
 
 export const RequisitionIdParam = z.object({
   id: z.string().regex(OBJECT_ID, 'Invalid requisition id'),
+});
+
+export const IssueAllBody = z.object({
+  unitIds: z.array(z.string().trim().min(1)).optional(),
+});
+
+export const UpdateCrossmatchLegacyBody = z.object({
+  inventoryId: z.string().trim().min(1, 'Provide inventoryId and crossmatchStatus (compatible | incompatible)'),
+  crossmatchStatus: z.enum(['compatible', 'incompatible']),
+  compatibilityResult: z.enum(['MAJOR_COMPATIBLE', 'MINOR_COMPATIBLE', 'UNIVERSAL']).optional(),
+  crossmatchDoneAt: z.coerce.date().optional(),
+  crossmatchSeenAt: z.coerce.date().optional(),
+  cardNumber: z.string().trim().optional(),
 });
 
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {
@@ -103,7 +132,11 @@ export const ListRequisitionsQuery = z.object({
 export const ValidateRequisition = {
   createPatient: (req: Request) => parseOrThrow(CreatePatientBody, req.body, 'request body'),
   createBody: (req: Request) => parseOrThrow(CreateRequisitionBody, req.body, 'request body'),
+  updateBody: (req: Request) => parseOrThrow(UpdateRequisitionBody, req.body, 'request body'),
   rejectBody: (req: Request) => parseOrThrow(RejectBody, req.body, 'request body'),
   idParam: (req: Request) => parseOrThrow(RequisitionIdParam, req.params, 'path params'),
   listQuery: (req: Request) => parseOrThrow(ListRequisitionsQuery, req.query, 'query string'),
+  issueAllBody: (req: Request) => parseOrThrow(IssueAllBody, req.body, 'request body'),
+  updateCrossmatchLegacyBody: (req: Request) =>
+    parseOrThrow(UpdateCrossmatchLegacyBody, req.body, 'request body'),
 };

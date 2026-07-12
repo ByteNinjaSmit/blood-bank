@@ -96,6 +96,7 @@ function mockDonations(): DonationRepo {
     softDelete: vi.fn(),
     restore: vi.fn(),
     delete: vi.fn(),
+    lookupByBagNo: vi.fn(),
   };
 }
 

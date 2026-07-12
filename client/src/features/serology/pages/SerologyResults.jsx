@@ -18,15 +18,17 @@ const RESULT_OPTIONS = ["NEGATIVE", "REACTIVE", "Shadeness"];
 const SerologyResults = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  // Mirrors the backend gate on POST /api/serology/results/:id
-  // (compatibility.routes.ts) — only these roles may save edits.
-  const canEdit = user?.role === "system-admin" || user?.role === "lab-tech-serology";
+  // Mirrors the backend gate on POST /api/serology/results/:id — only
+  // these roles may save edits, and only while no component from this
+  // bag has been issued (bag.canEdit, computed server-side).
+  const canEditRole = user?.role === "system-admin" || user?.role === "lab-tech-serology";
 
   const [isLoading, setIsLoading] = useState(false);
   const [bags, setBags] = useState([]);
   const [excelLoading, setExcelLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedResults, setEditedResults] = useState([]);
+  const [editReason, setEditReason] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   const mapSerologyForExport = (bagsList) => {
@@ -164,6 +166,7 @@ const SerologyResults = () => {
   const handleEditDetails = (bag) => {
     setSelectedBag(bag);
     setEditedResults((Array.isArray(bag.testResults) ? bag.testResults : []).map((t) => ({ ...t })));
+    setEditReason("");
     setIsEditing(true);
     setShowDetails(true);
   };
@@ -173,6 +176,7 @@ const SerologyResults = () => {
     setSelectedBag(null);
     setIsEditing(false);
     setEditedResults([]);
+    setEditReason("");
   };
 
   const setEditedResult = (index, result) => {
@@ -181,16 +185,21 @@ const SerologyResults = () => {
 
   const handleSaveResults = async () => {
     if (!selectedBag) return;
+    if (!editReason.trim()) {
+      toast.error("Please enter a reason for this edit");
+      return;
+    }
     setIsSaving(true);
     try {
       await apiClient.post(`/api/serology/results/${selectedBag._id || selectedBag.bagNo}`, {
         testResults: editedResults.map(({ test, result }) => ({ test, result })),
+        editReason: editReason.trim(),
       });
       toast.success("Serology results updated");
       handleCloseDetails();
       fetchBags(pagination.page, pagination.limit);
     } catch (err) {
-      toast.error(err?.message || "Failed to save results");
+      toast.error(err?.response?.data?.message || err?.message || "Failed to save results");
     } finally {
       setIsSaving(false);
     }
@@ -331,13 +340,14 @@ const SerologyResults = () => {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Collected</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tests</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Edited</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
                   {isLoading ? (
                     <tr>
-                      <td colSpan="7" className="px-4 py-8 text-center">
+                      <td colSpan="8" className="px-4 py-8 text-center">
                         <div className="inline-flex items-center gap-2 text-gray-500">
                           <Loader2 className="w-5 h-5 animate-spin" /> Loading results...
                         </div>
@@ -345,7 +355,7 @@ const SerologyResults = () => {
                     </tr>
                   ) : bags.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="px-4 py-8 text-center text-gray-500">No results found.</td>
+                      <td colSpan="8" className="px-4 py-8 text-center text-gray-500">No results found.</td>
                     </tr>
                   ) : (
                     bags.map((bag, idx) => {
@@ -387,6 +397,15 @@ const SerologyResults = () => {
                             <span className="text-xs text-gray-400">Not tested</span>
                           )}
                         </td>
+                        <td className="px-4 py-3 text-xs text-gray-500">
+                          {bag.lastEditedAt ? (
+                            <span title={bag.editReason || ""}>
+                              Edited on {formatDateTime(bag.lastEditedAt)}
+                            </span>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-sm text-gray-700">
                           <div className="flex items-center gap-1.5">
                             <Button
@@ -396,7 +415,7 @@ const SerologyResults = () => {
                             >
                               View
                             </Button>
-                            {canEdit && (
+                            {canEditRole && bag.canEdit && (
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -545,6 +564,15 @@ const SerologyResults = () => {
                       {formatDateTime(selectedBag.updatedAt)}
                     </p>
                   )}
+                  {selectedBag.lastEditedAt && (
+                    <p>
+                      <span className="font-medium">Edited on:</span>{" "}
+                      {formatDateTime(selectedBag.lastEditedAt)}
+                      {selectedBag.editReason && (
+                        <span className="text-xs text-slate-500"> — {selectedBag.editReason}</span>
+                      )}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -605,11 +633,25 @@ const SerologyResults = () => {
               </div>
 
               {isEditing && (
-                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
-                  Saving re-evaluates the release decision for this donation. If units were already
-                  discarded due to a reactive result, changing a result here will not automatically
-                  restore them.
-                </p>
+                <>
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                    Saving re-evaluates the release decision for this donation. If units were already
+                    discarded due to a reactive result, changing a result here will not automatically
+                    restore them.
+                  </p>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                      Reason for Edit <span className="text-red-600">*</span>
+                    </label>
+                    <textarea
+                      className="w-full px-3 py-2 border rounded-md text-sm border-gray-200 focus:border-red-400 focus:ring-red-400"
+                      rows={2}
+                      placeholder="Why are these results being corrected?"
+                      value={editReason}
+                      onChange={(e) => setEditReason(e.target.value)}
+                    />
+                  </div>
+                </>
               )}
 
               <div className="flex justify-end gap-2">
@@ -620,7 +662,7 @@ const SerologyResults = () => {
                     </Button>
                     <Button
                       onClick={handleSaveResults}
-                      disabled={isSaving || editedResults.length === 0}
+                      disabled={isSaving || editedResults.length === 0 || !editReason.trim()}
                       className="bg-red-700 hover:bg-red-800"
                     >
                       {isSaving ? (
@@ -632,7 +674,7 @@ const SerologyResults = () => {
                     </Button>
                   </>
                 ) : (
-                  canEdit && (
+                  canEditRole && selectedBag.canEdit && (
                     <Button variant="outline" onClick={() => handleEditDetails(selectedBag)}>
                       <Pencil className="w-3.5 h-3.5 mr-1.5" />
                       Edit Results

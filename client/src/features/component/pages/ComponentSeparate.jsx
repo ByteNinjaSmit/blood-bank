@@ -17,7 +17,33 @@ const ComponentSeparate = () => {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [showSeparateModal, setShowSeparateModal] = useState(false);
   const [activeBag, setActiveBag] = useState(null);
-  const [separateForm, setSeparateForm] = useState({ componentType: "RBC", volumeMl: 250 });
+  const [separateForm, setSeparateForm] = useState({
+    componentType: "RBC",
+    volumeMl: "",
+    rpmFirstSpin: "",
+    rpmSecondSpin: "",
+    separationTime: "",
+  });
+  const [pendingComponents, setPendingComponents] = useState([]);
+
+  const COMPONENT_LABELS = {
+    RBC: "Red Blood Cells",
+    FFP: "Fresh Frozen Plasma",
+    Platelet: "Platelets",
+    Cryo: "Cryoprecipitate",
+  };
+
+  const availableComponentTypes = (bag) => {
+    const all = (bag?.typeOfBag === "TB" || bag?.typeOfBag === "QB")
+      ? ["RBC", "FFP", "Platelet", "Cryo"]
+      : ["RBC", "FFP"];
+    const alreadyPrepared = new Set(
+      (Array.isArray(bag?.components) ? bag.components : [])
+        .map((c) => c.componentType?.toUpperCase())
+    );
+    const alreadyPending = new Set(pendingComponents.map((p) => p.componentType));
+    return all.filter((t) => !alreadyPending.has(t) && !alreadyPrepared.has(t.toUpperCase()));
+  };
 
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [signatureBag, setSignatureBag] = useState(null);
@@ -44,44 +70,106 @@ const ComponentSeparate = () => {
     fetchBags();
   }, []);
 
+  const toLocalDateTimeInput = (date) => {
+    const d = date ? new Date(date) : new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
   const openSeparate = (bag) => {
+    const firstAvailable = ((bag?.typeOfBag === "TB" || bag?.typeOfBag === "QB")
+      ? ["RBC", "FFP", "Platelet", "Cryo"]
+      : ["RBC", "FFP"])[0];
     setActiveBag(bag);
-    setSeparateForm({ componentType: "RBC", volumeMl: 250 });
+    setPendingComponents([]);
+    setSeparateForm({
+      componentType: firstAvailable,
+      volumeMl: "",
+      rpmFirstSpin: "",
+      rpmSecondSpin: "",
+      separationTime: toLocalDateTimeInput(),
+    });
     setShowSeparateModal(true);
+  };
+
+  const addPendingComponent = () => {
+    const inputVolume = Number(separateForm.volumeMl);
+    if (!(inputVolume > 0)) {
+      toast.error("Please enter a valid volume");
+      return;
+    }
+    if (!separateForm.componentType) {
+      toast.error("Please select a component");
+      return;
+    }
+    const type = separateForm.componentType;
+    setPendingComponents((prev) => [...prev, { componentType: type, volumeMl: inputVolume }]);
+
+    const remaining = availableComponentTypes(activeBag).filter((t) => t !== type);
+    setSeparateForm((s) => ({ ...s, componentType: remaining[0] || "", volumeMl: "" }));
+  };
+
+  const removePendingComponent = (index) => {
+    setPendingComponents((prev) => prev.filter((_, i) => i !== index));
   };
 
   const submitSeparate = async () => {
     if (!activeBag) return;
-    const inputVolume = Number(separateForm.volumeMl);
+    if (pendingComponents.length === 0) {
+      toast.error("Add at least one component before separating");
+      return;
+    }
 
     const donationId = activeBag.id || activeBag.donationId;
     if (!donationId) {
       toast.error("Unable to resolve donationId for this bag");
       return;
     }
-    if (!(inputVolume > 0)) {
-      toast.error("Please enter a valid volume");
+
+    setIsActionLoading(true);
+    const separationTime = separateForm.separationTime
+      ? new Date(separateForm.separationTime).toISOString()
+      : undefined;
+
+    const failed = [];
+    let succeededCount = 0;
+    for (const item of pendingComponents) {
+      try {
+        await apiClient.post(`/api/v2/component/separate`, {
+          donationId,
+          componentType: item.componentType,
+          volumeMl: item.volumeMl,
+          rpmFirstSpin: separateForm.rpmFirstSpin || undefined,
+          rpmSecondSpin: separateForm.rpmSecondSpin || undefined,
+          separationTime,
+        });
+        succeededCount += 1;
+      } catch (err) {
+        const msg = err?.response?.data?.message || `Failed to separate ${item.componentType}`;
+        toast.error(msg);
+        failed.push(item);
+      }
+    }
+    setIsActionLoading(false);
+
+    if (succeededCount > 0) {
+      toast.success(
+        succeededCount === 1
+          ? "Component separated successfully"
+          : `${succeededCount} components separated successfully`,
+      );
+      await fetchBags();
+    }
+
+    if (failed.length > 0) {
+      // Keep only the components that failed so the user can fix and retry.
+      setPendingComponents(failed);
       return;
     }
-    try {
-      setIsActionLoading(true);
-      await apiClient.post(`/api/v2/component/separate`, {
-        donationId,
-        componentType: separateForm.componentType,
-        volumeMl: inputVolume,
-      });
-      toast.success("Component separated successfully");
-      setShowSeparateModal(false);
-      
-      await fetchBags();
-      
-      setActiveBag(null);
-    } catch (err) {
-      const msg = err?.response?.data?.message || "Failed to separate component";
-      toast.error(msg);
-    } finally {
-      setIsActionLoading(false);
-    }
+
+    setShowSeparateModal(false);
+    setPendingComponents([]);
+    setActiveBag(null);
   };
 
   const markCompleted = async (bag, signature) => {
@@ -254,39 +342,120 @@ const ComponentSeparate = () => {
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Bag: <span className="font-medium text-gray-900">{activeBag?.bagNo}</span></span>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Component</label>
-              <select
-                className="w-full px-3 py-2 border rounded-md"
-                value={separateForm.componentType}
-                onChange={(e) => setSeparateForm((s) => ({ ...s, componentType: e.target.value }))}
+            <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Component</label>
+                <select
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={separateForm.componentType}
+                  onChange={(e) => setSeparateForm((s) => ({ ...s, componentType: e.target.value }))}
+                  disabled={availableComponentTypes(activeBag).length === 0}
+                >
+                  {availableComponentTypes(activeBag).length === 0 && (
+                    <option value="">All components added</option>
+                  )}
+                  {availableComponentTypes(activeBag).map((t) => (
+                    <option key={t} value={t}>{COMPONENT_LABELS[t]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Volume (mL)</label>
+                <input
+                  type="number"
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={separateForm.volumeMl}
+                  onChange={(e) => setSeparateForm((s) => ({ ...s, volumeMl: e.target.value }))}
+                  min={1}
+                  placeholder="e.g. 250"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addPendingComponent}
+                disabled={!separateForm.componentType || !(Number(separateForm.volumeMl) > 0)}
               >
-                <option value="RBC">Red Blood Cells</option>
-                <option value="FFP">Fresh Frozen Plasma</option>
-                {(activeBag?.typeOfBag === "TB" || activeBag?.typeOfBag === "QB") && (
-                  <>
-                    <option value="Platelet">Platelets</option>
-                    <option value="Cryo">Cryoprecipitate</option>
-                  </>
-                )}
-              </select>
+                Add
+              </Button>
             </div>
+
+            {pendingComponents.length > 0 && (
+              <div className="border rounded-md divide-y">
+                {pendingComponents.map((item, idx) => (
+                  <div key={`${item.componentType}-${idx}`} className="flex items-center justify-between px-3 py-2 text-sm">
+                    <span className="text-gray-800">
+                      {COMPONENT_LABELS[item.componentType] || item.componentType}
+                      <span className="text-gray-500"> — {item.volumeMl} mL</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removePendingComponent(idx)}
+                      className="text-red-600 hover:text-red-800 text-xs font-medium"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Volume (mL)</label>
-              <input
-                type="number"
-                className="w-full px-3 py-2 border rounded-md"
-                value={separateForm.volumeMl}
-                onChange={(e) => setSeparateForm((s) => ({ ...s, volumeMl: e.target.value }))}
-                min={1}
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">RPM</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">1st Spin</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border rounded-md"
+                    placeholder="e.g. 3400"
+                    value={separateForm.rpmFirstSpin}
+                    onChange={(e) => setSeparateForm((s) => ({ ...s, rpmFirstSpin: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">2nd Spin</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border rounded-md"
+                    placeholder="e.g. 1500"
+                    value={separateForm.rpmSecondSpin}
+                    onChange={(e) => setSeparateForm((s) => ({ ...s, rpmSecondSpin: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Collection Time</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border rounded-md bg-gray-50 text-gray-500"
+                    value={formatDateTime(activeBag?.collectionDate)}
+                    disabled
+                    readOnly
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Separation Time</label>
+                  <input
+                    type="datetime-local"
+                    className="w-full px-3 py-2 border rounded-md"
+                    value={separateForm.separationTime}
+                    onChange={(e) => setSeparateForm((s) => ({ ...s, separationTime: e.target.value }))}
+                  />
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowSeparateModal(false)}>Cancel</Button>
             <Button
               onClick={submitSeparate}
-              disabled={isActionLoading || Number(separateForm.volumeMl) <= 0}
+              disabled={isActionLoading || pendingComponents.length === 0}
             >
               {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Separate"}
             </Button>
@@ -295,7 +464,7 @@ const ComponentSeparate = () => {
       </Dialog>
 
       <Dialog open={showSignatureModal} onOpenChange={setShowSignatureModal}>
-        <DialogContent className="sm:max-w-[425px] rounded-xl p-6">
+        <DialogContent className="sm:max-w-[520px] rounded-xl p-6">
           <DialogHeader className="mb-2">
             <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <CheckCircle className="w-6 h-6 text-green-600 animate-pulse" />
@@ -306,6 +475,61 @@ const ComponentSeparate = () => {
             <p className="text-sm text-gray-600">
               You are marking component separation as completed for Bag <strong className="text-gray-900">{signatureBag?.bagNo}</strong>.
             </p>
+
+            {signatureBag && (
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <div className="bg-gray-50 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 border-b border-gray-100">
+                  Separation Details
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 px-3 py-3 text-sm">
+                  <div>
+                    <span className="block text-xs text-gray-500">Bag No</span>
+                    <span className="font-medium text-gray-900">{signatureBag.bagNo}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs text-gray-500">Blood Group</span>
+                    <span className="font-medium text-gray-900">{signatureBag.bloodGroup} {signatureBag.rh}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs text-gray-500">Collection Time</span>
+                    <span className="font-medium text-gray-900">{formatDateTime(signatureBag.collectionDate)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs text-gray-500">Separation Time</span>
+                    <span className="font-medium text-gray-900">
+                      {signatureBag.separationTime ? formatDateTime(signatureBag.separationTime) : "—"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-xs text-gray-500">1st Spin (RPM)</span>
+                    <span className="font-medium text-gray-900">{signatureBag.rpmFirstSpin || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs text-gray-500">2nd Spin (RPM)</span>
+                    <span className="font-medium text-gray-900">{signatureBag.rpmSecondSpin || "—"}</span>
+                  </div>
+                </div>
+
+                {Array.isArray(signatureBag.components) && signatureBag.components.length > 0 && (
+                  <div className="border-t border-gray-100">
+                    <div className="px-3 pt-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Components Separated
+                    </div>
+                    <div className="px-3 pb-3 pt-1 flex flex-wrap gap-1.5">
+                      {signatureBag.components.map((c, i) => (
+                        <span
+                          key={i}
+                          className="px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-100 font-medium"
+                        >
+                          {c.componentType} — {c.volumeMl} mL
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="text-sm text-gray-600 bg-gray-50 border border-gray-100 rounded-lg p-3">
               To verify and authorize this action, please type your full signature/name below:
               <br />

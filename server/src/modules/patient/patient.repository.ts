@@ -53,10 +53,25 @@ export interface CreatePatientInput {
   specialNeeds?: SpecialNeed[];
 }
 
+export interface PatientSnapshotUpdate {
+  name: string;
+  address?: string;
+  dob?: Date;
+  sex?: 'M' | 'F' | 'O';
+  medicalRecordNumber?: string;
+  specialNeeds?: SpecialNeed[];
+}
+
 export interface PatientRepo {
   create(input: CreatePatientInput, actorId: string): Promise<PatientDto>;
   /** Throws NotFoundError when absent — never resolves null. */
   findById(id: string): Promise<PatientDto>;
+  /**
+   * Best-effort sync of the linked Patient record from a requisition's
+   * embedded patient snapshot. No-op (resolves silently) if the
+   * patient no longer exists — mirrors the original inline behavior.
+   */
+  updateSnapshot(id: string, fields: PatientSnapshotUpdate): Promise<void>;
 }
 
 export function createPatientRepo(): PatientRepo {
@@ -70,6 +85,16 @@ export function createPatientRepo(): PatientRepo {
       const raw = (await PatientModel.findById(id).lean()) as RawPatient | null;
       if (!raw) throw new NotFoundError('Patient', id);
       return toDto(raw);
+    },
+    async updateSnapshot(id, fields) {
+      await PatientModel.findByIdAndUpdate(id, {
+        name: fields.name,
+        address: fields.address,
+        dob: fields.dob,
+        sex: fields.sex,
+        medicalRecordNumber: fields.medicalRecordNumber,
+        specialNeeds: fields.specialNeeds,
+      });
     },
   };
 }

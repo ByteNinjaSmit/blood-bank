@@ -44,6 +44,12 @@ const TtiResultSchema = new Schema(
     decidedAt: Date,
     decisionNotes: String,
 
+    // Set when a already-finalized result is corrected via the Serology
+    // Results edit screen (never on the first entry from the worklist).
+    editReason: { type: String, trim: true },
+    lastEditedAt: { type: Date },
+    lastEditedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

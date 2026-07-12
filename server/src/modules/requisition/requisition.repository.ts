@@ -170,10 +170,21 @@ export interface ListRequisitionsFilter {
   limit: number;
 }
 
+export interface UpdateRequisitionInput {
+  hospitalId: string;
+  clinicianName: string;
+  doctorName?: string;
+  requiredAt?: Date;
+  patient?: RequisitionPatientDto;
+  requestedComponents: RequestedComponentDto[];
+}
+
 export interface RequisitionRepo {
   list(filter: ListRequisitionsFilter): Promise<{ items: RequisitionDto[]; total: number }>;
   create(input: CreateRequisitionInput, actorId: string): Promise<RequisitionDto>;
   findById(id: string): Promise<RequisitionDto>;
+  /** Returns null (never throws) when the requisition doesn't exist. */
+  updateDetails(id: string, input: UpdateRequisitionInput, actorId: string): Promise<RequisitionDto | null>;
   setMatched(id: string, matched: MatchedUnitDto[], actorId: string): Promise<RequisitionDto>;
   setCrossmatchStatus(
     id: string,
@@ -184,6 +195,10 @@ export interface RequisitionRepo {
   ): Promise<RequisitionDto>;
   setStatus(id: string, status: RequisitionStatus, actorId: string): Promise<RequisitionDto>;
   reject(id: string, reason: string, actorId: string): Promise<RequisitionDto>;
+  /** Removes one matched unit (used when a crossmatch comes back incompatible). */
+  removeMatchedUnit(id: string, unitId: string): Promise<RequisitionDto>;
+  /** Appends an auto-selected replacement unit onto matchedUnits. */
+  pushMatchedUnit(id: string, unit: MatchedUnitDto): Promise<RequisitionDto>;
 }
 
 export function createRequisitionRepo(): RequisitionRepo {
@@ -248,6 +263,43 @@ export function createRequisitionRepo(): RequisitionRepo {
 
     async findById(id) {
       return toDto(await get(id));
+    },
+
+    async updateDetails(id, input, actorId) {
+      const updated = (await RequisitionModel.findByIdAndUpdate(
+        id,
+        {
+          hospitalId: new Types.ObjectId(input.hospitalId),
+          clinicianName: input.clinicianName,
+          doctorName: input.doctorName,
+          requiredAt: input.requiredAt,
+          ...(input.patient ? { patient: input.patient } : {}),
+          requestedComponents: input.requestedComponents,
+          updatedBy: new Types.ObjectId(actorId),
+        },
+        { new: true },
+      ).lean()) as RawReq | null;
+      return updated ? toDto(updated) : null;
+    },
+
+    async removeMatchedUnit(id, unitId) {
+      const updated = (await RequisitionModel.findByIdAndUpdate(
+        id,
+        { $pull: { matchedUnits: { unitId } } },
+        { new: true },
+      ).lean()) as RawReq | null;
+      if (!updated) throw new NotFoundError('Requisition', id);
+      return toDto(updated);
+    },
+
+    async pushMatchedUnit(id, unit) {
+      const updated = (await RequisitionModel.findByIdAndUpdate(
+        id,
+        { $push: { matchedUnits: unit } },
+        { new: true },
+      ).lean()) as RawReq | null;
+      if (!updated) throw new NotFoundError('Requisition', id);
+      return toDto(updated);
     },
 
     async setMatched(id, matched, actorId) {

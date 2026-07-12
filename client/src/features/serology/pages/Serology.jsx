@@ -31,8 +31,11 @@ const Serology = () => {
 
   const [activeBag, setActiveBag] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tests, setTests] = useState(() => DEFAULT_TESTS.map(t => ({ test: t.key, result: "" })));
+
+  const TEST_DISPLAY_LABELS = { HIV: "HIV", HBsAg: "HBsAg", HCV: "HCV", VDRL: "VDRL", MP: "Malaria" };
 
   const fetchBags = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
@@ -69,15 +72,24 @@ const Serology = () => {
     setShowModal(true);
   };
 
-  const submitResults = async () => {
-    if (!activeBag?._id) return;
-    
+  const handleSaveClick = () => {
     // Check if any test results are still unselected
     const unselected = tests.filter(t => !t.result);
     if (unselected.length > 0) {
       toast.error(`Please select a result for all tests: ${unselected.map(t => t.test).join(", ")}`);
       return;
     }
+    setShowModal(false);
+    setShowConfirmModal(true);
+  };
+
+  const backToEdit = () => {
+    setShowConfirmModal(false);
+    setShowModal(true);
+  };
+
+  const submitResults = async () => {
+    if (!activeBag?._id) return;
 
     try {
       setIsSubmitting(true);
@@ -87,7 +99,7 @@ const Serology = () => {
         updatedBy: user?._id || user?.id,
       });
       toast.success("Serology results saved");
-      setShowModal(false);
+      setShowConfirmModal(false);
       setActiveBag(null);
       fetchBags(pagination.page);
     } catch (err) {
@@ -294,8 +306,70 @@ const Serology = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button onClick={handleSaveClick}>Save Results</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Review TTI Results</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <div className="bg-gray-50 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 border-b border-gray-100">
+                Blood Unit Details
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 px-3 py-3 text-sm">
+                <div>
+                  <span className="block text-xs text-gray-500">Donation Number</span>
+                  <span className="font-medium text-gray-900">{activeBag?.donationId || "—"}</span>
+                </div>
+                <div>
+                  <span className="block text-xs text-gray-500">Donor Name</span>
+                  <span className="font-medium text-gray-900">{activeBag?.donorName || "—"}</span>
+                </div>
+                <div>
+                  <span className="block text-xs text-gray-500">Blood Group</span>
+                  <span className="font-medium text-gray-900">{activeBag?.bloodGroup} {activeBag?.rh}</span>
+                </div>
+                <div>
+                  <span className="block text-xs text-gray-500">Collection Date</span>
+                  <span className="font-medium text-gray-900">{formatDateTime(activeBag?.collectionDate)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <div className="bg-gray-50 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 border-b border-gray-100">
+                Entered Results
+              </div>
+              <div className="divide-y">
+                {tests.map((t, idx) => (
+                  <div key={idx} className="flex items-center justify-between px-3 py-2 text-sm">
+                    <span className="text-gray-700">{TEST_DISPLAY_LABELS[t.test] || t.test}</span>
+                    <span className="font-semibold text-gray-900">{t.result}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="font-medium mb-1">⚠️ Please verify all test results carefully.</p>
+              <p>
+                Once saved, TTI results can only be edited until no component from this blood unit has
+                been issued. After any component is issued, these results will become permanently
+                read-only.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={backToEdit} disabled={isSubmitting}>
+              Back to Edit
+            </Button>
             <Button onClick={submitResults} disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Results"}
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm & Save"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -5,21 +5,34 @@ import { apiClient } from "@/core/api-client";
 import CustomModal from "@/components/CustomModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatDateTime } from "@/lib/format-date";
 
 const TYPES = [
-  { key: "rbc", label: "Red Blood Cells (RBC)" },
-  { key: "ffp", label: "Fresh Frozen Plasma (FFP)" },
-  { key: "platelet", label: "Platelets" },
-  { key: "cryo", label: "Cryoprecipitate" },
+  { key: "rbc", label: "Red Blood Cells (RBC)", type: "RBC" },
+  { key: "ffp", label: "Fresh Frozen Plasma (FFP)", type: "FFP" },
+  { key: "platelet", label: "Platelets", type: "Platelet" },
+  { key: "cryo", label: "Cryoprecipitate", type: "Cryo" },
 ];
+const COMPONENT_TYPE_OPTIONS = TYPES.map((t) => t.type);
 
 const toDateInputValue = (iso) => (iso ? String(iso).slice(0, 10) : "");
+
+const toLocalDateTimeInput = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [bagInfo, setBagInfo] = useState(null);
   const [fields, setFields] = useState({});
+  const [rpmFirstSpin, setRpmFirstSpin] = useState("");
+  const [rpmSecondSpin, setRpmSecondSpin] = useState("");
+  const [separationTime, setSeparationTime] = useState("");
+  const [editReason, setEditReason] = useState("");
 
   const fetchDetails = async () => {
     if (!componentId) return;
@@ -29,6 +42,10 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
       const component = res.data?.component;
       if (!component) throw new Error("Component not found");
       setBagInfo(component.bloodBag);
+      setRpmFirstSpin(component.bloodBag?.rpmFirstSpin || "");
+      setRpmSecondSpin(component.bloodBag?.rpmSecondSpin || "");
+      setSeparationTime(toLocalDateTimeInput(component.bloodBag?.separationTime));
+      setEditReason("");
 
       const next = {};
       TYPES.forEach(({ key }) => {
@@ -36,6 +53,7 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
         if (comp && comp.status === "prepared") {
           next[key] = {
             unitId: comp.componentId,
+            componentType: comp.componentType || TYPES.find((t) => t.key === key)?.type,
             volumeMl: comp.volumeMl ?? "",
             storageLocation: comp.storageLocation || "",
             expiryDate: toDateInputValue(comp.expiryDate),
@@ -70,29 +88,43 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
     }));
   };
 
+  const usedTypes = Object.values(fields).map((f) => f.componentType);
+
   const handleSave = async () => {
     const entries = Object.entries(fields);
     if (entries.length === 0) {
       onClose?.();
       return;
     }
+    if (!editReason.trim()) {
+      toast.error("Please enter a reason for this edit");
+      return;
+    }
+    if (new Set(usedTypes).size !== usedTypes.length) {
+      toast.error("Each component type may only appear once — pick different types");
+      return;
+    }
 
     setIsSaving(true);
     try {
-      await Promise.all(
-        entries.map(([, f]) =>
-          apiClient.patch(`/api/v2/component/${f.unitId}`, {
-            volumeMl: f.volumeMl,
-            storageLocation: f.storageLocation,
-            expiryDate: f.expiryDate,
-          }),
-        ),
-      );
+      await apiClient.patch(`/api/v2/component/bag/${componentId}`, {
+        components: entries.map(([, f]) => ({
+          unitId: f.unitId,
+          componentType: f.componentType,
+          volumeMl: f.volumeMl,
+          storageLocation: f.storageLocation,
+          expiryDate: f.expiryDate || undefined,
+        })),
+        rpmFirstSpin: rpmFirstSpin || undefined,
+        rpmSecondSpin: rpmSecondSpin || undefined,
+        separationTime: separationTime ? new Date(separationTime).toISOString() : undefined,
+        editReason: editReason.trim(),
+      });
       toast.success("Component details updated");
       onSaved?.();
       onClose?.();
     } catch (err) {
-      toast.error(err?.message || "Failed to save changes");
+      toast.error(err?.response?.data?.message || err?.message || "Failed to save changes");
     } finally {
       setIsSaving(false);
     }
@@ -119,10 +151,29 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
         </p>
       ) : (
         <div className="space-y-4">
+          {bagInfo?.lastEditedAt && (
+            <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+              Edited on {formatDateTime(bagInfo.lastEditedAt)}
+              {bagInfo.editReason ? ` — ${bagInfo.editReason}` : ""}
+            </p>
+          )}
+
           {TYPES.filter(({ key }) => fields[key]).map(({ key, label }) => (
             <div key={key} className="rounded-lg border border-slate-200 p-3 space-y-2">
               <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">{label}</div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-500 uppercase">Component</label>
+                  <select
+                    className="w-full h-9 px-2 text-sm border rounded-md"
+                    value={fields[key].componentType}
+                    onChange={(e) => setField(key, "componentType", e.target.value)}
+                  >
+                    {COMPONENT_TYPE_OPTIONS.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label className="text-[10px] font-semibold text-slate-500 uppercase">Volume (mL)</label>
                   <Input
@@ -155,6 +206,70 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
               </div>
             </div>
           ))}
+
+          <div className="rounded-lg border border-slate-200 p-3 space-y-2">
+            <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">RPM</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 uppercase">1st Spin</label>
+                <Input
+                  type="text"
+                  value={rpmFirstSpin}
+                  onChange={(e) => setRpmFirstSpin(e.target.value)}
+                  className="h-9 text-sm"
+                  placeholder="e.g. 3400"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 uppercase">2nd Spin</label>
+                <Input
+                  type="text"
+                  value={rpmSecondSpin}
+                  onChange={(e) => setRpmSecondSpin(e.target.value)}
+                  className="h-9 text-sm"
+                  placeholder="e.g. 1500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 p-3 space-y-2">
+            <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">Time</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 uppercase">Collection Time</label>
+                <Input
+                  type="text"
+                  value={formatDateTime(bagInfo?.collectionDate)}
+                  disabled
+                  readOnly
+                  className="h-9 text-sm bg-gray-50 text-gray-500"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 uppercase">Separation Time</label>
+                <Input
+                  type="datetime-local"
+                  value={separationTime}
+                  onChange={(e) => setSeparationTime(e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-semibold text-slate-500 uppercase">
+              Reason for Edit <span className="text-red-600">*</span>
+            </label>
+            <textarea
+              className="w-full px-3 py-2 border rounded-md text-sm border-gray-200 focus:border-red-400 focus:ring-red-400"
+              rows={2}
+              placeholder="Why are these details being corrected?"
+              value={editReason}
+              onChange={(e) => setEditReason(e.target.value)}
+            />
+          </div>
         </div>
       )}
 
@@ -162,7 +277,11 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
         <Button variant="outline" onClick={onClose} disabled={isSaving}>
           Cancel
         </Button>
-        <Button onClick={handleSave} disabled={isLoading || isSaving} className="bg-red-700 hover:bg-red-800">
+        <Button
+          onClick={handleSave}
+          disabled={isLoading || isSaving || Object.keys(fields).length === 0 || !editReason.trim()}
+          className="bg-red-700 hover:bg-red-800"
+        >
           {isSaving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}
           Save Changes
         </Button>

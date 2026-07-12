@@ -28,8 +28,10 @@ function negativePanel(): TtiResultDto['tests'] {
 function mocks(ttiDto: TtiResultDto) {
   const tti: TtiRepo = {
     findByDonation: vi.fn().mockResolvedValue(ttiDto),
+    resolveByIdOrDonation: vi.fn().mockResolvedValue(ttiDto),
     recordTests: vi.fn().mockResolvedValue(ttiDto),
     setDecision: vi.fn().mockResolvedValue(ttiDto),
+    setEditMeta: vi.fn().mockResolvedValue(ttiDto),
   };
   const units: UnitRepo = {
     findByUnitId: vi.fn(),
@@ -40,6 +42,9 @@ function mocks(ttiDto: TtiResultDto) {
     inStockSummary: vi.fn(),
     findExpiredUnitIds: vi.fn(),
     findNearExpiry: vi.fn(),
+    findBestReplacement: vi.fn(),
+    allIssued: vi.fn(),
+    findDonationsWithIssuedUnit: vi.fn(),
   };
   const deferrals: DeferralRepo = {
     create: vi.fn(),

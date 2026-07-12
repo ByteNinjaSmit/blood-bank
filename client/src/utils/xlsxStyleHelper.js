@@ -29,6 +29,14 @@ const GROUP_HEADER_STYLE = {
   fill: { fgColor: { rgb: 'E2E8F0' } },
   border: BORDER_ALL,
 };
+// Darker variant for group headers that should stand out more (e.g. RPM,
+// TIME) — pass `dark: true` on a groupHeaders entry to use this.
+const DARK_GROUP_HEADER_STYLE = {
+  font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' }, name: 'Calibri' },
+  alignment: { horizontal: 'center', vertical: 'center' },
+  fill: { fgColor: { rgb: '4B5563' } },
+  border: BORDER_ALL,
+};
 const COLUMN_HEADER_STYLE = {
   font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' }, name: 'Calibri' },
   alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
@@ -92,7 +100,8 @@ function setCellStyle(ws, r, c, style) {
  * @param {string} opts.generatedBy
  * @param {string} opts.reportPeriod
  * @param {string[]} opts.columns
- * @param {{label:string, startCol:number, endCol:number}} [opts.groupHeader]
+ * @param {{label:string, startCol:number, endCol:number}} [opts.groupHeader] - single group (back-compat; use groupHeaders for multiple)
+ * @param {{label:string, startCol:number, endCol:number, dark?:boolean}[]} [opts.groupHeaders] - one or more merged group labels spanning a range of sub-columns (e.g. "RPM" over 1st Spin/2nd Spin, "TIME" over Collection/Separation Time). Pass `dark: true` for a darker grey fill.
  * @param {any[]} [opts.colWidths]
  * @param {number[]} [opts.totalRowIndexes] - 0-based indexes (within `rows`) to style as totals
  */
@@ -104,6 +113,7 @@ export function buildStyledSheet(rows, {
   statsLine,
   columns,
   groupHeader,
+  groupHeaders,
   colWidths,
   totalRowIndexes = [],
   highlightRowIndexes = [],
@@ -133,15 +143,23 @@ export function buildStyledSheet(rows, {
 
   aoa.push([]); // blank spacer row
 
+  const allGroupHeaders = groupHeaders || (groupHeader ? [groupHeader] : null);
   let groupRowIndex = null;
-  if (groupHeader) {
+  const groupColStyle = new Array(numCols).fill(GROUP_HEADER_STYLE);
+  if (allGroupHeaders && allGroupHeaders.length > 0) {
     const groupRow = new Array(numCols).fill('');
-    groupRow[groupHeader.startCol] = groupHeader.label;
+    allGroupHeaders.forEach((g) => {
+      groupRow[g.startCol] = g.label;
+      for (let c = g.startCol; c <= g.endCol; c++) {
+        groupColStyle[c] = g.dark ? DARK_GROUP_HEADER_STYLE : GROUP_HEADER_STYLE;
+      }
+    });
     aoa.push(groupRow);
     groupRowIndex = aoa.length - 1;
-    merges.push({
-      s: { r: groupRowIndex, c: groupHeader.startCol },
-      e: { r: groupRowIndex, c: groupHeader.endCol },
+    allGroupHeaders.forEach((g) => {
+      if (g.endCol > g.startCol) {
+        merges.push({ s: { r: groupRowIndex, c: g.startCol }, e: { r: groupRowIndex, c: g.endCol } });
+      }
     });
   }
 
@@ -210,7 +228,7 @@ export function buildStyledSheet(rows, {
     setCellStyle(ws, 1, c, SUBTITLE_STYLE);
     setCellStyle(ws, 2, c, META_STYLE);
     if (statsRowIndex !== null) setCellStyle(ws, statsRowIndex, c, STATS_STYLE);
-    if (groupRowIndex !== null) setCellStyle(ws, groupRowIndex, c, GROUP_HEADER_STYLE);
+    if (groupRowIndex !== null) setCellStyle(ws, groupRowIndex, c, groupColStyle[c]);
     setCellStyle(ws, headerRowIndex, c, COLUMN_HEADER_STYLE);
   }
 
