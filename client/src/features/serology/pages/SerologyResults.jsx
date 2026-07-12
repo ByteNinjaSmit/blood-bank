@@ -12,6 +12,7 @@ import { formatDateTime } from "@/lib/format-date";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportSerologyResults } from "@/utils/excelExportHelper";
+import { ComponentDetailsModal } from "@/components/blood-components";
 
 const RESULT_OPTIONS = ["NEGATIVE", "REACTIVE", "Shadeness"];
 
@@ -88,6 +89,7 @@ const SerologyResults = () => {
   const [sortBy, setSortBy] = useState("updatedAt");
   const [selectedBag, setSelectedBag] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showComponents, setShowComponents] = useState(false);
 
   const fetchBags = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
@@ -177,6 +179,7 @@ const SerologyResults = () => {
     setIsEditing(false);
     setEditedResults([]);
     setEditReason("");
+    setShowComponents(false);
   };
 
   const setEditedResult = (index, result) => {
@@ -635,9 +638,10 @@ const SerologyResults = () => {
               {isEditing && (
                 <>
                   <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
-                    Saving re-evaluates the release decision for this donation. If units were already
-                    discarded due to a reactive result, changing a result here will not automatically
-                    restore them.
+                    Saving re-evaluates the release decision for this donation. If this correction
+                    changes a reactive result back to negative, units/components discarded for that
+                    reactive result are restored to stock and the donor's TTI deferral is lifted
+                    automatically.
                   </p>
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
@@ -674,16 +678,29 @@ const SerologyResults = () => {
                     </Button>
                   </>
                 ) : (
-                  canEditRole && selectedBag.canEdit && (
-                    <Button variant="outline" onClick={() => handleEditDetails(selectedBag)}>
-                      <Pencil className="w-3.5 h-3.5 mr-1.5" />
-                      Edit Results
+                  <>
+                    <Button variant="outline" onClick={() => setShowComponents(true)}>
+                      View Components
                     </Button>
-                  )
+                    {canEditRole && selectedBag.canEdit && (
+                      <Button variant="outline" onClick={() => handleEditDetails(selectedBag)}>
+                        <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                        Edit Results
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
           </CustomModal>
+        )}
+
+        {selectedBag && (
+          <ComponentDetailsModal
+            isOpen={showComponents}
+            onClose={() => setShowComponents(false)}
+            componentId={selectedBag.donationId}
+          />
         )}
       </div>
     </>

@@ -463,6 +463,14 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
           }
         }
       }
+      // Fall back to the human-readable donationId (e.g. "DON-2026-0001"),
+      // used by callers like the serology worklist that only have that
+      // string, not a Mongo _id.
+      if (!donationDoc) {
+        donationDoc = await DonationModel.findOne({ donationId: id, deletedAt: null })
+          .populate('campId', 'name')
+          .lean();
+      }
       if (!donationDoc) throw new NotFoundError('Component group', id);
 
       const units = await BloodUnitModel.find({

@@ -74,6 +74,57 @@ export function createTtiService(deps: {
       let unitsAffected = 0;
 
       if (evaluation.decision === 'released') {
+        // If this donation was previously marked reactive and the edit
+        // now corrects it to released, undo the reactive side effects
+        // first: reinstate the units/components this service discarded,
+        // reverse the BagStock counters, and lift the permanent deferral
+        // it raised — before walking the normal release chain below.
+        if (tti.releaseDecision === 'reactive') {
+          const reinstated = await deps.units.applyEventToDonation(
+            donationId,
+            'REINSTATE',
+            actorId,
+            ['DISCARDED'],
+            'TTI result corrected: reactive -> released',
+            { match: { discardReason: 'TTI_POSITIVE' }, set: { discardReason: null } },
+          );
+
+          const priorDonation = await deps.donations.findById(donationId).catch(() => null);
+          if (priorDonation && priorDonation.lotNo && priorDonation.typeOfBag && deps.bagStock) {
+            const mappedBagType =
+              priorDonation.typeOfBag === 'DB' ? 'DOUBLE' : priorDonation.typeOfBag === 'TB' ? 'TRIPLE' : null;
+            if (mappedBagType) {
+              try {
+                const bagStock = await deps.bagStock.findByBatchAndType(priorDonation.lotNo, mappedBagType);
+                if (bagStock) {
+                  await deps.bagStock.decrementDiscarded(bagStock.id, 1, actorId);
+                  await deps.bagStock.incrementIssued(bagStock.id, 1, actorId);
+                  log.info(
+                    { donationId, batchNumber: priorDonation.lotNo, bagType: mappedBagType },
+                    'Bag stock reverted: discarded decremented, issued incremented after TTI correction',
+                  );
+                }
+              } catch (err) {
+                log.error({ err: (err as Error).message }, 'Failed to revert BagStock after TTI correction');
+              }
+            }
+          }
+
+          const deferral = await deps.deferrals.findByRelatedDonation(donationId);
+          if (deferral) {
+            await deps.deferrals.lift(
+              deferral.id,
+              actorId,
+              'TTI result corrected to released — reactive finding reversed',
+            );
+          }
+
+          log.warn(
+            { donationId, reinstated, deferralLifted: Boolean(deferral) },
+            'TTI correction: reactive discard reversed, units reinstated, deferral lifted',
+          );
+        }
+
         // Move units COLLECTED/IN_TESTING -> QUARANTINE -> RELEASED.
         // Units start at COLLECTED after donation; ensure they pass
         // through the legal chain.
@@ -86,14 +137,14 @@ export function createTtiService(deps: {
       } else if (evaluation.decision === 'reactive') {
         // Discard every unit of this donation, raise a permanent
         // deferral, and flag for lookback.
-        unitsAffected = await deps.units.applyEventToDonation(donationId, 'DISCARD', actorId, [
-          'COLLECTED',
-          'IN_TESTING',
-          'QUARANTINE',
-          'RELEASED',
-          'RESERVED',
-          'CROSSMATCHED',
-        ]);
+        unitsAffected = await deps.units.applyEventToDonation(
+          donationId,
+          'DISCARD',
+          actorId,
+          ['COLLECTED', 'IN_TESTING', 'QUARANTINE', 'RELEASED', 'RESERVED', 'CROSSMATCHED'],
+          'TTI reactive',
+          { set: { discardReason: 'TTI_POSITIVE' } },
+        );
         const donation = await deps.donations.findById(donationId).catch(() => null);
         const donorId = donation?.donor;
 

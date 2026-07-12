@@ -60,6 +60,8 @@ export interface DeferralRepo {
   listByDonor(donorId: string): Promise<DeferralDto[]>;
   list(filter: ListDeferralsFilter): Promise<{ items: DeferralRegisterEntry[]; total: number }>;
   lift(id: string, actorId: string, reason?: string): Promise<void>;
+  /** The still-active deferral raised by a reactive TTI result for this donation, if any. */
+  findByRelatedDonation(donationId: string): Promise<DeferralDto | null>;
 }
 
 interface RawDeferral {
@@ -204,6 +206,15 @@ export function createDeferralRepo(): DeferralRepo {
       });
 
       return { items, total };
+    },
+
+    async findByRelatedDonation(donationId) {
+      const raw = (await DeferralModel.findOne({
+        relatedDonationId: donationId,
+        source: 'TTI_REACTIVE',
+        liftedAt: null,
+      }).lean()) as RawDeferral | null;
+      return raw ? toDto(raw) : null;
     },
 
     async lift(id, actorId, reason) {

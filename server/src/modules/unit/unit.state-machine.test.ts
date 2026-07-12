@@ -53,10 +53,16 @@ describe('BloodUnit state machine', () => {
     expect(isTerminal('RETURNED_UNUSED')).toBe(true);
   });
 
-  it('terminal statuses have no outgoing events', () => {
-    for (const t of ['TRANSFUSED', 'RETURNED_UNUSED', 'DISCARDED', 'EXPIRED'] as const) {
+  it('terminal statuses have no outgoing events, except DISCARDED\'s guarded reinstate', () => {
+    for (const t of ['TRANSFUSED', 'RETURNED_UNUSED', 'EXPIRED'] as const) {
       expect(allowedEvents(t)).toEqual([]);
       expect(isTerminal(t)).toBe(true);
     }
+    expect(allowedEvents('DISCARDED')).toEqual(['REINSTATE']);
+    expect(isTerminal('DISCARDED')).toBe(true);
+  });
+
+  it('a unit discarded for a reactive TTI result can be reinstated to QUARANTINE', () => {
+    expect(transition('DISCARDED', 'REINSTATE')).toBe('QUARANTINE');
   });
 });

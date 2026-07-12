@@ -7,12 +7,12 @@ import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { DeferralRepo } from '@/modules/deferral/deferral.repository';
 import type { DonationRepo } from '@/modules/donation/donation.repository';
 
-function ttiWith(tests: TtiResultDto['tests']): TtiResultDto {
+function ttiWith(tests: TtiResultDto['tests'], releaseDecision: TtiResultDto['releaseDecision'] = 'pending'): TtiResultDto {
   return {
     id: 'tti-1',
     donationId: 'DN-1',
     tests,
-    releaseDecision: 'pending',
+    releaseDecision,
   };
 }
 
@@ -52,6 +52,7 @@ function mocks(ttiDto: TtiResultDto) {
     listByDonor: vi.fn(),
     list: vi.fn(),
     lift: vi.fn(),
+    findByRelatedDonation: vi.fn().mockResolvedValue(null),
   };
   const donations = {
     findById: vi.fn().mockResolvedValue({ donor: 'donor-1' }),
@@ -92,11 +93,38 @@ describe('tti-service.finalize', () => {
       'DISCARD',
       'actor',
       expect.arrayContaining(['RELEASED', 'QUARANTINE']),
+      expect.any(String),
+      { set: { discardReason: 'TTI_POSITIVE' } },
     );
     expect(m.deferrals.create).toHaveBeenCalledOnce();
     const deferralArg = (m.deferrals.create as ReturnType<typeof vi.fn>).mock.calls[0]![0];
     expect(deferralArg.type).toBe('PERMANENT');
     expect(deferralArg.source).toBe('TTI_REACTIVE');
+  });
+
+  it('correcting a reactive result to released reinstates units and lifts the deferral', async () => {
+    const m = mocks(ttiWith(negativePanel(), 'reactive'));
+    (m.deferrals.findByRelatedDonation as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: 'def-1',
+      donor: 'donor-1',
+      type: 'PERMANENT',
+      reason: 'TTI reactive: HIV',
+      source: 'TTI_REACTIVE',
+      createdAt: '2026-05-30T00:00:00Z',
+    });
+    const svc = createTtiService(m);
+    const r = await svc.finalize('DN-1', 'actor');
+    expect(r.decision).toBe('released');
+    expect(m.units.applyEventToDonation).toHaveBeenCalledWith(
+      'DN-1',
+      'REINSTATE',
+      'actor',
+      ['DISCARDED'],
+      expect.any(String),
+      { match: { discardReason: 'TTI_POSITIVE' }, set: { discardReason: null } },
+    );
+    expect(m.deferrals.findByRelatedDonation).toHaveBeenCalledWith('DN-1');
+    expect(m.deferrals.lift).toHaveBeenCalledWith('def-1', 'actor', expect.any(String));
   });
 
   it('incomplete panel stays pending, no unit movement', async () => {

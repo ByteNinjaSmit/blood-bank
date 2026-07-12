@@ -119,6 +119,14 @@ export interface UnitRepo {
     actorId: string,
     fromStatuses: UnitStatus[],
     reason?: string,
+    /**
+     * `match` narrows which units of the donation qualify beyond status
+     * (e.g. `{ discardReason: 'TTI_POSITIVE' }` so a TTI correction only
+     * reinstates units it itself discarded). `set` applies extra field
+     * writes alongside the status transition (e.g. clearing/tagging
+     * `discardReason`).
+     */
+    extra?: { match?: Record<string, unknown>; set?: Record<string, unknown> },
   ): Promise<number>;
   selectable(filter: {
     componentType: ComponentType;
@@ -224,16 +232,22 @@ export function createUnitRepo(): UnitRepo {
       return toDto(updated);
     },
 
-    async applyEventToDonation(donationId, event, actorId, fromStatuses, reason) {
+    async applyEventToDonation(donationId, event, actorId, fromStatuses, reason, extra) {
       const actor = new Types.ObjectId(actorId);
       let changed = 0;
+      const findFilter = {
+        donationId,
+        status: { $in: fromStatuses },
+        deletedAt: null,
+        ...(extra?.match ?? {}),
+      };
 
       try {
         const session = await BloodUnitModel.startSession();
         try {
           await session.withTransaction(async () => {
             const units = (await BloodUnitModel.find(
-              { donationId, status: { $in: fromStatuses }, deletedAt: null },
+              findFilter,
               null,
               { session },
             )) as Array<RawUnit & { status: UnitStatus }>;
@@ -245,6 +259,7 @@ export function createUnitRepo(): UnitRepo {
                 {
                   status: next,
                   updatedBy: actor,
+                  ...(extra?.set ?? {}),
                   $push: {
                     statusHistory: { from: u.status, to: next, event, actor, at: new Date(), reason },
                   },
@@ -258,9 +273,7 @@ export function createUnitRepo(): UnitRepo {
           await session.endSession();
         }
       } catch (err: any) {
-        const units = (await BloodUnitModel.find(
-          { donationId, status: { $in: fromStatuses }, deletedAt: null },
-        )) as Array<RawUnit & { status: UnitStatus }>;
+        const units = (await BloodUnitModel.find(findFilter)) as Array<RawUnit & { status: UnitStatus }>;
 
         for (const u of units) {
           const next = transition(u.status, event, u.unitId);
@@ -269,6 +282,7 @@ export function createUnitRepo(): UnitRepo {
             {
               status: next,
               updatedBy: actor,
+              ...(extra?.set ?? {}),
               $push: {
                 statusHistory: { from: u.status, to: next, event, actor, at: new Date(), reason },
               },

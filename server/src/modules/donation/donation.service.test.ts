@@ -15,6 +15,7 @@ function mockDeferrals(
     listByDonor: vi.fn(),
     list: vi.fn(),
     lift: vi.fn(),
+    findByRelatedDonation: vi.fn(),
   };
 }
 

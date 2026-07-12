@@ -97,6 +97,7 @@ export interface BagStockRepo {
   decrementIssued(id: string, qty: number, actorId: string): Promise<BagStockDto | null>;
   incrementDamaged(id: string, qty: number, actorId: string): Promise<BagStockDto | null>;
   incrementDiscarded(id: string, qty: number, actorId: string): Promise<BagStockDto | null>;
+  decrementDiscarded(id: string, qty: number, actorId: string): Promise<BagStockDto | null>;
   updateStatus(id: string, status: string, actorId: string): Promise<BagStockDto | null>;
   setReceivedQtyAndBoxes(
     batchNumber: string,
@@ -256,6 +257,17 @@ export function createBagStockRepo(): BagStockRepo {
       const doc = await BagStockModel.findOneAndUpdate(
         { _id: new Types.ObjectId(id), deletedAt: null },
         { $inc: { discardedQty: qty }, $set: { lastUpdatedAt: new Date(), updatedBy: actor } },
+        { new: true },
+      ).lean();
+      if (!doc) return null;
+      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+    },
+
+    async decrementDiscarded(id, qty, actorId) {
+      const actor = new Types.ObjectId(actorId);
+      const doc = await BagStockModel.findOneAndUpdate(
+        { _id: new Types.ObjectId(id), deletedAt: null },
+        { $inc: { discardedQty: -qty }, $set: { lastUpdatedAt: new Date(), updatedBy: actor } },
         { new: true },
       ).lean();
       if (!doc) return null;

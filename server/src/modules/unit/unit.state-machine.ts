@@ -28,6 +28,10 @@ export const UNIT_EVENT = [
   'RETURN_UNUSED',
   'DISCARD',
   'EXPIRE',
+  // Narrow, guarded reversal: a unit auto-discarded for a reactive TTI
+  // result gets one way back to QUARANTINE if that result is later
+  // corrected. Nothing else may leave DISCARDED.
+  'REINSTATE',
 ] as const;
 export type UnitEvent = (typeof UNIT_EVENT)[number];
 
@@ -71,6 +75,8 @@ const TRANSITIONS: ReadonlyArray<Transition> = [
   { from: 'ISSUED', event: 'CONFIRM_TRANSFUSION', to: 'TRANSFUSED' },
   { from: 'ISSUED', event: 'RETURN_UNUSED', to: 'RETURNED_UNUSED' },
   { from: 'ISSUED', event: 'DISCARD', to: 'DISCARDED' },
+
+  { from: 'DISCARDED', event: 'REINSTATE', to: 'QUARANTINE' },
 ];
 
 // Build a fast lookup table once.
