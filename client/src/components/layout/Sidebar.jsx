@@ -578,12 +578,7 @@ const MODULES = [
 ];
 
 // Access helper wrappers around user.permissions
-const canViewModule = (user, moduleName) => {
-  if (moduleName === "Master Register") {
-    return checkAccess(user, "Donor", "view") || checkAccess(user, "Donations", "view");
-  }
-  return checkAccess(user, moduleName, 'view');
-};
+const canViewModule = (user, moduleName) => checkAccess(user, moduleName, 'view');
 const canCreateInModule = (user, moduleName) => checkAccess(user, moduleName, 'create');
 const canUpdateInModule = (user, moduleName) => checkAccess(user, moduleName, 'update');
 const canDeleteInModule = (user, moduleName) => checkAccess(user, moduleName, 'delete');

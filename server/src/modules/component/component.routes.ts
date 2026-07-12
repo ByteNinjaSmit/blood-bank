@@ -1,13 +1,17 @@
 import { Router } from 'express';
 import mongoose, { Types } from 'mongoose';
 import { authenticate } from '@/shared/middlewares/authenticate';
+import { requireRole } from '@/shared/middlewares/rbac';
 import { DonationModel } from '@/modules/donation/donation.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { BagInspectionModel } from '@/modules/bag-inspection/bag-inspection.model';
 import { DonorModel } from '@/modules/donor/donor.model';
+import type { Role } from '@/shared/enums';
 
 const router = Router();
+
+const CAN_EDIT_COMPONENT: Role[] = ['system-admin', 'bbo', 'lab-tech-component', 'qa-manager'];
 
 router.get('/list', authenticate, async (req, res, next) => {
   try {
@@ -580,6 +584,54 @@ router.get('/:id', authenticate, async (req, res, next) => {
       success: true,
       component: result
     });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// PATCH /:id — edit a prepared component's editable fields (volume,
+// storage location, expiry). `id` may be either the BloodUnit's Mongo
+// _id or its human-readable unitId (e.g. "DON-2026-0001-PRBC-1").
+router.patch('/:id', authenticate, requireRole(CAN_EDIT_COMPONENT), async (req, res, next) => {
+  try {
+    const id = req.params['id'] as string;
+    const { volumeMl, storageLocation, expiryDate } = req.body as {
+      volumeMl?: unknown;
+      storageLocation?: unknown;
+      expiryDate?: unknown;
+    };
+    const actorId = (req.user as any)?.id;
+    if (!actorId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const query = Types.ObjectId.isValid(id) ? { _id: id } : { unitId: id };
+    const unit = await BloodUnitModel.findOne({ ...query, deletedAt: null });
+    if (!unit) {
+      return res.status(404).json({ success: false, message: 'Component not found' });
+    }
+
+    if (volumeMl !== undefined) {
+      const v = Number(volumeMl);
+      if (!Number.isFinite(v) || v <= 0) {
+        return res.status(400).json({ success: false, message: 'Volume must be greater than zero' });
+      }
+      unit.volumeMl = v;
+    }
+    if (storageLocation !== undefined) {
+      unit.storageLocation = (String(storageLocation).trim() || null) as any;
+    }
+    if (expiryDate) {
+      const d = new Date(expiryDate as string);
+      if (Number.isNaN(d.getTime())) {
+        return res.status(400).json({ success: false, message: 'Invalid expiry date' });
+      }
+      unit.expiresAt = d;
+    }
+    unit.updatedBy = new Types.ObjectId(actorId);
+    await unit.save();
+
+    res.json({ success: true, unit });
   } catch (e) {
     next(e);
   }

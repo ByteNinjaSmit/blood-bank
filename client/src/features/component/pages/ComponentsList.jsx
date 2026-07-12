@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, TestTube, Loader2, Filter, Search, ChevronLeft, ChevronRight, Calendar, Package, AlertTriangle, X, Eye } from "lucide-react";
+import { ArrowLeft, TestTube, Loader2, Filter, Search, ChevronLeft, ChevronRight, Calendar, Package, AlertTriangle, X, Eye, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ComponentDetailsModal } from "@/components/blood-components";
+import { ComponentDetailsModal, ComponentEditModal } from "@/components/blood-components";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportComponents } from "@/utils/excelExportHelper";
+import { checkAccess } from "@/atoms/static";
 
 const COMPONENT_TYPES = [
   { value: "RBC", label: "Red Blood Cells" },
@@ -29,8 +30,9 @@ const STATUS_OPTIONS = [
 ];
 
 const ComponentsList = () => {
-  const { API, authorizationToken } = useAuth();
+  const { API, authorizationToken, user } = useAuth();
   const navigate = useNavigate();
+  const canEdit = checkAccess(user, "Component", "update");
 
   const [excelLoading, setExcelLoading] = useState(false);
 
@@ -121,6 +123,12 @@ const ComponentsList = () => {
 
   // Modal state
   const [modalState, setModalState] = useState({
+    isOpen: false,
+    selectedComponentId: null,
+  });
+
+  // Edit modal state
+  const [editModalState, setEditModalState] = useState({
     isOpen: false,
     selectedComponentId: null,
   });
@@ -259,6 +267,22 @@ const ComponentsList = () => {
   // Single responsibility: Close component details modal
   const handleCloseModal = () => {
     setModalState({
+      isOpen: false,
+      selectedComponentId: null,
+    });
+  };
+
+  // Single responsibility: Open component edit modal
+  const handleEditComponent = (componentId) => {
+    setEditModalState({
+      isOpen: true,
+      selectedComponentId: componentId,
+    });
+  };
+
+  // Single responsibility: Close component edit modal
+  const handleCloseEditModal = () => {
+    setEditModalState({
       isOpen: false,
       selectedComponentId: null,
     });
@@ -702,15 +726,28 @@ const ComponentsList = () => {
                           {formatDate(bag.createdAt)}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewDetails(bag.id)}
-                            className="h-8 w-8 p-0 border-red-100 text-red-700 hover:bg-red-50"
-                            title="View Group Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewDetails(bag.id)}
+                              className="h-8 w-8 p-0 border-red-100 text-red-700 hover:bg-red-50"
+                              title="View Group Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            {canEdit && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditComponent(bag.id)}
+                                className="h-8 w-8 p-0 border-blue-100 text-blue-700 hover:bg-blue-50"
+                                title="Edit Components"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -818,6 +855,14 @@ const ComponentsList = () => {
         isOpen={modalState.isOpen}
         onClose={handleCloseModal}
         componentId={modalState.selectedComponentId}
+      />
+
+      {/* Component Edit Modal */}
+      <ComponentEditModal
+        isOpen={editModalState.isOpen}
+        onClose={handleCloseEditModal}
+        componentId={editModalState.selectedComponentId}
+        onSaved={fetchComponents}
       />
     </div>
   );

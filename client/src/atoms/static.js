@@ -1,24 +1,23 @@
+// Keep in sync with the sidebar's MODULES list (client/src/components/layout/Sidebar.jsx)
+// and the module names checked via checkAccess() across the app (e.g. Home.jsx).
+// Only modules that actually exist and are routed belong here.
 export const ModuleArray = [
   "Dashboard",
+  "Admin",
   "Requisition",
+  "Hospital",
   "Camp",
-  "Donor",
-  "Donations",
   "Component",
   "Labs",
-  "Serology",
   "Inventory",
-  "Discard",
-  "Queue",
-  "Report",
-  "Admin",
-  "Site",
-  "Hospital",
-  "MIS",
-  "Appointment",
+  "Master Register",
+  "Donor",
+  "Donations",
   "Bag Procurement",
   "Chemical Inventory",
-  "Master Register"
+  "Appointment",
+  "MIS",
+  "Discard",
 ];
 
 export const RoleArray = [

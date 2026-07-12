@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { apiClient } from "@/core/api-client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Microscope, Search, Calendar, X, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Microscope, Search, Calendar, X, Filter, ChevronLeft, ChevronRight, Pencil, Save } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/store/auth";
 import CustomModal from "@/components/CustomModal";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,12 +13,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportSerologyResults } from "@/utils/excelExportHelper";
 
+const RESULT_OPTIONS = ["NEGATIVE", "REACTIVE", "Shadeness"];
+
 const SerologyResults = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  // Mirrors the backend gate on POST /api/serology/results/:id
+  // (compatibility.routes.ts) — only these roles may save edits.
+  const canEdit = user?.role === "system-admin" || user?.role === "lab-tech-serology";
 
   const [isLoading, setIsLoading] = useState(false);
   const [bags, setBags] = useState([]);
   const [excelLoading, setExcelLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedResults, setEditedResults] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   const mapSerologyForExport = (bagsList) => {
     return bagsList.map(bag => ({
@@ -147,7 +157,43 @@ const SerologyResults = () => {
 
   const handleViewDetails = (bag) => {
     setSelectedBag(bag);
+    setIsEditing(false);
     setShowDetails(true);
+  };
+
+  const handleEditDetails = (bag) => {
+    setSelectedBag(bag);
+    setEditedResults((Array.isArray(bag.testResults) ? bag.testResults : []).map((t) => ({ ...t })));
+    setIsEditing(true);
+    setShowDetails(true);
+  };
+
+  const handleCloseDetails = () => {
+    setShowDetails(false);
+    setSelectedBag(null);
+    setIsEditing(false);
+    setEditedResults([]);
+  };
+
+  const setEditedResult = (index, result) => {
+    setEditedResults((prev) => prev.map((t, i) => (i === index ? { ...t, result } : t)));
+  };
+
+  const handleSaveResults = async () => {
+    if (!selectedBag) return;
+    setIsSaving(true);
+    try {
+      await apiClient.post(`/api/serology/results/${selectedBag._id || selectedBag.bagNo}`, {
+        testResults: editedResults.map(({ test, result }) => ({ test, result })),
+      });
+      toast.success("Serology results updated");
+      handleCloseDetails();
+      fetchBags(pagination.page, pagination.limit);
+    } catch (err) {
+      toast.error(err?.message || "Failed to save results");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -342,13 +388,26 @@ const SerologyResults = () => {
                           )}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewDetails(bag)}
-                          >
-                            View
-                          </Button>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewDetails(bag)}
+                            >
+                              View
+                            </Button>
+                            {canEdit && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditDetails(bag)}
+                                className="border-blue-100 text-blue-700 hover:bg-blue-50"
+                                title="Edit Results"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                       );
@@ -456,12 +515,9 @@ const SerologyResults = () => {
         {showDetails && selectedBag && (
           <CustomModal
             open={showDetails}
-            title={`Bag ${selectedBag.bagNo} – Serology details`}
+            title={`Bag ${selectedBag.bagNo} – Serology details${isEditing ? " (Editing)" : ""}`}
             description={selectedBag.status ? `Status: ${selectedBag.status}` : ""}
-            onCancel={() => {
-              setShowDetails(false);
-              setSelectedBag(null);
-            }}
+            onCancel={handleCloseDetails}
             size="lg"
             hideFooter
           >
@@ -494,7 +550,31 @@ const SerologyResults = () => {
 
               <div className="rounded-lg border border-slate-100 bg-white/80 p-3">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Test Results</p>
-                {Array.isArray(selectedBag.testResults) && selectedBag.testResults.length > 0 ? (
+                {isEditing ? (
+                  editedResults.length > 0 ? (
+                    <div className="divide-y text-sm">
+                      {editedResults.map((t, idx) => (
+                        <div key={idx} className="flex items-center justify-between py-2 gap-3">
+                          <p className="font-medium text-slate-800">{t.test}</p>
+                          <Select value={t.result} onValueChange={(val) => setEditedResult(idx, val)}>
+                            <SelectTrigger className="h-8 w-40 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {RESULT_OPTIONS.map((opt) => (
+                                <SelectItem key={opt} value={opt} className="text-xs">
+                                  {opt}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500">No serology tests recorded for this bag.</p>
+                  )
+                ) : Array.isArray(selectedBag.testResults) && selectedBag.testResults.length > 0 ? (
                   <div className="divide-y text-sm">
                     {selectedBag.testResults.map((t, idx) => (
                       <div key={idx} className="flex items-center justify-between py-2">
@@ -521,6 +601,43 @@ const SerologyResults = () => {
                   </div>
                 ) : (
                   <p className="text-sm text-slate-500">No serology tests recorded for this bag.</p>
+                )}
+              </div>
+
+              {isEditing && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                  Saving re-evaluates the release decision for this donation. If units were already
+                  discarded due to a reactive result, changing a result here will not automatically
+                  restore them.
+                </p>
+              )}
+
+              <div className="flex justify-end gap-2">
+                {isEditing ? (
+                  <>
+                    <Button variant="outline" onClick={handleCloseDetails} disabled={isSaving}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSaveResults}
+                      disabled={isSaving || editedResults.length === 0}
+                      className="bg-red-700 hover:bg-red-800"
+                    >
+                      {isSaving ? (
+                        <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-1.5" />
+                      )}
+                      Save Results
+                    </Button>
+                  </>
+                ) : (
+                  canEdit && (
+                    <Button variant="outline" onClick={() => handleEditDetails(selectedBag)}>
+                      <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                      Edit Results
+                    </Button>
+                  )
                 )}
               </div>
             </div>
