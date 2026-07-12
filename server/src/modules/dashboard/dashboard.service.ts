@@ -19,7 +19,7 @@ export interface DashboardResponseDto {
 }
 
 export interface DashboardService {
-  getFullDashboard(): Promise<DashboardResponseDto>;
+  getFullDashboard(fromDate?: Date, toDate?: Date): Promise<DashboardResponseDto>;
   getAlerts(): Promise<{ alerts: AlertDto[] }>;
 }
 
@@ -27,7 +27,7 @@ export function createDashboardService(deps: { dashboard: DashboardRepo }): Dash
   const log = childLogger({ module: 'dashboard-service' });
 
   return {
-    async getFullDashboard() {
+    async getFullDashboard(fromDate?: Date, toDate?: Date) {
       const [
         stockOverview,
         legacyOverview,
@@ -43,18 +43,18 @@ export function createDashboardService(deps: { dashboard: DashboardRepo }): Dash
         deferrals,
         alerts,
       ] = await Promise.all([
-        deps.dashboard.stockOverview(),
-        deps.dashboard.legacyOverview(),
-        deps.dashboard.requisitionsByHospital(),
-        deps.dashboard.donorCardSummary(),
-        deps.dashboard.campOverview(),
-        deps.dashboard.chemicalStock(),
-        deps.dashboard.bagStock(),
-        deps.dashboard.bulkTransferSummary(),
-        deps.dashboard.diseaseSummary(),
-        deps.dashboard.storageBreakdown(),
-        deps.dashboard.discardSummary(),
-        deps.dashboard.deferralReasonBreakdown(),
+        deps.dashboard.stockOverview(fromDate, toDate),
+        deps.dashboard.legacyOverview(fromDate, toDate),
+        deps.dashboard.requisitionsByHospital(fromDate, toDate),
+        deps.dashboard.donorCardSummary(fromDate, toDate),
+        deps.dashboard.campOverview(fromDate, toDate),
+        deps.dashboard.chemicalStock(fromDate, toDate),
+        deps.dashboard.bagStock(fromDate, toDate),
+        deps.dashboard.bulkTransferSummary(fromDate, toDate),
+        deps.dashboard.diseaseSummary(fromDate, toDate),
+        deps.dashboard.storageBreakdown(fromDate, toDate),
+        deps.dashboard.discardSummary(fromDate, toDate),
+        deps.dashboard.deferralReasonBreakdown(fromDate, toDate),
         deps.dashboard.lowStockAlerts(),
       ]);
 

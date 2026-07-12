@@ -164,13 +164,19 @@ async function restoreUnitsFromLoan(unitIds: string[], actorId: string): Promise
 export function createBulkTransferRepo(): BulkTransferRepo {
   return {
     async list(f) {
-      const filter: Record<string, unknown> = { deletedAt: null };
+      const filter: Record<string, any> = { deletedAt: null };
       if (f.transferType) filter.transferType = f.transferType;
       if (f.search) {
         filter.$or = [
           { transferId: { $regex: f.search, $options: 'i' } },
           { bloodBankName: { $regex: f.search, $options: 'i' } },
         ];
+      }
+      if (f.fromDate || f.toDate) {
+        const dateFilter: any = {};
+        if (f.fromDate) dateFilter.$gte = f.fromDate;
+        if (f.toDate) dateFilter.$lte = f.toDate;
+        filter.transferDate = dateFilter;
       }
 
       const skip = (f.page - 1) * f.limit;

@@ -306,12 +306,83 @@ function buildDashboardSheet(data, meta) {
 }
 
 export default function Dashboard() {
-  const { data: payload, isLoading, isError, error, refetch, isFetching } = useDashboard();
+  const getPresetDates = (presetName) => {
+    const today = new Date();
+    // Set hours to local bounds
+    const now = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+    let from = new Date();
+    let to = now;
+
+    if (presetName === "today") {
+      from = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    } else if (presetName === "yesterday") {
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+      from = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0);
+      to = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+    } else if (presetName === "7d") {
+      from = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      from.setHours(0, 0, 0, 0);
+    } else if (presetName === "1m") {
+      from = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate(), 0, 0, 0, 0);
+    } else if (presetName === "yearly") {
+      from = new Date(today.getFullYear(), 0, 1, 0, 0, 0, 0);
+    } else {
+      return { from: null, to: null };
+    }
+    return { from, to };
+  };
+
+  const formatInputDate = (date) => {
+    if (!date) return "";
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const [preset, setPreset] = React.useState("yearly");
+  const initialDates = getPresetDates("yearly");
+  const [customFrom, setCustomFrom] = React.useState(formatInputDate(initialDates.from));
+  const [customTo, setCustomTo] = React.useState(formatInputDate(initialDates.to));
+
+  const filters = React.useMemo(() => {
+    if (preset && preset !== "custom") {
+      const { from, to } = getPresetDates(preset);
+      return {
+        from: from ? from.toISOString() : undefined,
+        to: to ? to.toISOString() : undefined,
+      };
+    }
+    return {
+      from: customFrom ? new Date(customFrom + "T00:00:00").toISOString() : undefined,
+      to: customTo ? new Date(customTo + "T23:59:59").toISOString() : undefined,
+    };
+  }, [preset, customFrom, customTo]);
+
+  const { data: payload, isLoading, isError, error, refetch, isFetching } = useDashboard(filters);
   const [exporting, setExporting] = React.useState(false);
   const [reportChecking, setReportChecking] = React.useState(false);
   const [openChemicalsWarning, setOpenChemicalsWarning] = React.useState(null); // null | array
   const [reportInputsOpen, setReportInputsOpen] = React.useState(false);
   const [reportPeriod, setReportPeriod] = React.useState(null); // { month, year }
+
+  const handlePresetChange = (p) => {
+    setPreset(p);
+    const { from, to } = getPresetDates(p);
+    setCustomFrom(formatInputDate(from));
+    setCustomTo(formatInputDate(to));
+  };
+
+  const handleCustomFromChange = (e) => {
+    setPreset("custom");
+    setCustomFrom(e.target.value);
+  };
+
+  const handleCustomToChange = (e) => {
+    setPreset("custom");
+    setCustomTo(e.target.value);
+  };
 
   const handleExportExcel = async () => {
     if (!payload) {
@@ -320,8 +391,16 @@ export default function Dashboard() {
     }
     setExporting(true);
     try {
+      const dateRangeStr =
+        preset !== "custom"
+          ? `${preset.toUpperCase()} (${formatDate(filters.from)} to ${formatDate(filters.to)})`
+          : `Custom Range (${formatDate(filters.from)} to ${formatDate(filters.to)})`;
+
       const meta = buildExportMeta({}, {});
-      const sheet = buildDashboardSheet(payload, meta);
+      const sheet = {
+        ...buildDashboardSheet(payload, meta),
+        subtitle: `Operational Dashboard — ${dateRangeStr}`,
+      };
       await downloadExcelReport([sheet], `Dashboard_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
     } finally {
       setExporting(false);
@@ -426,6 +505,65 @@ export default function Dashboard() {
               </Button>
               <NotificationBell />
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Date Filter Toolbar */}
+      <Card className="border-slate-100 shadow-sm">
+        <CardContent className="p-4 flex flex-wrap items-center justify-between gap-4">
+          {/* Quick Presets */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-semibold text-slate-500 mr-2 uppercase tracking-wider">Date Filters:</span>
+            {[
+              { id: "today", label: "Today" },
+              { id: "yesterday", label: "Yesterday" },
+              { id: "7d", label: "7 Days" },
+              { id: "1m", label: "1 Month" },
+              { id: "yearly", label: "Yearly" },
+            ].map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => handlePresetChange(p.id)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  preset === p.id
+                    ? "bg-red-800 text-white shadow-sm"
+                    : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Custom Date Inputs */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Custom Range:</span>
+            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1">
+              <input
+                type="date"
+                value={customFrom}
+                onChange={handleCustomFromChange}
+                className="bg-transparent border-none text-xs text-slate-700 outline-none px-2 py-1 font-medium focus:ring-0 focus:outline-none"
+              />
+              <span className="text-slate-400 text-xs px-1">to</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={handleCustomToChange}
+                className="bg-transparent border-none text-xs text-slate-700 outline-none px-2 py-1 font-medium focus:ring-0 focus:outline-none"
+              />
+            </div>
+            {preset === "custom" && (
+              <button
+                type="button"
+                onClick={() => handlePresetChange("yearly")}
+                className="text-xs text-red-800 hover:text-red-950 font-semibold px-2"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </CardContent>
       </Card>

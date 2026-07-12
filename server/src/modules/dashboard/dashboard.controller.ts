@@ -10,7 +10,12 @@ export function createDashboardControllers(service: DashboardService): Dashboard
   return {
     async getDashboard(req, res, next) {
       try {
-        const data = await service.getFullDashboard();
+        const fromStr = req.query.from as string | undefined;
+        const toStr = req.query.to as string | undefined;
+        const fromDate = fromStr ? new Date(fromStr) : undefined;
+        const toDate = toStr ? new Date(toStr) : undefined;
+
+        const data = await service.getFullDashboard(fromDate, toDate);
         res.json({ success: true, data, requestId: req.id });
       } catch (e) {
         next(e);

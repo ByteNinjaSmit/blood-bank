@@ -7,10 +7,10 @@ export const dashboardKeys = {
   alerts: () => [...dashboardKeys.all, 'alerts'],
 };
 
-export function useDashboard() {
+export function useDashboard(filters) {
   return useQuery({
-    queryKey: dashboardKeys.full(),
-    queryFn: dashboardApi.get,
+    queryKey: [...dashboardKeys.full(), filters],
+    queryFn: () => dashboardApi.get(filters),
     staleTime: 60_000,
   });
 }

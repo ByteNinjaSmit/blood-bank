@@ -21,6 +21,16 @@ import type { BulkTransferRepo, BulkTransferDto } from '@/modules/bulk-transfer/
 
 const LOW_BOX_THRESHOLD = 3;
 
+function buildDateQuery(field: string, fromDate?: Date, toDate?: Date): any {
+  const query: any = {};
+  if (fromDate || toDate) {
+    query[field] = {};
+    if (fromDate) query[field].$gte = fromDate;
+    if (toDate) query[field].$lte = toDate;
+  }
+  return query;
+}
+
 export interface CampSummaryDto {
   id: string;
   campId: string;
@@ -223,18 +233,18 @@ function campToDto(raw: any): CampSummaryDto {
 }
 
 export interface DashboardRepo {
-  stockOverview(): Promise<StockOverviewDto>;
-  legacyOverview(): Promise<LegacyOverviewDto>;
-  requisitionsByHospital(): Promise<HospitalRequisitionDto[]>;
-  donorCardSummary(): Promise<DonorCardSectionDto>;
-  campOverview(): Promise<CampOverviewDto>;
-  chemicalStock(): Promise<any>;
-  bagStock(): Promise<BagStockSectionDto>;
-  bulkTransferSummary(): Promise<BulkTransferSectionDto>;
-  diseaseSummary(): Promise<DiseaseSectionDto>;
-  storageBreakdown(): Promise<StorageBreakdownItemDto[]>;
-  discardSummary(): Promise<DiscardSectionDto>;
-  deferralReasonBreakdown(): Promise<DeferralReasonDto[]>;
+  stockOverview(fromDate?: Date, toDate?: Date): Promise<StockOverviewDto>;
+  legacyOverview(fromDate?: Date, toDate?: Date): Promise<LegacyOverviewDto>;
+  requisitionsByHospital(fromDate?: Date, toDate?: Date): Promise<HospitalRequisitionDto[]>;
+  donorCardSummary(fromDate?: Date, toDate?: Date): Promise<DonorCardSectionDto>;
+  campOverview(fromDate?: Date, toDate?: Date): Promise<CampOverviewDto>;
+  chemicalStock(fromDate?: Date, toDate?: Date): Promise<any>;
+  bagStock(fromDate?: Date, toDate?: Date): Promise<BagStockSectionDto>;
+  bulkTransferSummary(fromDate?: Date, toDate?: Date): Promise<BulkTransferSectionDto>;
+  diseaseSummary(fromDate?: Date, toDate?: Date): Promise<DiseaseSectionDto>;
+  storageBreakdown(fromDate?: Date, toDate?: Date): Promise<StorageBreakdownItemDto[]>;
+  discardSummary(fromDate?: Date, toDate?: Date): Promise<DiscardSectionDto>;
+  deferralReasonBreakdown(fromDate?: Date, toDate?: Date): Promise<DeferralReasonDto[]>;
   lowStockAlerts(): Promise<AlertDto[]>;
 }
 
@@ -244,17 +254,24 @@ export function createDashboardRepo(deps: {
   bulkTransfer: BulkTransferRepo;
 }): DashboardRepo {
   return {
-    async stockOverview() {
+    async stockOverview(fromDate?: Date, toDate?: Date) {
+      const matrixMatch: any = { status: 'RELEASED', deletedAt: null };
+      if (fromDate || toDate) {
+        matrixMatch.collectedAt = {};
+        if (fromDate) matrixMatch.collectedAt.$gte = fromDate;
+        if (toDate) matrixMatch.collectedAt.$lte = toDate;
+      }
+
       const [donors, donations, inStock, reserved, issued, discarded, transfusions, matrixAgg] = await Promise.all([
-        DonorModel.countDocuments({ deletedAt: null }),
-        DonationModel.countDocuments({ deletedAt: null }),
-        BloodUnitModel.countDocuments({ status: 'RELEASED', deletedAt: null }),
-        BloodUnitModel.countDocuments({ status: 'RESERVED', deletedAt: null }),
-        BloodUnitModel.countDocuments({ status: 'ISSUED', deletedAt: null }),
-        BloodUnitModel.countDocuments({ status: 'DISCARDED', deletedAt: null }),
-        TransfusionModel.countDocuments({}),
+        DonorModel.countDocuments({ deletedAt: null, ...buildDateQuery('createdAt', fromDate, toDate) }),
+        DonationModel.countDocuments({ deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
+        BloodUnitModel.countDocuments({ status: 'RELEASED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
+        BloodUnitModel.countDocuments({ status: 'RESERVED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
+        BloodUnitModel.countDocuments({ status: 'ISSUED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
+        BloodUnitModel.countDocuments({ status: 'DISCARDED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
+        TransfusionModel.countDocuments({ ...buildDateQuery('createdAt', fromDate, toDate) }),
         BloodUnitModel.aggregate([
-          { $match: { status: 'RELEASED', deletedAt: null } },
+          { $match: matrixMatch },
           {
             $group: {
               _id: { componentType: '$componentType', bloodGroup: '$aboGroup', rhFactor: '$rhFactor' },
@@ -277,13 +294,15 @@ export function createDashboardRepo(deps: {
       };
     },
 
-    async legacyOverview() {
+    async legacyOverview(fromDate?: Date, toDate?: Date) {
       const now = new Date();
-      const startOfToday = new Date();
+      const refDate = toDate || now;
+
+      const startOfToday = new Date(refDate);
       startOfToday.setHours(0, 0, 0, 0);
       const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const sixMonthsAgo = new Date();
+      const thirtyDaysAgo = new Date(refDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const sixMonthsAgo = new Date(refDate);
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
       const [
@@ -322,44 +341,52 @@ export function createDashboardRepo(deps: {
         bagsQuarantined,
         donorDonationCounts,
       ] = await Promise.all([
-        DonorModel.countDocuments({ deletedAt: null }),
-        DonorModel.countDocuments({ deletedAt: null, createdAt: { $gte: thirtyDaysAgo } }),
-        DonorModel.countDocuments({ sex: 'M', deletedAt: null }),
-        DonorModel.countDocuments({ sex: 'F', deletedAt: null }),
-        DonorModel.countDocuments({ sex: 'O', deletedAt: null }),
+        DonorModel.countDocuments({ deletedAt: null, ...buildDateQuery('createdAt', fromDate, toDate) }),
+        DonorModel.countDocuments({ deletedAt: null, createdAt: { $gte: thirtyDaysAgo, $lte: refDate } }),
+        DonorModel.countDocuments({ sex: 'M', deletedAt: null, ...buildDateQuery('createdAt', fromDate, toDate) }),
+        DonorModel.countDocuments({ sex: 'F', deletedAt: null, ...buildDateQuery('createdAt', fromDate, toDate) }),
+        DonorModel.countDocuments({ sex: 'O', deletedAt: null, ...buildDateQuery('createdAt', fromDate, toDate) }),
         DonorModel.countDocuments({
           deletedAt: null,
+          ...buildDateQuery('createdAt', fromDate, toDate),
           $or: [{ lastDonationDate: { $lt: sixMonthsAgo } }, { lastDonationDate: null }, { lastDonationDate: { $exists: false } }],
         }),
-        DonationModel.countDocuments({ deletedAt: null }),
-        DonationModel.countDocuments({ campId: null, deletedAt: null }),
-        DonationModel.countDocuments({ campId: { $ne: null }, deletedAt: null }),
+        DonationModel.countDocuments({ deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
+        DonationModel.countDocuments({ campId: null, deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
+        DonationModel.countDocuments({ campId: { $ne: null }, deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
         BloodUnitModel.aggregate([
-          { $match: { deletedAt: null } },
+          { $match: { deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) } },
           { $group: { _id: '$componentType', count: { $sum: 1 } } },
         ]),
-        CampModel.countDocuments({}),
+        CampModel.countDocuments(buildDateQuery('dateFrom', fromDate, toDate)),
         BloodUnitModel.countDocuments({
           status: 'RELEASED',
           expiresAt: { $gte: startOfToday, $lt: startOfTomorrow },
           deletedAt: null,
+          ...buildDateQuery('collectedAt', fromDate, toDate),
         }),
-        TtiResultModel.countDocuments({ releaseDecision: 'pending' }),
-        TtiResultModel.countDocuments({ releaseDecision: 'pending', createdAt: { $lte: new Date(Date.now() - 24 * 60 * 60 * 1000) } }),
-        BloodUnitModel.countDocuments({ status: 'RELEASED', expiresAt: null, deletedAt: null }),
+        TtiResultModel.countDocuments({ releaseDecision: 'pending', ...buildDateQuery('createdAt', fromDate, toDate) }),
+        TtiResultModel.countDocuments({
+          releaseDecision: 'pending',
+          createdAt: {
+            $lte: new Date(refDate.getTime() - 24 * 60 * 60 * 1000),
+            ...(fromDate ? { $gte: fromDate } : {}),
+          },
+        }),
+        BloodUnitModel.countDocuments({ status: 'RELEASED', expiresAt: null, deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
         BloodUnitModel.aggregate([
-          { $match: { status: 'RELEASED', deletedAt: null } },
+          { $match: { status: 'RELEASED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) } },
           { $group: { _id: { bloodGroup: '$aboGroup', rhFactor: '$rhFactor' }, count: { $sum: 1 } } },
         ]),
         BloodUnitModel.aggregate([
-          { $match: { status: 'RELEASED', deletedAt: null } },
+          { $match: { status: 'RELEASED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) } },
           { $group: { _id: '$componentType', count: { $sum: 1 } } },
         ]),
         BloodUnitModel.aggregate([
-          { $match: { status: 'RELEASED', expiresAt: { $ne: null }, deletedAt: null } },
+          { $match: { status: 'RELEASED', expiresAt: { $ne: null }, deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) } },
           {
             $addFields: {
-              daysToExpiry: { $ceil: { $divide: [{ $subtract: ['$expiresAt', now] }, 86400000] } },
+              daysToExpiry: { $ceil: { $divide: [{ $subtract: ['$expiresAt', refDate] }, 86400000] } },
               threshold: {
                 $switch: {
                   branches: [
@@ -377,35 +404,36 @@ export function createDashboardRepo(deps: {
           { $group: { _id: '$componentType', count: { $sum: 1 } } },
         ]),
         RequisitionModel.aggregate([
-          { $match: { deletedAt: null } },
+          { $match: { deletedAt: null, ...buildDateQuery('createdAt', fromDate, toDate) } },
           { $group: { _id: '$status', count: { $sum: 1 } } },
         ]),
         RequisitionModel.aggregate([
-          { $match: { deletedAt: null } },
+          { $match: { deletedAt: null, ...buildDateQuery('createdAt', fromDate, toDate) } },
           { $unwind: '$requestedComponents' },
           { $group: { _id: null, units: { $sum: '$requestedComponents.units' } } },
         ]),
-        DonationModel.find({ campId: { $ne: null }, deletedAt: null }).distinct('donor'),
-        DonationModel.find({ campId: { $ne: null }, deletedAt: null }).distinct('donationId'),
-        TransfusionModel.countDocuments({}),
+        DonationModel.find({ campId: { $ne: null }, deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }).distinct('donor'),
+        DonationModel.find({ campId: { $ne: null }, deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }).distinct('donationId'),
+        TransfusionModel.countDocuments(buildDateQuery('createdAt', fromDate, toDate)),
         TtiResultModel.aggregate([
+          { $match: buildDateQuery('createdAt', fromDate, toDate) },
           { $unwind: '$tests' },
           { $group: { _id: { test: '$tests.testName', result: '$tests.result' }, count: { $sum: 1 } } },
         ]),
         BloodUnitModel.aggregate([
-          { $match: { deletedAt: null } },
+          { $match: { deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) } },
           { $group: { _id: '$status', count: { $sum: 1 } } },
         ]),
-        BloodUnitModel.countDocuments({ status: 'ISSUED', deletedAt: null }),
-        BloodUnitModel.countDocuments({ status: 'DISCARDED', deletedAt: null }),
-        BloodUnitModel.countDocuments({ status: 'RELEASED', deletedAt: null }),
-        BloodUnitModel.countDocuments({ status: 'RESERVED', deletedAt: null }),
-        TtiResultModel.countDocuments({ releaseDecision: 'released' }),
-        TtiResultModel.countDocuments({ releaseDecision: 'reactive' }),
-        TtiResultModel.countDocuments({ releaseDecision: 'pending' }),
-        TtiResultModel.countDocuments({ releaseDecision: 'on-hold' }),
+        BloodUnitModel.countDocuments({ status: 'ISSUED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
+        BloodUnitModel.countDocuments({ status: 'DISCARDED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
+        BloodUnitModel.countDocuments({ status: 'RELEASED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
+        BloodUnitModel.countDocuments({ status: 'RESERVED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
+        TtiResultModel.countDocuments({ releaseDecision: 'released', ...buildDateQuery('createdAt', fromDate, toDate) }),
+        TtiResultModel.countDocuments({ releaseDecision: 'reactive', ...buildDateQuery('createdAt', fromDate, toDate) }),
+        TtiResultModel.countDocuments({ releaseDecision: 'pending', ...buildDateQuery('createdAt', fromDate, toDate) }),
+        TtiResultModel.countDocuments({ releaseDecision: 'on-hold', ...buildDateQuery('createdAt', fromDate, toDate) }),
         DonationModel.aggregate([
-          { $match: { deletedAt: null } },
+          { $match: { deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) } },
           { $group: { _id: '$donor', count: { $sum: 1 } } },
         ]),
       ]);
@@ -489,7 +517,15 @@ export function createDashboardRepo(deps: {
       });
       const bloodbagStatusPie = Object.entries(statusPieMap).map(([status, value]) => ({ status, value }));
 
-      const ongoingCampsRaw = await CampModel.find({ dateFrom: { $lte: now }, dateTo: { $gte: now } })
+      const campFilter: any = {};
+      if (fromDate || toDate) {
+        if (fromDate) campFilter.dateTo = { $gte: fromDate };
+        if (toDate) campFilter.dateFrom = { $lte: toDate };
+      } else {
+        campFilter.dateFrom = { $lte: refDate };
+        campFilter.dateTo = { $gte: refDate };
+      }
+      const ongoingCampsRaw = await CampModel.find(campFilter)
         .populate('staff', 'name')
         .lean();
       const ongoingCamps: OngoingCampDto[] = ongoingCampsRaw.map((c: any) => ({
@@ -593,9 +629,9 @@ export function createDashboardRepo(deps: {
       };
     },
 
-    async requisitionsByHospital() {
+    async requisitionsByHospital(fromDate?: Date, toDate?: Date) {
       const rows = await RequisitionModel.aggregate([
-        { $match: { deletedAt: null } },
+        { $match: { deletedAt: null, ...buildDateQuery('createdAt', fromDate, toDate) } },
         { $unwind: { path: '$requestedComponents', preserveNullAndEmptyArrays: true } },
         {
           $group: {
@@ -626,8 +662,8 @@ export function createDashboardRepo(deps: {
       }));
     },
 
-    async donorCardSummary() {
-      const cards = await DonorCardModel.find().select('requisitionId').lean();
+    async donorCardSummary(fromDate?: Date, toDate?: Date) {
+      const cards = await DonorCardModel.find(buildDateQuery('createdAt', fromDate, toDate)).select('requisitionId').lean();
       const totalCount = cards.length;
       if (totalCount === 0) return { totalCount: 0, breakdown: [] };
 
@@ -637,7 +673,7 @@ export function createDashboardRepo(deps: {
       if (unitIds.length === 0) return { totalCount, breakdown: [] };
 
       const rows = await BloodUnitModel.aggregate([
-        { $match: { unitId: { $in: unitIds } } },
+        { $match: { unitId: { $in: unitIds }, ...buildDateQuery('collectedAt', fromDate, toDate) } },
         {
           $group: {
             _id: { componentType: '$componentType', bloodGroup: '$aboGroup', rhFactor: '$rhFactor' },
@@ -656,10 +692,12 @@ export function createDashboardRepo(deps: {
       return { totalCount, breakdown };
     },
 
-    async campOverview() {
+    async campOverview(fromDate?: Date, toDate?: Date) {
       const now = new Date();
-      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const camps = await CampModel.find()
+      const refDate = toDate || now;
+      const monthAgo = new Date(refDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const campFilter = buildDateQuery('dateFrom', fromDate, toDate);
+      const camps = await CampModel.find(campFilter)
         .select('campId name address dateFrom dateTo staff')
         .lean();
 
@@ -670,9 +708,9 @@ export function createDashboardRepo(deps: {
       for (const camp of camps) {
         const dateFrom = new Date(camp.dateFrom as unknown as string);
         const dateTo = new Date(camp.dateTo as unknown as string);
-        if (dateFrom > now) upcoming.push(campToDto(camp));
-        else if (dateFrom <= now && now <= dateTo) ongoing.push(campToDto(camp));
-        else if (dateTo < now && dateTo >= monthAgo) completedLast30Days.push(campToDto(camp));
+        if (dateFrom > refDate) upcoming.push(campToDto(camp));
+        else if (dateFrom <= refDate && refDate <= dateTo) ongoing.push(campToDto(camp));
+        else if (dateTo < refDate && dateTo >= monthAgo) completedLast30Days.push(campToDto(camp));
       }
 
       upcoming.sort((a, b) => new Date(a.dateFrom).getTime() - new Date(b.dateFrom).getTime());
@@ -681,11 +719,11 @@ export function createDashboardRepo(deps: {
       return { upcoming, ongoing, completedLast30Days };
     },
 
-    async chemicalStock() {
+    async chemicalStock(fromDate?: Date, toDate?: Date) {
       return deps.chemicalInventory.getDashboardStats();
     },
 
-    async bagStock() {
+    async bagStock(fromDate?: Date, toDate?: Date) {
       const [byType, lowBoxBatches] = await Promise.all([
         deps.bagStock.summary(),
         deps.bagStock.lowBoxStock(LOW_BOX_THRESHOLD),
@@ -693,10 +731,10 @@ export function createDashboardRepo(deps: {
       return { byType, lowBoxBatches };
     },
 
-    async bulkTransferSummary() {
+    async bulkTransferSummary(fromDate?: Date, toDate?: Date) {
       const [given, taken] = await Promise.all([
-        deps.bulkTransfer.list({ transferType: 'GIVE_LOAN', page: 1, limit: 10 } as any),
-        deps.bulkTransfer.list({ transferType: 'TAKE_LOAN', page: 1, limit: 10 } as any),
+        deps.bulkTransfer.list({ transferType: 'GIVE_LOAN', page: 1, limit: 10, fromDate, toDate } as any),
+        deps.bulkTransfer.list({ transferType: 'TAKE_LOAN', page: 1, limit: 10, fromDate, toDate } as any),
       ]);
       return {
         given: { total: given.total, recent: given.items },
@@ -704,10 +742,11 @@ export function createDashboardRepo(deps: {
       };
     },
 
-    async diseaseSummary() {
+    async diseaseSummary(fromDate?: Date, toDate?: Date) {
       const match = {
         deletedAt: null,
         'clinicalIndicationPatient.firstName': { $exists: true, $nin: [null, ''] },
+        ...buildDateQuery('collectedAt', fromDate, toDate),
       };
 
       const rows = await BloodUnitModel.aggregate([
@@ -763,24 +802,24 @@ export function createDashboardRepo(deps: {
       };
     },
 
-    async storageBreakdown() {
+    async storageBreakdown(fromDate?: Date, toDate?: Date) {
       const rows = await BloodUnitModel.aggregate([
-        { $match: { storageLocation: { $ne: null }, deletedAt: null } },
+        { $match: { storageLocation: { $ne: null }, deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) } },
         { $group: { _id: '$storageLocation', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
       ]);
       return rows.map((r: any) => ({ location: r._id, count: r.count }));
     },
 
-    async discardSummary() {
+    async discardSummary(fromDate?: Date, toDate?: Date) {
       const [bagLevel, unitLevel] = await Promise.all([
         BagDiscardModel.aggregate([
-          { $match: { deletedAt: null } },
+          { $match: { deletedAt: null, ...buildDateQuery('createdAt', fromDate, toDate) } },
           { $group: { _id: '$reason', quantity: { $sum: '$quantity' }, count: { $sum: 1 } } },
           { $sort: { quantity: -1 } },
         ]),
         BloodUnitModel.aggregate([
-          { $match: { status: 'DISCARDED', deletedAt: null } },
+          { $match: { status: 'DISCARDED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) } },
           { $group: { _id: '$discardReason', count: { $sum: 1 } } },
           { $sort: { count: -1 } },
         ]),
@@ -791,8 +830,9 @@ export function createDashboardRepo(deps: {
       };
     },
 
-    async deferralReasonBreakdown() {
+    async deferralReasonBreakdown(fromDate?: Date, toDate?: Date) {
       const rows = await DeferralModel.aggregate([
+        { $match: buildDateQuery('createdAt', fromDate, toDate) },
         { $group: { _id: '$reason', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
       ]);

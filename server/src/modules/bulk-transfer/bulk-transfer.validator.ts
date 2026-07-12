@@ -37,6 +37,8 @@ export const ListBulkTransferQuery = z.object({
   // Capped at 5000 (not the usual 200) so the "All Records" Excel export can
   // fetch the full register in one page, matching every other export flow.
   limit: z.coerce.number().int().min(1).max(5000).default(20),
+  fromDate: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.date().optional()),
+  toDate: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.date().optional()),
 });
 
 export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid id') });
