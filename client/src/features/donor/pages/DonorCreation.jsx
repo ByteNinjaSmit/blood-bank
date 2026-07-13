@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import axios from "axios";
 import CustomModal from "@/components/CustomModal";
 import {
-  Droplets,
   User,
   Heart,
   Activity,
@@ -20,6 +19,7 @@ import {
   Loader2,
   Lock,
   Unlock,
+  UserPlus,
   X
 } from "lucide-react";
 import { states } from "@/constants/states";
@@ -1111,8 +1111,8 @@ export default function DonorCreation() {
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-800 rounded-lg text-white">
-              <Droplets className="w-8 h-8" />
+            <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+              <UserPlus className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
@@ -1121,7 +1121,7 @@ export default function DonorCreation() {
               <p className="text-gray-500 text-sm">
                 {campId
                   ? "Unified camp donor registration and donation form"
-                  : "Unified registration, medical exam, fitness, and bag collection checks"}
+                  : "Register a new donor"}
               </p>
             </div>
           </div>

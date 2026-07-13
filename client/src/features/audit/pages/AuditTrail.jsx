@@ -203,14 +203,16 @@ export default function AuditTrail() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Shield className="w-7 h-7 text-red-700" />
-            Audit Trail
-          </h1>
-          <p className="text-gray-500 text-sm">
-            Centralized, append-only record of every clinical and operational mutation across the system.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+            <Shield className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Audit Trail</h1>
+            <p className="text-gray-500 text-sm">
+              Centralized, append-only record of every clinical and operational mutation across the system.
+            </p>
+          </div>
         </div>
         <ExportExcelDropdown onExport={handleExport} isLoading={exporting} />
       </div>

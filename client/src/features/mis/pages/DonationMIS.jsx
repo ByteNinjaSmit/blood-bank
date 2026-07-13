@@ -74,7 +74,7 @@ export default function DonationMIS() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-red-100 text-red-700"><Activity className="w-5 h-5" /></div>
+            <div className="p-2.5 bg-gradient-to-br from-red-700 to-red-900 rounded-xl shadow-sm"><Activity className="w-6 h-6 text-white" /></div>
             <div><CardTitle className="text-2xl font-bold text-gray-900">Donation MIS</CardTitle><p className="text-gray-500 text-sm">In-house vs camp donations, trends & peaks</p></div>
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end">

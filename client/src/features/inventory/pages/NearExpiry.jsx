@@ -64,8 +64,8 @@ const InventoryNearExpiry = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 bg-gradient-to-br from-red-800 to-red-900 rounded-xl">
-            <AlertTriangle className="w-8 h-8 text-white" />
+          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+            <AlertTriangle className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Near-Expiry Components</h1>

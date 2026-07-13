@@ -62,7 +62,7 @@ export default function CampMIS() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-indigo-100 text-indigo-700"><Tent className="w-5 h-5" /></div>
+            <div className="p-2.5 bg-gradient-to-br from-red-700 to-red-900 rounded-xl shadow-sm"><Tent className="w-6 h-6 text-white" /></div>
             <div><CardTitle className="text-2xl font-bold text-gray-900">Camp MIS</CardTitle><p className="text-gray-500 text-sm">Camp performance, collection stats, and quality metrics</p></div>
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end">

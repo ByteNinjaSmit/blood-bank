@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from "recharts";
-import { PieChart as PieIcon, Tent, RefreshCw } from "lucide-react";
+import { BarChart3, Tent, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const number = (v) => (typeof v === "number" ? v : 0);
@@ -81,13 +81,13 @@ export default function CampReports() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-orange-100 text-orange-700">
-              <PieIcon className="w-5 h-5" />
+            <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+              <BarChart3 className="w-6 h-6 text-white" />
             </div>
             <div>
               <CardTitle className="text-2xl font-bold text-gray-900">Camp Reports</CardTitle>
               <p className="text-gray-500 text-sm">
-                Overall camp performance with drill-down to individual camp details
+                Camp performance & reporting
               </p>
             </div>
           </div>

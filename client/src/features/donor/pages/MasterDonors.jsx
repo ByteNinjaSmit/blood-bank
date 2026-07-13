@@ -36,12 +36,12 @@ const MasterDonors = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-800 rounded-lg">
+              <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
                 <Users className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Master Register — Donors</h1>
-                <p className="text-gray-500 text-sm">Inhouse, Camp & combined master register</p>
+                <p className="text-gray-500 text-sm">Donor registry & eligibility</p>
               </div>
             </div>
             <div className="flex items-center gap-2">

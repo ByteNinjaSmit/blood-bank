@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState, useMemo } from "react"
-import { Plus, Eye, Edit, Trash2, Filter, X, Search, ChevronDown, MapPin, Users, Phone, Calendar, Droplets, ArrowUpDown, FileSpreadsheet } from "lucide-react"
+import { Plus, Eye, Edit, Trash2, Filter, X, Search, ChevronDown, MapPin, Users, Phone, Calendar, ArrowUpDown, FileSpreadsheet } from "lucide-react"
 import { useNavigate, useLocation, Link } from "react-router-dom"
 import { apiClient } from "@/core/api-client"
 import { toast } from "sonner"
@@ -272,12 +272,12 @@ const CampList = ({ OnBack }) => {
       /> */}
       <div className="py-8 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-orange-800 rounded-2xl flex items-center justify-center">
-            <Droplets className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+            <MapPin className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Blood Donation Camps</h1>
-            <p className="text-gray-500 text-sm">Manage and monitor all your blood donation camps</p>
+            <p className="text-gray-500 text-sm">All registered blood donation camps</p>
           </div>
         </div>
         <div className="flex items-center gap-3">

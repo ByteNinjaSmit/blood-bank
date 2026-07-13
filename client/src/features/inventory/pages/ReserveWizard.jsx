@@ -10,7 +10,7 @@ import PatientForm from '@/features/requisition/pages/components/PatientForm';
 import RequestedComponentsList from '@/features/requisition/pages/components/RequestedComponentsList';
 import { defaultRequestedComponent, defaultPatient } from '@/features/requisition/pages/hooks/useRequisition';
 import { SEX_TYPES } from '@/features/requisition/pages/constants';
-import { FileText, User, HeartHandshake, History, FileCheck, ShieldAlert } from 'lucide-react';
+import { FileText, User, HeartHandshake, History, FileCheck, ShieldAlert, BookmarkCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ReserveWizard() {
@@ -174,9 +174,14 @@ export default function ReserveWizard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Reserve Stock (FIFO)</h1>
-          <p className="text-gray-600 text-sm">Reserve units for a hospital until a specific date. Issuing will be handled separately.</p>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+            <BookmarkCheck className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Reserve Stock (FIFO)</h1>
+            <p className="text-gray-500 text-sm">Reserve blood units for a patient</p>
+          </div>
         </div>
 
         <Stepper

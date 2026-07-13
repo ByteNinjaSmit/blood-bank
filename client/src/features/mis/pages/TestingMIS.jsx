@@ -58,7 +58,7 @@ export default function TestingMIS() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-pink-100 text-pink-700"><FlaskConical className="w-5 h-5" /></div>
+            <div className="p-2.5 bg-gradient-to-br from-red-700 to-red-900 rounded-xl shadow-sm"><FlaskConical className="w-6 h-6 text-white" /></div>
             <div><CardTitle className="text-2xl font-bold text-gray-900">Serology MIS</CardTitle><p className="text-gray-500 text-sm">Test results, failure analysis, and quality control</p></div>
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end">

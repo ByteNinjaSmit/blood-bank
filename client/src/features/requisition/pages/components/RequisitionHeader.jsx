@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Droplets } from 'lucide-react';
+import { ArrowLeft, ClipboardList } from 'lucide-react';
 
 export default function RequisitionHeader({ onBack }) {
   return (
@@ -14,10 +14,12 @@ export default function RequisitionHeader({ onBack }) {
           Back
         </button>
         <div className="flex items-center gap-3">
-          <Droplets className="w-8 h-8 text-orange-800" />
+          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+            <ClipboardList className="w-6 h-6 text-white" />
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Hospital Requisition</h1>
-            <p className="text-gray-500 text-sm">Create → Match FIFO → Issue → Complete</p>
+            <p className="text-gray-500 text-sm">Requisition, crossmatch & issue workflow</p>
           </div>
         </div>
       </div>

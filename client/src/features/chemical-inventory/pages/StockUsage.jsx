@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlayCircle, AlertTriangle } from 'lucide-react';
+import { PlayCircle, AlertTriangle, Package } from 'lucide-react';
 import StockUsageTab from '../components/StockUsageTab';
 import DamagedStockTab from '../components/DamagedStockTab';
 
@@ -14,13 +14,18 @@ export default function StockUsage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Stock Usage Logic</h1>
-        <p className="text-gray-500 text-sm">
-          {activeTab === 'usage'
-            ? 'Start chemical units (Available ➔ In Use) and complete them (In Use ➔ Consumed)'
-            : 'Register and manage damaged chemical stock — deleting a record restores its quantity to available stock'}
-        </p>
+      <div className="flex items-center gap-3">
+        <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+          <Package className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Stock Usage Logic</h1>
+          <p className="text-gray-500 text-sm">
+            {activeTab === 'usage'
+              ? 'Start chemical units (Available ➔ In Use) and complete them (In Use ➔ Consumed)'
+              : 'Register and manage damaged chemical stock — deleting a record restores its quantity to available stock'}
+          </p>
+        </div>
       </div>
 
       {/* Tabs */}

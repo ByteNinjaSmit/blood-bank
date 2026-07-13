@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLotList } from '../queries';
-import { Calendar, Search, AlertCircle, ShieldAlert, CheckCircle, ShieldCheck } from 'lucide-react';
+import { Calendar, Search, AlertCircle, ShieldAlert, CheckCircle, ShieldCheck, Clock } from 'lucide-react';
 
 export default function ExpiryMonitoring() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,12 +55,14 @@ export default function ExpiryMonitoring() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Calendar className="w-7 h-7 text-red-700" />
-          Expiry Monitoring Dashboard
-        </h1>
-        <p className="text-gray-500 text-sm">Daily monitoring of reagent lot expirations and warning alerts</p>
+      <div className="flex items-center gap-3">
+        <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+          <Clock className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Expiry Monitoring Dashboard</h1>
+          <p className="text-gray-500 text-sm">Chemical expiry tracking</p>
+        </div>
       </div>
 
       {/* Filter and Search Panel */}

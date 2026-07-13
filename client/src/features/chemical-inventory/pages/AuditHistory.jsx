@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useHistoryList, useChemicalList } from '../queries';
-import { List, Search, User, Clipboard, Plus, Play, CheckCircle, AlertTriangle, Trash } from 'lucide-react';
+import { List, Search, User, Clipboard, Plus, Play, CheckCircle, AlertTriangle, Trash, History } from 'lucide-react';
 
 const ACTION_TYPES = ['PURCHASE', 'OPEN', 'CONSUME', 'ADJUSTMENT', 'EXPIRY_DISCARD', 'DELETE'];
 
@@ -76,12 +76,14 @@ export default function AuditHistory() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <List className="w-7 h-7 text-red-700" />
-          Stock Movement Audit History
-        </h1>
-        <p className="text-gray-500 text-sm">Complete trail of stock lot creation, opens, consumption, and adjustments</p>
+      <div className="flex items-center gap-3">
+        <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+          <History className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Stock Movement Audit History</h1>
+          <p className="text-gray-500 text-sm">Chemical inventory audit history</p>
+        </div>
       </div>
 
       {/* Filter and Search Panel */}

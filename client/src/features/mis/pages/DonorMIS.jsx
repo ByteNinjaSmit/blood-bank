@@ -100,7 +100,7 @@ export default function DonorMIS() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-100 text-blue-700"><Users className="w-5 h-5" /></div>
+            <div className="p-2.5 bg-gradient-to-br from-red-700 to-red-900 rounded-xl shadow-sm"><Users className="w-6 h-6 text-white" /></div>
             <div>
               <CardTitle className="text-2xl font-bold text-gray-900">Donor MIS</CardTitle>
               <p className="text-gray-500 text-sm">Demographics, registration stats, and behavior</p>

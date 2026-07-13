@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from "react"
-import { Droplets, CheckCircle, MapPin, Phone, Mail, Calendar, Users } from "lucide-react"
+import { Droplets, CheckCircle, ClipboardList, MapPin, Phone, Mail, Calendar, Users } from "lucide-react"
 import { toast } from "sonner"
 import { apiClient } from "@/core/api-client"
 import { useNavigate } from "react-router-dom"
@@ -182,12 +182,12 @@ const CampRegistration = () => {
         {/* Header */}
         <div className="mb-8 sm:mb-12">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-orange-800 rounded-2xl flex items-center justify-center">
-              <Droplets className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+            <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+              <ClipboardList className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Create Blood Donation Camp</h1>
-              <p className="text-gray-500 text-sm">Set up a new blood donation camp location</p>
+              <p className="text-gray-500 text-sm">Register a new camp</p>
             </div>
           </div>
         </div>

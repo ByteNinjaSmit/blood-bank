@@ -650,8 +650,8 @@ const Issue = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-red-800 to-red-900 rounded-xl">
-              <PackageCheck className="w-8 h-8 text-white" />
+            <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+              <PackageCheck className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Issue Stock</h1>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Search } from 'lucide-react';
+import { Plus, X, Search, Truck } from 'lucide-react';
 import { useSupplierList, useCreateSupplier, useUpdateSupplier, useDeleteSupplier } from '../queries';
 import { toast } from 'sonner';
 
@@ -85,9 +85,14 @@ export default function Suppliers() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Supplier Master</h1>
-          <p className="text-gray-500 text-sm">Manage chemical vendors and medical diagnostics suppliers</p>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+            <Truck className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Supplier Master</h1>
+            <p className="text-gray-500 text-sm">Chemical suppliers</p>
+          </div>
         </div>
         <button
           onClick={() => {

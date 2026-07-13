@@ -11,6 +11,7 @@ import {
   ArrowRight,
   Plus,
   TrendingUp,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useDashboardStats } from '../queries';
 
@@ -40,12 +41,14 @@ export default function ChemicalDashboard() {
     <div className="min-h-screen bg-gray-50 p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <FlaskConical className="w-7 h-7 text-red-700" />
-            Chemical & Reagent Inventory
-          </h1>
-          <p className="text-gray-500 text-sm">Digital register and lifecycle tracker for reagents, ELISA kits, and consumables</p>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+            <LayoutDashboard className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Chemical & Reagent Inventory</h1>
+            <p className="text-gray-500 text-sm">Chemical inventory overview</p>
+          </div>
         </div>
         <div className="flex gap-3">
           <button

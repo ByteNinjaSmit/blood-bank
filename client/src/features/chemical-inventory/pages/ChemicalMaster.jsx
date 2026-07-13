@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Search, Settings } from 'lucide-react';
+import { Plus, X, Search, Settings, FlaskConical } from 'lucide-react';
 import {
   useChemicalListWithStock,
   useCategoryList,
@@ -131,9 +131,14 @@ export default function ChemicalMaster() {
     <div className="min-h-screen bg-gray-50 p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Chemical Master</h1>
-          <p className="text-gray-500 text-sm">Configure chemical specifications, unit types, and reorder levels</p>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+            <FlaskConical className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Chemical Master</h1>
+            <p className="text-gray-500 text-sm">Chemical & reagent master list</p>
+          </div>
         </div>
         <div className="flex gap-3">
           <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />

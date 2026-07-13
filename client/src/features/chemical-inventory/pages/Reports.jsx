@@ -61,9 +61,14 @@ export default function Reports() {
     <div className="min-h-screen bg-gray-50 p-6 space-y-6 print:bg-white print:p-0">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 print:hidden">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Inventory Reports</h1>
-          <p className="text-gray-500 text-sm">Export monthly registers, supplier logs, and consumption analytics</p>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+            <BarChart3 className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Inventory Reports</h1>
+            <p className="text-gray-500 text-sm">Chemical inventory reports</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <button

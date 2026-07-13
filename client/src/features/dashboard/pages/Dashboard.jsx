@@ -481,7 +481,7 @@ export default function Dashboard() {
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-800 rounded-lg">
+              <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
                 <Droplets className="w-6 h-6 text-white" />
               </div>
               <div>

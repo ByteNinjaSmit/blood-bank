@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, ArrowLeft, Trash2, X, CreditCard, Calendar, ShoppingBag, FileText, CheckCircle2, AlertCircle, Clock, Upload, Image as ImageIcon, AlertTriangle } from 'lucide-react';
+import { Plus, ArrowLeft, Trash2, X, CreditCard, Calendar, ShoppingBag, FileText, CheckCircle2, AlertCircle, Clock, Upload, Image as ImageIcon, AlertTriangle, ShoppingCart } from 'lucide-react';
 import {
   useChemicalList,
   useSupplierList,
@@ -535,6 +535,9 @@ export default function PurchaseEntry() {
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
+          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+            <ShoppingCart className="w-6 h-6 text-white" />
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
               {showForm ? 'Purchase Stock Entry' : 'Chemical Purchase History'}

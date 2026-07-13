@@ -326,12 +326,12 @@ const ListHospital = () => {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Building2 className="w-6 h-6 text-blue-600" />
+            <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+              <Building2 className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Hospital Management</h1>
-              <p className="text-gray-500 text-sm">Manage and view all registered hospitals</p>
+              <p className="text-gray-500 text-sm">Hospital & consignee registry</p>
             </div>
           </div>
           <Button

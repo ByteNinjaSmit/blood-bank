@@ -10,7 +10,7 @@ import RequisitionPrintTemplate from './components/RequisitionPrintTemplate';
 import RequisitionLabelTemplate from './components/RequisitionLabelTemplate';
 import RequisitionPrintService from '@/services/requisitionPrintService';
 import { RejectRequestModal } from '@/components/shared';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X, ClipboardList } from 'lucide-react';
 import { exportRequisitionsExcel } from '@/features/requisition/requisitionExcelExport';
 import { COMPONENT_TYPES } from '@/constants/component-types';
 
@@ -487,9 +487,14 @@ export default function RequisitionList() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-2xl font-bold text-gray-900">Requisition List</h1>
-          <p className="text-gray-500 text-sm">Filter, paginate, and manage requests</p>
+        <div className="max-w-7xl mx-auto px-4 py-6 flex items-center gap-3">
+          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+            <ClipboardList className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Requisition List</h1>
+            <p className="text-gray-500 text-sm">Hospital requisitions</p>
+          </div>
         </div>
       <CustomModal open={viewOpen} onCancel={closeView} title="Requisition Details" size="3xl" hideFooter>
         {!viewDoc || viewLoading ? (

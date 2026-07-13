@@ -154,12 +154,12 @@ const AddHospital = () => {
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Building2 className="w-6 h-6 text-blue-600" />
+          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+            <Building2 className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Add New Hospital</h1>
-            <p className="text-gray-500 text-sm">Register a new hospital in the system</p>
+            <p className="text-gray-500 text-sm">Register a new hospital / consignee</p>
           </div>
         </div>
       </div>

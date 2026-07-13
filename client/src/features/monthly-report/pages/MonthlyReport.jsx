@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Loader2, Printer } from 'lucide-react';
+import { Loader2, Printer, FileBarChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -73,7 +73,15 @@ export default function MonthlyReport() {
     return (
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold text-slate-800">Sanjivani Blood Bank, Kopargaon</h1>
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+              <FileBarChart className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Sanjivani Blood Bank, Kopargaon</h1>
+              <p className="text-gray-500 text-sm">Monthly statutory report</p>
+            </div>
+          </div>
           {periodPicker}
         </div>
         <div className="flex items-center justify-center text-slate-500 gap-2 py-10">
@@ -87,7 +95,15 @@ export default function MonthlyReport() {
     return (
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold text-slate-800">Sanjivani Blood Bank, Kopargaon</h1>
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+              <FileBarChart className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Sanjivani Blood Bank, Kopargaon</h1>
+              <p className="text-gray-500 text-sm">Monthly statutory report</p>
+            </div>
+          </div>
           {periodPicker}
         </div>
         <Card className="border-red-200">
@@ -108,9 +124,14 @@ export default function MonthlyReport() {
   return (
     <div id="monthly-report-print-root" className="p-6 space-y-6 print:p-0 print:space-y-4">
       <div className="flex items-center justify-between print:hidden">
-        <div>
-          <h1 className="text-lg font-bold text-slate-800">Sanjivani Blood Bank, Kopargaon</h1>
-          <p className="text-sm text-slate-500">Blood Bank Monthly Record — {data.period.label}</p>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+            <FileBarChart className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Sanjivani Blood Bank, Kopargaon</h1>
+            <p className="text-gray-500 text-sm">Monthly statutory report — {data.period.label}</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {periodPicker}

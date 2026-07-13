@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Search } from 'lucide-react';
+import { Plus, X, Search, Factory } from 'lucide-react';
 import { useManufacturerList, useCreateManufacturer, useDeleteManufacturer } from '../queries';
 import { toast } from 'sonner';
 
@@ -45,9 +45,14 @@ export default function Manufacturers() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Manufacturer Master</h1>
-          <p className="text-gray-500 text-sm">Configure diagnostics and pharmaceutical manufacturers</p>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
+            <Factory className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Manufacturer Master</h1>
+            <p className="text-gray-500 text-sm">Chemical manufacturers</p>
+          </div>
         </div>
         <button
           onClick={() => setShowAddDrawer(true)}
