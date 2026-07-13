@@ -96,6 +96,9 @@ export const PERMISSION = [
   // Appointments (public-site form submissions)
   'appointment:read',
   'appointment:update',
+  // In-app notification center
+  'notification:read',
+  'notification:manage',
 ] as const;
 export type Permission = (typeof PERMISSION)[number];
 
@@ -284,6 +287,71 @@ export const NOTIFICATION_TYPE = [
   'REGISTER_OTP',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPE)[number];
+
+// ── In-app Notification Center ─────────────────────────────────────────────
+// Distinct from NOTIFICATION_TYPE above (which drives outbound email
+// templates). These back the persisted, per-user in-app notification feed.
+
+export const NOTIFICATION_SEVERITY = ['CRITICAL', 'WARNING', 'INFORMATION', 'SUCCESS'] as const;
+export type NotificationSeverity = (typeof NOTIFICATION_SEVERITY)[number];
+
+export const NOTIFICATION_MODULE = [
+  'DONOR',
+  'COLLECTION',
+  'COMPONENT_SEPARATION',
+  'TTI_TESTING',
+  'INVENTORY',
+  'CROSSMATCH',
+  'ISSUE_BLOOD',
+  'APPOINTMENTS',
+  'EQUIPMENT',
+  'ADMINISTRATION',
+  'OTHERS',
+] as const;
+export type NotificationModule = (typeof NOTIFICATION_MODULE)[number];
+
+export const NOTIFICATION_CATEGORY = [
+  // Critical
+  'LOW_STOCK',
+  'ZERO_STOCK',
+  'EXPIRED_INVENTORY',
+  'EQUIPMENT_ISSUE',
+  'TTI_REACTIVE',
+  'CROSSMATCH_FAILED',
+  // Warning
+  'NEAR_EXPIRY',
+  'DEFERRAL_REMOVED',
+  'COMPONENT_SEPARATION_PENDING',
+  'COMPONENT_SEPARATION_OVERDUE',
+  'TTI_TESTING_PENDING',
+  'TTI_TESTING_OVERDUE',
+  'CROSSMATCH_PENDING',
+  'RESERVATION_EXPIRED',
+  // Information
+  'APPOINTMENT_BOOKED',
+  'APPOINTMENT_CANCELLED',
+  'APPOINTMENT_APPROVED',
+  'APPOINTMENT_REMINDER',
+  'DONATION_COMPLETED',
+  'COLLECTION_CANCELLED',
+  'COLLECTION_PENDING',
+  'NEW_DONOR_REGISTERED',
+  'DONOR_RECORD_UPDATED',
+  'DONOR_ELIGIBLE_AGAIN',
+  'RARE_DONOR_AVAILABLE',
+  'BLOOD_UNIT_ADDED',
+  'INVENTORY_UPDATED',
+  'STOCK_SUMMARY',
+  'EMERGENCY_ISSUE',
+  'RESERVATION_CREATED',
+  // Success
+  'TESTING_COMPLETED',
+  'COMPONENT_SEPARATION_COMPLETED',
+  'CROSSMATCH_COMPLETED',
+  'BLOOD_ISSUED',
+  'TASK_COMPLETED',
+] as const;
+export type NotificationCategory = (typeof NOTIFICATION_CATEGORY)[number];
 
 // Compile-time exhaustiveness helper.
 export function assertNever(value: never): never {

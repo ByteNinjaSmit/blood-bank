@@ -1,5 +1,6 @@
 import type { ComponentListFilters, ComponentRepo, NearExpiryFilters } from '@/modules/component/component.repository';
 import { withAudit } from '@/shared/utils/with-audit';
+import { notificationCenterService } from '@/modules/notification/notification-center.service';
 
 export interface ComponentService {
   list(filters: ComponentListFilters): ReturnType<ComponentRepo['list']>;
@@ -60,6 +61,18 @@ export function createComponentService(deps: { repo: ComponentRepo }): Component
         undefined,
         { signature: input.signature },
       );
+      void notificationCenterService
+        .notify({
+          title: 'Component separation completed',
+          message: `Component separation completed for donation ${input.donationId}`,
+          module: 'COMPONENT_SEPARATION',
+          category: 'COMPONENT_SEPARATION_COMPLETED',
+          severity: 'SUCCESS',
+          relatedRecordId: input.donationId,
+          relatedRecordType: 'Donation',
+          actionLink: `/donation-management/${input.donationId}`,
+        })
+        .catch(() => undefined);
       return result;
     },
     nearExpiry: (filters) => deps.repo.nearExpiry(filters),

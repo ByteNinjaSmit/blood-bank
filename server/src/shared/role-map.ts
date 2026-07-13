@@ -64,6 +64,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'bag-discard:read', 'bag-discard:create', 'bag-discard:approve',
     'bulk-transfer:read', 'bulk-transfer:create', 'bulk-transfer:delete',
     'appointment:read', 'appointment:update',
+    'notification:read', 'notification:manage',
   ],
   bbo: [
     'donor:read',
@@ -92,6 +93,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'bag-discard:read', 'bag-discard:create', 'bag-discard:approve',
     'bulk-transfer:read', 'bulk-transfer:create', 'bulk-transfer:delete',
     'appointment:read', 'appointment:update',
+    'notification:read', 'notification:manage',
   ],
   'medical-officer': [
     'donor:read',
@@ -105,13 +107,21 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'transfusion:record',
     'adverse-reaction:record',
     'report:read',
+    'notification:read', 'notification:manage',
   ],
-  counsellor: ['donor:read', 'donor:update', 'tti:read', 'appointment:read', 'appointment:update'],
+  counsellor: [
+    'donor:read', 'donor:update', 'tti:read', 'appointment:read', 'appointment:update',
+    'notification:read', 'notification:manage',
+  ],
   phlebotomist: [
     'donor:read', 'donor:create', 'donor:update', 'donation:read', 'donation:create',
     'bag-stock:read', 'bag-issue:read',
+    'notification:read', 'notification:manage',
   ],
-  'lab-tech-component': ['donation:read', 'unit:read', 'unit:create', 'component:separate'],
+  'lab-tech-component': [
+    'donation:read', 'unit:read', 'unit:create', 'component:separate',
+    'notification:read', 'notification:manage',
+  ],
   'lab-tech-serology': [
     'donation:read',
     'unit:read',
@@ -119,6 +129,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'tti:edit',
     'tti:release',
     'crossmatch:perform',
+    'notification:read', 'notification:manage',
   ],
   'store-keeper': [
     'unit:read', 'unit:reserve', 'unit:return', 'report:read',
@@ -130,15 +141,23 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'bag-issue:read', 'bag-issue:create',
     'bag-discard:read', 'bag-discard:create',
     'bulk-transfer:read', 'bulk-transfer:create', 'bulk-transfer:delete',
+    'notification:read', 'notification:manage',
   ],
-  'issue-counter': ['unit:read', 'unit:issue', 'unit:return', 'requisition:read'],
-  'apheresis-tech': ['donor:read', 'donor:create', 'donation:read', 'donation:create'],
+  'issue-counter': [
+    'unit:read', 'unit:issue', 'unit:return', 'requisition:read',
+    'notification:read', 'notification:manage',
+  ],
+  'apheresis-tech': [
+    'donor:read', 'donor:create', 'donation:read', 'donation:create',
+    'notification:read', 'notification:manage',
+  ],
   'qa-manager': [
     'audit:read', 'audit:export', 'report:read', 'report:generate', 'unit:read',
     'vendor:read',
     'bag-stock:read',
     'bag-inspection:read', 'bag-inspection:create',
     'bag-discard:read', 'bag-discard:approve',
+    'notification:read', 'notification:manage',
   ],
   auditor: [
     'donor:read',
@@ -152,9 +171,16 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'report:read',
     'lookback:run',
     'vendor:read',
+    'notification:read', 'notification:manage',
   ],
-  'camp-organiser': ['donor:read', 'donor:create', 'donation:read', 'appointment:read'],
-  'hospital-user': ['requisition:read', 'requisition:create', 'unit:read', 'report:read'],
+  'camp-organiser': [
+    'donor:read', 'donor:create', 'donation:read', 'appointment:read',
+    'notification:read', 'notification:manage',
+  ],
+  'hospital-user': [
+    'requisition:read', 'requisition:create', 'unit:read', 'report:read',
+    'notification:read', 'notification:manage',
+  ],
 };
 
 export interface LegacyPermissionEntry {

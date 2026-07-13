@@ -15,9 +15,12 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/store/auth";
 import Sidebar from "@/components/layout/Sidebar";
+import NotificationBell from "@/features/notification/components/NotificationBell";
+import { useNotificationToastWatcher } from "@/features/notification/hooks/useNotificationToastWatcher";
 
 function MasterLayout() {
     const { user } = useAuth();
+    useNotificationToastWatcher();
     const pathname = useLocation().pathname
     const [sidebarOpen, setSidebarOpen] = useState(true)
     const [isMobile, setIsMobile] = useState(false)
@@ -101,6 +104,7 @@ function MasterLayout() {
                                 </h1>
                             </div>
                         </div>
+                        <NotificationBell />
                     </div>
                 </header>
 

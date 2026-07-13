@@ -8,7 +8,6 @@ import { downloadExcelReport, formatDate, buildExportMeta } from "@/utils/excelE
 import { toast } from "sonner";
 import { Droplets, FileSpreadsheet, Loader2, RefreshCw, ClipboardCheck } from "lucide-react";
 import { useDashboard } from "@/features/dashboard/queries";
-import NotificationBell from "@/features/dashboard/components/NotificationBell";
 import MonthlyReportInputsModal from "@/features/dashboard/components/MonthlyReportInputsModal";
 import {
   SummaryStat,
@@ -503,7 +502,6 @@ export default function Dashboard() {
                 {reportChecking ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ClipboardCheck className="w-4 h-4 mr-2 text-indigo-600" />}
                 {reportChecking ? "Checking..." : "Create Monthly Report"}
               </Button>
-              <NotificationBell />
             </div>
           </div>
         </CardContent>

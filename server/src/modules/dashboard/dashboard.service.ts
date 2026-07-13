@@ -1,5 +1,6 @@
 import { childLogger } from '@/core/logger';
 import type { DashboardRepo, AlertDto } from '@/modules/dashboard/dashboard.repository';
+import { notificationCenterService } from '@/modules/notification/notification-center.service';
 
 export interface DashboardResponseDto {
   stockOverview: Awaited<ReturnType<DashboardRepo['stockOverview']>>;
@@ -25,6 +26,28 @@ export interface DashboardService {
 
 export function createDashboardService(deps: { dashboard: DashboardRepo }): DashboardService {
   const log = childLogger({ module: 'dashboard-service' });
+
+  function raiseStockAlerts(alerts: AlertDto[]): void {
+    const dayBucket = new Date().toISOString().slice(0, 10);
+    for (const alert of alerts) {
+      void notificationCenterService
+        .notify({
+          title: alert.type === 'CHEMICAL_LOW_STOCK' ? 'Chemical stock low' : 'Blood bag stock low',
+          message: alert.message,
+          module: 'INVENTORY',
+          category: alert.currentValue <= 0 ? 'ZERO_STOCK' : 'LOW_STOCK',
+          severity: alert.severity === 'critical' ? 'CRITICAL' : 'WARNING',
+          relatedRecordId: alert.entityId,
+          relatedRecordType: alert.type,
+          actionLink: alert.link,
+          dedupeKey: `${alert.type}:${alert.entityId}:${dayBucket}`,
+        })
+        .catch(() => undefined);
+    }
+    // Best-effort, non-blocking — no cron involved, this piggybacks on
+    // whichever request happens to hit the dashboard.
+    notificationCenterService.checkAndCreateStockSummary().catch(() => undefined);
+  }
 
   return {
     async getFullDashboard(fromDate?: Date, toDate?: Date) {
@@ -59,6 +82,7 @@ export function createDashboardService(deps: { dashboard: DashboardRepo }): Dash
       ]);
 
       log.info({ alertCount: alerts.length }, 'dashboard payload generated');
+      raiseStockAlerts(alerts);
 
       return {
         stockOverview,
@@ -80,6 +104,7 @@ export function createDashboardService(deps: { dashboard: DashboardRepo }): Dash
 
     async getAlerts() {
       const alerts = await deps.dashboard.lowStockAlerts();
+      raiseStockAlerts(alerts);
       return { alerts };
     },
   };

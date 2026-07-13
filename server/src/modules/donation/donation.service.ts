@@ -29,6 +29,7 @@ import type { DonorRepo } from '@/modules/donor/donor.repository';
 import type { DeferralRepo } from '@/modules/deferral/deferral.repository';
 import type { BagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
 import type { BagIssueRepo } from '@/modules/bag-issue/bag-issue.repository';
+import { notificationCenterService } from '@/modules/notification/notification-center.service';
 
 export interface DonationService {
   register(input: CreateDonationInput, actorId: string): Promise<DonationWithUnitsDto>;
@@ -185,6 +186,47 @@ export function createDonationService(deps: {
         undefined,
         { donationId: donationPublicId, donor: input.donor, donationType: input.donationType, unitCount: units.length },
       );
+
+      if (input.donorFitness.isFit && units.length > 0) {
+        void notificationCenterService
+          .notify({
+            title: 'Donation completed',
+            message: `Donation ${donationPublicId} collected with ${units.length} unit(s)`,
+            module: 'COLLECTION',
+            category: 'DONATION_COMPLETED',
+            severity: 'INFORMATION',
+            relatedRecordId: created.id,
+            relatedRecordType: 'Donation',
+            actionLink: `/donation-management/${created.id}`,
+          })
+          .catch(() => undefined);
+        void notificationCenterService
+          .notify({
+            title: 'Component separation pending',
+            message: `${units.length} unit(s) from donation ${donationPublicId} await component separation`,
+            module: 'COMPONENT_SEPARATION',
+            category: 'COMPONENT_SEPARATION_PENDING',
+            severity: 'WARNING',
+            relatedRecordId: created.id,
+            relatedRecordType: 'Donation',
+            actionLink: `/component-separation`,
+            dedupeKey: `COMPONENT_SEPARATION_PENDING:${created.id}`,
+          })
+          .catch(() => undefined);
+      } else {
+        void notificationCenterService
+          .notify({
+            title: 'Collection cancelled',
+            message: `Donation ${donationPublicId} recorded as unfit — no units collected`,
+            module: 'COLLECTION',
+            category: 'COLLECTION_CANCELLED',
+            severity: 'WARNING',
+            relatedRecordId: created.id,
+            relatedRecordType: 'Donation',
+            actionLink: `/donation-management/${created.id}`,
+          })
+          .catch(() => undefined);
+      }
 
       return created;
     },

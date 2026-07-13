@@ -10,6 +10,7 @@ import { withAudit } from '@/shared/utils/with-audit';
 import { TtiQuarantineViolation, NotFoundError } from '@/shared/errors';
 import type { INotificationService } from '@/shared/interfaces';
 import { notificationService as defaultNotify } from '@/modules/notification/notification.service';
+import { notificationCenterService } from '@/modules/notification/notification-center.service';
 import { evaluateRelease, type PanelEntry } from './tti.release-rules';
 import type { TtiRepo, TtiResultDto, TtiTestEntryInput } from '@/modules/tti/tti.repository';
 import type { UnitRepo } from '@/modules/unit/unit.repository';
@@ -165,6 +166,18 @@ export function createTtiService(deps: {
         { requestId },
       );
       log.info({ donationId, unitsAffected }, 'TTI released units');
+      void notificationCenterService
+        .notify({
+          title: 'TTI testing completed',
+          message: `TTI panel for donation ${donationId} cleared — ${unitsAffected} unit(s) released`,
+          module: 'TTI_TESTING',
+          category: 'TESTING_COMPLETED',
+          severity: 'SUCCESS',
+          relatedRecordId: donationId,
+          relatedRecordType: 'Donation',
+          actionLink: `/serology/${donationId}`,
+        })
+        .catch(() => undefined);
     } else if (evaluation.decision === 'reactive') {
       // Discard every unit of this donation (including any currently
       // held in QUARANTINE by a shadeness hold), raise a permanent
@@ -246,6 +259,18 @@ export function createTtiService(deps: {
         { donationId, unitsAffected, reasons: evaluation.reasons, donorId },
         'TTI reactive — units discarded, donor permanently deferred, LOOKBACK triggered',
       );
+      void notificationCenterService
+        .notify({
+          title: 'Reactive TTI sample detected',
+          message: `Donation ${donationId} reactive: ${evaluation.reasons.join(', ')} — units discarded, lookback triggered`,
+          module: 'TTI_TESTING',
+          category: 'TTI_REACTIVE',
+          severity: 'CRITICAL',
+          relatedRecordId: donationId,
+          relatedRecordType: 'Donation',
+          actionLink: `/serology/${donationId}`,
+        })
+        .catch(() => undefined);
     } else if (evaluation.decision === 'indeterminate') {
       // Shadeness: do NOT release or discard anything. Any unit already
       // sitting in stock (RELEASED) for this donation is pulled back

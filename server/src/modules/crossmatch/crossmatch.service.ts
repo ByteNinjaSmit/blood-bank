@@ -8,6 +8,7 @@ import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
 import { withAudit } from '@/shared/utils/with-audit';
 import { ConflictError, NotFoundError } from '@/shared/errors';
+import { notificationCenterService } from '@/modules/notification/notification-center.service';
 import type { CrossmatchRepo } from '@/modules/crossmatch/crossmatch.repository';
 import type { RequisitionRepo } from '@/modules/requisition/requisition.repository';
 import type { UnitRepo } from '@/modules/unit/unit.repository';
@@ -115,6 +116,31 @@ export function createCrossmatchService(deps: {
         { crossmatchId, unitId: input.unitId, result: input.result, unitStatus },
         'crossmatch recorded',
       );
+      void notificationCenterService
+        .notify(
+          input.result === 'COMPATIBLE'
+            ? {
+                title: 'Cross match completed',
+                message: `Crossmatch ${crossmatchId} compatible for unit ${input.unitId}`,
+                module: 'CROSSMATCH',
+                category: 'CROSSMATCH_COMPLETED',
+                severity: 'SUCCESS',
+                relatedRecordId: crossmatchId,
+                relatedRecordType: 'Crossmatch',
+                actionLink: `/requisition-management/${req.id}`,
+              }
+            : {
+                title: 'Cross match failed',
+                message: `Crossmatch ${crossmatchId} incompatible for unit ${input.unitId}`,
+                module: 'CROSSMATCH',
+                category: 'CROSSMATCH_FAILED',
+                severity: 'CRITICAL',
+                relatedRecordId: crossmatchId,
+                relatedRecordType: 'Crossmatch',
+                actionLink: `/requisition-management/${req.id}`,
+              },
+        )
+        .catch(() => undefined);
       return { crossmatchId, unitId: input.unitId, result: input.result, unitStatus };
     },
   };

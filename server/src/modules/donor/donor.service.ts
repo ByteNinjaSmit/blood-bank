@@ -18,6 +18,7 @@ import type {
 import type { DonorDto, DonorRepo } from '@/modules/donor/donor.repository';
 import { CampModel } from '@/modules/camp/camp.model';
 import { DonationModel } from '@/modules/donation/donation.model';
+import { notificationCenterService } from '@/modules/notification/notification-center.service';
 
 const MINIMUM_DONOR_WEIGHT_KG = 45;
 const MINIMUM_DONOR_AGE_YEARS = 18;
@@ -65,6 +66,18 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
         undefined,
         { donorId: created.donorId, phone: input.phone, campId: input.campId },
       );
+      void notificationCenterService
+        .notify({
+          title: 'New donor registered',
+          message: `${created.donorId} registered as a new donor`,
+          module: 'DONOR',
+          category: 'NEW_DONOR_REGISTERED',
+          severity: 'INFORMATION',
+          relatedRecordId: created.id,
+          relatedRecordType: 'Donor',
+          actionLink: `/donor-management/${created.id}`,
+        })
+        .catch(() => undefined);
       return created;
     },
 
