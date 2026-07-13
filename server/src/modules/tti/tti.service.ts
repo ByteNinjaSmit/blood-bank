@@ -38,16 +38,22 @@ export interface TtiService {
     actorId: string,
   ): Promise<TtiResultDto>;
   /** Evaluate panel + apply the decision: release / discard units + deferral. */
-  finalize(donationId: string, actorId: string): Promise<FinalizeResult>;
+  finalize(donationId: string, actorId: string, requestId?: string): Promise<FinalizeResult>;
   /**
    * Combined record-then-finalize used by the single "Save Results" UI
    * action (Serology entry/edit screens) so it produces exactly ONE
    * audit entry (tests + decision together) instead of two.
+   *
+   * `requestId` (the originating HTTP request id) is threaded through to
+   * every unit-transition audit entry this call cascades, so the Audit
+   * Trail UI can group "all components quarantined by this one TTI
+   * edit" together instead of showing them as unrelated rows.
    */
   recordAndFinalize(
     donationId: string,
     tests: TtiTestEntryInput[],
     actorId: string,
+    requestId?: string,
   ): Promise<FinalizeResult>;
   get(donationId: string): Promise<TtiResultDto>;
 }
@@ -75,6 +81,7 @@ export function createTtiService(deps: {
     actorId: string,
     tti: TtiResultDto,
     evaluation: ReturnType<typeof evaluateRelease>,
+    requestId?: string,
   ): Promise<number> {
     let unitsAffected = 0;
 
@@ -91,7 +98,7 @@ export function createTtiService(deps: {
           actorId,
           ['DISCARDED'],
           'TTI result corrected: reactive -> released',
-          { match: { discardReason: 'TTI_POSITIVE' }, set: { discardReason: null } },
+          { match: { discardReason: 'TTI_POSITIVE' }, set: { discardReason: null }, requestId },
         );
 
         const priorDonation = await deps.donations.findById(donationId).catch(() => null);
@@ -147,11 +154,16 @@ export function createTtiService(deps: {
       // Move units COLLECTED/IN_TESTING -> QUARANTINE -> RELEASED. Units
       // already held in QUARANTINE by a prior shadeness hold flow
       // straight through this same RELEASE step.
-      await deps.units.applyEventToDonation(donationId, 'BEGIN_TESTING', actorId, ['COLLECTED']);
-      await deps.units.applyEventToDonation(donationId, 'AWAIT_TTI', actorId, ['IN_TESTING']);
-      unitsAffected = await deps.units.applyEventToDonation(donationId, 'RELEASE', actorId, [
-        'QUARANTINE',
-      ]);
+      await deps.units.applyEventToDonation(donationId, 'BEGIN_TESTING', actorId, ['COLLECTED'], undefined, { requestId });
+      await deps.units.applyEventToDonation(donationId, 'AWAIT_TTI', actorId, ['IN_TESTING'], undefined, { requestId });
+      unitsAffected = await deps.units.applyEventToDonation(
+        donationId,
+        'RELEASE',
+        actorId,
+        ['QUARANTINE'],
+        undefined,
+        { requestId },
+      );
       log.info({ donationId, unitsAffected }, 'TTI released units');
     } else if (evaluation.decision === 'reactive') {
       // Discard every unit of this donation (including any currently
@@ -163,7 +175,7 @@ export function createTtiService(deps: {
         actorId,
         ['COLLECTED', 'IN_TESTING', 'QUARANTINE', 'RELEASED', 'RESERVED', 'CROSSMATCHED'],
         'TTI reactive',
-        { set: { discardReason: 'TTI_POSITIVE' } },
+        { set: { discardReason: 'TTI_POSITIVE' }, requestId },
       );
       const donation = await deps.donations.findById(donationId).catch(() => null);
       const donorId = donation?.donor;
@@ -247,6 +259,7 @@ export function createTtiService(deps: {
         actorId,
         ['RELEASED'],
         `TTI shadeness: ${evaluation.reasons.join(', ')}`,
+        { requestId },
       );
 
       const donation = await deps.donations.findById(donationId).catch(() => null);
@@ -302,7 +315,7 @@ export function createTtiService(deps: {
       return result;
     },
 
-    async finalize(donationId, actorId) {
+    async finalize(donationId, actorId, requestId) {
       const tti = await deps.tti.findByDonation(donationId);
       if (!tti) throw new NotFoundError('TtiResult', donationId);
 
@@ -320,7 +333,7 @@ export function createTtiService(deps: {
       );
 
       void withAudit(
-        { actorId },
+        { actorId, requestId },
         {
           module: 'tti',
           action: evaluation.decision === 'released' ? 'RELEASE' : 'UPDATE',
@@ -334,12 +347,12 @@ export function createTtiService(deps: {
         { releaseDecision: evaluation.decision },
       );
 
-      const unitsAffected = await applyDecision(donationId, actorId, tti, evaluation);
+      const unitsAffected = await applyDecision(donationId, actorId, tti, evaluation, requestId);
 
       return { decision: evaluation.decision, unitsAffected, reasons: evaluation.reasons };
     },
 
-    async recordAndFinalize(donationId, tests, actorId) {
+    async recordAndFinalize(donationId, tests, actorId, requestId) {
       const before = await deps.tti.findByDonation(donationId);
       if (!before) throw new NotFoundError('TtiResult', donationId);
 
@@ -358,12 +371,12 @@ export function createTtiService(deps: {
         evaluation.reasons.join('; '),
       );
 
-      const unitsAffected = await applyDecision(donationId, actorId, before, evaluation);
+      const unitsAffected = await applyDecision(donationId, actorId, before, evaluation, requestId);
 
       // ONE combined audit entry for the whole "Save Results" action —
       // both the test-panel diff and the decision diff together.
       void withAudit(
-        { actorId },
+        { actorId, requestId },
         {
           module: 'tti',
           action: evaluation.decision === 'released' ? 'RELEASE' : 'UPDATE',

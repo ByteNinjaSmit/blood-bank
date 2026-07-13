@@ -74,10 +74,18 @@ describe('tti-service.finalize', () => {
       'BEGIN_TESTING',
       'actor',
       ['COLLECTED'],
+      undefined,
+      { requestId: undefined },
     );
-    expect(m.units.applyEventToDonation).toHaveBeenNthCalledWith(3, 'DN-1', 'RELEASE', 'actor', [
-      'QUARANTINE',
-    ]);
+    expect(m.units.applyEventToDonation).toHaveBeenNthCalledWith(
+      3,
+      'DN-1',
+      'RELEASE',
+      'actor',
+      ['QUARANTINE'],
+      undefined,
+      { requestId: undefined },
+    );
     expect(m.deferrals.create).not.toHaveBeenCalled();
   });
 

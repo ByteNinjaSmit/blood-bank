@@ -105,7 +105,7 @@ export function createTtiLegacyViewControllers(deps: {
 
         // One combined call so the whole "Save Results" action produces a
         // single audit entry (tests + decision together), not two.
-        await deps.ttiService.recordAndFinalize(tti.donationId, mappedTests, actorId);
+        await deps.ttiService.recordAndFinalize(tti.donationId, mappedTests, actorId, req.id);
         if (isEdit) {
           await deps.tti.setEditMeta(tti.donationId, editReason!.trim(), actorId);
         }

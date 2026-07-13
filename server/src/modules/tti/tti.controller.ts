@@ -30,7 +30,7 @@ export function createTtiControllers(service: TtiService): TtiControllers {
     async finalize(req, res, next) {
       try {
         const { donationId } = ValidateTti.donationIdParam(req);
-        const result = await service.finalize(donationId, actor(req));
+        const result = await service.finalize(donationId, actor(req), req.id);
         res.json({ success: true, data: result, requestId: req.id });
       } catch (e) {
         next(e);

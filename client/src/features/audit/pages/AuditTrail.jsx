@@ -46,6 +46,89 @@ const ACTION_BADGE = {
   LOGIN: 'bg-gray-50 text-gray-600 border-gray-200',
 };
 
+// Adjacent rows that stem from ONE underlying operation (e.g. editing a
+// TTI result to Shadeness cascades a separate STATE_TRANSITION audit
+// entry per BloodUnit it quarantines) share a `requestId` — see
+// server/src/shared/utils/with-audit.ts and unit.repository.ts. Older
+// entries written before requestId threading was added (or from flows
+// that don't have it yet) fall back to clustering by identical
+// module+action+reason within a short time window.
+const GROUP_TIME_WINDOW_MS = 5000;
+
+// Deterministic color per "type" of log (module+action) so the same
+// kind of event always reads the same color across the whole table —
+// e.g. all TTI-driven unit quarantine cascades are sky blue.
+const TYPE_COLOR_PALETTE = [
+  { row: 'bg-sky-200/80 hover:bg-sky-300/80', bar: 'bg-sky-600' },
+  { row: 'bg-violet-200/80 hover:bg-violet-300/80', bar: 'bg-violet-600' },
+  { row: 'bg-amber-200/80 hover:bg-amber-300/80', bar: 'bg-amber-600' },
+  { row: 'bg-rose-200/80 hover:bg-rose-300/80', bar: 'bg-rose-600' },
+  { row: 'bg-emerald-200/80 hover:bg-emerald-300/80', bar: 'bg-emerald-600' },
+  { row: 'bg-teal-200/80 hover:bg-teal-300/80', bar: 'bg-teal-600' },
+  { row: 'bg-fuchsia-200/80 hover:bg-fuchsia-300/80', bar: 'bg-fuchsia-600' },
+  { row: 'bg-orange-200/80 hover:bg-orange-300/80', bar: 'bg-orange-600' },
+  { row: 'bg-indigo-200/80 hover:bg-indigo-300/80', bar: 'bg-indigo-600' },
+  { row: 'bg-lime-200/80 hover:bg-lime-300/80', bar: 'bg-lime-600' },
+];
+
+// Human-meaningful pins for the well-known cascade types — kept small
+// and explicit rather than relying purely on the hash so the most
+// common cascades (TTI -> unit quarantine, reactive discard) land on
+// intuitive colors. Anything not listed falls back to a deterministic
+// hash of module+action so it's still stable across page loads.
+const TYPE_COLOR_OVERRIDES = {
+  'unit:STATE_TRANSITION': TYPE_COLOR_PALETTE[0], // sky — component status cascades (TTI quarantine/release/discard)
+  'tti:UPDATE': TYPE_COLOR_PALETTE[1],
+  'tti:RELEASE': TYPE_COLOR_PALETTE[1],
+  'bag-discard:CREATE': TYPE_COLOR_PALETTE[3],
+  'discard:CREATE': TYPE_COLOR_PALETTE[3],
+};
+
+function hashString(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function colorForType(moduleName, action) {
+  const key = `${moduleName}:${action}`;
+  return TYPE_COLOR_OVERRIDES[key] || TYPE_COLOR_PALETTE[hashString(key) % TYPE_COLOR_PALETTE.length];
+}
+
+// Clusters ADJACENT rows (current page order only) that belong to the
+// same underlying operation, so a batch of cascade entries renders as
+// one visually-grouped, consistently-colored block instead of N
+// unrelated-looking rows.
+function groupAuditRows(rows) {
+  const groups = [];
+  let current = null;
+
+  for (const entry of rows) {
+    const entryTime = entry.at ? new Date(entry.at).getTime() : null;
+    const groupKey = entry.requestId
+      ? `req:${entry.requestId}`
+      : `heur:${entry.module}|${entry.action}|${entry.reason || ''}`;
+
+    const withinWindow =
+      current?.lastTime != null && entryTime != null && Math.abs(entryTime - current.lastTime) <= GROUP_TIME_WINDOW_MS;
+    const canJoin = current && current.key === groupKey && (Boolean(entry.requestId) || withinWindow);
+
+    if (canJoin) {
+      current.entries.push(entry);
+      current.lastTime = entryTime;
+    } else {
+      current = {
+        key: groupKey,
+        entries: [entry],
+        lastTime: entryTime,
+        color: colorForType(entry.module, entry.action),
+      };
+      groups.push(current);
+    }
+  }
+  return groups;
+}
+
 export default function AuditTrail() {
   const { user } = useAuth();
   const [filters, setFilters] = useState({
@@ -63,6 +146,7 @@ export default function AuditTrail() {
 
   const { data, isLoading, isError } = useAuditSearch(filters, page, limit);
   const rows = useMemo(() => data?.data || [], [data]);
+  const groups = useMemo(() => groupAuditRows(rows), [rows]);
   const pagination = data?.pagination || { totalPages: 1, total: 0 };
 
   const canView = user && READ_ROLES.includes(user.role);
@@ -165,34 +249,37 @@ export default function AuditTrail() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {rows.map((entry) => (
-                  <tr
-                    key={entry._id || `${entry.entityId}-${entry.at}`}
-                    className="hover:bg-red-50/20 cursor-pointer transition-colors"
-                    onClick={() => setSelected(entry)}
-                  >
-                    <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">
-                      {entry.at ? new Date(entry.at).toLocaleString('en-IN') : '—'}
-                    </td>
-                    <td className="px-4 py-2.5 text-gray-700 font-medium">{entry.module || '—'}</td>
-                    <td className="px-4 py-2.5 text-gray-700">
-                      <span className="font-mono text-xs">{entry.entityLabel || entry.entityId}</span>
-                      <span className="text-gray-400 text-xs ml-1">({entry.entityType})</span>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${ACTION_BADGE[entry.action] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-                        {entry.action}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-gray-600">{entry.role || '—'}</td>
-                    <td className="px-4 py-2.5 text-gray-500 max-w-xs truncate">{humanize(entry.reason) || '—'}</td>
-                    <td className="px-4 py-2.5">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${SEVERITY_BADGE[entry.severity] || SEVERITY_BADGE.info}`}>
-                        {entry.severity || 'info'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {groups.map((group) =>
+                  group.entries.map((entry) => (
+                    <tr
+                      key={entry._id || `${entry.entityId}-${entry.at}`}
+                      className={`relative cursor-pointer transition-colors ${group.color.row}`}
+                      onClick={() => setSelected(entry)}
+                    >
+                      <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">
+                        <span className={`inline-block w-1.5 h-1.5 rounded-full mr-2 align-middle ${group.color.bar}`} />
+                        {entry.at ? new Date(entry.at).toLocaleString('en-IN') : '—'}
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-700 font-medium">{entry.module || '—'}</td>
+                      <td className="px-4 py-2.5 text-gray-700">
+                        <span className="font-mono text-xs">{entry.entityLabel || entry.entityId}</span>
+                        <span className="text-gray-400 text-xs ml-1">({entry.entityType})</span>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${ACTION_BADGE[entry.action] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                          {entry.action}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-600">{entry.role || '—'}</td>
+                      <td className="px-4 py-2.5 text-gray-500 max-w-xs truncate">{humanize(entry.reason) || '—'}</td>
+                      <td className="px-4 py-2.5">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${SEVERITY_BADGE[entry.severity] || SEVERITY_BADGE.info}`}>
+                          {entry.severity || 'info'}
+                        </span>
+                      </td>
+                    </tr>
+                  )),
+                )}
               </tbody>
             </table>
           </div>

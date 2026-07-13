@@ -127,7 +127,7 @@ export interface UnitRepo {
      * writes alongside the status transition (e.g. clearing/tagging
      * `discardReason`).
      */
-    extra?: { match?: Record<string, unknown>; set?: Record<string, unknown> },
+    extra?: { match?: Record<string, unknown>; set?: Record<string, unknown>; requestId?: string },
   ): Promise<number>;
   selectable(filter: {
     componentType: ComponentType;
@@ -315,7 +315,7 @@ export function createUnitRepo(): UnitRepo {
 
       for (const entry of auditEntries) {
         void withAudit(
-          { actorId },
+          { actorId, requestId: extra?.requestId },
           {
             module: 'unit',
             action: 'STATE_TRANSITION',
