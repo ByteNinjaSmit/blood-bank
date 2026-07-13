@@ -64,12 +64,15 @@ export interface PORepo {
     notes: string;
   }>, actorId: string): Promise<PODto | null>;
   delete(id: string, actorId: string): Promise<boolean>;
+  restore(id: string, actorId: string): Promise<boolean>;
+  hardDelete(id: string): Promise<boolean>;
+  findByIdIncludingDeleted(id: string): Promise<PODto | null>;
 }
 
 export function createPORepo(): PORepo {
   return {
     async list(q) {
-      const filter: Record<string, unknown> = { deletedAt: null };
+      const filter: Record<string, unknown> = { deletedAt: q.deletedOnly ? { $ne: null } : null };
       if (q.vendorId) filter.vendorId = new Types.ObjectId(q.vendorId);
       if (q.search) filter.poNumber = { $regex: q.search, $options: 'i' };
       if (q.from || q.to) {
@@ -129,6 +132,26 @@ export function createPORepo(): PORepo {
         { $set: { deletedAt: new Date(), updatedBy: actor } }
       );
       return res.modifiedCount > 0;
+    },
+
+    async restore(id, actorId) {
+      const actor = new Types.ObjectId(actorId);
+      const res = await PurchaseOrderModel.updateOne(
+        { _id: new Types.ObjectId(id) },
+        { $set: { deletedAt: null, updatedBy: actor } },
+      );
+      return res.modifiedCount > 0;
+    },
+
+    async hardDelete(id) {
+      const res = await PurchaseOrderModel.deleteOne({ _id: new Types.ObjectId(id) });
+      return res.deletedCount > 0;
+    },
+
+    async findByIdIncludingDeleted(id) {
+      const doc = await PurchaseOrderModel.findById(id).lean();
+      if (!doc) return null;
+      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
     },
   };
 }

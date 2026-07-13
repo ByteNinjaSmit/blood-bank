@@ -21,6 +21,7 @@ const STATUS_OPTIONS = [
   { value: "reserved", label: "Reserved" },
   { value: "issued", label: "Issued" },
   { value: "discarded", label: "Discarded" },
+  { value: "quarantined", label: "Quarantined" },
 ];
 
 const ComponentsList = () => {
@@ -355,6 +356,14 @@ const ComponentsList = () => {
     return expiry < today;
   };
 
+  // Single responsibility: Check if any prepared component on this bag is quarantined
+  // (edited to Shadeness on the serology report moves in-stock units to quarantine).
+  const isBagQuarantined = (bag) => {
+    return ['prbc', 'ffp', 'rdp', 'sdp', 'cryo'].some(
+      (type) => bag[type]?.status === 'prepared' && bag[type]?.componentStatus === 'quarantined'
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Compact Header */}
@@ -619,7 +628,12 @@ const ComponentsList = () => {
                     </tr>
                   ) : (
                     state.components.map((bag, idx) => (
-                      <tr key={`${bag.bagNo}-${idx}`} className="hover:bg-gray-50/50 transition-colors">
+                      <tr
+                        key={`${bag.bagNo}-${idx}`}
+                        className={`transition-colors ${
+                          isBagQuarantined(bag) ? "bg-yellow-50 hover:bg-yellow-100" : "hover:bg-gray-50/50"
+                        }`}
+                      >
                         <td className="px-4 py-3 text-sm font-semibold text-gray-900">
                           {bag.bagNo}
                         </td>
@@ -628,7 +642,7 @@ const ComponentsList = () => {
                         </td>
                         {/* PRBC column */}
                         <td className="px-4 py-3 text-sm">
-                          {bag.prbc.status === "prepared" ? (
+                          {bag.prbc?.status === "prepared" ? (
                             <div className="flex flex-col gap-0.5">
                               <Badge variant="outline" className={`w-fit text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${getStatusBadgeClass(bag.prbc.componentStatus)}`}>
                                 {getStatusLabel(bag.prbc.componentStatus)}
@@ -654,7 +668,7 @@ const ComponentsList = () => {
                         </td>
                         {/* FFP column */}
                         <td className="px-4 py-3 text-sm">
-                          {bag.ffp.status === "prepared" ? (
+                          {bag.ffp?.status === "prepared" ? (
                             <div className="flex flex-col gap-0.5">
                               <Badge variant="outline" className={`w-fit text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${getStatusBadgeClass(bag.ffp.componentStatus)}`}>
                                 {getStatusLabel(bag.ffp.componentStatus)}
@@ -680,7 +694,7 @@ const ComponentsList = () => {
                         </td>
                         {/* RDP column */}
                         <td className="px-4 py-3 text-sm">
-                          {bag.rdp.status === "prepared" ? (
+                          {bag.rdp?.status === "prepared" ? (
                             <div className="flex flex-col gap-0.5">
                               <Badge variant="outline" className={`w-fit text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${getStatusBadgeClass(bag.rdp.componentStatus)}`}>
                                 {getStatusLabel(bag.rdp.componentStatus)}
@@ -732,7 +746,7 @@ const ComponentsList = () => {
                         </td>
                         {/* Cryo column */}
                         <td className="px-4 py-3 text-sm">
-                          {bag.cryo.status === "prepared" ? (
+                          {bag.cryo?.status === "prepared" ? (
                             <div className="flex flex-col gap-0.5">
                               <Badge variant="outline" className={`w-fit text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${getStatusBadgeClass(bag.cryo.componentStatus)}`}>
                                 {getStatusLabel(bag.cryo.componentStatus)}

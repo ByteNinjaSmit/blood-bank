@@ -5,6 +5,7 @@ import { donationApi } from '@/features/donation/api';
 import { useAuth } from '@/store/auth';
 import { checkAccess } from '@/features/user/pages/utils/access';
 import { exportDonationRegister } from '@/features/donation/donationRegisterExport';
+import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
 import { PAGE_SIZE } from './constants';
 import { donationStatus } from './donationRegister.utils';
 
@@ -19,8 +20,6 @@ export function useDonationRegister(activeTab, setActiveTab) {
   const [trackId, setTrackId] = useState(null);
   const [viewDonationId, setViewDonationId] = useState(null);
   const [searchedDonation, setSearchedDonation] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState(null);
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -173,27 +172,24 @@ export function useDonationRegister(activeTab, setActiveTab) {
     setTrackId(null);
   };
 
+  // Soft-delete only (cascades to derived blood units — unused ones are
+  // discarded, already-issued ones are preserved and marked affected).
+  // The donation moves to Recycle Bin and disappears from this register.
+  const { requestDelete, DeleteReasonDialog } = useDeleteWithReason({
+    onDelete: async (donation, reason) => {
+      await deleteMutation.mutateAsync({ id: donation.id, reason });
+      toast.success('Donation deleted and moved to Recycle Bin');
+    },
+    title: 'Delete Donation',
+    message: 'This donation and any unused blood units derived from it will be moved to the Recycle Bin. Units already issued are preserved and marked affected, not deleted.',
+  });
+
   const handleDelete = (donation) => {
     if (!donationAccess.canDelete) {
       toast.error('You do not have permission to delete donations.');
       return;
     }
-    setDeleteTarget(donation);
-    setShowDeleteModal(true);
-  };
-
-  // Soft-delete only. The donation moves to Recycle Bin and disappears from
-  // this register; it can be recovered from there.
-  const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
-    try {
-      await deleteMutation.mutateAsync(deleteTarget.id);
-      toast.success('Donation deleted and moved to Recycle Bin');
-    } catch (e) {
-      toast.error(e?.message ?? 'Failed to delete donation');
-    }
-    setShowDeleteModal(false);
-    setDeleteTarget(null);
+    requestDelete(donation);
   };
 
   return {
@@ -210,7 +206,7 @@ export function useDonationRegister(activeTab, setActiveTab) {
     // timeline + view + delete
     trackId, setTrackId, detail, detailLoading,
     viewDonationId, setViewDonationId, viewDetail, viewDetailLoading,
-    showDeleteModal, setShowDeleteModal, deleteTarget, setDeleteTarget,
-    handleDelete, handleDeleteConfirm,
+    handleDelete,
+    DeleteReasonDialog,
   };
 }

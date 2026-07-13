@@ -137,7 +137,9 @@ async function mapTtiBags(ttis: any[]): Promise<TtiBagViewDto[]> {
             ? 'passed'
             : t.releaseDecision === 'reactive'
               ? 'failed'
-              : 'pending',
+              : t.releaseDecision === 'indeterminate'
+                ? 'shadeness'
+                : 'pending',
         testResults,
         canEdit: !hasLeftBank(uList),
         editReason: t.editReason || undefined,
@@ -159,13 +161,18 @@ export function createTtiLegacyViewRepo(): TtiLegacyViewRepo {
     async listQuarantined(filters) {
       const { page, limit, search, order, fromDate, toDate } = filters;
 
+      // Units held in QUARANTINE either awaiting a first decision, or
+      // pulled back off the shelf by a shadeness (indeterminate) hold —
+      // both belong on this worklist until they clear.
       const separatedDonationIds = await BloodUnitModel.distinct('donationId', {
         status: 'QUARANTINE',
         $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
       });
 
       const ttiFilter: any = {
-        releaseDecision: 'pending',
+        // 'indeterminate' (shadeness) stays on the worklist — it is not
+        // yet a final decision — only 'released'/'reactive' leave it.
+        releaseDecision: { $in: ['pending', 'indeterminate'] },
         donationId: { $in: separatedDonationIds },
       };
 
@@ -226,6 +233,8 @@ export function createTtiLegacyViewRepo(): TtiLegacyViewRepo {
           ttiFilter.releaseDecision = 'released';
         } else if (status === 'failed' || status === 'discarded') {
           ttiFilter.releaseDecision = 'reactive';
+        } else if (status === 'shadeness') {
+          ttiFilter.releaseDecision = 'indeterminate';
         }
       }
 

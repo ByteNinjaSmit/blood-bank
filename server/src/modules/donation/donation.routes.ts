@@ -83,5 +83,12 @@ router.post(
   requirePermission('donation:delete'),
   controllers.restore,
 );
+router.delete(
+  '/:id/permanent',
+  authenticate,
+  requireRole(['system-admin']),
+  requirePermission('donation:permanent-delete'),
+  controllers.permanentDelete,
+);
 
 export default router;

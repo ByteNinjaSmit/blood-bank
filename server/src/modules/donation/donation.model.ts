@@ -3,6 +3,7 @@
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import { DONATION_TYPE } from '@/shared/enums';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const MedicalExamSchema = new Schema(
   {
@@ -74,6 +75,7 @@ const DonationSchema = new Schema(
     lastEditedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     deletedAt: { type: Date, default: null, index: true },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

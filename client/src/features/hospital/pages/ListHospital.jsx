@@ -16,16 +16,6 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { 
   Building2, 
   Plus, 
   Search, 
@@ -50,15 +40,14 @@ import { useAuth } from '@/store/auth';
 import hospitalApi from '@/services/hospitalApi';
 import { Textarea } from '@/components/ui/textarea';
 import CustomModal from '@/components/CustomModal';
+import { useEditWithReason } from '@/hooks/useEditWithReason';
+import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
 
 const ListHospital = () => {
   const navigate = useNavigate();
   const { authorizationToken } = useAuth();
   const [hospitals, setHospitals] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [hospitalToDelete, setHospitalToDelete] = useState(null);
   const [selectedHospital, setSelectedHospital] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -185,39 +174,23 @@ const ListHospital = () => {
     setCurrentPage(1);
   };
 
-  // Handle delete
-  const handleDeleteClick = (hospital) => {
-    setHospitalToDelete(hospital);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!hospitalToDelete) return;
-
-    setDeleteLoading(true);
-    try {
-      // Initialize API service with auth token
+  // Handle delete — mandatory reason, cascades to this hospital's
+  // requisitions (issued ones are preserved and marked affected).
+  const { requestDelete, DeleteReasonDialog } = useDeleteWithReason({
+    onDelete: async (hospital, reason) => {
       hospitalApi.initialize(authorizationToken);
-
-      // Delete hospital using Axios API service
-      const result = await hospitalApi.deleteHospital(hospitalToDelete._id);
-
+      const result = await hospitalApi.deleteHospital(hospital._id, reason);
       if (!result.success) {
         toast.error(result.error || 'Failed to delete hospital');
-      } else {
-        const successMessage = result.data?.message || 'Hospital deleted successfully';
-        toast.success(successMessage);
-        fetchHospitals(); // Refresh the list
+        throw new Error(result.error || 'Failed to delete hospital');
       }
-    } catch (error) {
-      console.error('Error deleting hospital:', error);
-      toast.error('Network error. Please check your connection and try again.');
-    } finally {
-      setDeleteLoading(false);
-      setDeleteDialogOpen(false);
-      setHospitalToDelete(null);
-    }
-  };
+      toast.success('Hospital deleted successfully');
+      fetchHospitals();
+    },
+    title: 'Delete Hospital',
+    message: 'This hospital and its pending requisitions will be moved to the Recycle Bin. Requisitions already issued are preserved and marked affected, not deleted.',
+  });
+  const handleDeleteClick = (hospital) => requestDelete(hospital);
 
   const handleViewClick = (hospital) => {
     setSelectedHospital(hospital);
@@ -276,6 +249,30 @@ const ListHospital = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const { wrappedSave: wrappedSaveHospital, EditReasonDialog } = useEditWithReason({
+    onSave: async (data, editReason) => {
+      setEditSubmitting(true);
+      try {
+        hospitalApi.initialize(authorizationToken);
+        const result = await hospitalApi.updateHospital(selectedHospital._id, data, editReason);
+        if (!result.success) {
+          toast.error(result.error || 'Failed to update hospital');
+          return;
+        }
+        toast.success('Hospital updated successfully!');
+        setEditModalOpen(false);
+        setSelectedHospital(null);
+        fetchHospitals();
+      } catch (error) {
+        console.error('Error updating hospital:', error);
+        toast.error('Network error. Please check your connection and try again.');
+      } finally {
+        setEditSubmitting(false);
+      }
+    },
+    title: 'Confirm Hospital Changes',
+  });
+
   const handleEditSave = async () => {
     if (!selectedHospital || !validateEditForm()) {
       if (!selectedHospital) {
@@ -285,29 +282,7 @@ const ListHospital = () => {
       }
       return;
     }
-
-    setEditSubmitting(true);
-
-    try {
-      hospitalApi.initialize(authorizationToken);
-
-      const result = await hospitalApi.updateHospital(selectedHospital._id, editFormData);
-
-      if (!result.success) {
-        toast.error(result.error || 'Failed to update hospital');
-      } else {
-        const successMessage = result.data?.message || 'Hospital updated successfully!';
-        toast.success(successMessage);
-        setEditModalOpen(false);
-        setSelectedHospital(null);
-        fetchHospitals();
-      }
-    } catch (error) {
-      console.error('Error updating hospital:', error);
-      toast.error('Network error. Please check your connection and try again.');
-    } finally {
-      setEditSubmitting(false);
-    }
+    wrappedSaveHospital(editFormData);
   };
 
   const handleCloseModals = () => {
@@ -818,37 +793,8 @@ const ListHospital = () => {
         </div>
       </CustomModal>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Hospital</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{hospitalToDelete?.name}"? 
-              This action cannot be undone and will permanently remove the hospital from the system.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteLoading}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              disabled={deleteLoading}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {deleteLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete Hospital'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {DeleteReasonDialog}
+      {EditReasonDialog}
     </div>
   );
 };

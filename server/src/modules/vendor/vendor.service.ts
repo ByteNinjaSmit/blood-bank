@@ -1,7 +1,15 @@
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
 import { withAudit } from '@/shared/utils/with-audit';
+import {
+  cascadeSoftDelete,
+  cascadeRestore,
+  runInCascadeTransaction,
+  newDeleteBatchId,
+} from '@/shared/utils/cascade-delete';
+import { vendorCascadeNode } from '@/shared/cascade-registry';
 import { ConflictError, NotFoundError } from '@/shared/errors';
+import { VendorModel } from '@/modules/vendor/vendor.model';
 import type { VendorRepo, VendorDto } from '@/modules/vendor/vendor.repository';
 import type {
   CreateVendorInput,
@@ -14,9 +22,11 @@ export interface VendorService {
   list(q: ListVendorsInput): Promise<{ items: VendorDto[]; total: number; page: number; pageSize: number }>;
   get(id: string): Promise<VendorDto>;
   create(input: CreateVendorInput, actorId: string): Promise<VendorDto>;
-  update(id: string, input: UpdateVendorInput, actorId: string): Promise<VendorDto>;
+  update(id: string, input: UpdateVendorInput, actorId: string, editReason?: string): Promise<VendorDto>;
   updateStatus(id: string, input: UpdateVendorStatusInput, actorId: string): Promise<VendorDto>;
-  softDelete(id: string, actorId: string): Promise<void>;
+  softDelete(id: string, actorId: string, reason: string): Promise<void>;
+  restore(id: string, actorId: string): Promise<{ restored: boolean }>;
+  permanentDelete(id: string, actorId: string, reason: string): Promise<void>;
 }
 
 export function createVendorService(deps: { vendors: VendorRepo }): VendorService {
@@ -57,14 +67,21 @@ export function createVendorService(deps: { vendors: VendorRepo }): VendorServic
       return created;
     },
 
-    async update(id, input, actorId) {
+    async update(id, input, actorId, editReason) {
       const before = await deps.vendors.findById(id);
       const updated = await deps.vendors.update(id, input, actorId);
       if (!updated) throw new NotFoundError('Vendor', id);
       log.info({ vendorId: id, actorId }, 'vendor updated');
       void withAudit(
         { actorId },
-        { module: 'vendor', action: 'UPDATE', entityType: 'Vendor', entityId: id, entityLabel: before?.vendorId },
+        {
+          module: 'vendor',
+          action: 'UPDATE',
+          entityType: 'Vendor',
+          entityId: id,
+          entityLabel: before?.vendorId,
+          reason: editReason,
+        },
         before,
         updated,
       );
@@ -85,16 +102,68 @@ export function createVendorService(deps: { vendors: VendorRepo }): VendorServic
       return updated;
     },
 
-    async softDelete(id, actorId) {
+    async softDelete(id, actorId, reason) {
       const before = await deps.vendors.findById(id);
-      const deleted = await deps.vendors.softDelete(id, actorId);
-      if (!deleted) throw new NotFoundError('Vendor', id);
-      log.warn({ vendorId: id, actorId }, 'vendor soft-deleted');
+      if (!before) throw new NotFoundError('Vendor', id);
+      const deleteBatchId = newDeleteBatchId();
+      await runInCascadeTransaction((session) =>
+        cascadeSoftDelete(vendorCascadeNode, id, actorId, reason, deleteBatchId, session),
+      );
+      log.warn({ vendorId: id, actorId, deleteBatchId }, 'vendor cascade soft-deleted');
+      void withAudit(
+        {
+          actorId,
+        },
+        {
+          module: 'vendor',
+          action: 'DELETE',
+          entityType: 'Vendor',
+          entityId: id,
+          entityLabel: before.vendorId,
+          severity: 'warning',
+          reason,
+        },
+        { deletedAt: null },
+        { deletedAt: new Date(), deleteBatchId },
+      );
+    },
+
+    async restore(id, actorId) {
+      // deps.vendors.findById excludes soft-deleted rows by design (it's
+      // the normal-read path) — go straight to the model for this
+      // existence check, since we expect to find a deleted vendor here.
+      const before = await VendorModel.findById(id).lean();
+      if (!before) throw new NotFoundError('Vendor', id);
+      await runInCascadeTransaction((session) => cascadeRestore(vendorCascadeNode, id, actorId, session));
+      log.warn({ vendorId: id, actorId }, 'vendor cascade restored');
       void withAudit(
         { actorId },
-        { module: 'vendor', action: 'DELETE', entityType: 'Vendor', entityId: id, entityLabel: before?.vendorId },
+        { module: 'vendor', action: 'UPDATE', entityType: 'Vendor', entityId: id, entityLabel: before.vendorId },
+        { deletedAt: before.deletedAt },
         { deletedAt: null },
-        { deletedAt: new Date() },
+      );
+      return { restored: true };
+    },
+
+    async permanentDelete(id, actorId, reason) {
+      const before = await VendorModel.findById(id).lean();
+      if (!before) throw new NotFoundError('Vendor', id);
+      const deleted = await deps.vendors.delete(id);
+      if (!deleted) throw new NotFoundError('Vendor', id);
+      log.warn({ vendorId: id, actorId }, 'vendor permanently deleted');
+      void withAudit(
+        { actorId },
+        {
+          module: 'vendor',
+          action: 'DELETE',
+          entityType: 'Vendor',
+          entityId: id,
+          entityLabel: before.vendorId,
+          severity: 'critical',
+          reason,
+        },
+        before,
+        undefined,
       );
     },
   };

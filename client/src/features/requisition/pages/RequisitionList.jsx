@@ -531,6 +531,18 @@ export default function RequisitionList() {
                 <div className="font-medium">{viewDoc.patient?.indication || '—'}</div>
               </div>
             </div>
+            {(() => {
+              // One crossmatch card covers the whole requisition — pull the
+              // single card number off whichever matched unit recorded it,
+              // rather than repeating it per row in the inventory table.
+              const cardNumber = viewDoc.matchedInventory?.find((mi) => mi?.cardNumber)?.cardNumber;
+              return cardNumber ? (
+                <div>
+                  <div className="text-gray-600">Card No.</div>
+                  <div className="font-medium font-mono">{cardNumber}</div>
+                </div>
+              ) : null;
+            })()}
             {viewDoc.status === 'rejected' && (
               <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-950 text-sm space-y-2">
                 <div className="font-semibold flex items-center gap-2 text-red-800">
@@ -618,7 +630,6 @@ export default function RequisitionList() {
                         <th className="p-2">Compatibility</th>
                         <th className="p-2">Crossmatch Done At</th>
                         <th className="p-2">Seen At</th>
-                        <th className="p-2">Card No.</th>
                         <th className="p-2">Issue Date</th>
                         <th className="p-2">Status</th>
                       </tr>
@@ -649,7 +660,6 @@ export default function RequisitionList() {
                             <td className="p-2">{COMPATIBILITY_RESULT_LABELS[mi?.compatibilityResult] || '—'}</td>
                             <td className="p-2">{mi?.crossmatchDoneAt ? fmt(mi.crossmatchDoneAt) : '—'}</td>
                             <td className="p-2">{mi?.crossmatchSeenAt ? fmt(mi.crossmatchSeenAt) : '—'}</td>
-                            <td className="p-2">{mi?.cardNumber || '—'}</td>
                             <td className="p-2">{mi?.inventoryId?.issuedAt ? fmt(mi.inventoryId.issuedAt) : '—'}</td>
                             <td className="p-2">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${badgeColor}`}>

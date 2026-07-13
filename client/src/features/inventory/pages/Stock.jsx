@@ -395,6 +395,7 @@ const Stock = () => {
                     <SelectItem value="in-stock">In Stock</SelectItem>
                     <SelectItem value="reserved">Reserved</SelectItem>
                     <SelectItem value="issued">Issued</SelectItem>
+                    <SelectItem value="quarantine">Quarantine</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -559,7 +560,12 @@ const Stock = () => {
                   </tr>
                 ) : (
                   rows.map((r) => (
-                    <tr key={r._id} className="hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={r._id}
+                      className={`transition-colors ${
+                        r.status === "quarantine" ? "bg-yellow-50 hover:bg-yellow-100" : "hover:bg-gray-50"
+                      }`}
+                    >
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">
                         <div className="flex items-center gap-1.5">
                           {r?.bag?.bagNo || r.bagNo}
@@ -598,6 +604,8 @@ const Stock = () => {
                                 ? "bg-emerald-50 text-emerald-700 border-emerald-100"
                                 : r.status === "reserved"
                                 ? "bg-amber-50 text-amber-700 border-amber-100"
+                                : r.status === "quarantine"
+                                ? "bg-yellow-100 text-yellow-800 border-yellow-300"
                                 : "bg-gray-50 text-gray-700 border-gray-100"
                             }`}
                         >
@@ -605,7 +613,7 @@ const Stock = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700">
-                        {r.status === "in-stock"
+                        {r.status === "in-stock" || r.status === "quarantine"
                           ? (r.storageLocation || "Main Fridge")
                           : (r.hospital?.name || r.storageLocation || "—")}
                       </td>
@@ -823,7 +831,7 @@ const Stock = () => {
                 </div>
               </div>
 
-              {selectedViewItem?.status === 'in-stock' ? (
+              {selectedViewItem?.status === 'in-stock' || selectedViewItem?.status === 'quarantine' ? (
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Storage</p>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">

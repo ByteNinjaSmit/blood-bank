@@ -1,5 +1,6 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import { BAG_TYPE, BAG_CAPACITY_ML, ANTICOAGULANT, PO_STATUS } from '@/shared/enums';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const LineItemSchema = new Schema(
   {
@@ -24,6 +25,7 @@ const PurchaseOrderSchema = new Schema(
     notes: { type: String, trim: true },
     deletedAt: { type: Date, default: null, index: true },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

@@ -57,9 +57,9 @@ export function useCamp() {
         return { success: false };
       }
     },
-    updateCamp: async (id, data) => {
+    updateCamp: async (id, data, editReason) => {
       try {
-        await updateMutation.mutateAsync({ id, data });
+        await updateMutation.mutateAsync({ id, data, editReason });
         toast.success('Camp updated successfully');
         return { success: true };
       } catch (e) {
@@ -67,9 +67,9 @@ export function useCamp() {
         return { success: false };
       }
     },
-    deleteCamp: async (id) => {
+    deleteCamp: async (id, reason) => {
       try {
-        const result = await deleteMutation.mutateAsync(id);
+        const result = await deleteMutation.mutateAsync({ id, reason });
         const permanentlyDeleted = Boolean(result?.permanentlyDeleted);
         toast.success(
           permanentlyDeleted

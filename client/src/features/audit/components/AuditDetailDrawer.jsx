@@ -13,11 +13,74 @@ function diffRows(before, after, changedFields) {
   }));
 }
 
+// "indeterminate" is the internal TTI decision/result value — the lab
+// term shown to staff everywhere else in the app is "Shadeness".
+function humanize(text) {
+  if (typeof text !== 'string') return text;
+  return text.replace(/indeterminate/gi, 'Shadeness');
+}
+
 function renderValue(v) {
   if (v === undefined) return <span className="text-gray-300 italic">—</span>;
   if (v === null) return <span className="text-gray-400 italic">null</span>;
+  if (typeof v === 'string') return humanize(v);
   if (typeof v === 'object') return <span className="font-mono">{JSON.stringify(v)}</span>;
   return String(v);
+}
+
+const TEST_LABELS = { HIV: 'HIV', HBSAG: 'HBsAg', HCV: 'HCV', SYPHILIS: 'VDRL', MALARIA: 'MP' };
+
+function testLabel(name) {
+  return TEST_LABELS[name] || name;
+}
+
+function resultLabel(result) {
+  if (result === 'INDETERMINATE') return 'Shadeness';
+  if (result === 'NEGATIVE') return 'Negative';
+  if (result === 'REACTIVE') return 'Reactive';
+  return result || '—';
+}
+
+// Renders a TTI test-panel diff (before/after arrays of {testName,
+// result, ...}) as a per-test comparison table instead of raw JSON.
+function TestPanelDiff({ before, after }) {
+  const beforeMap = new Map((before || []).map((t) => [t.testName, t]));
+  const afterMap = new Map((after || []).map((t) => [t.testName, t]));
+  const names = Array.from(new Set([...beforeMap.keys(), ...afterMap.keys()]));
+
+  if (names.length === 0) {
+    return <span className="text-gray-300 italic">—</span>;
+  }
+
+  return (
+    <table className="w-full text-xs border border-gray-100 rounded-lg overflow-hidden">
+      <thead className="bg-gray-50">
+        <tr>
+          <th className="text-left px-3 py-1.5 font-bold text-gray-500 uppercase">Test</th>
+          <th className="text-left px-3 py-1.5 font-bold text-gray-500 uppercase">Before</th>
+          <th className="text-left px-3 py-1.5 font-bold text-gray-500 uppercase">After</th>
+        </tr>
+      </thead>
+      <tbody>
+        {names.map((name) => {
+          const b = beforeMap.get(name);
+          const a = afterMap.get(name);
+          const changed = (b?.result ?? null) !== (a?.result ?? null);
+          return (
+            <tr key={name} className="border-t border-gray-50">
+              <td className="px-3 py-1.5 font-semibold text-gray-700">{testLabel(name)}</td>
+              <td className={`px-3 py-1.5 ${changed ? 'text-red-600 bg-red-50/40' : 'text-gray-500'}`}>
+                {b ? resultLabel(b.result) : <span className="text-gray-300 italic">not tested</span>}
+              </td>
+              <td className={`px-3 py-1.5 ${changed ? 'text-green-700 bg-green-50/40' : 'text-gray-500'}`}>
+                {a ? resultLabel(a.result) : <span className="text-gray-300 italic">not tested</span>}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
 }
 
 export default function AuditDetailDrawer({ isOpen, onClose, entry }) {
@@ -56,7 +119,7 @@ export default function AuditDetailDrawer({ isOpen, onClose, entry }) {
         {entry.reason && (
           <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-900">
             <span className="font-bold uppercase tracking-wide">Reason: </span>
-            {entry.reason}
+            {humanize(entry.reason)}
           </div>
         )}
 
@@ -65,24 +128,26 @@ export default function AuditDetailDrawer({ isOpen, onClose, entry }) {
           {rows.length === 0 ? (
             <p className="text-xs text-gray-400 italic">No field-level diff recorded for this entry.</p>
           ) : (
-            <table className="w-full text-xs border border-gray-100 rounded-lg overflow-hidden">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left px-3 py-2 font-bold text-gray-500 uppercase">Field</th>
-                  <th className="text-left px-3 py-2 font-bold text-gray-500 uppercase">Before</th>
-                  <th className="text-left px-3 py-2 font-bold text-gray-500 uppercase">After</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.key} className="border-t border-gray-50">
-                    <td className="px-3 py-2 font-semibold text-gray-700">{r.key}</td>
-                    <td className="px-3 py-2 text-red-600 bg-red-50/40">{renderValue(r.before)}</td>
-                    <td className="px-3 py-2 text-green-700 bg-green-50/40">{renderValue(r.after)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="space-y-3">
+              {rows.map((r) =>
+                r.key === 'tests' ? (
+                  <div key={r.key}>
+                    <div className="text-xs font-semibold text-gray-700 mb-1">Test Results</div>
+                    <TestPanelDiff before={r.before} after={r.after} />
+                  </div>
+                ) : (
+                  <table key={r.key} className="w-full text-xs border border-gray-100 rounded-lg overflow-hidden">
+                    <tbody>
+                      <tr>
+                        <td className="px-3 py-2 font-semibold text-gray-700 bg-gray-50 w-1/4">{r.key}</td>
+                        <td className="px-3 py-2 text-red-600 bg-red-50/40 w-3/8">{renderValue(r.before)}</td>
+                        <td className="px-3 py-2 text-green-700 bg-green-50/40 w-3/8">{renderValue(r.after)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                ),
+              )}
+            </div>
           )}
         </div>
       </div>

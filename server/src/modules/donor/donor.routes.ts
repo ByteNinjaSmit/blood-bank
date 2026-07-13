@@ -227,5 +227,14 @@ router.post(
   requirePermission('donor:delete'),
   controllers.restore,
 );
+// Permanent delete — only reachable from the Recycle Bin, narrower role
+// grant than soft-delete/restore.
+router.delete(
+  '/:id/permanent',
+  authenticate,
+  requireRole(['system-admin']),
+  requirePermission('donor:permanent-delete'),
+  controllers.permanentDelete,
+);
 
 export default router;

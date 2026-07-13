@@ -32,6 +32,11 @@ export const UNIT_EVENT = [
   // result gets one way back to QUARANTINE if that result is later
   // corrected. Nothing else may leave DISCARDED.
   'REINSTATE',
+  // A released (in-stock) unit whose TTI result is corrected to
+  // shadeness (indeterminate) gets pulled back off the shelf pending
+  // retest — not discarded, just held. RELEASE from QUARANTINE is the
+  // existing, already-legal way back out once retested clean.
+  'QUARANTINE_HOLD',
 ] as const;
 export type UnitEvent = (typeof UNIT_EVENT)[number];
 
@@ -59,6 +64,7 @@ const TRANSITIONS: ReadonlyArray<Transition> = [
   { from: 'RELEASED', event: 'RESERVE', to: 'RESERVED' },
   { from: 'RELEASED', event: 'DISCARD', to: 'DISCARDED' },
   { from: 'RELEASED', event: 'EXPIRE', to: 'EXPIRED' },
+  { from: 'RELEASED', event: 'QUARANTINE_HOLD', to: 'QUARANTINE' },
 
   { from: 'RESERVED', event: 'UNRESERVE', to: 'RELEASED' },
   { from: 'RESERVED', event: 'ISSUE', to: 'ISSUED' },

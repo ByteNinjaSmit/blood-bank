@@ -3,7 +3,6 @@ import { Droplets, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DonationDetails from '../components/DonationDetails';
 import Modal from '@/components/shared/Modal';
-import CustomModal from '@/components/CustomModal';
 import RegisterExportDropdown from '@/components/shared/RegisterExportDropdown';
 import { DONATION_REGISTERS, TABS } from './master-donations/constants';
 import { tabEmptyText } from './master-donations/donationRegister.utils';
@@ -134,19 +133,8 @@ export default function MasterDonations() {
         )}
       </Modal>
 
-      {/* Delete confirmation modal — soft delete only, donation moves to Recycle Bin */}
-      <CustomModal
-        open={reg.showDeleteModal && !!reg.deleteTarget}
-        title="Delete Donation"
-        description={`Delete donation ${reg.deleteTarget?.bagNo || reg.deleteTarget?.donationId || ''}? It will be moved to the Recycle Bin, where it can be restored or permanently removed.`}
-        onCancel={() => {
-          reg.setShowDeleteModal(false);
-          reg.setDeleteTarget(null);
-        }}
-        onConfirm={reg.handleDeleteConfirm}
-        confirmText="Delete"
-        confirmVariant="danger"
-      />
+      {/* Delete confirmation — mandatory reason, soft delete only, donation moves to Recycle Bin */}
+      {reg.DeleteReasonDialog}
     </div>
   );
 }

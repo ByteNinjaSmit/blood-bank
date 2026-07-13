@@ -32,6 +32,7 @@ export const ListHospitalsQuery = z.object({
   isActive: blank(z.enum(['true', 'false']).transform((v) => v === 'true').optional()),
   from: blank(z.coerce.date().optional()),
   to: blank(z.coerce.date().optional()),
+  deletedOnly: z.coerce.boolean().optional().default(false),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(1000).default(10),
   sortBy: z.enum(['hospitalId', 'name', 'contactPerson', 'phone', 'createdAt', 'updatedAt']).default('name'),
@@ -39,6 +40,10 @@ export const ListHospitalsQuery = z.object({
 });
 
 export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid hospital id') });
+
+export const DeleteReasonBody = z.object({
+  reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
+});
 
 function parseOrThrow<T>(s: z.ZodType<T>, v: unknown, where: string): T {
   const r = s.safeParse(v);
@@ -51,4 +56,5 @@ export const ValidateHospital = {
   updateBody: (req: Request) => parseOrThrow(UpdateHospitalBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListHospitalsQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
+  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };

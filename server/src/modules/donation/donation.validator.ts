@@ -81,10 +81,19 @@ export const DonationIdParam = z.object({
   id: z.string().regex(OBJECT_ID, 'Invalid donation id'),
 });
 
+export const DeleteReasonBody = z.object({
+  reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
+});
+
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {
   const result = schema.safeParse(value);
   if (!result.success) {
-    throw new ValidationError(`Invalid ${where}`, result.error.issues);
+    // Surface exactly which field failed and why — a bare "Invalid
+    // request body" gives neither the caller nor the server log enough
+    // to diagnose a rejected edit/create without reproducing it.
+    const first = result.error.issues[0];
+    const detail = first ? ` — ${first.path.join('.') || '(root)'}: ${first.message}` : '';
+    throw new ValidationError(`Invalid ${where}${detail}`, result.error.issues);
   }
   return result.data;
 }
@@ -93,4 +102,5 @@ export const ValidateDonation = {
   createBody: (req: Request) => parseOrThrow(CreateDonationBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListDonationsQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(DonationIdParam, req.params, 'path params'),
+  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };

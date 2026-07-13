@@ -1,6 +1,13 @@
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
 import { withAudit } from '@/shared/utils/with-audit';
+import {
+  cascadeSoftDelete,
+  cascadeRestore,
+  runInCascadeTransaction,
+  newDeleteBatchId,
+} from '@/shared/utils/cascade-delete';
+import { purchaseOrderNode } from '@/shared/cascade-registry';
 import { ConflictError, NotFoundError, ValidationError } from '@/shared/errors';
 import type { PORepo, PODto, LineItemDto } from '@/modules/purchase-order/purchase-order.repository';
 import type { VendorRepo } from '@/modules/vendor/vendor.repository';
@@ -14,8 +21,10 @@ export interface POService {
   list(q: ListPOInput): Promise<{ items: PODto[]; total: number; page: number; pageSize: number }>;
   get(id: string): Promise<PODto>;
   create(input: CreatePOInput, actorId: string): Promise<PODto>;
-  update(id: string, input: UpdatePOInput, actorId: string): Promise<PODto>;
-  delete(id: string, actorId: string): Promise<boolean>;
+  update(id: string, input: UpdatePOInput, actorId: string, editReason?: string): Promise<PODto>;
+  delete(id: string, actorId: string, reason: string): Promise<boolean>;
+  restore(id: string, actorId: string): Promise<{ restored: boolean }>;
+  permanentDelete(id: string, actorId: string, reason: string): Promise<void>;
 }
 
 function generatePONumber(): string {
@@ -66,7 +75,7 @@ export function createPOService(deps: { pos: PORepo; vendors: VendorRepo }): POS
       return created;
     },
 
-    async update(id, input, actorId) {
+    async update(id, input, actorId, editReason) {
       const po = await deps.pos.findById(id);
       if (!po) throw new NotFoundError('PurchaseOrder', id);
 
@@ -82,24 +91,76 @@ export function createPOService(deps: { pos: PORepo; vendors: VendorRepo }): POS
       if (!updated) throw new NotFoundError('PurchaseOrder', id);
       void withAudit(
         { actorId },
-        { module: 'purchase-order', action: 'UPDATE', entityType: 'PurchaseOrder', entityId: id, entityLabel: po.poNumber },
+        {
+          module: 'purchase-order',
+          action: 'UPDATE',
+          entityType: 'PurchaseOrder',
+          entityId: id,
+          entityLabel: po.poNumber,
+          reason: editReason,
+        },
         po,
         updated,
       );
       return updated;
     },
 
-    async delete(id, actorId) {
+    async delete(id, actorId, reason) {
       const po = await deps.pos.findById(id);
-      const deleted = await deps.pos.delete(id, actorId);
+      if (!po) throw new NotFoundError('PurchaseOrder', id);
+      const deleteBatchId = newDeleteBatchId();
+      await runInCascadeTransaction((session) =>
+        cascadeSoftDelete(purchaseOrderNode, id, actorId, reason, deleteBatchId, session),
+      );
+      void withAudit(
+        { actorId },
+        {
+          module: 'purchase-order',
+          action: 'DELETE',
+          entityType: 'PurchaseOrder',
+          entityId: id,
+          entityLabel: po.poNumber,
+          severity: 'warning',
+          reason,
+        },
+        { deletedAt: null },
+        { deletedAt: new Date(), deleteBatchId },
+      );
+      return true;
+    },
+
+    async restore(id, actorId) {
+      const po = await deps.pos.findByIdIncludingDeleted(id);
+      if (!po) throw new NotFoundError('PurchaseOrder', id);
+      await runInCascadeTransaction((session) => cascadeRestore(purchaseOrderNode, id, actorId, session));
+      void withAudit(
+        { actorId },
+        { module: 'purchase-order', action: 'UPDATE', entityType: 'PurchaseOrder', entityId: id, entityLabel: po.poNumber },
+        { deletedAt: 'deleted' },
+        { deletedAt: null },
+      );
+      return { restored: true };
+    },
+
+    async permanentDelete(id, actorId, reason) {
+      const po = await deps.pos.findByIdIncludingDeleted(id);
+      if (!po) throw new NotFoundError('PurchaseOrder', id);
+      const deleted = await deps.pos.hardDelete(id);
       if (!deleted) throw new NotFoundError('PurchaseOrder', id);
       void withAudit(
         { actorId },
-        { module: 'purchase-order', action: 'DELETE', entityType: 'PurchaseOrder', entityId: id, entityLabel: po?.poNumber },
+        {
+          module: 'purchase-order',
+          action: 'DELETE',
+          entityType: 'PurchaseOrder',
+          entityId: id,
+          entityLabel: po.poNumber,
+          severity: 'critical',
+          reason,
+        },
         po,
         undefined,
       );
-      return deleted;
     },
   };
 }

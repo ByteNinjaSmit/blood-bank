@@ -2,6 +2,7 @@
 // cold-chain start and who took it.
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const IssueSchema = new Schema(
   {
@@ -18,6 +19,10 @@ const IssueSchema = new Schema(
     returnedReason: String,
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+
+    deletedAt: { type: Date, default: null, index: true },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
   },
   { timestamps: true },
 );

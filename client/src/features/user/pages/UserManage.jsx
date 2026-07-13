@@ -7,6 +7,7 @@ import ViewUserModal from "./components/ViewUserModal";
 import Pagination from "./components/Pagination";
 import CustomModal from "@/components/CustomModal";
 import ReasonForChangeModal from "@/components/shared/ReasonForChangeModal";
+import { useEditWithReason } from "@/hooks/useEditWithReason";
 import { checkAccess } from "./utils/access";
 import { statusChipClass } from "./utils/ui";
 import axios from "axios";
@@ -197,28 +198,17 @@ export default function UserManage() {
     }));
   };
 
-  const onSubmit = async (e) => {
-    e?.preventDefault?.();
+  const saveUser = async (payload, editReason) => {
     try {
       setLoading(true);
-      const payload = {
-        firstName: form.firstName,
-        lastName: form.lastName,
-        email: form.email,
-        phone: form.phone,
-        role: form.role,
-        password: form.password || undefined,
-        status: form.status,
-        permissions: form.permissions,
-      };
       if (editingId) {
-        await axios.put(`${API}/api/v2/user/${editingId}`, payload, {
+        await axios.put(`${API}/api/v2/user/${editingId}`, { ...payload, _editReason: editReason }, {
           headers: { Authorization: authorizationToken },
           withCredentials: true,
         });
         toast.success("User updated");
       } else {
-        await axios.post(`${API}/api/v2/user`, { ...payload, password: form.password || "default123" }, {
+        await axios.post(`${API}/api/v2/user`, { ...payload, password: payload.password || "default123" }, {
           headers: { Authorization: authorizationToken },
           withCredentials: true,
         });
@@ -233,6 +223,30 @@ export default function UserManage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Edit-Reason is mandatory when editing an existing user; creating a
+  // brand-new user has nothing to justify a "change" for, so it skips
+  // the dialog entirely.
+  const { wrappedSave: wrappedSaveUser, EditReasonDialog: userEditReasonDialog } = useEditWithReason({
+    onSave: saveUser,
+    skip: !editingId,
+    title: "Confirm User Changes",
+  });
+
+  const onSubmit = async (e) => {
+    e?.preventDefault?.();
+    const payload = {
+      firstName: form.firstName,
+      lastName: form.lastName,
+      email: form.email,
+      phone: form.phone,
+      role: form.role,
+      password: form.password || undefined,
+      status: form.status,
+      permissions: form.permissions,
+    };
+    wrappedSaveUser(payload);
   };
 
   const onDelete = async (id, reason) => {
@@ -430,6 +444,7 @@ export default function UserManage() {
         fieldLabel="Reason for Deactivation"
         submitting={deactivating}
       />
+      {userEditReasonDialog}
     </div>
   );
 }

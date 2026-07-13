@@ -56,12 +56,12 @@ export const campService = {
       entityType: 'Camp',
       entityId: String(camp._id),
     });
-    await invalidate(CAMP_LIST_KEY);
+    await invalidate(`${CAMP_LIST_KEY}*`);
     log.info({ campId: String(camp._id), actorId }, 'camp created');
     return camp;
   },
 
-  async update(id: string, input: UpdateCampInput, actorId: string) {
+  async update(id: string, input: UpdateCampInput, actorId: string, editReason?: string) {
     const camp = await campRepo.findRaw(id);
     if (!camp) throw new NotFoundError('Camp', id);
     if (input.name) camp.name = input.name;
@@ -77,12 +77,19 @@ export const campService = {
     }
     camp.lastUpdatedBy = actorId as unknown as typeof camp.lastUpdatedBy;
     const saved = await camp.save();
-    await auditService.record({ actorId, action: 'UPDATE', entityType: 'Camp', entityId: id });
-    await invalidate(CAMP_LIST_KEY);
+    await auditService.record({
+      actorId,
+      module: 'camp',
+      action: 'UPDATE',
+      entityType: 'Camp',
+      entityId: id,
+      reason: editReason,
+    });
+    await invalidate(`${CAMP_LIST_KEY}*`);
     return saved.toObject();
   },
 
-  async remove(id: string, actorId: string) {
+  async remove(id: string, actorId: string, reason: string) {
     const camp = await campRepo.findRaw(id);
     if (!camp) throw new NotFoundError('Camp', id);
     if (camp.createdBy?.toString() !== actorId) {
@@ -93,8 +100,16 @@ export const campService = {
       // First delete click: soft-delete only. Row stays visible (greyed
       // out) in the camp list so donation history tied to it isn't lost.
       await campRepo.softDelete(id, actorId);
-      await auditService.record({ actorId, action: 'DELETE', entityType: 'Camp', entityId: id });
-      await invalidate(CAMP_LIST_KEY);
+      await auditService.record({
+        actorId,
+        module: 'camp',
+        action: 'DELETE',
+        entityType: 'Camp',
+        entityId: id,
+        severity: 'warning',
+        reason,
+      });
+      await invalidate(`${CAMP_LIST_KEY}*`);
       log.warn({ campId: id, actorId }, 'camp soft-deleted');
       return { permanentlyDeleted: false };
     }
@@ -106,8 +121,16 @@ export const campService = {
       throw new ConflictError('Camp has donation records and cannot be permanently deleted');
     }
     await campRepo.deleteById(id);
-    await auditService.record({ actorId, action: 'DELETE', entityType: 'Camp', entityId: id });
-    await invalidate(CAMP_LIST_KEY);
+    await auditService.record({
+      actorId,
+      module: 'camp',
+      action: 'DELETE',
+      entityType: 'Camp',
+      entityId: id,
+      severity: 'critical',
+      reason,
+    });
+    await invalidate(`${CAMP_LIST_KEY}*`);
     log.warn({ campId: id, actorId }, 'camp permanently deleted');
     return { permanentlyDeleted: true };
   },
@@ -123,7 +146,7 @@ export const campService = {
     }
     await campRepo.restore(id, actorId);
     await auditService.record({ actorId, action: 'UPDATE', entityType: 'Camp', entityId: id });
-    await invalidate(CAMP_LIST_KEY);
+    await invalidate(`${CAMP_LIST_KEY}*`);
     log.warn({ campId: id, actorId }, 'camp restored');
     return { restored: true };
   },
@@ -140,7 +163,10 @@ export const campService = {
     return { ...c, donorCount, unitCount, donationCount };
   },
 
-  campList: () => cached(CAMP_LIST_KEY, CAMP_LIST_TTL, () => campRepo.campList()),
+  campList: (deletedOnly = false) =>
+    cached(`${CAMP_LIST_KEY}:${deletedOnly ? 'deleted' : 'active'}`, CAMP_LIST_TTL, () =>
+      campRepo.campList(deletedOnly),
+    ),
 
   all: () => campRepo.all(),
   staffList: () => campRepo.staffList(),

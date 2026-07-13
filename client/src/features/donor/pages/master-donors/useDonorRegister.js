@@ -4,6 +4,7 @@ import { useDonor, useDonorList } from '@/hooks/useDonor';
 import { useAuth } from '@/store/auth';
 import { checkAccess } from '@/features/user/pages/utils/access';
 import { exportRegisterChoice } from '@/features/donor/donorRegisterExport';
+import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
 import { PAGE_SIZE } from './constants';
 
 // Owns all state + data + actions for the Master Donor Register tabs
@@ -67,9 +68,7 @@ export function useDonorRegister(activeTab) {
   // ── Modals / CRUD ──
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedDonor, setSelectedDonor] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleEditDonor = (donor) => {
@@ -92,22 +91,21 @@ export function useDonorRegister(activeTab) {
     setShowDetailsModal(true);
   };
 
+  // Soft-delete only (cascades to the donor's donations/units/etc). The
+  // donor moves to Recycle Bin and disappears from this register; it can
+  // be recovered from there. Mandatory reason, centralized dialog.
+  const { requestDelete, DeleteReasonDialog } = useDeleteWithReason({
+    onDelete: (donor, reason) => deleteDonor(donor._id, reason),
+    title: 'Delete Donor',
+    message: 'This donor and their donation history will be moved to the Recycle Bin, where they can be restored or permanently removed.',
+  });
+
   const handleDelete = (donor) => {
     if (!donorAccess.canDelete) {
       toast.error('You do not have permission to delete donors.');
       return;
     }
-    setDeleteTarget(donor);
-    setShowDeleteModal(true);
-  };
-
-  // Soft-delete only. The donor moves to Recycle Bin and disappears from
-  // this register; it can be recovered from there.
-  const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
-    await deleteDonor(deleteTarget._id);
-    setShowDeleteModal(false);
-    setDeleteTarget(null);
+    requestDelete(donor);
   };
 
   const closeEditModal = () => {
@@ -117,10 +115,6 @@ export function useDonorRegister(activeTab) {
   const closeDetailsModal = () => {
     setShowDetailsModal(false);
     setSelectedDonor(null);
-  };
-  const closeDeleteModal = () => {
-    setShowDeleteModal(false);
-    setDeleteTarget(null);
   };
 
   // ── Data ──
@@ -165,8 +159,9 @@ export function useDonorRegister(activeTab) {
     // data
     items, total, totalPages, page, isLoading, isError, eligible, deferred,
     // modals + crud
-    showEditModal, showDetailsModal, showDeleteModal, selectedDonor, deleteTarget, loading,
-    handleEditDonor, handleUpdateDonor, handleViewDonor, handleDelete, handleDeleteConfirm,
-    closeEditModal, closeDetailsModal, closeDeleteModal,
+    showEditModal, showDetailsModal, selectedDonor, loading,
+    handleEditDonor, handleUpdateDonor, handleViewDonor, handleDelete,
+    closeEditModal, closeDetailsModal,
+    DeleteReasonDialog,
   };
 }

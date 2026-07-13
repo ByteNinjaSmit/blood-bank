@@ -20,6 +20,8 @@ router.post('/', authenticate, requireRole([...MANAGE]), hospitalController.crea
 router.get('/', authenticate, requireRole([...READ]), hospitalController.list);
 router.get('/:id', authenticate, requireRole([...READ]), hospitalController.get);
 router.put('/:id', authenticate, requireRole([...MANAGE]), hospitalController.update);
-router.delete('/:id', authenticate, requireRole(['system-admin']), hospitalController.remove);
+router.delete('/:id', authenticate, requireRole([...MANAGE]), hospitalController.remove);
+router.post('/:id/restore', authenticate, requireRole([...MANAGE]), hospitalController.restore);
+router.delete('/:id/permanent', authenticate, requireRole(['system-admin']), hospitalController.permanentDelete);
 
 export default router;

@@ -34,6 +34,12 @@ const Serology = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tests, setTests] = useState(() => DEFAULT_TESTS.map(t => ({ test: t.key, result: "" })));
+  const [editReason, setEditReason] = useState("");
+
+  // A bag already carries a decision (shadeness retest, or any other
+  // correction) once its worklist status is no longer 'pending' — the
+  // backend requires a reason for these edits (tti.legacy-view.controller.ts).
+  const isEditingDecided = activeBag?.status && activeBag.status !== "pending";
 
   const TEST_DISPLAY_LABELS = { HIV: "HIV", HBsAg: "HBsAg", HCV: "HCV", VDRL: "VDRL", MP: "Malaria" };
 
@@ -69,6 +75,7 @@ const Serology = () => {
       return { test: t.key, result: found?.result || "" };
     });
     setTests(mapped);
+    setEditReason("");
     setShowModal(true);
   };
 
@@ -90,6 +97,10 @@ const Serology = () => {
 
   const submitResults = async () => {
     if (!activeBag?._id) return;
+    if (isEditingDecided && !editReason.trim()) {
+      toast.error("Please enter a reason for this correction");
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -97,24 +108,29 @@ const Serology = () => {
         testResults: tests,
         technicianId: user?._id || user?.id,
         updatedBy: user?._id || user?.id,
+        ...(isEditingDecided ? { editReason: editReason.trim() } : {}),
       });
       toast.success("Serology results saved");
       setShowConfirmModal(false);
       setActiveBag(null);
+      setEditReason("");
       fetchBags(pagination.page);
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Failed to save results");
+      toast.error(err?.response?.data?.message || err?.message || "Failed to save results");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const STATUS_LABELS = { passed: "Passed", failed: "Failed", discarded: "Discarded", shadeness: "Shadeness", pending: "Pending" };
+
   const statusBadge = (status) => {
     const cls =
       status === "passed" ? "bg-green-50 text-green-700 border-green-200" :
       status === "discarded" || status === "failed" ? "bg-red-50 text-red-700 border-red-200" :
+      status === "shadeness" ? "bg-orange-50 text-orange-700 border-orange-200" :
       "bg-amber-50 text-amber-700 border-amber-200";
-    return <span className={`px-2 py-0.5 rounded-full text-xs border ${cls}`}>{status}</span>;
+    return <span className={`px-2 py-0.5 rounded-full text-xs border ${cls}`}>{STATUS_LABELS[status] || status}</span>;
   };
 
   return (
@@ -355,6 +371,22 @@ const Serology = () => {
               </div>
             </div>
 
+            {isEditingDecided && (
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                  Reason for Correction <span className="text-red-600">*</span>
+                </label>
+                <textarea
+                  value={editReason}
+                  onChange={(e) => setEditReason(e.target.value)}
+                  rows={2}
+                  maxLength={500}
+                  placeholder="e.g. Retest cleared the earlier shadeness (indeterminate) result"
+                  className="w-full px-3 py-2 border rounded-md text-sm border-gray-200 focus:border-red-400 focus:ring-red-400"
+                />
+              </div>
+            )}
+
             <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
               <p className="font-medium mb-1">⚠️ Please verify all test results carefully.</p>
               <p>
@@ -368,7 +400,7 @@ const Serology = () => {
             <Button variant="outline" onClick={backToEdit} disabled={isSubmitting}>
               Back to Edit
             </Button>
-            <Button onClick={submitResults} disabled={isSubmitting}>
+            <Button onClick={submitResults} disabled={isSubmitting || (isEditingDecided && !editReason.trim())}>
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm & Save"}
             </Button>
           </DialogFooter>

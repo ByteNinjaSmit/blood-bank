@@ -13,7 +13,7 @@ const router = Router();
 router.get(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'qa-manager']),
+  requireRole(['system-admin', 'bbo', 'store-keeper', 'qa-manager', 'auditor']),
   requirePermission('vendor:read'),
   controllers.list,
 );
@@ -21,7 +21,7 @@ router.get(
 router.get(
   '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'qa-manager']),
+  requireRole(['system-admin', 'bbo', 'store-keeper', 'qa-manager', 'auditor']),
   requirePermission('vendor:read'),
   controllers.get,
 );
@@ -53,9 +53,25 @@ router.patch(
 router.delete(
   '/:id',
   authenticate,
-  requireRole(['system-admin']),
+  requireRole(['system-admin', 'bbo']),
   requirePermission('vendor:delete'),
   controllers.remove,
+);
+
+router.post(
+  '/:id/restore',
+  authenticate,
+  requireRole(['system-admin', 'bbo']),
+  requirePermission('vendor:delete'),
+  controllers.restore,
+);
+
+router.delete(
+  '/:id/permanent',
+  authenticate,
+  requireRole(['system-admin']),
+  requirePermission('vendor:permanent-delete'),
+  controllers.permanentDelete,
 );
 
 export default router;

@@ -123,7 +123,7 @@ describe('tti-service.finalize', () => {
       expect.any(String),
       { match: { discardReason: 'TTI_POSITIVE' }, set: { discardReason: null } },
     );
-    expect(m.deferrals.findByRelatedDonation).toHaveBeenCalledWith('DN-1');
+    expect(m.deferrals.findByRelatedDonation).toHaveBeenCalledWith('DN-1', 'TTI_REACTIVE');
     expect(m.deferrals.lift).toHaveBeenCalledWith('def-1', 'actor', expect.any(String));
   });
 

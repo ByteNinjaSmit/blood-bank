@@ -47,12 +47,12 @@ export function evaluateRelease(panel: ReadonlyArray<PanelEntry>): ReleaseEvalua
     return { decision: 'pending', reasons };
   }
 
-  // Indeterminate on any mandatory test = on hold for re-test.
+  // Indeterminate ("shadeness") on any mandatory test = on hold for re-test.
   const indeterminate = MANDATORY_PANEL.filter((t) => latest.get(t) === 'INDETERMINATE');
   if (indeterminate.length > 0) {
     return {
       decision: 'indeterminate',
-      reasons: indeterminate.map((t) => `${t} indeterminate`),
+      reasons: indeterminate.map((t) => `${t} shadeness`),
     };
   }
 

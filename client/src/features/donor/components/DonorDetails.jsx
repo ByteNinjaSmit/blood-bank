@@ -1,7 +1,5 @@
 import React from 'react';
-import { X, User, Phone, Mail, MapPin, Calendar, Heart } from 'lucide-react';
 import Modal from '@/components/shared/Modal';
-import Button from '@/components/shared/Button';
 import { useDonorDetail } from '@/hooks/useDonor';
 
 const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
@@ -49,134 +47,120 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
     return age;
   };
 
+  const fullName = [donor.name?.firstName, donor.name?.middleName, donor.name?.lastName].filter(Boolean).join(' ');
+  const rhSymbol = donor.rh === 'Positive' || donor.rh === 'POSITIVE' ? '+' : donor.rh === 'Negative' || donor.rh === 'NEGATIVE' ? '-' : '';
+  const age = donor.dob ? calculateAge(donor.dob) : null;
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Donor Details"
       size="lg"
+      className="bg-gradient-to-b from-orange-50 to-white"
     >
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4 pb-4 border-b border-gray-200">
-          <div className="p-3 bg-orange-100 rounded-full">
-            <User className="w-8 h-8 text-orange-600" />
+      <div className="space-y-6 text-sm text-slate-800">
+        {/* Summary */}
+        <div className="rounded-lg bg-white/70 border border-slate-100 p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">
+              Donor overview
+            </p>
+            <span className="inline-flex items-center gap-1.5 shrink-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                Donor ID
+              </span>
+              <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-1 rounded-md shadow-sm whitespace-nowrap">
+                {donor.donorId || '—'}
+              </span>
+            </span>
           </div>
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900">
-              {donor.name?.firstName} {donor.name?.middleName} {donor.name?.lastName}
-            </h3>
-            <p className="text-gray-600">{donor.donorId}</p>
-            <div className="flex items-center gap-2 mt-2">
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(donor.eligibilityStatus)}`}>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">
+                {fullName || '—'}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                {age !== null ? `Age ${age} years` : ''}{age !== null && donor.sex ? ' · ' : ''}{donor.sex || ''}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-800 font-medium">
+                {donor.bloodGroup} {rhSymbol}
+              </span>
+              <span className={`px-2 py-1 rounded-full font-medium ${getStatusColor(donor.eligibilityStatus)}`}>
                 {getStatusText(donor.eligibilityStatus)}
               </span>
-              {donor.dob && calculateAge(donor.dob) !== null && (
-                <span className="text-sm text-gray-500">
-                  Age: {calculateAge(donor.dob)} years
-                </span>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Basic Information */}
-        <div>
-          <h4 className="text-lg font-medium text-gray-900 mb-3">Basic Information</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center gap-3">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-700">Date of Birth</p>
-                <p className="text-gray-900">{donor.dob ? new Date(donor.dob).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <User className="w-4 h-4 text-gray-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-700">Sex</p>
-                <p className="text-gray-900">{donor.sex}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Heart className="w-4 h-4 text-gray-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-700">Weight</p>
-                <p className="text-gray-900">{donor.weightKg} kg</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-              <div>
-                <p className="text-sm font-medium text-gray-700">Blood Group</p>
-                <p className="text-gray-900">{donor.bloodGroup} {donor.rh === "Positive" || donor.rh === "POSITIVE" ? "+" : donor.rh === "Negative" || donor.rh === "NEGATIVE" ? "-" : ""}</p>
-              </div>
+        {/* Basic Info & Contact */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-4">
+            <p className="font-semibold text-slate-700 mb-2">Basic Information</p>
+            <div className="space-y-1.5 text-slate-600">
+              <p>
+                <span className="font-medium">Date of Birth:</span>{' '}
+                {donor.dob ? new Date(donor.dob).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+              </p>
+              <p>
+                <span className="font-medium">Sex:</span> {donor.sex || '—'}
+              </p>
+              <p>
+                <span className="font-medium">Weight:</span> {donor.weightKg} kg
+              </p>
+              <p>
+                <span className="font-medium">Blood Group:</span> {donor.bloodGroup} {rhSymbol}
+              </p>
             </div>
           </div>
-        </div>
-
-        {/* Contact Information */}
-        <div>
-          <h4 className="text-lg font-medium text-gray-900 mb-3">Contact Information</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center gap-3">
-              <Phone className="w-4 h-4 text-gray-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-700">Phone</p>
-                <p className="text-gray-900">{donor.phone}</p>
-              </div>
-            </div>
-            {donor.email && (
-              <div className="flex items-center gap-3">
-                <Mail className="w-4 h-4 text-gray-500" />
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Email</p>
-                  <p className="text-gray-900">{donor.email}</p>
-                </div>
-              </div>
-            )}
-            <div className="flex items-center gap-3 md:col-span-2">
-              <MapPin className="w-4 h-4 text-gray-500" />
-              <div>
-                <p className="text-sm font-medium text-gray-700">Address</p>
-                <p className="text-gray-900">
-                  {donor.address?.line1 && `${donor.address.line1}, `}
-                  {donor.address?.line2 && `${donor.address.line2}, `}
-                  {donor.address?.city && `${donor.address.city}, `}
-                  {donor.address?.district && `${donor.address.district}, `}
-                  {donor.address?.state && `${donor.address.state} - `}
-                  {donor.address?.pincode}
+          <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-4">
+            <p className="font-semibold text-slate-700 mb-2">Contact Information</p>
+            <div className="space-y-1.5 text-slate-600">
+              <p>
+                <span className="font-medium">Phone:</span> {donor.phone || '—'}
+              </p>
+              {donor.email && (
+                <p>
+                  <span className="font-medium">Email:</span> {donor.email}
                 </p>
-              </div>
+              )}
+              <p>
+                <span className="font-medium">Address:</span>{' '}
+                {donor.address?.line1 && `${donor.address.line1}, `}
+                {donor.address?.line2 && `${donor.address.line2}, `}
+                {donor.address?.city && `${donor.address.city}, `}
+                {donor.address?.district && `${donor.address.district}, `}
+                {donor.address?.state && `${donor.address.state} - `}
+                {donor.address?.pincode}
+              </p>
             </div>
           </div>
         </div>
 
         {/* Medical Information */}
-        <div>
-          <h4 className="text-lg font-medium text-gray-900 mb-3">Medical Information</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm font-medium text-gray-700">Occupation</p>
-              <p className="text-gray-900">{donor.occupation || 'Not specified'}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-700">Last Donation</p>
-              <p className="text-gray-900">
-                {donor.lastDonationDate
-                  ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                  : 'No previous donations'
-                }
-              </p>
-            </div>
-            <div className="md:col-span-2">
-              <p className="text-sm font-medium text-gray-700">Will you donate if we call in emergency?</p>
+        <div className="rounded-lg border border-slate-100 bg-white/70 p-4">
+          <p className="font-semibold text-slate-700 mb-2">Medical Information</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-600">
+            <p>
+              <span className="font-medium">Occupation:</span> {donor.occupation || 'Not specified'}
+            </p>
+            <p>
+              <span className="font-medium">Last Donation:</span>{' '}
+              {donor.lastDonationDate
+                ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                : 'No previous donations'
+              }
+            </p>
+            <div className="md:col-span-2 flex items-center gap-2">
+              <span className="font-medium">Emergency donation willingness:</span>
               {donor.emergencyDonationWillingness === 'Yes' ? (
-                <span className="inline-flex mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-300">Yes</span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-300">Yes</span>
               ) : donor.emergencyDonationWillingness === 'No' ? (
-                <span className="inline-flex mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">No</span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">No</span>
               ) : (
-                <p className="text-gray-900">Not specified</p>
+                <span className="text-slate-500">Not specified</span>
               )}
             </div>
           </div>
@@ -186,8 +170,8 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
         {isLoading ? (
           <div className="py-6 text-center text-gray-500 text-sm">Loading donation history...</div>
         ) : donor.donationHistory && donor.donationHistory.length > 0 ? (
-          <div>
-            <h4 className="text-lg font-medium text-gray-900 mb-4 pb-1 border-b border-gray-100">Donation History</h4>
+          <div className="rounded-lg border border-slate-100 bg-white/70 p-4">
+            <p className="font-semibold text-slate-700 mb-3">Donation History</p>
             <div className="space-y-6">
               {donor.donationHistory.map((donation, index) => (
                 <div key={donation.donationId || index} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
@@ -325,19 +309,13 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
             </div>
           </div>
         ) : (
-          <div>
-            <h4 className="text-lg font-medium text-gray-900 mb-3 pb-1 border-b border-gray-100">Donation History</h4>
-            <div className="p-8 border border-dashed border-gray-200 rounded-xl text-center text-gray-400 text-sm">
+          <div className="rounded-lg border border-slate-100 bg-white/70 p-4">
+            <p className="font-semibold text-slate-700 mb-3">Donation History</p>
+            <div className="p-8 border border-dashed border-slate-200 rounded-xl text-center text-slate-400 text-sm">
               No previous donations recorded for this donor.
             </div>
           </div>
         )}
-
-        <div className="flex justify-end pt-4 border-t border-gray-200">
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-        </div>
       </div>
     </Modal>
   );

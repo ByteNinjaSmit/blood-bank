@@ -13,6 +13,7 @@ import {
   SPECIAL_NEED,
   UNIT_STATUS,
 } from '@/shared/enums';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const StatusHistoryEntry = new Schema(
   {
@@ -81,6 +82,7 @@ const BloodUnitSchema = new Schema(
 
     deletedAt: { type: Date, default: null, index: true },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
 
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },

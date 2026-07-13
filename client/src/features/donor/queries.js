@@ -58,7 +58,7 @@ export function useUpdateDonor() {
 export function useDeleteDonor() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: donorApi.remove,
+    mutationFn: ({ id, reason }) => donorApi.remove(id, reason),
     onSuccess: () => qc.invalidateQueries({ queryKey: donorKeys.all }),
   });
 }
@@ -67,6 +67,14 @@ export function useRestoreDonor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: donorApi.restore,
+    onSuccess: () => qc.invalidateQueries({ queryKey: donorKeys.all }),
+  });
+}
+
+export function usePermanentDeleteDonor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }) => donorApi.permanentDelete(id, reason),
     onSuccess: () => qc.invalidateQueries({ queryKey: donorKeys.all }),
   });
 }

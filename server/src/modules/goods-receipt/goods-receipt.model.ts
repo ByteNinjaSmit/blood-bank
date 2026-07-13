@@ -1,5 +1,6 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import { BAG_TYPE, ANTICOAGULANT, GRN_STATUS } from '@/shared/enums';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const BatchLineSchema = new Schema(
   {
@@ -43,6 +44,7 @@ const GoodsReceiptSchema = new Schema(
     invoiceImage: { type: String, default: null },
     deletedAt: { type: Date, default: null, index: true },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

@@ -80,6 +80,10 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         if (status === 'in-stock') unitFilter.status = 'RELEASED';
         else if (status === 'reserved') unitFilter.status = { $in: ['RESERVED', 'CROSSMATCHED'] };
         else if (status === 'issued') unitFilter.status = 'ISSUED';
+        // Units pulled back off the shelf (e.g. a shadeness/indeterminate
+        // TTI hold) — visible here for tracking, but never selectable()
+        // for requisition since that query only reads RELEASED units.
+        else if (status === 'quarantine') unitFilter.status = 'QUARANTINE';
       } else {
         unitFilter.status = { $in: ['RELEASED', 'RESERVED', 'CROSSMATCHED'] };
       }
@@ -211,8 +215,9 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       const data = units.map((u) => {
         let legacyStatus = 'in-stock';
         if (u.status === 'RELEASED') legacyStatus = 'in-stock';
-        else if (u.status === 'RESERVED') legacyStatus = 'reserved';
+        else if (u.status === 'RESERVED' || u.status === 'CROSSMATCHED') legacyStatus = 'reserved';
         else if (u.status === 'ISSUED') legacyStatus = 'issued';
+        else if (u.status === 'QUARANTINE') legacyStatus = 'quarantine';
 
         const legacyType: string = u.componentType;
 

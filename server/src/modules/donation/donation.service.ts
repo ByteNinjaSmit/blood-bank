@@ -5,6 +5,13 @@
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
 import { withAudit } from '@/shared/utils/with-audit';
+import {
+  cascadeSoftDelete,
+  cascadeRestore,
+  runInCascadeTransaction,
+  newDeleteBatchId,
+} from '@/shared/utils/cascade-delete';
+import { donationNode } from '@/shared/cascade-registry';
 import { AppError, ConflictError, NotFoundError } from '@/shared/errors';
 import { checkEligibility, yearsBetween } from '@/modules/donor/donor.eligibility';
 import { deriveUnits } from './donation.unit-derivation';
@@ -32,8 +39,9 @@ export interface DonationService {
     pageSize: number;
   }>;
   get(id: string): Promise<DonationWithUnitsDto>;
-  remove(id: string, actorId: string): Promise<{ permanentlyDeleted: boolean }>;
+  remove(id: string, actorId: string, reason: string): Promise<{ permanentlyDeleted: boolean }>;
   restore(id: string, actorId: string): Promise<{ restored: boolean }>;
+  permanentDelete(id: string, actorId: string, reason: string): Promise<void>;
 }
 
 export function createDonationService(deps: {
@@ -192,30 +200,71 @@ export function createDonationService(deps: {
       return found;
     },
 
-    async remove(id, actorId) {
+    async remove(id, actorId, reason) {
       const status = await deps.donations.findRawStatus(id);
       if (!status) throw new NotFoundError('Donation', id);
-
-      if (!status.deletedAt) {
-        // First delete click: soft-delete only. Row stays visible (greyed
-        // out) in Master Register so the clinical record isn't lost.
-        await deps.donations.softDelete(id, actorId);
-        log.warn({ donationId: id, actorId }, 'donation soft-deleted');
-        void withAudit(
-          { actorId },
-          { module: 'donation', action: 'DELETE', entityType: 'Donation', entityId: id },
-          { deletedAt: null },
-          { deletedAt: new Date() },
-        );
+      if (status.deletedAt) {
+        // Already soft-deleted (e.g. double-click) — idempotent no-op.
+        // Permanent removal now only happens via permanentDelete(), from
+        // the Recycle Bin.
         return { permanentlyDeleted: false };
       }
 
-      // Second delete click on an already soft-deleted donation: permanent,
-      // irreversible. Refuse if blood units were ever derived from it —
-      // hard deleting would orphan those clinical records.
+      const deleteBatchId = newDeleteBatchId();
+      await runInCascadeTransaction((session) =>
+        cascadeSoftDelete(donationNode, id, actorId, reason, deleteBatchId, session),
+      );
+      log.warn({ donationId: id, actorId, deleteBatchId }, 'donation cascade soft-deleted');
+      void withAudit(
+        { actorId },
+        {
+          module: 'donation',
+          action: 'DELETE',
+          entityType: 'Donation',
+          entityId: id,
+          severity: 'warning',
+          reason,
+        },
+        { deletedAt: null },
+        { deletedAt: new Date(), deleteBatchId },
+      );
+      return { permanentlyDeleted: false };
+    },
+
+    async restore(id, actorId) {
+      const status = await deps.donations.findRawStatus(id);
+      if (!status) throw new NotFoundError('Donation', id);
+      if (!status.deletedAt) {
+        return { restored: false };
+      }
+      await runInCascadeTransaction((session) => cascadeRestore(donationNode, id, actorId, session));
+      log.warn({ donationId: id, actorId }, 'donation cascade restored');
+      void withAudit(
+        { actorId },
+        { module: 'donation', action: 'UPDATE', entityType: 'Donation', entityId: id },
+        { deletedAt: status.deletedAt },
+        { deletedAt: null },
+      );
+      return { restored: true };
+    },
+
+    async permanentDelete(id, actorId, reason) {
+      const status = await deps.donations.findRawStatus(id);
+      if (!status) throw new NotFoundError('Donation', id);
+      if (!status.deletedAt) {
+        throw new ConflictError('Donation must be soft-deleted before it can be permanently deleted');
+      }
+      // Refuse if active (non-deleted) blood units still reference it —
+      // hard-deleting would orphan those clinical records. The
+      // donation's own units were already cascade-affected/discarded by
+      // remove(); this guards a unit created after the fact.
       const donation = await deps.donations.findById(id);
       const hasUnits = donation
-        ? await BloodUnitModel.exists({ donationId: donation.donationId })
+        ? await BloodUnitModel.exists({
+            donationId: donation.donationId,
+            affected: { $ne: true },
+            status: { $nin: ['DISCARDED', 'EXPIRED'] },
+          })
         : false;
       if (hasUnits) {
         throw new AppError(
@@ -228,28 +277,17 @@ export function createDonationService(deps: {
       log.warn({ donationId: id, actorId }, 'donation permanently deleted');
       void withAudit(
         { actorId },
-        { module: 'donation', action: 'DELETE', entityType: 'Donation', entityId: id, severity: 'critical' },
+        {
+          module: 'donation',
+          action: 'DELETE',
+          entityType: 'Donation',
+          entityId: id,
+          severity: 'critical',
+          reason,
+        },
         donation,
         undefined,
       );
-      return { permanentlyDeleted: true };
-    },
-
-    async restore(id, actorId) {
-      const status = await deps.donations.findRawStatus(id);
-      if (!status) throw new NotFoundError('Donation', id);
-      if (!status.deletedAt) {
-        return { restored: false };
-      }
-      await deps.donations.restore(id, actorId);
-      log.warn({ donationId: id, actorId }, 'donation restored');
-      void withAudit(
-        { actorId },
-        { module: 'donation', action: 'UPDATE', entityType: 'Donation', entityId: id },
-        { deletedAt: status.deletedAt },
-        { deletedAt: null },
-      );
-      return { restored: true };
     },
   };
 }

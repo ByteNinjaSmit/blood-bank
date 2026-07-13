@@ -64,9 +64,9 @@ export function useDonor() {
         return { success: false };
       }
     },
-    deleteDonor: async (id) => {
+    deleteDonor: async (id, reason) => {
       try {
-        const result = await deleteMutation.mutateAsync(id);
+        const result = await deleteMutation.mutateAsync({ id, reason });
         const permanentlyDeleted = Boolean(result?.permanentlyDeleted);
         toast.success(
           permanentlyDeleted

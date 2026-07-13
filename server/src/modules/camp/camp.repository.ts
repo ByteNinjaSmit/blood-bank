@@ -60,11 +60,13 @@ export const campRepo = {
       .lean();
   },
 
-  async campList() {
+  async campList(deletedOnly = false) {
     // donorData/unitData are ObjectId-only ref arrays (cheap to select, unlike
     // populating full Donor/BloodUnit docs) — selected only to derive counts
     // for the listing/export, then stripped before returning.
-    const camps = await CampModel.find()
+    const camps = await CampModel.find(
+      deletedOnly ? { deletedAt: { $ne: null } } : { deletedAt: null },
+    )
       .select(
         'campId name description address contactInfo dateFrom dateTo createdAt createdBy staff deletedAt donorData unitData',
       )

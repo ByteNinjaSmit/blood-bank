@@ -11,6 +11,13 @@ import { downloadExcelReport } from '@/utils/excelExportHelper';
 
 const READ_ROLES = ['system-admin', 'bbo', 'qa-manager', 'auditor'];
 
+// "indeterminate" is the internal TTI decision/result value — the lab
+// term shown to staff everywhere else in the app is "Shadeness".
+function humanize(text) {
+  if (typeof text !== 'string') return text;
+  return text.replace(/indeterminate/gi, 'Shadeness');
+}
+
 const MODULE_OPTIONS = [
   'unit', 'tti', 'crossmatch', 'issue', 'donor', 'donation', 'deferral',
   'transfusion', 'adverse-reaction', 'lookback', 'requisition', 'vendor',
@@ -81,7 +88,7 @@ export default function AuditTrail() {
             e.entityLabel || e.entityId || '',
             e.action || '',
             e.role || '',
-            e.reason || '',
+            humanize(e.reason) || '',
             (e.changedFields || []).join(', '),
           ]),
         }],
@@ -178,7 +185,7 @@ export default function AuditTrail() {
                       </span>
                     </td>
                     <td className="px-4 py-2.5 text-gray-600">{entry.role || '—'}</td>
-                    <td className="px-4 py-2.5 text-gray-500 max-w-xs truncate">{entry.reason || '—'}</td>
+                    <td className="px-4 py-2.5 text-gray-500 max-w-xs truncate">{humanize(entry.reason) || '—'}</td>
                     <td className="px-4 py-2.5">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${SEVERITY_BADGE[entry.severity] || SEVERITY_BADGE.info}`}>
                         {entry.severity || 'info'}

@@ -1,5 +1,6 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import { ABO_GROUP, RH_FACTOR } from '@/shared/enums';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const AddressSchema = new Schema(
   {
@@ -45,6 +46,7 @@ const DonorSchema = new Schema(
     embedding: { type: [Number], default: null, select: false },
     deletedAt: { type: Date, default: null, index: true },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },

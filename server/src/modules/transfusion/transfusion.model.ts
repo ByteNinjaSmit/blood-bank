@@ -1,5 +1,6 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import { TRANSFUSION_OUTCOME } from '@/shared/enums';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const VitalsEntry = new Schema(
   {
@@ -36,6 +37,10 @@ const TransfusionSchema = new Schema(
 
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+
+    deletedAt: { type: Date, default: null, index: true },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
   },
   { timestamps: true },
 );

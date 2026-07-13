@@ -54,4 +54,20 @@ router.delete(
   controllers.remove,
 );
 
+router.post(
+  '/:id/restore',
+  authenticate,
+  requireRole(['system-admin', 'bbo']),
+  requirePermission('po:create'),
+  controllers.restore,
+);
+
+router.delete(
+  '/:id/permanent',
+  authenticate,
+  requireRole(['system-admin']),
+  requirePermission('po:permanent-delete'),
+  controllers.permanentDelete,
+);
+
 export default router;

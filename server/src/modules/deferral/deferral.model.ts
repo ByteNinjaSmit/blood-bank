@@ -3,6 +3,7 @@
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import { DEFERRAL_TYPE } from '@/shared/enums';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const DeferralSchema = new Schema(
   {
@@ -14,7 +15,7 @@ const DeferralSchema = new Schema(
     // Source of the deferral: medical history, vitals, TTI reactive, etc.
     source: {
       type: String,
-      enum: ['QUESTIONNAIRE', 'VITALS', 'TTI_REACTIVE', 'LOOKBACK', 'MANUAL'],
+      enum: ['QUESTIONNAIRE', 'VITALS', 'TTI_REACTIVE', 'TTI_INDETERMINATE', 'LOOKBACK', 'MANUAL'],
       required: true,
     },
     // If raised by a TTI reactive result, link it for lookback.
@@ -25,6 +26,10 @@ const DeferralSchema = new Schema(
     liftReason: { type: String, trim: true, default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+
+    deletedAt: { type: Date, default: null, index: true },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
   },
   { timestamps: true },
 );

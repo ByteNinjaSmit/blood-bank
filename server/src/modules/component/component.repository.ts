@@ -211,9 +211,10 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
           canEdit: !hasLeftBank(units),
           editReason: (d as any).lastEditReason || undefined,
           lastEditedAt: (d as any).lastEditedAt ? new Date((d as any).lastEditedAt).toISOString() : undefined,
-          rbc: componentSlot(units, ['PRBC', 'WB'], tti),
+          prbc: componentSlot(units, ['PRBC', 'WB'], tti),
           ffp: componentSlot(units, ['FFP'], tti),
-          platelet: componentSlot(units, ['RDP', 'SDP'], tti),
+          rdp: componentSlot(units, ['RDP'], tti),
+          sdp: componentSlot(units, ['SDP'], tti),
           cryo: componentSlot(units, ['CRYO'], tti),
         };
       });
@@ -534,9 +535,10 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
             ? new Date((donationDoc as any).lastEditedAt).toISOString()
             : undefined,
         },
-        rbc: findComp(['PRBC', 'WB']),
+        prbc: findComp(['PRBC', 'WB']),
         ffp: findComp(['FFP']),
-        platelet: findComp(['RDP', 'SDP']),
+        rdp: findComp(['RDP']),
+        sdp: findComp(['SDP']),
         cryo: findComp(['CRYO']),
       };
     },

@@ -447,12 +447,13 @@ export async function exportStock(items, meta = {}) {
     formatDate(r?.bag?.donationDate),
     formatDate(r?.component?.expiryDate),
     (r.status || '—').toUpperCase(),
-    r.status === 'in-stock' ? (r.storageLocation || 'Main Fridge') : (r.hospital?.name || r.storageLocation || '—'),
+    r.status === 'in-stock' || r.status === 'quarantine' ? (r.storageLocation || 'Main Fridge') : (r.hospital?.name || r.storageLocation || '—'),
   ]);
 
   const stats = [
     { label: 'Total In-Stock Items', value: items.filter(r => r.status === 'in-stock').length },
     { label: 'Total Reserved Items', value: items.filter(r => r.status === 'reserved').length },
+    { label: 'Total Quarantined Items', value: items.filter(r => r.status === 'quarantine').length },
     { label: 'Total Stocked units', value: items.length },
   ];
 

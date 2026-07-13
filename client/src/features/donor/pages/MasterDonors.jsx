@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Users, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DonorDetails from '@/features/donor/components/DonorDetails';
-import CustomModal from '@/components/CustomModal';
 import DeferralRegister from '@/features/donor/components/DeferralRegister';
 import RegisterExportDropdown from '@/components/shared/RegisterExportDropdown';
 import { TABS } from './master-donors/constants';
@@ -140,16 +139,8 @@ const MasterDonors = () => {
         onClose={reg.closeDetailsModal}
       />
 
-      {/* Delete confirmation modal — soft delete only, donor moves to Recycle Bin */}
-      <CustomModal
-        open={reg.showDeleteModal && !!reg.deleteTarget}
-        title="Delete Donor"
-        description={`Delete donor ${(reg.deleteTarget && (`${reg.deleteTarget?.name?.firstName || ''} ${reg.deleteTarget?.name?.lastName || ''}`.trim() || reg.deleteTarget?.donorId)) || ''}? It will be moved to the Recycle Bin, where it can be restored or permanently removed.`}
-        onCancel={reg.closeDeleteModal}
-        onConfirm={reg.handleDeleteConfirm}
-        confirmText="Delete"
-        confirmVariant="danger"
-      />
+      {/* Delete confirmation — mandatory reason, soft delete only, donor moves to Recycle Bin */}
+      {reg.DeleteReasonDialog}
     </div>
   );
 };

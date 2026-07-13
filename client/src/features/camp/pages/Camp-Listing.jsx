@@ -9,13 +9,14 @@ import { toast } from "sonner"
 import Loader from "@/components/utils/Spinner"
 import { PageHeader } from "@/components/Header"
 import CampEditModal from "./CampEditModal"
-import CustomModal from "@/components/CustomModal"
+import ReasonForChangeModal from "@/components/shared/ReasonForChangeModal"
 import { useCamp } from "@/hooks/useCamp"
 import { useAuth } from "@/store/auth"
+import { useEditWithReason } from "@/hooks/useEditWithReason"
 import { exportCampsExcel } from "@/features/camp/campExcelExport"
 
 const CampList = ({ OnBack }) => {
-  const { camps, loading, fetchCamps, updateCamp, deleteCamp, restoreCamp } = useCamp()
+  const { camps, loading, fetchCamps, updateCamp, deleteCamp } = useCamp()
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -41,8 +42,6 @@ const CampList = ({ OnBack }) => {
   const [sortBy, setSortBy] = useState("dateFrom")
   const [order, setOrder] = useState("desc")
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [showPermanentDeleteModal, setShowPermanentDeleteModal] = useState(false)
-  const [showForceModal, setShowForceModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
 
   const toggleOrder = () => setOrder((o) => (o === "desc" ? "asc" : "desc"))
@@ -123,48 +122,16 @@ const CampList = ({ OnBack }) => {
 
   const handleDelete = (camp) => {
     setDeleteTarget(camp)
-    if (camp.deletedAt) {
-      setShowPermanentDeleteModal(true)
-    } else {
-      setShowDeleteModal(true)
-    }
+    setShowDeleteModal(true)
   }
 
-  // First click: soft-delete only. The camp stays in the list, greyed out.
-  const handleDeleteConfirm = async () => {
+  // Soft-delete only — the camp moves off this list into the Recycle Bin,
+  // where it can be restored or permanently deleted.
+  const handleDeleteConfirm = async (reason) => {
     if (!deleteTarget) return
-    await deleteCamp(deleteTarget._id)
+    await deleteCamp(deleteTarget._id, reason)
     setShowDeleteModal(false)
     setDeleteTarget(null)
-  }
-
-  const handleRecoverConfirm = async () => {
-    if (!deleteTarget) return
-    await restoreCamp(deleteTarget._id)
-    setShowPermanentDeleteModal(false)
-    setDeleteTarget(null)
-  }
-
-  // Second click (on an already soft-deleted camp): permanent, irreversible removal.
-  const handlePermanentDeleteConfirm = async () => {
-    if (!deleteTarget) return
-    const result = await deleteCamp(deleteTarget._id)
-
-    if (result.success) {
-      setShowPermanentDeleteModal(false)
-      setDeleteTarget(null)
-      return
-    }
-
-    if (result.code === 'CONFLICT') {
-      toast.error(result.message || 'Camp has donation records and cannot be permanently deleted.')
-      setShowPermanentDeleteModal(false)
-      setShowForceModal(true)
-    } else {
-      if (result.message) toast.error(result.message)
-      setShowPermanentDeleteModal(false)
-      setDeleteTarget(null)
-    }
   }
 
   const getStatusBadge = (status) => {
@@ -248,32 +215,38 @@ const CampList = ({ OnBack }) => {
     return Object.keys(errs).length === 0
   }
 
+  const { wrappedSave: wrappedSaveCamp, EditReasonDialog: campEditReasonDialog } = useEditWithReason({
+    onSave: async (payload, editReason) => {
+      setEditSaving(true)
+      try {
+        const { success } = await updateCamp(editingCamp._id, payload, editReason)
+        if (success) {
+          setEditModalOpen(false)
+          setEditingCamp(null)
+        }
+      } finally {
+        setEditSaving(false)
+      }
+    },
+    title: "Confirm Camp Changes",
+  })
+
   const handleEditSubmit = async (e) => {
     e.preventDefault()
     if (!editingCamp) return
     if (!validateEditForm()) return
 
-    setEditSaving(true)
-    try {
-      const payload = {
-        name: editForm.name.trim(),
-        description: editForm.description,
-        address: editForm.address.trim(),
-        phone: editForm.phone.trim(),
-        email: editForm.email.trim(),
-        staff: editForm.staff,
-        dateFrom: editForm.dateFrom,
-        dateTo: editForm.dateTo,
-      }
-
-      const { success } = await updateCamp(editingCamp._id, payload)
-      if (success) {
-        setEditModalOpen(false)
-        setEditingCamp(null)
-      }
-    } finally {
-      setEditSaving(false)
+    const payload = {
+      name: editForm.name.trim(),
+      description: editForm.description,
+      address: editForm.address.trim(),
+      phone: editForm.phone.trim(),
+      email: editForm.email.trim(),
+      staff: editForm.staff,
+      dateFrom: editForm.dateFrom,
+      dateTo: editForm.dateTo,
     }
+    wrappedSaveCamp(payload)
   }
 
   if (loading) {
@@ -441,9 +414,7 @@ const CampList = ({ OnBack }) => {
             {filteredCamps.map((camp) => (
               <div
                 key={camp._id}
-                className={`rounded-xl shadow-md border border-slate-200 transition-shadow overflow-hidden ${
-                  camp.deletedAt ? "bg-slate-100 opacity-60" : "bg-white hover:shadow-lg"
-                }`}
+                className="rounded-xl shadow-md border border-slate-200 transition-shadow overflow-hidden bg-white hover:shadow-lg"
               >
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-6 border-b border-slate-100">
                   <div className="flex-1">
@@ -452,11 +423,6 @@ const CampList = ({ OnBack }) => {
                         {camp.campId || "N/A"}
                       </span>
                       {getStatusBadge(getProgressStatus(camp))}
-                      {camp.deletedAt && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-200 text-slate-500">
-                          Deleted
-                        </span>
-                      )}
                     </div>
                     <h3 className="text-xl font-bold text-slate-900">{camp.name}</h3>
                     <p className="text-slate-600 text-sm mt-1">{camp.description}</p>
@@ -542,10 +508,10 @@ const CampList = ({ OnBack }) => {
                   <button
                     onClick={() => handleDelete(camp)}
                     className="inline-flex items-center gap-2 px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg font-medium transition-colors border border-red-200"
-                    title={camp.deletedAt ? "Permanently Delete" : "Delete"}
+                    title="Delete"
                   >
                     <Trash2 className="w-4 h-4" />
-                    {camp.deletedAt ? "Delete Permanently" : "Delete"}
+                    Delete
                   </button>
                 </div>
               </div>
@@ -571,53 +537,20 @@ const CampList = ({ OnBack }) => {
         onSubmit={handleEditSubmit}
       />
 
-      {/* Delete confirmation modal (first click — soft delete only) */}
-      <CustomModal
-        open={showDeleteModal && !!deleteTarget}
-        title="Delete Camp"
-        description={`Delete camp "${deleteTarget?.name || ""}"? The camp will be marked deleted and greyed out here, but kept in the list. You can permanently remove it later.`}
-        onCancel={() => {
+      {/* Delete confirmation — soft delete, moves the camp to the Recycle Bin */}
+      <ReasonForChangeModal
+        isOpen={showDeleteModal && !!deleteTarget}
+        onClose={() => {
           setShowDeleteModal(false)
           setDeleteTarget(null)
         }}
         onConfirm={handleDeleteConfirm}
-        confirmText="Delete"
-        confirmVariant="danger"
+        title="Delete Camp"
+        actionLabel="Delete"
+        message={`Delete camp "${deleteTarget?.name || ""}"? It will be moved to the Recycle Bin, where it can be restored or permanently deleted.`}
+        fieldLabel="Reason for Deletion"
       />
-
-      {/* Permanent delete confirmation (second click on an already-deleted camp) */}
-      <CustomModal
-        open={showPermanentDeleteModal && !!deleteTarget}
-        title="Permanently Delete Camp"
-        description={`This will permanently delete camp "${deleteTarget?.name || ""}". This action is NOT recoverable.`}
-        onCancel={() => {
-          setShowPermanentDeleteModal(false)
-          setDeleteTarget(null)
-        }}
-        onConfirm={handlePermanentDeleteConfirm}
-        confirmText="Permanently Delete"
-        confirmVariant="danger"
-      >
-        <button
-          type="button"
-          onClick={handleRecoverConfirm}
-          className="w-full px-3 py-2 rounded-lg border border-green-300 bg-green-50 text-green-700 text-sm font-medium hover:bg-green-100 transition-colors"
-        >
-          Recover Camp Instead
-        </button>
-      </CustomModal>
-
-      {/* Informational modal: camps with donation history cannot be permanently deleted */}
-      <CustomModal
-        open={showForceModal && !!deleteTarget}
-        title="Cannot Permanently Delete Camp"
-        description="This camp has donation records and cannot be permanently deleted. Donation records are clinical data and must be preserved for audit purposes."
-        onCancel={() => {
-          setShowForceModal(false)
-          setDeleteTarget(null)
-        }}
-        hideFooter
-      />
+      {campEditReasonDialog}
     </div>
   )
 }

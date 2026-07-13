@@ -52,6 +52,7 @@ export interface ListHospitalsFilter {
   isActive?: boolean;
   from?: Date;
   to?: Date;
+  deletedOnly?: boolean;
   page: number;
   limit: number;
   sortBy: string;
@@ -81,7 +82,7 @@ export const hospitalRepo = {
     return toDto(created.toObject() as unknown as RawHospital);
   },
   async list(f: ListHospitalsFilter): Promise<{ items: HospitalDto[]; total: number }> {
-    const filter: Record<string, unknown> = {};
+    const filter: Record<string, unknown> = { deletedAt: f.deletedOnly ? { $ne: null } : null };
     if (f.name) filter.name = { $regex: f.name, $options: 'i' };
     if (f.contactPerson) filter.contactPerson = { $regex: f.contactPerson, $options: 'i' };
     if (f.phone) filter.phone = { $regex: f.phone, $options: 'i' };
@@ -114,5 +115,29 @@ export const hospitalRepo = {
   async remove(id: string): Promise<boolean> {
     const r = await HospitalModel.findByIdAndDelete(id);
     return Boolean(r);
+  },
+
+  // Unlike findById (used by normal reads and excludes soft-deleted
+  // rows), this is used by restore/permanentDelete which expect to
+  // find an already soft-deleted hospital.
+  async findByIdIncludingDeleted(id: string): Promise<HospitalDto | null> {
+    const raw = (await HospitalModel.findById(id).lean()) as unknown as RawHospital | null;
+    return raw ? toDto(raw) : null;
+  },
+
+  async softDelete(id: string, actorId: string): Promise<boolean> {
+    const res = await HospitalModel.updateOne(
+      { _id: new Types.ObjectId(id), deletedAt: null },
+      { $set: { deletedAt: new Date(), deletedBy: new Types.ObjectId(actorId) } },
+    );
+    return res.modifiedCount > 0;
+  },
+
+  async restore(id: string, actorId: string): Promise<boolean> {
+    const res = await HospitalModel.updateOne(
+      { _id: new Types.ObjectId(id) },
+      { $set: { deletedAt: null, updatedBy: new Types.ObjectId(actorId) } },
+    );
+    return res.modifiedCount > 0;
   },
 };

@@ -44,6 +44,10 @@ export const VoluntaryQuery = z.object({
 export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid camp id') });
 export const CampIdParam = z.object({ campId: z.string().regex(OBJECT_ID, 'Invalid camp id') });
 
+export const DeleteReasonBody = z.object({
+  reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
+});
+
 function parseOrThrow<T>(s: z.ZodType<T>, v: unknown, where: string): T {
   const r = s.safeParse(v);
   if (!r.success) throw new ValidationError(`Invalid ${where}`, r.error.issues);
@@ -56,4 +60,5 @@ export const ValidateCamp = {
   voluntaryQuery: (req: Request) => parseOrThrow(VoluntaryQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
   campIdParam: (req: Request) => parseOrThrow(CampIdParam, req.params, 'path params'),
+  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };

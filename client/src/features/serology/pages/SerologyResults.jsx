@@ -145,12 +145,15 @@ const SerologyResults = () => {
     fetchBags(1, limit);
   };
 
+  const STATUS_LABELS = { passed: "Passed", failed: "Failed", discarded: "Discarded", shadeness: "Shadeness", pending: "Pending" };
+
   const statusBadge = (status) => {
     const cls =
       status === "passed" ? "bg-green-50 text-green-700 border-green-200" :
       status === "discarded" || status === "failed" ? "bg-red-50 text-red-700 border-red-200" :
+      status === "shadeness" ? "bg-orange-50 text-orange-700 border-orange-200" :
       "bg-amber-50 text-amber-700 border-amber-200";
-    return <span className={`px-2 py-0.5 rounded-full text-xs border ${cls}`}>{status}</span>;
+    return <span className={`px-2 py-0.5 rounded-full text-xs border ${cls}`}>{STATUS_LABELS[status] || status}</span>;
   };
 
   const formatBlood = (group, rh) => {
@@ -262,6 +265,7 @@ const SerologyResults = () => {
                       <SelectItem value="passed">Passed</SelectItem>
                       <SelectItem value="discarded">Discarded</SelectItem>
                       <SelectItem value="failed">Failed</SelectItem>
+                      <SelectItem value="shadeness">Shadeness</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -639,9 +643,12 @@ const SerologyResults = () => {
                 <>
                   <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
                     Saving re-evaluates the release decision for this donation. If this correction
-                    changes a reactive result back to negative, units/components discarded for that
-                    reactive result are restored to stock and the donor's TTI deferral is lifted
-                    automatically.
+                    changes a negative result to reactive, all components from this donation are
+                    removed from stock and moved to discarded, and the donor is permanently deferred.
+                    If it changes to shadeness, any in-stock units are moved to quarantine (not
+                    requisitionable) and the donor is temporarily deferred until retest. If a
+                    reactive result is corrected back to negative, discarded units are restored to
+                    stock and the donor's deferral is lifted automatically.
                   </p>
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">

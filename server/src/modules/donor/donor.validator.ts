@@ -8,10 +8,15 @@ const UID = /^\d{12}$/;
 const PINCODE = /^\d{6}$/;
 const OBJECT_ID = /^[a-f0-9]{24}$/i;
 
-// Empty strings from HTML forms become undefined so .optional() works
-// as expected without each field needing .or(z.literal('')).
+// Empty (or whitespace-only) strings from HTML forms become undefined so
+// .optional() works as expected without each field needing
+// .or(z.literal('')) — trimming first means a stray space left over
+// from older data/autofill doesn't fail a regex check below.
 const blankToUndef = <T extends z.ZodTypeAny>(schema: T) =>
-  z.preprocess((v) => (v === '' || v === null ? undefined : v), schema);
+  z.preprocess((v) => {
+    const t = typeof v === 'string' ? v.trim() : v;
+    return t === '' || t === null ? undefined : t;
+  }, schema);
 
 const NameSchema = z.object({
   firstName: z.string().trim().min(1).max(80),
@@ -76,10 +81,20 @@ export const DonorIdParam = z.object({
 });
 export type DonorIdInput = z.infer<typeof DonorIdParam>;
 
+export const DeleteReasonBody = z.object({
+  reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
+});
+export type DeleteReasonInput = z.infer<typeof DeleteReasonBody>;
+
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {
   const result = schema.safeParse(value);
   if (!result.success) {
-    throw new ValidationError(`Invalid ${where}`, result.error.issues);
+    // Surface exactly which field failed and why — a bare "Invalid
+    // request body" gives neither the caller nor the server log enough
+    // to diagnose a rejected edit/create without reproducing it.
+    const first = result.error.issues[0];
+    const detail = first ? ` — ${first.path.join('.') || '(root)'}: ${first.message}` : '';
+    throw new ValidationError(`Invalid ${where}${detail}`, result.error.issues);
   }
   return result.data;
 }
@@ -89,6 +104,7 @@ export const Validate = {
   updateBody: (req: Request) => parseOrThrow(UpdateDonorBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListDonorsQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(DonorIdParam, req.params, 'path params'),
+  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };
 
 // Used internally by tests; not exported through Validate.

@@ -41,7 +41,7 @@ export function useCreateVendor() {
 export function useUpdateVendor() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }) => bagProcurementApi.vendor.update(id, data),
+    mutationFn: ({ id, data, editReason }) => bagProcurementApi.vendor.update(id, data, editReason),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['vendor', 'list'] }),
   });
 }
@@ -57,7 +57,23 @@ export function useUpdateVendorStatus() {
 export function useDeleteVendor() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id) => bagProcurementApi.vendor.remove(id),
+    mutationFn: ({ id, reason }) => bagProcurementApi.vendor.remove(id, reason),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['vendor', 'list'] }),
+  });
+}
+
+export function useRestoreVendor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => bagProcurementApi.vendor.restore(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['vendor', 'list'] }),
+  });
+}
+
+export function usePermanentDeleteVendor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }) => bagProcurementApi.vendor.permanentDelete(id, reason),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['vendor', 'list'] }),
   });
 }
@@ -91,7 +107,7 @@ export function useCreatePO() {
 export function useUpdatePO() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }) => bagProcurementApi.purchaseOrder.update(id, data),
+    mutationFn: ({ id, data, editReason }) => bagProcurementApi.purchaseOrder.update(id, data, editReason),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-order', 'list'] }),
   });
 }
@@ -99,7 +115,23 @@ export function useUpdatePO() {
 export function useDeletePO() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id) => bagProcurementApi.purchaseOrder.remove(id),
+    mutationFn: ({ id, reason }) => bagProcurementApi.purchaseOrder.remove(id, reason),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-order', 'list'] }),
+  });
+}
+
+export function useRestorePO() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => bagProcurementApi.purchaseOrder.restore(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-order', 'list'] }),
+  });
+}
+
+export function usePermanentDeletePO() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }) => bagProcurementApi.purchaseOrder.permanentDelete(id, reason),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-order', 'list'] }),
   });
 }

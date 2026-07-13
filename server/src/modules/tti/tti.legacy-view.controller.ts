@@ -103,8 +103,9 @@ export function createTtiLegacyViewControllers(deps: {
           };
         });
 
-        await deps.ttiService.recordTests(tti.donationId, mappedTests, actorId);
-        await deps.ttiService.finalize(tti.donationId, actorId);
+        // One combined call so the whole "Save Results" action produces a
+        // single audit entry (tests + decision together), not two.
+        await deps.ttiService.recordAndFinalize(tti.donationId, mappedTests, actorId);
         if (isEdit) {
           await deps.tti.setEditMeta(tti.donationId, editReason!.trim(), actorId);
         }

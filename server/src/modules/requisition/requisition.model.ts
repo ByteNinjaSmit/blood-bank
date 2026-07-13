@@ -3,6 +3,7 @@
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import { ABO_GROUP, COMPONENT_TYPE, RH_FACTOR, SPECIAL_NEED } from '@/shared/enums';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const RequestedComponent = new Schema(
   {
@@ -115,6 +116,8 @@ const RequisitionSchema = new Schema(
     rejectionReason: String,
 
     deletedAt: { type: Date, default: null, index: true },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

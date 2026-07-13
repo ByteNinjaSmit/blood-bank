@@ -5,6 +5,7 @@
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import { TTI_RESULT, TTI_TEST } from '@/shared/enums';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const TestEntry = new Schema(
   {
@@ -52,6 +53,10 @@ const TtiResultSchema = new Schema(
 
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+
+    deletedAt: { type: Date, default: null, index: true },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
   },
   { timestamps: true },
 );

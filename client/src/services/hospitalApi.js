@@ -68,9 +68,9 @@ export default {
       };
     }
   },
-  updateHospital: async (id, data) => {
+  updateHospital: async (id, data, editReason) => {
     try {
-      const response = await apiClient.put(`/api/v2/hospital/${id}`, data);
+      const response = await apiClient.put(`/api/v2/hospital/${id}`, { ...data, _editReason: editReason });
       const item = response.data?.data || response.data;
       if (item && typeof item === 'object') {
         item._id = item.id || item._id;
@@ -87,9 +87,9 @@ export default {
       };
     }
   },
-  deleteHospital: async (id) => {
+  deleteHospital: async (id, reason) => {
     try {
-      await apiClient.delete(`/api/v2/hospital/${id}`);
+      await apiClient.delete(`/api/v2/hospital/${id}`, { data: { reason } });
       return {
         success: true
       };

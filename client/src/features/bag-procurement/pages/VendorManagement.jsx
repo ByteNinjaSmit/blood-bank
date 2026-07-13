@@ -10,6 +10,8 @@ import {
 } from '../queries';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportVendors } from '@/utils/excelExportHelper';
+import { useEditWithReason } from '@/hooks/useEditWithReason';
+import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
 
 const STATUS_BADGE = {
   APPROVED:    'bg-green-50 text-green-700 border-green-200',
@@ -48,12 +50,19 @@ function VendorDrawer({ onClose, editVendor }) {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  const { wrappedSave, EditReasonDialog } = useEditWithReason({
+    onSave: (data, editReason) =>
+      updateVendor.mutateAsync({ id: editVendor?._id, data, editReason }).then(onClose),
+    title: 'Confirm Vendor Changes',
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    const action = editVendor
-      ? updateVendor.mutateAsync({ id: editVendor._id, data: form })
-      : createVendor.mutateAsync(form);
-    action.then(onClose).catch(() => {});
+    if (editVendor) {
+      wrappedSave(form);
+    } else {
+      createVendor.mutateAsync(form).then(onClose).catch(() => {});
+    }
   };
 
   const busy = createVendor.isPending || updateVendor.isPending;
@@ -136,6 +145,7 @@ function VendorDrawer({ onClose, editVendor }) {
           </div>
         </form>
       </div>
+      {EditReasonDialog}
     </>
   );
 }
@@ -159,7 +169,11 @@ export default function VendorManagement() {
   };
 
   const handleStatus = (id, status) => updateStatus.mutate({ id, status });
-  const handleDelete = (id) => { if (window.confirm('Remove this vendor?')) deleteVendor.mutate(id); };
+  const { requestDelete, DeleteReasonDialog } = useDeleteWithReason({
+    onDelete: (vendor, reason) => deleteVendor.mutateAsync({ id: vendor._id, reason }),
+    title: 'Delete Vendor',
+    message: 'This vendor and its purchase orders, goods receipts, and unused stock will be moved to the Recycle Bin. Stock already issued for collection is preserved and marked affected, not deleted.',
+  });
   const openEdit = (v) => { setEditVendor(v); setShowDrawer(true); };
   const closeDrawer = () => { setShowDrawer(false); setEditVendor(null); };
 
@@ -294,7 +308,7 @@ export default function VendorManagement() {
                             <Ban className="w-4 h-4" />
                           </button>
                         )}
-                        <button onClick={() => handleDelete(v._id)}
+                        <button onClick={() => requestDelete(v)}
                           className="p-1.5 text-red-500 hover:bg-red-50 rounded-md" title="Delete">
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -309,6 +323,7 @@ export default function VendorManagement() {
       </div>
 
       {showDrawer && <VendorDrawer onClose={closeDrawer} editVendor={editVendor} />}
+      {DeleteReasonDialog}
     </div>
   );
 }

@@ -13,6 +13,8 @@ import { formatBloodBagQty, calcTotalBags } from '../utils/qtyHelper';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportProcurementPO } from '@/utils/excelExportHelper';
+import { useEditWithReason } from '@/hooks/useEditWithReason';
+import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
 
 
 
@@ -61,6 +63,13 @@ function PODrawer({ onClose, vendors, poToEdit }) {
   const createPO = useCreatePO();
   const updatePO = useUpdatePO();
   const createVendor = useCreateVendor();
+  const { wrappedSave: wrappedSavePO, EditReasonDialog } = useEditWithReason({
+    onSave: async (payload, editReason) => {
+      await updatePO.mutateAsync({ id: poToEdit?.id ?? poToEdit?._id, data: payload, editReason });
+      onClose();
+    },
+    title: 'Confirm Purchase Order Changes',
+  });
   const [previousVendors, setPreviousVendors] = useState([]);
 
   useEffect(() => {
@@ -164,10 +173,12 @@ function PODrawer({ onClose, vendors, poToEdit }) {
       };
 
       if (poToEdit) {
-        await updatePO.mutateAsync({ id: poToEdit.id ?? poToEdit._id, data: payload });
-      } else {
-        await createPO.mutateAsync(payload);
+        await wrappedSavePO(payload);
+        // Dialog handles onClose itself once the reason is confirmed —
+        // don't close prematurely while it's still open.
+        return;
       }
+      await createPO.mutateAsync(payload);
       onClose();
     } catch (err) {
       console.error(err);
@@ -304,6 +315,7 @@ function PODrawer({ onClose, vendors, poToEdit }) {
           </div>
         </form>
       </div>
+      {EditReasonDialog}
     </>
   );
 }
@@ -372,15 +384,14 @@ export default function PurchaseOrders() {
 
   const toggleExpand = (id) => setExpandedId((prev) => (prev === id ? null : id));
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this purchase order?')) {
-      try {
-        await deletePO.mutateAsync(id);
-      } catch (err) {
-        console.error(err);
-      }
-    }
-  };
+  const { requestDelete, DeleteReasonDialog } = useDeleteWithReason({
+    onDelete: async (po, reason) => {
+      await deletePO.mutateAsync({ id: po._id || po.id, reason });
+    },
+    title: 'Delete Purchase Order',
+    message: 'This purchase order and its goods receipts / unused stock will be moved to the Recycle Bin. Stock already issued for collection is preserved and marked affected, not deleted.',
+  });
+  const handleDelete = (po) => requestDelete(po);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -489,7 +500,7 @@ export default function PurchaseOrders() {
                             className="px-2.5 py-1 text-xs font-medium text-blue-700 border border-blue-200 rounded-md hover:bg-blue-50">
                             Edit
                           </button>
-                          <button onClick={() => handleDelete(o._id || o.id)} disabled={deletePO.isPending}
+                          <button onClick={() => handleDelete(o)} disabled={deletePO.isPending}
                             className="px-2.5 py-1 text-xs font-medium text-red-700 border border-red-200 rounded-md hover:bg-red-50 disabled:opacity-50">
                             Delete
                           </button>
@@ -535,6 +546,7 @@ export default function PurchaseOrders() {
       </div>
 
       {showDrawer && <PODrawer onClose={() => { setShowDrawer(false); setEditPO(null); }} vendors={vendors} poToEdit={editPO} />}
+      {DeleteReasonDialog}
     </div>
   );
 }

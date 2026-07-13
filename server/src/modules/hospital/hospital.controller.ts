@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { ValidateHospital } from './hospital.validator';
 import { hospitalService } from './hospital.service';
 import { UnauthorizedError } from '@/shared/errors';
+import { extractEditReason } from '@/shared/utils/edit-reason';
 
 const actor = (req: Request): string => {
   if (!req.user) throw new UnauthorizedError();
@@ -36,7 +37,8 @@ export const hospitalController = {
   async update(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = ValidateHospital.idParam(req);
-      const data = await hospitalService.update(id, ValidateHospital.updateBody(req), actor(req));
+      const editReason = extractEditReason(req);
+      const data = await hospitalService.update(id, ValidateHospital.updateBody(req), actor(req), editReason);
       res.json({ success: true, data, requestId: req.id });
     } catch (e) {
       next(e);
@@ -45,7 +47,27 @@ export const hospitalController = {
   async remove(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = ValidateHospital.idParam(req);
-      await hospitalService.remove(id, actor(req));
+      const { reason } = ValidateHospital.deleteReasonBody(req);
+      await hospitalService.remove(id, actor(req), reason);
+      res.status(204).end();
+    } catch (e) {
+      next(e);
+    }
+  },
+  async restore(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = ValidateHospital.idParam(req);
+      const data = await hospitalService.restore(id, actor(req));
+      res.json({ success: true, data, requestId: req.id });
+    } catch (e) {
+      next(e);
+    }
+  },
+  async permanentDelete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = ValidateHospital.idParam(req);
+      const { reason } = ValidateHospital.deleteReasonBody(req);
+      await hospitalService.permanentDelete(id, actor(req), reason);
       res.status(204).end();
     } catch (e) {
       next(e);

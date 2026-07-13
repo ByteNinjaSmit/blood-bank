@@ -42,11 +42,16 @@ export const ListPOQuery = z.object({
   search: z.string().trim().max(120).optional(),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
+  deletedOnly: z.coerce.boolean().optional().default(false),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(20),
 });
 
 export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid id') });
+
+export const DeleteReasonBody = z.object({
+  reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
+});
 
 export type CreatePOInput = z.infer<typeof CreatePOBody>;
 export type UpdatePOInput = z.infer<typeof UpdatePOBody>;
@@ -57,4 +62,5 @@ export const ValidatePO = {
   updateBody: (req: Request) => parseOrThrow(UpdatePOBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListPOQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
+  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };

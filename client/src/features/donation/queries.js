@@ -34,7 +34,7 @@ export function useCreateDonation() {
 export function useDeleteDonation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: donationApi.remove,
+    mutationFn: ({ id, reason }) => donationApi.remove(id, reason),
     onSuccess: () => qc.invalidateQueries({ queryKey: donationKeys.all }),
   });
 }
@@ -43,6 +43,14 @@ export function useRestoreDonation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: donationApi.restore,
+    onSuccess: () => qc.invalidateQueries({ queryKey: donationKeys.all }),
+  });
+}
+
+export function usePermanentDeleteDonation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }) => donationApi.permanentDelete(id, reason),
     onSuccess: () => qc.invalidateQueries({ queryKey: donationKeys.all }),
   });
 }

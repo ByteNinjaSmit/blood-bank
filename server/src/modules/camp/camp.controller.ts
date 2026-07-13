@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { ValidateCamp } from './camp.validator';
 import { campService } from './camp.service';
 import { UnauthorizedError } from '@/shared/errors';
+import { extractEditReason } from '@/shared/utils/edit-reason';
 
 const actor = (req: Request): string => {
   if (!req.user) throw new UnauthorizedError();
@@ -22,7 +23,8 @@ export const campController = {
   async update(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = ValidateCamp.idParam(req);
-      ok(req, res, await campService.update(id, ValidateCamp.updateBody(req), actor(req)));
+      const editReason = extractEditReason(req);
+      ok(req, res, await campService.update(id, ValidateCamp.updateBody(req), actor(req), editReason));
     } catch (e) {
       next(e);
     }
@@ -30,7 +32,8 @@ export const campController = {
   async remove(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = ValidateCamp.idParam(req);
-      const data = await campService.remove(id, actor(req));
+      const { reason } = ValidateCamp.deleteReasonBody(req);
+      const data = await campService.remove(id, actor(req), reason);
       res.status(200).json({ success: true, data, requestId: req.id });
     } catch (e) {
       next(e);
@@ -62,7 +65,8 @@ export const campController = {
   },
   async campList(req: Request, res: Response, next: NextFunction) {
     try {
-      ok(req, res, await campService.campList());
+      const deletedOnly = req.query.deletedOnly === 'true';
+      ok(req, res, await campService.campList(deletedOnly));
     } catch (e) {
       next(e);
     }

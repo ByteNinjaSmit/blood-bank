@@ -3,6 +3,13 @@ import { AppError, ConflictError, NotFoundError } from '@/shared/errors';
 import { childLogger } from '@/core/logger';
 import { cached, invalidate } from '@/core/cache';
 import { withAudit } from '@/shared/utils/with-audit';
+import {
+  cascadeSoftDelete,
+  cascadeRestore,
+  runInCascadeTransaction,
+  newDeleteBatchId,
+} from '@/shared/utils/cascade-delete';
+import { donorCascadeNode } from '@/shared/cascade-registry';
 import type {
   CreateDonorInput,
   ListDonorsInput,
@@ -24,8 +31,9 @@ export interface DonorService {
   list(
     query: ListDonorsInput,
   ): Promise<{ items: DonorDto[]; total: number; page: number; pageSize: number }>;
-  remove(id: string, actorId: string): Promise<{ permanentlyDeleted: boolean }>;
+  remove(id: string, actorId: string, reason: string): Promise<{ permanentlyDeleted: boolean }>;
   restore(id: string, actorId: string): Promise<{ restored: boolean }>;
+  permanentDelete(id: string, actorId: string, reason: string): Promise<void>;
 }
 
 export function createDonorService(deps: { repo: DonorRepo }): DonorService {
@@ -90,46 +98,38 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
       return { items, total, page: query.page, pageSize: query.pageSize };
     },
 
-    async remove(id, actorId) {
+    async remove(id, actorId, reason) {
       const donor = await deps.repo.findById(id);
       if (!donor) throw new NotFoundError('Donor', id);
 
-      if (!donor.deletedAt) {
-        // First delete click: soft-delete only. Row stays visible (greyed
-        // out) in Master Register so the clinical record isn't lost.
-        await deps.repo.softDelete(id, actorId);
-        await invalidate(`donor:detail:${id}`);
-        log.warn({ donorId: id, actorId }, 'donor soft-deleted');
-        void withAudit(
-          { actorId },
-          { module: 'donor', action: 'DELETE', entityType: 'Donor', entityId: id, entityLabel: donor.donorId },
-          { deletedAt: null },
-          { deletedAt: new Date() },
-        );
+      if (donor.deletedAt) {
+        // Already soft-deleted (e.g. double-click) — idempotent no-op.
+        // Permanent removal now only happens via permanentDelete(), from
+        // the Recycle Bin.
         return { permanentlyDeleted: false };
       }
 
-      // Second delete click on an already soft-deleted donor: permanent,
-      // irreversible. Still refuse if donation history exists — hard
-      // deleting would orphan clinical records.
-      const hasDonations = await DonationModel.exists({ donor: id, deletedAt: null });
-      if (hasDonations) {
-        throw new AppError(
-          'DONOR_HAS_DONATIONS',
-          'Donor has existing donation records and cannot be permanently deleted',
-          409,
-        );
-      }
-      await deps.repo.delete(id);
+      const deleteBatchId = newDeleteBatchId();
+      await runInCascadeTransaction((session) =>
+        cascadeSoftDelete(donorCascadeNode, id, actorId, reason, deleteBatchId, session),
+      );
       await invalidate(`donor:detail:${id}`);
-      log.warn({ donorId: id, actorId }, 'donor permanently deleted');
+      log.warn({ donorId: id, actorId, deleteBatchId }, 'donor cascade soft-deleted');
       void withAudit(
         { actorId },
-        { module: 'donor', action: 'DELETE', entityType: 'Donor', entityId: id, entityLabel: donor.donorId, severity: 'critical' },
-        donor,
-        undefined,
+        {
+          module: 'donor',
+          action: 'DELETE',
+          entityType: 'Donor',
+          entityId: id,
+          entityLabel: donor.donorId,
+          severity: 'warning',
+          reason,
+        },
+        { deletedAt: null },
+        { deletedAt: new Date(), deleteBatchId },
       );
-      return { permanentlyDeleted: true };
+      return { permanentlyDeleted: false };
     },
 
     async restore(id, actorId) {
@@ -138,9 +138,9 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
       if (!donor.deletedAt) {
         return { restored: false };
       }
-      await deps.repo.restore(id, actorId);
+      await runInCascadeTransaction((session) => cascadeRestore(donorCascadeNode, id, actorId, session));
       await invalidate(`donor:detail:${id}`);
-      log.warn({ donorId: id, actorId }, 'donor restored');
+      log.warn({ donorId: id, actorId }, 'donor cascade restored');
       void withAudit(
         { actorId },
         { module: 'donor', action: 'UPDATE', entityType: 'Donor', entityId: id, entityLabel: donor.donorId },
@@ -148,6 +148,44 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
         { deletedAt: null },
       );
       return { restored: true };
+    },
+
+    async permanentDelete(id, actorId, reason) {
+      const donor = await deps.repo.findById(id);
+      if (!donor) throw new NotFoundError('Donor', id);
+      if (!donor.deletedAt) {
+        throw new ConflictError('Donor must be soft-deleted before it can be permanently deleted');
+      }
+      // Still refuse if active (non-deleted) donation history exists —
+      // hard-deleting the donor row while an active donation still
+      // references it would orphan that clinical record. The donor's own
+      // donations were already cascade-soft-deleted by remove(); this
+      // guards against donations created *after* the donor was deleted.
+      const hasActiveDonations = await DonationModel.exists({ donor: id, deletedAt: null });
+      if (hasActiveDonations) {
+        throw new AppError(
+          'DONOR_HAS_DONATIONS',
+          'Donor has active donation records and cannot be permanently deleted',
+          409,
+        );
+      }
+      await deps.repo.delete(id);
+      await invalidate(`donor:detail:${id}`);
+      log.warn({ donorId: id, actorId }, 'donor permanently deleted');
+      void withAudit(
+        { actorId },
+        {
+          module: 'donor',
+          action: 'DELETE',
+          entityType: 'Donor',
+          entityId: id,
+          entityLabel: donor.donorId,
+          severity: 'critical',
+          reason,
+        },
+        donor,
+        undefined,
+      );
     },
   };
 }

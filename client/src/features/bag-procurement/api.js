@@ -7,17 +7,21 @@ export const bagProcurementApi = {
     list:         (params)      => apiClient.get(`${V}/vendor`, { params }).then(unwrap),
     get:          (id)          => apiClient.get(`${V}/vendor/${id}`).then(unwrap),
     create:       (data)        => apiClient.post(`${V}/vendor`, data).then(unwrap),
-    update:       (id, data)    => apiClient.put(`${V}/vendor/${id}`, data).then(unwrap),
+    update:       (id, data, editReason) => apiClient.patch(`${V}/vendor/${id}`, { ...data, _editReason: editReason }).then(unwrap),
     updateStatus: (id, status)  => apiClient.patch(`${V}/vendor/${id}/status`, { approvalStatus: status }).then(unwrap),
-    remove:       (id)          => apiClient.delete(`${V}/vendor/${id}`).then(unwrap),
+    remove:       (id, reason)  => apiClient.delete(`${V}/vendor/${id}`, { data: { reason } }).then(unwrap),
+    restore:      (id)          => apiClient.post(`${V}/vendor/${id}/restore`).then(unwrap),
+    permanentDelete: (id, reason) => apiClient.delete(`${V}/vendor/${id}/permanent`, { data: { reason } }).then(unwrap),
   },
 
   purchaseOrder: {
     list:    (params)   => apiClient.get(`${V}/purchase-order`, { params }).then(unwrap),
     get:     (id)       => apiClient.get(`${V}/purchase-order/${id}`).then(unwrap),
     create:  (data)     => apiClient.post(`${V}/purchase-order`, data).then(unwrap),
-    update:  (id, data) => apiClient.patch(`${V}/purchase-order/${id}`, data).then(unwrap),
-    remove:  (id)       => apiClient.delete(`${V}/purchase-order/${id}`).then(unwrap),
+    update:  (id, data, editReason) => apiClient.patch(`${V}/purchase-order/${id}`, { ...data, _editReason: editReason }).then(unwrap),
+    remove:  (id, reason) => apiClient.delete(`${V}/purchase-order/${id}`, { data: { reason } }).then(unwrap),
+    restore: (id)        => apiClient.post(`${V}/purchase-order/${id}/restore`).then(unwrap),
+    permanentDelete: (id, reason) => apiClient.delete(`${V}/purchase-order/${id}/permanent`, { data: { reason } }).then(unwrap),
   },
 
   goodsReceipt: {

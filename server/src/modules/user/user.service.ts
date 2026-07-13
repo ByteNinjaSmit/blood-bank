@@ -94,7 +94,7 @@ export const userService = {
     return user;
   },
 
-  async update(id: string, input: UpdateUserInput, actorId: string): Promise<UserDto> {
+  async update(id: string, input: UpdateUserInput, actorId: string, editReason?: string): Promise<UserDto> {
     const existing = await userRepo.findByIdOrPublicId(id);
     if (!existing) throw new NotFoundError('User', id);
 
@@ -145,6 +145,7 @@ export const userService = {
         entityType: 'User',
         entityId: updated.id,
         changedFields: nonPasswordFields,
+        reason: editReason,
       });
     }
     await invalidate('user:*');
