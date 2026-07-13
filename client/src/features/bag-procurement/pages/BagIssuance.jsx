@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Syringe, X, Search } from 'lucide-react';
+import { Syringe, X, Search, RefreshCw } from 'lucide-react';
 import {
   useBagIssueList,
   useBagIssueDetail,
@@ -178,7 +178,7 @@ export default function BagIssuance() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
-  const { data, isLoading } = useBagIssueList({
+  const { data, isLoading, refetch, isFetching } = useBagIssueList({
     pageSize: 500,
     fromDate: dateFilterType === 'custom' && fromDate ? fromDate : undefined,
     toDate: dateFilterType === 'custom' && toDate ? toDate : undefined,
@@ -292,6 +292,16 @@ export default function BagIssuance() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
             <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
           </div>
         </div>

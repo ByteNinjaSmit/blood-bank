@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Loader2, Printer, FileBarChart } from 'lucide-react';
+import { Loader2, Printer, FileBarChart, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -38,7 +38,7 @@ export default function MonthlyReport() {
     setSearchParams({ month: String(nextMonth), year: String(nextYear) });
   };
 
-  const { data, isLoading, isError, error } = useMonthlyReport(month, year);
+  const { data, isLoading, isError, error, refetch, isFetching } = useMonthlyReport(month, year);
 
   const periodPicker = (
     <div className="flex items-center gap-2 print:hidden">
@@ -82,7 +82,19 @@ export default function MonthlyReport() {
               <p className="text-gray-500 text-sm">Monthly statutory report</p>
             </div>
           </div>
-          {periodPicker}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
+            {periodPicker}
+          </div>
         </div>
         <div className="flex items-center justify-center text-slate-500 gap-2 py-10">
           <Loader2 className="w-5 h-5 animate-spin" /> Loading monthly report...
@@ -104,7 +116,19 @@ export default function MonthlyReport() {
               <p className="text-gray-500 text-sm">Monthly statutory report</p>
             </div>
           </div>
-          {periodPicker}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
+            {periodPicker}
+          </div>
         </div>
         <Card className="border-red-200">
           <CardContent className="p-4 text-red-600 text-sm">
@@ -134,6 +158,16 @@ export default function MonthlyReport() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            title="Refresh"
+            aria-label="Refresh"
+            className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
           {periodPicker}
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="w-4 h-4 mr-2" /> Print

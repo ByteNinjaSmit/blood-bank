@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Warehouse, AlertTriangle } from 'lucide-react';
+import { Warehouse, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useBagStockList, useOpenBagStockBox } from '../queries';
 import { formatBloodBagQty } from '../utils/qtyHelper';
 import { toast } from 'sonner';
@@ -49,7 +49,7 @@ function isNearExpiry(dateStr) {
 
 
 export default function BagInventory() {
-  const { data, isLoading } = useBagStockList({});
+  const { data, isLoading, refetch, isFetching } = useBagStockList({});
   const openBoxMutation = useOpenBagStockBox();
 
   const [confirmOpenBoxId, setConfirmOpenBoxId] = useState(null);
@@ -152,6 +152,16 @@ export default function BagInventory() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
             <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
           </div>
         </div>

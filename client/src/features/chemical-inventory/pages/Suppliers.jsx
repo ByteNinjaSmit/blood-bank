@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Search, Truck } from 'lucide-react';
+import { Plus, X, Search, Truck, RefreshCw } from 'lucide-react';
 import { useSupplierList, useCreateSupplier, useUpdateSupplier, useDeleteSupplier } from '../queries';
 import { toast } from 'sonner';
 
@@ -11,7 +11,7 @@ export default function Suppliers() {
     name: '', contactPerson: '', phone: '', email: '', gstNumber: '', address: '',
   });
 
-  const { data: suppliers, isLoading } = useSupplierList();
+  const { data: suppliers, isLoading, isFetching, refetch } = useSupplierList();
   const createSupplier = useCreateSupplier();
   const updateSupplier = useUpdateSupplier();
   const deleteSupplier = useDeleteSupplier();
@@ -94,15 +94,27 @@ export default function Suppliers() {
             <p className="text-gray-500 text-sm">Chemical suppliers</p>
           </div>
         </div>
-        <button
-          onClick={() => {
-            setEditingSupplierId(null);
-            setShowAddDrawer(true);
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-red-800 text-white text-sm font-semibold rounded-lg hover:bg-red-900 shadow-sm transition-colors self-start"
-        >
-          <Plus className="w-4 h-4" /> Add Supplier
-        </button>
+        <div className="flex gap-3 self-start">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            title="Refresh"
+            aria-label="Refresh"
+            className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={() => {
+              setEditingSupplierId(null);
+              setShowAddDrawer(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-red-800 text-white text-sm font-semibold rounded-lg hover:bg-red-900 shadow-sm transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Add Supplier
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

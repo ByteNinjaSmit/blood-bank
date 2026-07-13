@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, AlertTriangle, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, AlertTriangle, Pencil, Trash2, X, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLotList, useDamageList, useCreateDamage, useUpdateDamage, useDeleteDamage } from '../queries';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
@@ -212,7 +212,7 @@ export default function DamagedStockTab() {
   const [editingDamage, setEditingDamage] = useState(null);
 
   const { data: lotsData } = useLotList({});
-  const { data: damages, isLoading } = useDamageList();
+  const { data: damages, isLoading, isFetching, refetch } = useDamageList();
 
   const createDamage = useCreateDamage();
   const updateDamage = useUpdateDamage();
@@ -279,6 +279,16 @@ export default function DamagedStockTab() {
   return (
     <div className="space-y-6">
       <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          title="Refresh"
+          aria-label="Refresh"
+          className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+        </button>
         <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
         <button
           onClick={() => setShowRegisterModal(true)}

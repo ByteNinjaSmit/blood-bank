@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Clock, AlertTriangle, Filter, Search, ChevronLeft, ChevronRight, Calendar, Package, X, Eye, Loader2 } from "lucide-react";
+import { Clock, AlertTriangle, Filter, Search, ChevronLeft, ChevronRight, Calendar, Package, X, Eye, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
@@ -400,14 +400,16 @@ const NearExpiry = () => {
                 <div className="text-xs text-gray-500">
                   Page {state.pagination.page} of {state.pagination.totalPages}
                 </div>
-                <Button 
-                  onClick={fetchNearExpiryComponents} 
-                  variant="outline" 
-                  size="sm" 
+                <button
+                  type="button"
+                  onClick={() => fetchNearExpiryComponents()}
                   disabled={state.isLoading}
+                  title="Refresh"
+                  aria-label="Refresh"
+                  className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {state.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
-                </Button>
+                  <RefreshCw className={`w-4 h-4 ${state.isLoading ? 'animate-spin' : ''}`} />
+                </button>
               </div>
             </div>
           </CardHeader>

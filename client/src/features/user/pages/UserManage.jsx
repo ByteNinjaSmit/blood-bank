@@ -310,7 +310,7 @@ export default function UserManage() {
   return (
     <div className="p-4 md:p-6 space-y-4">
       {/* Header */}
-      <Header onRefresh={loadUsers} onNew={openCreate} canCreate={canCreate} />
+      <Header onRefresh={loadUsers} onNew={openCreate} canCreate={canCreate} isRefreshing={loading} />
 
       <Filters
         search={search}

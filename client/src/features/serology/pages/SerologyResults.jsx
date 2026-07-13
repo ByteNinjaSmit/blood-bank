@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { apiClient } from "@/core/api-client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Microscope, Search, Calendar, X, Filter, ChevronLeft, ChevronRight, Pencil, Save } from "lucide-react";
+import { Loader2, Microscope, Search, Calendar, X, Filter, ChevronLeft, ChevronRight, Pencil, Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/store/auth";
@@ -331,9 +331,16 @@ const SerologyResults = () => {
                     <SelectItem value="asc">Oldest First</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button onClick={() => fetchBags(pagination.page)} variant="outline" size="sm" disabled={isLoading} className="h-8 px-2">
-                  <Loader2 className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
-                </Button>
+                <button
+                  type="button"
+                  onClick={() => fetchBags(pagination.page)}
+                  disabled={isLoading}
+                  title="Refresh"
+                  aria-label="Refresh"
+                  className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
               </div>
             </div>
 

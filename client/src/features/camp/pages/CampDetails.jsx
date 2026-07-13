@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Phone, Mail, Users, Calendar, Droplets, Plus, Activity, Clock, ArrowLeft, Trash2, FolderOpen, FileSpreadsheet, ChevronDown, Loader2 } from 'lucide-react';
+import { MapPin, Phone, Mail, Users, Calendar, Droplets, Plus, Activity, Clock, ArrowLeft, Trash2, FolderOpen, FileSpreadsheet, ChevronDown, Loader2, RefreshCw } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
@@ -17,7 +17,7 @@ const CampDetails = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const campId = searchParams.get('id');
-  const { data: camp, isLoading: loading, error: queryError } = useCampDetail(campId);
+  const { data: camp, isLoading: loading, isFetching, error: queryError, refetch } = useCampDetail(campId);
   const { user } = useAuth();
   const [drafts, setDrafts] = React.useState([]);
   const [showDraftsModal, setShowDraftsModal] = React.useState(false);
@@ -238,6 +238,16 @@ const CampDetails = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => refetch()}
+                disabled={isFetching}
+                title="Refresh"
+                aria-label="Refresh"
+                className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+              </button>
               <Button
                 variant="outline"
                 onClick={() => navigate(`/camp-donors?id=${campId}`)}

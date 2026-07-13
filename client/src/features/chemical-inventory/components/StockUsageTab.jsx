@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FlaskConical, Play, CheckCircle } from 'lucide-react';
+import { Search, FlaskConical, Play, CheckCircle, RefreshCw } from 'lucide-react';
 import { useLotList, useUpdateUsage } from '../queries';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
@@ -65,7 +65,7 @@ export default function StockUsageTab() {
   const [statusFilter, setStatusFilter] = useState('');
   const [finishModalLot, setFinishModalLot] = useState(null);
 
-  const { data: lotsData, isLoading } = useLotList({
+  const { data: lotsData, isLoading, isFetching, refetch } = useLotList({
     search: searchQuery || undefined,
     status: statusFilter === 'Expired' ? 'Expired' : undefined,
   });
@@ -164,7 +164,17 @@ export default function StockUsageTab() {
   return (
     <div className="space-y-6">
       {/* Toolbar */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          title="Refresh"
+          aria-label="Refresh"
+          className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+        </button>
         <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
       </div>
 

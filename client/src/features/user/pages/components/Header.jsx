@@ -1,7 +1,7 @@
 import React from "react";
-import { RefreshCcw, Plus, UserCog } from "lucide-react";
+import { RefreshCw, Plus, UserCog } from "lucide-react";
 
-export default function Header({ onRefresh, onNew, canCreate }) {
+export default function Header({ onRefresh, onNew, canCreate, isRefreshing }) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -14,8 +14,15 @@ export default function Header({ onRefresh, onNew, canCreate }) {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <button onClick={onRefresh} className="inline-flex items-center gap-2 px-3 py-2 rounded-md border bg-white hover:bg-slate-50">
-          <RefreshCcw className="w-4 h-4" /> Refresh
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={isRefreshing}
+          title="Refresh"
+          aria-label="Refresh"
+          className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
         </button>
         {canCreate && (
           <button onClick={onNew} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-red-700 text-white hover:bg-red-800 shadow-sm">

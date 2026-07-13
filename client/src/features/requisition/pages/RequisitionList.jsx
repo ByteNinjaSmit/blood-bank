@@ -10,7 +10,7 @@ import RequisitionPrintTemplate from './components/RequisitionPrintTemplate';
 import RequisitionLabelTemplate from './components/RequisitionLabelTemplate';
 import RequisitionPrintService from '@/services/requisitionPrintService';
 import { RejectRequestModal } from '@/components/shared';
-import { Loader2, X, ClipboardList } from 'lucide-react';
+import { Loader2, X, ClipboardList, RefreshCw } from 'lucide-react';
 import { exportRequisitionsExcel } from '@/features/requisition/requisitionExcelExport';
 import { COMPONENT_TYPES } from '@/constants/component-types';
 
@@ -1024,6 +1024,16 @@ export default function RequisitionList() {
           </div>
           <div className="flex items-center justify-between mt-3">
             <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => fetchList()}
+                disabled={loading}
+                title="Refresh"
+                aria-label="Refresh"
+                className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
               <button type="button" onClick={applyFilters} className="px-4 py-2 rounded-lg bg-orange-800 text-white hover:bg-orange-900" disabled={loading}>Apply</button>
               <button type="button" onClick={resetFilters} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50" disabled={loading}>Reset</button>
               <button type="button" onClick={exportCsv} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50" disabled={loading}>Export CSV</button>

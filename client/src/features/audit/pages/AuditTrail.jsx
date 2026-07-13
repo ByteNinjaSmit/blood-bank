@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Shield, AlertTriangle } from 'lucide-react';
+import { Shield, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/store/auth';
 import { useAuditSearch } from '../queries';
 import { auditApi } from '../api';
@@ -144,7 +144,7 @@ export default function AuditTrail() {
     setPage(1);
   };
 
-  const { data, isLoading, isError } = useAuditSearch(filters, page, limit);
+  const { data, isLoading, isFetching, isError, refetch } = useAuditSearch(filters, page, limit);
   const rows = useMemo(() => data?.data || [], [data]);
   const groups = useMemo(() => groupAuditRows(rows), [rows]);
   const pagination = data?.pagination || { totalPages: 1, total: 0 };
@@ -214,7 +214,19 @@ export default function AuditTrail() {
             </p>
           </div>
         </div>
-        <ExportExcelDropdown onExport={handleExport} isLoading={exporting} />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            title="Refresh"
+            aria-label="Refresh"
+            className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
+          <ExportExcelDropdown onExport={handleExport} isLoading={exporting} />
+        </div>
       </div>
 
       <AuditFilterBar filters={filters} onChange={handleFilterChange} modules={MODULE_OPTIONS} />

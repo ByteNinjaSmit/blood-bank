@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState, useMemo } from "react"
-import { Plus, Eye, Edit, Trash2, Filter, X, Search, ChevronDown, MapPin, Users, Phone, Calendar, ArrowUpDown, FileSpreadsheet } from "lucide-react"
+import { Plus, Eye, Edit, Trash2, Filter, X, Search, ChevronDown, MapPin, Users, Phone, Calendar, ArrowUpDown, FileSpreadsheet, RefreshCw } from "lucide-react"
 import { useNavigate, useLocation, Link } from "react-router-dom"
 import { apiClient } from "@/core/api-client"
 import { toast } from "sonner"
@@ -281,6 +281,16 @@ const CampList = ({ OnBack }) => {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => fetchCamps()}
+            disabled={loading}
+            title="Refresh"
+            aria-label="Refresh"
+            className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
           <button
             type="button"
             onClick={handleExportExcel}

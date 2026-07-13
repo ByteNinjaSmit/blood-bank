@@ -12,12 +12,13 @@ import {
   Plus,
   TrendingUp,
   LayoutDashboard,
+  RefreshCw,
 } from 'lucide-react';
 import { useDashboardStats } from '../queries';
 
 export default function ChemicalDashboard() {
   const navigate = useNavigate();
-  const { data: stats, isLoading, error } = useDashboardStats();
+  const { data: stats, isLoading, isFetching, error, refetch } = useDashboardStats();
 
   if (isLoading) {
     return (
@@ -51,6 +52,16 @@ export default function ChemicalDashboard() {
           </div>
         </div>
         <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            title="Refresh"
+            aria-label="Refresh"
+            className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
           <button
             onClick={() => navigate('/chemical-inventory/purchase')}
             className="inline-flex items-center gap-2 px-4 py-2 bg-red-800 text-white text-sm font-semibold rounded-lg hover:bg-red-900 shadow-sm transition-colors"

@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
-import { Loader2, PackageCheck, Plus, Trash2, Warehouse, MapPin, Eye, ArrowLeftRight, Printer } from "lucide-react";
+import { Loader2, PackageCheck, Plus, Trash2, Warehouse, MapPin, Eye, ArrowLeftRight, Printer, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import CustomModal from "@/components/CustomModal";
 import RegisterExportDropdown from "@/components/shared/RegisterExportDropdown";
@@ -659,6 +659,21 @@ const Issue = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (mainTab === 'storage') fetchStorageBags(storageSubTab);
+                else if (mainTab === 'disease') fetchThalassemia(thalPagination.page);
+                else if (mainTab === 'bulkTransfer') fetchBulkTransfers(bulkPagination.page);
+                else fetchRows(pagination.page);
+              }}
+              disabled={mainTab === 'storage' ? storageLoading : mainTab === 'disease' ? thalLoading : mainTab === 'bulkTransfer' ? bulkLoading : isLoading}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${(mainTab === 'storage' ? storageLoading : mainTab === 'disease' ? thalLoading : mainTab === 'bulkTransfer' ? bulkLoading : isLoading) ? 'animate-spin' : ''}`} />
+            </button>
             <Button onClick={() => { setStorageOpen(true); fetchAvailableUnits(); }} className="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white shadow-sm flex items-center gap-1.5 h-10 px-4 rounded-lg">
               <Warehouse className="w-4 h-4" /> Send to Storage
             </Button>

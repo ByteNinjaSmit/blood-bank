@@ -490,10 +490,16 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-                {isFetching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                Refresh
-              </Button>
+              <button
+                type="button"
+                onClick={() => refetch()}
+                disabled={isFetching}
+                title="Refresh"
+                aria-label="Refresh"
+                className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+              </button>
               <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={exporting}>
                 {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />}
                 Export to Excel

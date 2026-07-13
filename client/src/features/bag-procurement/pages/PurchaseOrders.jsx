@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, X, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { FileText, Plus, X, ChevronDown, ChevronUp, Search, RefreshCw } from 'lucide-react';
 import {
   usePOList,
   useCreatePO,
@@ -330,7 +330,7 @@ export default function PurchaseOrders() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
-  const { data, isLoading } = usePOList({
+  const { data, isLoading, refetch, isFetching } = usePOList({
     search: search || undefined,
     vendorId: vendorFilter || undefined,
     from: fromDate || undefined,
@@ -407,6 +407,16 @@ export default function PurchaseOrders() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
             <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
             <button onClick={() => { setEditPO(null); setShowDrawer(true); }}
               className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">

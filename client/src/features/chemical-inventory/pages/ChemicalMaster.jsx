@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Search, Settings, FlaskConical } from 'lucide-react';
+import { Plus, X, Search, Settings, FlaskConical, RefreshCw } from 'lucide-react';
 import {
   useChemicalListWithStock,
   useCategoryList,
@@ -36,7 +36,7 @@ export default function ChemicalMaster() {
     reorderLevel: 0,
   });
 
-  const { data: chemicals, isLoading: loadingChems } = useChemicalListWithStock();
+  const { data: chemicals, isLoading: loadingChems, isFetching: fetchingChems, refetch: refetchChems } = useChemicalListWithStock();
   const { data: categories } = useCategoryList();
   const { data: manufacturers } = useManufacturerList();
   
@@ -141,6 +141,16 @@ export default function ChemicalMaster() {
           </div>
         </div>
         <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => refetchChems()}
+            disabled={fetchingChems}
+            title="Refresh"
+            aria-label="Refresh"
+            className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${fetchingChems ? 'animate-spin' : ''}`} />
+          </button>
           <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
           {isAdmin && (
             <button

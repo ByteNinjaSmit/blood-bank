@@ -13,7 +13,7 @@ const number = (v) => (typeof v === "number" ? v : 0);
 
 export default function CampReports() {
   const navigate = useNavigate();
-  const { data, isLoading: loading, error: queryError } = useCampMis();
+  const { data, isLoading: loading, isFetching, error: queryError, refetch } = useCampMis();
   const camps = useMemo(() => data ?? [], [data]);
   const error = queryError?.message;
 
@@ -92,6 +92,16 @@ export default function CampReports() {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
             <Button
               variant="outline"
               size="sm"

@@ -3,7 +3,7 @@ import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Microscope, TestTube } from "lucide-react";
+import { Loader2, Microscope, TestTube, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { formatDateTime } from "@/lib/format-date";
@@ -196,6 +196,16 @@ const Serology = () => {
           <div className="p-4 flex items-center justify-between border-b">
             <div className="text-sm text-gray-600">{pagination.total} bag(s) found</div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fetchBags(pagination.page)}
+                disabled={isLoading}
+                title="Refresh"
+                aria-label="Refresh"
+                className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              </button>
               <input
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPagination(p => ({...p, page: 1})); }}
@@ -224,9 +234,6 @@ const Serology = () => {
                 <option value="desc">Newest First</option>
                 <option value="asc">Oldest First</option>
               </select>
-              <Button onClick={() => fetchBags(pagination.page)} variant="outline" size="sm" disabled={isLoading}>
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
-              </Button>
             </div>
           </div>
 

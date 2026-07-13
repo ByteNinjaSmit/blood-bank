@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RotateCcw, Users, Droplets, Building2, Home, Truck, Hospital as HospitalIcon, AlertTriangle, Trash2, Tent } from 'lucide-react';
+import { RotateCcw, Users, Droplets, Building2, Home, Truck, Hospital as HospitalIcon, AlertTriangle, Trash2, Tent, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDonorList, useRestoreDonor, usePermanentDeleteDonor } from '@/features/donor/queries';
 import { useDonationList, useRestoreDonation, usePermanentDeleteDonation } from '@/features/donation/queries';
@@ -183,6 +183,23 @@ export default function RecycleBin() {
     (activeTab === 'camp' && campQuery.isError) ||
     (activeTab === 'affected' && affectedQuery.isError);
 
+  const isFetching =
+    (activeTab === 'donor' && donorQuery.isFetching) ||
+    (activeTab === 'donation' && donationQuery.isFetching) ||
+    (activeTab === 'vendor' && vendorQuery.isFetching) ||
+    (activeTab === 'hospital' && hospitalQuery.isFetching) ||
+    (activeTab === 'camp' && campQuery.isFetching) ||
+    (activeTab === 'affected' && affectedQuery.isFetching);
+
+  const refetchActive = () => {
+    if (activeTab === 'donor') donorQuery.refetch();
+    else if (activeTab === 'donation') donationQuery.refetch();
+    else if (activeTab === 'vendor') vendorQuery.refetch();
+    else if (activeTab === 'hospital') hospitalQuery.refetch();
+    else if (activeTab === 'camp') campQuery.refetch();
+    else if (activeTab === 'affected') affectedQuery.refetch();
+  };
+
   const RestoreButton = ({ onClick, label = 'Recover' }) => (
     <button
       onClick={onClick}
@@ -221,14 +238,26 @@ export default function RecycleBin() {
       {/* Page Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-3">
-            <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
-              <RotateCcw className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
+                <RotateCcw className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Recycle Bin</h1>
+                <p className="text-gray-500 text-sm">Deleted records across the system — restore them, or view records preserved (not deleted) because they already participate in a completed workflow.</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Recycle Bin</h1>
-              <p className="text-gray-500 text-sm">Deleted records across the system — restore them, or view records preserved (not deleted) because they already participate in a completed workflow.</p>
-            </div>
+            <button
+              type="button"
+              onClick={refetchActive}
+              disabled={isFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
           </div>
 
           {/* Tabs */}

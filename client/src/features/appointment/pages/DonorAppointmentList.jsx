@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarCheck, Search, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarCheck, Search, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppointmentList, useAppointmentSummary, useUpdateAppointmentStatus } from '../queries';
 import { appointmentApi } from '../api';
@@ -92,7 +92,7 @@ export default function DonorAppointmentList() {
   const [selected, setSelected] = useState(null);
   const limit = 20;
 
-  const { data, isLoading } = useAppointmentList({ page, limit, status: status || undefined, search: search || undefined });
+  const { data, isLoading, isFetching, refetch } = useAppointmentList({ page, limit, status: status || undefined, search: search || undefined });
   const { data: summary } = useAppointmentSummary();
   const updateStatus = useUpdateAppointmentStatus();
 
@@ -136,7 +136,19 @@ export default function DonorAppointmentList() {
               <p className="text-gray-500 text-sm">Public Site Form Submissions</p>
             </div>
           </div>
-          <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+          </div>
         </div>
       </div>
 

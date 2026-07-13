@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Search, Eye, Edit, Trash2, Download, Activity, AlertTriangle, X, ArrowUpDown } from 'lucide-react';
+import { Users, Plus, Search, Eye, Edit, Trash2, Download, Activity, AlertTriangle, X, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import DonorForm from '@/features/donor/components/DonorForm';
@@ -278,6 +278,16 @@ const CampDonorManagement = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fetchCampDonors(campId)}
+              disabled={loading}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
             <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
             <button
               onClick={() => setShowCreateModal(true)}

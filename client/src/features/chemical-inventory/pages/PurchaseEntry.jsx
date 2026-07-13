@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, ArrowLeft, Trash2, X, CreditCard, Calendar, ShoppingBag, FileText, CheckCircle2, AlertCircle, Clock, Upload, Image as ImageIcon, AlertTriangle, ShoppingCart } from 'lucide-react';
+import { Plus, ArrowLeft, Trash2, X, CreditCard, Calendar, ShoppingBag, FileText, CheckCircle2, AlertCircle, Clock, Upload, Image as ImageIcon, AlertTriangle, ShoppingCart, RefreshCw } from 'lucide-react';
 import {
   useChemicalList,
   useSupplierList,
@@ -113,7 +113,7 @@ export default function PurchaseEntry() {
   const { data: chemicals } = useChemicalList();
   const { data: suppliers } = useSupplierList();
   const { data: manufacturers } = useManufacturerList();
-  const { data: purchases, isLoading: purchasesLoading } = usePurchaseList();
+  const { data: purchases, isLoading: purchasesLoading, isFetching: purchasesFetching, refetch: refetchPurchases } = usePurchaseList();
 
   const createLot = useCreateLot();
   const updatePaymentsMutation = useUpdatePurchasePayments();
@@ -552,6 +552,16 @@ export default function PurchaseEntry() {
 
         {!showForm && (
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refetchPurchases()}
+              disabled={purchasesFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${purchasesFetching ? 'animate-spin' : ''}`} />
+            </button>
             <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
             <button
               onClick={() => setShowForm(true)}

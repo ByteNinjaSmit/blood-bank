@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Droplets, Plus } from 'lucide-react';
+import { Droplets, Plus, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DonationDetails from '../components/DonationDetails';
 import Modal from '@/components/shared/Modal';
@@ -33,6 +33,16 @@ export default function MasterDonations() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => reg.refetch()}
+                disabled={reg.isFetching}
+                title="Refresh"
+                aria-label="Refresh"
+                className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-4 h-4 ${reg.isFetching ? 'animate-spin' : ''}`} />
+              </button>
               <RegisterExportDropdown onExport={reg.handleExportRegister} isLoading={reg.excelLoading} registers={DONATION_REGISTERS} />
               <button
                 onClick={() => navigate('/master-register/donor-creation')}

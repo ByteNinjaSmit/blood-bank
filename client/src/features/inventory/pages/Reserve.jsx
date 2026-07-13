@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
-import { Loader2, Hand, X } from "lucide-react";
+import { Loader2, Hand, X, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { COMPONENT_TYPES, SEX_TYPES } from "@/features/requisition/pages/constants";
 import CustomModal from "@/components/CustomModal";
@@ -230,9 +230,16 @@ const Reserve = () => {
                 </select>
               </div>
               <div className="flex items-end gap-2">
-                <Button onClick={()=>fetchRows(pagination.page)} variant="outline" size="sm" className="h-10" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
-                </Button>
+                <button
+                  type="button"
+                  onClick={() => fetchRows(pagination.page)}
+                  disabled={isLoading}
+                  title="Refresh"
+                  aria-label="Refresh"
+                  className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
                 <Button onClick={handleAdd} size="sm" className="h-10" disabled={isLoading}>
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Add`}
                 </Button>

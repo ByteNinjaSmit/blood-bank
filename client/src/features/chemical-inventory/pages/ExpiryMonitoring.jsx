@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useLotList } from '../queries';
-import { Calendar, Search, AlertCircle, ShieldAlert, CheckCircle, ShieldCheck, Clock } from 'lucide-react';
+import { Calendar, Search, AlertCircle, ShieldAlert, CheckCircle, ShieldCheck, Clock, RefreshCw } from 'lucide-react';
 
 export default function ExpiryMonitoring() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expiryFilter, setExpiryFilter] = useState('');
 
-  const { data: lotsData, isLoading } = useLotList({
+  const { data: lotsData, isLoading, isFetching, refetch } = useLotList({
     search: searchQuery || undefined,
     status: expiryFilter || undefined,
   });
@@ -55,14 +55,26 @@ export default function ExpiryMonitoring() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
-          <Clock className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
+            <Clock className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Expiry Monitoring Dashboard</h1>
+            <p className="text-gray-500 text-sm">Chemical expiry tracking</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Expiry Monitoring Dashboard</h1>
-          <p className="text-gray-500 text-sm">Chemical expiry tracking</p>
-        </div>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          title="Refresh"
+          aria-label="Refresh"
+          className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       {/* Filter and Search Panel */}

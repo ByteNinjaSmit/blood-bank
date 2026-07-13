@@ -334,13 +334,25 @@ const ListHospital = () => {
               <p className="text-gray-500 text-sm">Hospital & consignee registry</p>
             </div>
           </div>
-          <Button
-            onClick={() => navigate('/hospital/add')}
-            className="flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add Hospital
-          </Button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fetchHospitals()}
+              disabled={loading}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <Button
+              onClick={() => navigate('/hospital/add')}
+              className="flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Hospital
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -446,15 +458,6 @@ const ListHospital = () => {
                 size="sm"
               >
                 Clear Filters
-              </Button>
-              <Button
-                variant="outline"
-                onClick={fetchHospitals}
-                size="sm"
-                disabled={loading}
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
               </Button>
             </div>
             

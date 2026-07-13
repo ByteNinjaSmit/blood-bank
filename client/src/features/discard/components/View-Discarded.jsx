@@ -1,6 +1,6 @@
 import React, { useEffect } from "react"
 import { useState } from "react"
-import { AlertTriangle, Search, Calendar, X, ChevronLeft, ChevronRight, Loader2, Layers, Plus, FileText, Image as ImageIcon } from "lucide-react"
+import { AlertTriangle, Search, Calendar, X, ChevronLeft, ChevronRight, Loader2, Layers, Plus, FileText, Image as ImageIcon, RefreshCw } from "lucide-react"
 import { apiClient } from "@/core/api-client"
 import { useAuth } from "@/store/auth"
 import MasterLoader from "@/components/Loader"
@@ -800,9 +800,16 @@ const ViewDiscarded = () => {
                                             <SelectItem value="asc">Oldest First</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <Button onClick={getItems} variant="outline" size="sm" className="h-8 px-2" disabled={isLoading}>
-                                        <Loader2 className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
-                                    </Button>
+                                    <button
+                                        type="button"
+                                        onClick={() => getItems()}
+                                        disabled={isLoading}
+                                        title="Refresh"
+                                        aria-label="Refresh"
+                                        className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                    </button>
                                 </div>
                             </div>
 
@@ -930,9 +937,16 @@ const ViewDiscarded = () => {
                     <div className="bg-white rounded-xl shadow-lg border border-red-100 overflow-hidden">
                         <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
                             <div className="text-sm font-semibold text-gray-700">Batch Discards ({batchDiscards.length})</div>
-                            <Button onClick={getBatchDiscards} variant="outline" size="sm" className="h-8 px-2" disabled={isBatchLoading}>
-                                <Loader2 className={`w-3.5 h-3.5 ${isBatchLoading ? "animate-spin" : ""}`} />
-                            </Button>
+                            <button
+                                type="button"
+                                onClick={() => getBatchDiscards()}
+                                disabled={isBatchLoading}
+                                title="Refresh"
+                                aria-label="Refresh"
+                                className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${isBatchLoading ? 'animate-spin' : ''}`} />
+                            </button>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-100">

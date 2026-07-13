@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, TestTube, Loader2, Filter, Search, ChevronLeft, ChevronRight, Calendar, Package, AlertTriangle, X, Eye, Pencil } from "lucide-react";
+import { ArrowLeft, TestTube, Loader2, Filter, Search, ChevronLeft, ChevronRight, Calendar, Package, AlertTriangle, X, Eye, Pencil, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
@@ -556,14 +556,16 @@ const ComponentsList = () => {
                 <div className="text-xs text-gray-500">
                   Page {state.pagination.page} of {state.pagination.totalPages}
                 </div>
-                <Button 
-                  onClick={fetchComponents} 
-                  variant="outline" 
-                  size="sm" 
+                <button
+                  type="button"
+                  onClick={() => fetchComponents()}
                   disabled={state.isLoading}
+                  title="Refresh"
+                  aria-label="Refresh"
+                  className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {state.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
-                </Button>
+                  <RefreshCw className={`w-4 h-4 ${state.isLoading ? 'animate-spin' : ''}`} />
+                </button>
               </div>
             </div>
           </CardHeader>

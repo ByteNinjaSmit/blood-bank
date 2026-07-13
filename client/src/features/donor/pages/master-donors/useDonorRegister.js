@@ -121,7 +121,7 @@ export function useDonorRegister(activeTab) {
   // For 'all' tab we don't filter by source; for others we pass the source.
   const sourceParam = (activeTab === 'all' || activeTab === 'deferral') ? undefined : activeTab;
 
-  const { data, isLoading, isError } = useDonorList({
+  const { data, isLoading, isError, refetch, isFetching } = useDonorList({
     source: sourceParam,
     page,
     pageSize: PAGE_SIZE,
@@ -157,7 +157,7 @@ export function useDonorRegister(activeTab) {
     // export
     excelLoading, handleExportRegister,
     // data
-    items, total, totalPages, page, isLoading, isError, eligible, deferred,
+    items, total, totalPages, page, isLoading, isError, eligible, deferred, refetch, isFetching,
     // modals + crud
     showEditModal, showDetailsModal, selectedDonor, loading,
     handleEditDonor, handleUpdateDonor, handleViewDonor, handleDelete,

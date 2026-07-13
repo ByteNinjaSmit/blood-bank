@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Truck, Plus, X, CheckCircle, Ban, Trash2, Users, Search } from 'lucide-react';
+import { Truck, Plus, X, CheckCircle, Ban, Trash2, Users, Search, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useVendorList,
@@ -155,7 +155,7 @@ export default function VendorManagement() {
   const [editVendor, setEditVendor] = useState(null);
   const [search, setSearch] = useState('');
   const [approvalStatus, setApprovalStatus] = useState('');
-  const { data, isLoading } = useVendorList({ search: search || undefined, approvalStatus: approvalStatus || undefined });
+  const { data, isLoading, refetch, isFetching } = useVendorList({ search: search || undefined, approvalStatus: approvalStatus || undefined });
   const updateStatus = useUpdateVendorStatus();
   const deleteVendor = useDeleteVendor();
 
@@ -210,6 +210,16 @@ export default function VendorManagement() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
             <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
             <button
               onClick={() => setShowDrawer(true)}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { GiCampingTent } from 'react-icons/gi';
-import { ArrowLeft, MapPin, Calendar, Users, Search } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Users, Search, RefreshCw } from 'lucide-react';
 import { useCampList } from '@/features/camp/queries';
 import { useVoluntaryDonations } from '@/features/camp/queries';
 import { formatDate, formatDateTime } from '@/lib/format-date';
@@ -48,7 +48,7 @@ function CampCard({ camp, phase, onClick }) {
 }
 
 function CampAppointmentsTable({ camp, onBack }) {
-  const { data, isLoading } = useVoluntaryDonations({ campId: camp._id, limit: 200, sortBy: 'createdAt', sortOrder: 'desc' });
+  const { data, isLoading, isFetching, refetch } = useVoluntaryDonations({ campId: camp._id, limit: 200, sortBy: 'createdAt', sortOrder: 'desc' });
   const items = data?.items ?? [];
   const [excelLoading, setExcelLoading] = useState(false);
 
@@ -82,6 +82,16 @@ function CampAppointmentsTable({ camp, onBack }) {
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Users className="w-4 h-4" /> {items.length} appointment(s)
           </div>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            title="Refresh"
+            aria-label="Refresh"
+            className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
           <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
         </div>
       </div>
@@ -125,7 +135,7 @@ function CampAppointmentsTable({ camp, onBack }) {
 }
 
 export default function CampDonorAppointmentList() {
-  const { data: campsData, isLoading } = useCampList();
+  const { data: campsData, isLoading, isFetching, refetch } = useCampList();
   const [search, setSearch] = useState('');
   const [selectedCamp, setSelectedCamp] = useState(null);
 
@@ -155,6 +165,18 @@ export default function CampDonorAppointmentList() {
               <p className="text-gray-500 text-sm">Camp-wise Public Site Appointments</p>
             </div>
           </div>
+          {!selectedCamp && (
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
+          )}
         </div>
       </div>
 

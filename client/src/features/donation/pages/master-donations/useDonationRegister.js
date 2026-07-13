@@ -60,7 +60,7 @@ export function useDonationRegister(activeTab, setActiveTab) {
   const sourceParam = activeTab === 'all' ? undefined : activeTab;
 
   // Fetch server-side for inhouse/camp tabs (paginated); fetch all for 'all' tab (client-side filtered)
-  const { data, isLoading, isError } = useDonationList(
+  const { data, isLoading, isError, refetch, isFetching } = useDonationList(
     activeTab === 'all'
       ? { page: 1, pageSize: 200 }
       : { source: sourceParam, page: 1, pageSize: 200 }
@@ -202,7 +202,7 @@ export function useDonationRegister(activeTab, setActiveTab) {
     excelLoading, handleExportRegister,
     // data
     displayedItems, filteredItems, totalCount, fitCount, unfitCount,
-    currentPage, setCurrentPage, totalPages, isLoading, isError,
+    currentPage, setCurrentPage, totalPages, isLoading, isError, refetch, isFetching,
     // timeline + view + delete
     trackId, setTrackId, detail, detailLoading,
     viewDonationId, setViewDonationId, viewDetail, viewDetailLoading,

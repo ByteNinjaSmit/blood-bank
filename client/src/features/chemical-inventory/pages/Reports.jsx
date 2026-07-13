@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSupplierList, useMonthlyReport, useSupplierReport, useExpiryReport, useConsumptionReport } from '../queries';
-import { BarChart3, Calendar, FileText, ShoppingBag, Download, ArrowRight } from 'lucide-react';
+import { BarChart3, Calendar, FileText, ShoppingBag, Download, ArrowRight, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Reports() {
@@ -21,14 +21,27 @@ export default function Reports() {
   const { data: suppliers } = useSupplierList();
 
   // Queries
-  const { data: monthlyData, isLoading: loadingMonthly } = useMonthlyReport(
+  const { data: monthlyData, isLoading: loadingMonthly, isFetching: fetchingMonthly, refetch: refetchMonthly } = useMonthlyReport(
     activeTab === 'monthly' ? monthlyFilter : null
   );
-  const { data: supplierData, isLoading: loadingSupplier } = useSupplierReport(
+  const { data: supplierData, isLoading: loadingSupplier, isFetching: fetchingSupplier, refetch: refetchSupplier } = useSupplierReport(
     activeTab === 'supplier' ? supplierFilter : null
   );
-  const { data: expiryData, isLoading: loadingExpiry } = useExpiryReport();
-  const { data: consumptionData, isLoading: loadingConsumption } = useConsumptionReport();
+  const { data: expiryData, isLoading: loadingExpiry, isFetching: fetchingExpiry, refetch: refetchExpiry } = useExpiryReport();
+  const { data: consumptionData, isLoading: loadingConsumption, isFetching: fetchingConsumption, refetch: refetchConsumption } = useConsumptionReport();
+
+  const isFetchingActive =
+    (activeTab === 'monthly' && fetchingMonthly) ||
+    (activeTab === 'supplier' && fetchingSupplier) ||
+    (activeTab === 'expiry' && fetchingExpiry) ||
+    (activeTab === 'consumption' && fetchingConsumption);
+
+  const refetchActive = () => {
+    if (activeTab === 'monthly') refetchMonthly();
+    else if (activeTab === 'supplier') refetchSupplier();
+    else if (activeTab === 'expiry') refetchExpiry();
+    else if (activeTab === 'consumption') refetchConsumption();
+  };
 
   const handlePrint = () => {
     window.print();
@@ -71,6 +84,16 @@ export default function Reports() {
           </div>
         </div>
         <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={refetchActive}
+            disabled={isFetchingActive}
+            title="Refresh"
+            aria-label="Refresh"
+            className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetchingActive ? 'animate-spin' : ''}`} />
+          </button>
           <button
             onClick={handlePrint}
             className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 shadow-sm transition-colors"

@@ -500,6 +500,16 @@ const Stock = () => {
 
               {/* Actions */}
               <div className="flex items-center gap-2 border-l border-gray-200 pl-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => fetchRows(pagination.page)}
+                  disabled={isLoading}
+                  title="Refresh"
+                  aria-label="Refresh"
+                  className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
                 {(search || componentType || status !== "in-stock" || bloodGroup || rh || expiryFrom || expiryTo || source !== "all") && (
                   <button
                     onClick={() => {
@@ -514,9 +524,6 @@ const Stock = () => {
                     <X className="w-3 h-3" />
                   </button>
                 )}
-                <Button onClick={()=>fetchRows(pagination.page)} variant="outline" size="sm" className="h-8 w-8 p-0" disabled={isLoading}>
-                    {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                </Button>
                 <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
               </div>
             </div>

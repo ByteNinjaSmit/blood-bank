@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ClipboardCheck, Plus, X, Upload, FileText, Image as ImageIcon, AlertTriangle } from 'lucide-react';
+import { ClipboardCheck, Plus, X, Upload, FileText, Image as ImageIcon, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useBagInspectionList, useCreateBagInspection, useUpdateBagInspectionReport } from '../queries';
 import { useGRNList } from '../queries';
 import { useDonationList } from '@/features/donation/queries';
@@ -1186,7 +1186,7 @@ export default function BagInspection() {
   const [batchNumberFilter, setBatchNumberFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const { data, isLoading } = useBagInspectionList({
+  const { data, isLoading, refetch, isFetching } = useBagInspectionList({
     decision: decisionFilter || undefined,
     batchNumber: batchNumberFilter || undefined,
     fromDate: fromDate || undefined,
@@ -1215,6 +1215,16 @@ export default function BagInspection() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
             <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
             <button onClick={() => setShowDrawer(true)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">

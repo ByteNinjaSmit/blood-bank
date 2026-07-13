@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { TestTube, Loader2, Scissors, CheckCircle } from "lucide-react";
+import { TestTube, Loader2, Scissors, CheckCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
@@ -228,9 +228,16 @@ const ComponentSeparate = () => {
         <div className="bg-white shadow-md rounded-xl overflow-hidden">
           <div className="p-4 flex items-center justify-between border-b">
             <div className="text-sm text-gray-600">{bags.length} bag(s) ready</div>
-            <Button onClick={fetchBags} variant="outline" size="sm" disabled={isLoading}>
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
-            </Button>
+            <button
+              type="button"
+              onClick={() => fetchBags()}
+              disabled={isLoading}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
 
           <div className="overflow-x-auto">
