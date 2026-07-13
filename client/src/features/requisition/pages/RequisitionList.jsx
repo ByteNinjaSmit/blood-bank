@@ -488,8 +488,8 @@ export default function RequisitionList() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6 flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
-            <ClipboardList className="w-6 h-6 text-white" />
+          <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
+            <ClipboardList className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Requisition List</h1>

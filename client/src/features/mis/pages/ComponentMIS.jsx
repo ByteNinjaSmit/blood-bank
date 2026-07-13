@@ -60,7 +60,7 @@ export default function ComponentMIS() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-br from-red-700 to-red-900 rounded-xl shadow-sm"><Layers className="w-6 h-6 text-white" /></div>
+            <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']"><Layers className="w-6 h-6 text-white relative z-10 drop-shadow-sm" /></div>
             <div><CardTitle className="text-2xl font-bold text-gray-900">Component MIS</CardTitle><p className="text-gray-500 text-sm">Production, ageing analysis, and status tracking</p></div>
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end">
