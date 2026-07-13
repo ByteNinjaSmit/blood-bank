@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import { AppError, ConflictError, NotFoundError } from '@/shared/errors';
 import { childLogger } from '@/core/logger';
 import { cached, invalidate } from '@/core/cache';
+import { withAudit } from '@/shared/utils/with-audit';
 import type {
   CreateDonorInput,
   ListDonorsInput,
@@ -50,21 +51,33 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
       }
       await invalidate('donor:detail:*');
       log.info({ donorId: created.id, actorId, campId: input.campId }, 'donor registered');
+      void withAudit(
+        { actorId },
+        { module: 'donor', action: 'CREATE', entityType: 'Donor', entityId: created.id, entityLabel: created.donorId },
+        undefined,
+        { donorId: created.donorId, phone: input.phone, campId: input.campId },
+      );
       return created;
     },
 
     async update(id, patch, actorId) {
+      const before = await deps.repo.findById(id);
       if (patch.weightKg !== undefined || patch.dob !== undefined) {
-        const current = await deps.repo.findById(id);
         const merged = {
-          weightKg: patch.weightKg ?? current?.weightKg ?? 0,
-          dob: patch.dob ?? (current?.dob ? new Date(current.dob) : new Date()),
+          weightKg: patch.weightKg ?? before?.weightKg ?? 0,
+          dob: patch.dob ?? (before?.dob ? new Date(before.dob) : new Date()),
         };
         assertEligibilityBasics(merged);
       }
       const updated = await deps.repo.update(id, patch, actorId);
       await invalidate(`donor:detail:${id}`);
       log.info({ donorId: id, actorId }, 'donor updated');
+      void withAudit(
+        { actorId },
+        { module: 'donor', action: 'UPDATE', entityType: 'Donor', entityId: id, entityLabel: before?.donorId },
+        before,
+        updated,
+      );
       return updated;
     },
 
@@ -87,6 +100,12 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
         await deps.repo.softDelete(id, actorId);
         await invalidate(`donor:detail:${id}`);
         log.warn({ donorId: id, actorId }, 'donor soft-deleted');
+        void withAudit(
+          { actorId },
+          { module: 'donor', action: 'DELETE', entityType: 'Donor', entityId: id, entityLabel: donor.donorId },
+          { deletedAt: null },
+          { deletedAt: new Date() },
+        );
         return { permanentlyDeleted: false };
       }
 
@@ -104,6 +123,12 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
       await deps.repo.delete(id);
       await invalidate(`donor:detail:${id}`);
       log.warn({ donorId: id, actorId }, 'donor permanently deleted');
+      void withAudit(
+        { actorId },
+        { module: 'donor', action: 'DELETE', entityType: 'Donor', entityId: id, entityLabel: donor.donorId, severity: 'critical' },
+        donor,
+        undefined,
+      );
       return { permanentlyDeleted: true };
     },
 
@@ -116,6 +141,12 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
       await deps.repo.restore(id, actorId);
       await invalidate(`donor:detail:${id}`);
       log.warn({ donorId: id, actorId }, 'donor restored');
+      void withAudit(
+        { actorId },
+        { module: 'donor', action: 'UPDATE', entityType: 'Donor', entityId: id, entityLabel: donor.donorId },
+        { deletedAt: donor.deletedAt },
+        { deletedAt: null },
+      );
       return { restored: true };
     },
   };

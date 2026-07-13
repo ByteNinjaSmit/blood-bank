@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { ValidateDiscard } from '@/modules/discard/discard.validator';
 import type { DiscardService } from '@/modules/discard/discard.service';
 import { UnauthorizedError } from '@/shared/errors';
+import { withAudit } from '@/shared/utils/with-audit';
 
 export interface DiscardControllers {
   list: (req: Request, res: Response, next: NextFunction) => Promise<void>;
@@ -34,7 +35,14 @@ export function createDiscardControllers(service: DiscardService): DiscardContro
     async create(req, res, next) {
       try {
         const body = ValidateDiscard.createBody(req);
-        const { unitsDiscarded, bagNo } = await service.create({ ...body, actorId: actor(req) });
+        const actorId = actor(req);
+        const { unitsDiscarded, bagNo } = await service.create({ ...body, actorId });
+        void withAudit(
+          { actorId, requestId: req.id },
+          { module: 'discard', action: 'DISCARD', entityType: 'ClinicalDiscard', entityId: bagNo, severity: 'warning' },
+          undefined,
+          { bagNo, unitsDiscarded },
+        );
         res.json({
           success: true,
           message: `Successfully discarded ${unitsDiscarded} blood unit(s) associated with bag number ${bagNo}.`,

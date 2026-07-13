@@ -23,6 +23,8 @@ import {
   verifyRefreshToken,
   parseDuration,
 } from './auth.tokens';
+import { auditService } from '@/modules/audit/audit.service';
+import { UNAUTHENTICATED_ACTOR_ID } from '@/modules/audit/audit.model';
 
 const log = childLogger({ module: 'auth-service' });
 
@@ -71,16 +73,65 @@ function sixDigit(): string {
   return ('000000' + crypto.randomInt(0, 1_000_000)).slice(-6);
 }
 
+interface RequestMeta {
+  ip?: string;
+  userAgent?: string;
+}
+
+// Records a failed login attempt. The submitted email is stored only as
+// the (non-PII-heavy) entityId for correlation — the password is never
+// passed to this function, let alone stored.
+async function recordFailedLogin(
+  emailAttempted: string,
+  failureReason: string,
+  meta: RequestMeta,
+): Promise<void> {
+  await auditService.record({
+    actorId: UNAUTHENTICATED_ACTOR_ID,
+    module: 'auth',
+    action: 'LOGIN',
+    entityType: 'auth',
+    entityId: emailAttempted,
+    entityLabel: emailAttempted,
+    severity: 'warning',
+    reason: failureReason,
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+    after: { outcome: 'failed', failureReason },
+  });
+}
+
 export const authService = {
   // ---- Password login (single step) ----
-  async login(email: string, password: string, ip?: string): Promise<TokenPair> {
+  async login(email: string, password: string, meta: RequestMeta = {}): Promise<TokenPair> {
     const user = await authRepo.findUserByEmail(email);
-    if (!user) throw new UnauthorizedError('Invalid credentials');
-    if (user.status !== 'active') throw new ForbiddenError('Account pending admin approval');
+    if (!user) {
+      await recordFailedLogin(email, 'invalid_credentials', meta);
+      throw new UnauthorizedError('Invalid credentials');
+    }
+    if (user.status !== 'active') {
+      await recordFailedLogin(email, 'account_locked', meta);
+      throw new ForbiddenError('Account pending admin approval');
+    }
     const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) throw new UnauthorizedError('Invalid credentials');
+    if (!ok) {
+      await recordFailedLogin(email, 'invalid_credentials', meta);
+      throw new UnauthorizedError('Invalid credentials');
+    }
     log.info({ userId: user.id }, 'password login');
-    return issuePair(user, ip);
+    const pair = await issuePair(user, meta.ip);
+    await auditService.record({
+      actorId: user.id,
+      module: 'auth',
+      action: 'LOGIN',
+      entityType: 'User',
+      entityId: user.id,
+      entityLabel: user.email,
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      after: { outcome: 'success' },
+    });
+    return pair;
   },
 
   async resendOtp(email: string, txnId: string, purpose: 'REGISTER') {
@@ -225,8 +276,24 @@ export const authService = {
   },
 
   // ---- Logout ----
-  async logout(token: string | undefined, ip?: string): Promise<void> {
-    if (token) await authRepo.revokeRefresh(token, ip);
+  async logout(token: string | undefined, meta: RequestMeta = {}): Promise<void> {
+    if (!token) return;
+    await authRepo.revokeRefresh(token, meta.ip);
+    try {
+      const claims = verifyRefreshToken(token);
+      await auditService.record({
+        actorId: claims.userID,
+        module: 'auth',
+        action: 'LOGIN',
+        entityType: 'User',
+        entityId: claims.userID,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+        after: { outcome: 'logout' },
+      });
+    } catch {
+      // Expired/malformed token at logout time — nothing to attribute.
+    }
   },
 
   // ---- Current user ----

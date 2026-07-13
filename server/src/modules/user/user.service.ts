@@ -54,6 +54,7 @@ export const userService = {
     });
     await auditService.record({
       actorId,
+      module: 'user',
       action: 'CREATE',
       entityType: 'User',
       entityId: user.id,
@@ -112,21 +113,45 @@ export const userService = {
     if (input.permissions) patch.permissions = input.permissions;
     if (input.campId) patch.campId = input.campId;
     if (input.status) patch.status = input.status;
+    const passwordChanged = Boolean(input.password);
     if (input.password) patch.password = await bcrypt.hash(input.password, 10);
 
     const updated = await userRepo.updateByIdOrPublicId(id, patch);
     if (!updated) throw new NotFoundError('User', id);
-    await auditService.record({
-      actorId,
-      action: 'UPDATE',
-      entityType: 'User',
-      entityId: updated.id,
-    });
+
+    // Password changes are audited as their own event, with no before/after
+    // snapshot — the hash must never be constructed into a diffable object
+    // in the first place, not merely redacted downstream.
+    if (passwordChanged) {
+      await auditService.record({
+        actorId,
+        module: 'user',
+        action: 'UPDATE',
+        entityType: 'User',
+        entityId: updated.id,
+        changedFields: ['password'],
+        reason: actorId === id ? 'self-service password change' : 'admin password reset',
+        severity: 'warning',
+      });
+    }
+
+    // Non-password profile fields, if any, get the normal diff-based entry.
+    const nonPasswordFields = Object.keys(patch).filter((k) => k !== 'updatedBy' && k !== 'password');
+    if (nonPasswordFields.length > 0) {
+      await auditService.record({
+        actorId,
+        module: 'user',
+        action: 'UPDATE',
+        entityType: 'User',
+        entityId: updated.id,
+        changedFields: nonPasswordFields,
+      });
+    }
     await invalidate('user:*');
     return updated;
   },
 
-  async deactivate(id: string, actorId: string): Promise<void> {
+  async deactivate(id: string, actorId: string, reason?: string): Promise<void> {
     const updated = await userRepo.updateByIdOrPublicId(id, {
       status: 'inactive',
       updatedBy: actorId,
@@ -134,10 +159,11 @@ export const userService = {
     if (!updated) throw new NotFoundError('User', id);
     await auditService.record({
       actorId,
+      module: 'user',
       action: 'DELETE',
       entityType: 'User',
       entityId: updated.id,
-      reason: 'soft delete (deactivate)',
+      reason: reason?.trim() || 'soft delete (deactivate)',
     });
     await invalidate('user:*');
     log.warn({ userId: updated.id, actorId }, 'user deactivated');

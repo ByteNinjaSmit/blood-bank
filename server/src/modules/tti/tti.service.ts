@@ -4,6 +4,7 @@
 // the donor (and is a lookback trigger).
 
 import { childLogger } from '@/core/logger';
+import { withAudit } from '@/shared/utils/with-audit';
 import { TtiQuarantineViolation, NotFoundError } from '@/shared/errors';
 import type { INotificationService } from '@/shared/interfaces';
 import { notificationService as defaultNotify } from '@/modules/notification/notification.service';
@@ -51,7 +52,20 @@ export function createTtiService(deps: {
     async recordTests(donationId, tests, actorId) {
       const existing = await deps.tti.findByDonation(donationId);
       if (!existing) throw new NotFoundError('TtiResult', donationId);
-      return deps.tti.recordTests(donationId, tests, actorId);
+      const result = await deps.tti.recordTests(donationId, tests, actorId);
+      void withAudit(
+        { actorId },
+        {
+          module: 'tti',
+          action: 'UPDATE',
+          entityType: 'TTIResult',
+          entityId: donationId,
+          entityLabel: donationId,
+        },
+        { tests: existing.tests },
+        { tests },
+      );
+      return result;
     },
 
     async finalize(donationId, actorId) {
@@ -69,6 +83,21 @@ export function createTtiService(deps: {
         evaluation.decision,
         actorId,
         evaluation.reasons.join('; '),
+      );
+
+      void withAudit(
+        { actorId },
+        {
+          module: 'tti',
+          action: evaluation.decision === 'released' ? 'RELEASE' : 'UPDATE',
+          entityType: 'TTIResult',
+          entityId: donationId,
+          entityLabel: donationId,
+          severity: evaluation.decision === 'reactive' ? 'critical' : 'info',
+          reason: evaluation.reasons.join('; '),
+        },
+        { releaseDecision: tti.releaseDecision },
+        { releaseDecision: evaluation.decision },
       );
 
       let unitsAffected = 0;

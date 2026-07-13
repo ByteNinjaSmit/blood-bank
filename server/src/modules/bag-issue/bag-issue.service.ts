@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
+import { withAudit } from '@/shared/utils/with-audit';
 import { ConflictError, NotFoundError } from '@/shared/errors';
 import type { BagIssueRepo, BagIssueDto } from '@/modules/bag-issue/bag-issue.repository';
 import type { BagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
@@ -78,6 +79,12 @@ export function createBagIssueService(deps: {
 
       await deps.bagStock.incrementIssued(input.stockId, 1, actorId);
       log.info({ issueNumber, bagSerialNumber, stockId: input.stockId, actorId }, 'bag issued');
+      void withAudit(
+        { actorId },
+        { module: 'bag-issue', action: 'CREATE', entityType: 'BagIssue', entityId: created.id, entityLabel: issueNumber },
+        undefined,
+        { issueNumber, bagSerialNumber, stockId: input.stockId },
+      );
       return created;
     },
 
@@ -95,6 +102,12 @@ export function createBagIssueService(deps: {
       }, actorId);
       if (!updated) throw new NotFoundError('BagIssue', id);
       log.info({ issueId: id, actorId }, 'bag marked as used');
+      void withAudit(
+        { actorId },
+        { module: 'bag-issue', action: 'UPDATE', entityType: 'BagIssue', entityId: id, entityLabel: issue.issueNumber },
+        { status: 'ISSUED' },
+        { status: 'USED', donorId: input.donorId, donationId: input.donationId },
+      );
       return updated;
     },
 
@@ -112,6 +125,12 @@ export function createBagIssueService(deps: {
       // Return the bag to stock
       await deps.bagStock.decrementIssued(issue.stockId, 1, actorId);
       log.info({ issueId: id, stockId: issue.stockId, actorId }, 'bag returned to stock');
+      void withAudit(
+        { actorId },
+        { module: 'bag-issue', action: 'UPDATE', entityType: 'BagIssue', entityId: id, entityLabel: issue.issueNumber },
+        { status: 'ISSUED' },
+        { status: 'RETURNED' },
+      );
       return updated;
     },
 
@@ -130,6 +149,12 @@ export function createBagIssueService(deps: {
       await deps.bagStock.decrementIssued(issue.stockId, 1, actorId);
       await deps.bagStock.incrementDamaged(issue.stockId, 1, actorId);
       log.warn({ issueId: id, stockId: issue.stockId, actorId }, 'bag marked as damaged');
+      void withAudit(
+        { actorId },
+        { module: 'bag-issue', action: 'UPDATE', entityType: 'BagIssue', entityId: id, entityLabel: issue.issueNumber, severity: 'warning' },
+        { status: 'ISSUED' },
+        { status: 'DAMAGED' },
+      );
       return updated;
     },
   };

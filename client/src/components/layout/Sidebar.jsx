@@ -31,6 +31,7 @@ import {
   Trash,
   TrendingUp,
   RotateCcw,
+  History,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/store/auth';
@@ -53,6 +54,14 @@ const MODULES = [
     permissions: ["read"],
     description: "Operational analytics overview",
     always: true,
+  },
+  {
+    id: "audit-trail",
+    name: "Audit Trail",
+    icon: <History className="w-5 h-5" />,
+    href: "/audit-trail",
+    permissions: ["read"],
+    description: "Centralized, append-only compliance audit log",
   },
   {
     id: "admin",
@@ -372,10 +381,10 @@ const MODULES = [
         icon: <PieChart className="w-5 h-5" />,
       },
       {
-        name: "Audit History",
+        name: "Stock Movement History",
         href: "/chemical-inventory/history",
         permissions: ["read"],
-        description: "Stock movement logs",
+        description: "Chemical stock lot movement logs",
         icon: <List className="w-5 h-5" />,
       },
     ],

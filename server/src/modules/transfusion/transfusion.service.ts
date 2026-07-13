@@ -66,11 +66,13 @@ export function createTransfusionService(deps: {
 
       await audit.record({
         actorId,
+        module: 'transfusion',
         action: 'STATE_TRANSITION',
         entityType: 'BloodUnit',
         entityId: input.unitId,
         after: { status: event === 'CONFIRM_TRANSFUSION' ? 'TRANSFUSED' : 'RETURNED_UNUSED' },
         reason: `transfusion ${transfusionId}`,
+        severity: input.hadReaction ? 'warning' : 'info',
       });
 
       log.info(

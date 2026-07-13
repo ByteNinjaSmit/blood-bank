@@ -52,6 +52,7 @@ export function createLookbackService(deps: {
 
     await audit.record({
       actorId,
+      module: 'lookback',
       action: 'OVERRIDE',
       entityType: 'Lookback',
       entityId: sourceDonationId,
@@ -61,6 +62,7 @@ export function createLookbackService(deps: {
         unitsTraced: trace.unitIds.length,
       },
       reason: 'donor TTI reactive lookback',
+      severity: 'critical',
     });
 
     if (notifyEmail) {

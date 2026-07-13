@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { ValidateDonorCard } from '@/modules/donor-card/donor-card.validator';
 import type { DonorCardRepo } from '@/modules/donor-card/donor-card.repository';
 import { UnauthorizedError } from '@/shared/errors';
+import { withAudit } from '@/shared/utils/with-audit';
 
 export interface DonorCardControllers {
   create: (req: Request, res: Response, next: NextFunction) => Promise<void>;
@@ -19,7 +20,14 @@ export function createDonorCardControllers(repo: DonorCardRepo): DonorCardContro
     async create(req, res, next) {
       try {
         const body = ValidateDonorCard.createBody(req);
-        const created = await repo.create(body, actor(req));
+        const actorId = actor(req);
+        const created = await repo.create(body, actorId);
+        void withAudit(
+          { actorId, requestId: req.id },
+          { module: 'donor-card', action: 'CREATE', entityType: 'DonorCard', entityId: created.id },
+          undefined,
+          { requisitionId: body.requisitionId },
+        );
         res.status(201).json({ success: true, data: created, requestId: req.id });
       } catch (e) {
         next(e);

@@ -4,6 +4,7 @@
 
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
+import { withAudit } from '@/shared/utils/with-audit';
 import { AppError, ConflictError, NotFoundError } from '@/shared/errors';
 import { checkEligibility, yearsBetween } from '@/modules/donor/donor.eligibility';
 import { deriveUnits } from './donation.unit-derivation';
@@ -170,6 +171,13 @@ export function createDonationService(deps: {
         }
       }
 
+      void withAudit(
+        { actorId },
+        { module: 'donation', action: 'CREATE', entityType: 'Donation', entityId: created.id, entityLabel: donationPublicId },
+        undefined,
+        { donationId: donationPublicId, donor: input.donor, donationType: input.donationType, unitCount: units.length },
+      );
+
       return created;
     },
 
@@ -193,6 +201,12 @@ export function createDonationService(deps: {
         // out) in Master Register so the clinical record isn't lost.
         await deps.donations.softDelete(id, actorId);
         log.warn({ donationId: id, actorId }, 'donation soft-deleted');
+        void withAudit(
+          { actorId },
+          { module: 'donation', action: 'DELETE', entityType: 'Donation', entityId: id },
+          { deletedAt: null },
+          { deletedAt: new Date() },
+        );
         return { permanentlyDeleted: false };
       }
 
@@ -212,6 +226,12 @@ export function createDonationService(deps: {
       }
       await deps.donations.delete(id);
       log.warn({ donationId: id, actorId }, 'donation permanently deleted');
+      void withAudit(
+        { actorId },
+        { module: 'donation', action: 'DELETE', entityType: 'Donation', entityId: id, severity: 'critical' },
+        donation,
+        undefined,
+      );
       return { permanentlyDeleted: true };
     },
 
@@ -223,6 +243,12 @@ export function createDonationService(deps: {
       }
       await deps.donations.restore(id, actorId);
       log.warn({ donationId: id, actorId }, 'donation restored');
+      void withAudit(
+        { actorId },
+        { module: 'donation', action: 'UPDATE', entityType: 'Donation', entityId: id },
+        { deletedAt: status.deletedAt },
+        { deletedAt: null },
+      );
       return { restored: true };
     },
   };

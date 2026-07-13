@@ -7,6 +7,7 @@ import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { transition, type UnitEvent } from '@/modules/unit/unit.state-machine';
 import { NotFoundError } from '@/shared/errors';
 import { invalidate } from '@/core/cache';
+import { withAudit } from '@/shared/utils/with-audit';
 import type {
   AboGroup,
   ComponentType,
@@ -229,6 +230,21 @@ export function createUnitRepo(): UnitRepo {
       }).lean()) as RawUnit | null;
       if (!updated) throw new NotFoundError('BloodUnit', unitId);
       void invalidate('inventory:*'); // stock view changed
+
+      void withAudit(
+        { actorId },
+        {
+          module: 'unit',
+          action: 'STATE_TRANSITION',
+          entityType: 'BloodUnit',
+          entityId: unitId,
+          entityLabel: unitId,
+          reason,
+        },
+        { status: current.status },
+        { status: nextStatus, event },
+      );
+
       return toDto(updated);
     },
 
@@ -241,6 +257,9 @@ export function createUnitRepo(): UnitRepo {
         deletedAt: null,
         ...(extra?.match ?? {}),
       };
+      // Collected outside the transaction and fired once it commits, so a
+      // transaction retry never double-writes audit entries.
+      const auditEntries: Array<{ unitId: string; from: UnitStatus; to: UnitStatus }> = [];
 
       try {
         const session = await BloodUnitModel.startSession();
@@ -267,6 +286,7 @@ export function createUnitRepo(): UnitRepo {
                 { session },
               );
               changed++;
+              auditEntries.push({ unitId: u.unitId, from: u.status, to: next });
             }
           });
         } finally {
@@ -289,7 +309,24 @@ export function createUnitRepo(): UnitRepo {
             },
           );
           changed++;
+          auditEntries.push({ unitId: u.unitId, from: u.status, to: next });
         }
+      }
+
+      for (const entry of auditEntries) {
+        void withAudit(
+          { actorId },
+          {
+            module: 'unit',
+            action: 'STATE_TRANSITION',
+            entityType: 'BloodUnit',
+            entityId: entry.unitId,
+            entityLabel: entry.unitId,
+            reason,
+          },
+          { status: entry.from },
+          { status: entry.to, event },
+        );
       }
 
       if (changed > 0) void invalidate('inventory:*');

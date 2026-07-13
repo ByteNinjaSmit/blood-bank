@@ -1,4 +1,5 @@
 import { childLogger } from '@/core/logger';
+import { withAudit } from '@/shared/utils/with-audit';
 import { NotFoundError, ConflictError } from '@/shared/errors';
 import type { BagStockRepo, BagStockDto, BagStockSummaryItem } from '@/modules/bag-stock/bag-stock.repository';
 import type {
@@ -34,9 +35,16 @@ export function createBagStockService(deps: { bagStock: BagStockRepo }): BagStoc
     },
 
     async updateStatus(id, input, actorId) {
+      const before = await deps.bagStock.findById(id);
       const updated = await deps.bagStock.updateStatus(id, input.status, actorId);
       if (!updated) throw new NotFoundError('BagStock', id);
       log.info({ stockId: id, status: input.status, actorId }, 'bag stock status updated');
+      void withAudit(
+        { actorId },
+        { module: 'bag-stock', action: 'UPDATE', entityType: 'BagStock', entityId: id },
+        { status: before?.status },
+        { status: input.status },
+      );
       return updated;
     },
 
@@ -46,6 +54,12 @@ export function createBagStockService(deps: { bagStock: BagStockRepo }): BagStoc
         throw new ConflictError('Cannot open box: no unopened boxes available or stock not found');
       }
       log.info({ stockId: id, actorId }, 'bag stock box opened');
+      void withAudit(
+        { actorId },
+        { module: 'bag-stock', action: 'UPDATE', entityType: 'BagStock', entityId: id, reason: 'box opened' },
+        undefined,
+        undefined,
+      );
       return updated;
     },
   };

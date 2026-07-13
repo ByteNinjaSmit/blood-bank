@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
+import { withAudit } from '@/shared/utils/with-audit';
 import { ConflictError, NotFoundError, ValidationError } from '@/shared/errors';
 import type { PORepo, PODto, LineItemDto } from '@/modules/purchase-order/purchase-order.repository';
 import type { VendorRepo } from '@/modules/vendor/vendor.repository';
@@ -56,13 +57,19 @@ export function createPOService(deps: { pos: PORepo; vendors: VendorRepo }): POS
         actorId,
       });
       log.info({ poNumber, actorId }, 'purchase order created');
+      void withAudit(
+        { actorId },
+        { module: 'purchase-order', action: 'CREATE', entityType: 'PurchaseOrder', entityId: created.id, entityLabel: poNumber },
+        undefined,
+        { poNumber, vendorId: input.vendorId },
+      );
       return created;
     },
 
     async update(id, input, actorId) {
       const po = await deps.pos.findById(id);
       if (!po) throw new NotFoundError('PurchaseOrder', id);
-      
+
       const patch: Partial<{ lineItems: LineItemDto[]; expectedDelivery: Date; manufacturer: string; billDate: Date; notes: string }> = {};
       if (input.lineItems) {
         patch.lineItems = input.lineItems;
@@ -73,12 +80,25 @@ export function createPOService(deps: { pos: PORepo; vendors: VendorRepo }): POS
       if (input.notes !== undefined) patch.notes = input.notes;
       const updated = await deps.pos.update(id, patch, actorId);
       if (!updated) throw new NotFoundError('PurchaseOrder', id);
+      void withAudit(
+        { actorId },
+        { module: 'purchase-order', action: 'UPDATE', entityType: 'PurchaseOrder', entityId: id, entityLabel: po.poNumber },
+        po,
+        updated,
+      );
       return updated;
     },
 
     async delete(id, actorId) {
+      const po = await deps.pos.findById(id);
       const deleted = await deps.pos.delete(id, actorId);
       if (!deleted) throw new NotFoundError('PurchaseOrder', id);
+      void withAudit(
+        { actorId },
+        { module: 'purchase-order', action: 'DELETE', entityType: 'PurchaseOrder', entityId: id, entityLabel: po?.poNumber },
+        po,
+        undefined,
+      );
       return deleted;
     },
   };

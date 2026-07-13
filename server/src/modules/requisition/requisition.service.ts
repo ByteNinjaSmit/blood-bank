@@ -103,6 +103,7 @@ export function createRequisitionService(deps: {
       const created = await deps.requisitions.create({ ...input, requisitionId }, actorId);
       await audit.record({
         actorId,
+        module: 'requisition',
         action: 'CREATE',
         entityType: 'Requisition',
         entityId: created.requisitionId,
@@ -257,6 +258,7 @@ export function createRequisitionService(deps: {
       const updated = await deps.requisitions.setStatus(id, 'APPROVED', actorId);
       await audit.record({
         actorId,
+        module: 'requisition',
         action: 'RELEASE',
         entityType: 'Requisition',
         entityId: req.requisitionId,
@@ -276,6 +278,7 @@ export function createRequisitionService(deps: {
       const updated = await deps.requisitions.setStatus(id, 'COMPLETED', actorId);
       await audit.record({
         actorId,
+        module: 'requisition',
         action: 'UPDATE',
         entityType: 'Requisition',
         entityId: req.requisitionId,
@@ -311,10 +314,12 @@ export function createRequisitionService(deps: {
       const updated = await deps.requisitions.reject(id, reason, actorId);
       await audit.record({
         actorId,
+        module: 'requisition',
         action: 'DELETE',
         entityType: 'Requisition',
         entityId: req.requisitionId,
         after: { status: 'REJECTED', reason },
+        reason,
       });
       return updated;
     },

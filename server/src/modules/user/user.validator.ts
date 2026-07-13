@@ -51,6 +51,10 @@ export const ListUsersQuery = z.object({
 
 export const IdParam = z.object({ id: z.string().min(1).max(80) });
 
+export const DeactivateUserBody = z.object({
+  reason: blank(z.string().trim().max(500).optional()),
+});
+
 function parseOrThrow<T>(s: z.ZodType<T>, v: unknown, where: string): T {
   const r = s.safeParse(v);
   if (!r.success) throw new ValidationError(`Invalid ${where}`, r.error.issues);
@@ -62,4 +66,5 @@ export const ValidateUser = {
   updateBody: (req: Request) => parseOrThrow(UpdateUserBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListUsersQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
+  deactivateBody: (req: Request) => parseOrThrow(DeactivateUserBody, req.body ?? {}, 'request body'),
 };

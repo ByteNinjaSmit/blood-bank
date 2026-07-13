@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
+import { withAudit } from '@/shared/utils/with-audit';
 import type { BulkTransferRepo, BulkTransferDto } from '@/modules/bulk-transfer/bulk-transfer.repository';
 import type { CreateBulkTransferInput, ListBulkTransferInput } from '@/modules/bulk-transfer/bulk-transfer.validator';
 
@@ -37,6 +38,12 @@ export function createBulkTransferService(deps: { bulkTransfers: BulkTransferRep
         { transferId, transferType: input.transferType, items: input.items.length, actorId },
         'bulk transfer recorded',
       );
+      void withAudit(
+        { actorId },
+        { module: 'bulk-transfer', action: 'CREATE', entityType: 'BulkTransfer', entityId: created.id, entityLabel: transferId },
+        undefined,
+        { transferId, transferType: input.transferType, items: input.items.length },
+      );
       return created;
     },
 
@@ -45,6 +52,12 @@ export function createBulkTransferService(deps: { bulkTransfers: BulkTransferRep
       log.info(
         { transferId: removed.transferId, transferType: removed.transferType, actorId },
         'bulk transfer deleted',
+      );
+      void withAudit(
+        { actorId },
+        { module: 'bulk-transfer', action: 'DELETE', entityType: 'BulkTransfer', entityId: id, entityLabel: removed.transferId },
+        removed,
+        undefined,
       );
       return removed;
     },

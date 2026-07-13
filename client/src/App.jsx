@@ -66,6 +66,9 @@ import ExpiryMonitoring from './features/chemical-inventory/pages/ExpiryMonitori
 import Reports from './features/chemical-inventory/pages/Reports';
 import AuditHistory from './features/chemical-inventory/pages/AuditHistory';
 
+// Audit Trail (centralized)
+import AuditTrail from './features/audit/pages/AuditTrail';
+
 // Monthly Statutory Report
 import MonthlyReport from './features/monthly-report/pages/MonthlyReport';
 
@@ -157,6 +160,9 @@ const App = () => {
           <Route path="chemical-inventory/expiry" element={<ExpiryMonitoring />} />
           <Route path="chemical-inventory/reports" element={<Reports />} />
           <Route path="chemical-inventory/history" element={<AuditHistory />} />
+
+          {/* Audit Trail */}
+          <Route path="audit-trail" element={<AuditTrail />} />
 
           <Route path="reports/monthly" element={<MonthlyReport />} />
 

@@ -8,11 +8,15 @@ function ip(req: Request): string | undefined {
   return req.ip;
 }
 
+function requestMeta(req: Request): { ip?: string; userAgent?: string } {
+  return { ip: req.ip, userAgent: req.headers['user-agent'] };
+}
+
 export const authController = {
   async login(req: Request, res: Response, next: NextFunction) {
     try {
       const { email, password } = ValidateAuth.login(req);
-      const pair = await authService.login(email, password, ip(req));
+      const pair = await authService.login(email, password, requestMeta(req));
       setRefreshCookie(res, pair.refreshToken);
       res.json({
         success: true,
@@ -77,7 +81,7 @@ export const authController = {
   async logout(req: Request, res: Response, next: NextFunction) {
     try {
       const token = req.cookies?.[REFRESH_COOKIE_NAME];
-      await authService.logout(token, ip(req));
+      await authService.logout(token, requestMeta(req));
       clearRefreshCookie(res);
       res.json({ success: true, requestId: req.id });
     } catch (e) {

@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
+import { withAudit } from '@/shared/utils/with-audit';
 import { NotFoundError } from '@/shared/errors';
 import type { BagInspectionRepo, BagInspectionDto } from '@/modules/bag-inspection/bag-inspection.repository';
 import type {
@@ -69,6 +70,19 @@ export function createBagInspectionService(deps: {
         actorId,
       });
       log.info({ inspectionId, grnId: input.grnId, decision: input.decision, actorId }, 'bag inspection recorded');
+      void withAudit(
+        { actorId },
+        {
+          module: 'bag-inspection',
+          action: 'CREATE',
+          entityType: 'BagInspection',
+          entityId: created.id,
+          entityLabel: inspectionId,
+          severity: input.decision === 'REJECTED' ? 'warning' : 'info',
+        },
+        undefined,
+        { inspectionId, grnId: input.grnId, decision: input.decision },
+      );
       return created;
     },
 
@@ -114,6 +128,20 @@ export function createBagInspectionService(deps: {
 
       if (!updated) throw new NotFoundError('BagInspection', id);
       log.info({ inspectionId: updated.inspectionId, actorId }, 'bag inspection report updated');
+      void withAudit(
+        { actorId },
+        {
+          module: 'bag-inspection',
+          action: 'UPDATE',
+          entityType: 'BagInspection',
+          entityId: id,
+          entityLabel: updated.inspectionId,
+          severity: isFailed ? 'warning' : 'info',
+          reason: updated.rejectionReason,
+        },
+        { decision: inspection.decision },
+        { decision },
+      );
 
       if (updated.testingType === 'EMPTY' && !isFailed) {
         const grn = await deps.grns.findById(updated.grnId);

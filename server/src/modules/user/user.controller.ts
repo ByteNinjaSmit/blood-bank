@@ -49,7 +49,8 @@ export const userController = {
   async deactivate(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = ValidateUser.idParam(req);
-      await userService.deactivate(id, actor(req));
+      const { reason } = ValidateUser.deactivateBody(req);
+      await userService.deactivate(id, actor(req), reason);
       res.status(204).end();
     } catch (e) {
       next(e);

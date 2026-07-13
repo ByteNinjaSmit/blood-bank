@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { ValidateMonthlyReportInput } from '@/modules/monthly-report-input/monthly-report-input.validator';
 import type { MonthlyReportInputRepo } from '@/modules/monthly-report-input/monthly-report-input.repository';
 import { UnauthorizedError } from '@/shared/errors';
+import { withAudit } from '@/shared/utils/with-audit';
 
 export interface MonthlyReportInputControllers {
   upsert: (req: Request, res: Response, next: NextFunction) => Promise<void>;
@@ -18,7 +19,14 @@ export function createMonthlyReportInputControllers(repo: MonthlyReportInputRepo
     async upsert(req, res, next) {
       try {
         const body = ValidateMonthlyReportInput.upsertBody(req);
-        const data = await repo.upsert(body, actor(req));
+        const actorId = actor(req);
+        const data = await repo.upsert(body, actorId);
+        void withAudit(
+          { actorId, requestId: req.id },
+          { module: 'monthly-report-input', action: 'UPDATE', entityType: 'MonthlyReportInput', entityId: `${body.month}-${body.year}` },
+          undefined,
+          body,
+        );
         res.json({ success: true, data, requestId: req.id });
       } catch (e) {
         next(e);

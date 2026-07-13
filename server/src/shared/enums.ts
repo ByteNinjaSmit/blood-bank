@@ -58,6 +58,7 @@ export const PERMISSION = [
   // Lookback + audit
   'lookback:run',
   'audit:read',
+  'audit:export',
   // Reports + MIS
   'report:read',
   'report:generate',

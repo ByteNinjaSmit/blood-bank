@@ -6,6 +6,7 @@
 
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
+import { withAudit } from '@/shared/utils/with-audit';
 import { ConflictError, NotFoundError } from '@/shared/errors';
 import type { CrossmatchRepo } from '@/modules/crossmatch/crossmatch.repository';
 import type { RequisitionRepo } from '@/modules/requisition/requisition.repository';
@@ -95,6 +96,20 @@ export function createCrossmatchService(deps: {
         unitStatus = u.status;
         await deps.requisitions.setCrossmatchStatus(req.id, input.unitId, 'INCOMPATIBLE', actorId, details);
       }
+
+      void withAudit(
+        { actorId },
+        {
+          module: 'crossmatch',
+          action: 'UPDATE',
+          entityType: 'Crossmatch',
+          entityId: crossmatchId,
+          entityLabel: `${crossmatchId} (unit ${input.unitId})`,
+          severity: input.result === 'INCOMPATIBLE' ? 'warning' : 'info',
+        },
+        undefined,
+        { requisitionId: req.requisitionId, unitId: input.unitId, method: input.method, result: input.result, unitStatus },
+      );
 
       log.info(
         { crossmatchId, unitId: input.unitId, result: input.result, unitStatus },

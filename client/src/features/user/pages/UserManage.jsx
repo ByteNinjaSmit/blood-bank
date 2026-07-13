@@ -6,6 +6,7 @@ import CreateUserForm from "./components/CreateUserForm";
 import ViewUserModal from "./components/ViewUserModal";
 import Pagination from "./components/Pagination";
 import CustomModal from "@/components/CustomModal";
+import ReasonForChangeModal from "@/components/shared/ReasonForChangeModal";
 import { checkAccess } from "./utils/access";
 import { statusChipClass } from "./utils/ui";
 import axios from "axios";
@@ -40,6 +41,8 @@ export default function UserManage() {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [confirmModal, setConfirmModal] = useState({ open: false });
+  const [deactivateTarget, setDeactivateTarget] = useState(null);
+  const [deactivating, setDeactivating] = useState(false);
 
   // Filters & Pagination
   const [search, setSearch] = useState("");
@@ -232,9 +235,10 @@ export default function UserManage() {
     }
   };
 
-  const onDelete = async (id) => {
+  const onDelete = async (id, reason) => {
     try {
       await axios.delete(`${API}/api/v2/user/${id}`, {
+        data: { reason },
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       });
@@ -242,6 +246,17 @@ export default function UserManage() {
       loadUsers();
     } catch (e) {
       toast.error("Deactivation failed");
+    }
+  };
+
+  const confirmDeactivate = async (reason) => {
+    if (!deactivateTarget) return;
+    setDeactivating(true);
+    try {
+      await onDelete(deactivateTarget, reason);
+    } finally {
+      setDeactivating(false);
+      setDeactivateTarget(null);
     }
   };
 
@@ -360,7 +375,7 @@ export default function UserManage() {
         onReject={(row)=>openConfirm({ title:'Reject User', description:'Reject this user?', confirmText:'Reject', confirmVariant:'danger', onConfirm:()=>{ closeConfirm(); setStatus(row._id,'reject'); }})}
         onBlock={(row)=>openConfirm({ title:'Block User', description:'Block this user? They will be unable to login.', confirmText:'Block', confirmVariant:'danger', onConfirm:()=>{ closeConfirm(); setStatus(row._id,'block'); }})}
         onDeactivate={(row)=>openConfirm({ title:'Deactivate User', description:'Deactivate this user?', confirmText:'Deactivate', onConfirm:()=>{ closeConfirm(); setStatus(row._id,'deactivate'); }})}
-        onDelete={(row)=>openConfirm({ title:'Deactivate User', description:'Deactivate this user? They will no longer be able to log in.', confirmText:'Deactivate', confirmVariant:'danger', onConfirm:()=>{ closeConfirm(); onDelete(row._id); }})}
+        onDelete={(row)=>setDeactivateTarget(row._id)}
         openMenuId={openMenuId}
         setOpenMenuId={setOpenMenuId}
         selectedIds={selectedIds}
@@ -403,6 +418,17 @@ export default function UserManage() {
         confirmVariant={confirmModal.variant}
         onCancel={closeConfirm}
         onConfirm={confirmModal.onConfirm}
+      />
+
+      <ReasonForChangeModal
+        isOpen={Boolean(deactivateTarget)}
+        onClose={() => setDeactivateTarget(null)}
+        onConfirm={confirmDeactivate}
+        title="Deactivate User"
+        actionLabel="Deactivate"
+        message="This user will no longer be able to log in. This action is logged to the audit trail."
+        fieldLabel="Reason for Deactivation"
+        submitting={deactivating}
       />
     </div>
   );

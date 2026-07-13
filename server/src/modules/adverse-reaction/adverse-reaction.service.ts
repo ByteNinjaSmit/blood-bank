@@ -38,10 +38,12 @@ export function createAdverseReactionService(deps: {
 
       await audit.record({
         actorId,
+        module: 'adverse-reaction',
         action: 'CREATE',
         entityType: 'AdverseReaction',
         entityId: reactionId,
         after: { category: input.category, severity: input.severity, unitId: input.unitId },
+        severity: input.severity === 'GRADE_3' || input.severity === 'GRADE_4' ? 'critical' : 'warning',
       });
 
       if (input.notifyEmail) {

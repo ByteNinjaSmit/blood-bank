@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
+import { withAudit } from '@/shared/utils/with-audit';
 import { ConflictError, NotFoundError } from '@/shared/errors';
 import type { GRNRepo, GRNDto, BatchLineDto } from '@/modules/goods-receipt/goods-receipt.repository';
 import type { PORepo } from '@/modules/purchase-order/purchase-order.repository';
@@ -97,6 +98,12 @@ export function createGRNService(deps: {
       }
 
       log.info({ grnNumber, poId: input.poId, actorId }, 'GRN created and stock updated');
+      void withAudit(
+        { actorId },
+        { module: 'goods-receipt', action: 'CREATE', entityType: 'GoodsReceipt', entityId: created.id, entityLabel: grnNumber },
+        undefined,
+        { grnNumber, poId: input.poId, batchLines: created.batchLines.length },
+      );
       return created;
     },
 
@@ -161,6 +168,12 @@ export function createGRNService(deps: {
       }
 
       log.info({ grnId: id, actorId }, 'GRN updated, bag stock updated');
+      void withAudit(
+        { actorId },
+        { module: 'goods-receipt', action: 'UPDATE', entityType: 'GoodsReceipt', entityId: id, entityLabel: grn.grnNumber },
+        grn,
+        updated,
+      );
       return updated;
     },
   };

@@ -3,6 +3,7 @@
 // Only modules that actually exist and are routed belong here.
 export const ModuleArray = [
   "Dashboard",
+  "Audit Trail",
   "Admin",
   "Requisition",
   "Hospital",
