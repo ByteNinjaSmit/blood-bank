@@ -56,30 +56,6 @@ const MODULES = [
     always: true,
   },
   {
-    id: "audit-trail",
-    name: "Audit Trail",
-    icon: <History className="w-5 h-5" />,
-    href: "/audit-trail",
-    permissions: ["read"],
-    description: "Centralized, append-only compliance audit log",
-  },
-  {
-    id: "admin",
-    name: "Admin",
-    icon: <Shield className="w-5 h-5" />,
-    permissions: ["admin"],
-    subModules: [
-      {
-        name: "User Manage",
-        href: "/admin/user-manage",
-        permissions: ["admin"],
-        description: "Manage users, roles, and permissions",
-        icon: <Users className="w-5 h-5" />,
-      }
-    ],
-    description: "Administration",
-  },
-  {
     id: "requisition",
     name: "Requisition",
     icon: <IoIosSend className="w-5 h-5" />,
@@ -390,27 +366,6 @@ const MODULES = [
     ],
     description: "Manage reagents & kits",
   },
-  // {
-    //   id: "queue",
-    //   name: "Queue",
-  //   icon: <FaUsersCog className="w-6 h-6" />,
-  //   permissions: ["read", "write"],
-  //   subModules: [
-  //     {
-  //       name: "Book",
-  //       href: "/queue/book",
-  //       permissions: ["write"],
-  //       description: "Book donor appointments",
-  //     },
-  //     {
-  //       name: "Queue List",
-  //       href: "/queue/list",
-  //       permissions: ["read"],
-  //       description: "View donor queue",
-  //     },
-  //   ],
-  //   description: "Donor queue management",
-  // },
   {
     id: "appointments",
     name: "Appointment",
@@ -433,6 +388,45 @@ const MODULES = [
       },
     ],
     description: "Manage donor appointments",
+  },
+  {
+    id: "discard",
+    name: "Discard",
+    icon: <FaTrash className="w-5 h-5" />,
+    permissions: ["read", "write"],
+    subModules: [
+      {
+        name: "Discard List",
+        href: "/discard",
+        permissions: ["read", "write"],
+        description: "View discarded blood units",
+      },
+    ],
+    description: "Manage discarded blood units",
+  },
+  {
+    id: "audit-trail",
+    name: "Audit Trail",
+    icon: <History className="w-5 h-5" />,
+    href: "/audit-trail",
+    permissions: ["read"],
+    description: "Centralized, append-only compliance audit log",
+  },
+  {
+    id: "admin",
+    name: "Admin",
+    icon: <Shield className="w-5 h-5" />,
+    permissions: ["admin"],
+    subModules: [
+      {
+        name: "User Manage",
+        href: "/admin/user-manage",
+        permissions: ["admin"],
+        description: "Manage users, roles, and permissions",
+        icon: <Users className="w-5 h-5" />,
+      }
+    ],
+    description: "Administration",
   },
   {
     id: "mis",
@@ -531,30 +525,16 @@ const MODULES = [
         description: "Predictive analysis and demand forecasting",
         icon: <TrendingUp className="w-5 h-5" />,
       },
-      {
-        name: "Recycle Bin",
-        href: "/mis/recycle-bin",
-        permissions: ["read"],
-        description: "Deleted donors and donations — restore or view",
-        icon: <RotateCcw className="w-5 h-5" />,
-      },
     ],
     description: "Management Information System",
   },
   {
-    id: "discard",
-    name: "Discard",
-    icon: <FaTrash className="w-5 h-5" />,
-    permissions: ["read", "write"],
-    subModules: [
-      {
-        name: "Discard List",
-        href: "/discard",
-        permissions: ["read", "write"],
-        description: "View discarded blood units",
-      },
-    ],
-    description: "Manage discarded blood units",
+    id: "recycle-bin",
+    name: "Recycle Bin",
+    icon: <RotateCcw className="w-5 h-5" />,
+    href: "/mis/recycle-bin",
+    permissions: ["read"],
+    description: "Deleted donors and donations — restore or view",
   },
   // {
   //   id: "report",

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bell, CheckCheck, Loader2, RefreshCcw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { badgeCount, MODULE_LABELS, SEVERITY_META } from '../lib/notification-meta';
 import {
@@ -57,14 +56,14 @@ export default function NotificationBell() {
           <Button
             variant="outline"
             size="sm"
-            className="relative h-9 w-9 p-0"
+            className="relative h-11 w-16 p-0 rounded-lg"
             aria-label="Notifications"
             aria-expanded={open}
             onClick={() => setOpen((o) => !o)}
           >
-            <Bell className="w-4 h-4" />
+            <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">
+              <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-[20px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold flex items-center justify-center">
                 {badgeCount(unreadCount)}
               </span>
             )}
@@ -157,7 +156,7 @@ export default function NotificationBell() {
             </select>
           </div>
 
-          <ScrollArea className="max-h-[26rem]">
+          <div className="max-h-[26rem] overflow-y-auto overscroll-contain">
             {isLoading ? (
               <div className="px-4 py-10 text-center text-xs text-slate-400 font-medium">Loading notifications…</div>
             ) : items.length === 0 ? (
@@ -172,7 +171,7 @@ export default function NotificationBell() {
                 ))}
               </ul>
             )}
-          </ScrollArea>
+          </div>
         </div>
       )}
     </div>
