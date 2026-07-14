@@ -92,6 +92,7 @@ export const PERMISSION = [
   'bag-discard:approve',
   'bulk-transfer:read',
   'bulk-transfer:create',
+  'bulk-transfer:update',
   'bulk-transfer:delete',
   // Appointments (public-site form submissions)
   'appointment:read',

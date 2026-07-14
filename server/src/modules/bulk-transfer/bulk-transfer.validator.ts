@@ -31,6 +31,18 @@ export const CreateBulkTransferBody = z.object({
   notes: z.string().trim().max(2000).optional(),
 });
 
+export const UpdateBulkTransferBody = z.object({
+  bloodBankName: z.string().trim().min(1).max(200).optional(),
+  bloodBankAddress: z.string().trim().min(1).max(500).optional(),
+  transferDate: z.coerce.date().optional(),
+  items: z.array(BulkTransferItem).min(1).optional(),
+  notes: z.string().trim().max(2000).optional(),
+});
+
+export const DeleteReasonBody = z.object({
+  reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
+});
+
 export const ListBulkTransferQuery = z.object({
   transferType: z.preprocess((v) => (v === '' ? undefined : v), z.enum(['GIVE_LOAN', 'TAKE_LOAN']).optional()),
   search: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
@@ -45,10 +57,13 @@ export const ListBulkTransferQuery = z.object({
 export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid id') });
 
 export type CreateBulkTransferInput = z.infer<typeof CreateBulkTransferBody>;
+export type UpdateBulkTransferInput = z.infer<typeof UpdateBulkTransferBody>;
 export type ListBulkTransferInput = z.infer<typeof ListBulkTransferQuery>;
 
 export const ValidateBulkTransfer = {
   createBody: (req: Request) => parseOrThrow(CreateBulkTransferBody, req.body, 'request body'),
+  updateBody: (req: Request) => parseOrThrow(UpdateBulkTransferBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListBulkTransferQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
+  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };

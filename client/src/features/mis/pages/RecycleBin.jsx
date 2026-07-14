@@ -3,10 +3,10 @@ import { RotateCcw, Users, Droplets, Building2, Home, Truck, Hospital as Hospita
 import { toast } from 'sonner';
 import { useDonorList, useRestoreDonor, usePermanentDeleteDonor } from '@/features/donor/queries';
 import { useDonationList, useRestoreDonation, usePermanentDeleteDonation } from '@/features/donation/queries';
-import { useVendorList, useRestoreVendor, usePermanentDeleteVendor } from '@/features/bag-procurement/queries';
 import { useHospitalList, useRestoreHospital, usePermanentDeleteHospital } from '@/features/hospital/queries';
 import { useCampList, useRestoreCamp, usePermanentDeleteCamp } from '@/features/camp/queries';
 import { useAffectedRecords } from '@/features/affected-records/queries';
+import { useAuditSearch } from '@/features/audit/queries';
 import { useAuth } from '@/store/auth';
 import CustomModal from '@/components/CustomModal';
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
@@ -14,11 +14,13 @@ import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
 const TABS = [
   { key: 'donor', label: 'Donor', icon: Users },
   { key: 'donation', label: 'Donation', icon: Droplets },
-  { key: 'vendor', label: 'Vendor', icon: Truck },
+  { key: 'stockTransfers', label: 'Stock Transfers', icon: Truck },
   { key: 'hospital', label: 'Hospital', icon: HospitalIcon },
   { key: 'camp', label: 'Camp', icon: Tent },
   { key: 'affected', label: 'Affected Records', icon: AlertTriangle },
 ];
+
+const STOCK_TRANSFER_MODULES = ['bulk-transfer', 'inventory-storage'];
 
 const PERMANENT_DELETE_ROLES = ['system-admin'];
 const READ_ROLES = ['system-admin', 'bbo', 'qa-manager', 'auditor'];
@@ -36,9 +38,9 @@ const formatBloodGroup = (bloodGroup, rhFactor) => {
   return `${baseGroup}${sign}`;
 };
 
-// Generic list table for tabs that don't need a bespoke layout (Vendor,
-// Hospital, Affected Records) — reuses one table shell instead of
-// duplicating the donor/donation table structure for every module.
+// Generic list table for tabs that don't need a bespoke layout (Stock
+// Transfers, Hospital, Affected Records) — reuses one table shell instead
+// of duplicating the donor/donation table structure for every module.
 function SimpleTable({ columns, rows, rowKey, emptyLabel, renderActions }) {
   if (rows.length === 0) {
     return <div className="p-12 text-center text-gray-400 text-sm">{emptyLabel}</div>;
@@ -80,26 +82,26 @@ export default function RecycleBin() {
 
   const donorQuery = useDonorList({ deletedOnly: true, page: 1, pageSize: 500 });
   const donationQuery = useDonationList({ deletedOnly: true, page: 1, pageSize: 500 });
-  const vendorQuery = useVendorList({ deletedOnly: true, pageSize: 500 });
+  const bulkTransferLogsQuery = useAuditSearch({ module: 'bulk-transfer' }, 1, 200);
+  const storageLogsQuery = useAuditSearch({ module: 'inventory-storage' }, 1, 200);
   const hospitalQuery = useHospitalList({ deletedOnly: true, limit: 500 });
   const campQuery = useCampList({ deletedOnly: true });
   const affectedQuery = useAffectedRecords();
 
   const restoreDonorMutation = useRestoreDonor();
   const restoreDonationMutation = useRestoreDonation();
-  const restoreVendorMutation = useRestoreVendor();
   const restoreHospitalMutation = useRestoreHospital();
   const restoreCampMutation = useRestoreCamp();
 
   const permanentDeleteDonor = usePermanentDeleteDonor();
   const permanentDeleteDonation = usePermanentDeleteDonation();
-  const permanentDeleteVendor = usePermanentDeleteVendor();
   const permanentDeleteHospital = usePermanentDeleteHospital();
   const permanentDeleteCamp = usePermanentDeleteCamp();
 
   const donorItems = donorQuery.data?.items ?? [];
   const donationItems = donationQuery.data?.items ?? [];
-  const vendorItems = vendorQuery.data?.items ?? vendorQuery.data?.vendors ?? (Array.isArray(vendorQuery.data) ? vendorQuery.data : []);
+  const stockTransferLogs = [...(bulkTransferLogsQuery.data?.data ?? []), ...(storageLogsQuery.data?.data ?? [])]
+    .sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
   const hospitalItems = hospitalQuery.data?.items ?? [];
   const campItems = campQuery.data ?? [];
   const affectedItems = affectedQuery.data ?? [];
@@ -122,9 +124,6 @@ export default function RecycleBin() {
       } else if (activeTab === 'donation') {
         await restoreDonationMutation.mutateAsync(restoreTarget.id);
         toast.success('Donation restored to Master Register');
-      } else if (activeTab === 'vendor') {
-        await restoreVendorMutation.mutateAsync(restoreTarget._id || restoreTarget.id);
-        toast.success('Vendor and its purchase orders / goods receipts restored');
       } else if (activeTab === 'hospital') {
         await restoreHospitalMutation.mutateAsync(restoreTarget._id || restoreTarget.id);
         toast.success('Hospital and its requisitions restored');
@@ -139,14 +138,13 @@ export default function RecycleBin() {
   };
 
   // Permanent delete — one shared reason dialog, reused for every module
-  // that already exposes a permanentDelete endpoint (donor, vendor,
-  // hospital). Recycle-Bin-only, gated to system-admin.
+  // that already exposes a permanentDelete endpoint (donor, donation,
+  // hospital, camp). Recycle-Bin-only, gated to system-admin.
   const { requestDelete: requestPermanentDelete, DeleteReasonDialog: PermanentDeleteDialog } = useDeleteWithReason({
     onDelete: async (item, reason) => {
       const id = item._id || item.id;
       if (item.__module === 'donor') await permanentDeleteDonor.mutateAsync({ id, reason });
       else if (item.__module === 'donation') await permanentDeleteDonation.mutateAsync({ id, reason });
-      else if (item.__module === 'vendor') await permanentDeleteVendor.mutateAsync({ id, reason });
       else if (item.__module === 'hospital') await permanentDeleteHospital.mutateAsync({ id, reason });
       else if (item.__module === 'camp') {
         try {
@@ -170,7 +168,7 @@ export default function RecycleBin() {
   const isLoading =
     (activeTab === 'donor' && donorQuery.isLoading) ||
     (activeTab === 'donation' && donationQuery.isLoading) ||
-    (activeTab === 'vendor' && vendorQuery.isLoading) ||
+    (activeTab === 'stockTransfers' && (bulkTransferLogsQuery.isLoading || storageLogsQuery.isLoading)) ||
     (activeTab === 'hospital' && hospitalQuery.isLoading) ||
     (activeTab === 'camp' && campQuery.isLoading) ||
     (activeTab === 'affected' && affectedQuery.isLoading);
@@ -178,7 +176,7 @@ export default function RecycleBin() {
   const isError =
     (activeTab === 'donor' && donorQuery.isError) ||
     (activeTab === 'donation' && donationQuery.isError) ||
-    (activeTab === 'vendor' && vendorQuery.isError) ||
+    (activeTab === 'stockTransfers' && (bulkTransferLogsQuery.isError || storageLogsQuery.isError)) ||
     (activeTab === 'hospital' && hospitalQuery.isError) ||
     (activeTab === 'camp' && campQuery.isError) ||
     (activeTab === 'affected' && affectedQuery.isError);
@@ -186,7 +184,7 @@ export default function RecycleBin() {
   const isFetching =
     (activeTab === 'donor' && donorQuery.isFetching) ||
     (activeTab === 'donation' && donationQuery.isFetching) ||
-    (activeTab === 'vendor' && vendorQuery.isFetching) ||
+    (activeTab === 'stockTransfers' && (bulkTransferLogsQuery.isFetching || storageLogsQuery.isFetching)) ||
     (activeTab === 'hospital' && hospitalQuery.isFetching) ||
     (activeTab === 'camp' && campQuery.isFetching) ||
     (activeTab === 'affected' && affectedQuery.isFetching);
@@ -194,7 +192,7 @@ export default function RecycleBin() {
   const refetchActive = () => {
     if (activeTab === 'donor') donorQuery.refetch();
     else if (activeTab === 'donation') donationQuery.refetch();
-    else if (activeTab === 'vendor') vendorQuery.refetch();
+    else if (activeTab === 'stockTransfers') { bulkTransferLogsQuery.refetch(); storageLogsQuery.refetch(); }
     else if (activeTab === 'hospital') hospitalQuery.refetch();
     else if (activeTab === 'camp') campQuery.refetch();
     else if (activeTab === 'affected') affectedQuery.refetch();
@@ -418,24 +416,18 @@ export default function RecycleBin() {
                 </table>
               </div>
             )
-          ) : activeTab === 'vendor' ? (
+          ) : activeTab === 'stockTransfers' ? (
             <SimpleTable
-              emptyLabel="No deleted vendors."
-              rowKey={(v) => v._id || v.id}
+              emptyLabel="No bulk transfer or storage activity logged yet."
+              rowKey={(l) => String(l._id)}
               columns={[
-                { key: 'vendorId', label: 'Vendor ID' },
-                { key: 'name', label: 'Name' },
-                { key: 'manufacturer', label: 'Manufacturer' },
-                { key: 'drugLicenseNo', label: 'Drug License' },
-                { key: 'deletedAt', label: 'Deleted On', render: (v) => formatDate(v.deletedAt) },
+                { key: 'at', label: 'When', render: (l) => new Date(l.at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) },
+                { key: 'module', label: 'Source', render: (l) => (l.module === 'bulk-transfer' ? 'Bulk Transfer' : 'Storage') },
+                { key: 'action', label: 'Action' },
+                { key: 'entityLabel', label: 'Record' },
+                { key: 'reason', label: 'Reason', render: (l) => l.reason || <span className="text-gray-400">—</span> },
               ]}
-              rows={vendorItems}
-              renderActions={(v) => (
-                <>
-                  <RestoreButton onClick={() => openRestoreModal(v)} />
-                  <PermanentDeleteButton item={v} module="vendor" />
-                </>
-              )}
+              rows={stockTransferLogs}
             />
           ) : activeTab === 'hospital' ? (
             <SimpleTable

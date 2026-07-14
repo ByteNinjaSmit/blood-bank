@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, Warehouse, Eye } from 'lucide-react';
+import { Loader2, Warehouse, Eye, Pencil, Trash2 } from 'lucide-react';
 
 const STORAGE_SUB_TABS = [
   { key: 'SJS', label: 'SJS — Kopargaon' },
@@ -18,6 +18,8 @@ export default function StorageTab({
   toggleDateGroup,
   fetchStorageBags,
   onViewBag,
+  onEditBag,
+  onDeleteBag,
 }) {
   return (
     <div className="bg-white shadow-md rounded-xl overflow-hidden">
@@ -136,12 +138,26 @@ export default function StorageTab({
                                       <td className="px-4 py-3 text-gray-600">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '—'}</td>
                                       <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{r.issuedAt ? new Date(r.issuedAt).toLocaleString() : '—'}</td>
                                       <td className="px-4 py-3">
-                                        <button
-                                          onClick={() => onViewBag(r)}
-                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 text-xs font-medium transition-colors"
-                                        >
-                                          <Eye className="w-3.5 h-3.5" /> View
-                                        </button>
+                                        <div className="flex items-center gap-1.5">
+                                          <button
+                                            onClick={() => onViewBag(r)}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 text-xs font-medium transition-colors"
+                                          >
+                                            <Eye className="w-3.5 h-3.5" /> View
+                                          </button>
+                                          <button
+                                            onClick={() => onEditBag(r)}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 text-xs font-medium transition-colors"
+                                          >
+                                            <Pencil className="w-3.5 h-3.5" /> Edit
+                                          </button>
+                                          <button
+                                            onClick={() => onDeleteBag(r)}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-600 hover:border-red-600 hover:text-white text-xs font-medium transition-colors"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                                          </button>
+                                        </div>
                                       </td>
                                     </tr>
                                   );

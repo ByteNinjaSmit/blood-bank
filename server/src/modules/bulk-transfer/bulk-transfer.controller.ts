@@ -2,11 +2,13 @@ import type { NextFunction, Request, Response } from 'express';
 import { ValidateBulkTransfer } from '@/modules/bulk-transfer/bulk-transfer.validator';
 import type { BulkTransferService } from '@/modules/bulk-transfer/bulk-transfer.service';
 import { UnauthorizedError } from '@/shared/errors';
+import { extractEditReason } from '@/shared/utils/edit-reason';
 
 export interface BulkTransferControllers {
   list(req: Request, res: Response, next: NextFunction): Promise<void>;
   get(req: Request, res: Response, next: NextFunction): Promise<void>;
   create(req: Request, res: Response, next: NextFunction): Promise<void>;
+  update(req: Request, res: Response, next: NextFunction): Promise<void>;
   remove(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
@@ -41,10 +43,21 @@ export function createBulkTransferControllers(service: BulkTransferService): Bul
       } catch (e) { next(e); }
     },
 
+    async update(req, res, next) {
+      try {
+        const { id } = ValidateBulkTransfer.idParam(req);
+        const editReason = extractEditReason(req);
+        const body = ValidateBulkTransfer.updateBody(req);
+        const data = await service.update(id, body, actorId(req), editReason);
+        res.json({ success: true, data, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+
     async remove(req, res, next) {
       try {
         const { id } = ValidateBulkTransfer.idParam(req);
-        const data = await service.remove(id, actorId(req));
+        const { reason } = ValidateBulkTransfer.deleteReasonBody(req);
+        const data = await service.remove(id, actorId(req), reason);
         res.json({ success: true, data, requestId: req.id });
       } catch (e) { next(e); }
     },

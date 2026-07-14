@@ -41,5 +41,7 @@ const WRITE_ROLES: Role[] = [
 router.get('/', authenticate, requireRole(READ_ROLES), controllers.listStock);
 router.post('/unreserve', authenticate, requireRole(WRITE_ROLES), controllers.unreserve);
 router.post('/send-to-storage', authenticate, requireRole(WRITE_ROLES), controllers.sendToStorage);
+router.patch('/:id/storage', authenticate, requireRole(WRITE_ROLES), controllers.updateStorage);
+router.post('/return-from-storage', authenticate, requireRole(WRITE_ROLES), controllers.returnFromStorage);
 
 export default router;

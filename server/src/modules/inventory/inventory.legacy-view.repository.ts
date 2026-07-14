@@ -18,7 +18,7 @@ import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { IssueModel } from '@/modules/issue/issue.model';
 import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 import { invalidate } from '@/core/cache';
-import { ValidationError } from '@/shared/errors';
+import { ValidationError, NotFoundError } from '@/shared/errors';
 import type { UnitRepo } from '@/modules/unit/unit.repository';
 
 export interface StockListFilters {
@@ -55,10 +55,25 @@ export interface SendToStorageInput {
   actorId: string;
 }
 
+export interface UpdateStorageInput {
+  id: string;
+  location?: string;
+  otherLocationName?: string;
+  actorId: string;
+}
+
+export interface StorageUnitSummary {
+  id: string;
+  bagNo: string;
+  storageLocation?: string;
+}
+
 export interface InventoryLegacyViewRepo {
   listStock(filters: StockListFilters): Promise<{ data: any[]; total: number; totalPages: number; page: number; limit: number }>;
   unreserve(inventoryIds: string[], actorId: string): Promise<void>;
   sendToStorage(input: SendToStorageInput): Promise<{ skipped: string[]; message: string }>;
+  updateStorage(input: UpdateStorageInput): Promise<StorageUnitSummary>;
+  returnFromStorage(id: string, actorId: string): Promise<StorageUnitSummary>;
 }
 
 export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): InventoryLegacyViewRepo {
@@ -499,6 +514,63 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
           : baseMessage;
 
       return { skipped, message };
+    },
+
+    async updateStorage({ id, location, otherLocationName, actorId }) {
+      let unit = await BloodUnitModel.findById(id);
+      if (!unit) unit = await BloodUnitModel.findOne({ unitId: id });
+      if (!unit || unit.status !== 'ISSUED' || !unit.storageLocation) {
+        throw new NotFoundError('Storage bag', id);
+      }
+
+      const finalLocation = location === 'Others' ? otherLocationName : location;
+      if (!finalLocation) throw new ValidationError('Location name is required');
+
+      const actorObjId = new Types.ObjectId(actorId);
+      const fromLocation = unit.storageLocation;
+      unit.storageLocation = finalLocation as any;
+      unit.updatedBy = actorObjId as any;
+      unit.statusHistory.push({
+        from: 'ISSUED',
+        to: 'ISSUED',
+        event: 'STORAGE_LOCATION_UPDATED',
+        actor: actorObjId,
+        at: new Date(),
+        reason: `Storage location changed from ${fromLocation} to ${finalLocation}`,
+      } as any);
+      await unit.save();
+      await invalidate('inventory:*');
+
+      const donation = await DonationModel.findOne({ donationId: unit.donationId }).select('bagNo').lean();
+      return { id: unit._id.toString(), bagNo: donation?.bagNo || unit.donationId, storageLocation: finalLocation };
+    },
+
+    async returnFromStorage(id, actorId) {
+      let unit = await BloodUnitModel.findById(id);
+      if (!unit) unit = await BloodUnitModel.findOne({ unitId: id });
+      if (!unit || unit.status !== 'ISSUED' || !unit.storageLocation) {
+        throw new NotFoundError('Storage bag', id);
+      }
+
+      const actorObjId = new Types.ObjectId(actorId);
+      const fromLocation = unit.storageLocation;
+      unit.status = 'RELEASED' as any;
+      (unit as any).storageLocation = null;
+      (unit as any).issuedAt = undefined;
+      unit.updatedBy = actorObjId as any;
+      unit.statusHistory.push({
+        from: 'ISSUED',
+        to: 'RELEASED',
+        event: 'STORAGE_RETURN',
+        actor: actorObjId,
+        at: new Date(),
+        reason: `Removed from storage at ${fromLocation} — bag returned to stock`,
+      } as any);
+      await unit.save();
+      await invalidate('inventory:*');
+
+      const donation = await DonationModel.findOne({ donationId: unit.donationId }).select('bagNo').lean();
+      return { id: unit._id.toString(), bagNo: donation?.bagNo || unit.donationId, storageLocation: fromLocation };
     },
   };
 }

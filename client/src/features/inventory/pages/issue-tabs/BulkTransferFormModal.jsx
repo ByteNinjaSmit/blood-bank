@@ -12,6 +12,7 @@ const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 export default function BulkTransferFormModal({
   open,
   onClose,
+  mode = 'create',
   bulkTransferType,
   setBulkTransferType,
   bulkBloodBankName,
@@ -29,10 +30,13 @@ export default function BulkTransferFormModal({
   bulkSubmitting,
   loadingAvailable,
 }) {
+  const isEdit = mode === 'edit';
   return (
-    <CustomModal open={open} onCancel={onClose} title="Bulk Transfer — Give / Take Loan" size="xl" hideFooter>
+    <CustomModal open={open} onCancel={onClose} title={isEdit ? 'Edit Bulk Transfer' : 'Bulk Transfer — Give / Take Loan'} size="xl" hideFooter>
       <div className="space-y-6 text-sm p-2">
-        {/* Give Loan / Take Loan selector */}
+        {/* Give Loan / Take Loan selector — locked once created, since
+            changing the transfer type after bags are already claimed/logged
+            would require a different reconciliation than a plain edit. */}
         <div className="flex gap-3">
           {[
             { key: 'GIVE_LOAN', label: 'Give Loan' },
@@ -41,12 +45,13 @@ export default function BulkTransferFormModal({
             <button
               key={opt.key}
               type="button"
+              disabled={isEdit}
               onClick={() => setBulkTransferType(opt.key)}
               className={`flex-1 h-11 rounded-lg text-sm font-bold border-2 transition-colors ${
                 bulkTransferType === opt.key
                   ? 'border-red-700 bg-red-50 text-red-800'
                   : 'border-gray-200 text-gray-500 hover:border-gray-300'
-              }`}
+              } ${isEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               {opt.label}
             </button>
@@ -501,6 +506,8 @@ export default function BulkTransferFormModal({
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 Submitting...
               </>
+            ) : isEdit ? (
+              "Save Changes"
             ) : (
               bulkTransferType === 'GIVE_LOAN' ? "Give Loan" : "Take Loan"
             )}

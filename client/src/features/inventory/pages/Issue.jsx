@@ -17,6 +17,11 @@ import BulkTransferTab from "./issue-tabs/BulkTransferTab";
 import IssueStockTab from "./issue-tabs/IssueStockTab";
 import SendToStorageModal from "./issue-tabs/SendToStorageModal";
 import BulkTransferFormModal from "./issue-tabs/BulkTransferFormModal";
+import StorageEditModal from "./issue-tabs/StorageEditModal";
+import { useEditWithReason } from "@/hooks/useEditWithReason";
+import { useDeleteWithReason } from "@/hooks/useDeleteWithReason";
+import { useUpdateStorageBag, useReturnFromStorage } from "@/features/inventory/queries";
+import { useUpdateBulkTransfer, useDeleteBulkTransfer } from "@/features/bulk-transfer/queries";
 
 const ISSUE_REGISTERS = [
   { key: 'issue', label: 'Issue Stock Register' },
@@ -155,6 +160,47 @@ const Issue = () => {
   const [storageViewItem, setStorageViewItem] = useState(null);
   const [expandedDates, setExpandedDates] = useState(new Set()); // dates open in accordion
 
+  // ── Storage bag edit / delete ─────────────────────────
+  const [storageEditOpen, setStorageEditOpen] = useState(false);
+  const [storageEditTarget, setStorageEditTarget] = useState(null);
+  const updateStorageBagMutation = useUpdateStorageBag();
+  const returnFromStorageMutation = useReturnFromStorage();
+
+  const openStorageEdit = (bag) => { setStorageEditTarget(bag); setStorageEditOpen(true); };
+  const closeStorageEdit = () => { setStorageEditOpen(false); setStorageEditTarget(null); };
+
+  const { wrappedSave: saveStorageEdit, EditReasonDialog: StorageEditReasonDialog } = useEditWithReason({
+    onSave: async (payload, reason) => {
+      try {
+        await updateStorageBagMutation.mutateAsync({ id: storageEditTarget._id, data: { ...payload, reason } });
+        toast.success('Storage location updated');
+        closeStorageEdit();
+        fetchStorageBags(storageSubTab);
+      } catch (e) {
+        toast.error(e?.message || 'Failed to update storage location');
+        throw e;
+      }
+    },
+    title: 'Confirm Storage Location Change',
+    message: "Please provide a reason for changing this bag's storage location. It will be recorded in the audit trail.",
+  });
+
+  const { requestDelete: requestStorageDelete, DeleteReasonDialog: StorageDeleteReasonDialog } = useDeleteWithReason({
+    onDelete: async (bag, reason) => {
+      try {
+        await returnFromStorageMutation.mutateAsync({ id: bag._id, reason });
+        toast.success('Bag removed from storage — returned to stock');
+        fetchStorageBags(storageSubTab);
+      } catch (e) {
+        toast.error(e?.message || 'Failed to remove bag from storage');
+        throw e;
+      }
+    },
+    title: 'Remove Bag From Storage',
+    message: 'This bag will be returned to available stock and removed from the storage register.',
+    fieldLabel: 'Reason for Removal',
+  });
+
   // ── Thalassemia tab state ────────────────────────────
   const [thalRows, setThalRows] = useState([]);
   const [thalLoading, setThalLoading] = useState(false);
@@ -189,6 +235,95 @@ const Issue = () => {
     setBulkTakeGroups([{ componentType: "PRBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" }] }]);
   };
 
+  // ── Edit a bulk transfer ──────────────────────────────
+  // Reuses the create form in "edit mode": pre-seeds bulkGiveBags /
+  // bulkTakeGroups from the transfer's own items, and (for GIVE_LOAN)
+  // injects those items as synthetic "available" units so already-claimed
+  // bags still show up as selectable/pre-checked in the bag picker even
+  // though they're ISSUED (not RELEASED) and so absent from availableUnits.
+  const [bulkEditTarget, setBulkEditTarget] = useState(null);
+  const [bulkEditExtraUnits, setBulkEditExtraUnits] = useState([]);
+  const updateBulkTransferMutation = useUpdateBulkTransfer();
+
+  const openEditBulkTransfer = (row) => {
+    setBulkEditTarget(row);
+    setBulkTransferType(row.transferType);
+    setBulkBloodBankName(row.bloodBankName || "");
+    setBulkBloodBankAddress(row.bloodBankAddress || "");
+    setBulkTransferDate(row.transferDate ? row.transferDate.split('T')[0] : new Date().toISOString().split('T')[0]);
+
+    if (row.transferType === 'GIVE_LOAN') {
+      const extraUnits = (row.items || []).filter(it => it.unitId).map(it => ({
+        _id: it.unitId,
+        bagNo: it.bagNo,
+        segmentNo: it.segmentNo,
+        typeOfBag: undefined,
+        bag: {
+          bagNo: it.bagNo,
+          bloodGroup: (it.bloodGroup || '').replace(/[+-]$/, ''),
+          rh: (it.bloodGroup || '').endsWith('-') ? 'Negative' : 'Positive',
+          donationDate: it.collectedAt,
+        },
+        component: { componentType: it.componentType, volumeMl: it.volumeMl, expiryDate: it.expiresAt },
+      }));
+      setBulkEditExtraUnits(extraUnits);
+
+      const byComp = {};
+      (row.items || []).forEach(it => {
+        byComp[it.componentType] = byComp[it.componentType] || {};
+        byComp[it.componentType][it.bloodGroup] = byComp[it.componentType][it.bloodGroup] || [];
+        if (it.unitId) byComp[it.componentType][it.bloodGroup].push(it.unitId);
+      });
+      const groups = Object.entries(byComp).map(([componentType, byBg]) => ({
+        componentType,
+        groups: Object.entries(byBg).map(([bloodGroup, selectedBags]) => ({ bloodGroup, bagType: 'All', selectedBags })),
+      }));
+      setBulkGiveBags(groups.length ? groups : [{ componentType: "PRBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
+      fetchAvailableUnits();
+    } else {
+      setBulkEditExtraUnits([]);
+      const byKey = {};
+      (row.items || []).forEach(it => {
+        const key = `${it.componentType}|${it.bloodGroup}`;
+        byKey[key] = byKey[key] || { componentType: it.componentType, bloodGroup: it.bloodGroup, bags: [] };
+        byKey[key].bags.push({
+          bagNo: it.bagNo || '',
+          segmentNo: it.segmentNo || '',
+          volumeMl: it.volumeMl != null ? String(it.volumeMl) : '',
+          collectedAt: it.collectedAt ? it.collectedAt.split('T')[0] : '',
+          expiresAt: it.expiresAt ? it.expiresAt.split('T')[0] : '',
+        });
+      });
+      const groups = Object.values(byKey);
+      setBulkTakeGroups(groups.length ? groups : [{ componentType: "PRBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" }] }]);
+    }
+
+    setBulkFormOpen(true);
+  };
+
+  const { wrappedSave: saveBulkEdit, EditReasonDialog: BulkEditReasonDialog } = useEditWithReason({
+    onSave: async (payload, reason) => {
+      try {
+        setBulkSubmitting(true);
+        await updateBulkTransferMutation.mutateAsync({ id: bulkEditTarget.id, data: payload, editReason: reason });
+        toast.success("Bulk transfer updated");
+        setBulkFormOpen(false);
+        setBulkEditTarget(null);
+        setBulkEditExtraUnits([]);
+        resetBulkForm();
+        fetchBulkTransfers(bulkPagination.page || 1);
+        fetchAvailableUnits();
+      } catch (e) {
+        toast.error(e?.message || "Failed to update bulk transfer");
+        throw e;
+      } finally {
+        setBulkSubmitting(false);
+      }
+    },
+    title: 'Confirm Bulk Transfer Changes',
+    message: 'Please provide a reason for editing this bulk transfer. It will be recorded in the audit trail.',
+  });
+
   const fetchBulkTransfers = async (page = 1, limit = bulkPagination.limit) => {
     setBulkLoading(true);
     try {
@@ -218,18 +353,23 @@ const Issue = () => {
   // only ever existed as line items on the transfer itself.
   const [deleteBulkConfirmOpen, setDeleteBulkConfirmOpen] = useState(false);
   const [deleteBulkTarget, setDeleteBulkTarget] = useState(null);
-  const [deleteBulkSubmitting, setDeleteBulkSubmitting] = useState(false);
+  const [deleteBulkReason, setDeleteBulkReason] = useState("");
+  const deleteBulkTransferMutation = useDeleteBulkTransfer();
+  const deleteBulkSubmitting = deleteBulkTransferMutation.isPending;
 
   const openDeleteBulkTransferConfirm = (row) => {
     setDeleteBulkTarget(row);
+    setDeleteBulkReason("");
     setDeleteBulkConfirmOpen(true);
   };
 
   const handleDeleteBulkTransfer = async () => {
     if (!deleteBulkTarget) return;
+    if (!deleteBulkReason.trim()) {
+      return toast.warning("Please provide a reason for deleting this bulk transfer");
+    }
     try {
-      setDeleteBulkSubmitting(true);
-      await apiClient.delete(`/api/v2/bulk-transfer/${deleteBulkTarget.id}`);
+      await deleteBulkTransferMutation.mutateAsync({ id: deleteBulkTarget.id, reason: deleteBulkReason.trim() });
       toast.success(
         deleteBulkTarget.transferType === 'GIVE_LOAN'
           ? "Bulk transfer deleted — bags returned to stock"
@@ -237,11 +377,10 @@ const Issue = () => {
       );
       setDeleteBulkConfirmOpen(false);
       setDeleteBulkTarget(null);
+      setDeleteBulkReason("");
       fetchBulkTransfers(bulkPagination.page || 1);
     } catch (e) {
-      toast.error(e?.response?.data?.message || "Failed to delete bulk transfer");
-    } finally {
-      setDeleteBulkSubmitting(false);
+      toast.error(e?.message || "Failed to delete bulk transfer");
     }
   };
 
@@ -253,12 +392,17 @@ const Issue = () => {
       return toast.warning("Please select a transfer date");
     }
 
+    // When editing, bags already on the transfer are ISSUED (not RELEASED)
+    // so they won't appear in availableUnits — bulkEditExtraUnits carries
+    // synthetic entries for them, built from the transfer's own items.
+    const unitsForLookup = bulkEditTarget ? [...availableUnits, ...bulkEditExtraUnits] : availableUnits;
+
     let items = [];
     if (bulkTransferType === "GIVE_LOAN") {
       bulkGiveBags.forEach(comp => {
         comp.groups.forEach(group => {
           group.selectedBags.forEach(bagId => {
-            const unit = availableUnits.find(u => u._id === bagId);
+            const unit = unitsForLookup.find(u => u._id === bagId);
             if (unit) {
               items.push({
                 componentType: comp.componentType,
@@ -294,6 +438,18 @@ const Issue = () => {
 
     if (items.length === 0) {
       return toast.warning("Please add at least one blood bag");
+    }
+
+    if (bulkEditTarget) {
+      // Pends on the mandatory reason dialog — actual PATCH happens in
+      // saveBulkEdit's onSave once a reason is supplied.
+      saveBulkEdit({
+        bloodBankName: bulkBloodBankName.trim(),
+        bloodBankAddress: bulkBloodBankAddress.trim(),
+        transferDate: bulkTransferDate,
+        items,
+      });
+      return;
     }
 
     try {
@@ -718,6 +874,8 @@ const Issue = () => {
             toggleDateGroup={toggleDateGroup}
             fetchStorageBags={fetchStorageBags}
             onViewBag={(r) => { setStorageViewItem(r); setStorageViewOpen(true); }}
+            onEditBag={openStorageEdit}
+            onDeleteBag={requestStorageDelete}
           />
         )}
 
@@ -740,8 +898,9 @@ const Issue = () => {
             bulkLoading={bulkLoading}
             bulkPagination={bulkPagination}
             fetchBulkTransfers={fetchBulkTransfers}
-            onSendBulk={() => { resetBulkForm(); setBulkFormOpen(true); fetchAvailableUnits(); }}
+            onSendBulk={() => { setBulkEditTarget(null); setBulkEditExtraUnits([]); resetBulkForm(); setBulkFormOpen(true); fetchAvailableUnits(); }}
             onViewTransfer={(r) => { setBulkViewItem(r); setBulkViewOpen(true); }}
+            onEditTransfer={openEditBulkTransfer}
             onDeleteTransfer={openDeleteBulkTransferConfirm}
           />
         )}
@@ -1099,13 +1258,26 @@ const Issue = () => {
               <> — its {deleteBulkTarget?.items?.length || 0} bag(s) will be removed from the stock listing.</>
             )}
           </p>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+              Reason for Deletion <span className="text-red-600 font-bold">*</span>
+            </label>
+            <textarea
+              rows={3}
+              value={deleteBulkReason}
+              onChange={(e) => setDeleteBulkReason(e.target.value)}
+              placeholder="Describe the reason for deleting this transfer..."
+              className="w-full px-3.5 py-2.5 text-sm bg-gray-50 border border-gray-250 rounded-xl focus:bg-white focus:ring-2 focus:ring-slate-150 focus:border-slate-800 transition-all outline-none resize-none"
+              disabled={deleteBulkSubmitting}
+            />
+          </div>
           <div className="flex items-center justify-end gap-2 border-t pt-4">
             <Button onClick={() => { setDeleteBulkConfirmOpen(false); setDeleteBulkTarget(null); }} variant="outline" className="h-10 px-4">
               Cancel
             </Button>
             <Button
               onClick={handleDeleteBulkTransfer}
-              disabled={deleteBulkSubmitting}
+              disabled={deleteBulkSubmitting || !deleteBulkReason.trim()}
               className="bg-red-700 hover:bg-red-800 text-white font-medium h-10 px-5"
             >
               {deleteBulkSubmitting ? (
@@ -1376,7 +1548,8 @@ const Issue = () => {
       {/* ── Send Bulk (Give/Take Loan) Form Modal ─────────── */}
       <BulkTransferFormModal
         open={bulkFormOpen}
-        onClose={() => setBulkFormOpen(false)}
+        onClose={() => { setBulkFormOpen(false); setBulkEditTarget(null); setBulkEditExtraUnits([]); }}
+        mode={bulkEditTarget ? 'edit' : 'create'}
         bulkTransferType={bulkTransferType}
         setBulkTransferType={setBulkTransferType}
         bulkBloodBankName={bulkBloodBankName}
@@ -1389,11 +1562,25 @@ const Issue = () => {
         setBulkGiveBags={setBulkGiveBags}
         bulkTakeGroups={bulkTakeGroups}
         setBulkTakeGroups={setBulkTakeGroups}
-        availableUnits={availableUnits}
+        availableUnits={bulkEditTarget ? [...availableUnits, ...bulkEditExtraUnits] : availableUnits}
         handleBulkTransferSubmit={handleBulkTransferSubmit}
         bulkSubmitting={bulkSubmitting}
         loadingAvailable={loadingAvailable}
       />
+
+      {/* ── Storage bag edit (location) + reason dialogs ──── */}
+      <StorageEditModal
+        open={storageEditOpen}
+        onClose={closeStorageEdit}
+        bag={storageEditTarget}
+        submitting={updateStorageBagMutation.isPending}
+        onSubmit={(payload) => { setStorageEditOpen(false); saveStorageEdit(payload); }}
+      />
+      {StorageEditReasonDialog}
+      {StorageDeleteReasonDialog}
+
+      {/* ── Bulk transfer edit reason dialog ──────────────── */}
+      {BulkEditReasonDialog}
     </div>
   );
 };

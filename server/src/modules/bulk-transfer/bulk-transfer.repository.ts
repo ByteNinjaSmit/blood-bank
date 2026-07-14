@@ -3,7 +3,7 @@ import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { ConflictError, NotFoundError } from '@/shared/errors';
 import { invalidate } from '@/core/cache';
-import type { ListBulkTransferInput } from '@/modules/bulk-transfer/bulk-transfer.validator';
+import type { ListBulkTransferInput, UpdateBulkTransferInput } from '@/modules/bulk-transfer/bulk-transfer.validator';
 
 export interface BulkTransferItemDto {
   componentType: string;
@@ -78,6 +78,7 @@ export interface BulkTransferRepo {
   list(f: ListBulkTransferInput): Promise<{ items: BulkTransferDto[]; total: number }>;
   findById(id: string): Promise<BulkTransferDto>;
   create(input: CreateBulkTransferInput, actorId: string): Promise<BulkTransferDto>;
+  update(id: string, input: UpdateBulkTransferInput, actorId: string): Promise<BulkTransferDto>;
   remove(id: string, actorId: string): Promise<BulkTransferDto>;
 }
 
@@ -212,6 +213,41 @@ export function createBulkTransferRepo(): BulkTransferRepo {
       });
 
       return toDto(doc.toObject());
+    },
+
+    async update(id, input, actorId) {
+      const raw = await BulkTransferModel.findOne({ _id: id, deletedAt: null });
+      if (!raw) throw new NotFoundError('BulkTransfer', id);
+
+      // Only GIVE_LOAN items are tied to real BloodUnits taken out of
+      // stock — reconcile the diff before persisting so a bag dropped
+      // from the transfer goes back to stock, and a bag newly added is
+      // re-validated as available before it's claimed. TAKE_LOAN items
+      // never touch BloodUnit records, so they can simply be replaced.
+      if (input.items && raw.transferType === 'GIVE_LOAN') {
+        const oldUnitIds = new Set(
+          (raw.items || []).map((it: any) => it.unitId).filter(Boolean).map((u: any) => u.toString()),
+        );
+        const newUnitIds = new Set(
+          input.items.map((it) => it.unitId).filter(Boolean) as string[],
+        );
+        const addedUnitIds = [...newUnitIds].filter((u) => !oldUnitIds.has(u));
+        const removedUnitIds = [...oldUnitIds].filter((u) => !newUnitIds.has(u));
+
+        // Claim newly-added bags first (fails fast, nothing committed yet)
+        // before restoring removed bags, mirroring create()'s claim-before-write order.
+        await markUnitsIssuedForLoan(addedUnitIds, actorId);
+        await restoreUnitsFromLoan(removedUnitIds, actorId);
+      }
+
+      if (input.bloodBankName !== undefined) raw.bloodBankName = input.bloodBankName;
+      if (input.bloodBankAddress !== undefined) raw.bloodBankAddress = input.bloodBankAddress;
+      if (input.transferDate !== undefined) raw.transferDate = input.transferDate;
+      if (input.notes !== undefined) raw.notes = input.notes;
+      if (input.items !== undefined) raw.items = input.items as any;
+      raw.updatedBy = new Types.ObjectId(actorId);
+      await raw.save();
+      return toDto(raw.toObject());
     },
 
     async remove(id, actorId) {

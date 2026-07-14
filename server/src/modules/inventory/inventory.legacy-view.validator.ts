@@ -44,6 +44,19 @@ const SendToStorageBody = z.object({
   sentDate: z.string().trim().optional(),
 });
 
+const UpdateStorageBody = z.object({
+  location: z.string().trim().optional(),
+  otherLocationName: z.string().trim().optional(),
+  reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
+});
+
+const ReturnFromStorageBody = z.object({
+  id: z.string().trim().min(1),
+  reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
+});
+
+const IdParam = z.object({ id: z.string().trim().min(1) });
+
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {
   const r = schema.safeParse(value);
   if (!r.success) throw new ValidationError(`Invalid ${where}`, r.error.issues);
@@ -54,4 +67,7 @@ export const ValidateInventoryLegacyView = {
   stockListQuery: (req: Request) => parseOrThrow(StockListQuery, req.query, 'query string'),
   unreserveBody: (req: Request) => parseOrThrow(UnreserveBody, req.body, 'request body'),
   sendToStorageBody: (req: Request) => parseOrThrow(SendToStorageBody, req.body, 'request body'),
+  updateStorageBody: (req: Request) => parseOrThrow(UpdateStorageBody, req.body, 'request body'),
+  returnFromStorageBody: (req: Request) => parseOrThrow(ReturnFromStorageBody, req.body, 'request body'),
+  idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
 };

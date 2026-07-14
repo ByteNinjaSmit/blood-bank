@@ -39,3 +39,11 @@ export function useFefoPrevew(params) {
 export function useSelectFefo() {
   return useMutation({ mutationFn: inventoryApi.selectFefo });
 }
+
+export function useUpdateStorageBag() {
+  return useMutation({ mutationFn: ({ id, data }) => inventoryApi.updateStorage(id, data) });
+}
+
+export function useReturnFromStorage() {
+  return useMutation({ mutationFn: ({ id, reason }) => inventoryApi.returnFromStorage(id, reason) });
+}

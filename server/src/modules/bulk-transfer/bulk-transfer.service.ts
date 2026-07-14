@@ -2,13 +2,14 @@ import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
 import { withAudit } from '@/shared/utils/with-audit';
 import type { BulkTransferRepo, BulkTransferDto } from '@/modules/bulk-transfer/bulk-transfer.repository';
-import type { CreateBulkTransferInput, ListBulkTransferInput } from '@/modules/bulk-transfer/bulk-transfer.validator';
+import type { CreateBulkTransferInput, ListBulkTransferInput, UpdateBulkTransferInput } from '@/modules/bulk-transfer/bulk-transfer.validator';
 
 export interface BulkTransferService {
   list(f: ListBulkTransferInput): Promise<{ items: BulkTransferDto[]; total: number; page: number; limit: number }>;
   get(id: string): Promise<BulkTransferDto>;
   create(input: CreateBulkTransferInput, actorId: string): Promise<BulkTransferDto>;
-  remove(id: string, actorId: string): Promise<BulkTransferDto>;
+  update(id: string, input: UpdateBulkTransferInput, actorId: string, reason?: string): Promise<BulkTransferDto>;
+  remove(id: string, actorId: string, reason?: string): Promise<BulkTransferDto>;
 }
 
 function generateTransferId(): string {
@@ -47,15 +48,45 @@ export function createBulkTransferService(deps: { bulkTransfers: BulkTransferRep
       return created;
     },
 
-    async remove(id, actorId) {
+    async update(id, input, actorId, reason) {
+      const before = await deps.bulkTransfers.findById(id);
+      const updated = await deps.bulkTransfers.update(id, input, actorId);
+      log.info({ transferId: updated.transferId, actorId }, 'bulk transfer updated');
+      void withAudit(
+        { actorId },
+        {
+          module: 'bulk-transfer',
+          action: 'UPDATE',
+          entityType: 'BulkTransfer',
+          entityId: id,
+          entityLabel: before.transferId,
+          reason,
+        },
+        before,
+        updated,
+      );
+      return updated;
+    },
+
+    async remove(id, actorId, reason) {
       const removed = await deps.bulkTransfers.remove(id, actorId);
       log.info(
         { transferId: removed.transferId, transferType: removed.transferType, actorId },
         'bulk transfer deleted',
       );
       void withAudit(
-        { actorId },
-        { module: 'bulk-transfer', action: 'DELETE', entityType: 'BulkTransfer', entityId: id, entityLabel: removed.transferId },
+        {
+          actorId,
+        },
+        {
+          module: 'bulk-transfer',
+          action: 'DELETE',
+          entityType: 'BulkTransfer',
+          entityId: id,
+          entityLabel: removed.transferId,
+          severity: 'warning',
+          reason,
+        },
         removed,
         undefined,
       );

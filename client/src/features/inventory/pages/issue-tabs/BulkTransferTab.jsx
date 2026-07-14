@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, ArrowLeftRight, Eye, Trash2 } from 'lucide-react';
+import { Loader2, ArrowLeftRight, Eye, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // Bulk Transfer tab: inter-bank loan records (give/take loan). Presentational
@@ -11,6 +11,7 @@ export default function BulkTransferTab({
   fetchBulkTransfers,
   onSendBulk,
   onViewTransfer,
+  onEditTransfer,
   onDeleteTransfer,
 }) {
   return (
@@ -86,6 +87,12 @@ export default function BulkTransferTab({
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 text-xs font-medium transition-colors"
                     >
                       <Eye className="w-3.5 h-3.5" /> View
+                    </button>
+                    <button
+                      onClick={() => onEditTransfer(r)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 text-xs font-medium transition-colors"
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> Edit
                     </button>
                     <button
                       onClick={() => onDeleteTransfer(r)}
