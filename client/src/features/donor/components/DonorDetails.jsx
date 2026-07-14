@@ -159,6 +159,13 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
                 {donor.lastDonationPlace === 'OTHER' ? 'Other' : 'Sanjivani Blood Bank'}
               </p>
             )}
+            <p>
+              <span className="font-medium">Recent Donation:</span>{' '}
+              {donor.recentDonationDate
+                ? new Date(donor.recentDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                : 'No donations recorded in-system'
+              }
+            </p>
             <div className="md:col-span-2 flex items-center gap-2">
               <span className="font-medium">Emergency donation willingness:</span>
               {donor.emergencyDonationWillingness === 'Yes' ? (

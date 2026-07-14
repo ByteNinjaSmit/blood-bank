@@ -39,6 +39,7 @@ export interface DonorDto {
   lastDonationDate?: string;
   lastDonationPlace?: 'SANJIVANI_BLOOD_BANK' | 'OTHER';
   lastDonationId?: string;
+  recentDonationDate?: string;
   emergencyDonationWillingness?: string;
   isAvailableToDonate?: boolean;
   daysUntilEligible?: number;
@@ -259,7 +260,13 @@ async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto[]> {
     return {
       ...dto,
       lastDonationId: dbDonation?.id,
-      lastDonationDate: effectiveDate,
+      // lastDonationDate stays exactly what's stored on the Donor record
+      // (the historical value entered at registration) — it must never be
+      // overwritten by an in-system donation's collection date. That
+      // separate, actual donation date is surfaced as recentDonationDate
+      // instead; effectiveDate (the max of the two) is used only for the
+      // eligibility computation below, never returned as a date field.
+      recentDonationDate: dbDonation?.date ? new Date(dbDonation.date).toISOString() : undefined,
       isAvailableToDonate: (ttiReactive || deferStatus) ? false : isAvailableToDonate,
       daysUntilEligible,
       ttiReactive,

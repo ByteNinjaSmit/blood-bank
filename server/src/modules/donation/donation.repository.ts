@@ -7,7 +7,6 @@ import { Types } from 'mongoose';
 import { DonationModel } from '@/modules/donation/donation.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
-import { DonorModel } from '@/modules/donor/donor.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { IssueModel } from '@/modules/issue/issue.model';
 import type {
@@ -129,15 +128,13 @@ export function createDonationRepo(): DonationRepo {
             );
             if (!donation) throw new Error('Failed to create donation');
 
-            // Update donor's lastDonationDate if the donor is fit
-            if (input.donorFitness.isFit) {
-              await DonorModel.findByIdAndUpdate(
-                donorObjId,
-                { lastDonationDate: input.collectedAt, updatedAt: new Date() },
-                { session },
-              );
-            }
-
+            // Donor.lastDonationDate is intentionally left untouched here —
+            // it holds the historical value entered at donor registration,
+            // not an auto-tracked "most recent donation" pointer. The
+            // actual most recent in-system donation is read straight off
+            // the Donation collection (see donor.repository's
+            // populateLastDonationId -> recentDonationDate) so the two
+            // never collide in the UI.
 
             const unitDocs = await BloodUnitModel.insertMany(
               units.map((u) => ({
@@ -238,13 +235,8 @@ export function createDonationRepo(): DonationRepo {
         );
         if (!donation) throw new Error('Failed to create donation');
 
-        // Update donor's lastDonationDate in fallback path too
-        if (input.donorFitness.isFit) {
-          await DonorModel.findByIdAndUpdate(
-            donorObjId,
-            { lastDonationDate: input.collectedAt, updatedAt: new Date() },
-          );
-        }
+        // Donor.lastDonationDate is intentionally left untouched here too —
+        // see the matching comment in the transactional path above.
 
         const unitDocs = await BloodUnitModel.insertMany(
           units.map((u) => ({
