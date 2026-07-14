@@ -183,6 +183,9 @@ export type DonationType = (typeof DONATION_TYPE)[number];
 export const DEFERRAL_TYPE = ['TEMPORARY', 'PERMANENT'] as const;
 export type DeferralType = (typeof DEFERRAL_TYPE)[number];
 
+export const DONOR_LAST_DONATION_PLACE = ['SANJIVANI_BLOOD_BANK', 'OTHER'] as const;
+export type DonorLastDonationPlace = (typeof DONOR_LAST_DONATION_PLACE)[number];
+
 export const SPECIAL_NEED = [
   'IRRADIATED',
   'CMV_NEGATIVE',

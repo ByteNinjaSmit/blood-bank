@@ -1,5 +1,5 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
-import { ABO_GROUP, RH_FACTOR } from '@/shared/enums';
+import { ABO_GROUP, RH_FACTOR, DONOR_LAST_DONATION_PLACE } from '@/shared/enums';
 import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const AddressSchema = new Schema(
@@ -39,6 +39,10 @@ const DonorSchema = new Schema(
       index: true,
     },
     lastDonationDate: { type: Date, index: true },
+    // Where the last donation (as entered above) was performed — only
+    // meaningful alongside lastDonationDate; defaults to in-house since
+    // that's the common case (most donors last donated at this bank).
+    lastDonationPlace: { type: String, enum: DONOR_LAST_DONATION_PLACE, default: 'SANJIVANI_BLOOD_BANK' },
     // Donor's answer to "Will you donate if we call in emergency?" (Yes/No).
     emergencyDonationWillingness: { type: String, enum: ['Yes', 'No', ''], default: '' },
     // 768-dim dense vector for Atlas Vector Search (populated by embedding job).

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ABO_GROUP, RH_FACTOR } from '@/shared/enums';
+import { ABO_GROUP, RH_FACTOR, DONOR_LAST_DONATION_PLACE } from '@/shared/enums';
 import { ValidationError } from '@/shared/errors';
 import type { Request } from 'express';
 
@@ -49,6 +49,7 @@ export const CreateDonorBody = z.object({
   eligibilityStatus: blankToUndef(z.enum(['eligible', 'deferred', 'temp-deferred']).optional()),
   campId: blankToUndef(z.string().regex(OBJECT_ID, 'Invalid camp id').optional()),
   lastDonationDate: blankToUndef(z.coerce.date().optional()),
+  lastDonationPlace: blankToUndef(z.enum(DONOR_LAST_DONATION_PLACE).optional()),
   emergencyDonationWillingness: blankToUndef(z.enum(['Yes', 'No']).optional()),
 });
 export type CreateDonorInput = z.infer<typeof CreateDonorBody>;

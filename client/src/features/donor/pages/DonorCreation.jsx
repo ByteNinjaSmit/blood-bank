@@ -155,6 +155,7 @@ const INITIAL_FORM_DATA = {
   occupation: "",
   lastDonationDate: "",
   lastDonationDateDisplay: "",
+  lastDonationPlace: "SANJIVANI_BLOOD_BANK",
 
   // Step 2: Medical Questions (q1-q36)
   q1: "No", q2: "Yes", q3: "Yes", q4: "No", q5: "No", q6: "Yes", q7: "Yes", q8: "No", q9: "No", q10: "No",
@@ -229,6 +230,9 @@ export default function DonorCreation() {
 
   const [repeatedDonation, setRepeatedDonation] = useState("No");
   const [selectedDonor, setSelectedDonor] = useState(null);
+  // Locked once a selected donor already has a last donation date on file —
+  // that date came from their record, not something staff should retype.
+  const [lastDonationDateLocked, setLastDonationDateLocked] = useState(false);
 
   React.useEffect(() => {
     if (draftId) {
@@ -339,8 +343,12 @@ export default function DonorCreation() {
       occupation: donor.occupation || "",
       lastDonationDate: lddISO,
       lastDonationDateDisplay: lddDisplay,
+      lastDonationPlace: donor.lastDonationPlace || "SANJIVANI_BLOOD_BANK",
       emergencyDonationWillingness: donor.emergencyDonationWillingness || "",
     }));
+    // A donor with an existing last-donation date already on file gets that
+    // date locked; a donor with none on file leaves it open for manual entry.
+    setLastDonationDateLocked(Boolean(lddISO));
   };
 
   React.useEffect(() => {
@@ -595,6 +603,7 @@ export default function DonorCreation() {
   };
 
   const handleLastDonationDateDisplayChange = (e) => {
+    if (lastDonationDateLocked) return;
     let val = e.target.value.replace(/\D/g, "").slice(0, 8);
     let display = val;
     if (val.length > 4) {
@@ -764,6 +773,7 @@ export default function DonorCreation() {
         eligibilityStatus: (repeatedDonation === "Yes" && selectedDonor) ? (selectedDonor.eligibilityStatus || "eligible") : "eligible",
         occupation: formData.occupation || undefined,
         lastDonationDate: formData.lastDonationDate ? new Date(formData.lastDonationDate).toISOString() : undefined,
+        lastDonationPlace: formData.lastDonationDate ? formData.lastDonationPlace : undefined,
         emergencyDonationWillingness: formData.emergencyDonationWillingness || undefined,
       };
 
@@ -801,6 +811,7 @@ export default function DonorCreation() {
           pincode: cleanStr(formData.pincode) !== cleanStr(address.pincode),
           occupation: cleanStr(formData.occupation) !== cleanStr(selectedDonor.occupation),
           lastDonationDate: getISODateOnly(formData.lastDonationDate) !== getISODateOnly(selectedDonor.lastDonationDate),
+          lastDonationPlace: cleanStr(formData.lastDonationPlace) !== cleanStr(selectedDonor.lastDonationPlace || "SANJIVANI_BLOOD_BANK"),
           emergencyDonationWillingness: cleanStr(formData.emergencyDonationWillingness) !== cleanStr(selectedDonor.emergencyDonationWillingness),
         };
 
@@ -881,6 +892,7 @@ export default function DonorCreation() {
         eligibilityStatus: formData.donorIsFit ? "eligible" : (formData.deferralReasonObj?.days === 0 ? "deferred" : "temp-deferred"),
         occupation: formData.occupation || undefined,
         lastDonationDate: formData.lastDonationDate ? new Date(formData.lastDonationDate).toISOString() : undefined,
+        lastDonationPlace: formData.lastDonationDate ? formData.lastDonationPlace : undefined,
         emergencyDonationWillingness: formData.emergencyDonationWillingness || undefined,
       };
 
@@ -1211,6 +1223,7 @@ export default function DonorCreation() {
                     if (val === "No") {
                       setSelectedDonor(null);
                       setFormData({ ...INITIAL_FORM_DATA });
+                      setLastDonationDateLocked(false);
                     }
                   }}
                   className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800 bg-white text-sm outline-none"
@@ -1565,14 +1578,23 @@ export default function DonorCreation() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Donation Date</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+                      Last Donation Date
+                      {lastDonationDateLocked && <Lock className="w-3 h-3 text-gray-400" />}
+                    </label>
                     <input
                       type="text"
                       placeholder="DD/MM/YYYY"
                       value={formData.lastDonationDateDisplay}
                       onChange={handleLastDonationDateDisplayChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
+                      disabled={lastDonationDateLocked}
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm ${
+                        lastDonationDateLocked ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""
+                      }`}
                     />
+                    {lastDonationDateLocked && (
+                      <p className="text-xs text-gray-400 mt-1">Loaded from donor record — cannot be edited here.</p>
+                    )}
                     {formData.lastDonationDateDisplay && !validateDate(formData.lastDonationDateDisplay) && (
                       <p className="text-xs text-red-655 mt-1 font-semibold">Enter a valid past date (DD/MM/YYYY)</p>
                     )}
@@ -1592,6 +1614,17 @@ export default function DonorCreation() {
                       }
                       return null;
                     })()}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Donation Done At</label>
+                    <select
+                      value={formData.lastDonationPlace}
+                      onChange={(e) => handleFormFieldChange("lastDonationPlace", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
+                    >
+                      <option value="SANJIVANI_BLOOD_BANK">Sanjivani Blood Bank</option>
+                      <option value="OTHER">Other</option>
+                    </select>
                   </div>
                 </div>
               </div>

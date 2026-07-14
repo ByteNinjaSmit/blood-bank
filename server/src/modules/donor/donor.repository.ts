@@ -37,6 +37,7 @@ export interface DonorDto {
   rh: 'Positive' | 'Negative';
   eligibilityStatus?: 'eligible' | 'deferred' | 'temp-deferred';
   lastDonationDate?: string;
+  lastDonationPlace?: 'SANJIVANI_BLOOD_BANK' | 'OTHER';
   lastDonationId?: string;
   emergencyDonationWillingness?: string;
   isAvailableToDonate?: boolean;
@@ -64,6 +65,7 @@ interface RawDonor {
   rh: DonorDto['rh'];
   eligibilityStatus?: DonorDto['eligibilityStatus'];
   lastDonationDate?: Date;
+  lastDonationPlace?: 'SANJIVANI_BLOOD_BANK' | 'OTHER';
   emergencyDonationWillingness?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -122,6 +124,7 @@ export function toDto(raw: any): any {
     rh: raw.rh === 'POSITIVE' ? 'Positive' : raw.rh === 'NEGATIVE' ? 'Negative' : raw.rh,
     eligibilityStatus: raw.eligibilityStatus,
     lastDonationDate: raw.lastDonationDate ? (raw.lastDonationDate instanceof Date ? raw.lastDonationDate.toISOString() : new Date(raw.lastDonationDate).toISOString()) : undefined,
+    lastDonationPlace: raw.lastDonationPlace || undefined,
     emergencyDonationWillingness: raw.emergencyDonationWillingness || '',
     isAvailableToDonate,
     daysUntilEligible,

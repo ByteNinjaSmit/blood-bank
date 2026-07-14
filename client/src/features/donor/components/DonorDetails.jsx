@@ -153,6 +153,12 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
                 : 'No previous donations'
               }
             </p>
+            {donor.lastDonationDate && (
+              <p>
+                <span className="font-medium">Last Donation Done At:</span>{' '}
+                {donor.lastDonationPlace === 'OTHER' ? 'Other' : 'Sanjivani Blood Bank'}
+              </p>
+            )}
             <div className="md:col-span-2 flex items-center gap-2">
               <span className="font-medium">Emergency donation willingness:</span>
               {donor.emergencyDonationWillingness === 'Yes' ? (
