@@ -187,7 +187,6 @@ function rbcFamily(component: ComponentType): Family {
     case 'FFP':
       return 'PLASMA';
     case 'RDP':
-    case 'SDP':
       return 'PLATELET';
     case 'CRYO':
       return 'CRYO';

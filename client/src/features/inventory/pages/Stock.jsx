@@ -39,14 +39,6 @@ const COMPONENT_THEMES = {
     activeText: 'text-yellow-900',
     activeBgLabel: 'text-yellow-700',
   },
-  SDP: {
-    bgClass: 'bg-purple-50/20 border-purple-100',
-    titleClass: 'text-purple-800 border-purple-200',
-    labelClass: 'bg-purple-700 text-white',
-    activeBubble: 'border-purple-300 bg-purple-50 text-purple-800',
-    activeText: 'text-purple-900',
-    activeBgLabel: 'text-purple-700',
-  },
   CRYO: {
     bgClass: 'bg-blue-50/20 border-blue-100',
     titleClass: 'text-blue-800 border-blue-200',
@@ -63,7 +55,6 @@ function ComponentStockLines({ stockSummary }) {
     PRBC: initialStock(),
     FFP: initialStock(),
     RDP: initialStock(),
-    SDP: initialStock(),
     CRYO: initialStock(),
   };
 

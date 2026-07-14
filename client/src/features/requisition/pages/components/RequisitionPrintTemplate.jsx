@@ -7,7 +7,6 @@ const COMPONENT_LABELS = {
   PRBC: 'PCV',
   FFP: 'FFP',
   RDP: 'RDP',
-  SDP: 'SDP',
   CRYO: 'CRYO',
 };
 

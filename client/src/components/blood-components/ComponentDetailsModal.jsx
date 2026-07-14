@@ -368,8 +368,6 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
                   {renderComponentCard("Fresh Frozen Plasma (FFP)", state.component.ffp)}
                   {/* RDP Component Card */}
                   {renderComponentCard("Random Donor Platelets (RDP)", state.component.rdp)}
-                  {/* SDP Component Card */}
-                  {renderComponentCard("Single Donor Platelets (SDP)", state.component.sdp)}
                   {/* Cryo Component Card */}
                   {renderComponentCard("Cryoprecipitate", state.component.cryo)}
                 </div>

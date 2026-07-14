@@ -6,7 +6,6 @@ export const COMPONENT_TYPES = [
   { value: 'PRBC', label: 'Packed Red Blood Cells' },
   { value: 'FFP', label: 'Fresh Frozen Plasma' },
   { value: 'RDP', label: 'Random Donor Platelets' },
-  { value: 'SDP', label: 'Single Donor Platelets' },
   { value: 'CRYO', label: 'Cryoprecipitate' },
 ];
 
@@ -18,6 +17,5 @@ export const COMPONENT_PRINT_LABEL = {
   PRBC: 'Packed Red Blood Cells I.P',
   FFP: 'Fresh Frozen Plasma',
   RDP: 'Random Donor Platelets',
-  SDP: 'Single Donor Platelets',
   CRYO: 'Cryoprecipitate',
 };

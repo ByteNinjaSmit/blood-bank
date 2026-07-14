@@ -2048,7 +2048,6 @@ export default function DonorCreation() {
                     <option value="AUTOLOGOUS">Autologous</option>
                     <option value="DIRECTED">Directed</option>
                     <option value="REPLACEMENT">Replacement</option>
-                    <option value="PLATELETPHERESIS">Plateletpheresis</option>
                     <option value="PLASMAPHERESIS">Plasmapheresis</option>
                     <option value="DOUBLE_RED_CELL">Double Red Cell</option>
                   </select>

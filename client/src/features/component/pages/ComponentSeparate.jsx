@@ -10,7 +10,7 @@ import { formatDateTime } from "@/lib/format-date";
 import { COMPONENT_LABEL } from "@/constants/component-types";
 
 // Component separation from a whole-blood donation only ever yields these four
-// derived products — WB and SDP (apheresis platelets) are never re-selected here.
+// derived products — WB is never re-selected here.
 const SEPARABLE_COMPONENT_TYPES = ["PRBC", "FFP", "RDP", "CRYO"];
 
 const ComponentSeparate = () => {

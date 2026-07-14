@@ -21,7 +21,6 @@ const DEFAULT_TEMPLATES: Readonly<Record<DonationType, ReadonlyArray<UnitTemplat
   WHOLE_BLOOD: [
     { componentType: 'WB', volumeMl: 350, shelfLifeDays: getShelfDays('WB') },
   ],
-  PLATELETPHERESIS: [{ componentType: 'SDP', volumeMl: 250, shelfLifeDays: getShelfDays('SDP') }],
   PLASMAPHERESIS: [{ componentType: 'FFP', volumeMl: 600, shelfLifeDays: getShelfDays('FFP') }],
   DOUBLE_RED_CELL: [
     { componentType: 'PRBC', volumeMl: 250, shelfLifeDays: getShelfDays('PRBC') },

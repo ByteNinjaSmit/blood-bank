@@ -12,7 +12,6 @@ const TYPES = [
   { key: "prbc", label: "Packed Red Blood Cells (PRBC)", type: "PRBC" },
   { key: "ffp", label: "Fresh Frozen Plasma (FFP)", type: "FFP" },
   { key: "rdp", label: "Random Donor Platelets (RDP)", type: "RDP" },
-  { key: "sdp", label: "Single Donor Platelets (SDP)", type: "SDP" },
   { key: "cryo", label: "Cryoprecipitate", type: "CRYO" },
 ];
 const COMPONENT_TYPE_OPTIONS = TYPES.map((t) => t.type);

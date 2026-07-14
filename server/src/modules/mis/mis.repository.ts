@@ -13,7 +13,7 @@ import { IssueModel } from '@/modules/issue/issue.model';
 import { BagStockModel } from '@/modules/bag-stock/bag-stock.model';
 
 // Stored `componentType` values are already the canonical report codes
-// (WB/PRBC/FFP/RDP/SDP/CRYO) post-migration, so no translation is needed.
+// (WB/PRBC/FFP/RDP/CRYO) post-migration, so no translation is needed.
 const toProductLabel = (t: string) => t;
 
 const DISCARD_LABEL: Record<string, string> = {

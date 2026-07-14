@@ -5,7 +5,6 @@ const COMPONENT_MATERIAL = {
   PRBC: 'Packed Red Blood Cells',
   FFP: 'Fresh Frozen Plasma',
   RDP: 'Platelet Concentrate',
-  SDP: 'Single Donor Platelets',
   CRYO: 'Cryoprecipitate',
 };
 

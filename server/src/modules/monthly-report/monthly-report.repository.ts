@@ -17,8 +17,8 @@ import { createChemicalInventoryRepo } from '@/modules/chemical-inventory/chemic
 import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 
 // Stored `componentType` values are already the canonical report codes
-// (WB/PRBC/FFP/RDP/SDP/CRYO) post-migration, so no translation is needed.
-const PRODUCTS = ['WB', 'PRBC', 'FFP', 'RDP', 'SDP', 'CRYO'] as const;
+// (WB/PRBC/FFP/RDP/CRYO) post-migration, so no translation is needed.
+const PRODUCTS = ['WB', 'PRBC', 'FFP', 'RDP', 'CRYO'] as const;
 
 const DISCARD_LABEL: Record<string, string> = {
   EXPIRED: 'Expired',

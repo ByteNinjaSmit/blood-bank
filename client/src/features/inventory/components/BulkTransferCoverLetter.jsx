@@ -7,7 +7,6 @@ const COMPONENT_DESCRIPTION = {
   PRBC: 'packed red blood cells which is component of whole blood',
   FFP: 'human plasma which is component of whole blood',
   RDP: 'platelet concentrate which is component of whole blood',
-  SDP: 'single donor platelets which is component of whole blood',
   CRYO: 'cryoprecipitate which is component of whole blood',
 };
 
@@ -17,7 +16,6 @@ const COMPONENT_NAME = {
   PRBC: 'blood',
   FFP: 'plasma',
   RDP: 'platelets',
-  SDP: 'platelets',
   CRYO: 'cryoprecipitate',
 };
 

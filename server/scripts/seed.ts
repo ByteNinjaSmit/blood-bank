@@ -244,7 +244,7 @@ async function main() {
   console.log('deferrals:', deferralDocs.length);
 
   // ── 7. DONATIONS (72) ────────────────────────────────────────────────────
-  const DONATION_TYPES = ['WHOLE_BLOOD', 'WHOLE_BLOOD', 'WHOLE_BLOOD', 'WHOLE_BLOOD', 'PLATELETPHERESIS', 'PLASMAPHERESIS', 'DOUBLE_RED_CELL'] as const;
+  const DONATION_TYPES = ['WHOLE_BLOOD', 'WHOLE_BLOOD', 'WHOLE_BLOOD', 'WHOLE_BLOOD', 'PLASMAPHERESIS', 'PLASMAPHERESIS', 'DOUBLE_RED_CELL'] as const;
   const donations: InstanceType<typeof DonationModel>[] = [];
   for (let i = 0; i < N_DONATIONS; i++) {
     const donor = donors[i]; // first 72 donors donate (distinct)
@@ -305,13 +305,12 @@ async function main() {
 
   // ── 9. BLOOD UNITS (component split per donation) ─────────────────────────
   const compsFor = (type: string): string[] => {
-    if (type === 'PLATELETPHERESIS') return ['SDP'];
     if (type === 'PLASMAPHERESIS') return ['FFP'];
     if (type === 'DOUBLE_RED_CELL') return ['PRBC', 'PRBC'];
     return chance(0.3) ? ['PRBC', 'FFP', 'RDP'] : ['PRBC', 'FFP'];
   };
   const expiryFor = (comp: string, from: Date) => {
-    if (comp === 'RDP' || comp === 'SDP') return new Date(from.getTime() + days(5));
+    if (comp === 'RDP') return new Date(from.getTime() + days(5));
     if (comp === 'FFP' || comp === 'CRYO') return new Date(from.getTime() + days(365));
     return new Date(from.getTime() + days(35));
   };
@@ -338,7 +337,7 @@ async function main() {
         unitId: `UNIT-2026-${pad(unitSeq++, 5)}`,
         donationId: don.donationId, componentType: comp,
         aboGroup: donor.bloodGroup, rhFactor: donor.rh,
-        volumeMl: comp === 'FFP' ? 220 : comp === 'SDP' ? 250 : comp === 'RDP' ? 60 : 280,
+        volumeMl: comp === 'FFP' ? 220 : comp === 'RDP' ? 60 : 280,
         collectedAt, expiresAt, status, statusHistory: hist(status, admin),
         specialAttributes: special,
         campId: don.campId ?? undefined,

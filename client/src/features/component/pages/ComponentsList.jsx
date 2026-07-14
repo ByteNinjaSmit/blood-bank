@@ -39,7 +39,7 @@ const ComponentsList = () => {
   const flattenComponents = (bags) => {
     return bags
       .map(bag => {
-        const components = ['prbc', 'ffp', 'rdp', 'sdp', 'cryo']
+        const components = ['prbc', 'ffp', 'rdp', 'cryo']
           .map(type => {
             const comp = bag[type];
             if (!comp || comp.status !== 'prepared') return null;
@@ -359,7 +359,7 @@ const ComponentsList = () => {
   // Single responsibility: Check if any prepared component on this bag is quarantined
   // (edited to Shadeness on the serology report moves in-stock units to quarantine).
   const isBagQuarantined = (bag) => {
-    return ['prbc', 'ffp', 'rdp', 'sdp', 'cryo'].some(
+    return ['prbc', 'ffp', 'rdp', 'cryo'].some(
       (type) => bag[type]?.status === 'prepared' && bag[type]?.componentStatus === 'quarantined'
     );
   };
@@ -590,9 +590,6 @@ const ComponentsList = () => {
                       Random Donor Platelets (RDP)
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Single Donor Platelets (SDP)
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Cryoprecipitate
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -709,32 +706,6 @@ const ComponentsList = () => {
                                 </span>
                               )}
                               {isNearExpiry(bag.rdp.expiryDate) && !isExpired(bag.rdp.expiryDate) && (
-                                <span className="text-[9px] text-yellow-600 flex items-center gap-0.5 mt-0.5">
-                                  <AlertTriangle className="w-2.5 h-2.5" /> Near Expiry
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <Badge variant="outline" className="w-fit text-[9px] font-medium text-gray-400 border-gray-200 bg-gray-50/50 uppercase tracking-wider">
-                              Unprepared
-                            </Badge>
-                          )}
-                        </td>
-                        {/* SDP column */}
-                        <td className="px-4 py-3 text-sm">
-                          {bag.sdp?.status === "prepared" ? (
-                            <div className="flex flex-col gap-0.5">
-                              <Badge variant="outline" className={`w-fit text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${getStatusBadgeClass(bag.sdp.componentStatus)}`}>
-                                {getStatusLabel(bag.sdp.componentStatus)}
-                              </Badge>
-                              <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.sdp.volumeMl} mL</span>
-                              <span className="text-[9px] text-gray-500">{bag.sdp.storageLocation || "Main Fridge"}</span>
-                              {isExpired(bag.sdp.expiryDate) && (
-                                <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
-                                  <AlertTriangle className="w-2.5 h-2.5" /> Expired
-                                </span>
-                              )}
-                              {isNearExpiry(bag.sdp.expiryDate) && !isExpired(bag.sdp.expiryDate) && (
                                 <span className="text-[9px] text-yellow-600 flex items-center gap-0.5 mt-0.5">
                                   <AlertTriangle className="w-2.5 h-2.5" /> Near Expiry
                                 </span>

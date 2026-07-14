@@ -15,7 +15,6 @@ export const COMPONENT_LABEL: Readonly<Record<ComponentType, string>> = {
   PRBC: 'Packed Red Blood Cells',
   FFP: 'Fresh Frozen Plasma',
   RDP: 'Random Donor Platelets',
-  SDP: 'Single Donor Platelets',
   CRYO: 'Cryoprecipitate',
 };
 
@@ -24,7 +23,6 @@ export const PRODUCT_CODE: Readonly<Record<ComponentType, string>> = {
   PRBC: 'PRBC',
   FFP: 'FFP',
   RDP: 'RDP',
-  SDP: 'SDP',
   CRYO: 'CRYO',
 };
 
@@ -34,7 +32,6 @@ const FLAT_SHELF_DAYS: Readonly<Record<Exclude<ComponentType, 'PRBC'>, number>> 
   WB: 35,
   FFP: 365,
   RDP: 5,
-  SDP: 5,
   CRYO: 365,
 };
 

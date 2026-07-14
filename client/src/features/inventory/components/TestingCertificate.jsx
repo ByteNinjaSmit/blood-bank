@@ -7,7 +7,6 @@ const COMPONENT_TYPE_LABEL = {
   PRBC: 'Blood Type',
   FFP: 'Plasma Type',
   RDP: 'Platelet Type',
-  SDP: 'Platelet Type',
   CRYO: 'Cryo Type',
 };
 
@@ -16,7 +15,6 @@ const COMPONENT_VALUE = {
   PRBC: 'Packed Red Blood Cells',
   FFP: 'Normal Human Plasma',
   RDP: 'Platelet Concentrate',
-  SDP: 'Single Donor Platelets',
   CRYO: 'Cryoprecipitate',
 };
 
@@ -25,7 +23,6 @@ const COMPONENT_NOUN = {
   PRBC: 'blood',
   FFP: 'plasma',
   RDP: 'platelets',
-  SDP: 'platelets',
   CRYO: 'cryoprecipitate',
 };
 

@@ -40,13 +40,13 @@ describe('ABO compatibility — Plasma (strict group-identical matching)', () =>
 
 describe('ABO compatibility — Platelets with modes', () => {
   it('Universal mode (default) accepts all groups', () => {
-    expect(new Set(compatibleAboGroups('A', 'SDP', 'UNIVERSAL'))).toEqual(new Set(['A', 'AB', 'O', 'B']));
+    expect(new Set(compatibleAboGroups('A', 'RDP', 'UNIVERSAL'))).toEqual(new Set(['A', 'AB', 'O', 'B']));
   });
   it('Major compatibility mode follows RBC rules', () => {
-    expect(new Set(compatibleAboGroups('A', 'SDP', 'MAJOR'))).toEqual(new Set(['A', 'O']));
+    expect(new Set(compatibleAboGroups('A', 'RDP', 'MAJOR'))).toEqual(new Set(['A', 'O']));
   });
   it('Minor compatibility mode follows Plasma (inverse) rules', () => {
-    expect(new Set(compatibleAboGroups('A', 'SDP', 'MINOR'))).toEqual(new Set(['A', 'AB']));
+    expect(new Set(compatibleAboGroups('A', 'RDP', 'MINOR'))).toEqual(new Set(['A', 'AB']));
   });
 });
 
@@ -64,7 +64,7 @@ describe('Rh rules', () => {
     expect(isRhAcceptable('NEGATIVE', 'POSITIVE', 'CRYO')).toBe(true);
   });
   it('Platelets: Rh preferred not mandatory', () => {
-    expect(isRhAcceptable('NEGATIVE', 'POSITIVE', 'SDP')).toBe(true);
+    expect(isRhAcceptable('NEGATIVE', 'POSITIVE', 'RDP')).toBe(true);
   });
 });
 
@@ -73,7 +73,7 @@ describe('Crossmatch requirement', () => {
     expect(requiresCrossmatch('PRBC')).toBe(true);
     expect(requiresCrossmatch('WB')).toBe(true);
     expect(requiresCrossmatch('FFP')).toBe(false);
-    expect(requiresCrossmatch('SDP')).toBe(false);
+    expect(requiresCrossmatch('RDP')).toBe(false);
     expect(requiresCrossmatch('CRYO')).toBe(false);
   });
 });
@@ -82,7 +82,7 @@ describe('Strictness label', () => {
   it.each([
     ['PRBC', 'HIGH'],
     ['FFP', 'MEDIUM'], // FFP clinical strictness label is still MEDIUM
-    ['SDP', 'LOW'],
+    ['RDP', 'LOW'],
     ['CRYO', 'VERY_LOW'],
   ] as const)('%s -> %s', (component, expected) => {
     expect(strictness(component)).toBe(expected);

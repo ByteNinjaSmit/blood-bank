@@ -25,16 +25,6 @@ describe('unit derivation defaults', () => {
     expect(diffDays).toBe(35);
   });
 
-  it('plateletpheresis produces 1 SDP unit', () => {
-    const units = deriveUnits({
-      donationId: 'A-001',
-      donationType: 'PLATELETPHERESIS',
-      collectedAt: COLLECTED,
-    });
-    expect(units).toHaveLength(1);
-    expect(units[0]!.componentType).toBe('SDP');
-  });
-
   it('double red cell produces 2 PRBCs', () => {
     const units = deriveUnits({
       donationId: 'A-002',

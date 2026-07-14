@@ -26,9 +26,11 @@ Requires `MONGODB_URI` in the env (read via `dotenv` from `server/.env`).
 
 ## Available migrations
 
-| Date       | Script                    | Purpose                                                                     |
-| ---------- | ------------------------- | --------------------------------------------------------------------------- |
-| 2026-05-30 | `20260530-bag-to-unit.js` | Split each `BloodBag` into one `Donation` + N `BloodUnit` + one `TtiResult` |
+| Date       | Script                                        | Purpose                                                                     |
+| ---------- | ---------------------------------------------- | --------------------------------------------------------------------------- |
+| 2026-05-30 | `20260530-bag-to-unit.js`                      | Split each `BloodBag` into one `Donation` + N `BloodUnit` + one `TtiResult` |
+| 2026-07-13 | `20260713-standardize-component-types.js`      | Collapse legacy component-type vocabulary down to the canonical codes       |
+| 2026-07-14 | `20260714-retire-sdp-component.js`              | Soft-delete existing SDP `BloodUnit`/`PLATELETPHERESIS` `Donation` docs after those values were retired from the app |
 
 ## Adding a new one
 

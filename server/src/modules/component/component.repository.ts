@@ -214,7 +214,6 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
           prbc: componentSlot(units, ['PRBC', 'WB'], tti),
           ffp: componentSlot(units, ['FFP'], tti),
           rdp: componentSlot(units, ['RDP'], tti),
-          sdp: componentSlot(units, ['SDP'], tti),
           cryo: componentSlot(units, ['CRYO'], tti),
         };
       });
@@ -538,7 +537,6 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         prbc: findComp(['PRBC', 'WB']),
         ffp: findComp(['FFP']),
         rdp: findComp(['RDP']),
-        sdp: findComp(['SDP']),
         cryo: findComp(['CRYO']),
       };
     },

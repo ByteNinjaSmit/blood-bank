@@ -66,7 +66,7 @@ export function createDonationControllers(service: DonationService): DonationCon
           }
 
           const rhFactor = legacy.rh === 'Positive' || legacy.rh === 'POSITIVE' ? 'POSITIVE' : 'NEGATIVE';
-          const VALID_DONATION_TYPES = ['WHOLE_BLOOD', 'PLATELETPHERESIS', 'PLASMAPHERESIS', 'DOUBLE_RED_CELL', 'AUTOLOGOUS', 'DIRECTED', 'REPLACEMENT'];
+          const VALID_DONATION_TYPES = ['WHOLE_BLOOD', 'PLASMAPHERESIS', 'DOUBLE_RED_CELL', 'AUTOLOGOUS', 'DIRECTED', 'REPLACEMENT'];
           const donationType = VALID_DONATION_TYPES.includes(legacy.donationType) ? legacy.donationType : 'WHOLE_BLOOD';
 
           const typeOfBag = legacy.typeOfBag || 'SB';

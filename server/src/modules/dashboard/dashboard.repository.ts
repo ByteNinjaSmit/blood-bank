@@ -383,7 +383,7 @@ export function createDashboardRepo(deps: {
               threshold: {
                 $switch: {
                   branches: [
-                    { case: { $in: ['$componentType', ['RDP', 'SDP']] }, then: 1 },
+                    { case: { $eq: ['$componentType', 'RDP'] }, then: 1 },
                     { case: { $eq: ['$componentType', 'PRBC'] }, then: 7 },
                     { case: { $eq: ['$componentType', 'FFP'] }, then: 30 },
                     { case: { $eq: ['$componentType', 'CRYO'] }, then: 30 },
