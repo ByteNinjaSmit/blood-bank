@@ -13,6 +13,7 @@ import { RejectRequestModal } from '@/components/shared';
 import { Loader2, X, ClipboardList, RefreshCw } from 'lucide-react';
 import { exportRequisitionsExcel } from '@/features/requisition/requisitionExcelExport';
 import { COMPONENT_TYPES } from '@/constants/component-types';
+import { auditApi } from '@/features/audit/api';
 
 const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'rejected'];
 
@@ -434,6 +435,13 @@ export default function RequisitionList() {
       };
       setSelectedPrintLabelDoc(singleDoc);
       setMultiLabelModalOpen(false);
+      auditApi.logPrintEvent({
+        module: 'requisition',
+        entityType: 'Requisition',
+        entityId: doc.requisitionId || doc._id,
+        entityLabel: matchedUnit?.unitId,
+        docType: 'label',
+      });
     } catch (e) {
       toast.error('Error while preparing preview');
     }
@@ -448,6 +456,13 @@ export default function RequisitionList() {
         toast.error(res.error || 'Failed to load requisition');
         return;
       }
+
+      auditApi.logPrintEvent({
+        module: 'requisition',
+        entityType: 'Requisition',
+        entityId: res.data?.requisitionId || row._id,
+        docType: type === 'label' ? 'label' : 'report',
+      });
 
       if (type === 'label') {
         // If it has multiple matched inventory bags, open the pop-up selection modal

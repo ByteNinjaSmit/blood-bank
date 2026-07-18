@@ -39,7 +39,14 @@ export function createDiscardControllers(service: DiscardService): DiscardContro
         const { unitsDiscarded, bagNo } = await service.create({ ...body, actorId });
         void withAudit(
           { actorId, requestId: req.id },
-          { module: 'discard', action: 'DISCARD', entityType: 'ClinicalDiscard', entityId: bagNo, severity: 'warning' },
+          {
+            module: 'discard',
+            action: 'DISCARD',
+            entityType: 'ClinicalDiscard',
+            entityId: bagNo,
+            severity: 'warning',
+            reason: body.description ? `${body.reason}: ${body.description}` : body.reason,
+          },
           undefined,
           { bagNo, unitsDiscarded },
         );

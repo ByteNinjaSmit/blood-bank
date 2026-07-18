@@ -49,6 +49,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'lookback:run',
     'audit:read',
     'audit:export',
+    'audit:write',
     'report:read',
     'report:generate',
     'user:read',
@@ -82,6 +83,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'crossmatch:override',
     'lookback:run',
     'audit:read',
+    'audit:write',
     'report:read',
     'report:generate',
     'vendor:read', 'vendor:create', 'vendor:update', 'vendor:delete',
@@ -107,6 +109,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'transfusion:record',
     'adverse-reaction:record',
     'report:read',
+    'audit:write',
     'notification:read', 'notification:manage',
   ],
   counsellor: [
@@ -132,7 +135,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'notification:read', 'notification:manage',
   ],
   'store-keeper': [
-    'unit:read', 'unit:reserve', 'unit:return', 'report:read',
+    'unit:read', 'unit:reserve', 'unit:return', 'report:read', 'audit:write',
     'vendor:read',
     'po:read',
     'grn:read', 'grn:create',
@@ -144,7 +147,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'notification:read', 'notification:manage',
   ],
   'issue-counter': [
-    'unit:read', 'unit:issue', 'unit:return', 'requisition:read',
+    'unit:read', 'unit:issue', 'unit:return', 'requisition:read', 'audit:write',
     'notification:read', 'notification:manage',
   ],
   'apheresis-tech': [
@@ -178,7 +181,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'notification:read', 'notification:manage',
   ],
   'hospital-user': [
-    'requisition:read', 'requisition:create', 'unit:read', 'report:read',
+    'requisition:read', 'requisition:create', 'unit:read', 'report:read', 'audit:write',
     'notification:read', 'notification:manage',
   ],
 };

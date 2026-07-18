@@ -61,6 +61,7 @@ export const PERMISSION = [
   'lookback:run',
   'audit:read',
   'audit:export',
+  'audit:write',
   // Reports + MIS
   'report:read',
   'report:generate',
@@ -271,6 +272,8 @@ export const AUDIT_ACTION = [
   'DISCARD',
   'OVERRIDE',
   'LOGIN',
+  'EXPORT',
+  'PRINT',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTION)[number];
 

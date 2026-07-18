@@ -115,6 +115,7 @@ export function createRequisitionService(deps: {
 
     async update(id, input, actorId) {
       const existing = await deps.requisitions.findById(id);
+      const { editReason, ...patch } = input as typeof input & { editReason?: string };
 
       if (input.patient) {
         let dob: Date | undefined;
@@ -137,10 +138,20 @@ export function createRequisitionService(deps: {
 
       const updated = await deps.requisitions.updateDetails(
         id,
-        { ...input, clinicianName, doctorName },
+        { ...patch, clinicianName, doctorName },
         actorId,
       );
       if (!updated) throw new NotFoundError('Requisition', id);
+      await audit.record({
+        actorId,
+        module: 'requisition',
+        action: 'UPDATE',
+        entityType: 'Requisition',
+        entityId: existing.requisitionId,
+        before: existing,
+        after: updated,
+        reason: editReason,
+      });
       return updated;
     },
 
@@ -220,6 +231,15 @@ export function createRequisitionService(deps: {
       );
 
       const shortageKeys = Object.keys(shortages);
+      await audit.record({
+        actorId,
+        module: 'requisition',
+        action: 'UPDATE',
+        entityType: 'Requisition',
+        entityId: req.requisitionId,
+        before: { status: req.status },
+        after: { status: updated.status, matchedCount: matched.length, shortageCount: shortageKeys.length },
+      });
       if (shortageKeys.length === 0) {
         return { requisition: updated, shortages: [], partial: false };
       }
@@ -262,6 +282,7 @@ export function createRequisitionService(deps: {
         action: 'RELEASE',
         entityType: 'Requisition',
         entityId: req.requisitionId,
+        before: { status: req.status },
         after: { status: 'APPROVED' },
       });
       log.info({ requisitionId: req.requisitionId, actorId }, 'requisition approved');
@@ -282,6 +303,7 @@ export function createRequisitionService(deps: {
         action: 'UPDATE',
         entityType: 'Requisition',
         entityId: req.requisitionId,
+        before: { status: req.status },
         after: { status: 'COMPLETED' },
       });
       log.info({ requisitionId: req.requisitionId, actorId }, 'requisition completed');
@@ -318,6 +340,7 @@ export function createRequisitionService(deps: {
         action: 'DELETE',
         entityType: 'Requisition',
         entityId: req.requisitionId,
+        before: { status: req.status },
         after: { status: 'REJECTED', reason },
         reason,
       });
@@ -344,6 +367,22 @@ export function createRequisitionService(deps: {
       const matchedUnitIds = requisition.matchedUnits.map((mu) => mu.unitId);
       const allIssued = await deps.units.allIssued(matchedUnitIds);
       await deps.requisitions.setStatus(id, allIssued ? 'COMPLETED' : 'APPROVED', actorId);
+
+      await audit.record({
+        actorId,
+        module: 'requisition',
+        action: allIssued ? 'ISSUE' : 'UPDATE',
+        entityType: 'Requisition',
+        entityId: requisition.requisitionId,
+        before: { status: requisition.status },
+        after: {
+          status: allIssued ? 'COMPLETED' : 'APPROVED',
+          totalRequested: requisition.matchedUnits.length,
+          componentsIssued: results.length,
+          componentsRemaining: targetUnits.length - results.length,
+          issuedAt: new Date(),
+        },
+      });
 
       return results;
     },

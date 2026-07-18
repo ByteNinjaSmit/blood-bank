@@ -1,6 +1,8 @@
 import type { NextFunction, Request, Response } from 'express';
 import ExcelJS from 'exceljs';
+import { Types } from 'mongoose';
 import { UserModel } from '@/modules/user/user.model';
+import { auditService } from '@/modules/audit/audit.service';
 import {
   createProfessionalHeader,
   createSummaryTable,
@@ -148,6 +150,29 @@ export const exportControllers = {
         'Content-Disposition',
         `attachment; filename=${filename || 'Export_Report'}.xlsx`,
       );
+
+      const rowCount = sheets.reduce(
+        (sum, s) =>
+          sum +
+          (s.rows?.length ?? 0) +
+          (s.tables?.reduce((tSum, t) => tSum + t.rows.length, 0) ?? 0),
+        0,
+      );
+      if (actorId) {
+        void auditService.record({
+          actorId,
+          role: req.user?.role,
+          requestId: req.id,
+          ip: req.ip,
+          userAgent: req.headers['user-agent'],
+          module: sheets[0]?.reportType || 'export',
+          action: 'EXPORT',
+          entityType: 'Export',
+          entityId: new Types.ObjectId().toHexString(),
+          entityLabel: filename,
+          after: { filename, sheetCount: sheets.length, rowCount },
+        });
+      }
 
       await workbook.xlsx.write(res);
       res.end();

@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 
 const AUDIT_ACTIONS = [
   'CREATE', 'UPDATE', 'DELETE', 'STATE_TRANSITION', 'RELEASE',
-  'RESERVE', 'ISSUE', 'DISCARD', 'OVERRIDE', 'LOGIN',
+  'RESERVE', 'ISSUE', 'DISCARD', 'OVERRIDE', 'LOGIN', 'EXPORT', 'PRINT',
 ];
 
 const SEVERITIES = ['info', 'warning', 'critical'];

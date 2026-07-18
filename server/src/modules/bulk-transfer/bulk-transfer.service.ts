@@ -43,7 +43,18 @@ export function createBulkTransferService(deps: { bulkTransfers: BulkTransferRep
         { actorId },
         { module: 'bulk-transfer', action: 'CREATE', entityType: 'BulkTransfer', entityId: created.id, entityLabel: transferId },
         undefined,
-        { transferId, transferType: input.transferType, items: input.items.length },
+        {
+          transferId,
+          transferType: input.transferType,
+          bloodBankName: input.bloodBankName,
+          itemCount: input.items.length,
+          items: input.items.map((i) => ({
+            componentType: i.componentType,
+            bloodGroup: i.bloodGroup,
+            bagNo: i.bagNo,
+            unitId: i.unitId,
+          })),
+        },
       );
       return created;
     },

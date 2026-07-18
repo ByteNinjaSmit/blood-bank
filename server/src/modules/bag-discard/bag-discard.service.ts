@@ -101,8 +101,17 @@ export function createBagDiscardService(deps: {
       if (!updated) throw new NotFoundError('BagDiscard', id);
       log.info({ discardId: id, actorId }, 'bag discard approved');
       void withAudit(
-        { actorId },
-        { module: 'bag-discard', action: 'UPDATE', entityType: 'BagDiscard', entityId: id, entityLabel: discard.discardId },
+        {
+          actorId,
+        },
+        {
+          module: 'bag-discard',
+          action: 'UPDATE',
+          entityType: 'BagDiscard',
+          entityId: id,
+          entityLabel: discard.discardId,
+          reason: input.approvalNote,
+        },
         { approvedById: null },
         { approvedById: actorId, disposalMethod: input.disposalMethod },
       );

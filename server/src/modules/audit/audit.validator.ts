@@ -36,8 +36,17 @@ export const AuditExportQuery = AuditSearchQuery.omit({ page: true, limit: true 
   limit: z.coerce.number().int().min(1).max(10_000).default(10_000),
 });
 
+export const PrintEventBody = z.object({
+  module: z.string().trim().min(1),
+  entityType: z.string().trim().min(1),
+  entityId: z.string().trim().min(1),
+  entityLabel: z.preprocess(empty, z.string().trim().optional()),
+  docType: z.enum(['label', 'report', 'sticker']),
+});
+
 export const ValidateAudit = {
   entityTrailParams: (req: Request) => parseOrThrow(EntityTrailParams, req.params, 'path params'),
   searchQuery: (req: Request) => parseOrThrow(AuditSearchQuery, req.query, 'query string'),
   exportQuery: (req: Request) => parseOrThrow(AuditExportQuery, req.query, 'query string'),
+  printEventBody: (req: Request) => parseOrThrow(PrintEventBody, req.body, 'request body'),
 };

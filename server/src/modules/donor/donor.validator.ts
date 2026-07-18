@@ -54,7 +54,9 @@ export const CreateDonorBody = z.object({
 });
 export type CreateDonorInput = z.infer<typeof CreateDonorBody>;
 
-export const UpdateDonorBody = CreateDonorBody.partial();
+export const UpdateDonorBody = CreateDonorBody.partial().extend({
+  editReason: blankToUndef(z.string().trim().max(500).optional()),
+});
 export type UpdateDonorInput = z.infer<typeof UpdateDonorBody>;
 
 export const ListDonorsQuery = z.object({

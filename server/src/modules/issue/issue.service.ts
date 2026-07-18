@@ -92,10 +92,18 @@ export function createIssueService(deps: {
 
       await audit.record({
         actorId,
+        module: 'issue',
         action: gate.usedOverride ? 'OVERRIDE' : 'ISSUE',
         entityType: 'BloodUnit',
         entityId: input.unitId,
-        after: { status: 'ISSUED', issueId, requisitionId: req.requisitionId },
+        before: { status: unit.status },
+        after: {
+          status: 'ISSUED',
+          issueId,
+          requisitionId: req.requisitionId,
+          componentType: unit.componentType,
+          issuedAt: new Date(),
+        },
         reason: gate.usedOverride ? input.override?.reason : undefined,
       });
 

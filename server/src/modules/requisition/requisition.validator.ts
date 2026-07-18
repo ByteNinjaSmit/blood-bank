@@ -76,6 +76,7 @@ export const UpdateRequisitionBody = z.object({
   requiredAt: z.coerce.date().optional(),
   patient: UpdateRequisitionPatient.optional(),
   requestedComponents: z.array(RequestedComponent).min(1),
+  editReason: z.string().trim().max(500).optional(),
 });
 
 export const RejectBody = z.object({

@@ -135,16 +135,28 @@ export const userService = {
       });
     }
 
-    // Non-password profile fields, if any, get the normal diff-based entry.
-    const nonPasswordFields = Object.keys(patch).filter((k) => k !== 'updatedBy' && k !== 'password');
-    if (nonPasswordFields.length > 0) {
+    // Non-password profile fields, if any, get a real before/after diff —
+    // the redaction map already strips password-family keys centrally, so
+    // there's no risk of a hash leaking through here.
+    const before: Record<string, unknown> = {};
+    const after: Record<string, unknown> = {};
+    if (input.firstName) { before.firstName = existing.name.first; after.firstName = input.firstName; }
+    if (input.lastName) { before.lastName = existing.name.last; after.lastName = input.lastName; }
+    if (input.email) { before.email = existing.email; after.email = input.email.toLowerCase(); }
+    if (input.phone) { before.phone = existing.phone; after.phone = input.phone; }
+    if (input.role) { before.role = existing.role; after.role = input.role; }
+    if (input.permissions) { before.permissions = existing.permissions; after.permissions = input.permissions; }
+    if (input.campId) { before.campId = existing.campId; after.campId = input.campId; }
+    if (input.status) { before.status = existing.status; after.status = input.status; }
+    if (Object.keys(after).length > 0) {
       await auditService.record({
         actorId,
         module: 'user',
         action: 'UPDATE',
         entityType: 'User',
         entityId: updated.id,
-        changedFields: nonPasswordFields,
+        before,
+        after,
         reason: editReason,
       });
     }

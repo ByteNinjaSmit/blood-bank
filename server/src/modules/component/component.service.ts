@@ -23,7 +23,7 @@ export interface ComponentService {
   getGroupDetail(id: string): ReturnType<ComponentRepo['getGroupDetail']>;
   patch(
     id: string,
-    fields: { volumeMl?: number; storageLocation?: string; expiryDate?: string },
+    fields: { volumeMl?: number; storageLocation?: string; expiryDate?: string; editReason?: string },
     actorId: string,
   ): ReturnType<ComponentRepo['patch']>;
   patchBag(
@@ -49,7 +49,7 @@ export function createComponentService(deps: { repo: ComponentRepo }): Component
         { actorId: input.actorId },
         { module: 'component', action: 'CREATE', entityType: 'Component', entityId: input.donationId, entityLabel: `${input.donationId} (${input.componentType})` },
         undefined,
-        { componentType: input.componentType, volumeMl: input.volumeMl },
+        { donationId: input.donationId, componentType: input.componentType, volumeMl: input.volumeMl },
       );
       return result;
     },
@@ -78,21 +78,31 @@ export function createComponentService(deps: { repo: ComponentRepo }): Component
     nearExpiry: (filters) => deps.repo.nearExpiry(filters),
     getGroupDetail: (id) => deps.repo.getGroupDetail(id),
     async patch(id, fields, actorId) {
-      const result = await deps.repo.patch(id, fields, actorId);
+      const { editReason, ...rest } = fields;
+      const before = await deps.repo.getUnitSnapshot(id);
+      const result = await deps.repo.patch(id, rest, actorId);
       void withAudit(
         { actorId },
-        { module: 'component', action: 'UPDATE', entityType: 'Component', entityId: id },
-        undefined,
-        fields,
+        {
+          module: 'component',
+          action: 'UPDATE',
+          entityType: 'Component',
+          entityId: id,
+          entityLabel: before?.unitId,
+          reason: editReason,
+        },
+        before,
+        rest,
       );
       return result;
     },
     async patchBag(donationId, fields, actorId) {
+      const before = await deps.repo.getBagSnapshot(donationId);
       const result = await deps.repo.patchBag(donationId, fields, actorId);
       void withAudit(
         { actorId },
         { module: 'component', action: 'UPDATE', entityType: 'ComponentBag', entityId: donationId, reason: fields.editReason },
-        undefined,
+        before,
         { components: fields.components },
       );
       return result;

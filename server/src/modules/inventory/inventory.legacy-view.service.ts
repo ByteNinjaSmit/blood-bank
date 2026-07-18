@@ -19,8 +19,38 @@ export function createInventoryLegacyViewService(deps: {
 }): InventoryLegacyViewService {
   return {
     listStock: (filters) => deps.repo.listStock(filters),
-    unreserve: (inventoryIds, actorId) => deps.repo.unreserve(inventoryIds, actorId),
-    sendToStorage: (input) => deps.repo.sendToStorage(input),
+
+    async unreserve(inventoryIds, actorId) {
+      await deps.repo.unreserve(inventoryIds, actorId);
+      void withAudit(
+        { actorId },
+        {
+          module: 'inventory-storage',
+          action: 'STATE_TRANSITION',
+          entityType: 'BloodUnit',
+          entityId: `batch:unreserve:${inventoryIds.length}`,
+        },
+        undefined,
+        { event: 'UNRESERVE', unitIds: inventoryIds },
+      );
+    },
+
+    async sendToStorage(input) {
+      const result = await deps.repo.sendToStorage(input);
+      const bagIds = input.bags.flatMap((b) => b.bagIds);
+      void withAudit(
+        { actorId: input.actorId },
+        {
+          module: 'inventory-storage',
+          action: 'UPDATE',
+          entityType: 'BloodUnit',
+          entityId: `batch:send-to-storage:${bagIds.length}`,
+        },
+        undefined,
+        { location: input.location, dispatchType: input.dispatchType, bagIds, skipped: result.skipped },
+      );
+      return result;
+    },
 
     async updateStorage(input, reason) {
       const updated = await deps.repo.updateStorage(input);

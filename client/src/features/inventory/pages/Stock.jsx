@@ -10,6 +10,7 @@ import { useStockSummary } from "@/features/inventory/queries";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportStock } from "@/utils/excelExportHelper";
 import { COMPONENT_TYPES, COMPONENT_PRINT_LABEL } from "@/constants/component-types";
+import { auditApi } from "@/features/audit/api";
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -1136,8 +1137,17 @@ const Stock = () => {
               >
                 Cancel
               </Button>
-              <Button 
-                onClick={() => window.print()}
+              <Button
+                onClick={() => {
+                  auditApi.logPrintEvent({
+                    module: 'bag-stock',
+                    entityType: 'BagStock',
+                    entityId: selectedPrintItem?.bag?.bagNo || selectedPrintItem?.bagNo || 'unknown',
+                    entityLabel: selectedPrintItem?.bag?.segmentNo || selectedPrintItem?.segmentNo,
+                    docType: 'sticker',
+                  });
+                  window.print();
+                }}
                 className="px-6 text-xs font-bold bg-red-800 hover:bg-red-900 text-white shadow-sm flex items-center gap-1.5"
               >
                 Print Label

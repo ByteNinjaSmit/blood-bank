@@ -23,6 +23,7 @@ export const ApproveBagDiscardBody = z.object({
   disposalMethod: z.string().trim().max(200).optional(),
   biomedicalWasteManifestNo: z.string().trim().max(100).optional(),
   disposalDate: z.coerce.date().optional(),
+  approvalNote: z.string().trim().max(500).optional(),
 });
 
 export const ListBagDiscardQuery = z.object({

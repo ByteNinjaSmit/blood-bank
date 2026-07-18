@@ -250,31 +250,35 @@ const CampDetails = () => {
               </button>
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => navigate(`/camp-donors?id=${campId}`)}
                 title="View donors for this camp"
-                className="hidden sm:flex"
+                className="hidden sm:flex text-sm"
               >
-                <Users className="w-4 h-4 mr-2" /> Donors
+                <Users className="w-4 h-4 mr-1.5" /> Donors
               </Button>
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => navigate(`/camp-donation?id=${campId}`)}
                 title="View donations for this camp"
-                className="hidden sm:flex"
+                className="hidden sm:flex text-sm"
               >
-                <Activity className="w-4 h-4 mr-2" /> Donations
+                <Activity className="w-4 h-4 mr-1.5" /> Donations
               </Button>
               <div className="relative">
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => setExportMenuOpen((o) => !o)}
                   disabled={exporting}
                   title="Export this camp's donor or donation register to Excel"
+                  className="text-sm"
                 >
                   {exporting ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                   ) : (
-                    <FileSpreadsheet className="w-4 h-4 mr-2 text-green-700" />
+                    <FileSpreadsheet className="w-4 h-4 mr-1.5 text-green-700" />
                   )}
                   Export Excel
                   <ChevronDown className={`w-3.5 h-3.5 ml-1.5 transition-transform ${exportMenuOpen ? 'rotate-180' : ''}`} />
@@ -302,18 +306,12 @@ const CampDetails = () => {
                 )}
               </div>
               <Button
-                variant="outline"
-                onClick={() => navigate(`/master-register/donor-creation?campId=${campId}`)}
-                title="Create a new donor"
-                className="hidden md:flex"
-              >
-                <Plus className="w-4 h-4 mr-2" /> Create Donor
-              </Button>
-              <Button
+                size="sm"
                 onClick={() => navigate(`/master-register/donor-creation?campId=${campId}`)}
                 title="Create a new donation"
+                className="text-sm"
               >
-                <Plus className="w-4 h-4 mr-2" /> Create Donation
+                <Plus className="w-4 h-4 mr-1.5" /> Create Donation
               </Button>
             </div>
           </div>

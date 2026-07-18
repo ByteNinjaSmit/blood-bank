@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { states } from "@/constants/states";
 import { useBagStockList } from "../../bag-procurement/queries";
+import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
 
 const DEFERRAL_REASONS = [
   // --- Vitals & Standard Criteria ---
@@ -409,72 +410,54 @@ export default function DonorCreation() {
     }
   };
 
-  const handleFormKeyDown = (e) => {
-    if (e.key === "Enter") {
-      const target = e.target;
-      
-      if (
-        target.tagName === "INPUT" && 
-        (target.type === "submit" || target.type === "button" || target.type === "radio" || target.type === "checkbox")
-      ) {
-        return;
-      }
-      
-      if (target.tagName === "INPUT" || target.tagName === "SELECT") {
-        e.preventDefault();
-        
-        const isCompulsory = target.hasAttribute("required");
-        const val = target.value ? target.value.trim() : "";
-        
-        let isValid = true;
-        let errorMsg = "";
-        const labelText = target.previousElementSibling?.textContent || "";
-        const fieldLabel = labelText.replace("*", "").trim() || "This field";
-        
-        if (isCompulsory && !val) {
-          isValid = false;
-          errorMsg = `${fieldLabel} is required`;
-        } else if (val) {
-          if (target.type === "tel" && val.length !== 10) {
-            isValid = false;
-            errorMsg = "Phone number must be exactly 10 digits";
-          } else if (target.placeholder === "DD/MM/YYYY" && !validateDate(val)) {
-            isValid = false;
-            errorMsg = `Enter a valid date for ${fieldLabel} (DD/MM/YYYY)`;
-          } else if (labelText.includes("Weight") && parseFloat(val) <= 0) {
-            isValid = false;
-            errorMsg = "Weight must be greater than 0 kg";
-          } else if (labelText.includes("Pincode") && val.length !== 6) {
-            isValid = false;
-            errorMsg = "Pincode must be exactly 6 digits";
-          }
-        }
-        
-        if (!isValid) {
-          toast.error(errorMsg);
-          return;
-        }
-        
-        const container = e.currentTarget;
-        const allElements = Array.from(
-          container.querySelectorAll(
-            "input:not([disabled]):not([type=radio]):not([type=checkbox]), select:not([disabled])"
-          )
-        );
-        
-        const currentIndex = allElements.indexOf(target);
-        if (currentIndex !== -1 && currentIndex < allElements.length - 1) {
-          allElements[currentIndex + 1].focus();
-        } else if (currentIndex === allElements.length - 1) {
-          if (isStepComplete()) {
-            handleNext();
-          } else {
-            toast.warning("Please complete all required fields on this step before continuing.");
-          }
-        }
+  // Field-level validation run before Enter is allowed to advance focus —
+  // shared navigation mechanics (including native-select showPicker()
+  // handling) live in the reusable useFormEnterNav hook.
+  const validateEnterNavField = (target) => {
+    const isCompulsory = target.hasAttribute("required");
+    const val = target.value ? target.value.trim() : "";
+
+    let isValid = true;
+    let errorMsg = "";
+    const labelText = target.previousElementSibling?.textContent || "";
+    const fieldLabel = labelText.replace("*", "").trim() || "This field";
+
+    if (isCompulsory && !val) {
+      isValid = false;
+      errorMsg = `${fieldLabel} is required`;
+    } else if (val) {
+      if (target.type === "tel" && val.length !== 10) {
+        isValid = false;
+        errorMsg = "Phone number must be exactly 10 digits";
+      } else if (target.placeholder === "DD/MM/YYYY" && !validateDate(val)) {
+        isValid = false;
+        errorMsg = `Enter a valid date for ${fieldLabel} (DD/MM/YYYY)`;
+      } else if (labelText.includes("Weight") && parseFloat(val) <= 0) {
+        isValid = false;
+        errorMsg = "Weight must be greater than 0 kg";
+      } else if (labelText.includes("Pincode") && val.length !== 6) {
+        isValid = false;
+        errorMsg = "Pincode must be exactly 6 digits";
       }
     }
+
+    if (!isValid) {
+      toast.error(errorMsg);
+      return false;
+    }
+    return true;
   };
+
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers({
+    validateField: validateEnterNavField,
+    onComplete: () => {
+      if (isStepComplete()) {
+        handleNext();
+      } else {
+        toast.warning("Please complete all required fields on this step before continuing.");
+      }
+    },
+  });
 
   const { data: stockData } = useBagStockList({});
   const stocks = stockData?.items ?? stockData?.bagStocks ?? (Array.isArray(stockData) ? stockData : []);
@@ -703,7 +686,18 @@ export default function DonorCreation() {
 
   const isStep2Complete = () => true;
 
-  const isStep3Complete = () => true;
+  const isStep3Complete = () => {
+    return (
+      formData.hb.toString().trim() !== "" &&
+      formData.tempC.toString().trim() !== "" &&
+      formData.pulse.toString().trim() !== "" &&
+      formData.bp.trim() !== "" &&
+      formData.pedalOedema !== "" &&
+      formData.o2Level.toString().trim() !== "" &&
+      formData.lymphadenopathy !== "" &&
+      formData.cyanosis !== ""
+    );
+  };
 
   const isStep4Complete = () => {
     return (
@@ -1192,7 +1186,7 @@ export default function DonorCreation() {
 
       {/* Content Form Body */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-        <div onKeyDown={handleFormKeyDown} className="bg-white rounded-2xl border border-gray-200 shadow overflow-hidden">
+        <div onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="bg-white rounded-2xl border border-gray-200 shadow overflow-hidden">
           
           {/* Step 1: Donor Profile */}
           {currentStep === 1 && (
@@ -1603,11 +1597,17 @@ export default function DonorCreation() {
                     <select
                       value={formData.lastDonationPlace}
                       onChange={(e) => handleFormFieldChange("lastDonationPlace", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
+                      disabled={!formData.lastDonationDate}
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm ${
+                        !formData.lastDonationDate ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""
+                      }`}
                     >
                       <option value="SANJIVANI_BLOOD_BANK">Sanjivani Blood Bank</option>
                       <option value="OTHER">Other</option>
                     </select>
+                    {!formData.lastDonationDate && (
+                      <p className="text-xs text-gray-400 mt-1">Enter a Last Donation Date to set this.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1684,19 +1684,20 @@ export default function DonorCreation() {
             <div className="p-6 sm:p-8 space-y-6 animate-fadeIn">
               <div>
                 <h3 className="font-semibold text-gray-800 mb-1 text-lg">Medical Examination Details</h3>
-                <p className="text-sm text-gray-500">Record medical examination details and vitals for the donor (All vitals are optional).</p>
+                <p className="text-sm text-gray-500">Record medical examination details and vitals for the donor. All fields marked * are required.</p>
               </div>
 
               {/* Vitals Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-750 mb-1">Haemoglobin (Hb gm%)</label>
+                  <label className="block text-sm font-medium text-gray-750 mb-1">Haemoglobin (Hb gm%) <span className="text-red-500">*</span></label>
                   <input
                     type="number"
                     step="0.1"
                     placeholder="e.g. 13.5"
                     value={formData.hb}
                     onChange={(e) => handleFormFieldChange("hb", e.target.value)}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
                   />
                   {isHbTooLow && (
@@ -1707,63 +1708,56 @@ export default function DonorCreation() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-750 mb-1">Temperature (°C)</label>
+                  <label className="block text-sm font-medium text-gray-750 mb-1">Temperature (°C) <span className="text-red-500">*</span></label>
                   <input
                     type="number"
                     step="0.1"
                     placeholder="e.g. 36.8"
                     value={formData.tempC}
                     onChange={(e) => handleFormFieldChange("tempC", e.target.value)}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-755 mb-1">Pulse Rate (Bpm)</label>
+                  <label className="block text-sm font-medium text-gray-755 mb-1">Pulse Rate (Bpm) <span className="text-red-500">*</span></label>
                   <input
                     type="number"
                     placeholder="e.g. 72"
                     value={formData.pulse}
                     onChange={(e) => handleFormFieldChange("pulse", e.target.value)}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-755 mb-1">Blood Pressure (Systolic/Diastolic)</label>
+                  <label className="block text-sm font-medium text-gray-755 mb-1">Blood Pressure (Systolic/Diastolic) <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     placeholder="e.g. 120/80"
                     value={formData.bp}
                     onChange={(e) => handleFormFieldChange("bp", e.target.value)}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-755 mb-1">Pedal Oedema</label>
-                  <select
-                    value={formData.pedalOedema}
-                    onChange={(e) => handleFormFieldChange("pedalOedema", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
-                  >
-                    <option value="">Select</option>
-                    <option value="No">No</option>
-                    <option value="Yes">Yes</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-755 mb-1">Oxygen Saturation (%)</label>
+                  <label className="block text-sm font-medium text-gray-755 mb-1">Oxygen Saturation (%) <span className="text-red-500">*</span></label>
                   <input
                     type="number"
                     placeholder="e.g. 98"
                     value={formData.o2Level}
                     onChange={(e) => handleFormFieldChange("o2Level", e.target.value)}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-755 mb-1">Lymphadenopathy</label>
+                  <label className="block text-sm font-medium text-gray-755 mb-1">Pedal Oedema <span className="text-red-500">*</span></label>
                   <select
-                    value={formData.lymphadenopathy}
-                    onChange={(e) => handleFormFieldChange("lymphadenopathy", e.target.value)}
+                    value={formData.pedalOedema}
+                    onChange={(e) => handleFormFieldChange("pedalOedema", e.target.value)}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
                   >
                     <option value="">Select</option>
@@ -1772,10 +1766,24 @@ export default function DonorCreation() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-755 mb-1">Cyanosis</label>
+                  <label className="block text-sm font-medium text-gray-755 mb-1">Lymphadenopathy <span className="text-red-500">*</span></label>
+                  <select
+                    value={formData.lymphadenopathy}
+                    onChange={(e) => handleFormFieldChange("lymphadenopathy", e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
+                  >
+                    <option value="">Select</option>
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-755 mb-1">Cyanosis <span className="text-red-500">*</span></label>
                   <select
                     value={formData.cyanosis}
                     onChange={(e) => handleFormFieldChange("cyanosis", e.target.value)}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
                   >
                     <option value="">Select</option>
@@ -1997,7 +2005,7 @@ export default function DonorCreation() {
                   <input
                     type="text"
                     value={formData.bagNo}
-                    onChange={(e) => handleFormFieldChange("bagNo", e.target.value)}
+                    onChange={(e) => handleFormFieldChange("bagNo", e.target.value.toUpperCase())}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
                     required
                   />
@@ -2007,7 +2015,7 @@ export default function DonorCreation() {
                   <input
                     type="text"
                     value={formData.segmentNo}
-                    onChange={(e) => handleFormFieldChange("segmentNo", e.target.value)}
+                    onChange={(e) => handleFormFieldChange("segmentNo", e.target.value.toUpperCase())}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
                     required
                   />

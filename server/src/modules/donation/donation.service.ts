@@ -184,7 +184,13 @@ export function createDonationService(deps: {
         { actorId },
         { module: 'donation', action: 'CREATE', entityType: 'Donation', entityId: created.id, entityLabel: donationPublicId },
         undefined,
-        { donationId: donationPublicId, donor: input.donor, donationType: input.donationType, unitCount: units.length },
+        {
+          donationId: donationPublicId,
+          donor: input.donor,
+          campId: input.campId,
+          donationType: input.donationType,
+          unitCount: units.length,
+        },
       );
 
       if (input.donorFitness.isFit && units.length > 0) {

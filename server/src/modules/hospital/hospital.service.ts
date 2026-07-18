@@ -44,10 +44,12 @@ export const hospitalService = {
     });
     await auditService.record({
       actorId,
+      module: 'hospital',
       action: 'CREATE',
       entityType: 'Hospital',
       entityId: created.id,
-      after: { name: created.name },
+      entityLabel: created.name,
+      after: { hospitalId: created.hospitalId, name: created.name, phone: created.phone },
     });
     await invalidate('hospital:*');
     log.info({ hospitalId: created.id, actorId }, 'hospital created');
@@ -89,6 +91,8 @@ export const hospitalService = {
     if (input.phone && (await hospitalRepo.findOnePhone(input.phone, id))) {
       throw new ConflictError('Hospital with this phone number already exists');
     }
+    const before = await hospitalRepo.findById(id);
+    if (!before) throw new NotFoundError('Hospital', id);
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     if (input.name) patch.name = input.name.trim();
     if (input.address) patch.address = input.address.trim();
@@ -105,6 +109,8 @@ export const hospitalService = {
       entityType: 'Hospital',
       entityId: id,
       entityLabel: updated.name,
+      before,
+      after: updated,
       reason: editReason,
     });
     await invalidate('hospital:*');
@@ -126,6 +132,8 @@ export const hospitalService = {
       entityId: id,
       entityLabel: before.name,
       severity: 'warning',
+      before,
+      after: { deletedAt: new Date() },
       reason,
     });
     await invalidate('hospital:*');
@@ -143,6 +151,8 @@ export const hospitalService = {
       entityType: 'Hospital',
       entityId: id,
       entityLabel: before.name,
+      before: { deletedAt: (before as any).deletedAt },
+      after: { deletedAt: null },
     });
     await invalidate('hospital:*');
     log.warn({ hospitalId: id, actorId }, 'hospital cascade restored');
@@ -162,6 +172,7 @@ export const hospitalService = {
       entityId: id,
       entityLabel: before.name,
       severity: 'critical',
+      before,
       reason,
     });
     await invalidate('hospital:*');

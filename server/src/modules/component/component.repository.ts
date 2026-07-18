@@ -90,6 +90,12 @@ export interface ComponentRepo {
     filters: NearExpiryFilters,
   ): Promise<{ components: any[]; total: number; totalPages: number }>;
   getGroupDetail(id: string): Promise<any>;
+  /** Pre-mutation snapshot for a single component unit — used by the
+   * service layer to populate the audit `before` payload ahead of patch(). */
+  getUnitSnapshot(id: string): Promise<any>;
+  /** Pre-mutation snapshot of every component unit in a bag — used by
+   * the service layer to populate the audit `before` payload ahead of patchBag(). */
+  getBagSnapshot(donationId: string): Promise<any[]>;
   patch(
     id: string,
     fields: { volumeMl?: number; storageLocation?: string; expiryDate?: string },
@@ -539,6 +545,21 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         rdp: findComp(['RDP']),
         cryo: findComp(['CRYO']),
       };
+    },
+
+    async getUnitSnapshot(id) {
+      const query = Types.ObjectId.isValid(id) ? { _id: id } : { unitId: id };
+      return BloodUnitModel.findOne({ ...query, deletedAt: null })
+        .select('unitId componentType volumeMl storageLocation expiresAt')
+        .lean();
+    },
+
+    async getBagSnapshot(donationId) {
+      const donation = await resolveDonation(donationId);
+      if (!donation) return [];
+      return BloodUnitModel.find({ donationId: donation.donationId, deletedAt: null })
+        .select('unitId componentType volumeMl')
+        .lean();
     },
 
     async patch(id, fields, actorId) {

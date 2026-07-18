@@ -71,4 +71,29 @@ export const auditController = {
       next(e);
     }
   },
+
+  // Client-side prints (labels, reports, stickers) never hit the
+  // server otherwise (window.print() is local) — this is the only
+  // place a PRINT audit entry can be written from.
+  async logPrintEvent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const body = ValidateAudit.printEventBody(req);
+      await auditService.record({
+        actorId: req.user!.id,
+        role: req.user!.role,
+        requestId: req.id,
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        module: body.module,
+        action: 'PRINT',
+        entityType: body.entityType,
+        entityId: body.entityId,
+        entityLabel: body.entityLabel,
+        after: { docType: body.docType },
+      });
+      res.json({ success: true, requestId: req.id });
+    } catch (e) {
+      next(e);
+    }
+  },
 };

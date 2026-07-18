@@ -70,7 +70,14 @@ export function createTransfusionService(deps: {
         action: 'STATE_TRANSITION',
         entityType: 'BloodUnit',
         entityId: input.unitId,
-        after: { status: event === 'CONFIRM_TRANSFUSION' ? 'TRANSFUSED' : 'RETURNED_UNUSED' },
+        after: {
+          status: event === 'CONFIRM_TRANSFUSION' ? 'TRANSFUSED' : 'RETURNED_UNUSED',
+          transfusionId,
+          patientId: input.patientId,
+          outcome: input.outcome,
+          checkedById: input.bedsideCheck.checkedById,
+          witnessedById: input.bedsideCheck.witnessedById,
+        },
         reason: `transfusion ${transfusionId}`,
         severity: input.hadReaction ? 'warning' : 'info',
       });

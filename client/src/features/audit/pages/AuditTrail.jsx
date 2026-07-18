@@ -24,7 +24,7 @@ const MODULE_OPTIONS = [
   'purchase-order', 'goods-receipt', 'bag-stock', 'bag-inspection',
   'bag-issue', 'bag-discard', 'bulk-transfer', 'discard', 'component',
   'donor-card', 'monthly-report-input', 'appointment', 'auth', 'user',
-  'hospital', 'camp', 'chemical-inventory',
+  'hospital', 'camp', 'chemical-inventory', 'export',
 ];
 
 const SEVERITY_BADGE = {
@@ -44,6 +44,8 @@ const ACTION_BADGE = {
   DISCARD: 'bg-orange-50 text-orange-700 border-orange-200',
   OVERRIDE: 'bg-red-100 text-red-800 border-red-200',
   LOGIN: 'bg-gray-50 text-gray-600 border-gray-200',
+  EXPORT: 'bg-teal-50 text-teal-700 border-teal-200',
+  PRINT: 'bg-slate-50 text-slate-600 border-slate-200',
 };
 
 // Adjacent rows that stem from ONE underlying operation (e.g. editing a

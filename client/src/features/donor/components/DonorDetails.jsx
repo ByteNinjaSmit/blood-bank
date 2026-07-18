@@ -153,12 +153,13 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
                 : 'No previous donations'
               }
             </p>
-            {donor.lastDonationDate && (
-              <p>
-                <span className="font-medium">Last Donation Done At:</span>{' '}
-                {donor.lastDonationPlace === 'OTHER' ? 'Other' : 'Sanjivani Blood Bank'}
-              </p>
-            )}
+            <p>
+              <span className="font-medium">Last Donation Done At:</span>{' '}
+              {!donor.lastDonationDate
+                ? 'Not specified'
+                : donor.lastDonationPlace === 'OTHER' ? 'Other' : 'Sanjivani Blood Bank'
+              }
+            </p>
             <p>
               <span className="font-medium">Recent Donation:</span>{' '}
               {donor.recentDonationDate

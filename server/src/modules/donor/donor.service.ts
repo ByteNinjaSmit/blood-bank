@@ -64,7 +64,14 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
         { actorId },
         { module: 'donor', action: 'CREATE', entityType: 'Donor', entityId: created.id, entityLabel: created.donorId },
         undefined,
-        { donorId: created.donorId, phone: input.phone, campId: input.campId },
+        {
+          donorId: created.donorId,
+          name: [created.name?.firstName, created.name?.middleName, created.name?.lastName]
+            .filter(Boolean)
+            .join(' '),
+          phone: input.phone,
+          campId: input.campId,
+        },
       );
       void notificationCenterService
         .notify({
@@ -82,20 +89,28 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
     },
 
     async update(id, patch, actorId) {
+      const { editReason, ...fields } = patch;
       const before = await deps.repo.findById(id);
-      if (patch.weightKg !== undefined || patch.dob !== undefined) {
+      if (fields.weightKg !== undefined || fields.dob !== undefined) {
         const merged = {
-          weightKg: patch.weightKg ?? before?.weightKg ?? 0,
-          dob: patch.dob ?? (before?.dob ? new Date(before.dob) : new Date()),
+          weightKg: fields.weightKg ?? before?.weightKg ?? 0,
+          dob: fields.dob ?? (before?.dob ? new Date(before.dob) : new Date()),
         };
         assertEligibilityBasics(merged);
       }
-      const updated = await deps.repo.update(id, patch, actorId);
+      const updated = await deps.repo.update(id, fields, actorId);
       await invalidate(`donor:detail:${id}`);
       log.info({ donorId: id, actorId }, 'donor updated');
       void withAudit(
         { actorId },
-        { module: 'donor', action: 'UPDATE', entityType: 'Donor', entityId: id, entityLabel: before?.donorId },
+        {
+          module: 'donor',
+          action: 'UPDATE',
+          entityType: 'Donor',
+          entityId: id,
+          entityLabel: before?.donorId,
+          reason: editReason,
+        },
         before,
         updated,
       );

@@ -41,6 +41,7 @@ const PatchBody = z.object({
   volumeMl: z.coerce.number().positive().optional(),
   storageLocation: z.string().trim().max(120).optional(),
   expiryDate: z.string().trim().optional(),
+  editReason: z.string().trim().max(500).optional(),
 });
 
 const PatchBagBody = z.object({

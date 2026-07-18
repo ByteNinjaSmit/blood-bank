@@ -52,9 +52,12 @@ export const campService = {
     });
     await auditService.record({
       actorId,
+      module: 'camp',
       action: 'CREATE',
       entityType: 'Camp',
       entityId: String(camp._id),
+      entityLabel: camp.campId,
+      after: { campId: camp.campId, name: camp.name, dateFrom: camp.dateFrom, dateTo: camp.dateTo },
     });
     await invalidate(`${CAMP_LIST_KEY}*`);
     log.info({ campId: String(camp._id), actorId }, 'camp created');
@@ -64,6 +67,15 @@ export const campService = {
   async update(id: string, input: UpdateCampInput, actorId: string, editReason?: string) {
     const camp = await campRepo.findRaw(id);
     if (!camp) throw new NotFoundError('Camp', id);
+    const before = {
+      name: camp.name,
+      description: camp.description,
+      address: camp.address,
+      contactInfo: camp.contactInfo ? { ...camp.contactInfo } : undefined,
+      staff: camp.staff,
+      dateFrom: camp.dateFrom,
+      dateTo: camp.dateTo,
+    };
     if (input.name) camp.name = input.name;
     if (input.description !== undefined) camp.description = input.description;
     if (input.address) camp.address = input.address;
@@ -83,6 +95,17 @@ export const campService = {
       action: 'UPDATE',
       entityType: 'Camp',
       entityId: id,
+      entityLabel: camp.campId,
+      before,
+      after: {
+        name: saved.name,
+        description: saved.description,
+        address: saved.address,
+        contactInfo: saved.contactInfo,
+        staff: saved.staff,
+        dateFrom: saved.dateFrom,
+        dateTo: saved.dateTo,
+      },
       reason: editReason,
     });
     await invalidate(`${CAMP_LIST_KEY}*`);
@@ -106,7 +129,10 @@ export const campService = {
         action: 'DELETE',
         entityType: 'Camp',
         entityId: id,
+        entityLabel: camp.campId,
         severity: 'warning',
+        before: { deletedAt: camp.deletedAt },
+        after: { deletedAt: new Date() },
         reason,
       });
       await invalidate(`${CAMP_LIST_KEY}*`);
@@ -127,7 +153,9 @@ export const campService = {
       action: 'DELETE',
       entityType: 'Camp',
       entityId: id,
+      entityLabel: camp.campId,
       severity: 'critical',
+      before: camp.toObject(),
       reason,
     });
     await invalidate(`${CAMP_LIST_KEY}*`);
@@ -145,7 +173,16 @@ export const campService = {
       return { restored: false };
     }
     await campRepo.restore(id, actorId);
-    await auditService.record({ actorId, action: 'UPDATE', entityType: 'Camp', entityId: id });
+    await auditService.record({
+      actorId,
+      module: 'camp',
+      action: 'UPDATE',
+      entityType: 'Camp',
+      entityId: id,
+      entityLabel: camp.campId,
+      before: { deletedAt: camp.deletedAt },
+      after: { deletedAt: null },
+    });
     await invalidate(`${CAMP_LIST_KEY}*`);
     log.warn({ campId: id, actorId }, 'camp restored');
     return { restored: true };
