@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import FormField from '@/components/shared/FormField';
 import Button from '@/components/shared/Button';
@@ -6,11 +6,10 @@ import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { useDonor } from '@/hooks/useDonor';
 
 const DonationForm = ({ 
-  initialData = null, 
-  onSubmit, 
-  onCancel, 
+  initialData = null,
+  onSubmit,
   loading = false,
-  campId = null 
+  campId = null
 }) => {
   const { searchDonor } = useDonor();
   const [donor, setDonor] = useState(null);
@@ -18,7 +17,7 @@ const DonationForm = ({
   const [donorNotFound, setDonorNotFound] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm({
     defaultValues: initialData ? {
       ...initialData,
       collectionDate: initialData.collectionDate ? new Date(initialData.collectionDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],

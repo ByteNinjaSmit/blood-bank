@@ -65,6 +65,13 @@ export const PERMISSION = [
   // Reports + MIS
   'report:read',
   'report:generate',
+  // Generic "download what's on my screen as an Excel report" — held by
+  // every authenticated staff role (the data was already fetched through
+  // an authorized endpoint; this endpoint only formats it).
+  'report:export',
+  // Generic image-attachment upload/delete (donor photos, vendor/GRN docs,
+  // signatures) — held by every authenticated staff role.
+  'upload:write',
   // Users + roles
   'user:read',
   'user:create',
@@ -101,6 +108,18 @@ export const PERMISSION = [
   // In-app notification center
   'notification:read',
   'notification:manage',
+  // Camp & Operations
+  'camp:read',
+  'camp:manage',
+  'hospital:read',
+  'hospital:manage',
+  'dashboard:read',
+  // Chemical / reagent inventory
+  'chemical:read',
+  'chemical:manage',
+  // Clinical (blood-unit) discard register
+  'discard:read',
+  'discard:create',
 ] as const;
 export type Permission = (typeof PERMISSION)[number];
 

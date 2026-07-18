@@ -1,8 +1,6 @@
 import React from "react"
 import { useState, useEffect, useCallback } from "react"
 import {
-    useNavigate,
-    useSearchParams,
     useLocation,
     Outlet,
     Link,
@@ -13,13 +11,11 @@ import {
     Menu,
     PanelLeftDashed,
 } from "lucide-react"
-import { useAuth } from "@/store/auth";
 import Sidebar from "@/components/layout/Sidebar";
 import NotificationBell from "@/features/notification/components/NotificationBell";
 import { useNotificationToastWatcher } from "@/features/notification/hooks/useNotificationToastWatcher";
 
 function MasterLayout() {
-    const { user } = useAuth();
     useNotificationToastWatcher();
     const pathname = useLocation().pathname
     const [sidebarOpen, setSidebarOpen] = useState(true)

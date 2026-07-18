@@ -3,7 +3,6 @@ import { Clock, AlertTriangle, Filter, Search, ChevronLeft, ChevronRight, Calend
 import { toast } from "sonner";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,7 +23,6 @@ const STATUS_OPTIONS = [
 
 const NearExpiry = () => {
   const { API, authorizationToken } = useAuth();
-  const navigate = useNavigate();
 
   const [excelLoading, setExcelLoading] = useState(false);
 
@@ -66,11 +64,7 @@ const NearExpiry = () => {
         ...(state.filters.search && { search: state.filters.search }),
       };
 
-      console.log("Fetching near-expiry components with params:", params);
-
       const response = await apiClient.get(`/api/v2/component/near-expiry`, { params });
-
-      console.log("Near-expiry components API response:", response.data);
 
       if (response.data?.components) {
         setState(prev => ({

@@ -3,7 +3,6 @@ import { TestTube, Loader2, Scissors, CheckCircle, RefreshCw } from "lucide-reac
 import { toast } from "sonner";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/format-date";
@@ -15,7 +14,6 @@ const SEPARABLE_COMPONENT_TYPES = ["PRBC", "FFP", "RDP", "CRYO"];
 
 const ComponentSeparate = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
   const [bags, setBags] = useState([]);
@@ -52,7 +50,6 @@ const ComponentSeparate = () => {
     setIsLoading(true);
     try {
       const bagsRes = await apiClient.get(`/api/v2/component/bags-to-separate`);
-      console.log("Bags to separate response:", bagsRes.data);
 
       const bagsData = Array.isArray(bagsRes.data?.bags) ? bagsRes.data.bags : [];
       setBags(bagsData);

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requireRole } from '@/shared/middlewares/rbac';
+import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
 import { affectedRecordsController } from './affected-records.controller';
 
 const router = Router();
@@ -12,6 +12,7 @@ router.get(
   '/',
   authenticate,
   requireRole(['system-admin', 'bbo', 'qa-manager', 'auditor']),
+  requirePermission('audit:read'),
   affectedRecordsController.list,
 );
 

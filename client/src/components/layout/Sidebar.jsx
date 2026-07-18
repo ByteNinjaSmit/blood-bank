@@ -568,13 +568,9 @@ const MODULES = [
 
 // Access helper wrappers around user.permissions
 const canViewModule = (user, moduleName) => checkAccess(user, moduleName, 'view');
-const canCreateInModule = (user, moduleName) => checkAccess(user, moduleName, 'create');
-const canUpdateInModule = (user, moduleName) => checkAccess(user, moduleName, 'update');
-const canDeleteInModule = (user, moduleName) => checkAccess(user, moduleName, 'delete');
 
 const Sidebar = ({
   isOpen,
-  onToggle,
   isMobile,
   showMobileOverlay,
   onCloseMobile
@@ -586,8 +582,8 @@ const Sidebar = ({
   // State declarations with proper initialization
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedModules, setExpandedModules] = useState(() => new Set());
-  const [selectedModule, setSelectedModule] = useState(null);
-  const [selectedSubModule, setSelectedSubModule] = useState(null);
+  const [, setSelectedModule] = useState(null);
+  const [, setSelectedSubModule] = useState(null);
   const [tempOpenForSubmodule, setTempOpenForSubmodule] = useState(false);
 
   // Memoize filtered modules to prevent unnecessary re-renders

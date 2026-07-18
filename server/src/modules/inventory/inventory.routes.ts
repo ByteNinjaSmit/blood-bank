@@ -2,10 +2,18 @@ import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
 import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
 import { createUnitRepo } from '@/modules/unit/unit.repository';
+import { createPatientRepo } from '@/modules/patient/patient.repository';
+import { createRequisitionRepo } from '@/modules/requisition/requisition.repository';
+import { createDonationRepo } from '@/modules/donation/donation.repository';
 import { createInventoryService } from '@/modules/inventory/inventory.service';
 import { createInventoryControllers } from '@/modules/inventory/inventory.controller';
 
-const service = createInventoryService({ units: createUnitRepo() });
+const service = createInventoryService({
+  units: createUnitRepo(),
+  patients: createPatientRepo(),
+  requisitions: createRequisitionRepo(),
+  donations: createDonationRepo(),
+});
 const controllers = createInventoryControllers(service);
 
 const router = Router();

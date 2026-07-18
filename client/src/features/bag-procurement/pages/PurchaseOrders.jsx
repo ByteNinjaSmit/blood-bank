@@ -8,8 +8,7 @@ import {
   useVendorList,
   useCreateVendor,
 } from '../queries';
-import { useAuth } from '@/store/auth';
-import { formatBloodBagQty, calcTotalBags } from '../utils/qtyHelper';
+import { formatBloodBagQty } from '../utils/qtyHelper';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportProcurementPO } from '@/utils/excelExportHelper';
@@ -42,7 +41,6 @@ function StatCard({ label, value, color }) {
 }
 
 function PODrawer({ onClose, vendors, poToEdit }) {
-  const { user } = useAuth();
   const [vendorSearchText, setVendorSearchText] = useState('');
   const [manufacturer, setManufacturer] = useState(poToEdit?.manufacturer || '');
   const [billDate, setBillDate] = useState(poToEdit?.billDate ? new Date(poToEdit.billDate).toISOString().split('T')[0] : '');
@@ -353,7 +351,7 @@ export default function PurchaseOrders() {
     });
   };
 
-  const handleExportExcel = async (exportAll = false) => {
+  const handleExportExcel = async (_exportAll = false) => {
     try {
       setExcelLoading(true);
       const dataToExport = mapPOForExport(orders, vendors);
@@ -380,7 +378,6 @@ export default function PurchaseOrders() {
   };
 
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-  const fmtMoney = (n) => n != null ? `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
 
   const toggleExpand = (id) => setExpandedId((prev) => (prev === id ? null : id));
 

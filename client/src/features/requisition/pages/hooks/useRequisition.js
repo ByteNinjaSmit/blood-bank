@@ -408,7 +408,9 @@ function checkHasChanges(doc, payload) {
     setMatching(false);
     if (!res.success) {
       const errMsg = res?.error || res?.raw?.message || 'Matching failed';
-      const sh = res?.errorData?.data?.shortages;
+      // A full shortage comes back as a 409 whose error body carries
+      // { shortages } under `details` (AppError shape from the middleware).
+      const sh = res?.errorData?.details?.shortages;
       if (Array.isArray(sh) && sh.length) {
         setShortages(sh);
         const s0 = sh[0];

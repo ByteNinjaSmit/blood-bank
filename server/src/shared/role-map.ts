@@ -66,6 +66,8 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'bulk-transfer:read', 'bulk-transfer:create', 'bulk-transfer:update', 'bulk-transfer:delete',
     'appointment:read', 'appointment:update',
     'notification:read', 'notification:manage',
+    'camp:read', 'camp:manage', 'hospital:read', 'hospital:manage', 'dashboard:read',
+    'chemical:read', 'chemical:manage', 'discard:read', 'discard:create',
   ],
   bbo: [
     'donor:read',
@@ -96,6 +98,8 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'bulk-transfer:read', 'bulk-transfer:create', 'bulk-transfer:update', 'bulk-transfer:delete',
     'appointment:read', 'appointment:update',
     'notification:read', 'notification:manage',
+    'camp:read', 'camp:manage', 'hospital:read', 'hospital:manage', 'dashboard:read',
+    'chemical:read', 'chemical:manage', 'discard:read', 'discard:create',
   ],
   'medical-officer': [
     'donor:read',
@@ -111,6 +115,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'report:read',
     'audit:write',
     'notification:read', 'notification:manage',
+    'camp:read', 'hospital:read', 'dashboard:read',
   ],
   counsellor: [
     'donor:read', 'donor:update', 'tti:read', 'appointment:read', 'appointment:update',
@@ -120,10 +125,12 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'donor:read', 'donor:create', 'donor:update', 'donation:read', 'donation:create',
     'bag-stock:read', 'bag-issue:read',
     'notification:read', 'notification:manage',
+    'camp:read',
   ],
   'lab-tech-component': [
     'donation:read', 'unit:read', 'unit:create', 'component:separate',
     'notification:read', 'notification:manage',
+    'camp:read', 'discard:read', 'discard:create',
   ],
   'lab-tech-serology': [
     'donation:read',
@@ -133,6 +140,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'tti:release',
     'crossmatch:perform',
     'notification:read', 'notification:manage',
+    'camp:read', 'dashboard:read', 'chemical:read', 'chemical:manage', 'discard:read',
   ],
   'store-keeper': [
     'unit:read', 'unit:reserve', 'unit:return', 'report:read', 'audit:write',
@@ -145,10 +153,12 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'bag-discard:read', 'bag-discard:create',
     'bulk-transfer:read', 'bulk-transfer:create', 'bulk-transfer:update', 'bulk-transfer:delete',
     'notification:read', 'notification:manage',
+    'camp:read', 'hospital:read', 'dashboard:read', 'chemical:read', 'chemical:manage', 'discard:read',
   ],
   'issue-counter': [
     'unit:read', 'unit:issue', 'unit:return', 'requisition:read', 'audit:write',
     'notification:read', 'notification:manage',
+    'hospital:read',
   ],
   'apheresis-tech': [
     'donor:read', 'donor:create', 'donation:read', 'donation:create',
@@ -161,6 +171,7 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'bag-inspection:read', 'bag-inspection:create',
     'bag-discard:read', 'bag-discard:approve',
     'notification:read', 'notification:manage',
+    'dashboard:read', 'chemical:read', 'discard:read', 'discard:create',
   ],
   auditor: [
     'donor:read',
@@ -175,14 +186,17 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
     'lookback:run',
     'vendor:read',
     'notification:read', 'notification:manage',
+    'camp:read', 'hospital:read', 'discard:read',
   ],
   'camp-organiser': [
     'donor:read', 'donor:create', 'donation:read', 'appointment:read',
     'notification:read', 'notification:manage',
+    'camp:read', 'camp:manage', 'dashboard:read',
   ],
   'hospital-user': [
     'requisition:read', 'requisition:create', 'unit:read', 'report:read', 'audit:write',
     'notification:read', 'notification:manage',
+    'hospital:read',
   ],
 };
 
@@ -217,6 +231,12 @@ export function projectPermissions(
     if (p.update) explicit.push(`${m}:update` as Permission);
     if (p.delete) explicit.push(`${m}:delete` as Permission);
   }
-  // de-dupe; the Permission union narrows at runtime via the Set
-  return Array.from(new Set([...defaults, ...explicit]));
+  // Every authenticated staff role may export the report they're already
+  // authorized to view and attach images to the forms they fill; grant
+  // these generic, cross-cutting permissions globally so the shared
+  // /export/excel and /upload endpoints are reachable without widening
+  // report:read or coupling them to any one module.
+  return Array.from(
+    new Set<Permission>([...defaults, ...explicit, 'report:export', 'upload:write']),
+  );
 }

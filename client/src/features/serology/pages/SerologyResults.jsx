@@ -3,7 +3,6 @@ import { apiClient } from "@/core/api-client";
 import { Button } from "@/components/ui/button";
 import { Loader2, Microscope, Search, Calendar, X, Filter, ChevronLeft, ChevronRight, Pencil, Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/store/auth";
 import CustomModal from "@/components/CustomModal";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,7 +16,6 @@ import { ComponentDetailsModal } from "@/components/blood-components";
 const RESULT_OPTIONS = ["NEGATIVE", "REACTIVE", "Shadeness"];
 
 const SerologyResults = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   // Mirrors the backend gate on POST /api/serology/results/:id — only
   // these roles may save edits, and only while no component from this
@@ -86,7 +84,7 @@ const SerologyResults = () => {
     toDate: ""
   });
   const [order, setOrder] = useState("desc");
-  const [sortBy, setSortBy] = useState("updatedAt");
+  const [sortBy] = useState("updatedAt");
   const [selectedBag, setSelectedBag] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showComponents, setShowComponents] = useState(false);

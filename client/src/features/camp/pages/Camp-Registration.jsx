@@ -8,9 +8,9 @@ import Stepper, { Step } from "@/components/Stepper"
 
 const CampRegistration = () => {
   const navigate = useNavigate()
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [, setIsSubmitting] = useState(false)
   const [staffList, setStaffList] = useState([])
-  const [errors, setErrors] = useState({})
+  const [, setErrors] = useState({})
   const [stepErrors, setStepErrors] = useState({})
 
   const [formData, setFormData] = useState({
@@ -60,8 +60,8 @@ const CampRegistration = () => {
       if (response.status === 200) {
         setStaffList(response.data.data || [])
       }
-    } catch (error) {
-      console.log(error.response?.data?.message)
+    } catch {
+      // Staff list is non-critical; ignore load failures.
     }
   }
 

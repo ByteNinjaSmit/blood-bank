@@ -5,7 +5,7 @@ import axios from "axios"
 import { useAuth } from "@/store/auth"
 import { useNavigate } from "react-router-dom"
 
-const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterCreate = "back", prefill = {}, showPostCreateActions = false, onStartDonation, originCampId }) => {
+const CreateDonor = ({ onBack, onCreated, afterCreate = "back", prefill = {}, showPostCreateActions = false, onStartDonation, originCampId }) => {
   const { API, authorizationToken } = useAuth()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -106,15 +106,6 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
     return age >= 0 ? String(age) : ""
   }
 
-  // Calculate DOB from age (sets Jan 1 of birth year)
-  const calculateDobFromAge = (ageStr) => {
-    if (!ageStr) return ""
-    const ageNum = parseInt(ageStr, 10)
-    if (isNaN(ageNum) || ageNum <= 0) return ""
-    const birthYear = new Date().getFullYear() - ageNum
-    return `${birthYear}-01-01`
-  }
-
   // Auto-calculate eligibility status based on age, weight, last donation date, and sex
   const getAutoEligibilityStatus = (age, weight, lastDonationDate, sex) => {
     if (!age || !weight) return null
@@ -197,18 +188,6 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
         eligibilityStatus: autoStatus || prev.eligibilityStatus
       }
     })
-  }
-
-  const handleAgeChange = (e) => {
-    const age = e.target.value
-    const dob = calculateDobFromAge(age)
-    const autoStatus = getAutoEligibilityStatus(age, formData.weightKg, formData.lastDonationDate, formData.sex)
-    setFormData((prev) => ({
-      ...prev,
-      age,
-      dob,
-      eligibilityStatus: autoStatus || prev.eligibilityStatus
-    }))
   }
 
   const validateForm = () => {
@@ -315,18 +294,6 @@ const CreateDonor = ({ onBack, onCreated, backText = "Back to Donations", afterC
     setError("")
     setSuccess(false)
     donorIdInputRef.current?.focus()
-  }
-
-  const generateDonorId = () => {
-    const now = new Date()
-    const yy = String(now.getFullYear()).slice(-2)
-    const mm = String(now.getMonth() + 1).padStart(2, '0')
-    const dd = String(now.getDate()).padStart(2, '0')
-    const hh = String(now.getHours()).padStart(2, '0')
-    const min = String(now.getMinutes()).padStart(2, '0')
-
-    setFormData((prev) => ({ ...prev, donorId: `DNR-${yy}-${mm}-${dd}-${hh}-${min}` }))
-    setTimeout(() => donorIdInputRef.current?.select(), 0)
   }
 
   const handleSubmit = async (e, action = "save") => {

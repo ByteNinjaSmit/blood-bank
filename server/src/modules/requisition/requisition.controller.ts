@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 import { ValidateRequisition } from '@/modules/requisition/requisition.validator';
 import { ValidateCrossmatch } from '@/modules/crossmatch/crossmatch.validator';
 import { ValidateIssue } from '@/modules/issue/issue.validator';
-import { UnauthorizedError } from '@/shared/errors';
+import { ConflictError, UnauthorizedError } from '@/shared/errors';
 import type { RequisitionService } from '@/modules/requisition/requisition.service';
 import type { CrossmatchService } from '@/modules/crossmatch/crossmatch.service';
 import type { IssueService } from '@/modules/issue/issue.service';
@@ -151,13 +151,10 @@ export function createRequisitionControllers(deps: {
               requestId: req.id,
             });
           } else {
-            res.status(409).json({
-              success: false,
-              message: 'Insufficient compatible stock to fully match request',
-              data: { shortages: result.shortages },
+            throw new ConflictError('Insufficient compatible stock to fully match request', {
+              shortages: result.shortages,
             });
           }
-          return;
         }
 
         const enrichedReq = await enrichRequisition(result.requisition);

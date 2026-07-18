@@ -12,6 +12,7 @@ function mockDeferrals(
   return {
     create: vi.fn(),
     findActiveByDonor: vi.fn().mockResolvedValue(active),
+    findLatestActiveByDonor: vi.fn().mockResolvedValue(null),
     listByDonor: vi.fn(),
     list: vi.fn(),
     lift: vi.fn(),
@@ -98,6 +99,7 @@ function mockDonations(): DonationRepo {
     restore: vi.fn(),
     delete: vi.fn(),
     lookupByBagNo: vi.fn(),
+    bagNosByDonationIds: vi.fn().mockResolvedValue({}),
   };
 }
 

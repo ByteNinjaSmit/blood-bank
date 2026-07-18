@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Microscope, TestTube, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 import { formatDateTime } from "@/lib/format-date";
 
 const DEFAULT_TESTS = [
@@ -18,7 +17,6 @@ const DEFAULT_TESTS = [
 
 const Serology = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
   const [bags, setBags] = useState([]);
@@ -27,7 +25,7 @@ const Serology = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [order, setOrder] = useState("desc");
-  const [sortBy, setSortBy] = useState("collectionDate");
+  const [sortBy] = useState("collectionDate");
 
   const [activeBag, setActiveBag] = useState(null);
   const [showModal, setShowModal] = useState(false);

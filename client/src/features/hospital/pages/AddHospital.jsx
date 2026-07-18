@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,20 +33,6 @@ const AddHospital = () => {
     }));
     
     // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const handleSelectChange = (value, name) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,

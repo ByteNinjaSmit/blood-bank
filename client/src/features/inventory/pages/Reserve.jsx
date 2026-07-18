@@ -102,9 +102,8 @@ const Reserve = () => {
   const [search, setSearch] = useState("");
   const [bloodGroup, setBloodGroup] = useState("");
   const [order, setOrder] = useState("desc");
-  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortBy] = useState("createdAt");
 
-  const [selected, setSelected] = useState({});
   const [unreserveModalOpen, setUnreserveModalOpen] = useState(false);
   const [targetUnreserveId, setTargetUnreserveId] = useState(null);
   const [selectedReserve, setSelectedReserve] = useState(null);
@@ -133,9 +132,6 @@ const Reserve = () => {
       setIsLoading(false);
     }
   };
-
-  const toggle = (id) => setSelected((s) => ({ ...s, [id]: !s[id] }));
-  const allSelectedIds = Object.keys(selected).filter((id) => selected[id]);
 
   const triggerUnreserveConfirm = (id) => {
     setTargetUnreserveId(id);

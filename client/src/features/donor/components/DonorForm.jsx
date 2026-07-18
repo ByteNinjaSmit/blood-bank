@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import FormField from '@/components/shared/FormField';
 import Button from '@/components/shared/Button';
@@ -74,10 +74,8 @@ const DonorForm = ({
 
   const watchDob = watch('dob');
   const watchWeight = watch('weightKg');
-  const watchEligibilityStatus = watch('eligibilityStatus');
   const watchLastDonationDate = watch('lastDonationDate');
   const watchSex = watch('sex');
-  const isDeferred = watchEligibilityStatus === 'deferred' || watchEligibilityStatus === 'temp-deferred';
 
   useEffect(() => {
     if (watchDob && watchWeight) {

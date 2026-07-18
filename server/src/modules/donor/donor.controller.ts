@@ -5,11 +5,10 @@ import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { Validate } from '@/modules/donor/donor.validator';
 import type { DonorService } from '@/modules/donor/donor.service';
-import { UnauthorizedError, ValidationError } from '@/shared/errors';
+import { NotFoundError, UnauthorizedError, ValidationError } from '@/shared/errors';
 import { searchDonors, searchDonorsByVector } from '@/core/search/vector-search';
 import { toDto } from './donor.repository';
-import { DeferralModel } from '@/modules/deferral/deferral.model';
-import mongoose from 'mongoose';
+import { createDeferralRepo } from '@/modules/deferral/deferral.repository';
 
 export interface DonorControllers {
   create: (req: Request, res: Response, next: NextFunction) => Promise<void>;
@@ -41,6 +40,7 @@ const VectorSearchBody = z.object({
 });
 
 export function createDonorControllers(service: DonorService): DonorControllers {
+  const deferrals = createDeferralRepo();
   const actorIdOrThrow = (req: Request): string => {
     if (!req.user) throw new UnauthorizedError();
     return req.user.id;
@@ -72,15 +72,7 @@ export function createDonorControllers(service: DonorService): DonorControllers 
       try {
         const { id } = Validate.idParam(req);
         const donor = await service.get(id);
-        if (!donor) {
-          res.status(404).json({
-            success: false,
-            code: 'NOT_FOUND',
-            message: 'Donor not found',
-            requestId: req.id,
-          });
-          return;
-        }
+        if (!donor) throw new NotFoundError('Donor', id);
         res.json({ success: true, data: donor, requestId: req.id });
       } catch (e) {
         next(e);
@@ -150,14 +142,7 @@ export function createDonorControllers(service: DonorService): DonorControllers 
         for (const item of (result.items || [])) {
           const dto = toDto(item);
           if (dto.eligibilityStatus === 'deferred' || dto.eligibilityStatus === 'temp-deferred') {
-            const activeDeferral = await DeferralModel.findOne({
-              donor: new mongoose.Types.ObjectId(dto.id),
-              liftedAt: null,
-              $or: [
-                { type: 'PERMANENT' },
-                { type: 'TEMPORARY', untilDate: { $gt: new Date() } }
-              ]
-            }).sort({ createdAt: -1 }).lean();
+            const activeDeferral = await deferrals.findLatestActiveByDonor(dto.id);
             if (activeDeferral) {
               dto.deferralReason = activeDeferral.reason;
               dto.deferralUntil = activeDeferral.untilDate ? activeDeferral.untilDate.toISOString() : null;

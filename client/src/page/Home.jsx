@@ -342,13 +342,6 @@ export default function BloodBankWelcome() {
     }))
     .filter((capability) => capability.features.length > 0)
 
-  const quickAccessLinks = [
-    { icon: Users, label: "Donor Management", link: "/donors", color: "orange" },
-    { icon: Droplets, label: "Blood Inventory", link: "/inventory", color: "red" },
-    { icon: Heart, label: "Medical Records", link: "/medical", color: "blue" },
-    { icon: BarChart3, label: "Analytics", link: "/analytics", color: "green" },
-  ]
-
   return (
     <div className="min-h-screen bg-white relative overflow-hidden rounded-2xl">
       {/* Decorative Elements */}

@@ -7,84 +7,12 @@ import { useAuth } from '@/store/auth';
 import { bagProcurementApi } from '../api';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import IframePreviewModal from '@/components/shared/IframePreviewModal';
+import ConfirmDeleteModal from '@/components/shared/ConfirmDeleteModal';
 import { exportProcurementInspection } from '@/utils/excelExportHelper';
 
 const uploadFile = bagProcurementApi.upload.file;
 const deleteFile = bagProcurementApi.upload.remove;
-
-function IframePreviewModal({ isOpen, url, title, onClose }) {
-  if (!isOpen || !url) return null;
-  const isImage = /\.(jpeg|jpg|gif|png|webp|svg)($|\?)/i.test(url) || !url.toLowerCase().endsWith('.pdf');
-
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[999] p-4 backdrop-blur-sm transition-opacity">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-4xl w-full h-[80vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-          <h3 className="text-base font-bold text-gray-900">{title || 'Document Viewer'}</h3>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="flex-1 bg-gray-50 flex items-center justify-center p-4 overflow-auto">
-          {isImage ? (
-            <img
-              src={url}
-              alt={title}
-              className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-sm border border-gray-205"
-            />
-          ) : (
-            <iframe
-              src={url}
-              title={title}
-              className="w-full h-full border-0 rounded-lg bg-white"
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ConfirmDeleteModal({ isOpen, title, message, onConfirm, onClose }) {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4 backdrop-blur-sm transition-opacity animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-sm w-full p-6 animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-red-50 text-red-600 rounded-xl shrink-0 animate-bounce">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-gray-900">{title || 'Delete Confirmation'}</h3>
-            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">{message || 'Are you sure you want to delete this?'}</p>
-          </div>
-        </div>
-        <div className="flex gap-3 justify-end mt-6">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
-            className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const DECISION_BADGE = {
   ACCEPTED: 'bg-green-50 text-green-700 border-green-200',
@@ -1163,7 +1091,7 @@ export default function BagInspection() {
     }));
   };
 
-  const handleExportExcel = async (exportAll = false) => {
+  const handleExportExcel = async (_exportAll = false) => {
     try {
       setExcelLoading(true);
       const dataToExport = mapInspectionForExport(inspections);

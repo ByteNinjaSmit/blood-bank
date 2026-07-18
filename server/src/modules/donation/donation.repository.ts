@@ -80,6 +80,8 @@ export interface DonationRepo {
   delete(id: string): Promise<void>;
   /** Batch/segment lookup by bag number, for the discard-entry form. */
   lookupByBagNo(bagNo: string): Promise<{ lotNo: string; segmentNo: string } | null>;
+  /** Map of donationId -> bagNo (falls back to donationId) for a set of donations. */
+  bagNosByDonationIds(donationIds: string[]): Promise<Record<string, string>>;
 }
 
 export function createDonationRepo(): DonationRepo {
@@ -573,6 +575,21 @@ export function createDonationRepo(): DonationRepo {
         lotNo: (donation as any).lotNo || '',
         segmentNo: (donation as any).segmentNo || '',
       };
+    },
+
+    async bagNosByDonationIds(donationIds) {
+      if (donationIds.length === 0) return {};
+      const donations = (await DonationModel.find({
+        donationId: { $in: donationIds },
+        deletedAt: null,
+      })
+        .select('donationId bagNo')
+        .lean()) as Array<{ donationId: string; bagNo?: string | null }>;
+      const map: Record<string, string> = {};
+      for (const d of donations) {
+        map[d.donationId] = d.bagNo || d.donationId;
+      }
+      return map;
     },
   };
 }

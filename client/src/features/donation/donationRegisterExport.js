@@ -1,14 +1,6 @@
 import { buildStyledSheet, XLSX } from '@/utils/xlsxStyleHelper';
 import { donationApi } from '@/features/donation/api';
 
-function fmtDate(d) {
-  if (!d) return '—';
-  const dt = new Date(d);
-  if (Number.isNaN(dt.getTime())) return '—';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}/${dt.getFullYear()}`;
-}
-
 function fmtDateTime(d) {
   if (!d) return '—';
   const dt = new Date(d);

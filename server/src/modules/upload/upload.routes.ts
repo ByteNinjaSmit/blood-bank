@@ -3,7 +3,10 @@ import multer from 'multer';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { env } from '@/core/config/env';
 import { authenticate } from '@/shared/middlewares/authenticate';
+import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
+import { ROLE } from '@/shared/enums';
 import { ValidationError } from '@/shared/errors';
+import { ValidateUpload } from '@/modules/upload/upload.validator';
 
 const s3Client = new S3Client({
   endpoint: env.S3_ENDPOINT || undefined,
@@ -34,6 +37,8 @@ const router = Router();
 router.post(
   '/',
   authenticate,
+  requireRole([...ROLE]),
+  requirePermission('upload:write'),
   upload.single('file'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -45,9 +50,8 @@ router.post(
       const extension = file.originalname.split('.').pop() || 'png';
       const bucketName = env.S3_BUCKET || 'blood-bank';
 
-      let folder = (req.query.folder as string) || '';
-      // Sanitize folder to be safe (alphanumeric, hyphens, and slashes allowed for subfolders)
-      folder = folder.replace(/[^a-zA-Z0-9_\-\/]/g, '').replace(/^\/|\/$/g, '');
+      // Sanitized (alphanumeric, hyphens, and slashes for subfolders) by the validator.
+      const { folder } = ValidateUpload.uploadQuery(req);
 
       const d = new Date();
       const day = String(d.getDate()).padStart(2, '0');
@@ -85,12 +89,11 @@ router.post(
 router.delete(
   '/',
   authenticate,
+  requireRole([...ROLE]),
+  requirePermission('upload:write'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const fileUrl = req.query.url as string;
-      if (!fileUrl) {
-        throw new ValidationError('url query parameter is required');
-      }
+      const { url: fileUrl } = ValidateUpload.deleteQuery(req);
 
       const publicUrl = env.S3_PUBLIC_URL;
       if (!fileUrl.startsWith(publicUrl)) {

@@ -138,7 +138,7 @@ export default function UserManage() {
     setSelectedIds(new Set());
   }, [search, roleFilter, statusFilter, sortBy, order, rowsPerPage]);
 
-  const { isAdmin, canView, canCreate, canUpdate, canDelete } = checkAccess(user);
+  const { canView, canCreate, canUpdate, canDelete } = checkAccess(user);
 
   const openCreate = () => {
     if (!canCreate) { toast.error('You do not have permission to create users'); return; }

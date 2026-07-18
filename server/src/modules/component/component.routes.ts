@@ -65,12 +65,15 @@ router.get('/:id', authenticate, requireRole(READ_ROLES), requirePermission('uni
 // PATCH /:id — edit a prepared component's editable fields (volume,
 // storage location, expiry). `id` may be either the BloodUnit's Mongo
 // _id or its human-readable unitId (e.g. "DON-2026-0001-PRBC-1").
-router.patch('/:id', authenticate, requireRole(CAN_EDIT_COMPONENT), controllers.patch);
+// unit:read is the permission common to every CAN_EDIT_COMPONENT role
+// (qa-manager lacks component:separate); the write restriction is carried
+// by requireRole(CAN_EDIT_COMPONENT).
+router.patch('/:id', authenticate, requireRole(CAN_EDIT_COMPONENT), requirePermission('unit:read'), controllers.patch);
 
 // PATCH /bag/:id — bag-level correction: component type/volume for any
 // already-separated unit plus the shared spin log/separation time, in
 // one call. `id` is the donation id (bag). Blocked once any component
 // from this bag has been issued; always requires an edit reason.
-router.patch('/bag/:id', authenticate, requireRole(CAN_EDIT_COMPONENT), controllers.patchBag);
+router.patch('/bag/:id', authenticate, requireRole(CAN_EDIT_COMPONENT), requirePermission('unit:read'), controllers.patchBag);
 
 export default router;

@@ -4,8 +4,6 @@ import { COMPONENT_PRINT_LABEL } from '@/constants/component-types';
 export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
   if (!doc) return null;
 
-  const fmt = (d) => (d ? new Date(d).toLocaleString() : '—');
-  
   const formatShortDate = (d) => {
     if (!d) return '—';
     const date = new Date(d);

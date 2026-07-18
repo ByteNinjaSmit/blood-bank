@@ -79,7 +79,7 @@ export default function BagInventory() {
     });
   };
 
-  const handleExportExcel = async (exportAll = false) => {
+  const handleExportExcel = async (_exportAll = false) => {
     try {
       setExcelLoading(true);
       const dataToExport = mapInventoryForExport(stocks);

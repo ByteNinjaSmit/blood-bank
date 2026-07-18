@@ -147,27 +147,23 @@ export default function ReserveWizard() {
       };
       const res = await inventoryApi.reserveByCriteria(payload);
       setReserving(false);
-      if (!res.success) {
-        const errMsg = res?.error || res?.raw?.message || 'Reservation failed';
-        const sh = res?.errorData?.data?.shortages;
-        if (Array.isArray(sh) && sh.length) {
-          setShortages(sh);
-          const s0 = sh[0];
-          toast.error(`Insufficient stock: ${s0.available} of ${s0.required} ${s0.componentType} available`);
-        } else {
-          setShortages(null);
-          toast.error(errMsg);
-        }
-        setResult(null);
-        return;
-      }
       setResult(res.data);
       setShortages(null);
       toast.success('Reserved successfully');
       navigate('/inventory/reserve');
     } catch (e) {
       setReserving(false);
-      toast.error('Reservation failed');
+      setResult(null);
+      // A stock shortage comes back as a 409 with { shortages } in details.
+      const sh = e?.details?.shortages;
+      if (Array.isArray(sh) && sh.length) {
+        setShortages(sh);
+        const s0 = sh[0];
+        toast.error(`Insufficient stock: ${s0.available} of ${s0.required} ${s0.componentType} available`);
+      } else {
+        setShortages(null);
+        toast.error(e?.message || 'Reservation failed');
+      }
     }
   };
 

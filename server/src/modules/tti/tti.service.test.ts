@@ -49,6 +49,7 @@ function mocks(ttiDto: TtiResultDto) {
   const deferrals: DeferralRepo = {
     create: vi.fn(),
     findActiveByDonor: vi.fn(),
+    findLatestActiveByDonor: vi.fn().mockResolvedValue(null),
     listByDonor: vi.fn(),
     list: vi.fn(),
     lift: vi.fn(),

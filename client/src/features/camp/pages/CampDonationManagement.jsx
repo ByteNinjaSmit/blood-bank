@@ -13,7 +13,7 @@ import { exportCampDonations } from '@/utils/excelExportHelper';
 const CampDonationManagement = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { donations: rawDonations, pagination, loading, error, fetchDonations } = useDonation();
+  const { donations: rawDonations, loading, error, fetchDonations } = useDonation();
   const [campId, setCampId] = useState(null);
   const [viewDonationId, setViewDonationId] = useState(null);
   const [excelLoading, setExcelLoading] = useState(false);

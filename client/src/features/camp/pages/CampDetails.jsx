@@ -176,13 +176,7 @@ const CampDetails = () => {
   }
 
   const durationDays = Math.max(1, Math.ceil((new Date(camp.dateTo) - new Date(camp.dateFrom)) / 86400000));
-  const formatDate = (d) => new Date(d).toLocaleDateString();
   const formatDateTime = (d) => new Date(d).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  const nowMs = Date.now();
-  const startMs = new Date(camp.dateFrom).getTime();
-  const endMs = new Date(camp.dateTo).getTime();
-  const progressPercent = Math.max(0, Math.min(100, ((nowMs - startMs) / Math.max(1, endMs - startMs)) * 100));
-  const progressLabel = `${Math.round(progressPercent)}% complete`;
 
   const facilities = [
     {

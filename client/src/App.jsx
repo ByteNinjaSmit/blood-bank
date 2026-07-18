@@ -1,7 +1,6 @@
 import React from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { AuthenticatedRoute } from './components/auth/Authentic-Routes';
-import { useAuth } from './store/auth';
 import ScrollToTop from './features/dashboard/pages/layout/ScrollToTop';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
@@ -103,7 +102,6 @@ const NO_SHELL = ['/login', '/register', '/forgot-password', '/reset-password'];
 
 const App = () => {
   const pathname = useLocation().pathname;
-  const { isLoading } = useAuth();
   const hideShell = NO_SHELL.includes(pathname);
 
   return (

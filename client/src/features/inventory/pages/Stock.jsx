@@ -253,7 +253,7 @@ const Stock = () => {
   // filters
   const [componentType, setComponentType] = useState("");
   const [status, setStatus] = useState("in-stock");
-  const [siteId, setSiteId] = useState("");
+  const [siteId] = useState("");
   const [search, setSearch] = useState("");
   const [bloodGroup, setBloodGroup] = useState("");
   const [rh, setRh] = useState("");

@@ -28,7 +28,7 @@ const InventoryNearExpiry = () => {
   const [bloodGroup, setBloodGroup] = useState("");
   const [withinDays, setWithinDays] = useState(30);
   const [order, setOrder] = useState("asc");
-  const [sortBy, setSortBy] = useState("expiresAt");
+  const [sortBy] = useState("expiresAt");
 
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);

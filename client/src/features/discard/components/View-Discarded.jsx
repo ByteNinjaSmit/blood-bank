@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown"
+import IframePreviewModal from "@/components/shared/IframePreviewModal"
 import { exportProcurementDiscard } from "@/utils/excelExportHelper"
 import { toast } from "sonner"
 import { formatDateTime } from "@/lib/format-date"
@@ -92,9 +93,8 @@ function CreateDiscardModal({ isOpen, onClose, onSuccess, API, token }) {
           setBatchNo(lotNo || '');
           setSegmentNo(segNo || '');
         }
-      } catch (err) {
-        // Fail silently during typing, logs to debug console
-        console.log("Auto-lookup for bagNo failed:", err.message);
+      } catch {
+        // Fail silently during typing — auto-lookup is best-effort.
       }
     }, 500);
 
@@ -442,42 +442,6 @@ function ViewInspectionModal({ onClose, inspection, onViewReportImage }) {
   );
 }
 
-function IframePreviewModal({ isOpen, url, title, onClose }) {
-  if (!isOpen || !url) return null;
-  const isImage = /\.(jpeg|jpg|gif|png|webp|svg)($|\?)/i.test(url) || !url.toLowerCase().endsWith('.pdf');
-
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[999] p-4 backdrop-blur-sm transition-opacity animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-4xl w-full h-[80vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-          <h3 className="text-base font-bold text-gray-900">{title || 'Document Viewer'}</h3>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="flex-1 bg-gray-50 flex items-center justify-center p-4 overflow-auto">
-          {isImage ? (
-            <img
-              src={url}
-              alt={title}
-              className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-sm border border-gray-200"
-            />
-          ) : (
-            <iframe
-              src={url}
-              title={title}
-              className="w-full h-full border-0 rounded-lg bg-white"
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const ViewDiscarded = () => {
     const { API, authorizationToken } = useAuth();
     const [selectedItem, setSelectedItem] = useState(null)
@@ -496,8 +460,7 @@ const ViewDiscarded = () => {
       fromDate: "",
       toDate: ""
     });
-    const [siteId, setSiteId] = useState("");
-    const [sortBy, setSortBy] = useState("discardedAt");
+    const [sortBy] = useState("discardedAt");
     const [order, setOrder] = useState("desc");
     // const [sites, setSites] = useState([]);
     const [excelLoading, setExcelLoading] = useState(false);

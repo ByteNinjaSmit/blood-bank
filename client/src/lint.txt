@@ -1,0 +1,151 @@
+
+> client@0.0.0 lint
+> eslint .
+
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\components\Header.jsx
+  2:9  error  'Icon' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\components\Stepper.jsx
+  3:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\components\blood-components\ComponentDetailsModal.jsx
+  61:6  warning  React Hook useEffect has a missing dependency: 'fetchComponentDetails'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\components\ui\badge.jsx
+  44:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\components\ui\button.jsx
+  55:18  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\components\ui\form.jsx
+  135:3  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\components\ui\navigation-menu.jsx
+  151:3  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\components\ui\sidebar.jsx
+  681:3  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\components\ui\toggle.jsx
+  43:18  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\auth\pages\Login-Page.jsx
+  20:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\auth\pages\Registration-Page.jsx
+  25:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\bag-procurement\pages\GoodsReceipt.jsx
+  565:9  error  'fmtMoney' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\camp\pages\Camp-Listing.jsx
+  18:21  error    'OnBack' is defined but never used. Allowed unused args must match /^_/u                                             no-unused-vars
+  74:6   warning  React Hook React.useEffect has a missing dependency: 'fetchCamps'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\camp\pages\CampDetails.jsx
+  180:9  error  'nowMs' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+  181:9  error  'startMs' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  182:9  error  'endMs' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\camp\pages\CampDonorManagement.jsx
+  124:6  warning  React Hook useEffect has a missing dependency: 'fetchCampDonors'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\component\pages\ComponentsList.jsx
+  200:6  warning  React Hook useCallback has unnecessary dependencies: 'API' and 'authorizationToken'. Either exclude them or remove the dependency array          react-hooks/exhaustive-deps
+  209:6  warning  React Hook useEffect has a missing dependency: 'fetchComponents'. Either include it or remove the dependency array                               react-hooks/exhaustive-deps
+  216:6  warning  React Hook useEffect has missing dependencies: 'fetchComponents' and 'state.filters.search'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\component\pages\NearExpiry.jsx
+  105:6  warning  React Hook useCallback has unnecessary dependencies: 'API' and 'authorizationToken'. Either exclude them or remove the dependency array                    react-hooks/exhaustive-deps
+  114:6  warning  React Hook useEffect has a missing dependency: 'fetchNearExpiryComponents'. Either include it or remove the dependency array                               react-hooks/exhaustive-deps
+  121:6  warning  React Hook useEffect has missing dependencies: 'fetchNearExpiryComponents' and 'state.filters.search'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\discard\components\View-Discarded.jsx
+  582:8  warning  React Hook useEffect has a missing dependency: 'getItems'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\donation\components\DonationList.jsx
+  39:6  warning  React Hook useCallback has missing dependencies: 'fetchCampDonations' and 'fetchDonations'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\donation\components\steps\DonorSearchStep.jsx
+  10:3  error  'loading' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\donor\components\DonorList.jsx
+  36:6  warning  React Hook useEffect has missing dependencies: 'fetchCampDonors' and 'fetchDonors'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\donor\pages\DonorCreation.jsx
+  2213:52  error  'idx' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\hospital\pages\AddHospital.jsx
+  61:30  error  Unnecessary escape character: \(  no-useless-escape
+  61:32  error  Unnecessary escape character: \)  no-useless-escape
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\hospital\pages\ListHospital.jsx
+  244:30  error  Unnecessary escape character: \(  no-useless-escape
+  244:32  error  Unnecessary escape character: \)  no-useless-escape
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\mis\pages\AnalyticsMIS.jsx
+  20:9  warning  The 'lastMonth' logical expression could make the dependencies of useMemo Hook (at line 28) change on every render. To fix this, wrap the initialization of 'lastMonth' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  21:9  warning  The 'forecast' logical expression could make the dependencies of useMemo Hook (at line 28) change on every render. To fix this, wrap the initialization of 'forecast' in its own useMemo() Hook    react-hooks/exhaustive-deps
+  21:9  warning  The 'forecast' logical expression could make the dependencies of useMemo Hook (at line 33) change on every render. To fix this, wrap the initialization of 'forecast' in its own useMemo() Hook    react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\mis\pages\BagMIS.jsx
+  25:9  warning  The 'stats' logical expression could make the dependencies of useMemo Hook (at line 28) change on every render. To fix this, wrap the initialization of 'stats' in its own useMemo() Hook              react-hooks/exhaustive-deps
+  26:9  warning  The 'byComponent' logical expression could make the dependencies of useMemo Hook (at line 29) change on every render. To fix this, wrap the initialization of 'byComponent' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\mis\pages\CampMIS.jsx
+  23:9  warning  The 'camps' logical expression could make the dependencies of useMemo Hook (at line 25) change on every render. To fix this, wrap the initialization of 'camps' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  23:9  warning  The 'camps' logical expression could make the dependencies of useMemo Hook (at line 26) change on every render. To fix this, wrap the initialization of 'camps' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\mis\pages\ComponentMIS.jsx
+  24:9  warning  The 'production' logical expression could make the dependencies of useMemo Hook (at line 29) change on every render. To fix this, wrap the initialization of 'production' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  25:9  warning  The 'ageing' logical expression could make the dependencies of useMemo Hook (at line 30) change on every render. To fix this, wrap the initialization of 'ageing' in its own useMemo() Hook          react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\mis\pages\DiscardMIS.jsx
+  22:9  warning  The 'discards' logical expression could make the dependencies of useMemo Hook (at line 26) change on every render. To fix this, wrap the initialization of 'discards' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  23:9  warning  The 'typeWise' logical expression could make the dependencies of useMemo Hook (at line 27) change on every render. To fix this, wrap the initialization of 'typeWise' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\mis\pages\DonationMIS.jsx
+  25:9  warning  The 'trends' logical expression could make the dependencies of useMemo Hook (at line 29) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'trends' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\mis\pages\ExceptionMIS.jsx
+  35:110  warning  React Hook useMemo has a missing dependency: 'rows'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  36:100  warning  React Hook useMemo has a missing dependency: 'rows'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\mis\pages\ExecutiveMIS.jsx
+  21:9  warning  The 'kpis' logical expression could make the dependencies of useMemo Hook (at line 31) change on every render. To fix this, wrap the initialization of 'kpis' in its own useMemo() Hook                                             react-hooks/exhaustive-deps
+  23:9  warning  The 'trends' logical expression could make the dependencies of useMemo Hook (at line 25) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'trends' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\mis\pages\InventoryMIS.jsx
+  20:9  warning  The 'data_' conditional could make the dependencies of useMemo Hook (at line 36) change on every render. To fix this, wrap the initialization of 'data_' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\mis\pages\IssueMIS.jsx
+  22:9  warning  The 'issues' logical expression could make the dependencies of useMemo Hook (at line 26) change on every render. To fix this, wrap the initialization of 'issues' in its own useMemo() Hook              react-hooks/exhaustive-deps
+  23:9  warning  The 'hospitalWise' logical expression could make the dependencies of useMemo Hook (at line 27) change on every render. To fix this, wrap the initialization of 'hospitalWise' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\mis\pages\RegulatoryMIS.jsx
+  23:9  warning  The 'testingByDisease' logical expression could make the dependencies of useMemo Hook (at line 30) change on every render. To fix this, wrap the initialization of 'testingByDisease' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\mis\pages\TestingMIS.jsx
+  22:9  warning  The 'failures' logical expression could make the dependencies of useMemo Hook (at line 27) change on every render. To fix this, wrap the initialization of 'failures' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  23:9  warning  The 'overall' logical expression could make the dependencies of useMemo Hook (at line 28) change on every render. To fix this, wrap the initialization of 'overall' in its own useMemo() Hook    react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\requisition\pages\RequisitionManagement.jsx
+  60:6  warning  React Hook React.useEffect has a missing dependency: 'loadRequest'. Either include it or remove the dependency array     react-hooks/exhaustive-deps
+  66:6  warning  React Hook React.useEffect has a missing dependency: 'refreshRequest'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\serology\pages\SerologyResults.jsx
+  123:6  warning  React Hook useEffect has missing dependencies: 'fetchBags' and 'pagination.limit'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\user\pages\UserManage.jsx
+  95:37  warning  React Hook useEffect has a missing dependency: 'loadUsers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\user\pages\components\ActionMenu.jsx
+  47:6  warning  React Hook useEffect has a missing dependency: 'setOpenMenuId'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\athar\Documents\GitHub\blood-bank\client\src\store\auth.jsx
+    7:14  error  Fast refresh only works when a file only exports components. Move your React context(s) to a separate file                      react-refresh/only-export-components
+  184:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+✖ 62 problems (23 errors, 39 warnings)
+

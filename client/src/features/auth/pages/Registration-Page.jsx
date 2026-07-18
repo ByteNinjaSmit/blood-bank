@@ -21,7 +21,6 @@ import {
 } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { toast } from "sonner"
-import axios from "axios"
 import { useAuth } from "@/store/auth"
 import { motion } from "framer-motion"
 

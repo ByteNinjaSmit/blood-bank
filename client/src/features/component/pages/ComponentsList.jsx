@@ -159,11 +159,7 @@ const ComponentsList = () => {
         order: state.filters.order,
       };
 
-      console.log("Fetching components with params:", params);
-
       const response = await apiClient.get(`/api/v2/component/list`, { params });
-
-      console.log("Components API response:", response.data);
 
       if (response.data?.components) {
         setState(prev => ({

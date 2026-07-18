@@ -57,6 +57,8 @@ export interface DeferralRepo {
   create(input: CreateDeferralInput, actorId: string): Promise<DeferralDto>;
   /** Active = permanent, or temporary whose untilDate is still in the future, and not lifted. */
   findActiveByDonor(donorId: string, now?: Date): Promise<ActiveDeferral[]>;
+  /** The single most recently created active deferral for a donor, if any. */
+  findLatestActiveByDonor(donorId: string, now?: Date): Promise<ActiveDeferral | null>;
   listByDonor(donorId: string): Promise<DeferralDto[]>;
   list(filter: ListDeferralsFilter): Promise<{ items: DeferralRegisterEntry[]; total: number }>;
   lift(id: string, actorId: string, reason?: string): Promise<void>;
@@ -138,6 +140,18 @@ export function createDeferralRepo(): DeferralRepo {
         untilDate: r.untilDate ?? undefined,
         reason: r.reason,
       }));
+    },
+
+    async findLatestActiveByDonor(donorId, now = new Date()) {
+      const raw = (await DeferralModel.findOne({
+        donor: new Types.ObjectId(donorId),
+        liftedAt: null,
+        $or: [{ type: 'PERMANENT' }, { type: 'TEMPORARY', untilDate: { $gt: now } }],
+      })
+        .sort({ createdAt: -1 })
+        .lean()) as RawDeferral | null;
+      if (!raw) return null;
+      return { type: raw.type, untilDate: raw.untilDate ?? undefined, reason: raw.reason };
     },
 
     async listByDonor(donorId) {

@@ -1,8 +1,9 @@
 import type { NextFunction, Request, Response } from 'express';
 import ExcelJS from 'exceljs';
 import { Types } from 'mongoose';
-import { UserModel } from '@/modules/user/user.model';
 import { auditService } from '@/modules/audit/audit.service';
+import { ValidateExport } from '@/modules/export/export.validator';
+import { createExportRepo } from '@/modules/export/export.repository';
 import {
   createProfessionalHeader,
   createSummaryTable,
@@ -10,6 +11,8 @@ import {
   applyPrintFormatting,
   applyFooter,
 } from '@/shared/utils/excelHelper';
+
+const exportRepo = createExportRepo();
 
 export interface ExportSubTable {
   subtitle: string;
@@ -37,25 +40,11 @@ export interface ExportSheetData {
 export const exportControllers = {
   async exportExcel(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { filename, sheets } = req.body as { filename?: string; sheets?: ExportSheetData[] };
-
-      if (!sheets || !Array.isArray(sheets)) {
-        res.status(400).json({ success: false, message: 'Sheets array is required' });
-        return;
-      }
+      const { filename, sheets } = ValidateExport.excelBody(req);
 
       // Fetch logged-in user details to brand the report
       const actorId = req.user?.id;
-      let userName = 'System User';
-      if (actorId) {
-        const user = await UserModel.findById(actorId).lean();
-        if (user) {
-          userName =
-            [user.name?.first, user.name?.last].filter(Boolean).join(' ') ||
-            user.email ||
-            'System User';
-        }
-      }
+      const userName = actorId ? await exportRepo.actorDisplayName(actorId) : 'System User';
 
       const workbook = new ExcelJS.Workbook();
       workbook.creator = 'Sanjivani Blood Bank Management System';

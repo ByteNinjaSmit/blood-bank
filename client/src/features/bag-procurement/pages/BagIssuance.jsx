@@ -239,7 +239,7 @@ export default function BagIssuance() {
     });
   };
 
-  const handleExportExcel = async (exportAll = false) => {
+  const handleExportExcel = async (_exportAll = false) => {
     try {
       setExcelLoading(true);
       const dataToExport = mapIssuanceForExport(filteredIssues);
