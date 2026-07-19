@@ -1,5 +1,10 @@
 import React from 'react';
 import { Loader2, Warehouse, Eye, Pencil, Trash2 } from 'lucide-react';
+import { formatDate, formatDateTime } from '@/lib/format-date';
+
+// Day/month/year with month as a number (e.g. 19/07/2026).
+const fmtDate = (v) => formatDate(v, { day: '2-digit', month: '2-digit', year: 'numeric' });
+const fmtDateTime = (v) => formatDateTime(v, { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 const STORAGE_SUB_TABS = [
   { key: 'SJS', label: 'SJS — Kopargaon' },
@@ -135,8 +140,8 @@ export default function StorageTab({
                                       <td className="px-4 py-3 text-gray-700 font-medium">{r?.component?.componentType || '—'}</td>
                                       <td className="px-4 py-3 font-bold text-gray-800">{r?.bag?.bloodGroup}{rh}</td>
                                       <td className="px-4 py-3 text-gray-600">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</td>
-                                      <td className="px-4 py-3 text-gray-600">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '—'}</td>
-                                      <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{r.issuedAt ? new Date(r.issuedAt).toLocaleString() : '—'}</td>
+                                      <td className="px-4 py-3 text-gray-600">{fmtDate(r?.component?.expiryDate)}</td>
+                                      <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{fmtDateTime(r.issuedAt)}</td>
                                       <td className="px-4 py-3">
                                         <div className="flex items-center gap-1.5">
                                           <button

@@ -2,7 +2,11 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { COMPONENT_TYPES } from '@/constants/component-types';
-import { formatDate } from '@/lib/format-date';
+import { formatDate as formatDateBase } from '@/lib/format-date';
+
+// Day/month/year with month as a number (e.g. 19/07/2026), not the
+// shared helper's default abbreviated month.
+const formatDate = (v) => formatDateBase(v, { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 // Issue Stock tab: the issued/reserved blood-unit ledger with filters +
 // paginated table. Presentational — filter state + data live in the page.

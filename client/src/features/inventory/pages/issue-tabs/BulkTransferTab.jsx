@@ -1,6 +1,10 @@
 import React from 'react';
 import { Loader2, ArrowLeftRight, Eye, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { formatDate } from '@/lib/format-date';
+
+// Day/month/year with month as a number (e.g. 19/07/2026).
+const fmtDate = (v) => formatDate(v, { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 // Bulk Transfer tab: inter-bank loan records (give/take loan). Presentational
 // only — data + actions provided by the page.
@@ -74,7 +78,7 @@ export default function BulkTransferTab({
                 </td>
                 <td className="px-4 py-3 font-semibold text-gray-800">{r.bloodBankName}</td>
                 <td className="px-4 py-3 text-gray-600 max-w-[220px] truncate" title={r.bloodBankAddress}>{r.bloodBankAddress}</td>
-                <td className="px-4 py-3 text-gray-600">{r.transferDate ? new Date(r.transferDate).toLocaleDateString() : '—'}</td>
+                <td className="px-4 py-3 text-gray-600">{fmtDate(r.transferDate)}</td>
                 <td className="px-4 py-3">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
                     {r.items?.length || 0} bag{(r.items?.length || 0) !== 1 ? 's' : ''}

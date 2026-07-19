@@ -1,5 +1,9 @@
 import React from 'react';
 import { Loader2, MapPin, Eye } from 'lucide-react';
+import { formatDateTime } from '@/lib/format-date';
+
+// Day/month/year with month as a number (e.g. 19/07/2026).
+const fmtDateTime = (v) => formatDateTime(v, { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 // Clinical Indication / Disease Patients tab: blood units issued directly to
 // disease patients (Thalassemia, Sickle Cell, etc.). Presentational only.
@@ -66,7 +70,7 @@ export default function DiseaseTab({
                   <td className="px-4 py-3 font-mono text-xs font-bold text-gray-700">{r?.bag?.bagNo || r.bagNo || '—'}</td>
                   <td className="px-4 py-3 text-gray-700">{r?.component?.componentType || '—'}</td>
                   <td className="px-4 py-3 font-semibold text-gray-800">{r?.bag?.bloodGroup}{rh}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{r.issuedAt ? new Date(r.issuedAt).toLocaleString() : '—'}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{fmtDateTime(r.issuedAt)}</td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => onViewBag(r)}

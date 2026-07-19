@@ -18,7 +18,13 @@ import IssueStockTab from "./issue-tabs/IssueStockTab";
 import SendToStorageModal from "./issue-tabs/SendToStorageModal";
 import BulkTransferFormModal from "./issue-tabs/BulkTransferFormModal";
 import StorageEditModal from "./issue-tabs/StorageEditModal";
-import { formatDate, formatDateTime } from "@/lib/format-date";
+import { formatDate as formatDateBase, formatDateTime as formatDateTimeBase } from "@/lib/format-date";
+
+// Day/month/year with month as a number (e.g. 19/07/2026), used across
+// every tab on this page and their view modals — not the shared helper's
+// default abbreviated month.
+const formatDate = (v) => formatDateBase(v, { day: "2-digit", month: "2-digit", year: "numeric" });
+const formatDateTime = (v) => formatDateTimeBase(v, { day: "2-digit", month: "2-digit", year: "numeric" });
 import { useEditWithReason } from "@/hooks/useEditWithReason";
 import { useDeleteWithReason } from "@/hooks/useDeleteWithReason";
 import { useUpdateStorageBag, useReturnFromStorage } from "@/features/inventory/queries";
@@ -482,22 +488,6 @@ const Issue = () => {
   const [coverLetterBoxCount, setCoverLetterBoxCount] = useState("");
   const [coverLetterPrintDoc, setCoverLetterPrintDoc] = useState(null);
 
-  // Print source for Invoice/Cover Letter: defaults to the open Bulk
-  // Transfer view, but Storage bags can also trigger these prints against
-  // a synthetic transfer-shaped object built from the single storage bag.
-  const [printSourceItem, setPrintSourceItem] = useState(null);
-
-  // Shapes a single storage bag row like a bulk-transfer "transfer" object
-  // so it can reuse the existing Invoice/Cover Letter print components.
-  const storageBagAsTransfer = (r) => ({
-    items: [{ componentType: r?.component?.componentType, volumeMl: r?.component?.volumeMl }],
-    transferId: r?.segmentNo || r?.bag?.bagNo || r?.bagNo || '—',
-    createdAt: r?.issuedAt,
-    transferDate: r?.issuedAt,
-    bloodBankName: r?.storageLocation || '—',
-    bloodBankAddress: '',
-  });
-
   // Per-component litres, computed from each bag's volumeMl — used both in
   // the View modal summary and inside the printed cover letter.
   const bulkTransferComponentTotals = (items) => {
@@ -511,8 +501,7 @@ const Issue = () => {
     return { byComponent: totals, totalLitres: totalMl / 1000 };
   };
 
-  const openCoverLetterPrompt = (source = bulkViewItem) => {
-    setPrintSourceItem(source);
+  const openCoverLetterPrompt = () => {
     setCoverLetterBoxCount("");
     setCoverLetterPromptOpen(true);
   };
@@ -524,6 +513,10 @@ const Issue = () => {
     const styleEl = document.createElement('style');
     styleEl.id = styleId;
     styleEl.innerHTML = `
+      @page {
+        size: auto;
+        margin: 0;
+      }
       @media print {
         #root { display: none !important; }
         html, body { background: white !important; }
@@ -552,7 +545,7 @@ const Issue = () => {
       return toast.warning("Please enter a valid number of boxes");
     }
     setCoverLetterPromptOpen(false);
-    setCoverLetterPrintDoc({ ...(printSourceItem || bulkViewItem), boxCount: n });
+    setCoverLetterPrintDoc({ ...bulkViewItem, boxCount: n });
     triggerPrint('bulk-transfer-cover-letter-print-wrapper', 'bulk-transfer-cover-letter-print-style', () => setCoverLetterPrintDoc(null));
   };
 
@@ -586,8 +579,7 @@ const Issue = () => {
   const [invoiceRate, setInvoiceRate] = useState("");
   const [invoicePrintDoc, setInvoicePrintDoc] = useState(null);
 
-  const openInvoicePrompt = (source = bulkViewItem) => {
-    setPrintSourceItem(source);
+  const openInvoicePrompt = () => {
     setInvoiceRate("");
     setInvoicePromptOpen(true);
   };
@@ -598,7 +590,7 @@ const Issue = () => {
       return toast.warning("Please enter a valid rate per litre");
     }
     setInvoicePromptOpen(false);
-    setInvoicePrintDoc({ ...(printSourceItem || bulkViewItem), ratePerLitre: rate });
+    setInvoicePrintDoc({ ...bulkViewItem, ratePerLitre: rate });
     triggerPrint('bulk-transfer-invoice-print-wrapper', 'bulk-transfer-invoice-print-style', () => setInvoicePrintDoc(null));
   };
 
@@ -751,7 +743,7 @@ const Issue = () => {
       setStorageBagRows(data);
       // Auto-expand the most recent date group
       if (data.length > 0) {
-        const latestDate = new Date(data[0].issuedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        const latestDate = formatDate(data[0].issuedAt);
         setExpandedDates(new Set([latestDate]));
       }
     } catch {
@@ -775,9 +767,7 @@ const Issue = () => {
   const storageBagsByDate = React.useMemo(() => {
     const groups = {};
     storageBagRows.forEach(r => {
-      const dateKey = r.issuedAt
-        ? new Date(r.issuedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-        : 'Unknown Date';
+      const dateKey = r.issuedAt ? formatDate(r.issuedAt) : 'Unknown Date';
       if (!groups[dateKey]) groups[dateKey] = [];
       groups[dateKey].push(r);
     });
@@ -958,7 +948,7 @@ const Issue = () => {
                 <div>
                   <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Donation Date</div>
                   <div className="font-semibold text-gray-850">
-                    {viewItem?.bag?.donationDate ? new Date(viewItem.bag.donationDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                    {formatDate(viewItem?.bag?.donationDate)}
                   </div>
                 </div>
                 <div>
@@ -1063,7 +1053,7 @@ const Issue = () => {
                 {viewItem?.reservedAt && (
                   <div>
                     <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Reserved At</div>
-                    <div className="text-gray-700">{new Date(viewItem.reservedAt).toLocaleString()}</div>
+                    <div className="text-gray-700">{formatDateTime(viewItem.reservedAt)}</div>
                   </div>
                 )}
               </div>
@@ -1137,21 +1127,6 @@ const Issue = () => {
                   <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Type of Bag</div>
                   <div className="text-gray-700">{r.typeOfBag || '—'}</div>
                 </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-2 border-t flex-wrap">
-                <Button
-                  onClick={() => openInvoicePrompt(storageBagAsTransfer(r))}
-                  variant="outline"
-                  className="border-red-200 text-red-800 hover:bg-red-50 font-medium h-10 px-5 shadow-sm flex items-center gap-2"
-                >
-                  <Printer className="w-4 h-4" /> Print Invoice
-                </Button>
-                <Button
-                  onClick={() => openCoverLetterPrompt(storageBagAsTransfer(r))}
-                  className="bg-red-800 hover:bg-red-900 text-white font-medium h-10 px-5 shadow-sm flex items-center gap-2"
-                >
-                  <Printer className="w-4 h-4" /> Print Cover Letter
-                </Button>
               </div>
             </div>
           );
@@ -1260,7 +1235,7 @@ const Issue = () => {
                     {req.requiredAt && (
                       <div>
                         <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Required At</div>
-                        <div className="text-gray-700">{new Date(req.requiredAt).toLocaleString()}</div>
+                        <div className="text-gray-700">{formatDateTime(req.requiredAt)}</div>
                       </div>
                     )}
                     {req.patient && (
@@ -1354,7 +1329,7 @@ const Issue = () => {
                 </div>
                 <div>
                   <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Transfer Date</div>
-                  <div className="text-gray-700">{bulkViewItem.transferDate ? new Date(bulkViewItem.transferDate).toLocaleDateString() : '—'}</div>
+                  <div className="text-gray-700">{formatDate(bulkViewItem.transferDate)}</div>
                 </div>
                 <div className="md:col-span-2">
                   <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Bank Address</div>
