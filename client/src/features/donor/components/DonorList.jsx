@@ -265,8 +265,8 @@ const DonorList = ({
                     {donor.bloodGroup} {donor.rh === "Positive" ? "+" : "-"}
                   </Table.Cell>
                   <Table.Cell>
-                    {donor.lastDonationDate 
-                      ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) 
+                    {donor.recentDonationDate || donor.lastDonationDate
+                      ? new Date(donor.recentDonationDate || donor.lastDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
                       : "N/A"
                     }
                   </Table.Cell>

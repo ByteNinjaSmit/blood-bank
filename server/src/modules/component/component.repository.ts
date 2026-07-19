@@ -221,6 +221,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
           ffp: componentSlot(units, ['FFP'], tti),
           rdp: componentSlot(units, ['RDP'], tti),
           cryo: componentSlot(units, ['CRYO'], tti),
+          sdp: componentSlot(units, ['SDP'], tti),
         };
       });
 
@@ -228,7 +229,14 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
     },
 
     async listBagsToSeparate() {
-      const donations = await DonationModel.find({ donationType: 'WHOLE_BLOOD', deletedAt: null })
+      // SDP donations also land here awaiting their (single-component)
+      // separation into TTI, same queue as Whole Blood bags — see
+      // ComponentSeparate.jsx, which restricts the selectable component
+      // type to SDP only for these donations.
+      const donations = await DonationModel.find({
+        donationType: { $in: ['WHOLE_BLOOD', 'SDP'] },
+        deletedAt: null,
+      })
         .sort({ collectedAt: -1 })
         .lean();
 
@@ -267,6 +275,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
           return {
             id: d._id.toString(),
             donationId: d.donationId,
+            donationType: d.donationType,
             bagNo: (d as any).bagNo || d.donationId,
             segmentNo: (d as any).segmentNo || segmentNo,
             bloodGroup: abo,
@@ -278,6 +287,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
             rpmSecondSpin: separation?.rpmSecondSpin || '',
             separationTime: separation?.separationTime ? separation.separationTime.toISOString() : '',
             components: units.map((u) => ({
+              unitId: u.unitId,
               componentType: u.componentType,
               volumeMl: u.volumeMl,
             })),
@@ -545,6 +555,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         ffp: findComp(['FFP']),
         rdp: findComp(['RDP']),
         cryo: findComp(['CRYO']),
+        sdp: findComp(['SDP']),
       };
     },
 

@@ -13,6 +13,7 @@ const TYPES = [
   { key: "ffp", label: "Fresh Frozen Plasma (FFP)", type: "FFP" },
   { key: "rdp", label: "Random Donor Platelets (RDP)", type: "RDP" },
   { key: "cryo", label: "Cryoprecipitate", type: "CRYO" },
+  { key: "sdp", label: "Single Donor Platelet (SDP)", type: "SDP" },
 ];
 const COMPONENT_TYPE_OPTIONS = TYPES.map((t) => t.type);
 
@@ -51,7 +52,7 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
       const next = {};
       TYPES.forEach(({ key }) => {
         const comp = component[key];
-        if (comp && comp.status === "prepared") {
+        if (comp && comp.status !== "unprepared") {
           next[key] = {
             unitId: comp.componentId,
             componentType: comp.componentType || TYPES.find((t) => t.key === key)?.type,

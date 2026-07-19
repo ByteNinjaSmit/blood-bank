@@ -212,11 +212,28 @@ export function mapLegacyRole(legacy: string): Role {
   return LEGACY_TO_NEW[legacy] ?? 'auditor';
 }
 
+// Legacy admin-panel module names whose actual enforced route permission
+// keys don't follow the generic `{module}:{action}` convention below.
+// "Component" is the known offender: its routes require `unit:read` (list/
+// bags-to-separate/near-expiry/detail/edit) and `component:separate`
+// (separate/complete), not `component:read/create/update/delete` — so a
+// grant made via the admin panel's "Component" checkboxes previously
+// produced permissions the server never checked, 403-ing the page.
+const LEGACY_MODULE_PERMISSION_OVERRIDES: Partial<
+  Record<string, Partial<Record<'view' | 'create' | 'update' | 'delete', Permission>>>
+> = {
+  component: {
+    view: 'unit:read',
+    create: 'component:separate',
+    update: 'unit:read',
+  },
+};
+
 /**
  * Project a legacy user's role + permission grid into the new
  * permission vocabulary. Combines role-default permissions with any
  * explicit grants in the legacy permissions[] array. Custom modules
- * use the convention `{moduleName}:{action}`.
+ * use the convention `{moduleName}:{action}`, unless overridden above.
  */
 export function projectPermissions(
   newRole: Role,
@@ -226,10 +243,11 @@ export function projectPermissions(
   const explicit: Permission[] = [];
   for (const p of legacyPermissions) {
     const m = p.moduleName.toLowerCase();
-    if (p.view) explicit.push(`${m}:read` as Permission);
-    if (p.create) explicit.push(`${m}:create` as Permission);
-    if (p.update) explicit.push(`${m}:update` as Permission);
-    if (p.delete) explicit.push(`${m}:delete` as Permission);
+    const overrides = LEGACY_MODULE_PERMISSION_OVERRIDES[m];
+    if (p.view) explicit.push((overrides?.view ?? `${m}:read`) as Permission);
+    if (p.create) explicit.push((overrides?.create ?? `${m}:create`) as Permission);
+    if (p.update) explicit.push((overrides?.update ?? `${m}:update`) as Permission);
+    if (p.delete) explicit.push((overrides?.delete ?? `${m}:delete`) as Permission);
   }
   // Every authenticated staff role may export the report they're already
   // authorized to view and attach images to the forms they fill; grant

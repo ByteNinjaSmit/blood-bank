@@ -16,6 +16,7 @@ export const COMPONENT_LABEL: Readonly<Record<ComponentType, string>> = {
   FFP: 'Fresh Frozen Plasma',
   RDP: 'Random Donor Platelets',
   CRYO: 'Cryoprecipitate',
+  SDP: 'Single Donor Platelet',
 };
 
 export const PRODUCT_CODE: Readonly<Record<ComponentType, string>> = {
@@ -24,6 +25,7 @@ export const PRODUCT_CODE: Readonly<Record<ComponentType, string>> = {
   FFP: 'FFP',
   RDP: 'RDP',
   CRYO: 'CRYO',
+  SDP: 'SDP',
 };
 
 // Flat shelf life (days) for component types whose expiry doesn't depend on
@@ -33,6 +35,9 @@ const FLAT_SHELF_DAYS: Readonly<Record<Exclude<ComponentType, 'PRBC'>, number>> 
   FFP: 365,
   RDP: 5,
   CRYO: 365,
+  // Apheresis platelets carry the same shelf life as pooled/random donor
+  // platelets.
+  SDP: 5,
 };
 
 /**

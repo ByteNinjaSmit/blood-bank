@@ -69,10 +69,10 @@ describe('Rh rules', () => {
 });
 
 describe('Crossmatch requirement', () => {
-  it('required for RBC + WB only', () => {
+  it('required for RBC, WB, and FFP', () => {
     expect(requiresCrossmatch('PRBC')).toBe(true);
     expect(requiresCrossmatch('WB')).toBe(true);
-    expect(requiresCrossmatch('FFP')).toBe(false);
+    expect(requiresCrossmatch('FFP')).toBe(true);
     expect(requiresCrossmatch('RDP')).toBe(false);
     expect(requiresCrossmatch('CRYO')).toBe(false);
   });

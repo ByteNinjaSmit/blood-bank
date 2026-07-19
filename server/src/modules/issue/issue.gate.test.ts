@@ -97,9 +97,25 @@ describe('issue gate — special needs', () => {
 });
 
 describe('issue gate — non-crossmatch components', () => {
-  it('FFP issues from RESERVED status with no crossmatch needed', () => {
+  it('RDP issues from RESERVED status with no crossmatch needed', () => {
+    const r = checkIssueGate(
+      base({ componentType: 'RDP', unitStatus: 'RESERVED', crossmatchResult: undefined }),
+    );
+    expect(r.allowed).toBe(true);
+  });
+});
+
+describe('issue gate — FFP now requires crossmatch (component-wise, same as PRBC)', () => {
+  it('blocks FFP issue from RESERVED with no crossmatch performed', () => {
     const r = checkIssueGate(
       base({ componentType: 'FFP', unitStatus: 'RESERVED', crossmatchResult: undefined }),
+    );
+    expect(r.allowed).toBe(false);
+  });
+
+  it('allows FFP issue once crossmatched compatible', () => {
+    const r = checkIssueGate(
+      base({ componentType: 'FFP', unitStatus: 'CROSSMATCHED', crossmatchResult: 'COMPATIBLE' }),
     );
     expect(r.allowed).toBe(true);
   });

@@ -128,6 +128,10 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
                   <p className="font-semibold text-gray-800 mt-0.5">{requestDoc.patient?.name || '—'}</p>
                 </div>
                 <div>
+                  <span className="text-gray-400 text-xs uppercase tracking-wide font-medium block">Patient ID</span>
+                  <p className="font-mono text-gray-800 text-xs font-semibold mt-1 bg-gray-50 px-2 py-0.5 rounded border border-gray-200/50 w-fit">{requestDoc.patient?.patientPublicId || '—'}</p>
+                </div>
+                <div>
                   <span className="text-gray-400 text-xs uppercase tracking-wide font-medium block">MRN</span>
                   <p className="font-mono text-gray-800 text-xs font-semibold mt-1 bg-gray-50 px-2 py-0.5 rounded border border-gray-200/50 w-fit">{requestDoc.patient?.mrn || '—'}</p>
                 </div>

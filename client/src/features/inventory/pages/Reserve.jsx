@@ -107,6 +107,28 @@ const Reserve = () => {
   const [unreserveModalOpen, setUnreserveModalOpen] = useState(false);
   const [targetUnreserveId, setTargetUnreserveId] = useState(null);
   const [selectedReserve, setSelectedReserve] = useState(null);
+  const [expandedRequisitions, setExpandedRequisitions] = useState(new Set());
+
+  // Group the current page's reserved bags by their requisition so staff
+  // can see, at a glance, everything reserved against a single request.
+  const groupByRequisition = (list) => {
+    const groups = new Map();
+    for (const r of list) {
+      const key = r?.requisition?.requisitionId || r?.requisition?._id || r?.requisitionId || 'unassigned';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
+    }
+    return Array.from(groups.entries());
+  };
+
+  const toggleRequisitionGroup = (key) => {
+    setExpandedRequisitions((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
@@ -247,58 +269,105 @@ const Reserve = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag No</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Component</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
+                  <th className="w-8 px-4 py-3"></th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requisition</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reserved For</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reserved Until</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Age</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Sex</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bags</th>
+                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {isLoading ? (
-                  <tr><td colSpan="11" className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
+                  <tr><td colSpan="5" className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan="11" className="px-4 py-8 text-center text-gray-500">No items found.</td></tr>
+                  <tr><td colSpan="5" className="px-4 py-8 text-center text-gray-500">No items found.</td></tr>
                 ) : (
-                  rows.map((r) => (
-                    <tr key={r._id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{r?.bag?.bagNo || r.bagNo}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{formatDateDMY(r?.component?.expiryDate)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.hospital?.name || '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{formatDateDMY(r?.reservedUntil)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.reservedPatientName || '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{(r?.reservedPatientAge ?? '') !== '' ? r.reservedPatientAge : '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{(() => {
-                        const sex = r?.reservedPatientSex;
-                        const found = (SEX_TYPES || []).find(s => s.value === sex);
-                        return found ? found.label : (sex || '—');
-                      })()}</td>
-                      <td className="px-4 py-3 text-sm text-right whitespace-nowrap space-x-2">
-                        <button
-                          onClick={() => setSelectedReserve(r)}
-                          className="px-2.5 py-1 text-xs font-semibold text-orange-800 hover:text-white border border-orange-200 hover:bg-orange-800 rounded transition-all duration-150"
+                  groupByRequisition(rows).map(([reqKey, group]) => {
+                    const isOpen = expandedRequisitions.has(reqKey);
+                    const first = group[0];
+                    return (
+                      <React.Fragment key={reqKey}>
+                        <tr
+                          onClick={() => toggleRequisitionGroup(reqKey)}
+                          className={`cursor-pointer select-none transition-colors ${isOpen ? 'bg-orange-50' : 'hover:bg-gray-50'}`}
                         >
-                          View
-                        </button>
-                        <button
-                          onClick={() => triggerUnreserveConfirm(r._id)}
-                          disabled={isLoading}
-                          className="px-2.5 py-1 text-xs font-semibold text-red-700 hover:text-white border border-red-200 hover:bg-red-600 rounded transition-all duration-150 disabled:opacity-50"
-                        >
-                          Unreserve
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                          <td className="px-4 py-3.5 text-gray-400">
+                            <span className={`inline-block transition-transform duration-200 text-xs ${isOpen ? 'rotate-180' : ''}`}>▼</span>
+                          </td>
+                          <td className="px-4 py-3.5 text-sm font-semibold text-gray-900">
+                            {first?.requisition?.requisitionId || reqKey}
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-gray-700">{first?.hospital?.name || '—'}</td>
+                          <td className="px-4 py-3.5">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">
+                              {group.length} bag{group.length > 1 ? 's' : ''}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-right text-xs text-gray-400 pr-5">
+                            {isOpen ? 'Collapse ▲' : 'Expand ▼'}
+                          </td>
+                        </tr>
+                        {isOpen && (
+                          <tr>
+                            <td colSpan={5} className="p-0 border-b border-gray-200">
+                              <div className="bg-gray-50/80 border-t border-gray-100 overflow-x-auto">
+                                <table className="min-w-full text-sm">
+                                  <thead>
+                                    <tr className="bg-gray-100/80 border-b border-gray-200">
+                                      <th className="px-6 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bag No</th>
+                                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Component</th>
+                                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Blood</th>
+                                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Volume</th>
+                                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Expiry</th>
+                                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reserved Until</th>
+                                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient Name</th>
+                                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient Age</th>
+                                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient Sex</th>
+                                      <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-100">
+                                    {group.map((r) => (
+                                      <tr key={r._id} className="bg-white hover:bg-orange-50/20 transition-colors">
+                                        <td className="px-6 py-3 text-sm font-medium text-gray-900">{r?.bag?.bagNo || r.bagNo}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-700">{formatDateDMY(r?.component?.expiryDate)}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-700">{formatDateDMY(r?.reservedUntil)}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-700">{r?.reservedPatientName || '—'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-700">{(r?.reservedPatientAge ?? '') !== '' ? r.reservedPatientAge : '—'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-700">{(() => {
+                                          const sex = r?.reservedPatientSex;
+                                          const found = (SEX_TYPES || []).find(s => s.value === sex);
+                                          return found ? found.label : (sex || '—');
+                                        })()}</td>
+                                        <td className="px-4 py-3 text-sm text-right whitespace-nowrap space-x-2">
+                                          <button
+                                            onClick={() => setSelectedReserve(r)}
+                                            className="px-2.5 py-1 text-xs font-semibold text-orange-800 hover:text-white border border-orange-200 hover:bg-orange-800 rounded transition-all duration-150"
+                                          >
+                                            View
+                                          </button>
+                                          <button
+                                            onClick={() => triggerUnreserveConfirm(r._id)}
+                                            disabled={isLoading}
+                                            className="px-2.5 py-1 text-xs font-semibold text-red-700 hover:text-white border border-red-200 hover:bg-red-600 rounded transition-all duration-150 disabled:opacity-50"
+                                          >
+                                            Unreserve
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -542,27 +611,6 @@ const Reserve = () => {
                     <span className="font-semibold text-gray-500">Expiry Date:</span>
                     <div className="text-slate-800 mt-0.5 font-semibold text-red-700">
                       {formatDateDMY(selectedReserve.component?.expiryDate)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 5: Authorization Details */}
-              <div className="bg-white p-4 rounded-xl border border-gray-150 shadow-sm space-y-3">
-                <h4 className="font-bold text-sm text-orange-900 border-b pb-1.5 uppercase tracking-wide">
-                  Authorization & Hospital Seal
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  <div>
-                    <span className="font-semibold text-gray-500">Medical Officer Signature:</span>
-                    <div className="text-slate-800 mt-0.5 font-medium">
-                      {selectedReserve.requisition?.medicalOfficerSignature || '—'}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-500">Hospital Seal Code:</span>
-                    <div className="text-slate-800 mt-0.5 font-medium">
-                      {selectedReserve.requisition?.hospitalSeal || '—'}
                     </div>
                   </div>
                 </div>

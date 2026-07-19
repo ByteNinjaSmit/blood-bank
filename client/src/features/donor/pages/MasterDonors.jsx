@@ -29,6 +29,17 @@ const MasterDonors = () => {
     reg.resetFilters();
   };
 
+  if (!reg.donorAccess.canView) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="bg-white border border-gray-200 rounded-xl p-8 text-center max-w-md">
+          <h2 className="text-lg font-bold text-gray-900 mb-2">Access Restricted</h2>
+          <p className="text-sm text-gray-500">You don't have permission to view the Master Register. Contact an administrator to request access.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Page Header */}

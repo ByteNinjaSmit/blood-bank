@@ -123,11 +123,13 @@ export function isRhAcceptable(
 }
 
 /**
- * Crossmatch requirement per component. Only RBC-bearing components
- * need a serological crossmatch between donor unit and recipient sample.
+ * Crossmatch requirement per component. RBC-bearing components always
+ * need a serological crossmatch; FFP is also crossmatched (component-wise,
+ * one worksheet per matched bag) even though it carries no red cells.
  */
 export function requiresCrossmatch(component: ComponentType): boolean {
-  return rbcFamily(component) === 'RBC' || rbcFamily(component) === 'WB';
+  const family = rbcFamily(component);
+  return family === 'RBC' || family === 'WB' || component === 'FFP';
 }
 
 /**
@@ -187,6 +189,7 @@ function rbcFamily(component: ComponentType): Family {
     case 'FFP':
       return 'PLASMA';
     case 'RDP':
+    case 'SDP':
       return 'PLATELET';
     case 'CRYO':
       return 'CRYO';

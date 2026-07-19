@@ -66,7 +66,9 @@ function StatusBadge({ entry }) {
 
 export default function DeferralRegister() {
   const { user } = useAuth();
-  const access = checkAccess(user, ['donor', 'donors', 'donor management']);
+  // Deferral Register lives under Master Register — gate it on that
+  // permission, not the general Donor module (see useDonorRegister.js).
+  const access = checkAccess(user, ['master register', 'master-register']);
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

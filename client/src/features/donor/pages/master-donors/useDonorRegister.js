@@ -14,7 +14,10 @@ import { PAGE_SIZE } from './constants';
 export function useDonorRegister(activeTab) {
   const { user } = useAuth();
   const { updateDonor, deleteDonor } = useDonor();
-  const donorAccess = checkAccess(user, ['donor', 'donors', 'donor management']);
+  // This hook backs the Master Register donor pages specifically — gate it
+  // on the "Master Register" permission, not the general "Donor" module,
+  // so granting Donor access elsewhere doesn't silently unlock this page.
+  const donorAccess = checkAccess(user, ['master register', 'master-register']);
 
   // ── Filters ──
   const [page, setPage] = useState(1);

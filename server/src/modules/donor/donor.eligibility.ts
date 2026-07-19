@@ -42,6 +42,12 @@ const INTERVAL_RULES_INDIA: Readonly<Record<DonationType, (sex: Sex) => Interval
     minDaysSinceAnyDonation: sex === 'F' ? 120 : 90,
     minDaysSinceSameType: sex === 'F' ? 120 : 90,
   }),
+  // Plateletpheresis (SDP) — same cadence as plasmapheresis: a short gap
+  // from any donation, a longer gap before repeating the same apheresis type.
+  SDP: () => ({
+    minDaysSinceAnyDonation: 2,
+    minDaysSinceSameType: 14,
+  }),
 };
 
 export interface DonorEligibilitySnapshot {

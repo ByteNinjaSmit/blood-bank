@@ -415,16 +415,29 @@ export function createMisRepo(): MisRepo {
     },
 
     async getSerologyStats() {
-      const results = await TtiResultModel.find().select('tests releaseDecision').lean();
+      const results = await TtiResultModel.find().select('donationId tests releaseDecision').lean();
 
       const failureCounts: Record<string, number> = {};
       const overallCounts: Record<string, number> = { Released: 0, Quarantined: 0, Pending: 0 };
+      const byDonationTypeCounts: Record<string, number> = {};
       let totalTests = 0;
       let reactiveTests = 0;
+
+      const donationIds = (results as any[]).map((r) => r.donationId).filter(Boolean);
+      const donations = await DonationModel.find({ donationId: { $in: donationIds } })
+        .select('donationId donationType')
+        .lean();
+      const donationTypeMap = new Map(donations.map((d: any) => [d.donationId, d.donationType]));
 
       for (const r of results as any[]) {
         const bucket = r.releaseDecision === 'released' ? 'Released' : r.releaseDecision === 'quarantined' ? 'Quarantined' : 'Pending';
         overallCounts[bucket] = (overallCounts[bucket] ?? 0) + 1;
+
+        // SDP donations skip component separation and are released as a
+        // single unit straight from TTI — surface that split here so
+        // serology reports can distinguish SDP volume from Whole Blood.
+        const donationType = donationTypeMap.get(r.donationId) || 'Unknown';
+        byDonationTypeCounts[donationType] = (byDonationTypeCounts[donationType] ?? 0) + 1;
 
         for (const t of r.tests || []) {
           totalTests += 1;
@@ -438,6 +451,7 @@ export function createMisRepo(): MisRepo {
       return {
         failures: Object.entries(failureCounts).map(([_id, count]) => ({ _id, count })),
         overall: Object.entries(overallCounts).map(([_id, count]) => ({ _id, count })),
+        byDonationType: Object.entries(byDonationTypeCounts).map(([_id, count]) => ({ _id, count })),
         reactiveRate: totalTests > 0 ? Math.round((reactiveTests / totalTests) * 1000) / 10 : 0,
         totalTests,
       };

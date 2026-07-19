@@ -96,17 +96,18 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
     age = String(calculatedAge);
   }
 
-  const patientData =
-    reqDto.patient ||
-    (patientDoc
+  const patientData = reqDto.patient
+    ? { ...reqDto.patient, patientPublicId: reqDto.patient.patientPublicId || patientDoc?.patientPublicId }
+    : patientDoc
       ? {
           name: patientDoc.name,
           address: patientDoc.address,
           age,
           sex: patientDoc.sex,
           mrn: patientDoc.medicalRecordNumber,
+          patientPublicId: patientDoc.patientPublicId,
         }
-      : undefined);
+      : undefined;
 
   const requestedComponents = (reqDto.requestedComponents || []).map((rc: any) => ({
     componentType: rc.componentType,

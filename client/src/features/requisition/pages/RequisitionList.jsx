@@ -245,6 +245,9 @@ export default function RequisitionList() {
     if (act === 'approve') return s === 'matched';
     if (act === 'issue') {
       if (s === 'rejected' || s === 'pending') return false;
+      // Approved requests can be issued even before any components have
+      // been matched/reserved yet — matching happens as part of issuing.
+      if (s === 'approved') return true;
       const hasMatches = Array.isArray(row.matchedInventory) && row.matchedInventory.length > 0;
       if (!hasMatches) return false;
       const hasUnissued = row.matchedInventory.some(
@@ -537,7 +540,7 @@ export default function RequisitionList() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <div className="text-gray-600">Patient</div>
-                <div className="font-medium">{viewDoc.patient?.name} • {viewDoc.patient?.age}/{viewDoc.patient?.sex} • MRN: {viewDoc.patient?.mrn || '—'}</div>
+                <div className="font-medium">{viewDoc.patient?.name} • {viewDoc.patient?.age}/{viewDoc.patient?.sex} • Patient ID: {viewDoc.patient?.patientPublicId || '—'} • MRN: {viewDoc.patient?.mrn || '—'}</div>
                 {viewDoc.patient?.address && (
                   <div className="text-xs text-gray-500 mt-0.5">{viewDoc.patient.address}</div>
                 )}
@@ -746,7 +749,7 @@ export default function RequisitionList() {
                   {issueDoc.patient?.name || '—'}
                 </h3>
                 <span className="text-xs text-slate-500 mt-1 block font-medium">
-                  MRN: {issueDoc.patient?.mrn || '—'} • Age/Sex: {issueDoc.patient?.age || '—'}Y/{issueDoc.patient?.sex || '—'}
+                  Patient ID: {issueDoc.patient?.patientPublicId || '—'} • MRN: {issueDoc.patient?.mrn || '—'} • Age/Sex: {issueDoc.patient?.age || '—'}Y/{issueDoc.patient?.sex || '—'}
                 </span>
               </div>
               <div className="text-right">
@@ -1162,7 +1165,7 @@ export default function RequisitionList() {
                       <td className="p-3">
                         <div className="flex flex-wrap gap-2">
                           <button onClick={() => openView(row)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">View</button>
-                          {rowDisplayStatus(row) === 'completed' && (
+                          {(rowDisplayStatus(row) === 'completed' || rowDisplayStatus(row) === 'approved') && (
                             <>
                               <button 
                                 onClick={() => handlePrint(row, 'report')} 

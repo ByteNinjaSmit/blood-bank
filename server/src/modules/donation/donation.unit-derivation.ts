@@ -39,6 +39,15 @@ const DEFAULT_TEMPLATES: Readonly<Record<DonationType, ReadonlyArray<UnitTemplat
   REPLACEMENT: [
     { componentType: 'WB', volumeMl: 350, shelfLifeDays: getShelfDays('WB') },
   ],
+  // SDP is collected by apheresis, but still passes through the
+  // Component Separate page once (operator enters RPM + confirms the
+  // single-donor platelet volume) before moving on to TTI — same
+  // placeholder-unit pattern as Whole Blood (see component.repository.ts
+  // separate(), which always clears the donation's 'WB' placeholder unit
+  // on the first real separate() call, regardless of donation type).
+  SDP: [
+    { componentType: 'WB', volumeMl: 250, shelfLifeDays: getShelfDays('WB') },
+  ],
 };
 
 export interface DerivedUnit {

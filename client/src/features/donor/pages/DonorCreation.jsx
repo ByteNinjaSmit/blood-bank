@@ -311,6 +311,10 @@ export default function DonorCreation() {
       // 1. Determine if any medical history question is unhealthy
       const questionReason = getUnhealthyQuestionReason(updated);
 
+      // 1.5 Determine if the exam & fitness questions (skin disease /
+      // puncture marks) rule the donor unfit.
+      const fitnessExamReason = getFitnessExamReason(updated);
+
       // 2. Determine if Hb is invalid (< 12.5)
       let isHbInvalid = false;
       let hbReason = null;
@@ -347,6 +351,9 @@ export default function DonorCreation() {
       if (questionReason) {
         updated.donorIsFit = false;
         updated.deferralReasonObj = questionReason;
+      } else if (fitnessExamReason) {
+        updated.donorIsFit = false;
+        updated.deferralReasonObj = fitnessExamReason;
       } else if (isHbInvalid) {
         updated.donorIsFit = false;
         updated.deferralReasonObj = hbReason;
@@ -357,6 +364,7 @@ export default function DonorCreation() {
         // If none of these checks are active, see if we need to auto-recover from a previous forced unfit status
         const wasForced = prev.deferralReasonObj && (
           prev.deferralReasonObj.reason.startsWith("Unfit due to Medical Question") ||
+          prev.deferralReasonObj.reason.startsWith("Unfit due to Fitness Exam") ||
           prev.deferralReasonObj.reason.toLowerCase().includes("haemoglobin") ||
           prev.deferralReasonObj.reason.startsWith("Unfit due to Last Donation Date")
         );
@@ -468,6 +476,24 @@ export default function DonorCreation() {
     const now = new Date();
     if (y * 12 + (m - 1) > now.getFullYear() * 12 + now.getMonth()) return false;
     return true;
+  };
+
+  const getFitnessExamReason = (data) => {
+    if (data.skinDiseaseFreeAtPhlebotomy === "No") {
+      return {
+        reason: "Unfit due to Fitness Exam: Skin disease present at the phlebotomy site",
+        days: 30,
+        type: "TEMPORARY",
+      };
+    }
+    if (data.armsFreeFromPunctureScars === "No") {
+      return {
+        reason: "Unfit due to Fitness Exam: Arms/forearms are not free from skin puncture marks",
+        days: 30,
+        type: "TEMPORARY",
+      };
+    }
+    return null;
   };
 
   const getUnhealthyQuestionReason = (data) => {
@@ -949,7 +975,10 @@ export default function DonorCreation() {
   ).length;
 
   const isHbTooLow = formData.hb && parseFloat(formData.hb) < 12.5;
-  const isQuestionUnfit = formData.deferralReasonObj && formData.deferralReasonObj.reason.startsWith("Unfit due to Medical Question");
+  const isQuestionUnfit = formData.deferralReasonObj && (
+    formData.deferralReasonObj.reason.startsWith("Unfit due to Medical Question") ||
+    formData.deferralReasonObj.reason.startsWith("Unfit due to Fitness Exam")
+  );
   const isFitnessForcedUnfit = isHbTooLow || isQuestionUnfit;
 
   return (
@@ -1004,8 +1033,6 @@ export default function DonorCreation() {
                       <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
-                    ) : isActive ? (
-                      <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
                     ) : (
                       s.step
                     )}
@@ -1780,7 +1807,8 @@ export default function DonorCreation() {
                       <div
                         onClick={() => {
                           if (!isFitnessForcedUnfit) {
-                            setDropdownOpen(!dropdownOpen);
+                            setReasonSearch("");
+                            setDropdownOpen(true);
                           }
                         }}
                         className={`w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white flex items-center justify-between cursor-pointer shadow-sm select-none ${
@@ -1791,56 +1819,65 @@ export default function DonorCreation() {
                         <span className={`text-sm ${formData.deferralReasonObj ? "text-gray-900 font-medium" : "text-gray-400"}`}>
                           {formData.deferralReasonObj
                             ? `${formData.deferralReasonObj.reason} (${formData.deferralReasonObj.days === 0 ? "Permanent" : `${formData.deferralReasonObj.days} Days`})`
-                            : "Search and select deferral reason..."}
+                            : "Select deferral reason..."}
                         </span>
                         <ChevronDown className="w-5 h-5 text-gray-400" />
                       </div>
-                      
-                      {dropdownOpen && !isFitnessForcedUnfit && (
-                        <div className="absolute left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-2.5 space-y-2">
-                          <input
-                            type="text"
-                            placeholder="Type to filter reasons..."
-                            value={reasonSearch}
-                            onChange={(e) => setReasonSearch(e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                          />
-                          <div className="max-h-[220px] overflow-y-auto space-y-1 pr-1">
-                            {filteredReasons.map((r, i) => (
-                              <div
-                                key={i}
-                                onClick={() => {
-                                  handleFormFieldChange("deferralReasonObj", r);
-                                  setDropdownOpen(false);
-                                  setReasonSearch("");
-                                }}
-                                className={`p-2.5 rounded-lg text-sm cursor-pointer hover:bg-red-55 hover:text-red-900 flex justify-between items-center transition-colors ${
-                                  formData.deferralReasonObj?.reason === r.reason
-                                    ? "bg-red-50 text-red-900 font-semibold"
-                                    : "text-gray-700"
-                                }`}
-                              >
-                                <span>{r.reason}</span>
-                                <span className={`text-2xs font-bold px-2 py-0.5 rounded-full ${
-                                  r.days === 0 ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-755"
-                                }`}>
-                                  {r.days === 0 ? "Permanent" : `${r.days} d`}
-                                </span>
-                              </div>
-                            ))}
-                            {filteredReasons.length === 0 && (
-                              <p className="text-xs text-gray-400 text-center py-2">No matching reasons found.</p>
-                            )}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
               </div>
             </div>
           )}
+
+          <CustomModal
+            open={dropdownOpen && !isFitnessForcedUnfit}
+            onCancel={() => {
+              setDropdownOpen(false);
+              setReasonSearch("");
+            }}
+            title="Select Deferral Reason"
+            size="md"
+            hideFooter
+          >
+            <div className="space-y-3">
+              <input
+                type="text"
+                autoFocus
+                placeholder="Type to filter reasons..."
+                value={reasonSearch}
+                onChange={(e) => setReasonSearch(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+              <div className="max-h-[320px] overflow-y-auto space-y-1 pr-1">
+                {filteredReasons.map((r, i) => (
+                  <div
+                    key={i}
+                    onClick={() => {
+                      handleFormFieldChange("deferralReasonObj", r);
+                      setDropdownOpen(false);
+                      setReasonSearch("");
+                    }}
+                    className={`p-2.5 rounded-lg text-sm cursor-pointer hover:bg-red-55 hover:text-red-900 flex justify-between items-center transition-colors ${
+                      formData.deferralReasonObj?.reason === r.reason
+                        ? "bg-red-50 text-red-900 font-semibold"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    <span>{r.reason}</span>
+                    <span className={`text-2xs font-bold px-2 py-0.5 rounded-full ${
+                      r.days === 0 ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-755"
+                    }`}>
+                      {r.days === 0 ? "Permanent" : `${r.days} d`}
+                    </span>
+                  </div>
+                ))}
+                {filteredReasons.length === 0 && (
+                  <p className="text-xs text-gray-400 text-center py-2">No matching reasons found.</p>
+                )}
+              </div>
+            </div>
+          </CustomModal>
 
           {/* Step 4: Bag Info */}
           {currentStep === 4 && (
@@ -1923,7 +1960,13 @@ export default function DonorCreation() {
                     <option value="REPLACEMENT">Replacement</option>
                     <option value="PLASMAPHERESIS">Plasmapheresis</option>
                     <option value="DOUBLE_RED_CELL">Double Red Cell</option>
+                    <option value="SDP">SDP (Single Donor Platelet)</option>
                   </select>
+                  {formData.donationType === "SDP" && (
+                    <p className="text-xs text-orange-700 mt-1">
+                      SDP donations skip component separation — the unit goes straight to TTI testing and, once released, directly into stock as one unit.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">How many times donated</label>

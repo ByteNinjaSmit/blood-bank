@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { TestTube, Loader2, Scissors, CheckCircle, RefreshCw } from "lucide-react";
+import { TestTube, Loader2, Scissors, CheckCircle, RefreshCw, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
@@ -29,8 +29,20 @@ const ComponentSeparate = () => {
   });
   const [pendingComponents, setPendingComponents] = useState([]);
 
+  // SDP donations are apheresis-collected as a single, already-separated
+  // product — they never yield PRBC/FFP/RDP/CRYO, and SDP is never an
+  // option for a Whole Blood bag.
+  const isSdpBag = (bag) => bag?.donationType === "SDP";
+
+  // Unique key for a bag row. bagNo is user-entered and can collide (blank,
+  // duplicate, reused across donations) — donationId/id never does, so use
+  // it to track "ready to sign" state, or clicking Mark as Complete on one
+  // bag can flip every bag that happens to share the same bagNo into the
+  // signable state together.
+  const bagKey = (bag) => bag?.id || bag?.donationId || bag?.bagNo;
+
   const availableComponentTypes = (bag) => {
-    const all = (bag?.typeOfBag === "TB" || bag?.typeOfBag === "QB")
+    const all = isSdpBag(bag) ? ["SDP"] : (bag?.typeOfBag === "TB" || bag?.typeOfBag === "QB")
       ? SEPARABLE_COMPONENT_TYPES
       : ["PRBC", "FFP"];
     const alreadyPrepared = new Set(
@@ -45,6 +57,14 @@ const ComponentSeparate = () => {
   const [signatureBag, setSignatureBag] = useState(null);
   const [signatureText, setSignatureText] = useState("");
   const [readyToSignBags, setReadyToSignBags] = useState([]);
+
+  // ── Edit already-separated components + RPM (bag-level correction) ──
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editBag, setEditBag] = useState(null);
+  const [editComponents, setEditComponents] = useState([]);
+  const [editRpmFirstSpin, setEditRpmFirstSpin] = useState("");
+  const [editRpmSecondSpin, setEditRpmSecondSpin] = useState("");
+  const [editSeparationTime, setEditSeparationTime] = useState("");
 
   const fetchBags = async () => {
     setIsLoading(true);
@@ -72,9 +92,11 @@ const ComponentSeparate = () => {
   };
 
   const openSeparate = (bag) => {
-    const firstAvailable = ((bag?.typeOfBag === "TB" || bag?.typeOfBag === "QB")
-      ? SEPARABLE_COMPONENT_TYPES
-      : ["PRBC", "FFP"])[0];
+    const firstAvailable = isSdpBag(bag)
+      ? "SDP"
+      : ((bag?.typeOfBag === "TB" || bag?.typeOfBag === "QB")
+          ? SEPARABLE_COMPONENT_TYPES
+          : ["PRBC", "FFP"])[0];
     setActiveBag(bag);
     setPendingComponents([]);
     setSeparateForm({
@@ -165,6 +187,86 @@ const ComponentSeparate = () => {
     setShowSeparateModal(false);
     setPendingComponents([]);
     setActiveBag(null);
+  };
+
+  const openEditBag = (bag) => {
+    setEditBag(bag);
+    setEditComponents(
+      (Array.isArray(bag.components) ? bag.components : []).map((c) => ({
+        unitId: c.unitId,
+        componentType: c.componentType,
+        volumeMl: c.volumeMl,
+        editing: false,
+      })),
+    );
+    setEditRpmFirstSpin(bag.rpmFirstSpin || "");
+    setEditRpmSecondSpin(bag.rpmSecondSpin || "");
+    setEditSeparationTime(toLocalDateTimeInput(bag.separationTime || undefined));
+    setShowEditModal(true);
+  };
+
+  // Types still free to pick for a given edit slot: the bag's separable
+  // set minus whatever every *other* (non-removed) slot already uses.
+  const editAvailableTypesForSlot = (index) => {
+    const all = isSdpBag(editBag)
+      ? ["SDP"]
+      : ((editBag?.typeOfBag === "TB" || editBag?.typeOfBag === "QB")
+          ? SEPARABLE_COMPONENT_TYPES
+          : ["PRBC", "FFP"]);
+    const usedByOthers = new Set(
+      editComponents
+        .filter((_, i) => i !== index)
+        .map((c) => c.componentType?.toUpperCase())
+        .filter(Boolean),
+    );
+    return all.filter((t) => !usedByOthers.has(t));
+  };
+
+  const removeEditComponent = (index) => {
+    setEditComponents((prev) =>
+      prev.map((c, i) => (i === index ? { ...c, componentType: "", volumeMl: "", editing: true } : c)),
+    );
+  };
+
+  const updateEditComponent = (index, patch) => {
+    setEditComponents((prev) => prev.map((c, i) => (i === index ? { ...c, ...patch } : c)));
+  };
+
+  const canSaveEdit =
+    editComponents.length > 0 &&
+    editComponents.every((c) => c.componentType && Number(c.volumeMl) > 0);
+
+  const submitEditBag = async () => {
+    if (!editBag || !canSaveEdit) return;
+    const donationId = editBag.id || editBag.donationId;
+    if (!donationId) {
+      toast.error("Unable to resolve donationId for this bag");
+      return;
+    }
+    setIsActionLoading(true);
+    try {
+      await apiClient.patch(`/api/v2/component/bag/${donationId}`, {
+        components: editComponents.map((c) => ({
+          unitId: c.unitId,
+          componentType: c.componentType,
+          volumeMl: Number(c.volumeMl),
+        })),
+        rpmFirstSpin: editRpmFirstSpin || undefined,
+        rpmSecondSpin: editRpmSecondSpin || undefined,
+        separationTime: editSeparationTime ? new Date(editSeparationTime).toISOString() : undefined,
+        // Server requires a non-empty reason, but staff shouldn't have to
+        // type one every time they fix an RPM/volume entry from this page.
+        editReason: "Corrected via Component Separate page",
+      });
+      toast.success("Bag updated successfully");
+      setShowEditModal(false);
+      setEditBag(null);
+      await fetchBags();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to update bag");
+    } finally {
+      setIsActionLoading(false);
+    }
   };
 
   const markCompleted = async (bag, signature) => {
@@ -268,9 +370,15 @@ const ComponentSeparate = () => {
                     <tr key={`${bag.bagNo}-${idx}`} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{bag.bagNo}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-200">
-                          {bag.typeOfBag || "SB"}
-                        </span>
+                        {isSdpBag(bag) ? (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                            SDP
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-200">
+                            {bag.typeOfBag || "SB"}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.segmentNo || "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.bloodGroup} {bag.rh}</td>
@@ -290,21 +398,33 @@ const ComponentSeparate = () => {
                       </td>
                       <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-2">
-                          {!readyToSignBags.includes(bag.bagNo) ? (
+                          {!readyToSignBags.includes(bagKey(bag)) ? (
                             <>
-                              <Button 
-                                size="sm" 
-                                onClick={() => openSeparate(bag)} 
-                                disabled={isActionLoading}
-                                title="Separate Component"
+                              <Button
+                                size="sm"
+                                onClick={() => openSeparate(bag)}
+                                disabled={isActionLoading || availableComponentTypes(bag).length === 0}
+                                title={availableComponentTypes(bag).length === 0 ? "All components already separated — use Edit to correct RPM/components" : "Separate Component"}
                               >
                                 <Scissors className="w-4 h-4 mr-1" />
                                 Separate
                               </Button>
+                              {Array.isArray(bag.components) && bag.components.length > 0 && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openEditBag(bag)}
+                                  disabled={isActionLoading}
+                                  title="Edit RPM / separated components"
+                                  className="border-blue-600 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                              )}
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => setReadyToSignBags((prev) => [...prev, bag.bagNo])}
+                                onClick={() => setReadyToSignBags((prev) => [...prev, bagKey(bag)])}
                                 disabled={isActionLoading}
                                 title="Mark as Complete"
                                 className="border-green-600 text-green-700 hover:bg-green-50 hover:text-green-800"
@@ -573,7 +693,7 @@ const ComponentSeparate = () => {
               type="button"
               onClick={() => {
                 if (signatureBag) {
-                  setReadyToSignBags((prev) => prev.filter((b) => b !== signatureBag.bagNo));
+                  setReadyToSignBags((prev) => prev.filter((b) => b !== bagKey(signatureBag)));
                 }
                 setShowSignatureModal(false);
               }}
@@ -588,6 +708,107 @@ const ComponentSeparate = () => {
             >
               {isActionLoading ? <Loader2 className="w-5 h-5 animate-spin mr-1.5" /> : null}
               Confirm & Complete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Separation — RPM &amp; Components</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-600">Bag: <span className="font-medium text-gray-900">{editBag?.bagNo}</span></span>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Separated Components</label>
+              <div className="border rounded-md divide-y">
+                {editComponents.map((item, idx) => (
+                  <div key={item.unitId || idx} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                    {item.editing ? (
+                      <div className="grid grid-cols-[1fr_1fr] gap-2 flex-1">
+                        <select
+                          className="w-full px-2 py-1.5 border rounded-md text-sm"
+                          value={item.componentType}
+                          onChange={(e) => updateEditComponent(idx, { componentType: e.target.value })}
+                        >
+                          <option value="">Select component</option>
+                          {editAvailableTypesForSlot(idx).map((t) => (
+                            <option key={t} value={t}>{COMPONENT_LABEL[t]}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          className="w-full px-2 py-1.5 border rounded-md text-sm"
+                          placeholder="Volume (mL)"
+                          min={1}
+                          value={item.volumeMl}
+                          onChange={(e) => updateEditComponent(idx, { volumeMl: e.target.value })}
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-gray-800">
+                        {COMPONENT_LABEL[item.componentType] || item.componentType}
+                        <span className="text-gray-500"> — {item.volumeMl} mL</span>
+                      </span>
+                    )}
+                    {!item.editing && (
+                      <button
+                        type="button"
+                        onClick={() => removeEditComponent(idx)}
+                        className="text-red-600 hover:text-red-800 text-xs font-medium shrink-0"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">RPM</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">1st Spin</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border rounded-md"
+                    placeholder="e.g. 3400"
+                    value={editRpmFirstSpin}
+                    onChange={(e) => setEditRpmFirstSpin(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">2nd Spin</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border rounded-md"
+                    placeholder="e.g. 1500"
+                    value={editRpmSecondSpin}
+                    onChange={(e) => setEditRpmSecondSpin(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Separation Time</label>
+              <input
+                type="datetime-local"
+                className="w-full px-3 py-2 border rounded-md"
+                value={editSeparationTime}
+                onChange={(e) => setEditSeparationTime(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancel</Button>
+            <Button onClick={submitEditBag} disabled={isActionLoading || !canSaveEdit}>
+              {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>

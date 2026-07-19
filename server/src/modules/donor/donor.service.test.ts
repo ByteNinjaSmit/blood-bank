@@ -77,14 +77,14 @@ describe('donor-service.register', () => {
     await expect(svc.register({ ...baseDonor(), dob }, 'a')).rejects.toBeInstanceOf(ConflictError);
   });
 
-  it('rejects duplicate phone', async () => {
+  it('allows registration even when the phone is already used by another donor', async () => {
     const repo = mockRepo({
       findActiveByPhone: vi
         .fn()
         .mockResolvedValue({ id: 'existing', phone: '9876543210' } as DonorDto),
     });
     const svc = createDonorService({ repo });
-    await expect(svc.register(baseDonor(), 'a')).rejects.toBeInstanceOf(ConflictError);
-    expect(repo.create).not.toHaveBeenCalled();
+    await expect(svc.register(baseDonor(), 'a')).resolves.toBeDefined();
+    expect(repo.create).toHaveBeenCalled();
   });
 });

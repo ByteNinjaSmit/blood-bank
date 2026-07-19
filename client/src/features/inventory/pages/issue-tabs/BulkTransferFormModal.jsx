@@ -60,7 +60,7 @@ export default function BulkTransferFormModal({
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex flex-col md:col-span-2">
-            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Blood Bank Name</label>
+            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Company Name</label>
             <input
               type="text"
               value={bulkBloodBankName}

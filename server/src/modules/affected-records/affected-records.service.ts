@@ -38,6 +38,30 @@ async function affectedUnits(): Promise<AffectedRecordDto[]> {
   }));
 }
 
+// Units auto-discarded by a cascade delete (donor/donation removed) are
+// never marked `affected` — they were legitimately transitioned through
+// the state machine, not preserved-in-place — so they're invisible in
+// affectedUnits() above. Surface them separately, keyed by deleteBatchId,
+// so staff can see stock that disappeared as a side effect of a delete.
+async function affectedCascadeDiscardedUnits(): Promise<AffectedRecordDto[]> {
+  const docs = await BloodUnitModel.find({
+    deleteBatchId: { $exists: true, $ne: null },
+    status: 'DISCARDED',
+    affected: { $ne: true },
+  }).lean();
+  return docs.map((d) => ({
+    id: String(d._id),
+    entityType: 'BloodUnit',
+    entityLabel: d.unitId,
+    currentStatus: d.status,
+    affectedReason: 'Discarded automatically because its donation/donor record was deleted',
+    affectedByModule: 'donor/donation',
+    affectedByRecord: d.deleteBatchId,
+    affectedDate: (d as any).updatedAt ? new Date((d as any).updatedAt).toISOString() : undefined,
+    canAutoRecover: true,
+  }));
+}
+
 async function affectedCrossmatches(): Promise<AffectedRecordDto[]> {
   const docs = await CrossmatchModel.find({ affected: true }).lean();
   return docs.map((d) => ({
@@ -131,6 +155,7 @@ export const affectedRecordsService = {
   async list(): Promise<AffectedRecordDto[]> {
     const groups = await Promise.all([
       affectedUnits(),
+      affectedCascadeDiscardedUnits(),
       affectedCrossmatches(),
       affectedIssues(),
       affectedTransfusions(),

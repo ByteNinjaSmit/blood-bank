@@ -107,9 +107,9 @@ export default function DonorRegisterTable({
                       {donor.bloodGroup} {donor.rh === 'Positive' || donor.rh === 'POSITIVE' ? '+' : donor.rh === 'Negative' || donor.rh === 'NEGATIVE' ? '-' : ''}
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
-                      {donor.lastDonationDate
-                        ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', {
-                          month: 'short', year: 'numeric',
+                      {donor.recentDonationDate || donor.lastDonationDate
+                        ? new Date(donor.recentDonationDate || donor.lastDonationDate).toLocaleDateString('en-IN', {
+                          day: '2-digit', month: 'short', year: 'numeric',
                         })
                         : 'N/A'
                       }

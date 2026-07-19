@@ -2,6 +2,7 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { COMPONENT_TYPES } from '@/constants/component-types';
+import { formatDate } from '@/lib/format-date';
 
 // Issue Stock tab: the issued/reserved blood-unit ledger with filters +
 // paginated table. Presentational — filter state + data live in the page.
@@ -109,8 +110,8 @@ export default function IssueStockTab({
                   <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{r?.issuedAt ? new Date(r.issuedAt).toLocaleDateString() : '—'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700">{formatDate(r?.component?.expiryDate)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{formatDate(r?.issuedAt)}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{r?.storageLocation || r?.hospital?.name || '—'}</td>
                   <td className="px-4 py-3 text-sm">
                     <button onClick={() => onView(r)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">View</button>

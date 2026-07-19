@@ -355,22 +355,31 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
                 </Card>
               )}
 
-              {/* Bottom Section: 4 Components Breakdown Grid */}
+              {/* Bottom Section: Components Breakdown Grid */}
               <div className="space-y-3">
                 <h3 className="text-xs font-bold text-gray-950 uppercase tracking-widest flex items-center gap-2">
                   <Package className="w-4 h-4 text-red-600" />
                   Components Breakdown
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* PRBC Component Card */}
-                  {renderComponentCard("Packed Red Blood Cells (PRBC)", state.component.prbc)}
-                  {/* FFP Component Card */}
-                  {renderComponentCard("Fresh Frozen Plasma (FFP)", state.component.ffp)}
-                  {/* RDP Component Card */}
-                  {renderComponentCard("Random Donor Platelets (RDP)", state.component.rdp)}
-                  {/* Cryo Component Card */}
-                  {renderComponentCard("Cryoprecipitate", state.component.cryo)}
-                </div>
+                {state.component.sdp && state.component.sdp.status !== "unprepared" ? (
+                  // This bag donated SDP directly (apheresis, single-donor
+                  // platelet) — it never yields PRBC/FFP/RDP/CRYO, so only
+                  // the SDP card is relevant here.
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderComponentCard("Single Donor Platelet (SDP)", state.component.sdp)}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* PRBC Component Card */}
+                    {renderComponentCard("Packed Red Blood Cells (PRBC)", state.component.prbc)}
+                    {/* FFP Component Card */}
+                    {renderComponentCard("Fresh Frozen Plasma (FFP)", state.component.ffp)}
+                    {/* RDP Component Card */}
+                    {renderComponentCard("Random Donor Platelets (RDP)", state.component.rdp)}
+                    {/* Cryo Component Card */}
+                    {renderComponentCard("Cryoprecipitate", state.component.cryo)}
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -172,7 +172,7 @@ export type RhFactor = (typeof RH_FACTOR)[number];
 // Canonical component-type codes. IRRADIATED_PRBC/WASHED_PRBC/LEUKOREDUCED_PRBC
 // (former separate component types) collapse into plain PRBC + the matching
 // SpecialNeed flag (irradiated/washed/leukoreduced) — see shared/component-type.ts.
-export const COMPONENT_TYPE = ['WB', 'PRBC', 'FFP', 'RDP', 'CRYO'] as const;
+export const COMPONENT_TYPE = ['WB', 'PRBC', 'FFP', 'RDP', 'CRYO', 'SDP'] as const;
 export type ComponentType = (typeof COMPONENT_TYPE)[number];
 
 export const UNIT_STATUS = [
@@ -197,6 +197,9 @@ export const DONATION_TYPE = [
   'AUTOLOGOUS',
   'DIRECTED',
   'REPLACEMENT',
+  // Apheresis platelet donation — yields a single already-separated SDP
+  // unit directly, bypassing component separation (see donation.service.ts).
+  'SDP',
 ] as const;
 export type DonationType = (typeof DONATION_TYPE)[number];
 

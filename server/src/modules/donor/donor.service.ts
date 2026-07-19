@@ -43,11 +43,15 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
   return {
     async register(input, actorId) {
       assertEligibilityBasics(input);
+      // A shared/reused phone number (common with household or repeat
+      // donors) must never block registration or the donation that
+      // depends on it — log it for visibility only, don't reject.
       const existing = await deps.repo.findActiveByPhone(input.phone);
       if (existing) {
-        throw new ConflictError('A donor with this phone already exists', {
-          existingDonorId: existing.id,
-        });
+        log.warn(
+          { phone: input.phone, existingDonorId: existing.id },
+          'Donor registered with a phone number already used by another donor',
+        );
       }
       const created = await deps.repo.create(
         { ...input, donorId: generateDonorId() },

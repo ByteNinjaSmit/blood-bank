@@ -48,6 +48,14 @@ const COMPONENT_THEMES = {
     activeText: 'text-blue-900',
     activeBgLabel: 'text-blue-700',
   },
+  SDP: {
+    bgClass: 'bg-purple-50/20 border-purple-100',
+    titleClass: 'text-purple-800 border-purple-200',
+    labelClass: 'bg-purple-700 text-white',
+    activeBubble: 'border-purple-300 bg-purple-50 text-purple-800',
+    activeText: 'text-purple-900',
+    activeBgLabel: 'text-purple-700',
+  },
 };
 
 function ComponentStockLines({ stockSummary }) {
@@ -57,6 +65,7 @@ function ComponentStockLines({ stockSummary }) {
     FFP: initialStock(),
     RDP: initialStock(),
     CRYO: initialStock(),
+    SDP: initialStock(),
   };
 
   if (stockSummary && Array.isArray(stockSummary)) {
@@ -886,7 +895,7 @@ const Stock = () => {
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Loan Source</p>
                   <div className="grid grid-cols-3 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
                     <div>
-                      <p className="text-[10px] text-gray-500">Blood Bank</p>
+                      <p className="text-[10px] text-gray-500">Company Name</p>
                       <p className="font-semibold text-gray-800">{selectedViewItem?.loanTransfer?.bloodBankName || '—'}</p>
                     </div>
                     <div>

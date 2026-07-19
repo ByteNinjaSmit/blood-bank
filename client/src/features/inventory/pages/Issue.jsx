@@ -18,6 +18,7 @@ import IssueStockTab from "./issue-tabs/IssueStockTab";
 import SendToStorageModal from "./issue-tabs/SendToStorageModal";
 import BulkTransferFormModal from "./issue-tabs/BulkTransferFormModal";
 import StorageEditModal from "./issue-tabs/StorageEditModal";
+import { formatDate, formatDateTime } from "@/lib/format-date";
 import { useEditWithReason } from "@/hooks/useEditWithReason";
 import { useDeleteWithReason } from "@/hooks/useDeleteWithReason";
 import { useUpdateStorageBag, useReturnFromStorage } from "@/features/inventory/queries";
@@ -144,10 +145,12 @@ const Issue = () => {
   const [expiryFrom, setExpiryFrom] = useState("");
   const [expiryTo, setExpiryTo] = useState("");
   const [order, setOrder] = useState("desc");
-  // sortBy is fixed (used in fetch params); no UI control changes it.
-  const [sortBy] = useState("createdAt");
 
   const [status, setStatus] = useState('issued');
+  // Sort by actual issue recency when viewing issued stock (most recently
+  // issued first); reserved stock has no issuedAt yet, so fall back to
+  // createdAt there. No UI control changes this.
+  const sortBy = status === 'issued' ? 'issuedAt' : 'createdAt';
   const [viewOpen, setViewOpen] = useState(false);
   const [viewItem, setViewItem] = useState(null);
 
@@ -386,7 +389,7 @@ const Issue = () => {
 
   const handleBulkTransferSubmit = async () => {
     if (!bulkBloodBankName.trim() || !bulkBloodBankAddress.trim()) {
-      return toast.warning("Please enter the blood bank name and address");
+      return toast.warning("Please enter the company name and address");
     }
     if (!bulkTransferDate) {
       return toast.warning("Please select a transfer date");
@@ -479,6 +482,22 @@ const Issue = () => {
   const [coverLetterBoxCount, setCoverLetterBoxCount] = useState("");
   const [coverLetterPrintDoc, setCoverLetterPrintDoc] = useState(null);
 
+  // Print source for Invoice/Cover Letter: defaults to the open Bulk
+  // Transfer view, but Storage bags can also trigger these prints against
+  // a synthetic transfer-shaped object built from the single storage bag.
+  const [printSourceItem, setPrintSourceItem] = useState(null);
+
+  // Shapes a single storage bag row like a bulk-transfer "transfer" object
+  // so it can reuse the existing Invoice/Cover Letter print components.
+  const storageBagAsTransfer = (r) => ({
+    items: [{ componentType: r?.component?.componentType, volumeMl: r?.component?.volumeMl }],
+    transferId: r?.segmentNo || r?.bag?.bagNo || r?.bagNo || '—',
+    createdAt: r?.issuedAt,
+    transferDate: r?.issuedAt,
+    bloodBankName: r?.storageLocation || '—',
+    bloodBankAddress: '',
+  });
+
   // Per-component litres, computed from each bag's volumeMl — used both in
   // the View modal summary and inside the printed cover letter.
   const bulkTransferComponentTotals = (items) => {
@@ -492,7 +511,8 @@ const Issue = () => {
     return { byComponent: totals, totalLitres: totalMl / 1000 };
   };
 
-  const openCoverLetterPrompt = () => {
+  const openCoverLetterPrompt = (source = bulkViewItem) => {
+    setPrintSourceItem(source);
     setCoverLetterBoxCount("");
     setCoverLetterPromptOpen(true);
   };
@@ -532,7 +552,7 @@ const Issue = () => {
       return toast.warning("Please enter a valid number of boxes");
     }
     setCoverLetterPromptOpen(false);
-    setCoverLetterPrintDoc({ ...bulkViewItem, boxCount: n });
+    setCoverLetterPrintDoc({ ...(printSourceItem || bulkViewItem), boxCount: n });
     triggerPrint('bulk-transfer-cover-letter-print-wrapper', 'bulk-transfer-cover-letter-print-style', () => setCoverLetterPrintDoc(null));
   };
 
@@ -566,7 +586,8 @@ const Issue = () => {
   const [invoiceRate, setInvoiceRate] = useState("");
   const [invoicePrintDoc, setInvoicePrintDoc] = useState(null);
 
-  const openInvoicePrompt = () => {
+  const openInvoicePrompt = (source = bulkViewItem) => {
+    setPrintSourceItem(source);
     setInvoiceRate("");
     setInvoicePromptOpen(true);
   };
@@ -577,7 +598,7 @@ const Issue = () => {
       return toast.warning("Please enter a valid rate per litre");
     }
     setInvoicePromptOpen(false);
-    setInvoicePrintDoc({ ...bulkViewItem, ratePerLitre: rate });
+    setInvoicePrintDoc({ ...(printSourceItem || bulkViewItem), ratePerLitre: rate });
     triggerPrint('bulk-transfer-invoice-print-wrapper', 'bulk-transfer-invoice-print-style', () => setInvoicePrintDoc(null));
   };
 
@@ -970,7 +991,7 @@ const Issue = () => {
                 <div>
                   <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Expiry Date</div>
                   <div className="font-semibold text-gray-800">
-                    {viewItem?.component?.expiryDate ? new Date(viewItem.component.expiryDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                    {formatDate(viewItem?.component?.expiryDate)}
                   </div>
                 </div>
               </div>
@@ -987,7 +1008,7 @@ const Issue = () => {
                 <div>
                   <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Issue / Dispatch Date</div>
                   <div className="font-bold text-gray-800">
-                    {viewItem?.issuedAt ? new Date(viewItem.issuedAt).toLocaleString() : '—'}
+                    {formatDateTime(viewItem?.issuedAt)}
                   </div>
                 </div>
                 {viewItem?.storageLocation ? (
@@ -1102,7 +1123,7 @@ const Issue = () => {
                 </div>
                 <div>
                   <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Expiry Date</div>
-                  <div className="text-gray-700">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '—'}</div>
+                  <div className="text-gray-700">{formatDate(r?.component?.expiryDate)}</div>
                 </div>
                 <div>
                   <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Storage Location</div>
@@ -1110,12 +1131,27 @@ const Issue = () => {
                 </div>
                 <div>
                   <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Sent At</div>
-                  <div className="text-gray-700">{r.issuedAt ? new Date(r.issuedAt).toLocaleString() : '—'}</div>
+                  <div className="text-gray-700">{formatDateTime(r.issuedAt)}</div>
                 </div>
                 <div>
                   <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Type of Bag</div>
                   <div className="text-gray-700">{r.typeOfBag || '—'}</div>
                 </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t flex-wrap">
+                <Button
+                  onClick={() => openInvoicePrompt(storageBagAsTransfer(r))}
+                  variant="outline"
+                  className="border-red-200 text-red-800 hover:bg-red-50 font-medium h-10 px-5 shadow-sm flex items-center gap-2"
+                >
+                  <Printer className="w-4 h-4" /> Print Invoice
+                </Button>
+                <Button
+                  onClick={() => openCoverLetterPrompt(storageBagAsTransfer(r))}
+                  className="bg-red-800 hover:bg-red-900 text-white font-medium h-10 px-5 shadow-sm flex items-center gap-2"
+                >
+                  <Printer className="w-4 h-4" /> Print Cover Letter
+                </Button>
               </div>
             </div>
           );
@@ -1193,7 +1229,7 @@ const Issue = () => {
                   </div>
                   <div>
                     <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Expiry Date</div>
-                    <div className="text-gray-700">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '—'}</div>
+                    <div className="text-gray-700">{formatDate(r?.component?.expiryDate)}</div>
                   </div>
                   <div>
                     <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Type of Bag</div>
@@ -1201,7 +1237,7 @@ const Issue = () => {
                   </div>
                   <div>
                     <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Issued At</div>
-                    <div className="text-gray-700">{r.issuedAt ? new Date(r.issuedAt).toLocaleString() : '—'}</div>
+                    <div className="text-gray-700">{formatDateTime(r.issuedAt)}</div>
                   </div>
                 </div>
               </div>
@@ -1313,7 +1349,7 @@ const Issue = () => {
                   <div className="font-bold text-red-700">{bulkViewItem.transferType === 'GIVE_LOAN' ? 'Give Loan' : 'Take Loan'}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Bank Name</div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Company Name</div>
                   <div className="font-semibold text-gray-800">{bulkViewItem.bloodBankName}</div>
                 </div>
                 <div>
@@ -1356,8 +1392,8 @@ const Issue = () => {
                         <td className="px-3 py-2.5 font-mono font-bold text-gray-800">{it.bagNo}</td>
                         <td className="px-3 py-2.5 font-mono text-gray-600">{it.segmentNo || '—'}</td>
                         <td className="px-3 py-2.5 text-gray-600">{it.volumeMl ? `${it.volumeMl} mL` : '—'}</td>
-                        <td className="px-3 py-2.5 text-gray-600">{it.collectedAt ? new Date(it.collectedAt).toLocaleDateString() : '—'}</td>
-                        <td className="px-3 py-2.5 text-gray-600">{it.expiresAt ? new Date(it.expiresAt).toLocaleDateString() : '—'}</td>
+                        <td className="px-3 py-2.5 text-gray-600">{formatDate(it.collectedAt)}</td>
+                        <td className="px-3 py-2.5 text-gray-600">{formatDate(it.expiresAt)}</td>
                       </tr>
                     ))}
                   </tbody>

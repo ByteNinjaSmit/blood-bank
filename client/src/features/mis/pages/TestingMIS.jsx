@@ -21,6 +21,7 @@ export default function TestingMIS() {
 
   const failures = data?.failures || [];
   const overall = data?.overall || [];
+  const byDonationType = data?.byDonationType || [];
   const reactiveRate = data?.reactiveRate ?? 0;
   const totalTests = data?.totalTests ?? 0;
 
@@ -41,6 +42,7 @@ export default function TestingMIS() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(failures.map(f => ({ Test: f._id, PositiveCount: f.count }))), "Failures");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(overall.map(o => ({ Status: o._id, Count: o.count }))), "Overall");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(byDonationType.map(d => ({ DonationType: d._id, Count: d.count }))), "By Donation Type");
     autoFitWorkbook(wb);
     XLSX.writeFile(wb, "serology_mis.xlsx");
   };

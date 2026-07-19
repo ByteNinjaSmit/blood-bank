@@ -69,6 +69,14 @@ const COMPONENT_THEMES = {
     activeText: 'text-blue-900',
     activeBgLabel: 'text-blue-700',
   },
+  SDP: {
+    bgClass: 'bg-purple-50/20 border-purple-100',
+    titleClass: 'text-purple-800 border-purple-200',
+    labelClass: 'bg-purple-700 text-white',
+    activeBubble: 'border-purple-300 bg-purple-50 text-purple-800',
+    activeText: 'text-purple-900',
+    activeBgLabel: 'text-purple-700',
+  },
 };
 
 function ComponentStockLines({ stockSummary }) {
@@ -78,6 +86,7 @@ function ComponentStockLines({ stockSummary }) {
     FFP: initialStock(),
     RDP: initialStock(),
     CRYO: initialStock(),
+    SDP: initialStock(),
   };
 
   if (stockSummary && Array.isArray(stockSummary)) {
@@ -169,7 +178,7 @@ export default function BagIssuance() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
-  const { data, isLoading, refetch, isFetching } = useBagIssueList({
+  const { data, isLoading, isError, error, refetch, isFetching } = useBagIssueList({
     pageSize: 500,
     fromDate: dateFilterType === 'custom' && fromDate ? fromDate : undefined,
     toDate: dateFilterType === 'custom' && toDate ? toDate : undefined,
@@ -402,6 +411,10 @@ export default function BagIssuance() {
               <tbody className="divide-y divide-gray-100">
                 {isLoading ? (
                   <tr><td colSpan={7} className="py-12 text-center text-sm text-gray-500">Loading...</td></tr>
+                ) : isError ? (
+                  <tr><td colSpan={7} className="py-12 text-center text-sm text-red-600">
+                    Failed to load bag issuances{error?.message ? `: ${error.message}` : '.'}
+                  </td></tr>
                 ) : filteredIssues.length === 0 ? (
                   <tr><td colSpan={7} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
                 ) : filteredIssues.map((iss) => (

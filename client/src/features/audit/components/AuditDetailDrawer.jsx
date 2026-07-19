@@ -83,6 +83,69 @@ function TestPanelDiff({ before, after }) {
   );
 }
 
+const CRUD_FLAGS = [
+  { key: 'view', label: 'View' },
+  { key: 'create', label: 'Create' },
+  { key: 'update', label: 'Update' },
+  { key: 'delete', label: 'Delete' },
+];
+
+// Renders a permissions diff (before/after arrays of {moduleName, view,
+// create, update, delete}) as added/removed CRUD-flag chips per module,
+// instead of dumping the raw permission array as JSON.
+function PermissionsDiff({ before, after }) {
+  const beforeMap = new Map((before || []).map((p) => [p.moduleName, p]));
+  const afterMap = new Map((after || []).map((p) => [p.moduleName, p]));
+  const modules = Array.from(new Set([...beforeMap.keys(), ...afterMap.keys()])).sort();
+
+  if (modules.length === 0) {
+    return <span className="text-gray-300 italic">—</span>;
+  }
+
+  return (
+    <table className="w-full text-xs border border-gray-100 rounded-lg overflow-hidden">
+      <thead className="bg-gray-50">
+        <tr>
+          <th className="text-left px-3 py-1.5 font-bold text-gray-500 uppercase">Module</th>
+          <th className="text-left px-3 py-1.5 font-bold text-gray-500 uppercase">Change</th>
+        </tr>
+      </thead>
+      <tbody>
+        {modules.map((moduleName) => {
+          const b = beforeMap.get(moduleName);
+          const a = afterMap.get(moduleName);
+          const added = CRUD_FLAGS.filter((f) => !b?.[f.key] && a?.[f.key]);
+          const removed = CRUD_FLAGS.filter((f) => b?.[f.key] && !a?.[f.key]);
+          const unchanged = !a && !b ? [] : CRUD_FLAGS.filter((f) => !!b?.[f.key] === !!a?.[f.key] && (b?.[f.key] || a?.[f.key]));
+          return (
+            <tr key={moduleName} className="border-t border-gray-50">
+              <td className="px-3 py-1.5 font-semibold text-gray-700 align-top whitespace-nowrap">{moduleName}</td>
+              <td className="px-3 py-1.5">
+                {!b && a ? (
+                  <span className="text-green-700 bg-green-50/40 px-1.5 py-0.5 rounded">module access granted ({unchanged.map((f) => f.label).join(', ') || 'no flags'})</span>
+                ) : b && !a ? (
+                  <span className="text-red-600 bg-red-50/40 px-1.5 py-0.5 rounded">module access removed</span>
+                ) : added.length === 0 && removed.length === 0 ? (
+                  <span className="text-gray-400 italic">no change</span>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {added.map((f) => (
+                      <span key={`add-${f.key}`} className="text-green-700 bg-green-50/40 px-1.5 py-0.5 rounded">+{f.label}</span>
+                    ))}
+                    {removed.map((f) => (
+                      <span key={`rm-${f.key}`} className="text-red-600 bg-red-50/40 px-1.5 py-0.5 rounded">−{f.label}</span>
+                    ))}
+                  </div>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
 export default function AuditDetailDrawer({ isOpen, onClose, entry }) {
   if (!entry) return null;
   const rows = diffRows(entry.before, entry.after, entry.changedFields);
@@ -134,6 +197,11 @@ export default function AuditDetailDrawer({ isOpen, onClose, entry }) {
                   <div key={r.key}>
                     <div className="text-xs font-semibold text-gray-700 mb-1">Test Results</div>
                     <TestPanelDiff before={r.before} after={r.after} />
+                  </div>
+                ) : r.key === 'permissions' ? (
+                  <div key={r.key}>
+                    <div className="text-xs font-semibold text-gray-700 mb-1">Permissions</div>
+                    <PermissionsDiff before={r.before} after={r.after} />
                   </div>
                 ) : (
                   <table key={r.key} className="w-full text-xs border border-gray-100 rounded-lg overflow-hidden">

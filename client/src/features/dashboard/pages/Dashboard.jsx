@@ -41,6 +41,7 @@ const MATRIX_COMPONENTS = [
   { key: "FFP", label: "Fresh Frozen Plasma (FFP)", theme: "text-sky-700 bg-sky-50 border-sky-200" },
   { key: "RDP", label: "Random Donor Platelets (RDP)", theme: "text-amber-700 bg-amber-50 border-amber-200" },
   { key: "CRYO", label: "Cryoprecipitate (CRYO)", theme: "text-indigo-700 bg-indigo-50 border-indigo-200" },
+  { key: "SDP", label: "Single Donor Platelet (SDP)", theme: "text-purple-700 bg-purple-50 border-purple-200" },
 ];
 
 const MATRIX_BLOOD_GROUPS = [

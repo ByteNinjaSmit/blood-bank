@@ -7,6 +7,7 @@ export const COMPONENT_TYPES = [
   { value: 'FFP', label: 'Fresh Frozen Plasma' },
   { value: 'RDP', label: 'Random Donor Platelets' },
   { value: 'CRYO', label: 'Cryoprecipitate' },
+  { value: 'SDP', label: 'Single Donor Platelet' },
 ];
 
 export const COMPONENT_LABEL = Object.fromEntries(COMPONENT_TYPES.map(c => [c.value, c.label]));
@@ -18,4 +19,5 @@ export const COMPONENT_PRINT_LABEL = {
   FFP: 'Fresh Frozen Plasma',
   RDP: 'Random Donor Platelets',
   CRYO: 'Cryoprecipitate',
+  SDP: 'Single Donor Platelet',
 };
