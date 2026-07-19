@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import FormField from '@/components/shared/FormField';
 import Button from '@/components/shared/Button';
 import { states } from '@/constants/states';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 const DonorForm = ({
   initialData = null,
@@ -252,8 +253,10 @@ const DonorForm = ({
     onSubmit(transformedData);
   };
 
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
+
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(handleFormSubmit)} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="space-y-6">
       <input type="hidden" {...register('donorId')} />
       <input type="hidden" {...register('uid')} />
       <input type="hidden" {...register('eligibilityStatus')} />

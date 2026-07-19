@@ -1,10 +1,12 @@
 import React from 'react';
 import Modal from '@/components/shared/Modal';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 export default function AddHospitalModal({ isOpen, onClose, form, onChange, saving, onSave }) {
+  const { onKeyDown: handleFormKeyDown } = createFormEnterNavHandlers({ onComplete: onSave });
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Add Hospital" size="default">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4" onKeyDown={handleFormKeyDown}>
         <div>
           <label className="block text-sm text-gray-700 mb-1">Name</label>
           <input

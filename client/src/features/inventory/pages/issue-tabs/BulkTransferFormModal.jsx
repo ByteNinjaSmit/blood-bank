@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import CustomModal from '@/components/CustomModal';
 import MultiBagSelect from './MultiBagSelect';
 import { COMPONENT_TYPES } from '@/constants/component-types';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -31,9 +32,10 @@ export default function BulkTransferFormModal({
   loadingAvailable,
 }) {
   const isEdit = mode === 'edit';
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
   return (
     <CustomModal open={open} onCancel={onClose} title={isEdit ? 'Edit Bulk Transfer' : 'Bulk Transfer — Give / Take Loan'} size="xl" hideFooter>
-      <div className="space-y-6 text-sm p-2">
+      <div className="space-y-6 text-sm p-2" onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
         {/* Give Loan / Take Loan selector — locked once created, since
             changing the transfer type after bags are already claimed/logged
             would require a different reconciliation than a plain edit. */}

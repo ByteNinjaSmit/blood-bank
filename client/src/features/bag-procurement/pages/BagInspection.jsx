@@ -10,6 +10,7 @@ import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import IframePreviewModal from '@/components/shared/IframePreviewModal';
 import ConfirmDeleteModal from '@/components/shared/ConfirmDeleteModal';
 import { exportProcurementInspection } from '@/utils/excelExportHelper';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 const uploadFile = bagProcurementApi.upload.file;
 const deleteFile = bagProcurementApi.upload.remove;
@@ -180,6 +181,7 @@ function InspectionDrawer({ onClose, grns }) {
   };
 
   const fieldClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400';
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
   return (
     <>
@@ -189,7 +191,7 @@ function InspectionDrawer({ onClose, grns }) {
           <h2 className="text-base font-semibold text-white">Send Bag for Lab Testing</h2>
           <button onClick={onClose} className="text-orange-200 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="flex-1 overflow-y-auto p-6 space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">GRN *</label>
@@ -510,6 +512,7 @@ function UpdateReportDrawer({ onClose, inspection, mode }) {
 
   const fieldClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400';
   const selectClass = 'w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white';
+  const { onKeyDown: handleFormKeyDown2, onChange: handleFormEnterNavChange2 } = createFormEnterNavHandlers();
 
   return (
     <>
@@ -522,7 +525,7 @@ function UpdateReportDrawer({ onClose, inspection, mode }) {
           </div>
           <button onClick={onClose} className="text-orange-200 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown2} onChange={handleFormEnterNavChange2} className="flex-1 overflow-y-auto p-6 space-y-5">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>

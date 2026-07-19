@@ -12,6 +12,7 @@ import { useAuth } from '@/store/auth';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportChemicalMaster } from '@/utils/excelExportHelper';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 export default function ChemicalMaster() {
   const { user } = useAuth();
@@ -25,6 +26,7 @@ export default function ChemicalMaster() {
   const [catDesc, setCatDesc] = useState('');
 
   const [showMfgSuggestions, setShowMfgSuggestions] = useState(false);
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
   // Create Chemical States
   const [chemForm, setChemForm] = useState({
@@ -235,7 +237,7 @@ export default function ChemicalMaster() {
               <h2 className="text-base font-bold">Add New Master Category</h2>
               <button onClick={() => setShowCategoryDrawer(false)} className="text-red-100 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={handleAddCategory} className="flex-1 p-6 space-y-4">
+            <form onSubmit={handleAddCategory} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="flex-1 p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Category Name *</label>
                 <input required value={catName} onChange={(e) => setCatName(e.target.value)} className={fieldClass} placeholder="e.g. Blood Grouping Reagents" />
@@ -262,7 +264,7 @@ export default function ChemicalMaster() {
               <h2 className="text-base font-bold">Register Chemical Specifications</h2>
               <button onClick={() => setShowAddDrawer(false)} className="text-red-100 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={handleAddChemical} className="flex-1 overflow-y-auto p-6 space-y-4">
+            <form onSubmit={handleAddChemical} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="flex-1 overflow-y-auto p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Chemical / Reagent Name *</label>
                 <input required value={chemForm.name} onChange={(e) => setChemForm({ ...chemForm, name: e.target.value })} className={fieldClass} placeholder="e.g. Anti-A" />

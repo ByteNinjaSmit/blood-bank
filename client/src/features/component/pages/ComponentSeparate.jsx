@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/format-date";
 import { COMPONENT_LABEL } from "@/constants/component-types";
+import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
 
 // Component separation from a whole-blood donation only ever yields these four
 // derived products — WB is never re-selected here.
@@ -57,6 +58,7 @@ const ComponentSeparate = () => {
   const [signatureBag, setSignatureBag] = useState(null);
   const [signatureText, setSignatureText] = useState("");
   const [readyToSignBags, setReadyToSignBags] = useState([]);
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
   // ── Edit already-separated components + RPM (bag-level correction) ──
   const [showEditModal, setShowEditModal] = useState(false);
@@ -460,7 +462,7 @@ const ComponentSeparate = () => {
           <DialogHeader>
             <DialogTitle>Separate Component</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4" onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Bag: <span className="font-medium text-gray-900">{activeBag?.bagNo}</span></span>
             </div>
@@ -718,7 +720,7 @@ const ComponentSeparate = () => {
           <DialogHeader>
             <DialogTitle>Edit Separation — RPM &amp; Components</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4" onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Bag: <span className="font-medium text-gray-900">{editBag?.bagNo}</span></span>
             </div>

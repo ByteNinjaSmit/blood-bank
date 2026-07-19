@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Plus, X, Search, Factory, RefreshCw } from 'lucide-react';
 import { useManufacturerList, useCreateManufacturer, useDeleteManufacturer } from '../queries';
 import { toast } from 'sonner';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 export default function Manufacturers() {
   const [showAddDrawer, setShowAddDrawer] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [mfgName, setMfgName] = useState('');
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
   const { data: manufacturers, isLoading, isFetching, refetch } = useManufacturerList();
   const createManufacturer = useCreateManufacturer();
@@ -131,7 +133,7 @@ export default function Manufacturers() {
               <h2 className="text-base font-bold">Register Chemical Manufacturer</h2>
               <button onClick={() => setShowAddDrawer(false)} className="text-red-100 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={handleSubmit} className="flex-1 p-6 space-y-4">
+            <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="flex-1 p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Manufacturer Name *</label>
                 <input required value={mfgName} onChange={(e) => setMfgName(e.target.value)} className={fieldClass} placeholder="e.g. Bio-Rad" />

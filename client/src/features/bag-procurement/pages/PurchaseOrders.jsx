@@ -14,6 +14,7 @@ import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportProcurementPO } from '@/utils/excelExportHelper';
 import { useEditWithReason } from '@/hooks/useEditWithReason';
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 
 
@@ -188,6 +189,8 @@ function PODrawer({ onClose, vendors, poToEdit }) {
     ...previousVendors
   ]));
 
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
+
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
@@ -196,7 +199,7 @@ function PODrawer({ onClose, vendors, poToEdit }) {
           <h2 className="text-base font-semibold text-white">{poToEdit ? "Edit Purchase Order" : "New Purchase Order"}</h2>
           <button onClick={onClose} className="text-orange-200 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="flex-1 overflow-y-auto p-6 space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Vendor *</label>

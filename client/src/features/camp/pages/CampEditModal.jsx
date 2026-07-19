@@ -2,6 +2,7 @@
 
 import React from "react"
 import { Edit, X } from "lucide-react"
+import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav"
 
 const CampEditModal = ({
   open,
@@ -16,6 +17,8 @@ const CampEditModal = ({
   onSubmit,
 }) => {
   if (!open || !camp) return null
+
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers()
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
@@ -40,7 +43,7 @@ const CampEditModal = ({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="px-6 py-5 space-y-5 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={onSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="px-6 py-5 space-y-5 max-h-[80vh] overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-slate-700">Camp Name *</label>

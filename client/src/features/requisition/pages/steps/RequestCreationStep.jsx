@@ -5,6 +5,7 @@ import PatientForm from '../components/PatientForm';
 import RequestedComponentsList from '../components/RequestedComponentsList';
 import { RejectRequestModal } from '@/components/shared';
 import { toast } from 'sonner';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 export default function RequestCreationStep({
   hospitals,
@@ -120,8 +121,10 @@ export default function RequestCreationStep({
     }));
   };
 
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
+
   return (
-    <div className="p-6 space-y-6 bg-gray-50/50 rounded-xl">
+    <div className="p-6 space-y-6 bg-gray-50/50 rounded-xl" onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-4 border-gray-200">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Blood Requisition Sheet</h2>

@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Save, Building2 } from 'lucide-react';
 import { useAuth } from '@/store/auth';
 import hospitalApi from '@/services/hospitalApi';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 const AddHospital = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const AddHospital = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
 
   const handleInputChange = (e) => {
@@ -158,7 +160,7 @@ const AddHospital = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Hospital Name */}
               <div className="space-y-2">

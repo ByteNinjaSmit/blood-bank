@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
 
 export default function CreateUserForm({
   form,
@@ -19,6 +20,8 @@ export default function CreateUserForm({
     return () => document.removeEventListener("keydown", onKey);
   }, [onCancel]);
 
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
       <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden" onClick={(e)=>e.stopPropagation()}>
@@ -26,7 +29,7 @@ export default function CreateUserForm({
           <div className="font-semibold text-slate-800">{editingId ? 'Edit User' : 'Create User'}</div>
           <button onClick={onCancel} className="px-2 py-1 rounded-md border hover:bg-slate-50">Close</button>
         </div>
-        <form onSubmit={onSubmit} className="p-4 md:p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={onSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="p-4 md:p-5 space-y-4 max-h-[80vh] overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-xs text-slate-600">Public ID</label>

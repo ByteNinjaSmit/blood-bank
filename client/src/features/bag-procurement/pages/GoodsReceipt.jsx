@@ -14,6 +14,7 @@ import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import IframePreviewModal from '@/components/shared/IframePreviewModal';
 import ConfirmDeleteModal from '@/components/shared/ConfirmDeleteModal';
 import { exportProcurementGRN } from '@/utils/excelExportHelper';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 const uploadFile = bagProcurementApi.upload.file;
 const deleteFile = bagProcurementApi.upload.remove;
@@ -129,6 +130,7 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
   };
 
   const fieldClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400';
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
   return (
     <>
@@ -138,7 +140,7 @@ function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
           <h2 className="text-base font-semibold text-white">{grnToEdit ? 'Edit Goods Receipt (GRN)' : 'Create Goods Receipt (GRN)'}</h2>
           <button onClick={onClose} className="text-orange-200 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="flex-1 overflow-y-auto p-6 space-y-5">
           {/* PO + Invoice */}
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">

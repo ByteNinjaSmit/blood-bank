@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { apiClient } from "@/core/api-client"
 import { useNavigate } from "react-router-dom"
 import Stepper, { Step } from "@/components/Stepper"
+import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav"
 
 const CampRegistration = () => {
   const navigate = useNavigate()
@@ -176,6 +177,8 @@ const CampRegistration = () => {
     }
   }
 
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers()
+
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       <div className="w-full">
@@ -192,6 +195,7 @@ const CampRegistration = () => {
           </div>
         </div>
 
+        <div onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
         <Stepper
           initialStep={1}
           onStepChange={handleStepChange}
@@ -442,6 +446,7 @@ const CampRegistration = () => {
             </div>
           </Step>
         </Stepper>
+        </div>
       </div>
     </div>
   )

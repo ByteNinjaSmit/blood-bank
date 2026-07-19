@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Loader2, Microscope, TestTube, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateTime } from "@/lib/format-date";
+import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
 
 const DEFAULT_TESTS = [
   { key: "HIV", label: "HIV" },
@@ -33,6 +34,7 @@ const Serology = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tests, setTests] = useState(() => DEFAULT_TESTS.map(t => ({ test: t.key, result: "" })));
   const [editReason, setEditReason] = useState("");
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
   // A bag already carries a decision (shadeness retest, or any other
   // correction) once its worklist status is no longer 'pending' — the
@@ -305,7 +307,7 @@ const Serology = () => {
           <DialogHeader>
             <DialogTitle>Enter Serology Results</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4" onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
             <div className="text-sm text-gray-600">Bag: <span className="font-medium text-gray-900">{activeBag?.bagNo}</span></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {tests.map((t, idx) => (

@@ -12,6 +12,7 @@ import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportVendors } from '@/utils/excelExportHelper';
 import { useEditWithReason } from '@/hooks/useEditWithReason';
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 const STATUS_BADGE = {
   APPROVED:    'bg-green-50 text-green-700 border-green-200',
@@ -66,6 +67,7 @@ function VendorDrawer({ onClose, editVendor }) {
   };
 
   const busy = createVendor.isPending || updateVendor.isPending;
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
   return (
     <>
@@ -79,7 +81,7 @@ function VendorDrawer({ onClose, editVendor }) {
             <X className="w-5 h-5" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="flex-1 overflow-y-auto p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Vendor Name *</label>

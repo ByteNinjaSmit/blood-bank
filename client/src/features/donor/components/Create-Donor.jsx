@@ -4,6 +4,7 @@ import { User, Save, Loader2, CheckCircle } from "lucide-react"
 import axios from "axios"
 import { useAuth } from "@/store/auth"
 import { useNavigate } from "react-router-dom"
+import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav"
 
 const CreateDonor = ({ onBack, onCreated, afterCreate = "back", prefill = {}, showPostCreateActions = false, onStartDonation, originCampId }) => {
   const { API, authorizationToken } = useAuth()
@@ -390,6 +391,8 @@ const CreateDonor = ({ onBack, onCreated, afterCreate = "back", prefill = {}, sh
     setShowPostCreate(false)
   }
 
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers()
+
   return (
     <div className="min-h-screen bg-white">
       <div className="bg-white border-b border-orange-200">
@@ -421,6 +424,8 @@ const CreateDonor = ({ onBack, onCreated, afterCreate = "back", prefill = {}, sh
 
         <form
           onSubmit={(e) => handleSubmit(e, mode === "quick" ? "save-next" : "save")}
+          onKeyDown={handleFormKeyDown}
+          onChange={handleFormEnterNavChange}
           className="space-y-6"
         >
           <div className="flex items-center justify-between">

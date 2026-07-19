@@ -16,6 +16,7 @@ import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import IframePreviewModal from '@/components/shared/IframePreviewModal';
 import ConfirmDeleteModal from '@/components/shared/ConfirmDeleteModal';
 import { exportChemicalPurchase } from '@/utils/excelExportHelper';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 import { chemicalInventoryApi } from '../api';
 
 const uploadFile = (file, folder) => {
@@ -446,6 +447,8 @@ export default function PurchaseEntry() {
     }
   };
 
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
+
   return (
     <div className="min-h-screen bg-gray-50 p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -670,7 +673,7 @@ export default function PurchaseEntry() {
         </>
       ) : (
         /* Purchase Stock Entry Form View */
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
           {/* Invoice Information */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Purchase Invoice Details</h3>

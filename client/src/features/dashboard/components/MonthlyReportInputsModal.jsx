@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { apiClient, unwrap } from "@/core/api-client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
 
 const ICTC_FIELDS = [
   { key: "hiv", label: "HIV" },
@@ -87,9 +88,11 @@ export default function MonthlyReportInputsModal({ open, onClose, month, year, d
     }
   };
 
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
+
   return (
     <CustomModal open={open} onCancel={onClose} title="Monthly Report — Manual Inputs" hideFooter size="lg">
-      <div className="space-y-5 text-sm">
+      <div className="space-y-5 text-sm" onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
         {loading && (
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading previously saved inputs for this period…
