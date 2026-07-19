@@ -494,10 +494,11 @@ export function ComponentOverviewSection({ data }) {
       <CardContent>
         <StatGrid>
           <Stat label="Total Components Produced" value={d.componentsProduced} />
-          <Stat label="PRBC Units Produced" value={d.prbcProduced} />
-          <Stat label="RDP Units Produced" value={d.rdpProduced} />
+          <Stat label="PRBC Units Produced" value={d.rbcProduced} />
+          <Stat label="RDP Units Produced" value={d.pltProduced} />
           <Stat label="FFP Units Produced" value={d.ffpProduced} />
           <Stat label="Cryo Units Produced" value={d.cryoProduced} />
+          <Stat label="SDP Units Produced" value={d.sdpProduced} />
         </StatGrid>
       </CardContent>
     </Card>
@@ -566,10 +567,11 @@ export function ComponentAvailabilitySection({ data }) {
       </CardHeader>
       <CardContent>
         <StatGrid>
-          <Stat label="PRBC In-Stock" value={d.prbcStock} />
-          <Stat label="RDP In-Stock" value={d.rdpStock} />
+          <Stat label="PRBC In-Stock" value={d.rbcStock} />
+          <Stat label="RDP In-Stock" value={d.pltStock} />
           <Stat label="FFP In-Stock" value={d.ffpStock} />
           <Stat label="Cryo In-Stock" value={d.cryoStock} />
+          <Stat label="SDP In-Stock" value={d.sdpStock} />
         </StatGrid>
       </CardContent>
     </Card>

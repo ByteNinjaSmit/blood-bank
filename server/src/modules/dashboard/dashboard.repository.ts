@@ -136,6 +136,7 @@ export interface LegacyOverviewDto {
     pltProduced: number;
     ffpProduced: number;
     cryoProduced: number;
+    sdpProduced: number;
   };
   inventory: {
     inStock: number;
@@ -150,7 +151,7 @@ export interface LegacyOverviewDto {
     Bpos: number; Bneg: number; ABpos: number; ABneg: number;
   };
   componentAvailability: {
-    rbcStock: number; pltStock: number; ffpStock: number; cryoStock: number;
+    rbcStock: number; pltStock: number; ffpStock: number; cryoStock: number; sdpStock: number;
   };
   hospitalRequests: {
     totalRequests: number;
@@ -562,6 +563,7 @@ export function createDashboardRepo(deps: {
           pltProduced: componentProducedMap.RDP || 0,
           ffpProduced: componentProducedMap.FFP || 0,
           cryoProduced: componentProducedMap.CRYO || 0,
+          sdpProduced: componentProducedMap.SDP || 0,
         },
         inventory: {
           inStock: inStockTotal,
@@ -586,6 +588,7 @@ export function createDashboardRepo(deps: {
           pltStock: componentStockMap.RDP || 0,
           ffpStock: componentStockMap.FFP || 0,
           cryoStock: componentStockMap.CRYO || 0,
+          sdpStock: componentStockMap.SDP || 0,
         },
         hospitalRequests: {
           totalRequests,
