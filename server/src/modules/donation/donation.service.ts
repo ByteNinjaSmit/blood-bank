@@ -186,7 +186,9 @@ export function createDonationService(deps: {
         undefined,
         {
           donationId: donationPublicId,
-          donor: input.donor,
+          // Show the human-readable donor id (DNR-…) in the audit snapshot,
+          // not the raw Mongo ObjectId.
+          donor: donor.donorId ?? input.donor,
           campId: input.campId,
           donationType: input.donationType,
           unitCount: units.length,

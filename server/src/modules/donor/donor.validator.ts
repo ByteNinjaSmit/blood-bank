@@ -65,7 +65,9 @@ export const ListDonorsQuery = z.object({
   rh: z.enum(['Positive', 'Negative']).optional(),
   city: z.string().trim().max(80).optional(),
   source: z.enum(['inhouse', 'camp']).optional(),
-  eligibilityStatus: z.enum(['eligible', 'deferred', 'temp-deferred']).optional(),
+  // 'recently-donated' is a derived status (eligible but still inside the
+  // 90/120-day interval); resolved in the repository, not a stored value.
+  eligibilityStatus: z.enum(['eligible', 'deferred', 'temp-deferred', 'recently-donated']).optional(),
   campId: z.string().regex(OBJECT_ID, 'Invalid camp id').optional(),
   from: blankToUndef(z.coerce.date().optional()),
   to: blankToUndef(z.coerce.date().optional()),

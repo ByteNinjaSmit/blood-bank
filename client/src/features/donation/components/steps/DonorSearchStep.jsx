@@ -7,7 +7,6 @@ import CreateDonor from "@/features/donor/components/Create-Donor";
 import DonorForm from "@/features/donor/components/DonorForm";
 
 const DonorSearchStep = ({
-  loading,
   error,
   onOpenCreateDonor,
   showPopup,

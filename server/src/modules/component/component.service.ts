@@ -45,35 +45,40 @@ export function createComponentService(deps: { repo: ComponentRepo }): Component
     listBagsToSeparate: () => deps.repo.listBagsToSeparate(),
     async separate(input) {
       const result = await deps.repo.separate(input);
+      // The created unit carries the human-readable donation id (DON-…); use it
+      // in the audit rather than whatever id the caller passed (often the Mongo _id).
+      const publicDonationId = result?.donationId ?? input.donationId;
       void withAudit(
         { actorId: input.actorId },
-        { module: 'component', action: 'CREATE', entityType: 'Component', entityId: input.donationId, entityLabel: `${input.donationId} (${input.componentType})` },
+        { module: 'component', action: 'CREATE', entityType: 'Component', entityId: publicDonationId, entityLabel: `${publicDonationId} (${input.componentType})` },
         undefined,
-        { donationId: input.donationId, componentType: input.componentType, volumeMl: input.volumeMl },
+        { donationId: publicDonationId, componentType: input.componentType, volumeMl: input.volumeMl },
       );
       return result;
     },
     async separationCompleted(input) {
       const result = await deps.repo.separationCompleted(input);
+      // Prefer the resolved human-readable donation id (DON-…) for the audit,
+      // notification and link — the caller may pass the Mongo _id.
+      const publicDonationId = result?.donationId ?? input.donationId;
       void withAudit(
         { actorId: input.actorId },
-        { module: 'component', action: 'UPDATE', entityType: 'Component', entityId: input.donationId, reason: 'separation completed' },
+        { module: 'component', action: 'UPDATE', entityType: 'Component', entityId: publicDonationId, entityLabel: publicDonationId, reason: 'separation completed' },
         undefined,
-        { signature: input.signature },
+        { donationId: publicDonationId, signature: input.signature },
       );
       void notificationCenterService
         .notify({
           title: 'Component separation completed',
-          message: `Component separation completed for donation ${input.donationId}`,
+          message: `Component separation completed for donation ${publicDonationId}`,
           module: 'COMPONENT_SEPARATION',
           category: 'COMPONENT_SEPARATION_COMPLETED',
           severity: 'SUCCESS',
-          relatedRecordId: input.donationId,
+          relatedRecordId: publicDonationId,
           relatedRecordType: 'Donation',
-          actionLink: `/donation-management/${input.donationId}`,
+          actionLink: `/donation-management/${publicDonationId}`,
         })
         .catch(() => undefined);
-      return result;
     },
     nearExpiry: (filters) => deps.repo.nearExpiry(filters),
     getGroupDetail: (id) => deps.repo.getGroupDetail(id),

@@ -3,12 +3,6 @@
 > eslint .
 
 
-C:\Users\athar\Documents\GitHub\blood-bank\client\src\components\Header.jsx
-  2:9  error  'Icon' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
-
-C:\Users\athar\Documents\GitHub\blood-bank\client\src\components\Stepper.jsx
-  3:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
-
 C:\Users\athar\Documents\GitHub\blood-bank\client\src\components\blood-components\ComponentDetailsModal.jsx
   61:6  warning  React Hook useEffect has a missing dependency: 'fetchComponentDetails'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
@@ -30,23 +24,9 @@ C:\Users\athar\Documents\GitHub\blood-bank\client\src\components\ui\sidebar.jsx
 C:\Users\athar\Documents\GitHub\blood-bank\client\src\components\ui\toggle.jsx
   43:18  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
 
-C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\auth\pages\Login-Page.jsx
-  20:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
-
-C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\auth\pages\Registration-Page.jsx
-  25:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
-
-C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\bag-procurement\pages\GoodsReceipt.jsx
-  565:9  error  'fmtMoney' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
-
 C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\camp\pages\Camp-Listing.jsx
   18:21  error    'OnBack' is defined but never used. Allowed unused args must match /^_/u                                             no-unused-vars
   74:6   warning  React Hook React.useEffect has a missing dependency: 'fetchCamps'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-
-C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\camp\pages\CampDetails.jsx
-  180:9  error  'nowMs' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
-  181:9  error  'startMs' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
-  182:9  error  'endMs' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
 
 C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\camp\pages\CampDonorManagement.jsx
   124:6  warning  React Hook useEffect has a missing dependency: 'fetchCampDonors'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
@@ -67,14 +47,8 @@ C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\discard\component
 C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\donation\components\DonationList.jsx
   39:6  warning  React Hook useCallback has missing dependencies: 'fetchCampDonations' and 'fetchDonations'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
 
-C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\donation\components\steps\DonorSearchStep.jsx
-  10:3  error  'loading' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
-
 C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\donor\components\DonorList.jsx
   36:6  warning  React Hook useEffect has missing dependencies: 'fetchCampDonors' and 'fetchDonors'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
-
-C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\donor\pages\DonorCreation.jsx
-  2213:52  error  'idx' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
 
 C:\Users\athar\Documents\GitHub\blood-bank\client\src\features\hospital\pages\AddHospital.jsx
   61:30  error  Unnecessary escape character: \(  no-useless-escape
@@ -147,5 +121,5 @@ C:\Users\athar\Documents\GitHub\blood-bank\client\src\store\auth.jsx
     7:14  error  Fast refresh only works when a file only exports components. Move your React context(s) to a separate file                      react-refresh/only-export-components
   184:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
 
-✖ 62 problems (23 errors, 39 warnings)
+✖ 52 problems (13 errors, 39 warnings)
 

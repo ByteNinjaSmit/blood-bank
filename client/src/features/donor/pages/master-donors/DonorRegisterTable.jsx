@@ -1,6 +1,7 @@
 import React from 'react';
 import { Home, Building2, Eye, Edit, Trash2 } from 'lucide-react';
 import { calculateAge, getStatusColor, getStatusText } from './donorRegister.utils';
+import { getEffectiveEligibility } from '@/features/donor/donor-eligibility';
 
 export default function DonorRegisterTable({
   activeTab,
@@ -108,15 +109,20 @@ export default function DonorRegisterTable({
                     <td className="px-4 py-3 text-gray-500 text-xs">
                       {donor.lastDonationDate
                         ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', {
-                          day: '2-digit', month: 'short', year: 'numeric',
+                          month: 'short', year: 'numeric',
                         })
                         : 'N/A'
                       }
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs border font-medium ${getStatusColor(donor.eligibilityStatus)}`}>
-                        {getStatusText(donor.eligibilityStatus)}
-                      </span>
+                      {(() => {
+                        const effectiveStatus = getEffectiveEligibility(donor);
+                        return (
+                          <span className={`px-2 py-0.5 rounded-full text-xs border font-medium ${getStatusColor(effectiveStatus)}`}>
+                            {getStatusText(effectiveStatus)}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">

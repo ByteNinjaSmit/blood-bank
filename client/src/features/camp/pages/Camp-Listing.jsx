@@ -15,7 +15,7 @@ import { useAuth } from "@/store/auth"
 import { useEditWithReason } from "@/hooks/useEditWithReason"
 import { exportCampsExcel } from "@/features/camp/campExcelExport"
 
-const CampList = ({ OnBack }) => {
+const CampList = () => {
   const { camps, loading, fetchCamps, updateCamp, deleteCamp } = useCamp()
   const { user } = useAuth()
   const navigate = useNavigate()

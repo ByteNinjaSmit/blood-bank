@@ -17,6 +17,8 @@ export function getStatusColor(status) {
   switch (status) {
     case 'eligible':
       return 'bg-green-50 text-green-700 border-green-200';
+    case 'recently-donated':
+      return 'bg-orange-50 text-orange-700 border-orange-200';
     case 'deferred':
       return 'bg-red-50 text-red-700 border-red-200';
     case 'temp-deferred':
@@ -30,6 +32,8 @@ export function getStatusText(status) {
   switch (status) {
     case 'eligible':
       return 'Eligible';
+    case 'recently-donated':
+      return 'Recently Donated';
     case 'deferred':
       return 'Deferred';
     case 'temp-deferred':

@@ -149,7 +149,7 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
             <p>
               <span className="font-medium">Last Donation:</span>{' '}
               {donor.lastDonationDate
-                ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
                 : 'No previous donations'
               }
             </p>

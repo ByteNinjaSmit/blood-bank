@@ -44,6 +44,8 @@ export interface DonorDto {
   isAvailableToDonate?: boolean;
   daysUntilEligible?: number;
   ttiReactive?: boolean;
+  deferralReason?: string;
+  deferralUntil?: string | null;
   source?: 'inhouse' | 'camp';
   deletedAt?: string | null;
   createdAt: string;
@@ -146,7 +148,12 @@ export interface DonorRepo {
   findActiveByPhone(phone: string): Promise<DonorDto | null>;
 }
 
-async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto[]> {
+// Enriches a set of donor DTOs with their *actual* last donation (aggregated
+// from the donations collection, not the possibly-stale Donor.lastDonationDate
+// field), active-deferral status, and the resulting isAvailableToDonate /
+// daysUntilEligible / eligibilityStatus. Used by both the register list and
+// the donor search so they agree on who can donate right now.
+export async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto[]> {
   if (dtos.length === 0) return dtos;
   const donorIds = dtos.map(d => new Types.ObjectId(d.id));
   const donations = await DonationModel.aggregate([
@@ -273,6 +280,48 @@ async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto[]> {
       eligibilityStatus: effectiveEligibility,
     };
   });
+}
+
+// Set of donor _id strings currently inside their post-donation waiting window
+// (90 days male / 120 days female), using the later of the stored profile
+// lastDonationDate and their most recent actual donation. Mirrors the
+// per-row interval logic in populateLastDonationId so the "recently-donated"
+// filter and the displayed status agree.
+async function donorIdsWithinDonationWindow(now = new Date()): Promise<Set<string>> {
+  const lastDonations = await DonationModel.aggregate([
+    { $match: { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] } },
+    { $sort: { collectedAt: -1 } },
+    { $group: { _id: '$donor', lastDate: { $first: '$collectedAt' } } },
+  ]);
+  const actualMap = new Map<string, Date>();
+  for (const d of lastDonations) {
+    if (d._id && d.lastDate) actualMap.set(d._id.toString(), new Date(d.lastDate));
+  }
+
+  const donors = (await DonorModel.find(
+    {
+      $or: [
+        { lastDonationDate: { $ne: null } },
+        { _id: { $in: lastDonations.map((d) => d._id).filter(Boolean) } },
+      ],
+    },
+    { sex: 1, lastDonationDate: 1 },
+  ).lean()) as Array<{ _id: { toString(): string }; sex?: string; lastDonationDate?: Date | null }>;
+
+  const within = new Set<string>();
+  for (const dn of donors) {
+    const id = dn._id.toString();
+    const profileDate = dn.lastDonationDate ? new Date(dn.lastDonationDate) : null;
+    const actualDate = actualMap.get(id) ?? null;
+    let eff: Date | null;
+    if (profileDate && actualDate) eff = profileDate > actualDate ? profileDate : actualDate;
+    else eff = profileDate ?? actualDate;
+    if (!eff) continue;
+    const diffDays = Math.floor((now.getTime() - eff.getTime()) / 86_400_000);
+    const waiting = dn.sex === 'F' ? 120 : 90;
+    if (diffDays < waiting) within.add(id);
+  }
+  return within;
 }
 
 async function getDetailedDonationHistory(donorId: string): Promise<any[]> {
@@ -407,9 +456,27 @@ export function createDonorRepo(): DonorRepo {
       if (input.bloodGroup) filter.bloodGroup = input.bloodGroup;
       if (input.rh) filter.rh = input.rh === 'Positive' ? 'POSITIVE' : input.rh === 'Negative' ? 'NEGATIVE' : input.rh;
       if (input.city) filter['address.city'] = input.city;
-      // Filter by eligibility status: support "deferred" to match both deferred types
+      // Filter by eligibility status.
+      // - "deferred" matches both deferred types.
+      // - "eligible" and "recently-donated" are both stored as 'eligible';
+      //   the 90/120-day interval splits them (recently-donated = inside the
+      //   window, eligible = clear of it). Applied via $and so it composes
+      //   with any source/camp _id filters below.
       if (input.eligibilityStatus === 'deferred') {
         filter.eligibilityStatus = { $in: ['deferred', 'temp-deferred'] };
+      } else if (
+        input.eligibilityStatus === 'eligible' ||
+        input.eligibilityStatus === 'recently-donated'
+      ) {
+        filter.eligibilityStatus = 'eligible';
+        const withinIds = [...(await donorIdsWithinDonationWindow())].map(
+          (id) => new Types.ObjectId(id),
+        );
+        filter.$and = ((filter.$and as unknown[]) || []).concat([
+          input.eligibilityStatus === 'recently-donated'
+            ? { _id: { $in: withinIds } }
+            : { _id: { $nin: withinIds } },
+        ]);
       } else if (input.eligibilityStatus) {
         filter.eligibilityStatus = input.eligibilityStatus;
       }

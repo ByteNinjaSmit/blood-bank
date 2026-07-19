@@ -85,7 +85,7 @@ export interface ComponentRepo {
     donationId: string;
     signature: string;
     actorId: string;
-  }): Promise<void>;
+  }): Promise<{ donationId: string }>;
   nearExpiry(
     filters: NearExpiryFilters,
   ): Promise<{ components: any[]; total: number; totalPages: number }>;
@@ -384,6 +384,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
           `Signature: ${signature}`,
         );
       }
+      return { donationId: resolvedDonationId };
     },
 
     async nearExpiry(filters) {

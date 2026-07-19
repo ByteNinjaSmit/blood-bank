@@ -5,6 +5,7 @@ import { useAuth } from '@/store/auth';
 import { checkAccess } from '@/features/user/pages/utils/access';
 import { exportRegisterChoice } from '@/features/donor/donorRegisterExport';
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
+import { getEffectiveEligibility } from '@/features/donor/donor-eligibility';
 import { PAGE_SIZE } from './constants';
 
 // Owns all state + data + actions for the Master Donor Register tabs
@@ -139,9 +140,11 @@ export function useDonorRegister(activeTab) {
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // Local eligibility filter for inhouse/camp tabs (backend may not support it)
+  // Local eligibility filter for inhouse/camp tabs (belt-and-suspenders on top
+  // of the backend filter). Uses the effective status so 'recently-donated'
+  // (derived: eligible but inside the 90/120-day window) matches correctly.
   const items = (activeTab !== 'all' && eligibilityFilter)
-    ? rawItems.filter((d) => d.eligibilityStatus === eligibilityFilter)
+    ? rawItems.filter((d) => getEffectiveEligibility(d) === eligibilityFilter)
     : rawItems;
 
   const eligible = items.filter((d) => d.eligibilityStatus === 'eligible').length;

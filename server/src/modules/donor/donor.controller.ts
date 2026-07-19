@@ -7,7 +7,7 @@ import { Validate } from '@/modules/donor/donor.validator';
 import type { DonorService } from '@/modules/donor/donor.service';
 import { NotFoundError, UnauthorizedError, ValidationError } from '@/shared/errors';
 import { searchDonors, searchDonorsByVector } from '@/core/search/vector-search';
-import { toDto } from './donor.repository';
+import { toDto, populateLastDonationId } from './donor.repository';
 import { createDeferralRepo } from '@/modules/deferral/deferral.repository';
 
 export interface DonorControllers {
@@ -138,9 +138,14 @@ export function createDonorControllers(service: DonorService): DonorControllers 
           limit,
           skip,
         });
+        // Enrich with each donor's *actual* last donation date + active
+        // deferrals so isAvailableToDonate / eligibilityStatus reflect the
+        // 90-day (male) / 120-day (female) interval — the stored
+        // Donor.lastDonationDate is not updated on donation, so toDto alone
+        // would wrongly mark a recent donor as available.
+        const enriched = await populateLastDonationId((result.items || []).map(toDto));
         const mappedItems = [];
-        for (const item of (result.items || [])) {
-          const dto = toDto(item);
+        for (const dto of enriched) {
           if (dto.eligibilityStatus === 'deferred' || dto.eligibilityStatus === 'temp-deferred') {
             const activeDeferral = await deferrals.findLatestActiveByDonor(dto.id);
             if (activeDeferral) {

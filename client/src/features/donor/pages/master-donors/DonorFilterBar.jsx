@@ -73,6 +73,7 @@ export default function DonorFilterBar({
           >
             <option value="">All Status</option>
             <option value="eligible">Eligible</option>
+            <option value="recently-donated">Recently Donated</option>
             <option value="deferred">Deferred</option>
             <option value="temp-deferred">Temp Deferred</option>
           </select>
