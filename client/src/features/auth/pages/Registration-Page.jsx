@@ -22,7 +22,9 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile"
 import { toast } from "sonner"
 import { useAuth } from "@/store/auth"
-import { motion } from "framer-motion"
+import { checkPasswordStrength } from "../password-strength"
+import RegistrationBrandingPanel from "../components/RegistrationBrandingPanel"
+import AccountSetupStep from "../components/AccountSetupStep"
 
 export default function RegisterPage() {
     const navigate = useNavigate();
@@ -51,30 +53,6 @@ export default function RegisterPage() {
     useEffect(() => {
         setMounted(true)
     }, [])
-
-    const checkPasswordStrength = (password) => {
-        const hasUppercase = /[A-Z]/.test(password)
-        const hasNumber = /[0-9]/.test(password)
-        const hasSymbol = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)
-
-        let score = 0
-        if (hasUppercase) score++
-        if (hasNumber) score++
-        if (hasSymbol) score++
-
-        let label = "Weak"
-        if (score === 1) label = "Fair"
-        else if (score === 2) label = "Good"
-        else if (score === 3) label = "Strong"
-
-        return {
-            score,
-            hasUppercase,
-            hasNumber,
-            hasSymbol,
-            label,
-        }
-    }
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -193,30 +171,6 @@ export default function RegisterPage() {
         otpRefs.current[focusIndex]?.focus();
     };
 
-    const bloodBankFeatures = [
-        { icon: Droplets, label: "Blood Inventory", description: "Manage blood units and stock levels" },
-        { icon: UserCheck, label: "Donor Management", description: "Track donors and donation history" },
-        { icon: TestTube, label: "Blood Testing", description: "Monitor test results and quality" },
-        { icon: BarChart3, label: "Medical Reports", description: "Generate medical and inventory reports" },
-    ]
-
-    const roles = [
-        { value: "system-admin", label: "System Administrator" },
-        { value: "bbo", label: "Blood Bank Officer (BBO)" },
-        { value: "medical-officer", label: "Medical Officer" },
-        { value: "counsellor", label: "Counsellor" },
-        { value: "phlebotomist", label: "Phlebotomist" },
-        { value: "lab-tech-component", label: "Lab Tech — Component" },
-        { value: "lab-tech-serology", label: "Lab Tech — Serology" },
-        { value: "store-keeper", label: "Store Keeper" },
-        { value: "issue-counter", label: "Issue Counter" },
-        { value: "apheresis-tech", label: "Apheresis Technician" },
-        { value: "qa-manager", label: "QA Manager" },
-        { value: "auditor", label: "Auditor" },
-        { value: "camp-organiser", label: "Camp Organiser" },
-        { value: "hospital-user", label: "Hospital User" },
-    ]
-
     if (isLoggedIn) {
         navigate('/');
     }
@@ -224,103 +178,7 @@ export default function RegisterPage() {
 
     return (
         <div className="min-h-screen flex flex-col lg:flex-row">
-            {/* Left side - Blood Bank Panel */}
-            <div className="w-full lg:w-1/2 bg-gradient-to-br from-red-950 via-red-900 to-red-800 relative overflow-hidden min-h-[50vh] lg:min-h-screen flex flex-col justify-center">
-                
-                {/* Decorative floating animated blobs */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <motion.div
-                        animate={{
-                            x: [0, 30, 0],
-                            y: [0, -30, 0],
-                            scale: [1, 1.1, 1],
-                        }}
-                        transition={{
-                            duration: 15,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                        }}
-                        className="absolute -top-10 -left-10 w-72 h-72 rounded-full bg-red-600/10 blur-3xl"
-                    />
-                    <motion.div
-                        animate={{
-                            x: [0, -20, 0],
-                            y: [0, 40, 0],
-                            scale: [1, 1.05, 1],
-                        }}
-                        transition={{
-                            duration: 18,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                        }}
-                        className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-rose-600/10 blur-3xl"
-                    />
-                </div>
-
-                <div
-                    className={`relative z-10 flex flex-col items-center justify-center p-6 sm:p-8 lg:p-12 transition-opacity duration-1000 ${
-                        mounted ? "opacity-100" : "opacity-0"
-                    }`}
-                >
-                    {/* Main Heart Icon with pulsing ring */}
-                    <div className="relative mb-6 sm:mb-8">
-                        <motion.div 
-                            animate={{ scale: [1, 1.04, 1] }}
-                            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                            className="w-24 h-24 sm:w-28 sm:h-28 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20 shadow-2xl relative"
-                        >
-                            <div className="absolute inset-0 rounded-full border border-white/10 animate-ping opacity-30" />
-                            <Heart className="w-10 h-10 sm:w-12 sm:h-12 text-white fill-white/10" />
-                        </motion.div>
-                        <div className="absolute -top-1 -right-1 w-8 h-8 sm:w-9 sm:h-9 bg-red-600 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
-                            <Droplets className="w-4 h-4 text-white" />
-                        </div>
-                    </div>
-
-                    {/* Branding */}
-                    <motion.div 
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.2 }}
-                        className="text-center mb-8 lg:mb-12 flex flex-col items-center"
-                    >
-                        <span className="text-[11px] sm:text-xs font-bold tracking-[0.25em] text-red-200/90 uppercase mb-2">
-                            Sai Healthcare Foundation's
-                        </span>
-                        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight drop-shadow-md leading-tight">
-                            SANJIVANI BLOOD BANK
-                        </h1>
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 backdrop-blur-md text-white/95 rounded-full text-[10px] sm:text-xs font-semibold uppercase tracking-widest border border-white/20 shadow-inner mt-3">
-                            Kopargaon
-                        </span>
-                        <p className="text-white/80 text-xs sm:text-sm max-w-sm mt-4 leading-relaxed">
-                            Join our secure medical blood bank management system and contribute to saving lives
-                        </p>
-                    </motion.div>
-
-                    {/* Blood Bank Features Grid */}
-                    {!isMobile && (
-                        <div className="grid grid-cols-2 gap-4 w-full max-w-sm sm:max-w-md px-4 sm:px-0">
-                            {bloodBankFeatures.map((feature, index) => (
-                                <motion.div
-                                    key={index}
-                                    initial={{ opacity: 0, y: 15 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
-                                    whileHover={{ y: -4, backgroundColor: "rgba(255, 255, 255, 0.08)" }}
-                                    className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-lg transition-all duration-300 group cursor-default"
-                                >
-                                    <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center mb-3 group-hover:bg-red-650 group-hover:text-white transition-colors duration-300">
-                                        <feature.icon className="w-5 h-5 text-white" />
-                                    </div>
-                                    <h3 className="text-white font-bold text-xs sm:text-sm mb-1">{feature.label}</h3>
-                                    <p className="text-white/60 text-[11px] leading-relaxed">{feature.description}</p>
-                                </motion.div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
+            <RegistrationBrandingPanel mounted={mounted} isMobile={isMobile} />
 
             {/* Right side - Registration Form */}
             <div
@@ -536,219 +394,17 @@ export default function RegisterPage() {
 
                     {/* Step 2: Account Setup */}
                     {currentStep === 2 && (
-                        <form onSubmit={handleSubmit} className="w-full space-y-4 sm:space-y-6">
-                            <div className="text-center mb-4">
-                                <h2 className="text-lg font-semibold text-gray-900">Account Setup</h2>
-                                <p className="text-sm text-gray-600">Complete your registration</p>
-                            </div>
-
-                            {/* Public ID */}
-                            <div className="space-y-2">
-                                <label htmlFor="publicId" className="text-sm font-medium text-gray-700 block">
-                                    Public ID
-                                </label>
-                                <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                                        <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                                    </div>
-                                    <input
-                                        id="publicId"
-                                        name="publicId"
-                                        type="text"
-                                        disabled={true}
-                                        value={formData.publicId || ''}
-                                        onChange={handleChange}
-                                        className="block w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-4 border-2 border-gray-200 rounded-xl sm:rounded-2xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-800 text-sm sm:text-base"
-                                        placeholder="Auto-generated ID"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Role */}
-                            <div className="space-y-2">
-                                <label htmlFor="role" className="text-sm font-medium text-gray-700 block">
-                                    Role
-                                </label>
-                                <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                                        <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                                    </div>
-                                    <select
-                                        id="role"
-                                        name="role"
-                                        required
-                                        value={formData.role}
-                                        onChange={handleChange}
-                                        className="block w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-4 border-2 border-gray-200 rounded-xl sm:rounded-2xl bg-white text-gray-900 focus:outline-none focus:border-red-800 text-sm sm:text-base appearance-none"
-                                    >
-                                        <option value="" disabled hidden>
-                                            Select Role
-                                        </option>
-
-                                        {roles.map((role) => (
-                                            <option
-                                                key={role.value}
-                                                value={role.value}
-                                                className="bg-white text-gray-900 focus:bg-orange-800 hover:bg-red-100 cursor-pointer"
-                                            >
-                                                {role.label}
-                                            </option>
-                                        ))}
-                                    </select>
-
-                                </div>
-                            </div>
-
-                            {/* Password */}
-                            <div className="space-y-2">
-                                <label htmlFor="password" className="text-sm font-medium text-gray-700 block">
-                                    Password
-                                </label>
-                                <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                                        <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                                    </div>
-                                    <input
-                                        id="password"
-                                        name="password"
-                                        type={showPassword ? "text" : "password"}
-                                        required
-                                        value={formData.password}
-                                        onChange={handleChange}
-                                        className="block w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-3 sm:py-4 border-2 border-gray-200 rounded-xl sm:rounded-2xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-800 text-sm sm:text-base"
-                                        placeholder="Create a strong password"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute cursor-pointer right-0 pr-3 sm:pr-4 inset-y-0 flex items-center"
-                                    >
-                                        {showPassword ? (
-                                            <EyeOff className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                                        ) : (
-                                            <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                                        )}
-                                    </button>
-                                </div>
-
-                                {formData.password && (
-                                    <div className="mt-2 space-y-2">
-                                        {/* Progress Bar */}
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                                <div
-                                                    className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.score === 0
-                                                        ? "w-1/4 bg-red-500"
-                                                        : passwordStrength.score === 1
-                                                            ? "w-2/4 bg-orange-500"
-                                                            : passwordStrength.score === 2
-                                                                ? "w-3/4 bg-yellow-500"
-                                                                : "w-full bg-green-500"
-                                                        }`}
-                                                />
-                                            </div>
-                                            <span
-                                                className={`text-xs font-medium ${passwordStrength.score === 0
-                                                    ? "text-red-600"
-                                                    : passwordStrength.score === 1
-                                                        ? "text-orange-600"
-                                                        : passwordStrength.score === 2
-                                                            ? "text-yellow-600"
-                                                            : "text-green-600"
-                                                    }`}
-                                            >
-                                                {passwordStrength.label}
-                                            </span>
-                                        </div>
-
-                                        {/* Requirements Checklist */}
-                                        <div className="grid grid-cols-1 gap-1 text-xs">
-                                            <div
-                                                className={`flex items-center gap-2 ${passwordStrength.hasUppercase ? "text-green-600" : "text-gray-500"}`}
-                                            >
-                                                <div
-                                                    className={`w-3 h-3 rounded-full flex items-center justify-center ${passwordStrength.hasUppercase ? "bg-green-100" : "bg-gray-100"}`}
-                                                >
-                                                    {passwordStrength.hasUppercase && <CheckCircle className="w-2 h-2" />}
-                                                </div>
-                                                <span>Uppercase letter</span>
-                                            </div>
-                                            <div
-                                                className={`flex items-center gap-2 ${passwordStrength.hasNumber ? "text-green-600" : "text-gray-500"}`}
-                                            >
-                                                <div
-                                                    className={`w-3 h-3 rounded-full flex items-center justify-center ${passwordStrength.hasNumber ? "bg-green-100" : "bg-gray-100"}`}
-                                                >
-                                                    {passwordStrength.hasNumber && <CheckCircle className="w-2 h-2" />}
-                                                </div>
-                                                <span>Number</span>
-                                            </div>
-                                            <div
-                                                className={`flex items-center gap-2 ${passwordStrength.hasSymbol ? "text-green-600" : "text-gray-500"}`}
-                                            >
-                                                <div
-                                                    className={`w-3 h-3 rounded-full flex items-center justify-center ${passwordStrength.hasSymbol ? "bg-green-100" : "bg-gray-100"}`}
-                                                >
-                                                    {passwordStrength.hasSymbol && <CheckCircle className="w-2 h-2" />}
-                                                </div>
-                                                <span>Symbol (!@#$%^&*)</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Confirm Password */}
-                            <div className="space-y-2">
-                                <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 block">
-                                    Confirm Password
-                                </label>
-                                <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                                        <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                                    </div>
-                                    <input
-                                        id="confirmPassword"
-                                        name="confirmPassword"
-                                        type={showConfirmPassword ? "text" : "password"}
-                                        required
-                                        value={formData.confirmPassword}
-                                        onChange={handleChange}
-                                        className="block w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-3 sm:py-4 border-2 border-gray-200 rounded-xl sm:rounded-2xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-800 text-sm sm:text-base"
-                                        placeholder="Confirm your password"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute cursor-pointer right-0 pr-3 sm:pr-4 inset-y-0 flex items-center"
-                                    >
-                                        {showConfirmPassword ? (
-                                            <EyeOff className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                                        ) : (
-                                            <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={handlePrevStep}
-                                    className="flex-1 flex cursor-pointer items-center justify-center px-4 sm:px-6 py-3 sm:py-4 border-2 border-red-800 rounded-xl sm:rounded-2xl text-sm sm:text-base font-medium text-red-800 bg-white hover:bg-red-50 transition-all duration-200"
-                                >
-                                    <ArrowLeft className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                                    Back
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 flex cursor-pointer items-center justify-center px-4 sm:px-6 py-3 sm:py-4 border border-transparent rounded-xl sm:rounded-2xl text-sm sm:text-base font-medium text-white bg-gradient-to-r from-red-800 to-red-900 hover:from-red-900 hover:to-red-950 transition-all duration-200"
-                                >
-                                    Create
-                                    <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-                                </button>
-                            </div>
-                        </form>
+                        <AccountSetupStep
+                            formData={formData}
+                            handleChange={handleChange}
+                            showPassword={showPassword}
+                            setShowPassword={setShowPassword}
+                            showConfirmPassword={showConfirmPassword}
+                            setShowConfirmPassword={setShowConfirmPassword}
+                            passwordStrength={passwordStrength}
+                            handleSubmit={handleSubmit}
+                            handlePrevStep={handlePrevStep}
+                        />
                     )}
 
                     {/* Security Badge */}
