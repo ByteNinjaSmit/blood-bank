@@ -153,43 +153,35 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                   </span>
 
                   {/* Two-column grid for details */}
-                  <div className="grid grid-cols-2 gap-x-4 text-[9.5px] font-bold text-black uppercase leading-tight mt-1">
+                  <div className="grid grid-cols-2 gap-x-4 text-[9px] font-bold text-black uppercase leading-tight mt-1">
                     {/* Column 1 */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Age</span><span>: {doc.patientAge || doc.patient?.age || '—'} Years</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Sex</span><span>: {doc.patientGender || doc.patient?.gender || doc.patient?.sex || '—'}</span>
-                      </div>
-                      <div className="flex justify-between truncate">
-                        <span>Hospital</span><span>: {doc.hospitalId?.name || '—'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>X-Match</span><span>: {formatShortDate(doc.issuedAt || doc.completedAt || new Date())} by {moSignatureName}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Ward/Bed</span><span>: {doc.wardNo || '—'} / {doc.bedNo || '—'}</span>
-                      </div>
+                    <div className="grid grid-cols-[auto_1fr] gap-x-1 gap-y-1.5">
+                      <span>Age</span>
+                      <span>: {doc.patientAge || doc.patient?.age || '—'} Years</span>
+
+                      <span>Sex</span>
+                      <span>: {doc.patientGender || doc.patient?.gender || doc.patient?.sex || '—'}</span>
+
+                      <span className="truncate">Hospital</span>
+                      <span className="truncate">: {doc.hospitalId?.name || '—'}</span>
+
+                      <span>X-Match</span>
+                      <span>: {formatShortDate(unit.crossmatchDoneAt || doc.issuedAt || doc.completedAt || new Date())} by {moSignatureName}</span>
                     </div>
 
                     {/* Column 2 */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>CRN</span><span>: {doc.crn || doc.patient?.crn || doc.patient?.mrn || '—'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Patient B.G</span><span>: {patientBloodGroup}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>RID</span><span>: {doc.requestId || '—'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Method</span><span>: Fully automated</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Issue No</span><span>: {doc.issueNo || doc.requestId || '—'}</span>
-                      </div>
+                    <div className="grid grid-cols-[auto_1fr] gap-x-1 gap-y-1.5">
+                      <span>Patient B.G</span>
+                      <span>: {patientBloodGroup}</span>
+
+                      <span>RID</span>
+                      <span>: {doc.requestId || '—'}</span>
+
+                      <span>Method</span>
+                      <span>: Fully automated</span>
+
+                      <span>Issue No</span>
+                      <span>: {unit.issueId || doc.issueNo || doc.requestId || '—'}</span>
                     </div>
                   </div>
                 </div>

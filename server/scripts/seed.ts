@@ -15,7 +15,6 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-import { PERMISSION } from '@/shared/enums';
 import { UserModel } from '@/modules/user/user.model';
 import { HospitalModel } from '@/modules/hospital/hospital.model';
 import { VendorModel } from '@/modules/vendor/vendor.model';
@@ -39,6 +38,10 @@ import { BagInspectionModel } from '@/modules/bag-inspection/bag-inspection.mode
 import { BagIssueModel } from '@/modules/bag-issue/bag-issue.model';
 import { BagDiscardModel } from '@/modules/bag-discard/bag-discard.model';
 import { AuditLogModel } from '@/modules/audit/audit.model';
+import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
+import { AppointmentModel } from '@/modules/appointment/appointment.model';
+import { InAppNotificationModel } from '@/modules/notification/notification.model';
+import { DonorCardModel } from '@/modules/donor-card/donor-card.model';
 import {
   ChemicalCategoryModel,
   ChemicalManufacturerModel,
@@ -47,10 +50,8 @@ import {
   ChemicalPurchaseModel,
   ChemicalStockLotModel,
   ChemicalStockHistoryModel,
+  ChemicalDamageModel,
 } from '@/modules/chemical-inventory/chemical-inventory.model';
-
-const PASSWORD = 'Password@123';
-const ADMIN_EMAIL = 'smitrajbankar11@gmail.com';
 
 // ── volume knobs ────────────────────────────────────────────────────────────
 const N_DONORS = 300;
@@ -96,17 +97,21 @@ const rhPick = (): RH => (chance(0.92) ? 'POSITIVE' : 'NEGATIVE');
 const aboPick = (): ABO => choice(ABO_WEIGHTED);
 
 async function clearAll() {
+  // NOTE: UserModel is deliberately NOT in this list. User/role/permission
+  // management is out of scope — the users collection is never wiped or mutated.
   const models = [
-    UserModel, HospitalModel, VendorModel, CampModel, CampDonationModel,
+    HospitalModel, VendorModel, CampModel, CampDonationModel,
     DonorModel, DeferralModel, DonationModel, TtiResultModel, BloodUnitModel,
     PatientModel, RequisitionModel, CrossmatchModel, IssueModel, TransfusionModel,
     AdverseReactionModel, PurchaseOrderModel, GoodsReceiptModel, BagStockModel,
     BagInspectionModel, BagIssueModel, BagDiscardModel, AuditLogModel,
+    BulkTransferModel, AppointmentModel, InAppNotificationModel, DonorCardModel,
     ChemicalCategoryModel, ChemicalManufacturerModel, ChemicalSupplierModel,
     ChemicalModel, ChemicalPurchaseModel, ChemicalStockLotModel, ChemicalStockHistoryModel,
+    ChemicalDamageModel,
   ];
   for (const m of models) await m.deleteMany({});
-  console.log('cleared', models.length, 'collections');
+  console.log('cleared', models.length, 'collections (users preserved)');
 }
 
 async function main() {
@@ -116,44 +121,34 @@ async function main() {
   console.log('connected');
   await clearAll();
 
-  // ── 1. USERS (one per role) ──────────────────────────────────────────────
-  const roleUsers: Array<{ role: string; first: string; last: string; email: string }> = [
-    { role: 'system-admin', first: 'Smitraj', last: 'Bankar', email: ADMIN_EMAIL },
-    { role: 'bbo', first: 'Bhushan', last: 'Officer', email: 'bbo@sanjivani.test' },
-    { role: 'medical-officer', first: 'Meera', last: 'Doctor', email: 'mo@sanjivani.test' },
-    { role: 'counsellor', first: 'Chetan', last: 'Counsel', email: 'counsellor@sanjivani.test' },
-    { role: 'phlebotomist', first: 'Priya', last: 'Phlebo', email: 'phlebo@sanjivani.test' },
-    { role: 'lab-tech-component', first: 'Lalit', last: 'Component', email: 'labcomp@sanjivani.test' },
-    { role: 'lab-tech-serology', first: 'Sneha', last: 'Serology', email: 'labsero@sanjivani.test' },
-    { role: 'store-keeper', first: 'Sanjay', last: 'Store', email: 'store@sanjivani.test' },
-    { role: 'issue-counter', first: 'Ishan', last: 'Counter', email: 'issue@sanjivani.test' },
-    { role: 'apheresis-tech', first: 'Asha', last: 'Apheresis', email: 'apheresis@sanjivani.test' },
-    { role: 'qa-manager', first: 'Qadir', last: 'Quality', email: 'qa@sanjivani.test' },
-    { role: 'auditor', first: 'Anil', last: 'Audit', email: 'auditor@sanjivani.test' },
-    { role: 'camp-organiser', first: 'Karan', last: 'Camp', email: 'camp@sanjivani.test' },
-    { role: 'hospital-user', first: 'Hema', last: 'Hospital', email: 'hospital@sanjivani.test' },
-  ];
-  // Full permission grid (every module, all CRUD flags) for the admin.
-  const fullGrid = Array.from(new Set(PERMISSION.map((p) => p.split(':')[0]))).map((moduleName) => ({
-    moduleName, view: true, create: true, update: true, delete: true,
-  }));
-  const users: Record<string, InstanceType<typeof UserModel>> = {};
-  let userSeq = 1;
-  for (const u of roleUsers) {
-    users[u.role] = await UserModel.create({
-      publicId: `USR-2026-${pad(userSeq++)}`,
-      name: { first: u.first, last: u.last },
-      email: u.email, phone: `+9198${pad(20000000 + userSeq, 8)}`,
-      role: u.role, password: PASSWORD, status: 'active',
-      permissions: u.role === 'system-admin' ? fullGrid : [],
-    });
+  // ── 1. USERS — REUSE EXISTING ONLY (never cleared, never created) ─────────
+  // Out of scope: user/role/permission management. We look up whatever users
+  // already exist and route every createdBy/actor reference through pick(role),
+  // falling back to the system-admin (or first user) when a role is absent.
+  const existingUsers = (await UserModel.find({}).lean()) as Array<{ _id: any; role: string; email?: string }>;
+  if (existingUsers.length === 0) {
+    console.error('No users found. This seed reuses existing users — create at least the system-admin first (e.g. scripts/seed-admins.ts). Aborting.');
+    process.exit(1);
   }
-  const admin = users['system-admin']._id;
-  const tech = users['lab-tech-serology']._id;
-  const mo = users['medical-officer']._id;
-  const phlebo = users['phlebotomist']._id;
+  const adminUser = existingUsers.find((u) => u.role === 'system-admin') ?? existingUsers[0];
+  const byRole = new Map<string, { _id: any }>();
+  for (const u of existingUsers) if (!byRole.has(u.role)) byRole.set(u.role, u);
+  const pick = (role: string): any => (byRole.get(role) ?? adminUser)._id;
+
+  const ROLES = [
+    'system-admin', 'bbo', 'medical-officer', 'counsellor', 'phlebotomist',
+    'lab-tech-component', 'lab-tech-serology', 'store-keeper', 'issue-counter',
+    'apheresis-tech', 'qa-manager', 'auditor', 'camp-organiser', 'hospital-user',
+  ] as const;
+  const users: Record<string, { _id: any }> = {};
+  for (const r of ROLES) users[r] = { _id: pick(r) };
+
+  const admin = pick('system-admin');
+  const tech = pick('lab-tech-serology');
+  const mo = pick('medical-officer');
+  const phlebo = pick('phlebotomist');
   const audit = { createdBy: admin, updatedBy: admin };
-  console.log('users:', Object.keys(users).length);
+  console.log(`reusing ${existingUsers.length} existing users (users collection untouched); admin=${adminUser.email ?? adminUser._id}`);
 
   // ── 2. HOSPITALS ─────────────────────────────────────────────────────────
   const hospNames = ['Sanjivani General', 'Noble Multispeciality', 'City Care', 'Lifeline', 'Aastha', 'Suyog', 'Sahyadri', 'Jeevan Jyoti', 'Aditya', 'Krishna', 'Sushrut', 'Apex', 'Ruby Hall', 'Wockhardt', 'Deenanath'];
@@ -222,7 +217,9 @@ async function main() {
       occupation: choice(OCCUPATIONS), weightKg: randInt(50, 95),
       bloodGroup: aboPick(), rh: rhPick(),
       eligibilityStatus: elig,
-      lastDonationDate: chance(0.7) ? ago(randInt(90, 400)) : undefined,
+      // lastDonationDate is intentionally left unset here and back-filled from
+      // the donor's actual seeded donation(s) below, so the profile date always
+      // corresponds to a real Donation record.
       createdBy: phlebo, updatedBy: phlebo,
     }));
   }
@@ -249,9 +246,13 @@ async function main() {
   for (let i = 0; i < N_DONATIONS; i++) {
     const donor = donors[i]; // first 72 donors donate (distinct)
     const isCamp = chance(0.35) && pastCamps.length > 0;
-    // Bias toward recent collections so live inventory isn't all expired
-    // (PRBC shelf life is 35d): ~65% within 30d, rest spread to 180d.
-    const collectedAt = chance(0.65) ? ago(randInt(1, 28)) : ago(randInt(29, 180));
+    // Three explicit horizons so both "a month ago" and "6 months ago" exist:
+    //  ~40% within 28d (fresh → live RELEASED PRBC/FFP),
+    //  ~30% ~1 month ago (PRBC now EXPIRED, FFP still valid),
+    //  ~30% ~6 months ago (PRBC/RDP expired, FFP near/at expiry).
+    const bucket = rnd();
+    const collectedAt =
+      bucket < 0.4 ? ago(randInt(1, 28)) : bucket < 0.7 ? ago(randInt(30, 45)) : ago(randInt(170, 190));
     donations.push(await DonationModel.create({
       donationId: `DON-2026-${pad(i + 1)}`,
       bagNo: `BAG${5000 + i}`, segmentNo: `SEG${i + 1}`, lotNo: `LOT-${choice(['A', 'B', 'C'])}${i + 1}`,
@@ -261,13 +262,29 @@ async function main() {
       medicalExam: {
         weightKg: donor.weightKg, hbGdl: 12.5 + rnd() * 4, temperatureCelsius: 36.5 + rnd(),
         pulseBpm: randInt(65, 90), bloodPressure: { systolic: randInt(110, 130), diastolic: randInt(70, 88) },
-        oxygenSaturationPercent: randInt(96, 100), skinClearAtPhlebotomy: true, armsFreeOfPunctureScars: true, volumeMl: 450,
+        oxygenSaturationPercent: randInt(96, 100), skinClearAtPhlebotomy: chance(0.95), armsFreeOfPunctureScars: chance(0.95), volumeMl: 450,
       },
       donorFitness: { isFit: true }, typeOfBag: 'SB',
       createdBy: phlebo, updatedBy: phlebo,
     }));
   }
   console.log('donations:', donations.length);
+
+  // Back-fill each donor's lastDonationDate from their most-recent real
+  // donation, so the profile date is always backed by a Donation record.
+  const lastByDonor = new Map<string, Date>();
+  for (const d of donations) {
+    const key = String(d.donor);
+    const when = d.collectedAt as Date;
+    const prev = lastByDonor.get(key);
+    if (!prev || when > prev) lastByDonor.set(key, when);
+  }
+  await Promise.all(
+    [...lastByDonor.entries()].map(([donorId, when]) =>
+      DonorModel.updateOne({ _id: donorId }, { $set: { lastDonationDate: when } }),
+    ),
+  );
+  console.log('donor lastDonationDate back-filled from donations:', lastByDonor.size);
 
   // ── 8. TTI RESULTS (one per donation; ~5% reactive) ──────────────────────
   const TTI_TESTS = ['HIV', 'HBSAG', 'HCV', 'SYPHILIS', 'MALARIA'] as const;
@@ -348,6 +365,70 @@ async function main() {
   }
   const statusCount = units.reduce<Record<string, number>>((a, u) => ((a[u.status as string] = (a[u.status as string] ?? 0) + 1), a), {});
   console.log('blood units:', units.length, statusCount);
+
+  // ── 9b. SIX-MONTH FULLY-PROCESSED COHORT ─────────────────────────────────
+  // Dedicated set of donors who donated ~6 months ago with the full clinical
+  // chain done: a Donation record, a released (negative) TTI result, and
+  // separated components (PRBC/FFP[/RDP]). Aged out naturally — PRBC/RDP show
+  // EXPIRED, FFP still RELEASED — so the record shows collection → testing →
+  // separation all completed. Distinct IDs (…-6M-…) make the cohort easy to find.
+  const N_SIXMONTH = 25;
+  const sixMonthTti: Array<Record<string, unknown>> = [];
+  let sixUnits = 0;
+  for (let i = 0; i < N_SIXMONTH; i++) {
+    const sex = chance(0.55) ? 'M' : 'F';
+    const fn = sex === 'M' ? choice(MALE) : choice(FEMALE);
+    const ln = choice(LAST);
+    const [city, district, pincode] = choice(CITIES);
+    const age = randInt(18, 64);
+    const abo = aboPick();
+    const rh = rhPick();
+    const collectedAt = ago(randInt(178, 195)); // ~6 months ago
+    const donor = await DonorModel.create({
+      donorId: `DNR-2026-6M-${pad(i + 1, 3)}`, name: { firstName: fn, lastName: ln },
+      uid: `UID6M${100000 + i}`, dob: new Date(2026 - age, randInt(0, 11), randInt(1, 27)),
+      sex, phone: `+9195${pad(randInt(10000000, 99999999), 8)}`,
+      email: `${fn.toLowerCase()}.${ln.toLowerCase()}.6m${i}@donor.test`,
+      address: { line1: `${randInt(1, 200)} ${choice(['Gandhi', 'Nehru', 'Shivaji', 'Tilak'])} Path`, city, district, state: 'Maharashtra', pincode },
+      occupation: choice(OCCUPATIONS), weightKg: randInt(50, 95),
+      bloodGroup: abo, rh, eligibilityStatus: 'eligible',
+      lastDonationDate: collectedAt, createdBy: phlebo, updatedBy: phlebo,
+    });
+    const donationId = `DON-2026-6M-${pad(i + 1, 3)}`;
+    await DonationModel.create({
+      donationId, bagNo: `BAG6M${5000 + i}`, segmentNo: `SEG6M${i + 1}`, lotNo: `LOT-6M${i + 1}`,
+      donor: donor._id, donationType: 'WHOLE_BLOOD', collectedAt, phlebotomistId: phlebo,
+      medicalExam: {
+        weightKg: donor.weightKg, hbGdl: 12.5 + rnd() * 4, temperatureCelsius: 36.5 + rnd(),
+        pulseBpm: randInt(65, 90), bloodPressure: { systolic: randInt(110, 130), diastolic: randInt(70, 88) },
+        oxygenSaturationPercent: randInt(96, 100), skinClearAtPhlebotomy: true, armsFreeOfPunctureScars: true, volumeMl: 450,
+      },
+      donorFitness: { isFit: true }, typeOfBag: 'SB', createdBy: phlebo, updatedBy: phlebo,
+    });
+    // TTI done — released, all negative.
+    sixMonthTti.push({
+      donationId, aboGroupConfirmed: abo, rhFactorConfirmed: rh,
+      tests: TTI_TESTS.map((t) => ({
+        testName: t, method: choice(['ELISA', 'CLIA', 'RAPID'] as const), result: 'NEGATIVE',
+        technicianId: tech, performedAt: new Date(collectedAt.getTime() + days(1)), kitLot: `KIT-${t}-${randInt(1, 9)}`,
+      })),
+      releaseDecision: 'released', decidedBy: users['bbo']._id, decidedAt: new Date(collectedAt.getTime() + days(2)), ...audit,
+    });
+    // Components separated.
+    for (const comp of compsFor('WHOLE_BLOOD')) {
+      const expiresAt = expiryFor(comp, collectedAt);
+      const status = expiresAt < new Date() ? 'EXPIRED' : 'RELEASED';
+      units.push(await BloodUnitModel.create({
+        unitId: `UNIT-2026-${pad(unitSeq++, 5)}`, donationId, componentType: comp,
+        aboGroup: abo, rhFactor: rh, volumeMl: comp === 'FFP' ? 220 : comp === 'RDP' ? 60 : 280,
+        collectedAt, expiresAt, status, statusHistory: hist(status, admin), specialAttributes: [],
+        createdBy: users['lab-tech-component']._id, updatedBy: users['lab-tech-component']._id,
+      }));
+      sixUnits++;
+    }
+  }
+  await TtiResultModel.create(sixMonthTti);
+  console.log(`6-month cohort: donors×${N_SIXMONTH}, donations×${N_SIXMONTH}, tti×${N_SIXMONTH}, components×${sixUnits}`);
 
   // back-link past camps' donorData / unitData
   for (const camp of pastCamps) {
@@ -467,6 +548,71 @@ async function main() {
   }
   console.log('requisitions:', reqDocs.length, '| crossmatch:', xmSeq - 1, '| issues:', issSeq - 1, '| transfusions:', txnSeq - 1, '| reactions:', arSeq - 1);
 
+  // ── 15b. DONOR CARDS (replacement-donor cards vs requisitions) ────────────
+  const donorCardDocs = reqDocs.slice(0, 15).map((req, i) => ({
+    requisitionId: req._id,
+    name: `${choice(MALE.concat(FEMALE))} ${choice(LAST)}`,
+    address: `${choice(CITIES)[0]}, Maharashtra`,
+    bloodGroup: choice(['O+', 'A+', 'B+', 'AB+', 'O-', 'A-', 'B-', 'AB-']),
+    donationCardNumber: `DC-2026-${pad(i + 1)}`,
+    createdBy: users['issue-counter']._id,
+  }));
+  await DonorCardModel.create(donorCardDocs);
+  console.log('donor cards:', donorCardDocs.length);
+
+  // ── 15c. BULK TRANSFER (loan give / loan take to/from other banks) ─────────
+  const OTHER_BANKS: Array<[string, string]> = [
+    ['District Civil Hospital Blood Bank', 'Civil Lines, Ahmednagar'],
+    ['Ruby Hall Clinic Blood Bank', 'Sassoon Road, Pune'],
+    ['Sassoon General Blood Bank', 'Near Railway Stn, Pune'],
+    ['Nashik Red Cross Blood Bank', 'Old Agra Road, Nashik'],
+    ['Aurangabad GMC Blood Bank', 'Ghati Campus, Aurangabad'],
+  ];
+  const bgStr = (u: { aboGroup: unknown; rhFactor: unknown }) =>
+    `${u.aboGroup as string}${u.rhFactor === 'POSITIVE' ? '+' : '-'}`;
+  const loanable = units.filter((u) => u.status === 'RELEASED' && !usedUnit.has(u.unitId));
+  let btSeq = 1;
+  const btDocs: Array<Record<string, unknown>> = [];
+  // GIVE_LOAN: bags loaned out (reference our released units — a separate paper trail).
+  for (let i = 0; i < 8; i++) {
+    const [bankName, bankAddr] = OTHER_BANKS[i % OTHER_BANKS.length];
+    const take = loanable.splice(0, randInt(1, 3));
+    if (take.length === 0) break;
+    for (const u of take) usedUnit.add(u.unitId);
+    btDocs.push({
+      transferId: `BT-2026-G${pad(btSeq++)}`, transferType: 'GIVE_LOAN',
+      bloodBankName: bankName, bloodBankAddress: bankAddr, transferDate: ago(randInt(1, 90)),
+      items: take.map((u, k) => ({
+        componentType: u.componentType, bloodGroup: bgStr(u),
+        bagNo: `LOAN-OUT-${pad(btSeq, 3)}${k}`, segmentNo: `SEG${k + 1}`,
+        volumeMl: u.volumeMl, collectedAt: u.collectedAt, expiresAt: u.expiresAt, unitId: u._id,
+      })),
+      notes: 'Inter-bank loan issued', ...audit,
+    });
+  }
+  // TAKE_LOAN: bags borrowed from other banks (no local BloodUnit record).
+  for (let i = 0; i < 8; i++) {
+    const [bankName, bankAddr] = OTHER_BANKS[(i + 2) % OTHER_BANKS.length];
+    const n = randInt(1, 3);
+    const collectedAt = ago(randInt(5, 30));
+    btDocs.push({
+      transferId: `BT-2026-T${pad(btSeq++)}`, transferType: 'TAKE_LOAN',
+      bloodBankName: bankName, bloodBankAddress: bankAddr, transferDate: ago(randInt(1, 90)),
+      items: Array.from({ length: n }, (_, k) => {
+        const comp = choice(['PRBC', 'FFP', 'RDP'] as const);
+        return {
+          componentType: comp, bloodGroup: choice(['O+', 'A+', 'B+', 'AB+', 'O-', 'A-', 'B-', 'AB-']),
+          bagNo: `LOAN-IN-${pad(btSeq, 3)}${k}`, segmentNo: `SEG${k + 1}`,
+          volumeMl: comp === 'FFP' ? 220 : comp === 'RDP' ? 60 : 280,
+          collectedAt, expiresAt: new Date(collectedAt.getTime() + days(comp === 'RDP' ? 5 : comp === 'FFP' ? 365 : 35)),
+        };
+      }),
+      notes: 'Inter-bank loan received', ...audit,
+    });
+  }
+  await BulkTransferModel.create(btDocs);
+  console.log('bulk transfers:', btDocs.length, `(give=${btDocs.filter((d) => d.transferType === 'GIVE_LOAN').length}, take=${btDocs.filter((d) => d.transferType === 'TAKE_LOAN').length})`);
+
   // ── 16. PROCUREMENT CHAIN ────────────────────────────────────────────────
   const BAG_TYPES = ['SINGLE', 'DOUBLE', 'TRIPLE', 'QUADRUPLE'] as const;
   const ANTICO = ['CPDA_1', 'CPD', 'ACD', 'SAG_MANNITOL'] as const;
@@ -544,24 +690,41 @@ async function main() {
   }
   console.log('bag issues:', N_BAG_ISSUES, '| bag discards:', N_BAG_DISCARDS);
 
-  // ── 17. CHEMICAL INVENTORY ───────────────────────────────────────────────
-  const cats = await ChemicalCategoryModel.create([
-    { name: 'TTI Reagents', description: 'ELISA / rapid test kits', ...audit },
-    { name: 'Blood Grouping', description: 'Antisera + cells', ...audit },
-    { name: 'Crossmatch', description: 'AHG / Coombs reagents', ...audit },
-  ]);
-  const mfrs = await ChemicalManufacturerModel.create([
-    { name: 'J. Mitra & Co', ...audit }, { name: 'Tulip Diagnostics', ...audit }, { name: 'Span Diagnostics', ...audit },
-  ]);
+  // ── 17. CHEMICAL INVENTORY (exact reagent register) ──────────────────────
+  // Categories exactly as used on the Chemical Management screen.
+  const catDefs = ['Lab Reagents & Kits', 'Blood Grouping Reagents', 'ELISA / Microlisa Kits'];
+  const catByName: Record<string, InstanceType<typeof ChemicalCategoryModel>> = {};
+  for (const name of catDefs) {
+    catByName[name] = await ChemicalCategoryModel.create({ name, description: name, ...audit });
+  }
+  // Single manufacturer per the supplied list.
+  const tulip = await ChemicalManufacturerModel.create({ name: 'Tulip Diagnostics', ...audit });
   const sups = await ChemicalSupplierModel.create([
     { name: 'Diagnostics Hub Pvt Ltd', contactPerson: choice(LAST), phone: '+91-22-40000003', email: 'sales@dhub.test', gstNumber: '27AABCD9012C1Z3', address: 'Mumbai, MH', ...audit },
     { name: 'MedSupply Traders', contactPerson: choice(LAST), phone: '+91-20-40000004', email: 'sales@medsupply.test', gstNumber: '27AABCD3456E1Z7', address: 'Pune, MH', ...audit },
   ]);
-  const chemNames = ['HIV ELISA Kit', 'HBsAg ELISA Kit', 'HCV ELISA Kit', 'Anti-A Sera', 'Anti-B Sera', 'Anti-D Sera', 'Coombs (AHG) Reagent', 'Malaria Rapid Card'];
-  const chems = await ChemicalModel.create(chemNames.map((n, i) => ({
-    name: n, categoryId: cats[i % cats.length]._id, manufacturerId: mfrs[i % mfrs.length]._id,
-    unitType: choice(['Bottle', 'Kit', 'Card', 'Pack'] as const), minStockLevel: randInt(3, 8), reorderLevel: randInt(9, 15), isActive: true, ...audit,
+  // [name, category, unitType] — exactly the supplied 13 chemicals.
+  const chemDefs: Array<[string, string, 'Bottle' | 'Kit']> = [
+    ['Anti-A', 'Lab Reagents & Kits', 'Bottle'],
+    ['Anti-A1', 'Blood Grouping Reagents', 'Bottle'],
+    ['Anti-AB', 'Lab Reagents & Kits', 'Bottle'],
+    ['Anti-AHG', 'Blood Grouping Reagents', 'Bottle'],
+    ['Anti-B', 'Lab Reagents & Kits', 'Bottle'],
+    ['Anti-D', 'Blood Grouping Reagents', 'Bottle'],
+    ['Anti-H', 'Blood Grouping Reagents', 'Bottle'],
+    ['Bovine', 'Blood Grouping Reagents', 'Bottle'],
+    ['HBsAg ELISA', 'ELISA / Microlisa Kits', 'Kit'],
+    ['HCV ELISA', 'ELISA / Microlisa Kits', 'Kit'],
+    ['HIV ELISA', 'ELISA / Microlisa Kits', 'Kit'],
+    ['MP ELISA', 'ELISA / Microlisa Kits', 'Kit'],
+    ['VDRL ELISA', 'ELISA / Microlisa Kits', 'Kit'],
+  ];
+  const chems = await ChemicalModel.create(chemDefs.map(([name, cat, unitType]) => ({
+    name, categoryId: catByName[cat]._id, manufacturerId: tulip._id,
+    unitType, minStockLevel: 5, reorderLevel: 10, isActive: true, ...audit,
   })));
+  // Purchases → stock lots → stock history, spread across the chemicals.
+  const chemLots: Array<{ chemId: unknown; lotId: unknown; avail: number }> = [];
   let cinvSeq = 1;
   for (let i = 0; i < N_CHEM_PURCHASES; i++) {
     const sup = choice(sups);
@@ -570,23 +733,35 @@ async function main() {
       totalAmount: randInt(20000, 80000), paidAmount: randInt(10000, 80000), paymentStatus: choice(['Pending', 'Partially Paid', 'Fully Paid'] as const),
       remarks: 'Reagent purchase', ...audit,
     });
-    const chem = choice(chems);
-    const mfr = mfrs.find((m) => String(m._id) === String(chem.manufacturerId))!;
+    const chem = chems[i % chems.length];
     const qty = randInt(10, 40);
     const used = randInt(0, qty);
     const lot = await ChemicalStockLotModel.create({
       chemicalId: chem._id, purchaseId: pur._id, purchaseDate: pur.purchaseDate, invoiceNumber: pur.invoiceNumber,
-      supplierId: sup._id, manufacturerId: mfr._id, lotNumber: `LOT-${randInt(1000, 9999)}`, batchNumber: `B-${randInt(100, 999)}`,
+      supplierId: sup._id, manufacturerId: tulip._id, lotNumber: `LOT-${randInt(1000, 9999)}`, batchNumber: `B-${randInt(100, 999)}`,
       mfgDate: ago(randInt(60, 120)), expiryDate: ahead(randInt(120, 400)), qtyPurchased: qty, qtyAvailable: qty - used,
       qtyInUse: Math.min(used, 5), qtyConsumed: Math.max(0, used - 5), costPerUnit: randInt(500, 3000), totalCost: randInt(20000, 80000),
       cgstAmount: 4500, sgstAmount: 4500, cgstPercent: 9, sgstPercent: 9, totalAmount: randInt(20000, 90000), ...audit,
     });
+    chemLots.push({ chemId: chem._id, lotId: lot._id, avail: qty - used });
     await ChemicalStockHistoryModel.create([
       { chemicalId: chem._id, lotId: lot._id, action: 'PURCHASE', quantity: qty, remarks: 'Receipt', createdBy: admin },
       { chemicalId: chem._id, lotId: lot._id, action: 'CONSUME', quantity: used, remarks: 'Daily use', createdBy: tech },
     ]);
   }
-  console.log(`chemical inventory: cats×3, mfrs×3, suppliers×2, chemicals×8, purchases×${N_CHEM_PURCHASES}, lots×${N_CHEM_PURCHASES}`);
+  // Damaged-stock register entries.
+  let chemDmg = 0;
+  for (const l of chemLots.filter((x) => x.avail > 1).slice(0, 6)) {
+    const q = Math.max(1, Math.min(2, l.avail - 1));
+    await ChemicalDamageModel.create({
+      chemicalId: l.chemId, lotId: l.lotId, quantity: q,
+      reason: choice(['Broken vial', 'Temperature excursion', 'Expired on shelf', 'Contamination suspected']),
+      damagedDate: ago(randInt(1, 40)), ...audit,
+    });
+    await ChemicalStockHistoryModel.create({ chemicalId: l.chemId, lotId: l.lotId, action: 'DAMAGE', quantity: q, remarks: 'Damage register', createdBy: pick('qa-manager') });
+    chemDmg++;
+  }
+  console.log(`chemical inventory: categories×${catDefs.length}, manufacturer×1 (Tulip), suppliers×2, chemicals×${chems.length}, purchases×${N_CHEM_PURCHASES}, lots×${N_CHEM_PURCHASES}, damage×${chemDmg}`);
 
   // ── 18. CAMP DONATIONS ───────────────────────────────────────────────────
   const BG_STR = ['O+', 'A+', 'B+', 'AB+', 'O-', 'A-', 'B-', 'AB-'];
@@ -607,11 +782,61 @@ async function main() {
   await CampDonationModel.create(campDonDocs);
   console.log('camp donations:', campDonDocs.length);
 
+  // ── 18b. APPOINTMENTS (public-site booking form; mixed status + yes/no) ────
+  const YN = ['yes', 'no'] as const;
+  const apptDocs = Array.from({ length: 25 }, (_, i) => {
+    const sex = chance(0.55) ? 'M' : 'F';
+    const fn = sex === 'M' ? choice(MALE) : choice(FEMALE);
+    const past = chance(0.5);
+    return {
+      fullName: `${fn} ${choice(LAST)}`, gender: sex === 'M' ? 'Male' : 'Female',
+      mobileNo: `+9196${pad(randInt(10000000, 99999999), 8)}`, email: `${fn.toLowerCase()}.appt${i}@donor.test`,
+      bloodGroup: choice(BG_STR), birthDate: new Date(2026 - randInt(18, 60), randInt(0, 11), randInt(1, 27)), age: randInt(18, 60),
+      address: `${choice(CITIES)[0]}, Maharashtra`,
+      appointmentDate: past ? ago(randInt(1, 30)) : ahead(randInt(1, 30)),
+      status: choice(['pending', 'confirmed', 'cancelled'] as const), source: 'public-frontend-nextjs',
+      recentIllness: choice(YN), surgery: choice(YN), medication: choice(YN),
+      lastDonation: chance(0.5) ? ago(randInt(120, 400)) : undefined,
+      donationFrequency: choice(['1', '2', '3', '4'] as const), wantReminder: chance(0.5), reminderDays: choice([0, 1, 3, 7]),
+    };
+  });
+  await AppointmentModel.create(apptDocs);
+  console.log('appointments:', apptDocs.length);
+
+  // ── 18c. IN-APP NOTIFICATIONS (spanning modules / severities) ─────────────
+  const notifDefs: Array<{ title: string; message: string; module: string; category: string; severity: string }> = [
+    { title: 'Low reagent stock', message: 'Anti-D below minimum level.', module: 'INVENTORY', category: 'LOW_STOCK', severity: 'CRITICAL' },
+    { title: 'Zero stock', message: 'AB-negative PRBC out of stock.', module: 'INVENTORY', category: 'ZERO_STOCK', severity: 'CRITICAL' },
+    { title: 'Units near expiry', message: '4 PRBC units expire within 3 days.', module: 'INVENTORY', category: 'NEAR_EXPIRY', severity: 'WARNING' },
+    { title: 'Expired inventory', message: 'Expired units awaiting discard.', module: 'INVENTORY', category: 'EXPIRED_INVENTORY', severity: 'CRITICAL' },
+    { title: 'TTI reactive result', message: 'A donation returned reactive; lookback triggered.', module: 'TTI_TESTING', category: 'TTI_REACTIVE', severity: 'CRITICAL' },
+    { title: 'TTI testing pending', message: 'Donations awaiting serology.', module: 'TTI_TESTING', category: 'TTI_TESTING_PENDING', severity: 'WARNING' },
+    { title: 'Component separation pending', message: 'Whole-blood units awaiting separation.', module: 'COMPONENT_SEPARATION', category: 'COMPONENT_SEPARATION_PENDING', severity: 'WARNING' },
+    { title: 'Crossmatch pending', message: 'Requisition awaiting crossmatch.', module: 'CROSSMATCH', category: 'CROSSMATCH_PENDING', severity: 'WARNING' },
+    { title: 'Blood issued', message: 'Units issued against a requisition.', module: 'ISSUE_BLOOD', category: 'BLOOD_ISSUED', severity: 'SUCCESS' },
+    { title: 'New donor registered', message: 'A new donor was registered.', module: 'DONOR', category: 'NEW_DONOR_REGISTERED', severity: 'INFORMATION' },
+    { title: 'Appointment booked', message: 'A new appointment was booked.', module: 'APPOINTMENTS', category: 'APPOINTMENT_BOOKED', severity: 'INFORMATION' },
+    { title: 'Donation completed', message: 'A donation was completed successfully.', module: 'COLLECTION', category: 'DONATION_COMPLETED', severity: 'SUCCESS' },
+  ];
+  const notifDocs = Array.from({ length: 40 }, (_, i) => {
+    const d = notifDefs[i % notifDefs.length];
+    const read = chance(0.4);
+    return {
+      userId: chance(0.5) ? admin : null, // null = broadcast
+      title: d.title, message: d.message, module: d.module, category: d.category, severity: d.severity,
+      read, readAt: read ? ago(randInt(0, 5)) : null,
+      createdAt: ago(randInt(0, 20)),
+    };
+  });
+  await InAppNotificationModel.create(notifDocs);
+  console.log('notifications:', notifDocs.length);
+
   // ── 19. AUDIT LOG ────────────────────────────────────────────────────────
   const auditDocs: Array<Record<string, unknown>> = [
     { actor: admin, action: 'LOGIN', entityType: 'User', entityId: String(admin), at: ago(1) },
     ...donations.slice(0, 80).map((d) => ({ actor: users['bbo']._id, action: 'RELEASE', entityType: 'TtiResult', entityId: d.donationId, at: ago(randInt(1, 30)) })),
     ...donors.slice(0, 80).map((d) => ({ actor: phlebo, action: 'CREATE', entityType: 'Donor', entityId: d.donorId, at: ago(randInt(1, 60)) })),
+    ...btDocs.map((b) => ({ actor: admin, action: 'CREATE', entityType: 'BulkTransfer', entityId: String(b.transferId), reason: String(b.transferType), at: ago(randInt(1, 90)) })),
     ...auditExtra,
   ];
   await AuditLogModel.create(auditDocs);
@@ -624,7 +849,7 @@ async function main() {
   for (const c of cols.sort((a, b) => a.name.localeCompare(b.name))) {
     console.log(`  ${c.name}: ${await db.collection(c.name).countDocuments()}`);
   }
-  console.log(`\nLogin: ${ADMIN_EMAIL} / ${PASSWORD}  (all seeded staff use the same password)`);
+  console.log(`\nUsers were preserved (not seeded). Log in with your existing credentials, e.g. ${adminUser.email ?? adminUser._id}.`);
   await mongoose.disconnect();
 }
 

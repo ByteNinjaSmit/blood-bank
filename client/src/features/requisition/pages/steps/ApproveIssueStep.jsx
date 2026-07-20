@@ -245,7 +245,7 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
                               <div className="flex items-center justify-end gap-2">
                                 {inv?.status === 'ISSUED' ? (
                                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 border border-green-200 text-green-800">
-                                    ✅ Issued
+                                    ✅ Issued {mi.issueId ? `(${mi.issueId})` : ''}
                                   </span>
                                 ) : mi.crossmatchRequired && mi.crossmatchStatus === 'pending' ? (
                                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 border border-amber-200 text-amber-800" title="Crossmatch pending">

@@ -653,6 +653,7 @@ export default function RequisitionList() {
                         <th className="p-2">Compatibility</th>
                         <th className="p-2">Crossmatch Done At</th>
                         <th className="p-2">Seen At</th>
+                        <th className="p-2">Issue ID</th>
                         <th className="p-2">Issue Date</th>
                         <th className="p-2">Status</th>
                       </tr>
@@ -683,6 +684,7 @@ export default function RequisitionList() {
                             <td className="p-2">{COMPATIBILITY_RESULT_LABELS[mi?.compatibilityResult] || '—'}</td>
                             <td className="p-2">{mi?.crossmatchDoneAt ? fmt(mi.crossmatchDoneAt) : '—'}</td>
                             <td className="p-2">{mi?.crossmatchSeenAt ? fmt(mi.crossmatchSeenAt) : '—'}</td>
+                            <td className="p-2 font-mono text-xs font-semibold">{mi?.issueId || '—'}</td>
                             <td className="p-2">{mi?.inventoryId?.issuedAt ? fmt(mi.inventoryId.issuedAt) : '—'}</td>
                             <td className="p-2">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${badgeColor}`}>
@@ -777,6 +779,7 @@ export default function RequisitionList() {
                         <th className="p-3">Blood Group</th>
                         <th className="p-3">Donation Date</th>
                         <th className="p-3">Expiry Date</th>
+                        <th className="p-3">Issue ID</th>
                         <th className="p-3">Issued At</th>
                         <th className="p-3 text-right">Status</th>
                         <th className="p-3 text-right">Actions</th>
@@ -806,6 +809,7 @@ export default function RequisitionList() {
                             <td className="p-3 font-bold text-gray-800">{bloodGroup}</td>
                             <td className="p-3 text-gray-600">{donationDate}</td>
                             <td className="p-3 text-gray-600">{expiryDate}</td>
+                            <td className="p-3 font-mono text-xs font-semibold">{mi.issueId || '—'}</td>
                             <td className="p-3 text-gray-600 whitespace-nowrap">{issuedAtDisplay}</td>
                             <td className="p-3 text-right">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
@@ -954,10 +958,14 @@ export default function RequisitionList() {
                             {bloodGroupText}
                           </span>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 mt-2 text-xs text-slate-600">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 mt-2 text-xs text-slate-600">
                           <div>
                             <span className="text-slate-400 font-medium">Bag No:</span>{' '}
                             <span className="font-mono font-semibold text-slate-800">{bag.bagNo || '—'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 font-medium">Issue ID:</span>{' '}
+                            <span className="font-mono font-semibold text-slate-800">{unit.issueId || '—'}</span>
                           </div>
                           <div>
                             <span className="text-slate-400 font-medium">Expiry:</span>{' '}

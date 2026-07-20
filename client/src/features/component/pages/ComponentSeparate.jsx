@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { TestTube, Loader2, Scissors, CheckCircle, RefreshCw, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/format-date";
-import { COMPONENT_LABEL } from "@/constants/component-types";
 import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
+import SeparateComponentModal from "../components/separate/SeparateComponentModal";
+import SignatureModal from "../components/separate/SignatureModal";
+import EditSeparationModal from "../components/separate/EditSeparationModal";
 
 // Component separation from a whole-blood donation only ever yields these four
 // derived products — WB is never re-selected here.
@@ -435,10 +436,10 @@ const ComponentSeparate = () => {
                               </Button>
                             </>
                           ) : (
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => handleOpenSignatureModal(bag)} 
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenSignatureModal(bag)}
                               disabled={isActionLoading}
                               title="Sign and Complete Separation"
                               className="border-green-600 text-green-700 hover:bg-green-50 hover:text-green-800"
@@ -457,364 +458,56 @@ const ComponentSeparate = () => {
           </div>
         </div>
       </div>
-      <Dialog open={showSeparateModal} onOpenChange={setShowSeparateModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Separate Component</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4" onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600">Bag: <span className="font-medium text-gray-900">{activeBag?.bagNo}</span></span>
-            </div>
-            <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Component</label>
-                <select
-                  className="w-full px-3 py-2 border rounded-md"
-                  value={separateForm.componentType}
-                  onChange={(e) => setSeparateForm((s) => ({ ...s, componentType: e.target.value }))}
-                  disabled={availableComponentTypes(activeBag).length === 0}
-                >
-                  {availableComponentTypes(activeBag).length === 0 && (
-                    <option value="">All components added</option>
-                  )}
-                  {availableComponentTypes(activeBag).map((t) => (
-                    <option key={t} value={t}>{COMPONENT_LABEL[t]}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Volume (mL)</label>
-                <input
-                  type="number"
-                  className="w-full px-3 py-2 border rounded-md"
-                  value={separateForm.volumeMl}
-                  onChange={(e) => setSeparateForm((s) => ({ ...s, volumeMl: e.target.value }))}
-                  min={1}
-                  placeholder="e.g. 250"
-                />
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addPendingComponent}
-                disabled={!separateForm.componentType || !(Number(separateForm.volumeMl) > 0)}
-              >
-                Add
-              </Button>
-            </div>
 
-            {pendingComponents.length > 0 && (
-              <div className="border rounded-md divide-y">
-                {pendingComponents.map((item, idx) => (
-                  <div key={`${item.componentType}-${idx}`} className="flex items-center justify-between px-3 py-2 text-sm">
-                    <span className="text-gray-800">
-                      {COMPONENT_LABEL[item.componentType] || item.componentType}
-                      <span className="text-gray-500"> — {item.volumeMl} mL</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removePendingComponent(idx)}
-                      className="text-red-600 hover:text-red-800 text-xs font-medium"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+      <SeparateComponentModal
+        open={showSeparateModal}
+        onOpenChange={setShowSeparateModal}
+        activeBag={activeBag}
+        separateForm={separateForm}
+        setSeparateForm={setSeparateForm}
+        availableComponentTypes={availableComponentTypes}
+        pendingComponents={pendingComponents}
+        addPendingComponent={addPendingComponent}
+        removePendingComponent={removePendingComponent}
+        submitSeparate={submitSeparate}
+        isActionLoading={isActionLoading}
+        onFormKeyDown={handleFormKeyDown}
+        onFormChange={handleFormEnterNavChange}
+      />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">RPM</label>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">1st Spin</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="e.g. 3400"
-                    value={separateForm.rpmFirstSpin}
-                    onChange={(e) => setSeparateForm((s) => ({ ...s, rpmFirstSpin: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">2nd Spin</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="e.g. 1500"
-                    value={separateForm.rpmSecondSpin}
-                    onChange={(e) => setSeparateForm((s) => ({ ...s, rpmSecondSpin: e.target.value }))}
-                  />
-                </div>
-              </div>
-            </div>
+      <SignatureModal
+        open={showSignatureModal}
+        onOpenChange={setShowSignatureModal}
+        signatureBag={signatureBag}
+        signatureText={signatureText}
+        setSignatureText={setSignatureText}
+        user={user}
+        bagKey={bagKey}
+        setReadyToSignBags={setReadyToSignBags}
+        handleConfirmSignature={handleConfirmSignature}
+        isActionLoading={isActionLoading}
+      />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Collection Time</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border rounded-md bg-gray-50 text-gray-500"
-                    value={formatDateTime(activeBag?.collectionDate)}
-                    disabled
-                    readOnly
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Separation Time</label>
-                  <input
-                    type="datetime-local"
-                    className="w-full px-3 py-2 border rounded-md"
-                    value={separateForm.separationTime}
-                    onChange={(e) => setSeparateForm((s) => ({ ...s, separationTime: e.target.value }))}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSeparateModal(false)}>Cancel</Button>
-            <Button
-              onClick={submitSeparate}
-              disabled={isActionLoading || pendingComponents.length === 0}
-            >
-              {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Separate"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showSignatureModal} onOpenChange={setShowSignatureModal}>
-        <DialogContent className="sm:max-w-[520px] rounded-xl p-6">
-          <DialogHeader className="mb-2">
-            <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <CheckCircle className="w-6 h-6 text-green-600 animate-pulse" />
-              Technician Verification
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-gray-600">
-              You are marking component separation as completed for Bag <strong className="text-gray-900">{signatureBag?.bagNo}</strong>.
-            </p>
-
-            {signatureBag && (
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <div className="bg-gray-50 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 border-b border-gray-100">
-                  Separation Details
-                </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 px-3 py-3 text-sm">
-                  <div>
-                    <span className="block text-xs text-gray-500">Bag No</span>
-                    <span className="font-medium text-gray-900">{signatureBag.bagNo}</span>
-                  </div>
-                  <div>
-                    <span className="block text-xs text-gray-500">Blood Group</span>
-                    <span className="font-medium text-gray-900">{signatureBag.bloodGroup} {signatureBag.rh}</span>
-                  </div>
-                  <div>
-                    <span className="block text-xs text-gray-500">Collection Time</span>
-                    <span className="font-medium text-gray-900">{formatDateTime(signatureBag.collectionDate)}</span>
-                  </div>
-                  <div>
-                    <span className="block text-xs text-gray-500">Separation Time</span>
-                    <span className="font-medium text-gray-900">
-                      {signatureBag.separationTime ? formatDateTime(signatureBag.separationTime) : "—"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-xs text-gray-500">1st Spin (RPM)</span>
-                    <span className="font-medium text-gray-900">{signatureBag.rpmFirstSpin || "—"}</span>
-                  </div>
-                  <div>
-                    <span className="block text-xs text-gray-500">2nd Spin (RPM)</span>
-                    <span className="font-medium text-gray-900">{signatureBag.rpmSecondSpin || "—"}</span>
-                  </div>
-                </div>
-
-                {Array.isArray(signatureBag.components) && signatureBag.components.length > 0 && (
-                  <div className="border-t border-gray-100">
-                    <div className="px-3 pt-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Components Separated
-                    </div>
-                    <div className="px-3 pb-3 pt-1 flex flex-wrap gap-1.5">
-                      {signatureBag.components.map((c, i) => (
-                        <span
-                          key={i}
-                          className="px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-100 font-medium"
-                        >
-                          {c.componentType} — {c.volumeMl} mL
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="text-sm text-gray-600 bg-gray-50 border border-gray-100 rounded-lg p-3">
-              To verify and authorize this action, please type your full signature/name below:
-              <br />
-              <span className="font-semibold text-gray-800">
-                "{user ? `${user.name?.first || ""} ${user.name?.last || ""}`.trim() : "Lab Technician"}"
-              </span>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                Your Signature
-              </label>
-              <input
-                type="text"
-                placeholder="Type your name here..."
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl shadow-inner focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300 bg-white"
-                value={signatureText}
-                onChange={(e) => setSignatureText(e.target.value)}
-              />
-            </div>
-            
-            {/* Elegant Signature Preview Box */}
-            {signatureText.trim() && (
-              <div className="border border-dashed border-gray-200 rounded-xl p-4 bg-gradient-to-br from-gray-50/50 to-slate-50/50 flex flex-col items-center justify-center min-h-[80px] shadow-sm relative overflow-hidden">
-                <span className="absolute top-2 left-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                  Preview
-                </span>
-                <span 
-                  className="text-2xl text-green-800 select-none antialiased" 
-                  style={{ fontFamily: "'Dancing Script', 'Brush Script MT', 'Caveat', cursive, sans-serif" }}
-                >
-                  {signatureText}
-                </span>
-              </div>
-            )}
-          </div>
-          <DialogFooter className="flex flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-gray-100">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => {
-                if (signatureBag) {
-                  setReadyToSignBags((prev) => prev.filter((b) => b !== bagKey(signatureBag)));
-                }
-                setShowSignatureModal(false);
-              }}
-              className="rounded-xl px-5 h-11 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 text-xs sm:text-sm font-semibold"
-            >
-              Edit Separation
-            </Button>
-            <Button
-              onClick={handleConfirmSignature}
-              disabled={isActionLoading || !signatureText.trim()}
-              className="bg-green-600 hover:bg-green-700 text-white rounded-xl px-6 h-11 transition-all duration-300 font-semibold flex items-center justify-center shadow-md hover:shadow-lg disabled:opacity-50 disabled:shadow-none text-xs sm:text-sm"
-            >
-              {isActionLoading ? <Loader2 className="w-5 h-5 animate-spin mr-1.5" /> : null}
-              Confirm & Complete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Separation — RPM &amp; Components</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4" onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600">Bag: <span className="font-medium text-gray-900">{editBag?.bagNo}</span></span>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Separated Components</label>
-              <div className="border rounded-md divide-y">
-                {editComponents.map((item, idx) => (
-                  <div key={item.unitId || idx} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
-                    {item.editing ? (
-                      <div className="grid grid-cols-[1fr_1fr] gap-2 flex-1">
-                        <select
-                          className="w-full px-2 py-1.5 border rounded-md text-sm"
-                          value={item.componentType}
-                          onChange={(e) => updateEditComponent(idx, { componentType: e.target.value })}
-                        >
-                          <option value="">Select component</option>
-                          {editAvailableTypesForSlot(idx).map((t) => (
-                            <option key={t} value={t}>{COMPONENT_LABEL[t]}</option>
-                          ))}
-                        </select>
-                        <input
-                          type="number"
-                          className="w-full px-2 py-1.5 border rounded-md text-sm"
-                          placeholder="Volume (mL)"
-                          min={1}
-                          value={item.volumeMl}
-                          onChange={(e) => updateEditComponent(idx, { volumeMl: e.target.value })}
-                        />
-                      </div>
-                    ) : (
-                      <span className="text-gray-800">
-                        {COMPONENT_LABEL[item.componentType] || item.componentType}
-                        <span className="text-gray-500"> — {item.volumeMl} mL</span>
-                      </span>
-                    )}
-                    {!item.editing && (
-                      <button
-                        type="button"
-                        onClick={() => removeEditComponent(idx)}
-                        className="text-red-600 hover:text-red-800 text-xs font-medium shrink-0"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">RPM</label>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">1st Spin</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="e.g. 3400"
-                    value={editRpmFirstSpin}
-                    onChange={(e) => setEditRpmFirstSpin(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">2nd Spin</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="e.g. 1500"
-                    value={editRpmSecondSpin}
-                    onChange={(e) => setEditRpmSecondSpin(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Separation Time</label>
-              <input
-                type="datetime-local"
-                className="w-full px-3 py-2 border rounded-md"
-                value={editSeparationTime}
-                onChange={(e) => setEditSeparationTime(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancel</Button>
-            <Button onClick={submitEditBag} disabled={isActionLoading || !canSaveEdit}>
-              {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditSeparationModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        editBag={editBag}
+        editComponents={editComponents}
+        editAvailableTypesForSlot={editAvailableTypesForSlot}
+        updateEditComponent={updateEditComponent}
+        removeEditComponent={removeEditComponent}
+        editRpmFirstSpin={editRpmFirstSpin}
+        setEditRpmFirstSpin={setEditRpmFirstSpin}
+        editRpmSecondSpin={editRpmSecondSpin}
+        setEditRpmSecondSpin={setEditRpmSecondSpin}
+        editSeparationTime={editSeparationTime}
+        setEditSeparationTime={setEditSeparationTime}
+        submitEditBag={submitEditBag}
+        canSaveEdit={canSaveEdit}
+        isActionLoading={isActionLoading}
+        onFormKeyDown={handleFormKeyDown}
+        onFormChange={handleFormEnterNavChange}
+      />
     </div>
   );
 };

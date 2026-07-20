@@ -109,6 +109,7 @@ export default function CompleteStep({ requestDoc, completing, onComplete, short
                   <th className="p-3">Blood Group</th>
                   <th className="p-3">Donation Date</th>
                   <th className="p-3">Expiry Date</th>
+                  <th className="p-3">Issue ID</th>
                   <th className="p-3 text-right">Unit Status</th>
                 </tr>
               </thead>
@@ -132,6 +133,7 @@ export default function CompleteStep({ requestDoc, completing, onComplete, short
                       <td className="p-3 font-bold text-gray-800">{bloodGroup}</td>
                       <td className="p-3 text-gray-600">{donationDate}</td>
                       <td className="p-3 text-gray-600">{expiryDate}</td>
+                      <td className="p-3 font-mono text-xs font-semibold text-gray-700">{mi.issueId || '—'}</td>
                       <td className="p-3 text-right">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
                           unitStatus === 'ISSUED'

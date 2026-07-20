@@ -11,6 +11,7 @@ import { HospitalModel } from '@/modules/hospital/hospital.model';
 import { PatientModel } from '@/modules/patient/patient.model';
 import { DonorModel } from '@/modules/donor/donor.model';
 import { UserModel } from '@/modules/user/user.model';
+import { IssueModel } from '@/modules/issue/issue.model';
 
 export async function enrichRequisition(reqDto: any): Promise<any> {
   if (!reqDto) return reqDto;
@@ -18,6 +19,12 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
   const unitIds = matchedUnits.map((mu: any) => mu.unitId);
   const units = await BloodUnitModel.find({ unitId: { $in: unitIds }, deletedAt: null }).lean();
   const unitMap = new Map(units.map((u) => [u.unitId, u]));
+
+  const reqId = reqDto.id || reqDto._id;
+  const issues = reqId
+    ? await IssueModel.find({ requisitionId: reqId, deletedAt: null }).lean()
+    : [];
+  const issueMap = new Map(issues.map((iss) => [iss.unitId, iss]));
 
   const donationIds = units.map((u) => u.donationId).filter(Boolean);
   const donations = (await DonationModel.find({ donationId: { $in: donationIds } })
@@ -72,6 +79,7 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
         crossmatchDoneAt: mu.crossmatchDoneAt ? new Date(mu.crossmatchDoneAt).toISOString() : null,
         crossmatchSeenAt: mu.crossmatchSeenAt ? new Date(mu.crossmatchSeenAt).toISOString() : null,
         cardNumber: mu.cardNumber || null,
+        issueId: issueMap.get(mu.unitId)?.issueId || null,
       };
     })
     .filter(Boolean);
