@@ -26,7 +26,6 @@ const formatDateTime = (v) => formatDateTimeBase(v, { day: "2-digit", month: "2-
 import { useEditWithReason } from "@/hooks/useEditWithReason";
 import { useDeleteWithReason } from "@/hooks/useDeleteWithReason";
 import { useUpdateStorageBag, useReturnFromStorage } from "@/features/inventory/queries";
-import { useUpdateBulkTransfer, useDeleteBulkTransfer } from "@/features/bulk-transfer/queries";
 
 const ISSUE_REGISTERS = [
   { key: 'issue', label: 'Issue Stock Register' },

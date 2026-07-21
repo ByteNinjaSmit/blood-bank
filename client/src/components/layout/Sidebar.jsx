@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, ChevronRight, ChevronDown, Lock, Shield, User, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
@@ -350,4 +350,4 @@ const Sidebar = ({
   );
 };
 
-export default React.memo(Sidebar);
+export default memo(Sidebar);

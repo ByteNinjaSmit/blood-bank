@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import CustomModal from "@/components/CustomModal";
 import { ArrowRight, ArrowLeft, Save, Loader2, UserPlus, CheckCircle, AlertTriangle } from "lucide-react";
@@ -16,7 +16,6 @@ import QaChecklistStep from "./donor-creation/steps/QaChecklistStep";
 import ReviewStep from "./donor-creation/steps/ReviewStep";
 
 export default function DonorCreation() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const campId = searchParams.get("campId");
   const draftId = searchParams.get("draftId");

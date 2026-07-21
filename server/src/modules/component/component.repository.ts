@@ -20,54 +20,12 @@ import {
 } from '@/modules/component/component.mapper';
 import { getShelfDays, PRODUCT_CODE } from '@/shared/component-type';
 import type { ComponentType } from '@/shared/enums';
+import { resolveDonation, componentSlot } from './component.helpers';
+import type { ComponentListFilters, NearExpiryFilters } from './component.helpers';
+import { componentList } from './component.read';
 
-export interface ComponentListFilters {
-  page?: number;
-  limit?: number;
-  type?: string;
-  status?: string;
-  expiryBefore?: string;
-  fromDate?: string;
-  toDate?: string;
-  search?: string;
-  order?: 'asc' | 'desc';
-}
-
-export interface NearExpiryFilters {
-  page?: number;
-  limit?: number;
-  days?: number;
-  componentType?: string;
-  status?: string;
-  search?: string;
-}
-
-async function resolveDonation(donationIdOrObjectId: string) {
-  let donation = await DonationModel.findOne({
-    donationId: donationIdOrObjectId,
-    deletedAt: null,
-  }).lean();
-  if (!donation && Types.ObjectId.isValid(donationIdOrObjectId)) {
-    donation = await DonationModel.findOne({
-      _id: donationIdOrObjectId,
-      deletedAt: null,
-    }).lean();
-  }
-  return donation;
-}
-
-function componentSlot(units: any[], types: string[], tti: any) {
-  const u = units.find((x) => types.includes(x.componentType));
-  if (!u) return { status: 'unprepared' as const };
-
-  return {
-    status: 'prepared' as const,
-    componentStatus: toLegacyUnitStatus(u.status, tti?.releaseDecision),
-    volumeMl: u.volumeMl,
-    expiryDate: u.expiresAt ? u.expiresAt.toISOString() : '',
-    storageLocation: u.storageLocation || 'Main Fridge',
-  };
-}
+// Re-exported so existing consumers (component.service) keep their imports.
+export type { ComponentListFilters, NearExpiryFilters } from './component.helpers';
 
 export interface ComponentRepo {
   list(filters: ComponentListFilters): Promise<{ components: any[]; total: number; totalPages: number }>;
@@ -129,103 +87,7 @@ export interface ComponentRepo {
 export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
   return {
     async list(filters) {
-      const { page, limit, type, status, expiryBefore, fromDate, toDate, search, order } = filters;
-
-      const unitFilter: any = { deletedAt: null, status: { $ne: 'COLLECTED' } };
-      if (type) unitFilter.componentType = type;
-      if (status) {
-        if (status === 'in-stock') unitFilter.status = 'RELEASED';
-        else if (status === 'reserved') unitFilter.status = 'RESERVED';
-        else if (status === 'issued') unitFilter.status = 'ISSUED';
-        else if (status === 'discarded') unitFilter.status = 'DISCARDED';
-      }
-      if (expiryBefore) unitFilter.expiresAt = { $lte: new Date(expiryBefore) };
-      if (search) {
-        const searchRegex = new RegExp(search, 'i');
-        unitFilter.$or = [
-          { donationId: searchRegex },
-          { unitId: searchRegex },
-          { aboGroup: searchRegex },
-        ];
-      }
-
-      const hasUnitFilters = Boolean(type || status || expiryBefore || search);
-      const matchingDonationIds = hasUnitFilters
-        ? await BloodUnitModel.distinct('donationId', unitFilter)
-        : [];
-
-      const donationFilter: any = { deletedAt: null };
-      if (hasUnitFilters) donationFilter.donationId = { $in: matchingDonationIds };
-      if (fromDate || toDate) {
-        donationFilter.collectedAt = {};
-        if (fromDate) donationFilter.collectedAt.$gte = new Date(fromDate);
-        if (toDate) donationFilter.collectedAt.$lte = new Date(toDate);
-      }
-      if (search && !matchingDonationIds.length && !hasUnitFilters) {
-        donationFilter.donationId = new RegExp(search, 'i');
-      }
-
-      const pageNum = Number(page) || 1;
-      const limitNum = Number(limit) || 50;
-      const skipNum = (pageNum - 1) * limitNum;
-      const sortDir = order === 'asc' ? 1 : -1;
-
-      const total = await DonationModel.countDocuments(donationFilter);
-      const donations = await DonationModel.find(donationFilter)
-        .sort({ collectedAt: sortDir })
-        .skip(skipNum)
-        .limit(limitNum)
-        .populate('campId', 'name')
-        .lean();
-
-      const donationIds = donations.map((d) => d.donationId);
-      const allUnits = await BloodUnitModel.find({
-        donationId: { $in: donationIds },
-        deletedAt: null,
-        status: { $ne: 'COLLECTED' },
-      }).lean();
-      const ttiResults = await TtiResultModel.find({ donationId: { $in: donationIds } }).lean();
-
-      const unitsMap: Record<string, typeof allUnits> = {};
-      allUnits.forEach((u) => {
-        if (!u.donationId) return;
-        (unitsMap[u.donationId] ??= []).push(u);
-      });
-      const ttiMap = new Map(ttiResults.map((t) => [t.donationId, t]));
-
-      const components = donations.map((d) => {
-        const units = unitsMap[d.donationId] || [];
-        const tti = ttiMap.get(d.donationId);
-
-        const abo = tti?.aboGroupConfirmed || units[0]?.aboGroup || 'O';
-        const rh = tti?.rhFactorConfirmed || units[0]?.rhFactor || 'POSITIVE';
-
-        const separation = (d as any).separation;
-
-        return {
-          id: d._id.toString(),
-          bagNo: (d as any).bagNo || d.donationId,
-          segmentNo: (d as any).segmentNo || '',
-          bloodGroup: `${abo}${rh === 'POSITIVE' ? '+' : '-'}`,
-          site: d.campId ? (d.campId as any).name : 'Inhouse',
-          createdAt: (d.createdAt ?? d.collectedAt).toISOString(),
-          rpmFirstSpin: separation?.rpmFirstSpin || '',
-          rpmSecondSpin: separation?.rpmSecondSpin || '',
-          collectionTime: d.collectedAt.toISOString(),
-          separationTime: separation?.separationTime ? separation.separationTime.toISOString() : '',
-          serologyTests: mapSerologyTests(tti),
-          canEdit: !hasLeftBank(units),
-          editReason: (d as any).lastEditReason || undefined,
-          lastEditedAt: (d as any).lastEditedAt ? new Date((d as any).lastEditedAt).toISOString() : undefined,
-          prbc: componentSlot(units, ['PRBC', 'WB'], tti),
-          ffp: componentSlot(units, ['FFP'], tti),
-          rdp: componentSlot(units, ['RDP'], tti),
-          cryo: componentSlot(units, ['CRYO'], tti),
-          sdp: componentSlot(units, ['SDP'], tti),
-        };
-      });
-
-      return { components, total, totalPages: Math.ceil(total / limitNum) };
+      return componentList(filters);
     },
 
     async listBagsToSeparate() {

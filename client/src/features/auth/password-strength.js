@@ -1,7 +1,7 @@
 export const checkPasswordStrength = (password) => {
     const hasUppercase = /[A-Z]/.test(password)
     const hasNumber = /[0-9]/.test(password)
-    const hasSymbol = /[!@#$%^&*()_+\-=[\]{};':"\|,.<>/?]/.test(password)
+    const hasSymbol = /[!@#$%^&*()_+\-=[\]{};':"|,.<>/?]/.test(password)
 
     let score = 0
     if (hasUppercase) score++

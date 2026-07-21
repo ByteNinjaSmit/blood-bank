@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { Badge } from "@/components/ui/badge";
 
 export const number = (v) => (typeof v === "number" ? v : 0);
