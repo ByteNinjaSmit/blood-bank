@@ -1,123 +1,8 @@
 import React, { useState } from 'react';
 import CompatibilityMatrix from '../components/CompatibilityMatrix';
-import { ConfirmModal, RejectRequestModal } from '@/components/shared';
-
-// ── Badge helpers ──
-
-function CompatBadge({ type }) {
-  if (type === 'exact') {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
-        <span className="w-2 h-2 rounded-full bg-green-500" /> Exact
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
-      <span className="w-2 h-2 rounded-full bg-yellow-500" /> Compatible
-    </span>
-  );
-}
-
-function CrossmatchStatusBadge({ status, required }) {
-  if (!required || status === 'not-required') {
-    return <span className="text-xs text-gray-400">N/A</span>;
-  }
-  const badges = {
-    pending: (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-        ⏳ Pending
-      </span>
-    ),
-    compatible: (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
-        ✅ Compatible
-      </span>
-    ),
-    incompatible: (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-800 border border-red-200">
-        ❌ Incompatible
-      </span>
-    ),
-  };
-  return badges[status] || badges.pending;
-}
-
-// Manual crossmatch worksheet — shown for every component (no auto-compatible
-// shortcut for exact ABO/Rh matches). The operator must explicitly pick the
-// compatibility type; there is no default selection.
-const COMPATIBILITY_RESULT_LABELS = {
-  MAJOR_COMPATIBLE: 'Major Compatible',
-  MINOR_COMPATIBLE: 'Minor Compatible',
-  UNIVERSAL: 'Universal',
-};
-
-function CrossmatchWorksheet({ invId, onSave, updating }) {
-  const [compatibility, setCompatibility] = useState('');
-  const [doneAt, setDoneAt] = useState('');
-  const [seenAt, setSeenAt] = useState('');
-
-  const canSave = compatibility && doneAt && seenAt;
-
-  const handleSave = () => {
-    if (!canSave) return;
-    onSave(invId, 'compatible', {
-      compatibilityResult: compatibility,
-      crossmatchDoneAt: new Date(doneAt).toISOString(),
-      crossmatchSeenAt: new Date(seenAt).toISOString(),
-    });
-  };
-
-  return (
-    <div className="mt-2 p-3 rounded-lg border border-amber-300 bg-white space-y-2 max-w-2xl">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Compatibility <span className="text-red-600">*</span></label>
-          <select
-            value={compatibility}
-            onChange={(e) => setCompatibility(e.target.value)}
-            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white"
-          >
-            <option value="">— Select —</option>
-            <option value="MAJOR_COMPATIBLE">Major Compatible</option>
-            <option value="MINOR_COMPATIBLE">Minor Compatible</option>
-            <option value="UNIVERSAL">Universal</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Crossmatch Done At <span className="text-red-600">*</span></label>
-          <input
-            type="datetime-local"
-            value={doneAt}
-            onChange={(e) => setDoneAt(e.target.value)}
-            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Seen At <span className="text-red-600">*</span></label>
-          <input
-            type="datetime-local"
-            value={seenAt}
-            onChange={(e) => setSeenAt(e.target.value)}
-            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white"
-          />
-        </div>
-      </div>
-      <button
-        type="button"
-        disabled={!canSave || updating}
-        onClick={handleSave}
-        className={`w-full px-3 py-1.5 text-xs font-semibold rounded-md ${
-          canSave && !updating
-            ? 'bg-orange-800 text-white hover:bg-orange-900 cursor-pointer'
-            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-        }`}
-      >
-        {updating ? 'Saving…' : 'Save Crossmatch'}
-      </button>
-    </div>
-  );
-}
+import GroupingWorksheet from '../components/GroupingWorksheet';
+import MatchedBagCard from '../components/MatchedBagCard';
+import { RejectRequestModal } from '@/components/shared';
 
 // ── Group matched inventory by component type ──
 
@@ -135,6 +20,8 @@ function groupByComponent(matchedInventory) {
 export default function MatchReviewStep({
   requestDoc, matchedResult, matching, onMatch, onReject, shortages,
   onCrossmatchUpdate, crossmatchUpdating,
+  fetchAvailableUnits, onSwapBag, swapping,
+  onSaveRecipientGrouping, onSaveBagGrouping, groupingSaving,
 }) {
   const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
   const status = requestDoc?.status;
@@ -143,6 +30,13 @@ export default function MatchReviewStep({
   const recipientGroup = requestDoc?.requestedComponents?.[0]?.bloodGroup || null;
 
   const grouped = groupByComponent(requestDoc?.matchedInventory);
+
+  // PRBC bags assigned a compatible (non-exact) substitute group — surfaced
+  // as a banner the operator must review before approving.
+  const prbcSubstitutes = (requestDoc?.matchedInventory || []).filter((mi) => {
+    const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+    return inv?.componentId?.componentType === 'PRBC' && (mi.compatibilityType || 'exact') !== 'exact';
+  });
 
   return (
     <div className="p-6 space-y-5">
@@ -158,6 +52,16 @@ export default function MatchReviewStep({
 
       {/* Compatibility Reference (collapsible) */}
       <CompatibilityMatrix recipientGroup={recipientGroup} />
+
+      {/* Recipient blood-grouping worksheet */}
+      {requestDoc?._id && (
+        <GroupingWorksheet
+          title="Recipient Serum / Cell Grouping"
+          value={requestDoc?.recipientGrouping || {}}
+          onSave={onSaveRecipientGrouping}
+          saving={groupingSaving}
+        />
+      )}
 
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-gray-800">Match Results (Compatibility-Aware FIFO)</h3>
@@ -185,6 +89,20 @@ export default function MatchReviewStep({
         </div>
       </div>
 
+      {/* Bags are proposed only — reserved on approval */}
+      <div className="p-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-900 text-sm">
+        Bags shown below are <strong>proposed</strong>. You can change the blood group and bag until the
+        request is <strong>approved</strong> — units are only reserved once you approve.
+      </div>
+
+      {/* PRBC substitution banner */}
+      {prbcSubstitutes.length > 0 && (
+        <div className="p-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900">
+          <p className="font-medium">⚠️ {prbcSubstitutes.length} PRBC bag{prbcSubstitutes.length > 1 ? 's are' : ' is'} a compatible substitute (not the patient's exact group).</p>
+          <p className="mt-1 text-sm">Review each bag below and, if needed, pick a different compatible blood group / bag from the dropdowns before approving.</p>
+        </div>
+      )}
+
       {/* Shortages / Unavailable Components */}
       {Array.isArray(shortages) && shortages.length > 0 && (
         <div className="p-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900">
@@ -198,20 +116,22 @@ export default function MatchReviewStep({
                     Unavailable
                   </span>
                 )}
+                {Array.isArray(s.specialNeeds) && s.specialNeeds.length > 0 && (
+                  <span className="block text-xs text-amber-800 mt-0.5">
+                    Filtered by patient special needs: <strong>{s.specialNeeds.join(', ')}</strong> — only units carrying these attributes qualify.
+                  </span>
+                )}
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-amber-700 font-medium">The available components have been reserved. Unavailable components will be marked as "Unavailable" throughout the request.</p>
+          <p className="mt-2 text-xs text-amber-700 font-medium">The available components have been proposed. Unavailable components will be marked as "Unavailable" throughout the request.</p>
         </div>
       )}
 
       {/* Match result summary */}
       {matchedResult && (
         <div className="p-4 rounded-lg border border-green-200 bg-green-50 text-green-900">
-          <p className="font-medium">Reserved units: {matchedResult?.matchedCount}</p>
-          {Array.isArray(matchedResult?.inventoryIds) && matchedResult.inventoryIds.length > 0 && (
-            <p className="text-sm mt-1">Inventory IDs: {matchedResult.inventoryIds.join(', ')}</p>
-          )}
+          <p className="font-medium">Proposed units: {requestDoc?.matchedInventory?.length ?? 0}</p>
         </div>
       )}
 
@@ -232,115 +152,49 @@ export default function MatchReviewStep({
 
           {/* Component-wise grouped inventory */}
           <div className="p-4 border-t">
-            <h4 className="font-semibold mb-3">Reserved Inventory (by Component)</h4>
+            <h4 className="font-semibold mb-3">Proposed Inventory (by Component)</h4>
             {Object.keys(grouped).length > 0 ? (
               <div className="space-y-4">
-                {Object.entries(grouped).map(([compType, items]) => (
-                  <div key={compType} className="border rounded-lg overflow-hidden">
-                    <div className="px-3 py-2 bg-gray-50 border-b flex items-center gap-2">
-                      <span className="font-medium text-sm text-gray-800">{compType}</span>
-                      <span className="text-xs text-gray-500">({items.length} unit{items.length > 1 ? 's' : ''})</span>
-                      {items.some((mi) => mi.crossmatchRequired) && (
-                        <span className="ml-auto text-xs text-red-600 font-medium flex items-center gap-1">
-                          🔬 Crossmatch Required
-                        </span>
-                      )}
+                {Object.entries(grouped).map(([compType, items]) => {
+                  const rc = requestDoc?.requestedComponents?.find((c) => c.componentType === compType);
+                  return (
+                    <div key={compType} className="border rounded-lg overflow-hidden">
+                      <div className="px-3 py-2 bg-gray-50 border-b flex items-center gap-2">
+                        <span className="font-medium text-sm text-gray-800">{compType}</span>
+                        <span className="text-xs text-gray-500">({items.length} unit{items.length > 1 ? 's' : ''})</span>
+                        {items.some((mi) => mi.crossmatchRequired) && (
+                          <span className="ml-auto text-xs text-red-600 font-medium flex items-center gap-1">
+                            🔬 Crossmatch Required
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-3 space-y-3">
+                        {items.map((mi) => {
+                          const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+                          const invId = inv?._id || mi.inventoryId;
+                          return (
+                            <MatchedBagCard
+                              key={invId}
+                              mi={mi}
+                              rc={rc}
+                              componentType={compType}
+                              fetchAvailableUnits={fetchAvailableUnits}
+                              onSwapBag={onSwapBag}
+                              swapping={swapping}
+                              onSaveBagGrouping={onSaveBagGrouping}
+                              onCrossmatchUpdate={onCrossmatchUpdate}
+                              crossmatchUpdating={crossmatchUpdating}
+                              groupingSaving={groupingSaving}
+                            />
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full text-sm">
-                        <thead>
-                          <tr className="text-left text-gray-600 bg-gray-50">
-                            <th className="p-2">Bag No</th>
-                            <th className="p-2">Segment No</th>
-                            <th className="p-2">Blood</th>
-                            <th className="p-2">Compatibility</th>
-                            <th className="p-2">Crossmatch</th>
-                            <th className="p-2">Reserved At</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {items.map((mi) => {
-                            const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
-                            const invId = inv?._id || mi.inventoryId;
-                            const bagNo = inv?.bagNo?.bagNo || '—';
-                            const segmentNo = inv?.bagNo?.segmentNo || '—';
-                            const blood = inv?.bagNo
-                              ? `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}`
-                              : '—';
-
-                            const rc = requestDoc?.requestedComponents?.find(
-                              (c) => c.componentType === compType
-                            );
-                            const isGroupMismatch = rc && inv?.bagNo && (
-                              inv.bagNo.bloodGroup !== rc.bloodGroup ||
-                              inv.bagNo.rh !== rc.rh
-                            );
-                            let mismatchWarning = null;
-                            if (isGroupMismatch) {
-                              const patGroupText = `${rc.bloodGroup} ${rc.rh}`;
-                              const bagGroupText = `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}`;
-                              mismatchWarning = `${patGroupText} patient is receiving ${bagGroupText} ${compType}`;
-                            }
-
-                            const showWorksheet = mi.crossmatchRequired && mi.crossmatchStatus === 'pending' && !!onCrossmatchUpdate;
-                            const showSavedResult = mi.crossmatchRequired && mi.crossmatchStatus !== 'pending' && !!mi.compatibilityResult;
-
-                            return (
-                              <React.Fragment key={invId}>
-                                <tr className="border-t hover:bg-gray-50 transition-colors">
-                                  <td className="p-2 font-mono text-xs font-bold text-gray-800">{bagNo}</td>
-                                  <td className="p-2 font-mono text-xs font-bold text-gray-800">{segmentNo}</td>
-                                  <td className="p-2">
-                                    <div className="font-semibold">{blood}</div>
-                                    {mismatchWarning && (
-                                      <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1 mt-1.5 font-bold w-max flex items-center gap-1.5 shadow-sm">
-                                        <span className="text-amber-500 text-sm">⚠️</span> {mismatchWarning}
-                                      </div>
-                                    )}
-                                  </td>
-                                  <td className="p-2">
-                                    <CompatBadge type={mi.compatibilityType || 'exact'} />
-                                  </td>
-                                  <td className="p-2 align-top">
-                                    <CrossmatchStatusBadge
-                                      status={mi.crossmatchStatus || 'not-required'}
-                                      required={mi.crossmatchRequired || false}
-                                    />
-                                    {showSavedResult && (
-                                      <div className="mt-1.5 text-2xs text-gray-500 space-y-0.5">
-                                        <div>Compatibility: <span className="font-medium">{COMPATIBILITY_RESULT_LABELS[mi.compatibilityResult] || mi.compatibilityResult}</span></div>
-                                        {mi.crossmatchDoneAt && <div>Done At: {new Date(mi.crossmatchDoneAt).toLocaleString()}</div>}
-                                        {mi.crossmatchSeenAt && <div>Seen At: {new Date(mi.crossmatchSeenAt).toLocaleString()}</div>}
-                                        {mi.cardNumber && <div>Card #: {mi.cardNumber}</div>}
-                                      </div>
-                                    )}
-                                  </td>
-                                  <td className="p-2 text-xs text-gray-500 align-top">
-                                    {mi?.reservedAt ? new Date(mi.reservedAt).toLocaleString() : '—'}
-                                  </td>
-                                </tr>
-                                {showWorksheet && (
-                                  <tr className="border-t-0 bg-amber-50/30">
-                                    <td colSpan={6} className="p-2">
-                                      <CrossmatchWorksheet
-                                        invId={invId}
-                                        onSave={onCrossmatchUpdate}
-                                        updating={crossmatchUpdating}
-                                      />
-                                    </td>
-                                  </tr>
-                                )}
-                              </React.Fragment>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
-              <p className="text-gray-600 text-sm">No inventory reserved yet.</p>
+              <p className="text-gray-600 text-sm">No inventory proposed yet.</p>
             )}
 
             {/* Unavailable components from partial shortages */}

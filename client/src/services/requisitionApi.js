@@ -64,6 +64,33 @@ class RequisitionApiService {
     );
   }
 
+  // Match Review: available in-stock bags an operator may pick for a
+  // component (optionally narrowed to a specific compatible ABO group).
+  async getAvailableUnits(id, { componentType, aboGroup } = {}) {
+    const params = { componentType };
+    if (aboGroup) params.aboGroup = aboGroup;
+    return this._wrap(await apiService.get(`${this.baseUrl}/${id}/available-units`, params));
+  }
+
+  // Swap a proposed bag for another available compatible bag (no reservation).
+  async swapMatchedUnit(id, { fromUnitId, toUnitId }) {
+    return this._wrap(
+      await apiService.patch(`${this.baseUrl}/${id}/matched-unit`, { fromUnitId, toUnitId }),
+    );
+  }
+
+  // Save the recipient (patient-side) blood-grouping worksheet.
+  async saveRecipientGrouping(id, grouping) {
+    return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/grouping`, grouping));
+  }
+
+  // Save a per-bag (donor-side) blood-grouping worksheet.
+  async saveBagGrouping(id, { unitId, grouping }) {
+    return this._wrap(
+      await apiService.patch(`${this.baseUrl}/${id}/matched-unit/grouping`, { unitId, grouping }),
+    );
+  }
+
   async getCompatibilityInfo(componentType, bloodGroup, rh, plateletCompatibilityMode) {
     const params = { componentType };
     if (bloodGroup) params.bloodGroup = bloodGroup;

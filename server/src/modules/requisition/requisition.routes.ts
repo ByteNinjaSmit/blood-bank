@@ -190,4 +190,40 @@ router.patch(
   controllers.updateCrossmatchLegacy,
 );
 
+// Match Review: available bags an operator may pick for a component.
+router.get(
+  '/:id/available-units',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'lab-tech-serology', 'store-keeper']),
+  requirePermission('unit:reserve'),
+  controllers.availableUnits,
+);
+
+// Match Review: swap the proposed bag (no reservation until approval).
+router.patch(
+  '/:id/matched-unit',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'lab-tech-serology', 'store-keeper']),
+  requirePermission('unit:reserve'),
+  controllers.swapMatchedUnit,
+);
+
+// Recipient (patient-side) blood-grouping worksheet.
+router.patch(
+  '/:id/grouping',
+  authenticate,
+  requireRole(['system-admin', 'lab-tech-serology']),
+  requirePermission('crossmatch:perform'),
+  controllers.setRecipientGrouping,
+);
+
+// Per-bag (donor-side) blood-grouping worksheet.
+router.patch(
+  '/:id/matched-unit/grouping',
+  authenticate,
+  requireRole(['system-admin', 'lab-tech-serology']),
+  requirePermission('crossmatch:perform'),
+  controllers.setMatchedUnitGrouping,
+);
+
 export default router;

@@ -25,6 +25,10 @@ export interface RequisitionControllers {
   issue: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   issueAll: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   updateCrossmatchLegacy: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  availableUnits: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  swapMatchedUnit: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  setRecipientGrouping: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  setMatchedUnitGrouping: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
 export function createRequisitionControllers(deps: {
@@ -255,6 +259,53 @@ export function createRequisitionControllers(deps: {
               : 'Crossmatch incompatible — unit released, replacement attempted',
           data: enriched,
         });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async availableUnits(req, res, next) {
+      try {
+        const { id } = ValidateRequisition.idParam(req);
+        const { componentType, aboGroup } = ValidateRequisition.availableUnitsQuery(req);
+        const data = await deps.requisitions.availableUnits(id, componentType, aboGroup);
+        res.json({ success: true, data, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async swapMatchedUnit(req, res, next) {
+      try {
+        const { id } = ValidateRequisition.idParam(req);
+        const { fromUnitId, toUnitId } = ValidateRequisition.swapMatchedUnitBody(req);
+        const updated = await deps.requisitions.swapMatchedUnit(id, fromUnitId, toUnitId, actor(req));
+        const enriched = await enrichRequisition(updated);
+        res.json({ success: true, data: enriched, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async setRecipientGrouping(req, res, next) {
+      try {
+        const { id } = ValidateRequisition.idParam(req);
+        const body = ValidateRequisition.recipientGroupingBody(req);
+        const updated = await deps.requisitions.setRecipientGrouping(id, body, actor(req));
+        const enriched = await enrichRequisition(updated);
+        res.json({ success: true, data: enriched, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async setMatchedUnitGrouping(req, res, next) {
+      try {
+        const { id } = ValidateRequisition.idParam(req);
+        const { unitId, grouping } = ValidateRequisition.matchedUnitGroupingBody(req);
+        const updated = await deps.requisitions.setMatchedUnitGrouping(id, unitId, grouping, actor(req));
+        const enriched = await enrichRequisition(updated);
+        res.json({ success: true, data: enriched, requestId: req.id });
       } catch (e) {
         next(e);
       }

@@ -90,6 +90,7 @@ function deps(opts: {
     findBestReplacement: vi.fn(),
     allIssued: vi.fn(),
     findDonationsWithIssuedUnit: vi.fn(),
+    availableForSelection: vi.fn().mockResolvedValue([]),
   };
   const patients: PatientRepo = {
     create: vi.fn(),

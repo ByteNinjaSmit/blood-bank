@@ -75,6 +75,7 @@ function deps(opts: { candidates?: SelectableUnit[]; pat?: PatientDto; req?: Req
     findBestReplacement: vi.fn(),
     allIssued: vi.fn(),
     findDonationsWithIssuedUnit: vi.fn(),
+    availableForSelection: vi.fn().mockResolvedValue([]),
   };
   const requisitions: RequisitionRepo = {
     list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
@@ -91,6 +92,10 @@ function deps(opts: { candidates?: SelectableUnit[]; pat?: PatientDto; req?: Req
     reject: vi.fn().mockResolvedValue(reqDto({ status: 'REJECTED' })),
     removeMatchedUnit: vi.fn(),
     pushMatchedUnit: vi.fn(),
+    swapMatchedUnit: vi.fn(),
+    markReserved: vi.fn().mockImplementation(async () => reqDto()),
+    setRecipientGrouping: vi.fn(),
+    setMatchedUnitGrouping: vi.fn(),
   };
   const patients: PatientRepo = {
     create: vi.fn(),
@@ -107,15 +112,33 @@ function deps(opts: { candidates?: SelectableUnit[]; pat?: PatientDto; req?: Req
 }
 
 describe('requisition-service.match', () => {
-  it('reserves 2 compatible units and records them', async () => {
+  it('proposes 2 compatible units without reserving them', async () => {
     const d = deps({ candidates: [releasedUnit('U1'), releasedUnit('U2'), releasedUnit('U3')] });
     const svc = createRequisitionService(d);
     const { requisition, shortages } = await svc.match(REQ_ID, 'actor');
-    expect(d.units.applyEvent).toHaveBeenCalledTimes(2);
+    // Match no longer reserves — reservation is deferred to approve.
+    expect(d.units.applyEvent).not.toHaveBeenCalled();
     expect(requisition.matchedUnits).toHaveLength(2);
+    expect(requisition.matchedUnits[0]!.reserved).toBe(false);
     expect(shortages).toHaveLength(0);
     expect(requisition.matchedUnits[0]!.crossmatchRequired).toBe(true);
     expect(requisition.matchedUnits[0]!.crossmatchStatus).toBe('PENDING');
+  });
+
+  it('reserves proposed units on approve and flips them to reserved', async () => {
+    const matchedUnits = [
+      { unitId: 'U1', componentType: 'PRBC' as const, compatibilityType: 'EXACT' as const, reserved: false, crossmatchRequired: true, crossmatchStatus: 'PENDING' as const },
+    ];
+    const d = deps({ req: reqDto({ status: 'MATCHED', matchedUnits }) });
+    d.units.applyEvent = vi.fn().mockResolvedValue({ status: 'RESERVED' });
+    d.requisitions.setStatus = vi.fn().mockResolvedValue(reqDto({ status: 'APPROVED' }));
+    const svc = createRequisitionService(d);
+    await svc.approve(REQ_ID, 'actor');
+    expect(d.units.applyEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ unitId: 'U1', event: 'RESERVE' }),
+    );
+    expect(d.requisitions.markReserved).toHaveBeenCalledWith(REQ_ID, 'U1', 'actor');
+    expect(d.requisitions.setStatus).toHaveBeenCalledWith(REQ_ID, 'APPROVED', 'actor');
   });
 
   it('reports a shortage when not enough compatible units', async () => {
@@ -124,7 +147,7 @@ describe('requisition-service.match', () => {
     const { requisition, shortages } = await svc.match(REQ_ID, 'actor');
     expect(requisition.matchedUnits).toHaveLength(1);
     expect(shortages).toEqual([
-      { componentType: 'PRBC', bloodGroup: 'A', rh: 'Positive', required: 2, available: 1, compatibleGroupsSearched: ['A'] },
+      { componentType: 'PRBC', bloodGroup: 'A', rh: 'Positive', required: 2, available: 1, compatibleGroupsSearched: ['A'], specialNeeds: [] },
     ]);
   });
 

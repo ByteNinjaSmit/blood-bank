@@ -4,6 +4,7 @@
 
 import { Types } from 'mongoose';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
+import { DonationModel } from '@/modules/donation/donation.model';
 import { transition, type UnitEvent } from '@/modules/unit/unit.state-machine';
 import { NotFoundError } from '@/shared/errors';
 import { invalidate } from '@/core/cache';
@@ -133,6 +134,27 @@ export interface UnitRepo {
     componentType: ComponentType;
     aboGroups: AboGroup[];
   }): Promise<SelectableUnit[]>;
+  /**
+   * Available RELEASED units for operator selection in Match Review,
+   * enriched with the donation bag/segment number for display. Returns
+   * one row per in-stock, non-expired unit of the given component and
+   * ABO groups, FEFO-sorted.
+   */
+  availableForSelection(filter: {
+    componentType: ComponentType;
+    aboGroups: AboGroup[];
+  }): Promise<
+    Array<{
+      unitId: string;
+      aboGroup: AboGroup;
+      rhFactor: RhFactor;
+      componentType: ComponentType;
+      volumeMl: number;
+      expiresAt: string;
+      bagNo: string;
+      segmentNo: string;
+    }>
+  >;
   inStockSummary(): Promise<
     Array<{ componentType: string; aboGroup: string; rhFactor: string; count: number }>
   >;
@@ -352,6 +374,39 @@ export function createUnitRepo(): UnitRepo {
         specialAttributes: new Set(r.specialAttributes ?? []),
         status: r.status,
       }));
+    },
+
+    async availableForSelection({ componentType, aboGroups }) {
+      const raws = (await BloodUnitModel.find({
+        componentType,
+        aboGroup: { $in: aboGroups },
+        status: 'RELEASED',
+        deletedAt: null,
+        expiresAt: { $gt: new Date() },
+      })
+        .sort({ expiresAt: 1 })
+        .select('unitId aboGroup rhFactor componentType volumeMl expiresAt donationId unitDin')
+        .lean()) as RawUnit[];
+
+      const donationIds = raws.map((r) => r.donationId).filter(Boolean);
+      const donations = (await DonationModel.find({ donationId: { $in: donationIds } })
+        .select('donationId bagNo segmentNo')
+        .lean()) as Array<{ donationId: string; bagNo?: string; segmentNo?: string }>;
+      const donationMap = new Map(donations.map((d) => [d.donationId, d]));
+
+      return raws.map((r) => {
+        const d = donationMap.get(r.donationId);
+        return {
+          unitId: r.unitId,
+          aboGroup: r.aboGroup,
+          rhFactor: r.rhFactor,
+          componentType: r.componentType,
+          volumeMl: r.volumeMl,
+          expiresAt: r.expiresAt.toISOString(),
+          bagNo: d?.bagNo || r.donationId,
+          segmentNo: d?.segmentNo || r.unitDin || r.unitId,
+        };
+      });
     },
 
     async findExpiredUnitIds(now = new Date()) {

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Request } from 'express';
-import { ABO_GROUP, COMPONENT_TYPE, RH_FACTOR, SPECIAL_NEED } from '@/shared/enums';
+import { ABO_GROUP, COMPONENT_TYPE, GRADING_REACTION, RH_FACTOR, SPECIAL_NEED } from '@/shared/enums';
 import { ValidationError } from '@/shared/errors';
 
 const OBJECT_ID = /^[a-f0-9]{24}$/i;
@@ -104,6 +104,34 @@ export const UpdateCrossmatchLegacyBody = z.object({
   cardNumber: z.string().trim().optional(),
 });
 
+// One agglutination reaction cell; null clears it.
+const Grade = z.enum(GRADING_REACTION).nullable().optional();
+
+const GroupingWorksheet = z.object({
+  cellGrouping: z
+    .object({ antiA: Grade, antiA1: Grade, antiB: Grade, antiAB: Grade, antiH: Grade })
+    .optional(),
+  serumGrouping: z.object({ aCell: Grade, bCell: Grade, oCell: Grade }).optional(),
+  rhTyping: z.object({ antiD: Grade, antiDBovine: Grade, indirectCoombs: Grade }).optional(),
+});
+
+export const RecipientGroupingBody = GroupingWorksheet;
+
+export const MatchedUnitGroupingBody = z.object({
+  unitId: z.string().trim().min(1),
+  grouping: GroupingWorksheet,
+});
+
+export const SwapMatchedUnitBody = z.object({
+  fromUnitId: z.string().trim().min(1),
+  toUnitId: z.string().trim().min(1),
+});
+
+export const AvailableUnitsQuery = z.object({
+  componentType: z.enum(COMPONENT_TYPE),
+  aboGroup: z.preprocess((v) => (v === '' ? undefined : v), z.enum(ABO_GROUP).optional()),
+});
+
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {
   const r = schema.safeParse(value);
   if (!r.success) throw new ValidationError(`Invalid ${where}`, r.error.issues);
@@ -140,4 +168,12 @@ export const ValidateRequisition = {
   issueAllBody: (req: Request) => parseOrThrow(IssueAllBody, req.body, 'request body'),
   updateCrossmatchLegacyBody: (req: Request) =>
     parseOrThrow(UpdateCrossmatchLegacyBody, req.body, 'request body'),
+  recipientGroupingBody: (req: Request) =>
+    parseOrThrow(RecipientGroupingBody, req.body, 'request body'),
+  matchedUnitGroupingBody: (req: Request) =>
+    parseOrThrow(MatchedUnitGroupingBody, req.body, 'request body'),
+  swapMatchedUnitBody: (req: Request) =>
+    parseOrThrow(SwapMatchedUnitBody, req.body, 'request body'),
+  availableUnitsQuery: (req: Request) =>
+    parseOrThrow(AvailableUnitsQuery, req.query, 'query string'),
 };

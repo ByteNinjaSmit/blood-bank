@@ -36,6 +36,8 @@ const RequisitionManagement = () => {
     approving,
     completing,
     crossmatchUpdating,
+    swapping,
+    groupingSaving,
     hasChanges,
     handleCreateHospital,
     addRequestLine,
@@ -48,6 +50,10 @@ const RequisitionManagement = () => {
     handleReject,
     handleCreateAndReject,
     handleCrossmatchUpdate,
+    fetchAvailableUnits,
+    handleSwapBag,
+    handleSaveRecipientGrouping,
+    handleSaveBagGrouping,
     loadRequest,
     refreshRequest,
   } = useRequisition(authorizationToken);
@@ -83,18 +89,16 @@ const RequisitionManagement = () => {
 
   const canProceedFromStep2 = React.useMemo(() => {
     const okStatus = ['matched', 'approved', 'issued', 'completed'];
-    const hasReserved = Array.isArray(requestDoc?.matchedInventory) && requestDoc.matchedInventory.length > 0;
-    if (!requestDoc?._id || !okStatus.includes(requestDoc?.status) || !hasReserved) return false;
+    if (!requestDoc?._id || !okStatus.includes(requestDoc?.status)) return false;
 
-    // If there are shortages but this is a multi-component request and at least one component was matched,
-    // allow proceeding (partial match for multi-component requests)
-    const hasShortage = Array.isArray(shortages) && shortages.length > 0;
-    if (!hasShortage) return true;
-
-    // Multi-component: allow partial match to proceed
+    // Multi-component requests always proceed — the operator continues with
+    // whatever components are available and unavailable ones stay flagged.
     const isMultiComponent = Array.isArray(requestDoc?.requestedComponents) && requestDoc.requestedComponents.length > 1;
-    return isMultiComponent;
-  }, [requestDoc, shortages]);
+    if (isMultiComponent) return true;
+
+    // Single-component request: needs at least one proposed unit to proceed.
+    return Array.isArray(requestDoc?.matchedInventory) && requestDoc.matchedInventory.length > 0;
+  }, [requestDoc]);
 
   const canProceedFromStep3 = React.useMemo(() => {
     const okStatus = ['approved', 'issued', 'completed'];
@@ -180,6 +184,12 @@ const RequisitionManagement = () => {
                 shortages={shortages}
                 onCrossmatchUpdate={handleCrossmatchUpdate}
                 crossmatchUpdating={crossmatchUpdating}
+                fetchAvailableUnits={fetchAvailableUnits}
+                onSwapBag={handleSwapBag}
+                swapping={swapping}
+                onSaveRecipientGrouping={handleSaveRecipientGrouping}
+                onSaveBagGrouping={handleSaveBagGrouping}
+                groupingSaving={groupingSaving}
               />
             </Step>
 

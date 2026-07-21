@@ -45,6 +45,7 @@ function mocks(ttiDto: TtiResultDto) {
     findBestReplacement: vi.fn(),
     allIssued: vi.fn(),
     findDonationsWithIssuedUnit: vi.fn(),
+    availableForSelection: vi.fn().mockResolvedValue([]),
   };
   const deferrals: DeferralRepo = {
     create: vi.fn(),

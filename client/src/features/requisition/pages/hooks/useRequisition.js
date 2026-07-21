@@ -38,6 +38,8 @@ export default function useRequisition(authToken) {
   const [approving, setApproving] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [crossmatchUpdating, setCrossmatchUpdating] = useState(false);
+  const [swapping, setSwapping] = useState(false);
+  const [groupingSaving, setGroupingSaving] = useState(false);
 
   const canProceedToMatch = useMemo(() => !!requestDoc?._id, [requestDoc]);
 
@@ -482,6 +484,60 @@ export default function useRequisition(authToken) {
     return true;
   };
 
+  // Fetch available in-stock bags for a component, optionally narrowed to a
+  // compatible ABO group. Returns { compatibleGroups, units } or null.
+  const fetchAvailableUnits = async (componentType, aboGroup) => {
+    if (!requestDoc?._id) return null;
+    const res = await requisitionApi.getAvailableUnits(requestDoc._id, { componentType, aboGroup });
+    if (!res.success) {
+      toast.error(res.error || 'Failed to load available bags');
+      return null;
+    }
+    return res.data;
+  };
+
+  const handleSwapBag = async (fromUnitId, toUnitId) => {
+    if (!requestDoc?._id || !toUnitId || fromUnitId === toUnitId) return false;
+    setSwapping(true);
+    const res = await requisitionApi.swapMatchedUnit(requestDoc._id, { fromUnitId, toUnitId });
+    setSwapping(false);
+    if (!res.success) {
+      toast.error(res.error || 'Failed to change bag');
+      return false;
+    }
+    await refreshRequest(requestDoc._id);
+    toast.success('Bag updated');
+    return true;
+  };
+
+  const handleSaveRecipientGrouping = async (grouping) => {
+    if (!requestDoc?._id) return false;
+    setGroupingSaving(true);
+    const res = await requisitionApi.saveRecipientGrouping(requestDoc._id, grouping);
+    setGroupingSaving(false);
+    if (!res.success) {
+      toast.error(res.error || 'Failed to save grouping');
+      return false;
+    }
+    await refreshRequest(requestDoc._id);
+    toast.success('Recipient grouping saved');
+    return true;
+  };
+
+  const handleSaveBagGrouping = async (unitId, grouping) => {
+    if (!requestDoc?._id || !unitId) return false;
+    setGroupingSaving(true);
+    const res = await requisitionApi.saveBagGrouping(requestDoc._id, { unitId, grouping });
+    setGroupingSaving(false);
+    if (!res.success) {
+      toast.error(res.error || 'Failed to save grouping');
+      return false;
+    }
+    await refreshRequest(requestDoc._id);
+    toast.success('Bag grouping saved');
+    return true;
+  };
+
   const hasChanges = useMemo(() => {
     if (!requestDoc) return false;
     const payload = {
@@ -542,6 +598,8 @@ export default function useRequisition(authToken) {
     approving,
     completing,
     crossmatchUpdating,
+    swapping,
+    groupingSaving,
     canProceedToMatch,
     hasChanges,
 
@@ -557,6 +615,10 @@ export default function useRequisition(authToken) {
     handleReject,
     handleCreateAndReject,
     handleCrossmatchUpdate,
+    fetchAvailableUnits,
+    handleSwapBag,
+    handleSaveRecipientGrouping,
+    handleSaveBagGrouping,
     loadRequest,
     refreshRequest,
   };

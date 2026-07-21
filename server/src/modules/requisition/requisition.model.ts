@@ -2,8 +2,33 @@
 // patient. Drives the match → crossmatch → issue flow.
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
-import { ABO_GROUP, COMPONENT_TYPE, RH_FACTOR, SPECIAL_NEED } from '@/shared/enums';
+import { ABO_GROUP, COMPONENT_TYPE, GRADING_REACTION, RH_FACTOR, SPECIAL_NEED } from '@/shared/enums';
 import { cascadeFields } from '@/shared/schemas/cascade-fields';
+
+// One agglutination-grading cell. Every worksheet reagent is stored as
+// this enum (or null until the tech records it).
+const grade = () => ({ type: String, enum: GRADING_REACTION, default: null }) as const;
+
+// Blood-grouping / crossmatch worksheet: forward cell grouping, reverse
+// serum grouping, and Rh typing. Reused for the recipient (once per
+// requisition) and per matched donor bag.
+const GroupingWorksheet = new Schema(
+  {
+    cellGrouping: new Schema(
+      { antiA: grade(), antiA1: grade(), antiB: grade(), antiAB: grade(), antiH: grade() },
+      { _id: false },
+    ),
+    serumGrouping: new Schema(
+      { aCell: grade(), bCell: grade(), oCell: grade() },
+      { _id: false },
+    ),
+    rhTyping: new Schema(
+      { antiD: grade(), antiDBovine: grade(), indirectCoombs: grade() },
+      { _id: false },
+    ),
+  },
+  { _id: false },
+);
 
 const RequestedComponent = new Schema(
   {
@@ -30,6 +55,10 @@ const MatchedUnit = new Schema(
     unitId: { type: String, required: true },
     componentType: { type: String, enum: COMPONENT_TYPE, required: true },
     compatibilityType: { type: String, enum: ['EXACT', 'COMPATIBLE'], required: true },
+    // Proposed vs actually reserved. Units are only picked (not reserved)
+    // at match time; reservation happens on approve, so bag/group can be
+    // freely changed in Match Review until then.
+    reserved: { type: Boolean, default: false },
     crossmatchRequired: { type: Boolean, required: true },
     crossmatchStatus: {
       type: String,
@@ -48,6 +77,8 @@ const MatchedUnit = new Schema(
     crossmatchDoneAt: { type: Date, default: null },
     crossmatchSeenAt: { type: Date, default: null },
     cardNumber: { type: String, trim: true, default: null },
+    // Per-bag (donor-side) blood-grouping worksheet.
+    grouping: { type: GroupingWorksheet, default: undefined },
   },
   { _id: false },
 );
@@ -101,6 +132,9 @@ const RequisitionSchema = new Schema(
     requiredAt: { type: Date, index: true },
     requestedAt: { type: Date, default: Date.now },
     patient: { type: RequisitionPatientSchema },
+    // Recipient (patient-side) blood-grouping worksheet, entered once in
+    // Match Review.
+    recipientGrouping: { type: GroupingWorksheet, default: undefined },
     requestedComponents: { type: [RequestedComponent], default: [] },
     matchedUnits: { type: [MatchedUnit], default: [] },
     status: {

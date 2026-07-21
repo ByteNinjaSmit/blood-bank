@@ -169,6 +169,13 @@ export type AboGroup = (typeof ABO_GROUP)[number];
 export const RH_FACTOR = ['POSITIVE', 'NEGATIVE'] as const;
 export type RhFactor = (typeof RH_FACTOR)[number];
 
+// Serological agglutination grading — reactions recorded on the
+// crossmatch/blood-grouping worksheet (cell grouping, serum grouping,
+// Rh typing). NEG_0 = negative (0), POS_1..POS_4 = 1+..4+, H = haemolysis,
+// MF = mixed field.
+export const GRADING_REACTION = ['NEG_0', 'POS_1', 'POS_2', 'POS_3', 'POS_4', 'H', 'MF'] as const;
+export type GradingReaction = (typeof GRADING_REACTION)[number];
+
 // Canonical component-type codes. IRRADIATED_PRBC/WASHED_PRBC/LEUKOREDUCED_PRBC
 // (former separate component types) collapse into plain PRBC + the matching
 // SpecialNeed flag (irradiated/washed/leukoreduced) — see shared/component-type.ts.

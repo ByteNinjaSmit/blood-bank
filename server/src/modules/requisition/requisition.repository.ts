@@ -1,7 +1,27 @@
 import { Types } from 'mongoose';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
-import type { AboGroup, ComponentType, RhFactor } from '@/shared/enums';
+import type { AboGroup, ComponentType, GradingReaction, RhFactor } from '@/shared/enums';
 import { NotFoundError } from '@/shared/errors';
+
+export interface GroupingWorksheetDto {
+  cellGrouping?: {
+    antiA?: GradingReaction | null;
+    antiA1?: GradingReaction | null;
+    antiB?: GradingReaction | null;
+    antiAB?: GradingReaction | null;
+    antiH?: GradingReaction | null;
+  };
+  serumGrouping?: {
+    aCell?: GradingReaction | null;
+    bCell?: GradingReaction | null;
+    oCell?: GradingReaction | null;
+  };
+  rhTyping?: {
+    antiD?: GradingReaction | null;
+    antiDBovine?: GradingReaction | null;
+    indirectCoombs?: GradingReaction | null;
+  };
+}
 
 export type RequisitionStatus =
   | 'PENDING'
@@ -25,6 +45,7 @@ export interface MatchedUnitDto {
   unitId: string;
   componentType: ComponentType;
   compatibilityType: 'EXACT' | 'COMPATIBLE';
+  reserved?: boolean;
   crossmatchRequired: boolean;
   crossmatchStatus: 'NOT_REQUIRED' | 'PENDING' | 'COMPATIBLE' | 'INCOMPATIBLE';
   reservedAt?: Date | string;
@@ -32,6 +53,7 @@ export interface MatchedUnitDto {
   crossmatchDoneAt?: Date | string | null;
   crossmatchSeenAt?: Date | string | null;
   cardNumber?: string | null;
+  grouping?: GroupingWorksheetDto | null;
 }
 
 export interface CrossmatchDetails {
@@ -72,6 +94,7 @@ export interface RequisitionDto {
   clinicianName: string;
   doctorName?: string;
   patient?: RequisitionPatientDto;
+  recipientGrouping?: GroupingWorksheetDto | null;
   requestedComponents: RequestedComponentDto[];
   matchedUnits: MatchedUnitDto[];
   status: RequisitionStatus;
@@ -91,6 +114,7 @@ interface RawReq {
   clinicianName: string;
   doctorName?: string;
   patient?: RequisitionPatientDto;
+  recipientGrouping?: GroupingWorksheetDto | null;
   requestedComponents: RequestedComponentDto[];
   matchedUnits: MatchedUnitDto[];
   status: RequisitionStatus;
@@ -132,6 +156,7 @@ function toDto(raw: RawReq): RequisitionDto {
         numChildrenWithHemolyticDisease: raw.patient.pregnancy.numChildrenWithHemolyticDisease ?? 0,
       } : undefined,
     } : undefined,
+    recipientGrouping: raw.recipientGrouping ?? null,
     requestedComponents: raw.requestedComponents || [],
     matchedUnits: raw.matchedUnits || [],
     status: raw.status,
@@ -199,6 +224,23 @@ export interface RequisitionRepo {
   removeMatchedUnit(id: string, unitId: string): Promise<RequisitionDto>;
   /** Appends an auto-selected replacement unit onto matchedUnits. */
   pushMatchedUnit(id: string, unit: MatchedUnitDto): Promise<RequisitionDto>;
+  /** Replaces one proposed matched unit with a different (unreserved) one. */
+  swapMatchedUnit(id: string, fromUnitId: string, newUnit: MatchedUnitDto): Promise<RequisitionDto>;
+  /** Marks one matched unit as actually reserved (set on approve). */
+  markReserved(id: string, unitId: string, actorId: string): Promise<RequisitionDto>;
+  /** Saves the recipient (patient-side) grouping worksheet. */
+  setRecipientGrouping(
+    id: string,
+    grouping: GroupingWorksheetDto,
+    actorId: string,
+  ): Promise<RequisitionDto>;
+  /** Saves the per-bag (donor-side) grouping worksheet. */
+  setMatchedUnitGrouping(
+    id: string,
+    unitId: string,
+    grouping: GroupingWorksheetDto,
+    actorId: string,
+  ): Promise<RequisitionDto>;
 }
 
 export function createRequisitionRepo(): RequisitionRepo {
@@ -299,6 +341,57 @@ export function createRequisitionRepo(): RequisitionRepo {
         { new: true },
       ).lean()) as RawReq | null;
       if (!updated) throw new NotFoundError('Requisition', id);
+      return toDto(updated);
+    },
+
+    async swapMatchedUnit(id, fromUnitId, newUnit) {
+      const updated = (await RequisitionModel.findOneAndUpdate(
+        { _id: id, 'matchedUnits.unitId': fromUnitId },
+        { $set: { 'matchedUnits.$': newUnit } },
+        { new: true },
+      ).lean()) as RawReq | null;
+      if (!updated) throw new NotFoundError('Requisition matched unit', `${id}/${fromUnitId}`);
+      return toDto(updated);
+    },
+
+    async markReserved(id, unitId, actorId) {
+      const updated = (await RequisitionModel.findOneAndUpdate(
+        { _id: id, 'matchedUnits.unitId': unitId },
+        {
+          $set: {
+            'matchedUnits.$.reserved': true,
+            'matchedUnits.$.reservedAt': new Date(),
+            updatedBy: new Types.ObjectId(actorId),
+          },
+        },
+        { new: true },
+      ).lean()) as RawReq | null;
+      if (!updated) throw new NotFoundError('Requisition matched unit', `${id}/${unitId}`);
+      return toDto(updated);
+    },
+
+    async setRecipientGrouping(id, grouping, actorId) {
+      const updated = (await RequisitionModel.findByIdAndUpdate(
+        id,
+        { $set: { recipientGrouping: grouping, updatedBy: new Types.ObjectId(actorId) } },
+        { new: true },
+      ).lean()) as RawReq | null;
+      if (!updated) throw new NotFoundError('Requisition', id);
+      return toDto(updated);
+    },
+
+    async setMatchedUnitGrouping(id, unitId, grouping, actorId) {
+      const updated = (await RequisitionModel.findOneAndUpdate(
+        { _id: id, 'matchedUnits.unitId': unitId },
+        {
+          $set: {
+            'matchedUnits.$.grouping': grouping,
+            updatedBy: new Types.ObjectId(actorId),
+          },
+        },
+        { new: true },
+      ).lean()) as RawReq | null;
+      if (!updated) throw new NotFoundError('Requisition matched unit', `${id}/${unitId}`);
       return toDto(updated);
     },
 

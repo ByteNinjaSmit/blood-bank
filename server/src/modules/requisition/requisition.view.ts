@@ -72,6 +72,7 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
           issuedAt: unit.issuedAt ? unit.issuedAt.toISOString() : null,
         },
         compatibilityType: mu.compatibilityType.toLowerCase(),
+        reserved: mu.reserved ?? false,
         crossmatchRequired: mu.crossmatchRequired,
         crossmatchStatus: mu.crossmatchStatus.toLowerCase(),
         reservedAt: mu.reservedAt,
@@ -79,6 +80,7 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
         crossmatchDoneAt: mu.crossmatchDoneAt ? new Date(mu.crossmatchDoneAt).toISOString() : null,
         crossmatchSeenAt: mu.crossmatchSeenAt ? new Date(mu.crossmatchSeenAt).toISOString() : null,
         cardNumber: mu.cardNumber || null,
+        grouping: mu.grouping || null,
         issueId: issueMap.get(mu.unitId)?.issueId || null,
       };
     })
@@ -136,6 +138,7 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
     _id: reqDto.id || reqDto._id || '',
     requestId: reqDto.requisitionId,
     doctorName: reqDto.doctorName || reqDto.clinicianName,
+    recipientGrouping: reqDto.recipientGrouping || null,
     requestedComponents,
     matchedInventory,
     status: reqDto.status?.toLowerCase(),
