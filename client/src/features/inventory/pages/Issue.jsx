@@ -1,16 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
-import { Loader2, PackageCheck, Plus, Trash2, Warehouse, MapPin, Eye, ArrowLeftRight, Printer, RefreshCw } from "lucide-react";
+import { PackageCheck, Warehouse, MapPin, ArrowLeftRight, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import CustomModal from "@/components/CustomModal";
 import RegisterExportDropdown from "@/components/shared/RegisterExportDropdown";
-import { exportIssues, exportStorageBags, exportClinicalIndicationIssues, exportBulkTransfers } from "@/utils/excelExportHelper";
-import BulkTransferCoverLetter from "@/features/inventory/components/BulkTransferCoverLetter";
-import TestingCertificate from "@/features/inventory/components/TestingCertificate";
-import BulkTransferInvoice from "@/features/inventory/components/BulkTransferInvoice";
 import StorageTab from "./issue-tabs/StorageTab";
 import DiseaseTab from "./issue-tabs/DiseaseTab";
 import BulkTransferTab from "./issue-tabs/BulkTransferTab";
@@ -18,6 +12,10 @@ import IssueStockTab from "./issue-tabs/IssueStockTab";
 import SendToStorageModal from "./issue-tabs/SendToStorageModal";
 import BulkTransferFormModal from "./issue-tabs/BulkTransferFormModal";
 import StorageEditModal from "./issue-tabs/StorageEditModal";
+import IssueViewModals from "./issue-tabs/IssueViewModals";
+import IssuePrintPrompts from "./issue-tabs/IssuePrintPrompts";
+import { useBulkTransfer } from "./hooks/useBulkTransfer";
+import { useIssueExport } from "./hooks/useIssueExport";
 import { formatDate as formatDateBase, formatDateTime as formatDateTimeBase } from "@/lib/format-date";
 
 // Day/month/year with month as a number (e.g. 19/07/2026), used across
@@ -62,88 +60,6 @@ const Issue = () => {
   const [availableUnits, setAvailableUnits] = useState([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
-  const [excelLoading, setExcelLoading] = useState(false);
-
-  // Exports a specific register (Issue Stock / Storage / Clinical Indication /
-  // Bulk Transfer), regardless of which tab is currently active — each
-  // register re-fetches its own data fresh from its own endpoint.
-  const handleExportRegister = async (registerKey, scope) => {
-    const exportAll = scope === 'all';
-    try {
-      setExcelLoading(true);
-
-      if (registerKey === 'storage') {
-        let dataToExport;
-        if (exportAll) {
-          // storageLocation=ALL asks the backend for every storage transfer
-          // (SJS + Anand + any other site) — omitting the param entirely
-          // would instead match the plain Issue Stock definition (storageLocation: null).
-          const res = await apiClient.get(`/api/inventory`, {
-            params: { page: 1, limit: 5000, status: 'issued', storageLocation: 'ALL', sortBy: 'issuedAt', order: 'desc' },
-          });
-          dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
-        } else {
-          const res = await apiClient.get(`/api/inventory`, {
-            params: { page: 1, limit: 500, status: 'issued', storageLocation: storageSubTab, sortBy: 'issuedAt', order: 'desc' },
-          });
-          dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
-        }
-        if (dataToExport.length === 0) return toast.info("No storage records to export");
-        await exportStorageBags(dataToExport);
-        return;
-      }
-
-      if (registerKey === 'disease') {
-        const res = await apiClient.get(`/api/inventory`, {
-          params: { page: 1, limit: exportAll ? 5000 : thalPagination.limit, status: 'issued', dispatchType: 'CLINICAL_INDICATION', sortBy: 'issuedAt', order: 'desc' },
-        });
-        const dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
-        if (dataToExport.length === 0) return toast.info("No clinical indication records to export");
-        await exportClinicalIndicationIssues(dataToExport);
-        return;
-      }
-
-      if (registerKey === 'bulkTransfer') {
-        const res = await apiClient.get(`/api/v2/bulk-transfer`, {
-          params: { page: 1, limit: exportAll ? 5000 : bulkPagination.limit },
-        });
-        const dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
-        if (dataToExport.length === 0) return toast.info("No bulk transfer records to export");
-        await exportBulkTransfers(dataToExport);
-        return;
-      }
-
-      // 'issue' register (default)
-      const res = await apiClient.get(`/api/inventory`, {
-        params: {
-          page: 1,
-          limit: exportAll ? 5000 : pagination.limit,
-          status,
-          componentType: componentType || undefined,
-          search: search || undefined,
-          bloodGroup: bloodGroup || undefined,
-          expiryFrom: expiryFrom || undefined,
-          expiryTo: expiryTo || undefined,
-          sortBy,
-          order,
-        },
-      });
-      const dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
-
-      if (dataToExport.length === 0) {
-        toast.info("No items to export");
-        return;
-      }
-
-      await exportIssues(dataToExport);
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to generate Excel report");
-    } finally {
-      setExcelLoading(false);
-    }
-  };
-
   // filters
   const [componentType, setComponentType] = useState("");
   const [search, setSearch] = useState("");
@@ -217,382 +133,6 @@ const Issue = () => {
   const [thalViewItem, setThalViewItem] = useState(null);
   const [thalPagination, setThalPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
 
-  // ── Bulk Transfer tab state ──────────────────────────
-  const [bulkRows, setBulkRows] = useState([]);
-  const [bulkLoading, setBulkLoading] = useState(false);
-  const [bulkViewOpen, setBulkViewOpen] = useState(false);
-  const [bulkViewItem, setBulkViewItem] = useState(null);
-  const [bulkPagination, setBulkPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
-
-  const [bulkFormOpen, setBulkFormOpen] = useState(false);
-  const [bulkSubmitting, setBulkSubmitting] = useState(false);
-  const [bulkTransferType, setBulkTransferType] = useState("GIVE_LOAN"); // GIVE_LOAN | TAKE_LOAN
-  const [bulkBloodBankName, setBulkBloodBankName] = useState("");
-  const [bulkBloodBankAddress, setBulkBloodBankAddress] = useState("");
-  const [bulkTransferDate, setBulkTransferDate] = useState(new Date().toISOString().split('T')[0]);
-  // GIVE_LOAN: pick from our own stock, same shape as the "Send to Storage" bag picker
-  const [bulkGiveBags, setBulkGiveBags] = useState([{ componentType: "PRBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
-  // TAKE_LOAN: bags coming in from the other bank — manually entered, not yet in our stock
-  const [bulkTakeGroups, setBulkTakeGroups] = useState([{ componentType: "PRBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" }] }]);
-
-  const resetBulkForm = () => {
-    setBulkTransferType("GIVE_LOAN");
-    setBulkBloodBankName("");
-    setBulkBloodBankAddress("");
-    setBulkTransferDate(new Date().toISOString().split('T')[0]);
-    setBulkGiveBags([{ componentType: "PRBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
-    setBulkTakeGroups([{ componentType: "PRBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" }] }]);
-  };
-
-  // ── Edit a bulk transfer ──────────────────────────────
-  // Reuses the create form in "edit mode": pre-seeds bulkGiveBags /
-  // bulkTakeGroups from the transfer's own items, and (for GIVE_LOAN)
-  // injects those items as synthetic "available" units so already-claimed
-  // bags still show up as selectable/pre-checked in the bag picker even
-  // though they're ISSUED (not RELEASED) and so absent from availableUnits.
-  const [bulkEditTarget, setBulkEditTarget] = useState(null);
-  const [bulkEditExtraUnits, setBulkEditExtraUnits] = useState([]);
-  const updateBulkTransferMutation = useUpdateBulkTransfer();
-
-  const openEditBulkTransfer = (row) => {
-    setBulkEditTarget(row);
-    setBulkTransferType(row.transferType);
-    setBulkBloodBankName(row.bloodBankName || "");
-    setBulkBloodBankAddress(row.bloodBankAddress || "");
-    setBulkTransferDate(row.transferDate ? row.transferDate.split('T')[0] : new Date().toISOString().split('T')[0]);
-
-    if (row.transferType === 'GIVE_LOAN') {
-      const extraUnits = (row.items || []).filter(it => it.unitId).map(it => ({
-        _id: it.unitId,
-        bagNo: it.bagNo,
-        segmentNo: it.segmentNo,
-        typeOfBag: undefined,
-        bag: {
-          bagNo: it.bagNo,
-          bloodGroup: (it.bloodGroup || '').replace(/[+-]$/, ''),
-          rh: (it.bloodGroup || '').endsWith('-') ? 'Negative' : 'Positive',
-          donationDate: it.collectedAt,
-        },
-        component: { componentType: it.componentType, volumeMl: it.volumeMl, expiryDate: it.expiresAt },
-      }));
-      setBulkEditExtraUnits(extraUnits);
-
-      const byComp = {};
-      (row.items || []).forEach(it => {
-        byComp[it.componentType] = byComp[it.componentType] || {};
-        byComp[it.componentType][it.bloodGroup] = byComp[it.componentType][it.bloodGroup] || [];
-        if (it.unitId) byComp[it.componentType][it.bloodGroup].push(it.unitId);
-      });
-      const groups = Object.entries(byComp).map(([componentType, byBg]) => ({
-        componentType,
-        groups: Object.entries(byBg).map(([bloodGroup, selectedBags]) => ({ bloodGroup, bagType: 'All', selectedBags })),
-      }));
-      setBulkGiveBags(groups.length ? groups : [{ componentType: "PRBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
-      fetchAvailableUnits();
-    } else {
-      setBulkEditExtraUnits([]);
-      const byKey = {};
-      (row.items || []).forEach(it => {
-        const key = `${it.componentType}|${it.bloodGroup}`;
-        byKey[key] = byKey[key] || { componentType: it.componentType, bloodGroup: it.bloodGroup, bags: [] };
-        byKey[key].bags.push({
-          bagNo: it.bagNo || '',
-          segmentNo: it.segmentNo || '',
-          volumeMl: it.volumeMl != null ? String(it.volumeMl) : '',
-          collectedAt: it.collectedAt ? it.collectedAt.split('T')[0] : '',
-          expiresAt: it.expiresAt ? it.expiresAt.split('T')[0] : '',
-        });
-      });
-      const groups = Object.values(byKey);
-      setBulkTakeGroups(groups.length ? groups : [{ componentType: "PRBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" }] }]);
-    }
-
-    setBulkFormOpen(true);
-  };
-
-  const { wrappedSave: saveBulkEdit, EditReasonDialog: BulkEditReasonDialog } = useEditWithReason({
-    onSave: async (payload, reason) => {
-      try {
-        setBulkSubmitting(true);
-        await updateBulkTransferMutation.mutateAsync({ id: bulkEditTarget.id, data: payload, editReason: reason });
-        toast.success("Bulk transfer updated");
-        setBulkFormOpen(false);
-        setBulkEditTarget(null);
-        setBulkEditExtraUnits([]);
-        resetBulkForm();
-        fetchBulkTransfers(bulkPagination.page || 1);
-        fetchAvailableUnits();
-      } catch (e) {
-        toast.error(e?.message || "Failed to update bulk transfer");
-        throw e;
-      } finally {
-        setBulkSubmitting(false);
-      }
-    },
-    title: 'Confirm Bulk Transfer Changes',
-    message: 'Please provide a reason for editing this bulk transfer. It will be recorded in the audit trail.',
-  });
-
-  const fetchBulkTransfers = async (page = 1, limit = bulkPagination.limit) => {
-    setBulkLoading(true);
-    try {
-      const res = await apiClient.get(`/api/v2/bulk-transfer`, {
-        params: { page, limit },
-      });
-      setBulkRows(Array.isArray(res.data?.data) ? res.data.data : []);
-      const p = res.data?.pagination || {};
-      setBulkPagination({ page: p.page || page, limit: p.limit || limit, total: p.total || 0, totalPages: Math.ceil((p.total || 0) / (p.limit || limit)) });
-    } catch (e) {
-      toast.error(e?.response?.data?.message || "Failed to fetch bulk transfers");
-      setBulkRows([]);
-    } finally {
-      setBulkLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (mainTab === 'bulkTransfer') fetchBulkTransfers(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mainTab]);
-
-  // ── Delete a bulk transfer ────────────────────────────
-  // Deleting a GIVE_LOAN transfer puts its bags back into stock (server
-  // restores each linked BloodUnit to RELEASED); deleting a TAKE_LOAN
-  // transfer simply removes those bags from the stock listing, since they
-  // only ever existed as line items on the transfer itself.
-  const [deleteBulkConfirmOpen, setDeleteBulkConfirmOpen] = useState(false);
-  const [deleteBulkTarget, setDeleteBulkTarget] = useState(null);
-  const [deleteBulkReason, setDeleteBulkReason] = useState("");
-  const deleteBulkTransferMutation = useDeleteBulkTransfer();
-  const deleteBulkSubmitting = deleteBulkTransferMutation.isPending;
-
-  const openDeleteBulkTransferConfirm = (row) => {
-    setDeleteBulkTarget(row);
-    setDeleteBulkReason("");
-    setDeleteBulkConfirmOpen(true);
-  };
-
-  const handleDeleteBulkTransfer = async () => {
-    if (!deleteBulkTarget) return;
-    if (!deleteBulkReason.trim()) {
-      return toast.warning("Please provide a reason for deleting this bulk transfer");
-    }
-    try {
-      await deleteBulkTransferMutation.mutateAsync({ id: deleteBulkTarget.id, reason: deleteBulkReason.trim() });
-      toast.success(
-        deleteBulkTarget.transferType === 'GIVE_LOAN'
-          ? "Bulk transfer deleted — bags returned to stock"
-          : "Bulk transfer deleted"
-      );
-      setDeleteBulkConfirmOpen(false);
-      setDeleteBulkTarget(null);
-      setDeleteBulkReason("");
-      fetchBulkTransfers(bulkPagination.page || 1);
-    } catch (e) {
-      toast.error(e?.message || "Failed to delete bulk transfer");
-    }
-  };
-
-  const handleBulkTransferSubmit = async () => {
-    if (!bulkBloodBankName.trim() || !bulkBloodBankAddress.trim()) {
-      return toast.warning("Please enter the company name and address");
-    }
-    if (!bulkTransferDate) {
-      return toast.warning("Please select a transfer date");
-    }
-
-    // When editing, bags already on the transfer are ISSUED (not RELEASED)
-    // so they won't appear in availableUnits — bulkEditExtraUnits carries
-    // synthetic entries for them, built from the transfer's own items.
-    const unitsForLookup = bulkEditTarget ? [...availableUnits, ...bulkEditExtraUnits] : availableUnits;
-
-    let items = [];
-    if (bulkTransferType === "GIVE_LOAN") {
-      bulkGiveBags.forEach(comp => {
-        comp.groups.forEach(group => {
-          group.selectedBags.forEach(bagId => {
-            const unit = unitsForLookup.find(u => u._id === bagId);
-            if (unit) {
-              items.push({
-                componentType: comp.componentType,
-                bloodGroup: group.bloodGroup,
-                bagNo: unit.bag?.bagNo || unit.bagNo || '',
-                segmentNo: unit.segmentNo || unit.bag?.segmentNo || undefined,
-                volumeMl: unit.component?.volumeMl || undefined,
-                collectedAt: unit.bag?.donationDate || undefined,
-                expiresAt: unit.component?.expiryDate || undefined,
-                unitId: unit._id || undefined,
-              });
-            }
-          });
-        });
-      });
-    } else {
-      bulkTakeGroups.forEach(group => {
-        group.bags.forEach(b => {
-          if (b.bagNo.trim()) {
-            items.push({
-              componentType: group.componentType,
-              bloodGroup: group.bloodGroup,
-              bagNo: b.bagNo.trim(),
-              segmentNo: b.segmentNo.trim() || undefined,
-              volumeMl: b.volumeMl ? Number(b.volumeMl) : undefined,
-              collectedAt: b.collectedAt || undefined,
-              expiresAt: b.expiresAt || undefined,
-            });
-          }
-        });
-      });
-    }
-
-    if (items.length === 0) {
-      return toast.warning("Please add at least one blood bag");
-    }
-
-    if (bulkEditTarget) {
-      // Pends on the mandatory reason dialog — actual PATCH happens in
-      // saveBulkEdit's onSave once a reason is supplied.
-      saveBulkEdit({
-        bloodBankName: bulkBloodBankName.trim(),
-        bloodBankAddress: bulkBloodBankAddress.trim(),
-        transferDate: bulkTransferDate,
-        items,
-      });
-      return;
-    }
-
-    try {
-      setBulkSubmitting(true);
-      await apiClient.post(`/api/v2/bulk-transfer`, {
-        transferType: bulkTransferType,
-        bloodBankName: bulkBloodBankName.trim(),
-        bloodBankAddress: bulkBloodBankAddress.trim(),
-        transferDate: bulkTransferDate,
-        items,
-      });
-
-      toast.success(bulkTransferType === "GIVE_LOAN" ? "Loan given successfully — bags removed from stock" : "Loan taken in successfully — bags added to stock");
-      setBulkFormOpen(false);
-      resetBulkForm();
-      fetchBulkTransfers(1);
-      if (bulkTransferType === "GIVE_LOAN") fetchAvailableUnits();
-    } catch (e) {
-      toast.error(e?.response?.data?.message || "Failed to record bulk transfer");
-    } finally {
-      setBulkSubmitting(false);
-    }
-  };
-
-  // ── Bulk Transfer cover letter (Give Loan) ───────────
-  const [coverLetterPromptOpen, setCoverLetterPromptOpen] = useState(false);
-  const [coverLetterBoxCount, setCoverLetterBoxCount] = useState("");
-  const [coverLetterPrintDoc, setCoverLetterPrintDoc] = useState(null);
-
-  // Per-component litres, computed from each bag's volumeMl — used both in
-  // the View modal summary and inside the printed cover letter.
-  const bulkTransferComponentTotals = (items) => {
-    const totals = {};
-    let totalMl = 0;
-    (items || []).forEach((it) => {
-      const ml = Number(it.volumeMl) || 0;
-      totals[it.componentType] = (totals[it.componentType] || 0) + ml;
-      totalMl += ml;
-    });
-    return { byComponent: totals, totalLitres: totalMl / 1000 };
-  };
-
-  const openCoverLetterPrompt = () => {
-    setCoverLetterBoxCount("");
-    setCoverLetterPromptOpen(true);
-  };
-
-  // Shared print trigger: injects a @media print stylesheet scoped to the
-  // given hidden wrapper id, fires window.print(), then cleans up and
-  // clears whichever print-doc state the caller is driving.
-  const triggerPrint = (wrapperId, styleId, onDone) => {
-    const styleEl = document.createElement('style');
-    styleEl.id = styleId;
-    styleEl.innerHTML = `
-      @page {
-        size: auto;
-        margin: 0;
-      }
-      @media print {
-        #root { display: none !important; }
-        html, body { background: white !important; }
-        #${wrapperId} { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; background: white; }
-        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-scheme: light !important; }
-      }
-    `;
-    document.head.appendChild(styleEl);
-
-    setTimeout(() => {
-      window.print();
-      const cleanup = () => {
-        const style = document.getElementById(styleId);
-        if (style) style.remove();
-        onDone();
-        window.removeEventListener('afterprint', cleanup);
-      };
-      window.addEventListener('afterprint', cleanup);
-      setTimeout(cleanup, 1500);
-    }, 150);
-  };
-
-  const handleConfirmCoverLetter = () => {
-    const n = Number(coverLetterBoxCount);
-    if (!coverLetterBoxCount || !Number.isInteger(n) || n <= 0) {
-      return toast.warning("Please enter a valid number of boxes");
-    }
-    setCoverLetterPromptOpen(false);
-    setCoverLetterPrintDoc({ ...bulkViewItem, boxCount: n });
-    triggerPrint('bulk-transfer-cover-letter-print-wrapper', 'bulk-transfer-cover-letter-print-style', () => setCoverLetterPrintDoc(null));
-  };
-
-  // ── Testing Certificate (Give Loan) ───────────────────
-  const [testingCertPromptOpen, setTestingCertPromptOpen] = useState(false);
-  const [testingCertBleedDate, setTestingCertBleedDate] = useState("");
-  const [testingCertBoxCount, setTestingCertBoxCount] = useState("");
-  const [testingCertPrintDoc, setTestingCertPrintDoc] = useState(null);
-
-  const openTestingCertPrompt = () => {
-    setTestingCertBleedDate("");
-    setTestingCertBoxCount("");
-    setTestingCertPromptOpen(true);
-  };
-
-  const handleConfirmTestingCert = () => {
-    const n = Number(testingCertBoxCount);
-    if (!testingCertBleedDate) {
-      return toast.warning("Please enter the bleed date");
-    }
-    if (!testingCertBoxCount || !Number.isInteger(n) || n <= 0) {
-      return toast.warning("Please enter a valid number of boxes");
-    }
-    setTestingCertPromptOpen(false);
-    setTestingCertPrintDoc({ ...bulkViewItem, bleedDate: testingCertBleedDate, boxCount: n });
-    triggerPrint('testing-certificate-print-wrapper', 'testing-certificate-print-style', () => setTestingCertPrintDoc(null));
-  };
-
-  // ── Invoice (Give Loan) ────────────────────────────────
-  const [invoicePromptOpen, setInvoicePromptOpen] = useState(false);
-  const [invoiceRate, setInvoiceRate] = useState("");
-  const [invoicePrintDoc, setInvoicePrintDoc] = useState(null);
-
-  const openInvoicePrompt = () => {
-    setInvoiceRate("");
-    setInvoicePromptOpen(true);
-  };
-
-  const handleConfirmInvoice = () => {
-    const rate = Number(invoiceRate);
-    if (!invoiceRate || rate <= 0) {
-      return toast.warning("Please enter a valid rate per litre");
-    }
-    setInvoicePromptOpen(false);
-    setInvoicePrintDoc({ ...bulkViewItem, ratePerLitre: rate });
-    triggerPrint('bulk-transfer-invoice-print-wrapper', 'bulk-transfer-invoice-print-style', () => setInvoicePrintDoc(null));
-  };
 
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
@@ -812,6 +352,15 @@ const Issue = () => {
     return p.otherDiseaseName || 'Other';
   };
 
+  // Bulk Transfer register (list/create/edit/delete + cover-letter/certificate/invoice prints)
+  const bulk = useBulkTransfer({ mainTab, availableUnits, fetchAvailableUnits });
+
+  // Per-register Excel export
+  const { excelLoading, handleExportRegister } = useIssueExport({
+    storageSubTab, thalPagination, bulkPagination: bulk.bulkPagination, pagination,
+    status, componentType, search, bloodGroup, expiryFrom, expiryTo, sortBy, order,
+  });
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -831,15 +380,15 @@ const Issue = () => {
               onClick={() => {
                 if (mainTab === 'storage') fetchStorageBags(storageSubTab);
                 else if (mainTab === 'disease') fetchThalassemia(thalPagination.page);
-                else if (mainTab === 'bulkTransfer') fetchBulkTransfers(bulkPagination.page);
+                else if (mainTab === 'bulkTransfer') bulk.fetchBulkTransfers(bulk.bulkPagination.page);
                 else fetchRows(pagination.page);
               }}
-              disabled={mainTab === 'storage' ? storageLoading : mainTab === 'disease' ? thalLoading : mainTab === 'bulkTransfer' ? bulkLoading : isLoading}
+              disabled={mainTab === 'storage' ? storageLoading : mainTab === 'disease' ? thalLoading : mainTab === 'bulkTransfer' ? bulk.bulkLoading : isLoading}
               title="Refresh"
               aria-label="Refresh"
               className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <RefreshCw className={`w-4 h-4 ${(mainTab === 'storage' ? storageLoading : mainTab === 'disease' ? thalLoading : mainTab === 'bulkTransfer' ? bulkLoading : isLoading) ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${(mainTab === 'storage' ? storageLoading : mainTab === 'disease' ? thalLoading : mainTab === 'bulkTransfer' ? bulk.bulkLoading : isLoading) ? 'animate-spin' : ''}`} />
             </button>
             <Button onClick={() => { setStorageOpen(true); fetchAvailableUnits(); }} className="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white shadow-sm flex items-center gap-1.5 h-10 px-4 rounded-lg">
               <Warehouse className="w-4 h-4" /> Send to Storage
@@ -905,14 +454,14 @@ const Issue = () => {
         {/* ── Bulk Transfer tab ────────────────────────────── */}
         {mainTab === 'bulkTransfer' && (
           <BulkTransferTab
-            bulkRows={bulkRows}
-            bulkLoading={bulkLoading}
-            bulkPagination={bulkPagination}
-            fetchBulkTransfers={fetchBulkTransfers}
-            onSendBulk={() => { setBulkEditTarget(null); setBulkEditExtraUnits([]); resetBulkForm(); setBulkFormOpen(true); fetchAvailableUnits(); }}
-            onViewTransfer={(r) => { setBulkViewItem(r); setBulkViewOpen(true); }}
-            onEditTransfer={openEditBulkTransfer}
-            onDeleteTransfer={openDeleteBulkTransferConfirm}
+            bulkRows={bulk.bulkRows}
+            bulkLoading={bulk.bulkLoading}
+            bulkPagination={bulk.bulkPagination}
+            fetchBulkTransfers={bulk.fetchBulkTransfers}
+            onSendBulk={() => { bulk.setBulkEditTarget(null); bulk.setBulkEditExtraUnits([]); bulk.resetBulkForm(); bulk.setBulkFormOpen(true); fetchAvailableUnits(); }}
+            onViewTransfer={(r) => { bulk.setBulkViewItem(r); bulk.setBulkViewOpen(true); }}
+            onEditTransfer={bulk.openEditBulkTransfer}
+            onDeleteTransfer={bulk.openDeleteBulkTransferConfirm}
           />
         )}
 
@@ -934,133 +483,6 @@ const Issue = () => {
           />
         )}
       </div>
-      <CustomModal open={viewOpen} onCancel={closeView} title={status === 'issued' ? 'Issued Component Details' : 'Reserved Component Details'} size="lg" hideFooter>
-        {viewItem && (
-          <div className="space-y-5 text-sm">
-            {/* Donor & Collection Section */}
-            <div className="bg-red-50/50 border border-red-100 rounded-xl p-4">
-              <h4 className="text-xs font-black text-red-800 uppercase tracking-wider mb-3">Donor & Collection Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Donor Name</div>
-                  <div className="font-bold text-gray-800">{viewItem?.bag?.donorName || '—'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Donation Date</div>
-                  <div className="font-semibold text-gray-850">
-                    {formatDate(viewItem?.bag?.donationDate)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Segment No</div>
-                  <div className="font-mono text-gray-700">{viewItem?.bag?.segmentNo || viewItem?.segmentNo || '—'}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Component & Bag Section */}
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-              <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider mb-3">Component & Bag Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Bag No</div>
-                  <div className="font-bold text-gray-800 font-mono">{viewItem?.bag?.bagNo || viewItem?.bagNo || '—'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Component Type</div>
-                  <div className="font-bold text-gray-800">
-                    {viewItem?.component?.componentType || '—'} {viewItem?.component?.volumeMl ? `• ${viewItem.component.volumeMl} mL` : ''}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Group</div>
-                  <div className="font-bold text-red-700 text-base">
-                    {viewItem?.bag ? `${viewItem.bag.bloodGroup} ${viewItem.bag.rh === 'Positive' ? '+' : viewItem.bag.rh === 'Negative' ? '-' : viewItem.bag.rh}` : '—'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Expiry Date</div>
-                  <div className="font-semibold text-gray-800">
-                    {formatDate(viewItem?.component?.expiryDate)}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Requisition & Issuance Section */}
-            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4">
-              <h4 className="text-xs font-black text-blue-800 uppercase tracking-wider mb-3">Requisition & Issuance Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Current Status</div>
-                  <div className="font-bold text-gray-800 uppercase">{viewItem?.status || '—'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Issue / Dispatch Date</div>
-                  <div className="font-bold text-gray-800">
-                    {formatDateTime(viewItem?.issuedAt)}
-                  </div>
-                </div>
-                {viewItem?.storageLocation ? (
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Storage Location</div>
-                    <div className="font-bold text-red-800 flex items-center gap-1">
-                      <Warehouse className="w-3.5 h-3.5" /> {viewItem.storageLocation}
-                    </div>
-                  </div>
-                ) : viewItem?.clinicalIndicationPatient ? (
-                  <div className="md:col-span-2">
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-1">Clinical Indication / Disease Patient Recipient</div>
-                    <div className="bg-white border border-red-100 rounded-lg p-3 text-xs grid grid-cols-2 gap-2">
-                      <div>
-                        <div className="text-gray-400">Name</div>
-                        <div className="font-bold text-gray-800">
-                          {viewItem.clinicalIndicationPatient.firstName} {viewItem.clinicalIndicationPatient.middleName} {viewItem.clinicalIndicationPatient.lastName}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-gray-400">Disease</div>
-                        <div className="font-bold text-gray-800">{diseaseLabel(viewItem.clinicalIndicationPatient)}</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-400">Age / Sex</div>
-                        <div className="font-bold text-gray-850">
-                          {viewItem.clinicalIndicationPatient.age} Yrs / {viewItem.clinicalIndicationPatient.sex}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {viewItem?.hospital?.name && (
-                      <div>
-                        <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Hospital / Facility</div>
-                        <div className="font-semibold text-gray-800">{viewItem.hospital.name}</div>
-                      </div>
-                    )}
-                    {((viewItem?.request && viewItem.request.patient) || viewItem?.reservedPatientName) && (
-                      <div>
-                        <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Patient</div>
-                        <div className="font-semibold text-gray-800">
-                          {viewItem?.request?.patient
-                            ? `${viewItem.request.patient.name} (${viewItem.request.patient.age}/${viewItem.request.patient.sex})`
-                            : `${viewItem.reservedPatientName} (${viewItem.reservedPatientAge}/${viewItem.reservedPatientSex})`}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-                {viewItem?.reservedAt && (
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Reserved At</div>
-                    <div className="text-gray-700">{formatDateTime(viewItem.reservedAt)}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </CustomModal>
 
       <SendToStorageModal
         open={storageOpen}
@@ -1083,501 +505,52 @@ const Issue = () => {
         loadingAvailable={loadingAvailable}
       />
 
-      {/* ── Storage Bag View Modal ──────────────────────── */}
-      <CustomModal open={storageViewOpen} onCancel={() => { setStorageViewOpen(false); setStorageViewItem(null); }} title="Storage Bag Details" size="lg" hideFooter>
-        {storageViewItem && (() => {
-          const r = storageViewItem;
-          const rh = r?.bag?.rh === 'Positive' ? '+' : r?.bag?.rh === 'Negative' ? '-' : r?.bag?.rh || '';
-          return (
-            <div className="space-y-4 text-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Bag No</div>
-                  <div className="font-bold text-gray-800">{r?.bag?.bagNo || r.bagNo || '—'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Segment No</div>
-                  <div className="font-mono text-gray-700">{r.segmentNo || '—'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Component</div>
-                  <div className="font-semibold text-gray-800">{r?.component?.componentType || '—'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Group</div>
-                  <div className="font-bold text-gray-800">{r?.bag?.bloodGroup}{rh}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Volume</div>
-                  <div className="text-gray-700">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Expiry Date</div>
-                  <div className="text-gray-700">{formatDate(r?.component?.expiryDate)}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Storage Location</div>
-                  <div className="font-semibold text-gray-800 flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-red-600" />{r.storageLocation || '—'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Sent At</div>
-                  <div className="text-gray-700">{formatDateTime(r.issuedAt)}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Type of Bag</div>
-                  <div className="text-gray-700">{r.typeOfBag || '—'}</div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-      </CustomModal>
-
-      {/* ── Thalassemia Patient View Modal ──────────────── */}
-      <CustomModal open={thalViewOpen} onCancel={() => { setThalViewOpen(false); setThalViewItem(null); }} title="Clinical Indication / Disease Patient Details" size="lg" hideFooter>
-        {thalViewItem && (() => {
-          const r = thalViewItem;
-          const p = r.clinicalIndicationPatient || {};
-          const fullName = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ') || '—';
-          const rh = r?.bag?.rh === 'Positive' ? '+' : r?.bag?.rh === 'Negative' ? '-' : r?.bag?.rh || '';
-          const req = r.requisition;
-          return (
-            <div className="space-y-5 text-sm">
-              {/* Patient details section */}
-              <div className="bg-red-50 border border-red-100 rounded-xl p-4">
-                <h4 className="text-xs font-black text-red-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5" /> Patient Information
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Full Name</div>
-                    <div className="font-bold text-gray-800 text-base">{fullName}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Group</div>
-                    <div className="font-bold text-red-700 text-base">{p.bloodGroup || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Disease</div>
-                    <div className="font-semibold text-gray-800">{diseaseLabel(p)}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Age</div>
-                    <div className="font-semibold text-gray-800">{p.age ? `${p.age} years` : '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Sex</div>
-                    <div className="font-semibold text-gray-800">{p.sex || '—'}</div>
-                  </div>
-                  {p.address && (
-                    <div className="md:col-span-2">
-                      <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Address</div>
-                      <div className="text-gray-700">{p.address}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Blood bag details section */}
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider mb-3">Blood Bag Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Bag No</div>
-                    <div className="font-bold text-gray-800 font-mono">{r?.bag?.bagNo || r.bagNo || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Segment No</div>
-                    <div className="font-mono text-gray-700">{r.segmentNo || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Component</div>
-                    <div className="font-semibold text-gray-800">{r?.component?.componentType || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Group</div>
-                    <div className="font-bold text-gray-800">{r?.bag?.bloodGroup}{rh}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Volume</div>
-                    <div className="text-gray-700">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Expiry Date</div>
-                    <div className="text-gray-700">{formatDate(r?.component?.expiryDate)}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Type of Bag</div>
-                    <div className="text-gray-700">{r.typeOfBag || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Issued At</div>
-                    <div className="text-gray-700">{formatDateTime(r.issuedAt)}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Requisition details if present */}
-              {req && (
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                  <h4 className="text-xs font-black text-blue-800 uppercase tracking-wider mb-3">Requisition Details</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Requisition ID</div>
-                      <div className="font-mono font-bold text-gray-800">{req.requisitionId || '—'}</div>
-                    </div>
-                    {req.doctorName && (
-                      <div>
-                        <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Doctor / Clinician</div>
-                        <div className="text-gray-700">{req.doctorName}</div>
-                      </div>
-                    )}
-                    {req.requiredAt && (
-                      <div>
-                        <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Required At</div>
-                        <div className="text-gray-700">{formatDateTime(req.requiredAt)}</div>
-                      </div>
-                    )}
-                    {req.patient && (
-                      <div className="md:col-span-2">
-                        <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Requisition Patient</div>
-                        <div className="text-gray-700">{req.patient.name || '—'} · {req.patient.age ? `${req.patient.age} yrs` : ''} {req.patient.sex || ''}</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-      </CustomModal>
-
-      {/* ── Delete Bulk Transfer Confirmation ─────────────── */}
-      <CustomModal
-        open={deleteBulkConfirmOpen}
-        onCancel={() => { setDeleteBulkConfirmOpen(false); setDeleteBulkTarget(null); }}
-        title="Delete Bulk Transfer"
-        size="sm"
-        hideFooter
-      >
-        <div className="space-y-4 text-sm p-1">
-          <p className="text-gray-700">
-            Delete transfer <strong className="font-mono">{deleteBulkTarget?.transferId}</strong>
-            {deleteBulkTarget?.transferType === 'GIVE_LOAN' ? (
-              <> — its {deleteBulkTarget?.items?.length || 0} bag(s) will be <strong>returned to stock</strong>.</>
-            ) : (
-              <> — its {deleteBulkTarget?.items?.length || 0} bag(s) will be removed from the stock listing.</>
-            )}
-          </p>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-              Reason for Deletion <span className="text-red-600 font-bold">*</span>
-            </label>
-            <textarea
-              rows={3}
-              value={deleteBulkReason}
-              onChange={(e) => setDeleteBulkReason(e.target.value)}
-              placeholder="Describe the reason for deleting this transfer..."
-              className="w-full px-3.5 py-2.5 text-sm bg-gray-50 border border-gray-250 rounded-xl focus:bg-white focus:ring-2 focus:ring-slate-150 focus:border-slate-800 transition-all outline-none resize-none"
-              disabled={deleteBulkSubmitting}
-            />
-          </div>
-          <div className="flex items-center justify-end gap-2 border-t pt-4">
-            <Button onClick={() => { setDeleteBulkConfirmOpen(false); setDeleteBulkTarget(null); }} variant="outline" className="h-10 px-4">
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDeleteBulkTransfer}
-              disabled={deleteBulkSubmitting || !deleteBulkReason.trim()}
-              className="bg-red-700 hover:bg-red-800 text-white font-medium h-10 px-5"
-            >
-              {deleteBulkSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2 inline" /> Deleting...
-                </>
-              ) : (
-                "Delete"
-              )}
-            </Button>
-          </div>
-        </div>
-      </CustomModal>
-
-      {/* ── Bulk Transfer View Modal ──────────────────────── */}
-      <CustomModal open={bulkViewOpen} onCancel={() => { setBulkViewOpen(false); setBulkViewItem(null); }} title="Bulk Transfer Details" size="lg" hideFooter>
-        {bulkViewItem && (() => {
-          const { byComponent, totalLitres } = bulkTransferComponentTotals(bulkViewItem.items);
-          const componentEntries = Object.entries(byComponent);
-          return (
-          <div className="space-y-5 text-sm">
-            <div className="bg-red-50 border border-red-100 rounded-xl p-4">
-              <h4 className="text-xs font-black text-red-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <ArrowLeftRight className="w-3.5 h-3.5" /> Transfer Information
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Transfer ID</div>
-                  <div className="font-bold text-gray-800 font-mono">{bulkViewItem.transferId}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Type</div>
-                  <div className="font-bold text-red-700">{bulkViewItem.transferType === 'GIVE_LOAN' ? 'Give Loan' : 'Take Loan'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Company Name</div>
-                  <div className="font-semibold text-gray-800">{bulkViewItem.bloodBankName}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Transfer Date</div>
-                  <div className="text-gray-700">{formatDate(bulkViewItem.transferDate)}</div>
-                </div>
-                <div className="md:col-span-2">
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Bank Address</div>
-                  <div className="text-gray-700">{bulkViewItem.bloodBankAddress}</div>
-                </div>
-                {bulkViewItem.notes && (
-                  <div className="md:col-span-2">
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Notes</div>
-                    <div className="text-gray-700">{bulkViewItem.notes}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
-              <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider p-4 pb-0">Blood Bags ({bulkViewItem.items?.length || 0})</h4>
-              <div className="overflow-x-auto p-4 pt-3">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-gray-500 text-xs uppercase font-semibold">
-                      <th className="px-3 py-2">Component</th>
-                      <th className="px-3 py-2">Blood Group</th>
-                      <th className="px-3 py-2">Bag No</th>
-                      <th className="px-3 py-2">Segment No</th>
-                      <th className="px-3 py-2">Volume</th>
-                      <th className="px-3 py-2">Collected</th>
-                      <th className="px-3 py-2">Expiry</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {(bulkViewItem.items || []).map((it, idx) => (
-                      <tr key={idx} className="bg-white">
-                        <td className="px-3 py-2.5 text-gray-700 font-medium">{it.componentType}</td>
-                        <td className="px-3 py-2.5 font-bold text-gray-800">{it.bloodGroup}</td>
-                        <td className="px-3 py-2.5 font-mono font-bold text-gray-800">{it.bagNo}</td>
-                        <td className="px-3 py-2.5 font-mono text-gray-600">{it.segmentNo || '—'}</td>
-                        <td className="px-3 py-2.5 text-gray-600">{it.volumeMl ? `${it.volumeMl} mL` : '—'}</td>
-                        <td className="px-3 py-2.5 text-gray-600">{formatDate(it.collectedAt)}</td>
-                        <td className="px-3 py-2.5 text-gray-600">{formatDate(it.expiresAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Component totals in litres */}
-            <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
-              <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider mb-3">Component Totals (Litres)</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {componentEntries.length === 0 ? (
-                  <div className="col-span-full text-gray-500 text-xs">No volume data recorded for these bags.</div>
-                ) : componentEntries.map(([comp, ml]) => (
-                  <div key={comp} className="bg-white border border-amber-100 rounded-lg px-3 py-2">
-                    <div className="text-gray-500 text-[10px] uppercase font-semibold">{comp}</div>
-                    <div className="font-bold text-gray-800">{(ml / 1000).toFixed(2)} L</div>
-                  </div>
-                ))}
-                <div className="bg-white border border-amber-200 rounded-lg px-3 py-2">
-                  <div className="text-amber-700 text-[10px] uppercase font-semibold">Total</div>
-                  <div className="font-bold text-amber-900">{totalLitres.toFixed(2)} L</div>
-                </div>
-              </div>
-            </div>
-
-            {bulkViewItem.transferType === 'GIVE_LOAN' && (
-              <div className="flex justify-end gap-2 pt-2 border-t flex-wrap">
-                <Button
-                  onClick={openTestingCertPrompt}
-                  variant="outline"
-                  className="border-red-200 text-red-800 hover:bg-red-50 font-medium h-10 px-5 shadow-sm flex items-center gap-2"
-                >
-                  <Printer className="w-4 h-4" /> Print Testing Certificate
-                </Button>
-                <Button
-                  onClick={openInvoicePrompt}
-                  variant="outline"
-                  className="border-red-200 text-red-800 hover:bg-red-50 font-medium h-10 px-5 shadow-sm flex items-center gap-2"
-                >
-                  <Printer className="w-4 h-4" /> Print Invoice
-                </Button>
-                <Button
-                  onClick={openCoverLetterPrompt}
-                  className="bg-red-800 hover:bg-red-900 text-white font-medium h-10 px-5 shadow-sm flex items-center gap-2"
-                >
-                  <Printer className="w-4 h-4" /> Print Cover Letter
-                </Button>
-              </div>
-            )}
-          </div>
-          );
-        })()}
-      </CustomModal>
-
-      {/* ── Cover Letter: Box Count Prompt ────────────────── */}
-      <CustomModal
-        open={coverLetterPromptOpen}
-        onCancel={() => setCoverLetterPromptOpen(false)}
-        title="Enter Box Count"
-        size="sm"
-        hideFooter
-      >
-        <div className="space-y-4 text-sm p-1">
-          <div className="flex flex-col">
-            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Total No. of Boxes</label>
-            <input
-              type="number"
-              min="1"
-              autoFocus
-              value={coverLetterBoxCount}
-              onChange={(e) => setCoverLetterBoxCount(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmCoverLetter(); }}
-              className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm focus:ring-1 focus:ring-red-500 border-gray-300"
-              placeholder="e.g. 5"
-            />
-          </div>
-          <div className="flex items-center justify-end gap-2 border-t pt-4">
-            <Button onClick={() => setCoverLetterPromptOpen(false)} variant="outline" className="h-10 px-4">
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmCoverLetter} className="bg-red-800 hover:bg-red-900 text-white font-medium h-10 px-5">
-              Print
-            </Button>
-          </div>
-        </div>
-      </CustomModal>
-
-      {/* Hidden print wrapper for the cover letter */}
-      {coverLetterPrintDoc && createPortal(
-        <div id="bulk-transfer-cover-letter-print-wrapper" className="hidden print:block">
-          <BulkTransferCoverLetter transfer={coverLetterPrintDoc} boxCount={coverLetterPrintDoc.boxCount} />
-        </div>,
-        document.body
-      )}
-
-      {/* ── Testing Certificate: Bleed Date & Box Count Prompt ──── */}
-      <CustomModal
-        open={testingCertPromptOpen}
-        onCancel={() => setTestingCertPromptOpen(false)}
-        title="Testing Certificate Details"
-        size="sm"
-        hideFooter
-      >
-        <div className="space-y-4 text-sm p-1">
-          <div className="flex flex-col">
-            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Bleed Date</label>
-            <input
-              type="date"
-              autoFocus
-              value={testingCertBleedDate}
-              onChange={(e) => setTestingCertBleedDate(e.target.value)}
-              className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm focus:ring-1 focus:ring-red-500 border-gray-300"
-            />
-          </div>
-          <div className="flex flex-col">
-            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Total No. of Boxes</label>
-            <input
-              type="number"
-              min="1"
-              value={testingCertBoxCount}
-              onChange={(e) => setTestingCertBoxCount(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmTestingCert(); }}
-              className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm focus:ring-1 focus:ring-red-500 border-gray-300"
-              placeholder="e.g. 6"
-            />
-          </div>
-          <div className="flex items-center justify-end gap-2 border-t pt-4">
-            <Button onClick={() => setTestingCertPromptOpen(false)} variant="outline" className="h-10 px-4">
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmTestingCert} className="bg-red-800 hover:bg-red-900 text-white font-medium h-10 px-5">
-              Print
-            </Button>
-          </div>
-        </div>
-      </CustomModal>
-
-      {/* Hidden print wrapper for the testing certificate */}
-      {testingCertPrintDoc && createPortal(
-        <div id="testing-certificate-print-wrapper" className="hidden print:block">
-          <TestingCertificate transfer={testingCertPrintDoc} bleedDate={testingCertPrintDoc.bleedDate} boxCount={testingCertPrintDoc.boxCount} />
-        </div>,
-        document.body
-      )}
-
-      {/* ── Invoice: Rate Per Litre Prompt ─────────────────── */}
-      <CustomModal
-        open={invoicePromptOpen}
-        onCancel={() => setInvoicePromptOpen(false)}
-        title="Invoice Details"
-        size="sm"
-        hideFooter
-      >
-        <div className="space-y-4 text-sm p-1">
-          <div className="flex flex-col">
-            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Rate per Litre (₹)</label>
-            <input
-              type="number"
-              min="0"
-              autoFocus
-              value={invoiceRate}
-              onChange={(e) => setInvoiceRate(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmInvoice(); }}
-              className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm focus:ring-1 focus:ring-red-500 border-gray-300"
-              placeholder="e.g. 1600"
-            />
-          </div>
-          <div className="flex items-center justify-end gap-2 border-t pt-4">
-            <Button onClick={() => setInvoicePromptOpen(false)} variant="outline" className="h-10 px-4">
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmInvoice} className="bg-red-800 hover:bg-red-900 text-white font-medium h-10 px-5">
-              Print
-            </Button>
-          </div>
-        </div>
-      </CustomModal>
-
-      {/* Hidden print wrapper for the invoice */}
-      {invoicePrintDoc && createPortal(
-        <div id="bulk-transfer-invoice-print-wrapper" className="hidden print:block">
-          <BulkTransferInvoice transfer={invoicePrintDoc} ratePerLitre={invoicePrintDoc.ratePerLitre} />
-        </div>,
-        document.body
-      )}
 
       {/* ── Send Bulk (Give/Take Loan) Form Modal ─────────── */}
       <BulkTransferFormModal
-        open={bulkFormOpen}
-        onClose={() => { setBulkFormOpen(false); setBulkEditTarget(null); setBulkEditExtraUnits([]); }}
-        mode={bulkEditTarget ? 'edit' : 'create'}
-        bulkTransferType={bulkTransferType}
-        setBulkTransferType={setBulkTransferType}
-        bulkBloodBankName={bulkBloodBankName}
-        setBulkBloodBankName={setBulkBloodBankName}
-        bulkBloodBankAddress={bulkBloodBankAddress}
-        setBulkBloodBankAddress={setBulkBloodBankAddress}
-        bulkTransferDate={bulkTransferDate}
-        setBulkTransferDate={setBulkTransferDate}
-        bulkGiveBags={bulkGiveBags}
-        setBulkGiveBags={setBulkGiveBags}
-        bulkTakeGroups={bulkTakeGroups}
-        setBulkTakeGroups={setBulkTakeGroups}
-        availableUnits={bulkEditTarget ? [...availableUnits, ...bulkEditExtraUnits] : availableUnits}
-        handleBulkTransferSubmit={handleBulkTransferSubmit}
-        bulkSubmitting={bulkSubmitting}
+        open={bulk.bulkFormOpen}
+        onClose={() => { bulk.setBulkFormOpen(false); bulk.setBulkEditTarget(null); bulk.setBulkEditExtraUnits([]); }}
+        mode={bulk.bulkEditTarget ? 'edit' : 'create'}
+        bulkTransferType={bulk.bulkTransferType}
+        setBulkTransferType={bulk.setBulkTransferType}
+        bulkBloodBankName={bulk.bulkBloodBankName}
+        setBulkBloodBankName={bulk.setBulkBloodBankName}
+        bulkBloodBankAddress={bulk.bulkBloodBankAddress}
+        setBulkBloodBankAddress={bulk.setBulkBloodBankAddress}
+        bulkTransferDate={bulk.bulkTransferDate}
+        setBulkTransferDate={bulk.setBulkTransferDate}
+        bulkGiveBags={bulk.bulkGiveBags}
+        setBulkGiveBags={bulk.setBulkGiveBags}
+        bulkTakeGroups={bulk.bulkTakeGroups}
+        setBulkTakeGroups={bulk.setBulkTakeGroups}
+        availableUnits={bulk.bulkEditTarget ? [...availableUnits, ...bulk.bulkEditExtraUnits] : availableUnits}
+        handleBulkTransferSubmit={bulk.handleBulkTransferSubmit}
+        bulkSubmitting={bulk.bulkSubmitting}
         loadingAvailable={loadingAvailable}
       />
+
+      {/* ── View modals (issue / storage / disease / bulk) + delete confirm ── */}
+      <IssueViewModals
+        viewOpen={viewOpen}
+        closeView={closeView}
+        viewItem={viewItem}
+        status={status}
+        storageViewOpen={storageViewOpen}
+        setStorageViewOpen={setStorageViewOpen}
+        storageViewItem={storageViewItem}
+        setStorageViewItem={setStorageViewItem}
+        thalViewOpen={thalViewOpen}
+        setThalViewOpen={setThalViewOpen}
+        thalViewItem={thalViewItem}
+        setThalViewItem={setThalViewItem}
+        diseaseLabel={diseaseLabel}
+        formatDate={formatDate}
+        formatDateTime={formatDateTime}
+        bulk={bulk}
+      />
+
+      {/* ── Bulk transfer print prompts (cover letter / testing cert / invoice) ── */}
+      <IssuePrintPrompts bulk={bulk} />
 
       {/* ── Storage bag edit (location) + reason dialogs ──── */}
       <StorageEditModal
@@ -1591,7 +564,7 @@ const Issue = () => {
       {StorageDeleteReasonDialog}
 
       {/* ── Bulk transfer edit reason dialog ──────────────── */}
-      {BulkEditReasonDialog}
+      {bulk.BulkEditReasonDialog}
     </div>
   );
 };
