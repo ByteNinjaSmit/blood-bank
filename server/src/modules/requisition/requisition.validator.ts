@@ -96,12 +96,22 @@ export const IssueAllBody = z.object({
 });
 
 export const UpdateCrossmatchLegacyBody = z.object({
-  inventoryId: z.string().trim().min(1, 'Provide inventoryId and crossmatchStatus (compatible | incompatible)'),
-  crossmatchStatus: z.enum(['compatible', 'incompatible']),
+  inventoryId: z.string().trim().min(1, 'Provide inventoryId and crossmatchStatus (compatible | incompatible | pending)'),
+  crossmatchStatus: z.enum(['compatible', 'incompatible', 'pending']),
   compatibilityResult: z.enum(['MAJOR_COMPATIBLE', 'MINOR_COMPATIBLE', 'UNIVERSAL']).optional(),
   crossmatchDoneAt: z.coerce.date().optional(),
   crossmatchSeenAt: z.coerce.date().optional(),
   cardNumber: z.string().trim().optional(),
+});
+
+export const ConfirmCompatibilityBody = z.object({
+  unitId: z.string().trim().min(1),
+  confirmed: z.boolean(),
+});
+
+export const RejectComponentBody = z.object({
+  componentType: z.enum(COMPONENT_TYPE),
+  reason: z.string().trim().min(1).max(500),
 });
 
 // One agglutination reaction cell; null clears it.
@@ -176,4 +186,8 @@ export const ValidateRequisition = {
     parseOrThrow(SwapMatchedUnitBody, req.body, 'request body'),
   availableUnitsQuery: (req: Request) =>
     parseOrThrow(AvailableUnitsQuery, req.query, 'query string'),
+  confirmCompatibilityBody: (req: Request) =>
+    parseOrThrow(ConfirmCompatibilityBody, req.body, 'request body'),
+  rejectComponentBody: (req: Request) =>
+    parseOrThrow(RejectComponentBody, req.body, 'request body'),
 };

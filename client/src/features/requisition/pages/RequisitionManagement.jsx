@@ -11,6 +11,44 @@ import ApproveIssueStep from './steps/ApproveIssueStep';
 import CompleteStep from './steps/CompleteStep';
 import AddHospitalModal from './components/AddHospitalModal';
 
+// True when a grouping worksheet has at least one recorded reaction.
+function groupingHasValue(g) {
+  if (!g) return false;
+  for (const section of ['cellGrouping', 'serumGrouping', 'rhTyping']) {
+    const vals = g[section] ? Object.values(g[section]) : [];
+    if (vals.some((v) => v)) return true;
+  }
+  return false;
+}
+
+// What still blocks Step 2 → Next. Returns a list of human-readable reasons
+// (empty = complete). A bag needs: crossmatch compatible (if required),
+// substitute compatibility confirmed, and its grouping saved; plus the
+// recipient grouping when any bag exists.
+function step2Blockers(requestDoc) {
+  const reasons = [];
+  const bags = Array.isArray(requestDoc?.matchedInventory) ? requestDoc.matchedInventory : [];
+  if (bags.length === 0) return reasons; // nothing to fulfil (all unavailable/rejected)
+
+  if (!groupingHasValue(requestDoc?.recipientGrouping)) {
+    reasons.push('Enter and save the recipient serum/cell grouping.');
+  }
+  for (const mi of bags) {
+    const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+    const bagNo = inv?.bagNo?.bagNo || inv?._id || 'bag';
+    if (mi.crossmatchRequired && mi.crossmatchStatus !== 'compatible') {
+      reasons.push(`Record a compatible crossmatch for ${bagNo}.`);
+    }
+    if ((mi.compatibilityType || 'exact') === 'compatible' && !mi.compatibilityConfirmed) {
+      reasons.push(`Confirm compatibility for substitute bag ${bagNo}.`);
+    }
+    if (!groupingHasValue(mi.grouping)) {
+      reasons.push(`Enter and save the bag grouping for ${bagNo}.`);
+    }
+  }
+  return reasons;
+}
+
 const RequisitionManagement = () => {
   const navigate = useNavigate();
   const params = useParams();
@@ -54,6 +92,9 @@ const RequisitionManagement = () => {
     handleSwapBag,
     handleSaveRecipientGrouping,
     handleSaveBagGrouping,
+    handleConfirmCompatibility,
+    handleResetCrossmatch,
+    handleRejectComponent,
     loadRequest,
     refreshRequest,
   } = useRequisition(authorizationToken);
@@ -87,18 +128,17 @@ const RequisitionManagement = () => {
     return !!requestDoc?._id;
   }, [requestDoc]);
 
+  // Step 2 → Next is gated on completeness: every proposed bag crossmatched +
+  // compatibility-confirmed + grouped, and the recipient grouping saved.
+  const step2Reasons = React.useMemo(() => step2Blockers(requestDoc), [requestDoc]);
+
   const canProceedFromStep2 = React.useMemo(() => {
     const okStatus = ['matched', 'approved', 'issued', 'completed'];
     if (!requestDoc?._id || !okStatus.includes(requestDoc?.status)) return false;
-
-    // Multi-component requests always proceed — the operator continues with
-    // whatever components are available and unavailable ones stay flagged.
-    const isMultiComponent = Array.isArray(requestDoc?.requestedComponents) && requestDoc.requestedComponents.length > 1;
-    if (isMultiComponent) return true;
-
-    // Single-component request: needs at least one proposed unit to proceed.
-    return Array.isArray(requestDoc?.matchedInventory) && requestDoc.matchedInventory.length > 0;
-  }, [requestDoc]);
+    // Once past matching (approved/issued/completed) the gate already cleared.
+    if (requestDoc.status !== 'matched') return true;
+    return step2Reasons.length === 0;
+  }, [requestDoc, step2Reasons]);
 
   const canProceedFromStep3 = React.useMemo(() => {
     const okStatus = ['approved', 'issued', 'completed'];
@@ -190,6 +230,10 @@ const RequisitionManagement = () => {
                 onSaveRecipientGrouping={handleSaveRecipientGrouping}
                 onSaveBagGrouping={handleSaveBagGrouping}
                 groupingSaving={groupingSaving}
+                onConfirmCompatibility={handleConfirmCompatibility}
+                onResetCrossmatch={handleResetCrossmatch}
+                onRejectComponent={handleRejectComponent}
+                step2Reasons={step2Reasons}
               />
             </Step>
 

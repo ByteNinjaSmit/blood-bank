@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import CompatibilityMatrix from '../components/CompatibilityMatrix';
 import GroupingWorksheet from '../components/GroupingWorksheet';
 import MatchedBagCard from '../components/MatchedBagCard';
+import ComponentRejectModal from '../components/ComponentRejectModal';
+import { componentColor } from '../components/component-colors';
 import { RejectRequestModal } from '@/components/shared';
 
 // ── Group matched inventory by component type ──
@@ -22,8 +24,12 @@ export default function MatchReviewStep({
   onCrossmatchUpdate, crossmatchUpdating,
   fetchAvailableUnits, onSwapBag, swapping,
   onSaveRecipientGrouping, onSaveBagGrouping, groupingSaving,
+  onConfirmCompatibility, onResetCrossmatch, onRejectComponent, step2Reasons = [],
 }) {
   const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
+  const [rejectComponentTarget, setRejectComponentTarget] = useState(null);
+  const [rejectingComponent, setRejectingComponent] = useState(false);
+  const rejectedComponents = (requestDoc?.requestedComponents || []).filter((c) => c.status === 'REJECTED');
   const status = requestDoc?.status;
   const canMatch = !!requestDoc?._id && status === 'pending' && !matching;
   const canReject = !!requestDoc?._id && ['pending', 'matched', 'approved'].includes(status);
@@ -48,6 +54,21 @@ export default function MatchReviewStep({
           setRejectConfirmOpen(false);
         }}
         requestId={requestDoc?.requestId}
+      />
+
+      <ComponentRejectModal
+        isOpen={!!rejectComponentTarget}
+        onClose={() => setRejectComponentTarget(null)}
+        component={rejectComponentTarget?.rc}
+        bagCount={rejectComponentTarget?.bagCount || 0}
+        submitting={rejectingComponent}
+        onConfirm={async (reason) => {
+          if (!rejectComponentTarget) return;
+          setRejectingComponent(true);
+          const ok = await onRejectComponent(rejectComponentTarget.rc.componentType, reason);
+          setRejectingComponent(false);
+          if (ok) setRejectComponentTarget(null);
+        }}
       />
 
       {/* Compatibility Reference (collapsible) */}
@@ -94,6 +115,16 @@ export default function MatchReviewStep({
         Bags shown below are <strong>proposed</strong>. You can change the blood group and bag until the
         request is <strong>approved</strong> — units are only reserved once you approve.
       </div>
+
+      {/* Completeness gate — what still blocks Next */}
+      {step2Reasons.length > 0 && (
+        <div className="p-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900">
+          <p className="font-medium">Complete these before continuing to Approve &amp; Issue:</p>
+          <ul className="mt-2 text-sm list-disc pl-5 space-y-1">
+            {step2Reasons.map((r, idx) => (<li key={idx}>{r}</li>))}
+          </ul>
+        </div>
+      )}
 
       {/* PRBC substitution banner */}
       {prbcSubstitutes.length > 0 && (
@@ -157,15 +188,25 @@ export default function MatchReviewStep({
               <div className="space-y-4">
                 {Object.entries(grouped).map(([compType, items]) => {
                   const rc = requestDoc?.requestedComponents?.find((c) => c.componentType === compType);
+                  const color = componentColor(compType);
                   return (
-                    <div key={compType} className="border rounded-lg overflow-hidden">
-                      <div className="px-3 py-2 bg-gray-50 border-b flex items-center gap-2">
-                        <span className="font-medium text-sm text-gray-800">{compType}</span>
-                        <span className="text-xs text-gray-500">({items.length} unit{items.length > 1 ? 's' : ''})</span>
+                    <div key={compType} className={`border-2 rounded-lg overflow-hidden ${color.box}`}>
+                      <div className={`px-3 py-2 border-b flex items-center gap-2 ${color.header} ${color.box}`}>
+                        <span className="font-semibold text-sm">{compType}</span>
+                        <span className="text-xs opacity-80">({items.length} unit{items.length > 1 ? 's' : ''})</span>
                         {items.some((mi) => mi.crossmatchRequired) && (
-                          <span className="ml-auto text-xs text-red-600 font-medium flex items-center gap-1">
+                          <span className="text-xs font-medium flex items-center gap-1">
                             🔬 Crossmatch Required
                           </span>
+                        )}
+                        {rc && onRejectComponent && (
+                          <button
+                            type="button"
+                            onClick={() => setRejectComponentTarget({ rc, bagCount: items.length })}
+                            className="ml-auto px-2.5 py-1 rounded border border-red-200 text-red-700 hover:bg-red-50 text-xs font-medium cursor-pointer"
+                          >
+                            Reject Component
+                          </button>
                         )}
                       </div>
                       <div className="p-3 space-y-3">
@@ -178,11 +219,14 @@ export default function MatchReviewStep({
                               mi={mi}
                               rc={rc}
                               componentType={compType}
+                              color={color}
                               fetchAvailableUnits={fetchAvailableUnits}
                               onSwapBag={onSwapBag}
                               swapping={swapping}
                               onSaveBagGrouping={onSaveBagGrouping}
                               onCrossmatchUpdate={onCrossmatchUpdate}
+                              onConfirmCompatibility={onConfirmCompatibility}
+                              onResetCrossmatch={onResetCrossmatch}
                               crossmatchUpdating={crossmatchUpdating}
                               groupingSaving={groupingSaving}
                             />
@@ -195,6 +239,26 @@ export default function MatchReviewStep({
               </div>
             ) : (
               <p className="text-gray-600 text-sm">No inventory proposed yet.</p>
+            )}
+
+            {/* Rejected components */}
+            {rejectedComponents.length > 0 && (
+              <div className="space-y-4 mt-4">
+                {rejectedComponents.map((c, idx) => (
+                  <div key={idx} className="border border-red-200 rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-red-50 border-b flex items-center gap-2">
+                      <span className="font-medium text-sm text-red-800">{c.componentType}</span>
+                      <span className="text-xs text-red-500">({c.bloodGroup}{c.rh === 'Positive' ? '+' : '−'}, {c.units} requested)</span>
+                      <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-200 border border-red-300 text-red-800">
+                        Rejected
+                      </span>
+                    </div>
+                    {c.rejectionReason && (
+                      <div className="px-3 py-2 text-sm text-red-700">Reason: {c.rejectionReason}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
 
             {/* Unavailable components from partial shortages */}

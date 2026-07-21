@@ -51,7 +51,9 @@ export interface MatchOutcome {
 
 export interface UpdateCrossmatchLegacyInput {
   inventoryId: string;
-  crossmatchStatus: 'compatible' | 'incompatible';
+  // 'pending' resets a recorded (but unreserved) crossmatch so the operator
+  // can edit it — the worksheet reopens prefilled with the stored details.
+  crossmatchStatus: 'compatible' | 'incompatible' | 'pending';
   compatibilityResult?: 'MAJOR_COMPATIBLE' | 'MINOR_COMPATIBLE' | 'UNIVERSAL';
   crossmatchDoneAt?: Date;
   crossmatchSeenAt?: Date;
@@ -131,6 +133,20 @@ export interface RequisitionService {
     id: string,
     unitId: string,
     grouping: GroupingWorksheetDto,
+    actorId: string,
+  ): Promise<RequisitionDto>;
+  /** Toggles the substitute-group compatibility sign-off on a bag. */
+  confirmCompatibility(
+    id: string,
+    unitId: string,
+    confirmed: boolean,
+    actorId: string,
+  ): Promise<RequisitionDto>;
+  /** Rejects one component (drops its bags) while the requisition continues. */
+  rejectComponent(
+    id: string,
+    componentType: string,
+    reason: string,
     actorId: string,
   ): Promise<RequisitionDto>;
 }
@@ -242,8 +258,12 @@ export function createRequisitionService(deps: {
 
       const matched: MatchedUnitDto[] = [];
       const shortages: Record<string, number> = {};
+      // Per-component availability outcome, applied as component status after
+      // setMatched. Rejected components are skipped entirely (no bags proposed).
+      const componentOutcome: Array<{ componentType: string; available: number }> = [];
 
       for (const rc of req.requestedComponents) {
+        if (rc.status === 'REJECTED') continue;
         const aboGroups = [...compatibleAboGroups(rc.aboGroup, rc.componentType)];
         const candidates = await deps.units.selectable({
           componentType: rc.componentType,
@@ -259,6 +279,7 @@ export function createRequisitionService(deps: {
         if (selection.shortage > 0) {
           shortages[`${rc.componentType}-${rc.aboGroup}${rc.rhFactor}`] = selection.shortage;
         }
+        componentOutcome.push({ componentType: rc.componentType, available: selection.selected.length });
 
         const needsXm = requiresCrossmatch(rc.componentType);
         for (const sel of selection.selected) {
@@ -272,6 +293,7 @@ export function createRequisitionService(deps: {
               { aboGroup: sel.unit.aboGroup, rhFactor: sel.unit.rhFactor },
             ),
             reserved: false,
+            compatibilityConfirmed: false,
             crossmatchRequired: needsXm,
             crossmatchStatus: needsXm ? 'PENDING' : 'NOT_REQUIRED',
           });
@@ -279,6 +301,19 @@ export function createRequisitionService(deps: {
       }
 
       const updated = await deps.requisitions.setMatched(id, matched, actorId);
+      // Flag components with no compatible/available stock as UNAVAILABLE so
+      // the status persists throughout the requisition; the rest are ACTIVE.
+      // (Return value not reused — the client refreshes the requisition after
+      // match, which reflects these statuses.)
+      for (const co of componentOutcome) {
+        await deps.requisitions.setComponentStatus(
+          id,
+          co.componentType,
+          co.available === 0 ? 'UNAVAILABLE' : 'ACTIVE',
+          null,
+          actorId,
+        );
+      }
       log.info(
         { requisitionId: req.requisitionId, matched: matched.length, shortages },
         'requisition matched',
@@ -337,6 +372,18 @@ export function createRequisitionService(deps: {
       // now that the operator has finalised the bag/group selection. If any
       // chosen unit is no longer available, roll back the ones just reserved
       // and surface which bags failed so the operator can re-pick.
+      //
+      // Reservation window (reservedUntil): the requisition's required-by date
+      // when it's a valid future date, otherwise a 3-day default — mirroring
+      // the inventory Reserve flow so the Reserve list shows a value.
+      const threeDaysFromNow = new Date();
+      threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+      const requiredAt = req.requiredAt ? new Date(req.requiredAt) : null;
+      const reservedUntil =
+        requiredAt && !isNaN(requiredAt.getTime()) && requiredAt.getTime() > Date.now()
+          ? requiredAt
+          : threeDaysFromNow;
+
       const justReserved: string[] = [];
       const failed: string[] = [];
       for (const m of req.matchedUnits) {
@@ -347,7 +394,7 @@ export function createRequisitionService(deps: {
             event: 'RESERVE',
             actorId,
             reason: `Reserved on approval of requisition ${req.requisitionId}`,
-            set: { reservedFor: req.id, reservedAt: new Date() },
+            set: { reservedFor: req.id, reservedAt: new Date(), reservedUntil },
           });
           await deps.requisitions.markReserved(id, m.unitId, actorId);
           justReserved.push(m.unitId);
@@ -537,14 +584,26 @@ export function createRequisitionService(deps: {
       // RESERVED), so we cannot run the crossmatch state transition — record
       // the worksheet result as data on the matched unit. The unit CROSSMATCH
       // transition and issue-gate enforcement happen after approval/reserve.
+      // 'pending' is the Edit/undo path: revert to PENDING but keep the stored
+      // details so the worksheet can reopen prefilled.
       if (!miEntry.reserved) {
+        const dataStatus =
+          crossmatchStatus === 'compatible'
+            ? 'COMPATIBLE'
+            : crossmatchStatus === 'incompatible'
+              ? 'INCOMPATIBLE'
+              : 'PENDING';
         return deps.requisitions.setCrossmatchStatus(
           id,
           inventoryId,
-          crossmatchStatus === 'compatible' ? 'COMPATIBLE' : 'INCOMPATIBLE',
+          dataStatus,
           actorId,
-          crossmatchDetails,
+          crossmatchStatus === 'pending' ? undefined : crossmatchDetails,
         );
+      }
+
+      if (crossmatchStatus === 'pending') {
+        throw new ConflictError('Crossmatch cannot be edited after the unit is reserved.');
       }
 
       if (crossmatchStatus === 'compatible') {
@@ -686,6 +745,8 @@ export function createRequisitionService(deps: {
           { aboGroup: target.aboGroup, rhFactor: target.rhFactor },
         ),
         reserved: false,
+        // A new bag resets any prior crossmatch/compatibility sign-off.
+        compatibilityConfirmed: false,
         crossmatchRequired: needsXm,
         crossmatchStatus: needsXm ? 'PENDING' : 'NOT_REQUIRED',
       });
@@ -709,6 +770,63 @@ export function createRequisitionService(deps: {
 
     async setMatchedUnitGrouping(id, unitId, grouping, actorId) {
       return deps.requisitions.setMatchedUnitGrouping(id, unitId, grouping, actorId);
+    },
+
+    async confirmCompatibility(id, unitId, confirmed, actorId) {
+      const req = await deps.requisitions.findById(id);
+      const mu = req.matchedUnits.find((m) => m.unitId === unitId);
+      if (!mu) throw new NotFoundError('Matched unit in this requisition', unitId);
+      if (mu.reserved) {
+        throw new ConflictError('Compatibility sign-off cannot change after the unit is reserved.');
+      }
+      return deps.requisitions.setMatchedUnitCompatibilityConfirmed(id, unitId, confirmed, actorId);
+    },
+
+    async rejectComponent(id, componentType, reason, actorId) {
+      const req = await deps.requisitions.findById(id);
+      const rc = req.requestedComponents.find((c) => c.componentType === componentType);
+      if (!rc) throw new NotFoundError('Requisition component', componentType);
+      if (!['PENDING', 'MATCHED'].includes(req.status)) {
+        throw new ConflictError(
+          `Components can only be rejected before approval (status is ${req.status}).`,
+        );
+      }
+
+      // Release any reserved bags of this component (proposed ones need no
+      // unit write), then drop them from the requisition and flag the
+      // component REJECTED — the rest of the requisition continues.
+      for (const m of req.matchedUnits.filter((mu) => mu.componentType === componentType)) {
+        if (!m.reserved) continue;
+        await deps.units
+          .applyEvent({
+            unitId: m.unitId,
+            event: 'UNRESERVE',
+            actorId,
+            reason: `Component ${componentType} rejected on requisition ${req.requisitionId}`,
+            set: { reservedFor: null, reservedAt: null, reservedUntil: null } as any,
+          })
+          .catch(() => undefined);
+      }
+      await deps.requisitions.removeMatchedUnitsByComponent(id, componentType);
+      const updated = await deps.requisitions.setComponentStatus(
+        id,
+        componentType,
+        'REJECTED',
+        reason,
+        actorId,
+      );
+
+      await audit.record({
+        actorId,
+        module: 'requisition',
+        action: 'UPDATE',
+        entityType: 'Requisition',
+        entityId: req.requisitionId,
+        before: { component: componentType, status: rc.status || 'ACTIVE' },
+        after: { component: componentType, status: 'REJECTED', reason },
+        reason,
+      });
+      return updated;
     },
   };
 }

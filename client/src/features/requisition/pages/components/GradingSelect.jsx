@@ -21,13 +21,24 @@ function keyToGrade(key) {
  * to the next grading field in the worksheet.
  */
 const GradingSelect = forwardRef(function GradingSelect(
-  { label, value, onChange, onAdvance, disabled },
+  { label, value, onChange, onAdvance, onNavigate, disabled },
   ref,
 ) {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       onAdvance?.();
+      return;
+    }
+    // Arrow keys move focus between boxes instead of changing the value.
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      onNavigate?.(1);
+      return;
+    }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      onNavigate?.(-1);
       return;
     }
     const grade = keyToGrade(e.key);

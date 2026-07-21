@@ -39,6 +39,8 @@ export interface RequestedComponentDto {
   rhFactor: RhFactor;
   urgency: 'ROUTINE' | 'URGENT' | 'EMERGENCY';
   compatibilityMode?: 'UNIVERSAL' | 'MAJOR' | 'MINOR';
+  status?: 'ACTIVE' | 'REJECTED' | 'UNAVAILABLE';
+  rejectionReason?: string | null;
 }
 
 export interface MatchedUnitDto {
@@ -46,6 +48,7 @@ export interface MatchedUnitDto {
   componentType: ComponentType;
   compatibilityType: 'EXACT' | 'COMPATIBLE';
   reserved?: boolean;
+  compatibilityConfirmed?: boolean;
   crossmatchRequired: boolean;
   crossmatchStatus: 'NOT_REQUIRED' | 'PENDING' | 'COMPATIBLE' | 'INCOMPATIBLE';
   reservedAt?: Date | string;
@@ -241,6 +244,23 @@ export interface RequisitionRepo {
     grouping: GroupingWorksheetDto,
     actorId: string,
   ): Promise<RequisitionDto>;
+  /** Toggles the operator's substitute-group compatibility sign-off on a bag. */
+  setMatchedUnitCompatibilityConfirmed(
+    id: string,
+    unitId: string,
+    confirmed: boolean,
+    actorId: string,
+  ): Promise<RequisitionDto>;
+  /** Sets the lifecycle status (+ optional reason) of one requested component. */
+  setComponentStatus(
+    id: string,
+    componentType: string,
+    status: 'ACTIVE' | 'REJECTED' | 'UNAVAILABLE',
+    reason: string | null,
+    actorId: string,
+  ): Promise<RequisitionDto>;
+  /** Drops every matched unit of a component (used on component reject). */
+  removeMatchedUnitsByComponent(id: string, componentType: string): Promise<RequisitionDto>;
 }
 
 export function createRequisitionRepo(): RequisitionRepo {
@@ -392,6 +412,47 @@ export function createRequisitionRepo(): RequisitionRepo {
         { new: true },
       ).lean()) as RawReq | null;
       if (!updated) throw new NotFoundError('Requisition matched unit', `${id}/${unitId}`);
+      return toDto(updated);
+    },
+
+    async setMatchedUnitCompatibilityConfirmed(id, unitId, confirmed, actorId) {
+      const updated = (await RequisitionModel.findOneAndUpdate(
+        { _id: id, 'matchedUnits.unitId': unitId },
+        {
+          $set: {
+            'matchedUnits.$.compatibilityConfirmed': confirmed,
+            updatedBy: new Types.ObjectId(actorId),
+          },
+        },
+        { new: true },
+      ).lean()) as RawReq | null;
+      if (!updated) throw new NotFoundError('Requisition matched unit', `${id}/${unitId}`);
+      return toDto(updated);
+    },
+
+    async setComponentStatus(id, componentType, status, reason, actorId) {
+      const updated = (await RequisitionModel.findOneAndUpdate(
+        { _id: id, 'requestedComponents.componentType': componentType },
+        {
+          $set: {
+            'requestedComponents.$.status': status,
+            'requestedComponents.$.rejectionReason': reason,
+            updatedBy: new Types.ObjectId(actorId),
+          },
+        },
+        { new: true },
+      ).lean()) as RawReq | null;
+      if (!updated) throw new NotFoundError('Requisition component', `${id}/${componentType}`);
+      return toDto(updated);
+    },
+
+    async removeMatchedUnitsByComponent(id, componentType) {
+      const updated = (await RequisitionModel.findByIdAndUpdate(
+        id,
+        { $pull: { matchedUnits: { componentType } } },
+        { new: true },
+      ).lean()) as RawReq | null;
+      if (!updated) throw new NotFoundError('Requisition', id);
       return toDto(updated);
     },
 

@@ -73,6 +73,7 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
         },
         compatibilityType: mu.compatibilityType.toLowerCase(),
         reserved: mu.reserved ?? false,
+        compatibilityConfirmed: mu.compatibilityConfirmed ?? false,
         crossmatchRequired: mu.crossmatchRequired,
         crossmatchStatus: mu.crossmatchStatus.toLowerCase(),
         reservedAt: mu.reservedAt,
@@ -126,6 +127,8 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
     rh: rc.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
     urgency: rc.urgency?.toLowerCase() === 'routine' ? 'regular' : rc.urgency?.toLowerCase(),
     compatibilityMode: rc.compatibilityMode || 'UNIVERSAL',
+    status: rc.status || 'ACTIVE',
+    rejectionReason: rc.rejectionReason || null,
   }));
 
   let rejectedByDoc = null;

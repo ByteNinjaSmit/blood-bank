@@ -46,6 +46,15 @@ const RequestedComponent = new Schema(
       enum: ['UNIVERSAL', 'MAJOR', 'MINOR'],
       default: 'UNIVERSAL',
     },
+    // Per-component lifecycle within a requisition. ACTIVE = being fulfilled;
+    // REJECTED = operator dropped this component (with reason) but the
+    // requisition continues with the rest; UNAVAILABLE = no compatible stock.
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'REJECTED', 'UNAVAILABLE'],
+      default: 'ACTIVE',
+    },
+    rejectionReason: { type: String, trim: true, default: null },
   },
   { _id: false },
 );
@@ -59,6 +68,10 @@ const MatchedUnit = new Schema(
     // at match time; reservation happens on approve, so bag/group can be
     // freely changed in Match Review until then.
     reserved: { type: Boolean, default: false },
+    // Operator's explicit sign-off that a compatible SUBSTITUTE-group bag
+    // (e.g. O− for an AB− patient) is acceptable. Only meaningful when
+    // compatibilityType === 'COMPATIBLE'; reset on bag swap.
+    compatibilityConfirmed: { type: Boolean, default: false },
     crossmatchRequired: { type: Boolean, required: true },
     crossmatchStatus: {
       type: String,

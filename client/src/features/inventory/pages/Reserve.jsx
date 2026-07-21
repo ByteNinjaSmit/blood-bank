@@ -296,7 +296,14 @@ const Reserve = () => {
                             <span className={`inline-block transition-transform duration-200 text-xs ${isOpen ? 'rotate-180' : ''}`}>▼</span>
                           </td>
                           <td className="px-4 py-3.5 text-sm font-semibold text-gray-900">
-                            {first?.requisition?.requisitionId || reqKey}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span>{first?.requisition?.requisitionId || reqKey}</span>
+                              {first?.requisition?.requiredAt && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                                  Required by: {formatDateTimeDMY(first.requisition.requiredAt)}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3.5 text-sm text-gray-700">{first?.hospital?.name || '—'}</td>
                           <td className="px-4 py-3.5">

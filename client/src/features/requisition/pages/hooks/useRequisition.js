@@ -538,6 +538,41 @@ export default function useRequisition(authToken) {
     return true;
   };
 
+  const handleConfirmCompatibility = async (unitId, confirmed) => {
+    if (!requestDoc?._id || !unitId) return false;
+    const res = await requisitionApi.confirmCompatibility(requestDoc._id, { unitId, confirmed });
+    if (!res.success) {
+      toast.error(res.error || 'Failed to update compatibility');
+      return false;
+    }
+    await refreshRequest(requestDoc._id);
+    toast.success(confirmed ? 'Compatibility confirmed' : 'Compatibility confirmation removed');
+    return true;
+  };
+
+  const handleResetCrossmatch = async (unitId) => {
+    if (!requestDoc?._id || !unitId) return false;
+    const res = await requisitionApi.resetCrossmatch(requestDoc._id, unitId);
+    if (!res.success) {
+      toast.error(res.error || 'Failed to reopen crossmatch');
+      return false;
+    }
+    await refreshRequest(requestDoc._id);
+    return true;
+  };
+
+  const handleRejectComponent = async (componentType, reason) => {
+    if (!requestDoc?._id || !componentType) return false;
+    const res = await requisitionApi.rejectComponent(requestDoc._id, { componentType, reason });
+    if (!res.success) {
+      toast.error(res.error || 'Failed to reject component');
+      return false;
+    }
+    await refreshRequest(requestDoc._id);
+    toast.success(`${componentType} component rejected`);
+    return true;
+  };
+
   const hasChanges = useMemo(() => {
     if (!requestDoc) return false;
     const payload = {
@@ -619,6 +654,9 @@ export default function useRequisition(authToken) {
     handleSwapBag,
     handleSaveRecipientGrouping,
     handleSaveBagGrouping,
+    handleConfirmCompatibility,
+    handleResetCrossmatch,
+    handleRejectComponent,
     loadRequest,
     refreshRequest,
   };

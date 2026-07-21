@@ -39,6 +39,12 @@ export default function ReserveDetailModal({ reserve, onClose, formatDateDMY, fo
                 <div className="text-slate-800 mt-0.5 font-medium">{reserve.requisition?.doctorName || '—'}</div>
               </div>
               <div>
+                <span className="font-semibold text-gray-500">Required By:</span>
+                <div className="text-slate-800 mt-0.5 font-medium">
+                  {reserve.requisition?.requiredAt ? formatDateTimeDMY(reserve.requisition.requiredAt) : '—'}
+                </div>
+              </div>
+              <div>
                 <span className="font-semibold text-gray-500">Reserved Until:</span>
                 <div className="text-slate-800 mt-0.5 font-medium">
                   {formatDateTimeDMY(reserve.reservedUntil)}

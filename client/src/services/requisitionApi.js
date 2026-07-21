@@ -91,6 +91,27 @@ class RequisitionApiService {
     );
   }
 
+  // Toggle the substitute-group compatibility sign-off on a bag.
+  async confirmCompatibility(id, { unitId, confirmed }) {
+    return this._wrap(
+      await apiService.patch(`${this.baseUrl}/${id}/matched-unit/confirm-compatibility`, { unitId, confirmed }),
+    );
+  }
+
+  // Reject one component (keeps the requisition open for the rest).
+  async rejectComponent(id, { componentType, reason }) {
+    return this._wrap(
+      await apiService.patch(`${this.baseUrl}/${id}/component/reject`, { componentType, reason }),
+    );
+  }
+
+  // Undo a recorded crossmatch back to pending so it can be edited.
+  async resetCrossmatch(id, unitId) {
+    return this._wrap(
+      await apiService.patch(`${this.baseUrl}/${id}/crossmatch`, { inventoryId: unitId, crossmatchStatus: 'pending' }),
+    );
+  }
+
   async getCompatibilityInfo(componentType, bloodGroup, rh, plateletCompatibilityMode) {
     const params = { componentType };
     if (bloodGroup) params.bloodGroup = bloodGroup;

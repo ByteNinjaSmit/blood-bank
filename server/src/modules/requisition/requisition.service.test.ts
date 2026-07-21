@@ -96,6 +96,9 @@ function deps(opts: { candidates?: SelectableUnit[]; pat?: PatientDto; req?: Req
     markReserved: vi.fn().mockImplementation(async () => reqDto()),
     setRecipientGrouping: vi.fn(),
     setMatchedUnitGrouping: vi.fn(),
+    setMatchedUnitCompatibilityConfirmed: vi.fn(),
+    setComponentStatus: vi.fn().mockImplementation(async () => reqDto()),
+    removeMatchedUnitsByComponent: vi.fn().mockImplementation(async () => reqDto()),
   };
   const patients: PatientRepo = {
     create: vi.fn(),

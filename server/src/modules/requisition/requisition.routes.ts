@@ -226,4 +226,22 @@ router.patch(
   controllers.setMatchedUnitGrouping,
 );
 
+// Match Review: operator's substitute-group compatibility sign-off toggle.
+router.patch(
+  '/:id/matched-unit/confirm-compatibility',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'lab-tech-serology']),
+  requirePermission('crossmatch:perform'),
+  controllers.confirmCompatibility,
+);
+
+// Match Review: reject one component while continuing the requisition.
+router.patch(
+  '/:id/component/reject',
+  authenticate,
+  requireRole(['system-admin', 'bbo', 'medical-officer']),
+  requirePermission('requisition:reject'),
+  controllers.rejectComponent,
+);
+
 export default router;

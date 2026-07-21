@@ -1,4 +1,5 @@
 import React from 'react';
+import { COMPATIBILITY_RESULT_LABELS } from '../components/grading';
 
 function CompatBadge({ type }) {
   if (type === 'exact') {
@@ -157,10 +158,15 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
                   const isPositive = rc.rh === 'Positive' || rc.rhFactor === 'POSITIVE' || String(rc.rh).toLowerCase().includes('pos');
                   const bloodSign = isPositive ? '+' : '-';
                   return (
-                    <div key={idx} className="bg-gray-50/60 border border-gray-200 p-3 rounded-xl flex items-center justify-between">
+                    <div key={idx} className={`border p-3 rounded-xl flex items-center justify-between ${rc.status === 'REJECTED' ? 'bg-red-50/60 border-red-200' : 'bg-gray-50/60 border-gray-200'}`}>
                       <div>
-                        <p className="font-bold text-gray-900 text-sm">{rc.componentType}</p>
+                        <p className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                          {rc.componentType}
+                          {rc.status === 'REJECTED' && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-200 text-red-800 border border-red-300">Rejected</span>}
+                          {rc.status === 'UNAVAILABLE' && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-600 border border-gray-300">Unavailable</span>}
+                        </p>
                         <p className="text-xs text-gray-500 mt-0.5 font-medium">Group: {rc.bloodGroup}{bloodSign}</p>
+                        {rc.status === 'REJECTED' && rc.rejectionReason && <p className="text-[11px] text-red-600 mt-0.5">{rc.rejectionReason}</p>}
                       </div>
                       <div className="text-right">
                         <span className="inline-block px-2.5 py-1 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-800">
@@ -237,8 +243,16 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
                               )}
                             </td>
                             <td className="p-2"><CompatBadge type={mi.compatibilityType || 'exact'} /></td>
-                            <td className="p-2">
+                            <td className="p-2 align-top">
                               <CrossmatchStatusBadge status={mi.crossmatchStatus || 'not-required'} required={mi.crossmatchRequired || false} />
+                              {mi.crossmatchRequired && mi.crossmatchStatus === 'compatible' && (mi.compatibilityResult || mi.crossmatchDoneAt) && (
+                                <div className="mt-1.5 text-2xs text-gray-500 space-y-0.5">
+                                  {mi.compatibilityResult && <div>Result: <span className="font-medium">{COMPATIBILITY_RESULT_LABELS[mi.compatibilityResult] || mi.compatibilityResult}</span></div>}
+                                  {mi.crossmatchDoneAt && <div>Done: {new Date(mi.crossmatchDoneAt).toLocaleString()}</div>}
+                                  {mi.crossmatchSeenAt && <div>Seen: {new Date(mi.crossmatchSeenAt).toLocaleString()}</div>}
+                                  {mi.cardNumber && <div>Card #: {mi.cardNumber}</div>}
+                                </div>
+                              )}
                             </td>
                             <td className="p-2 text-xs text-gray-500">{mi?.reservedAt ? new Date(mi.reservedAt).toLocaleString() : '—'}</td>
                             <td className="p-2 text-right">

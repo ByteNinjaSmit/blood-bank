@@ -29,6 +29,8 @@ export interface RequisitionControllers {
   swapMatchedUnit: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   setRecipientGrouping: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   setMatchedUnitGrouping: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  confirmCompatibility: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  rejectComponent: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
 export function createRequisitionControllers(deps: {
@@ -304,6 +306,30 @@ export function createRequisitionControllers(deps: {
         const { id } = ValidateRequisition.idParam(req);
         const { unitId, grouping } = ValidateRequisition.matchedUnitGroupingBody(req);
         const updated = await deps.requisitions.setMatchedUnitGrouping(id, unitId, grouping, actor(req));
+        const enriched = await enrichRequisition(updated);
+        res.json({ success: true, data: enriched, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async confirmCompatibility(req, res, next) {
+      try {
+        const { id } = ValidateRequisition.idParam(req);
+        const { unitId, confirmed } = ValidateRequisition.confirmCompatibilityBody(req);
+        const updated = await deps.requisitions.confirmCompatibility(id, unitId, confirmed, actor(req));
+        const enriched = await enrichRequisition(updated);
+        res.json({ success: true, data: enriched, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async rejectComponent(req, res, next) {
+      try {
+        const { id } = ValidateRequisition.idParam(req);
+        const { componentType, reason } = ValidateRequisition.rejectComponentBody(req);
+        const updated = await deps.requisitions.rejectComponent(id, componentType, reason, actor(req));
         const enriched = await enrichRequisition(updated);
         res.json({ success: true, data: enriched, requestId: req.id });
       } catch (e) {

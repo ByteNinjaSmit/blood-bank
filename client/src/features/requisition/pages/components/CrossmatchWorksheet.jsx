@@ -4,10 +4,19 @@ import React, { useState } from 'react';
 // crossmatch. The operator explicitly picks the compatibility type; there is
 // no default selection. Before approval this saves as data only (the unit
 // isn't reserved yet); the unit state transition happens after approval.
-export default function CrossmatchWorksheet({ invId, onSave, updating }) {
-  const [compatibility, setCompatibility] = useState('');
-  const [doneAt, setDoneAt] = useState('');
-  const [seenAt, setSeenAt] = useState('');
+// Turn a stored ISO timestamp into the value a datetime-local input expects.
+function toLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const off = d.getTimezoneOffset();
+  return new Date(d.getTime() - off * 60000).toISOString().slice(0, 16);
+}
+
+export default function CrossmatchWorksheet({ invId, onSave, updating, initial, accentClass }) {
+  const [compatibility, setCompatibility] = useState(initial?.compatibilityResult || '');
+  const [doneAt, setDoneAt] = useState(toLocalInput(initial?.crossmatchDoneAt));
+  const [seenAt, setSeenAt] = useState(toLocalInput(initial?.crossmatchSeenAt));
 
   const canSave = compatibility && doneAt && seenAt;
 
@@ -21,7 +30,7 @@ export default function CrossmatchWorksheet({ invId, onSave, updating }) {
   };
 
   return (
-    <div className="p-3 rounded-lg border border-amber-300 bg-white space-y-2">
+    <div className={`p-3 rounded-lg border-2 bg-white space-y-2 ${accentClass || 'border-amber-300'}`}>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Compatibility <span className="text-red-600">*</span></label>

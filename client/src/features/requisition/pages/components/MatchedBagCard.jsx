@@ -27,14 +27,18 @@ export default function MatchedBagCard({
   mi,
   rc,
   componentType,
+  color,
   fetchAvailableUnits,
   onSwapBag,
   swapping,
   onSaveBagGrouping,
   onCrossmatchUpdate,
+  onConfirmCompatibility,
+  onResetCrossmatch,
   crossmatchUpdating,
   groupingSaving,
 }) {
+  const theme = color || { box: 'border-gray-200', tint: 'bg-gray-50', accent: 'border-gray-200' };
   const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
   const currentUnitId = inv?._id || mi.inventoryId;
   const currentGroup = inv?.bagNo?.bloodGroup || rc?.bloodGroup;
@@ -104,7 +108,7 @@ export default function MatchedBagCard({
     mi.crossmatchRequired && mi.crossmatchStatus !== 'pending' && !!mi.compatibilityResult;
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className={`border rounded-lg overflow-hidden ${theme.box}`}>
       <ConfirmModal
         isOpen={!!pendingSwap}
         onClose={() => setPendingSwap(null)}
@@ -123,7 +127,7 @@ export default function MatchedBagCard({
         }
       />
 
-      <div className="px-3 py-2.5 bg-gray-50 border-b space-y-2.5">
+      <div className={`px-3 py-2.5 border-b space-y-2.5 ${theme.tint} ${theme.box}`}>
         <div className="flex flex-wrap items-center gap-3">
           {/* Blood group (compatible only) */}
           <div>
@@ -153,13 +157,13 @@ export default function MatchedBagCard({
             >
               {/* Current bag always present */}
               <option value={currentUnitId}>
-                {currentBagNo} — {currentGroup} {rhSymbol(currentRh)} (current)
+                {currentBagNo} : {currentGroup}{rhSymbol(currentRh)} (current)
               </option>
               {bagsForGroup
                 .filter((u) => u.unitId !== currentUnitId)
                 .map((u) => (
                   <option key={u.unitId} value={u.unitId}>
-                    {u.bagNo} — {u.aboGroup} {rhSymbol(u.rhFactor)} · exp {new Date(u.expiresAt).toLocaleDateString()}
+                    {u.bagNo} : {u.aboGroup}{rhSymbol(u.rhFactor)} : {new Date(u.expiresAt).toLocaleDateString()} : {u.volumeMl} ml
                   </option>
                 ))}
             </select>
@@ -181,9 +185,23 @@ export default function MatchedBagCard({
         </div>
 
         {isSubstitute && (
-          <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 font-medium flex items-center gap-1.5">
-            <span className="text-amber-500">⚠️</span>
-            {recipientGroup} {rhSymbol(recipientRh)} patient is receiving {currentGroup} {rhSymbol(currentRh)} {componentType}. Verify compatibility before approving.
+          <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 font-medium space-y-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-amber-500">⚠️</span>
+              {recipientGroup} {rhSymbol(recipientRh)} patient is receiving {currentGroup} {rhSymbol(currentRh)} {componentType}. Confirm compatibility before approving.
+            </div>
+            <button
+              type="button"
+              onClick={() => onConfirmCompatibility(currentUnitId, !mi.compatibilityConfirmed)}
+              disabled={isReserved}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors cursor-pointer disabled:opacity-60 ${
+                mi.compatibilityConfirmed
+                  ? 'bg-green-600 text-white border-green-700 hover:bg-green-700'
+                  : 'bg-white text-amber-800 border-amber-300 hover:bg-amber-100'
+              }`}
+            >
+              {mi.compatibilityConfirmed ? '✓ Compatibility confirmed — click to undo' : 'Confirm Compatibility'}
+            </button>
           </div>
         )}
       </div>
@@ -206,6 +224,7 @@ export default function MatchedBagCard({
               value={mi.grouping || {}}
               onSave={(grouping) => onSaveBagGrouping(currentUnitId, grouping)}
               saving={groupingSaving}
+              accentClass={theme.accent}
             />
           </div>
 
@@ -213,7 +232,18 @@ export default function MatchedBagCard({
             <div>
               {showSavedCrossmatch ? (
                 <div className="text-xs text-gray-600 bg-green-50 border border-green-200 rounded-md p-2.5 space-y-0.5">
-                  <div className="font-semibold text-green-800">Crossmatch recorded</div>
+                  <div className="flex items-center justify-between">
+                    <div className="font-semibold text-green-800">Crossmatch recorded</div>
+                    {!isReserved && (
+                      <button
+                        type="button"
+                        onClick={() => onResetCrossmatch(currentUnitId)}
+                        className="px-2 py-0.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 text-2xs font-semibold cursor-pointer"
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
                   <div>Compatibility: <span className="font-medium">{COMPATIBILITY_RESULT_LABELS[mi.compatibilityResult] || mi.compatibilityResult}</span></div>
                   {mi.crossmatchDoneAt && <div>Done At: {new Date(mi.crossmatchDoneAt).toLocaleString()}</div>}
                   {mi.crossmatchSeenAt && <div>Seen At: {new Date(mi.crossmatchSeenAt).toLocaleString()}</div>}
@@ -223,6 +253,8 @@ export default function MatchedBagCard({
                   invId={currentUnitId}
                   onSave={onCrossmatchUpdate}
                   updating={crossmatchUpdating}
+                  initial={mi}
+                  accentClass={theme.accent}
                 />
               ) : null}
             </div>

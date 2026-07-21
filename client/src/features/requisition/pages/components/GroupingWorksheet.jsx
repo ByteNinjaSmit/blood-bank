@@ -43,7 +43,7 @@ const CHAIN = GROUPS.flatMap((g) => g.fields.map((f) => [g.key, f.key]));
  * Used both for the recipient (top of Match Review) and per donor bag.
  * Enter walks the whole sheet; the last field triggers Save.
  */
-export default function GroupingWorksheet({ title, value, onSave, saving, disabled }) {
+export default function GroupingWorksheet({ title, value, onSave, saving, disabled, accentClass }) {
   const [draft, setDraft] = useState(() => value || {});
   const refs = useRef([]);
 
@@ -66,13 +66,19 @@ export default function GroupingWorksheet({ title, value, onSave, saving, disabl
     if (next) next.focus();
   };
 
+  // Move focus by a signed delta, clamped to the chain bounds.
+  const focusBy = (index, dir) => {
+    const target = refs.current[index + dir];
+    if (target) target.focus();
+  };
+
   const handleSave = () => {
     if (!dirty || saving || disabled) return;
     onSave(draft);
   };
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-3">
+    <div className={`rounded-lg border-2 bg-white p-3 space-y-3 ${accentClass || 'border-gray-200'}`}>
       {title && (
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-semibold text-gray-800">{title}</h4>
@@ -100,6 +106,7 @@ export default function GroupingWorksheet({ title, value, onSave, saving, disabl
                       if (chainIndex === CHAIN.length - 1) handleSave();
                       else focusNext(chainIndex);
                     }}
+                    onNavigate={(dir) => focusBy(chainIndex, dir)}
                   />
                 );
               })}
