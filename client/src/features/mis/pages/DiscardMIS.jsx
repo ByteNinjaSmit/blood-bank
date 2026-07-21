@@ -19,8 +19,8 @@ const COLORS = ["#ef4444", "#f97316", "#f59e0b", "#84cc16", "#06b6d4", "#6366f1"
 export default function DiscardMIS() {
   const { data, isLoading, isError, error, refetch } = useDiscardMis();
 
-  const discards = data?.discards || [];
-  const typeWise = data?.typeWise || [];
+  const discards = useMemo(() => data?.discards || [], [data]);
+  const typeWise = useMemo(() => data?.typeWise || [], [data]);
   const totalDiscards = discards.reduce((a, d) => a + (d.count || 0), 0);
 
   const reasonData = useMemo(() => discards.map(d => ({ name: d._id || "Unknown", value: d.count })), [discards]);

@@ -22,8 +22,8 @@ export default function BagMIS() {
   const { data, isLoading, isError, error, refetch } = useBagMis({ fromDate: fromDate || undefined, toDate: toDate || undefined });
 
   const register = data?.register || {};
-  const stats = data?.stats || [];
-  const byComponent = data?.byComponent || [];
+  const stats = useMemo(() => data?.stats || [], [data]);
+  const byComponent = useMemo(() => data?.byComponent || [], [data]);
 
   const statusData = useMemo(() => stats.map(s => ({ name: s._id || "Unknown", value: s.count })), [stats]);
   const componentData = useMemo(() => byComponent.map(c => ({ name: c._id || "Unknown", value: c.count })), [byComponent]);

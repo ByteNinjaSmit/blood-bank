@@ -119,6 +119,7 @@ const SerologyResults = () => {
       fetchBags(1, pagination.limit);
     }, 300);
     return () => clearTimeout(timeoutId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, order, sortBy]);
 
   const handleFilterChange = (key, value) => {

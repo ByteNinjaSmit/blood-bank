@@ -20,7 +20,7 @@ export default function RegulatoryMIS() {
   const { data, isLoading, isError, error, refetch } = useRegulatoryMis();
 
   const testing = data?.testing || {};
-  const testingByDisease = data?.testingByDisease || [];
+  const testingByDisease = useMemo(() => data?.testingByDisease || [], [data]);
   const funnelData = useMemo(() => [
     { name: "Collection", value: number(data?.collection) },
     { name: "Production", value: number(data?.production) },

@@ -20,7 +20,7 @@ export default function CampMIS() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const { data, isLoading, isError, error, refetch } = useCampMis({ fromDate: fromDate || undefined, toDate: toDate || undefined });
-  const camps = data || [];
+  const camps = useMemo(() => data || [], [data]);
 
   const chartData = useMemo(() => camps.slice(0, 10).map(c => ({ name: c.name, collected: number(c.totalBags), discarded: number(c.discardedBags) })), [camps]);
   const donorShareData = useMemo(() => camps.slice(0, 8).map(c => ({ name: c.name, value: number(c.donorCount) })), [camps]);

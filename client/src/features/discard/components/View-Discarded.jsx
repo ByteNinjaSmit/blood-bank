@@ -155,6 +155,7 @@ const ViewDiscarded = () => {
           getItems();
         }, 300);
         return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentPage, rowsPerPage, filters, sortBy, order]);
 
     const handleFilterChange = (key, value) => {

@@ -121,6 +121,7 @@ const CampDonorManagement = () => {
     }
     setCampId(id);
     fetchCampDonors(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, navigate]);
 
   const handleCreateDonor = async (donorData) => {

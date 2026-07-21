@@ -57,12 +57,14 @@ const RequisitionManagement = () => {
       // Load existing request and jump to appropriate step
       loadRequest(params.id);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params?.id]);
 
   React.useEffect(() => {
     if (params?.id && currentStep) {
       refreshRequest(params.id);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, params?.id]);
 
   const nextLabel = React.useMemo(() => {

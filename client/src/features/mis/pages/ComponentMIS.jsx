@@ -21,8 +21,8 @@ export default function ComponentMIS() {
   const [toDate, setToDate] = useState("");
   const { data, isLoading, isError, error, refetch } = useComponentMis({ fromDate: fromDate || undefined, toDate: toDate || undefined });
 
-  const production = data?.production || [];
-  const ageing = data?.ageing || [];
+  const production = useMemo(() => data?.production || [], [data]);
+  const ageing = useMemo(() => data?.ageing || [], [data]);
   const status = data?.status || [];
   const bloodGroup = data?.bloodGroup || [];
 

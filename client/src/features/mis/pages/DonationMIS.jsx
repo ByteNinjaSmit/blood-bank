@@ -22,7 +22,7 @@ export default function DonationMIS() {
 
   const summary = data?.summary || {};
   const breakdowns = data?.breakdowns || {};
-  const trends = data?.trends || [];
+  const trends = useMemo(() => data?.trends || [], [data]);
 
   const donationsTrend = useMemo(
     () => trends.map((d) => ({ date: formatDate(d.date), value: number(d.count) })),

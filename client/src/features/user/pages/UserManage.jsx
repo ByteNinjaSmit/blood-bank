@@ -92,6 +92,7 @@ export default function UserManage() {
 
   // using imported statusChipClass from utils/ui
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadUsers(); }, [API, authorizationToken]);
 
   // Derived filtered & paginated data

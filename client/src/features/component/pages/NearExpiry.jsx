@@ -21,7 +21,7 @@ const STATUS_OPTIONS = [
 ];
 
 const NearExpiry = () => {
-  const { API, authorizationToken } = useAuth();
+  const { API } = useAuth();
 
   const [excelLoading, setExcelLoading] = useState(false);
 
@@ -101,7 +101,7 @@ const NearExpiry = () => {
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [API, authorizationToken, state.pagination.page, state.pagination.limit, state.filters]);
+  }, [state.pagination.page, state.pagination.limit, state.filters]);
 
   // Debounced search effect
   useEffect(() => {
@@ -110,6 +110,7 @@ const NearExpiry = () => {
     }, 300);
 
     return () => clearTimeout(timeoutId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.filters.search]);
 
   // Effect to fetch data when other dependencies change
@@ -117,6 +118,7 @@ const NearExpiry = () => {
     if (state.filters.search === "") {
       fetchNearExpiryComponents();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.pagination.page, state.pagination.limit, state.filters.days, state.filters.componentType, state.filters.status]);
 
   // Single responsibility: Handle filter changes

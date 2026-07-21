@@ -19,8 +19,8 @@ const COLORS = ["#ef4444", "#22c55e", "#f59e0b", "#3b82f6"];
 export default function TestingMIS() {
   const { data, isLoading, isError, error, refetch } = useSerologyMis();
 
-  const failures = data?.failures || [];
-  const overall = data?.overall || [];
+  const failures = useMemo(() => data?.failures || [], [data]);
+  const overall = useMemo(() => data?.overall || [], [data]);
   const byDonationType = data?.byDonationType || [];
   const reactiveRate = data?.reactiveRate ?? 0;
   const totalTests = data?.totalTests ?? 0;

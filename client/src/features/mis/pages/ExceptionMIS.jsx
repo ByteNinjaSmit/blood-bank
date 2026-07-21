@@ -32,7 +32,9 @@ export default function ExceptionMIS() {
     { label: "Expired Units Not Yet Discarded", value: expiredNotDiscarded, severity: "High", action: "Process discard immediately" },
   ];
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const pieData = useMemo(() => rows.filter(r => r.value > 0).map(r => ({ name: r.label, value: r.value })), [stuckInTesting, nearExpiry, longQuarantine, expiredNotDiscarded]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const barData = useMemo(() => rows.map(r => ({ name: r.label.split(' (')[0], value: r.value })), [stuckInTesting, nearExpiry, longQuarantine, expiredNotDiscarded]);
 
   const exportPDF = () => {

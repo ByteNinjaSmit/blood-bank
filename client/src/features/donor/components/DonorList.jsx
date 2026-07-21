@@ -33,6 +33,7 @@ const DonorList = ({
     } else {
       fetchDonors();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campId]);
 
   const filteredDonors = donors.filter((donor) => {

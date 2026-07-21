@@ -19,8 +19,8 @@ const COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6"];
 export default function IssueMIS() {
   const { data, isLoading, isError, error, refetch } = useIssueMis();
 
-  const issues = data?.issues || [];
-  const hospitalWise = data?.hospitalWise || [];
+  const issues = useMemo(() => data?.issues || [], [data]);
+  const hospitalWise = useMemo(() => data?.hospitalWise || [], [data]);
   const totalIssued = data?.totalIssued ?? 0;
 
   const statusData = useMemo(() => issues.map(i => ({ name: i._id || "Unknown", value: i.count })), [issues]);

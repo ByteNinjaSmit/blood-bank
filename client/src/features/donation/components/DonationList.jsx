@@ -36,6 +36,7 @@ const DonationList = ({
 
       fetchDonations(queryParams);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campId, page, rowsPerPage, filters]);
 
   useEffect(() => {

@@ -71,6 +71,7 @@ const CampList = () => {
   React.useEffect(() => {
     fetchCamps()
     getStaffNames()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const getStaffNames = async () => {

@@ -14,7 +14,7 @@ import ComponentFilterBar from "../components/ComponentFilterBar";
 import ComponentsTable from "../components/ComponentsTable";
 
 const ComponentsList = () => {
-  const { API, authorizationToken, user } = useAuth();
+  const { API, user } = useAuth();
   const navigate = useNavigate();
   const canEdit = checkAccess(user, "Component", "update");
 
@@ -186,7 +186,7 @@ const ComponentsList = () => {
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [API, authorizationToken, state.pagination.page, state.pagination.limit, state.filters]);
+  }, [state.pagination.page, state.pagination.limit, state.filters]);
 
   // Debounced search effect
   useEffect(() => {
@@ -195,6 +195,7 @@ const ComponentsList = () => {
     }, 300);
 
     return () => clearTimeout(timeoutId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.filters.search]);
 
   // Effect to fetch data when other dependencies change
@@ -202,6 +203,7 @@ const ComponentsList = () => {
     if (state.filters.search === "") {
       fetchComponents();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore, state.filters.fromDate, state.filters.toDate, state.filters.order]);
 
   // Single responsibility: Handle filter changes

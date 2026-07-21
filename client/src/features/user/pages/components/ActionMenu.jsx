@@ -44,6 +44,7 @@ export default function ActionMenu({...props}) {
     };
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   return (

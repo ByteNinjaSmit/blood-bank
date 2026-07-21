@@ -17,7 +17,7 @@ const number = (v) => (typeof v === "number" ? v : 0);
 
 export default function InventoryMIS() {
   const { data, isLoading, isError, error, refetch } = useInventoryMis();
-  const data_ = Array.isArray(data) ? data : [];
+  const data_ = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const nearExpiry = data_[0]?.nearExpiryContext ?? 0;
 
   const summary = useMemo(() => {

@@ -18,9 +18,9 @@ export default function ExecutiveMIS() {
   const [preset, setPreset] = useState("30d");
   const { data, isLoading, isError, error, refetch } = useExecutiveMis({ period: preset });
 
-  const kpis = data?.kpis || {};
+  const kpis = useMemo(() => data?.kpis || {}, [data]);
   const ratios = data?.ratios || {};
-  const trends = data?.trends || [];
+  const trends = useMemo(() => data?.trends || [], [data]);
 
   const donationsTrend = useMemo(() => trends.map((d) => ({ date: formatDate(d.date), value: number(d.value) })), [trends]);
   const kpiPieData = useMemo(() => [

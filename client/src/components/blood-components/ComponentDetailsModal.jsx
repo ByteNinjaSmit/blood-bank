@@ -58,6 +58,7 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
     if (isOpen && componentId) {
       fetchComponentDetails();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, componentId]);
 
   // Reset state when modal closes

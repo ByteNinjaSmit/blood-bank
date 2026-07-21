@@ -17,8 +17,8 @@ const number = (v) => (typeof v === "number" ? v : 0);
 export default function AnalyticsMIS() {
   const { data, isLoading, isError, error, refetch } = useAnalyticsMis();
 
-  const lastMonth = data?.lastMonth || {};
-  const forecast = data?.forecast || {};
+  const lastMonth = useMemo(() => data?.lastMonth || {}, [data]);
+  const forecast = useMemo(() => data?.forecast || {}, [data]);
   const currentStock = number(data?.currentStock);
   const shortageRisk = data?.shortageRisk || "Unknown";
 
