@@ -158,7 +158,7 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
   const R0 = xmColumnsBase.length;        // recipient block start
   const D0 = R0 + GROUPING_SUBHEADERS.length; // donor block start
   const xmGroupHeaders = [
-    { label: 'Crossmatching', startCol: doneAtIdx, endCol: crossmatchingResult },
+    { label: 'Crossmatching', startCol: doneAtIdx, endCol: crossmatchingResult, dark: true },
     { label: 'Recipient — Cell Grouping', startCol: R0, endCol: R0 + 4 },
     { label: 'Recipient — Serum Grouping', startCol: R0 + 5, endCol: R0 + 7 },
     { label: 'Recipient — Rh Typing', startCol: R0 + 8, endCol: R0 + 10 },

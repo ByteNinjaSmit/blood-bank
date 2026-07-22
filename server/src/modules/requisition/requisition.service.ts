@@ -170,7 +170,7 @@ export function createRequisitionService(deps: {
     },
 
     async create(input, actorId) {
-      await deps.patients.findById(input.patientId);
+      const patient = await deps.patients.findById(input.patientId);
       const requisitionId = `RQ-${dateStamp()}-${rand()}`;
       const created = await deps.requisitions.create({ ...input, requisitionId }, actorId);
       await audit.record({
@@ -179,7 +179,7 @@ export function createRequisitionService(deps: {
         action: 'CREATE',
         entityType: 'Requisition',
         entityId: created.requisitionId,
-        after: { patientId: input.patientId, status: 'PENDING' },
+        after: { patientName: patient.name, status: 'PENDING' },
       });
       log.info({ requisitionId, patientId: input.patientId, actorId }, 'requisition created');
       return created;
