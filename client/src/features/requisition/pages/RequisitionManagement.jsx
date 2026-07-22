@@ -132,13 +132,27 @@ const RequisitionManagement = () => {
   // compatibility-confirmed + grouped, and the recipient grouping saved.
   const step2Reasons = React.useMemo(() => step2Blockers(requestDoc), [requestDoc]);
 
+  // A partial match (some requested components unavailable in stock) lets the
+  // operator advance with the available components — they explicitly accepted
+  // proceeding. Crossmatch safety is still enforced downstream at Approve &
+  // Issue (PRBC with pending/incompatible crossmatch cannot be issued). Read
+  // off the persisted component statuses so it survives a page reload, unlike
+  // the transient `shortages` state.
+  const isPartialMatch = React.useMemo(
+    () => (requestDoc?.requestedComponents || []).some((c) => c.status === 'UNAVAILABLE'),
+    [requestDoc],
+  );
+
   const canProceedFromStep2 = React.useMemo(() => {
     const okStatus = ['matched', 'approved', 'issued', 'completed'];
     if (!requestDoc?._id || !okStatus.includes(requestDoc?.status)) return false;
     // Once past matching (approved/issued/completed) the gate already cleared.
     if (requestDoc.status !== 'matched') return true;
+    // Partial match: don't block on the completeness gate — proceed with the
+    // available components (the banner still lists outstanding items).
+    if (isPartialMatch) return true;
     return step2Reasons.length === 0;
-  }, [requestDoc, step2Reasons]);
+  }, [requestDoc, step2Reasons, isPartialMatch]);
 
   const canProceedFromStep3 = React.useMemo(() => {
     const okStatus = ['approved', 'issued', 'completed'];
@@ -173,6 +187,7 @@ const RequisitionManagement = () => {
 
         <div className="max-w-7xl mx-auto px-4 py-8">
           <Stepper
+            activeStep={currentStep}
             onStepChange={(s) => setCurrentStep(s)}
             onFinalStepCompleted={async () => {
               if (!requestDoc?._id) {
@@ -234,6 +249,7 @@ const RequisitionManagement = () => {
                 onResetCrossmatch={handleResetCrossmatch}
                 onRejectComponent={handleRejectComponent}
                 step2Reasons={step2Reasons}
+                isPartialMatch={isPartialMatch}
               />
             </Step>
 

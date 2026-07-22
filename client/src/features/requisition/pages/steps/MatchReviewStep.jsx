@@ -25,6 +25,7 @@ export default function MatchReviewStep({
   fetchAvailableUnits, onSwapBag, swapping,
   onSaveRecipientGrouping, onSaveBagGrouping, groupingSaving,
   onConfirmCompatibility, onResetCrossmatch, onRejectComponent, step2Reasons = [],
+  isPartialMatch = false,
 }) {
   const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
   const [rejectComponentTarget, setRejectComponentTarget] = useState(null);
@@ -119,7 +120,11 @@ export default function MatchReviewStep({
       {/* Completeness gate — what still blocks Next */}
       {step2Reasons.length > 0 && (
         <div className="p-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900">
-          <p className="font-medium">Complete these before continuing to Approve &amp; Issue:</p>
+          <p className="font-medium">
+            {isPartialMatch
+              ? 'Outstanding for the available components (you can continue — crossmatch is enforced before issue):'
+              : 'Complete these before continuing to Approve & Issue:'}
+          </p>
           <ul className="mt-2 text-sm list-disc pl-5 space-y-1">
             {step2Reasons.map((r, idx) => (<li key={idx}>{r}</li>))}
           </ul>
