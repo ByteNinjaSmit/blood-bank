@@ -148,7 +148,7 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
     'Crossmatching & Compatibility Test', 'Card Number', 'Issue Date & Time', 'Bag No',
   ];
   const doneAtIdx = xmColumnsBase.indexOf('Crossmatch Done At');
-  const seenAtIdx = xmColumnsBase.indexOf('Seen At');
+  const crossmatchingResult = xmColumnsBase.indexOf('Crossmatching & Compatibility Test');
 
   // Two blocks of blood-grouping sub-columns appended after the base columns:
   // Recipient (entered once per requisition, shown on the first line only) and
@@ -158,7 +158,7 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
   const R0 = xmColumnsBase.length;        // recipient block start
   const D0 = R0 + GROUPING_SUBHEADERS.length; // donor block start
   const xmGroupHeaders = [
-    { label: 'Crossmatching', startCol: doneAtIdx, endCol: seenAtIdx },
+    { label: 'Crossmatching', startCol: doneAtIdx, endCol: crossmatchingResult },
     { label: 'Recipient — Cell Grouping', startCol: R0, endCol: R0 + 4 },
     { label: 'Recipient — Serum Grouping', startCol: R0 + 5, endCol: R0 + 7 },
     { label: 'Recipient — Rh Typing', startCol: R0 + 8, endCol: R0 + 10 },

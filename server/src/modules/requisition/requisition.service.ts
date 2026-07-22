@@ -25,6 +25,7 @@ import type { PatientRepo } from '@/modules/patient/patient.repository';
 import type { CrossmatchService } from '@/modules/crossmatch/crossmatch.service';
 import type { IssueService } from '@/modules/issue/issue.service';
 import { normalizeRequestedComponents } from '@/modules/requisition/requisition.mapper';
+import { approvalBlockers } from '@/modules/requisition/requisition.approval-readiness';
 
 export interface MatchShortageDto {
   componentType: string;
@@ -365,6 +366,16 @@ export function createRequisitionService(deps: {
       if (req.status !== 'MATCHED' && req.status !== 'CROSSMATCHED') {
         throw new ConflictError(
           `Cannot approve requisition in status ${req.status}. Must be MATCHED or CROSSMATCHED.`,
+        );
+      }
+
+      // Non-bypassable safety gate: recipient grouping, each bag's grouping and
+      // a compatible crossmatch must all be recorded before reservation.
+      const blockers = approvalBlockers(req.matchedUnits, req.recipientGrouping);
+      if (blockers.length > 0) {
+        throw new ValidationError(
+          'Cannot approve: complete the grouping and crossmatch worksheets first.',
+          { blockers },
         );
       }
 

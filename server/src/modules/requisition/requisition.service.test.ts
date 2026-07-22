@@ -106,7 +106,7 @@ function deps(opts: { candidates?: SelectableUnit[]; pat?: PatientDto; req?: Req
     updateSnapshot: vi.fn(),
   };
   const crossmatch: CrossmatchService = {
-    perform: vi.fn(),
+    perform: vi.fn().mockResolvedValue(undefined),
   };
   const issue: IssueService = {
     issue: vi.fn(),
@@ -129,10 +129,13 @@ describe('requisition-service.match', () => {
   });
 
   it('reserves proposed units on approve and flips them to reserved', async () => {
+    // Approval-ready: recipient + bag grouping recorded and crossmatch compatible
+    // (the readiness gate blocks approve otherwise).
+    const grouping = { cellGrouping: { antiA: 'POS_4' as const, antiB: 'NEG_0' as const } };
     const matchedUnits = [
-      { unitId: 'U1', componentType: 'PRBC' as const, compatibilityType: 'EXACT' as const, reserved: false, crossmatchRequired: true, crossmatchStatus: 'PENDING' as const },
+      { unitId: 'U1', componentType: 'PRBC' as const, compatibilityType: 'EXACT' as const, reserved: false, crossmatchRequired: true, crossmatchStatus: 'COMPATIBLE' as const, grouping },
     ];
-    const d = deps({ req: reqDto({ status: 'MATCHED', matchedUnits }) });
+    const d = deps({ req: reqDto({ status: 'MATCHED', matchedUnits, recipientGrouping: grouping }) });
     d.units.applyEvent = vi.fn().mockResolvedValue({ status: 'RESERVED' });
     d.requisitions.setStatus = vi.fn().mockResolvedValue(reqDto({ status: 'APPROVED' }));
     const svc = createRequisitionService(d);
@@ -142,6 +145,17 @@ describe('requisition-service.match', () => {
     );
     expect(d.requisitions.markReserved).toHaveBeenCalledWith(REQ_ID, 'U1', 'actor');
     expect(d.requisitions.setStatus).toHaveBeenCalledWith(REQ_ID, 'APPROVED', 'actor');
+  });
+
+  it('refuses to approve until grouping + crossmatch worksheets are recorded', async () => {
+    const matchedUnits = [
+      { unitId: 'U1', componentType: 'PRBC' as const, compatibilityType: 'EXACT' as const, reserved: false, crossmatchRequired: true, crossmatchStatus: 'PENDING' as const },
+    ];
+    const d = deps({ req: reqDto({ status: 'MATCHED', matchedUnits }) });
+    const svc = createRequisitionService(d);
+    await expect(svc.approve(REQ_ID, 'actor')).rejects.toThrow(/complete the grouping and crossmatch/i);
+    // Nothing reserved — the gate short-circuits before touching inventory.
+    expect(d.units.applyEvent).not.toHaveBeenCalled();
   });
 
   it('reports a shortage when not enough compatible units', async () => {

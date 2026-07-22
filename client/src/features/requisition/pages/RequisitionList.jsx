@@ -10,7 +10,7 @@ const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'reject
 
 export default function RequisitionList() {
   const rl = useRequisitionList();
-  const { allSelectedIds,applyFilters,bulkAction,callAction,can,clearSelection,closeView,componentFulfillment,data,excelLoading,exportCsv,exportDropdownOpen,fetchList,filters,fmt,handleConfirmReject,handleExportExcel,handleOpenReject,handlePrint,hospitals,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocReqId,rejectModalOpen,rejectSubmitting,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setExportDropdownOpen,setFilters,setIssueDoc,setIssueModalOpen,setIssuingRowId,setLimit,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintType,setRejectModalOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen } = rl;
+  const { allSelectedIds,applyFilters,bulkAction,callAction,can,canManage,clearSelection,closeView,componentFulfillment,data,excelLoading,exportCsv,exportDropdownOpen,fetchList,filters,fmt,handleConfirmReject,handleExportExcel,handleOpenReject,handlePrint,hospitals,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocReqId,rejectModalOpen,rejectSubmitting,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setExportDropdownOpen,setFilters,setIssueDoc,setIssueModalOpen,setIssuingRowId,setLimit,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintType,setRejectModalOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen } = rl;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -219,7 +219,14 @@ export default function RequisitionList() {
                           )}
                           {row.status !== 'rejected' && (
                             <>
-                              <button onClick={() => navigate(`/requisition/${row._id}`)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">Manage</button>
+                              <button
+                                disabled={!canManage(row)}
+                                onClick={() => navigate(`/requisition/${row._id}`)}
+                                title={canManage(row) ? 'Manage requisition' : 'Locked — details cannot be edited after approval'}
+                                className={`px-3 py-1 rounded border ${canManage(row) ? 'border-gray-300 text-gray-800 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed'}`}
+                              >
+                                Manage
+                              </button>
                               <button disabled={!can(row, 'match')} onClick={() => callAction(row._id, 'match')} className={`px-3 py-1 rounded ${can(row,'match') ? 'bg-orange-800 hover:bg-orange-900 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Match</button>
                               <button disabled={!can(row, 'approve')} onClick={() => callAction(row._id, 'approve')} className={`px-3 py-1 rounded ${can(row,'approve') ? 'bg-blue-700 hover:bg-blue-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Approve</button>
                               <button disabled={!can(row, 'issue')} onClick={() => callAction(row._id, 'issue')} className={`px-3 py-1 rounded ${can(row,'issue') ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Issue</button>

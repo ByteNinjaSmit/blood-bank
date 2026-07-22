@@ -6,6 +6,7 @@ import hospitalApi from '@/services/hospitalApi';
 import { toast } from 'sonner';
 import RequisitionPrintService from '@/services/requisitionPrintService';
 import { exportRequisitionsExcel } from '@/features/requisition/requisitionExcelExport';
+import { requisitionApprovalBlockers } from '@/features/requisition/requisition-gating';
 import { auditApi } from '@/features/audit/api';
 
 const COMPATIBILITY_RESULT_LABELS = {
@@ -230,10 +231,17 @@ export function useRequisitionList() {
     }
   };
 
+  // Editing (Manage) is only allowed before the request is approved — after
+  // approval, units are reserved, so patient/component/bag details are locked.
+  const canManage = (row) => !['approved', 'issued', 'completed', 'rejected'].includes(row.status);
+
   const can = (row, act) => {
     const s = row.status;
     if (act === 'match') return s === 'pending';
-    if (act === 'approve') return s === 'matched';
+    // Approve is blocked until the recipient grouping, each proposed bag's
+    // grouping and the crossmatch worksheet are recorded — mirrors the Manage
+    // stepper's gate so approving straight from the list can't skip them.
+    if (act === 'approve') return s === 'matched' && requisitionApprovalBlockers(row).length === 0;
     if (act === 'issue') {
       if (s === 'rejected' || s === 'pending') return false;
       // Approved requests can be issued even before any components have
@@ -492,5 +500,5 @@ export function useRequisitionList() {
       RequisitionPrintService.print('report');
     }, 100);
   };
-  return { allSelectedIds,applyFilters,bulkAction,callAction,can,clearSelection,closeView,componentFulfillment,data,excelLoading,exportCsv,exportDropdownOpen,fetchList,filters,fmt,getReqLabel,handleConfirmReject,handleExportExcel,handleOpenIssueModal,handleOpenReject,handlePrint,hospitals,isApprovedForIssue,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocId,rejectingDocReqId,rejectModalOpen,rejectSubmitting,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setData,setExcelLoading,setExportDropdownOpen,setFilters,setHospitals,setIssueDoc,setIssueLoading,setIssueModalOpen,setIssuingRowId,setLimit,setLoading,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintLoading,setPrintReportPage,setPrintType,setRejectingDocId,setRejectingDocReqId,setRejectModalOpen,setRejectSubmitting,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,setTotal,setViewDoc,setViewLoading,setViewOpen,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen,user,authorizationToken };
+  return { allSelectedIds,applyFilters,bulkAction,callAction,can,canManage,clearSelection,closeView,componentFulfillment,data,excelLoading,exportCsv,exportDropdownOpen,fetchList,filters,fmt,getReqLabel,handleConfirmReject,handleExportExcel,handleOpenIssueModal,handleOpenReject,handlePrint,hospitals,isApprovedForIssue,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocId,rejectingDocReqId,rejectModalOpen,rejectSubmitting,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setData,setExcelLoading,setExportDropdownOpen,setFilters,setHospitals,setIssueDoc,setIssueLoading,setIssueModalOpen,setIssuingRowId,setLimit,setLoading,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintLoading,setPrintReportPage,setPrintType,setRejectingDocId,setRejectingDocReqId,setRejectModalOpen,setRejectSubmitting,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,setTotal,setViewDoc,setViewLoading,setViewOpen,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen,user,authorizationToken };
 }
