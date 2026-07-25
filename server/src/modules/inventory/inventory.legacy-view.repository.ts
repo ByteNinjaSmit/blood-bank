@@ -149,8 +149,11 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         } else if (storageLocation) {
           unitFilter.storageLocation = new RegExp(storageLocation, 'i');
         } else {
+          // Default "Issue Stock" view: every issued bag not sitting in
+          // external storage — plain hospital/requisition issues AND
+          // Clinical Indication / Disease issues both belong here (Storage
+          // batches get their own tab, so storageLocation stays excluded).
           unitFilter.storageLocation = { $eq: null };
-          unitFilter.clinicalIndicationPatient = { $in: [null, undefined] };
         }
       } else {
         if (storageLocation) unitFilter.storageLocation = new RegExp(storageLocation, 'i');

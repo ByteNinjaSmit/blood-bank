@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { apiClient } from "@/core/api-client";
 import { toast } from "sonner";
 import { useEditWithReason } from "@/hooks/useEditWithReason";
 import { useDeleteWithReason } from "@/hooks/useDeleteWithReason";
@@ -10,10 +9,6 @@ import {
   useDeleteStorageTransfer,
 } from "@/features/storage-transfer/queries";
 
-const DEFAULT_PATIENT = {
-  firstName: "", middleName: "", lastName: "", address: "",
-  age: "", sex: "M", bloodGroup: "A+", disease: "THALASSEMIA", otherDiseaseName: "",
-};
 // A factory, not a shared constant: form handlers mutate the nested
 // group/bag objects in place (e.g. newBags[i].groups[j].selectedBags = ...),
 // so reusing one module-level array would leak a user's picks into every
@@ -26,16 +21,17 @@ function splitBloodGroup(bg) {
 }
 
 // Owns the Storage register: list/fetch, create/edit/delete of
-// StorageTransfer batches (the "Send to Storage" flow), plus the legacy
-// one-off Clinical Indication / Disease issuance that shares the same
-// form but isn't tracked as an editable batch. Mirrors useBulkTransfer's
-// shape so both tabs feel and behave the same way.
+// StorageTransfer batches (the "Send to Storage" flow). Clinical
+// Indication / Disease issuance is a separate, dedicated flow — see
+// useClinicalIndication.js — even though it shares the same bag-picker
+// UI shape. Mirrors useBulkTransfer's shape so both tabs feel and behave
+// the same way.
 export const STORAGE_LOCATION_TABS = [
   { key: 'SJS [Kopargaon]', label: 'SJS' },
   { key: 'Anand [Vaijapur]', label: 'Anand' },
 ];
 
-export function useStorageTransfer({ mainTab, user, availableUnits, fetchAvailableUnits }) {
+export function useStorageTransfer({ mainTab, availableUnits, fetchAvailableUnits }) {
   const [storagePagination, setStoragePagination] = useState({ page: 1, limit: 10 });
   const [storageLocationTab, setStorageLocationTab] = useState(STORAGE_LOCATION_TABS[0].key);
   const listQuery = useStorageTransferList({
@@ -70,21 +66,17 @@ export function useStorageTransfer({ mainTab, user, availableUnits, fetchAvailab
   // ── Create / Edit form ──
   const [storageFormOpen, setStorageFormOpen] = useState(false);
   const [storageSubmitting, setStorageSubmitting] = useState(false);
-  const [dispatchType, setDispatchType] = useState("STORAGE"); // STORAGE | CLINICAL_INDICATION
   const [storageLocation, setStorageLocation] = useState("SJS [Kopargaon]");
   const [otherLocationName, setOtherLocationName] = useState("");
   const [sentDate, setSentDate] = useState(todayIso());
-  const [patientDetails, setPatientDetails] = useState(DEFAULT_PATIENT);
   const [storageBags, setStorageBags] = useState(defaultBags);
   const [storageEditTarget, setStorageEditTarget] = useState(null);
   const [storageEditExtraUnits, setStorageEditExtraUnits] = useState([]);
 
   const resetStorageForm = () => {
-    setDispatchType("STORAGE");
     setStorageLocation("SJS [Kopargaon]");
     setOtherLocationName("");
     setSentDate(todayIso());
-    setPatientDetails(DEFAULT_PATIENT);
     setStorageBags(defaultBags());
   };
 
@@ -98,12 +90,10 @@ export function useStorageTransfer({ mainTab, user, availableUnits, fetchAvailab
 
   const openEditStorage = (row) => {
     setStorageEditTarget(row);
-    setDispatchType("STORAGE");
     const isKnown = row.location === 'SJS [Kopargaon]' || row.location === 'Anand [Vaijapur]';
     setStorageLocation(isKnown ? row.location : 'Others');
     setOtherLocationName(isKnown ? '' : (row.otherLocationName || row.location || ''));
     setSentDate(row.sentDate ? row.sentDate.split('T')[0] : todayIso());
-    setPatientDetails(DEFAULT_PATIENT);
 
     const extraUnits = (row.items || []).map((it) => ({
       _id: it.unitId,
@@ -161,61 +151,9 @@ export function useStorageTransfer({ mainTab, user, availableUnits, fetchAvailab
   });
 
   const handleStorageSubmit = async () => {
-    const isClinicalIndication = dispatchType === "CLINICAL_INDICATION";
+    const locationVal = storageLocation === 'Others' ? otherLocationName.trim() : storageLocation;
+    if (!locationVal) return toast.warning("Please specify a storage location");
 
-    if (!isClinicalIndication) {
-      const locationVal = storageLocation === 'Others' ? otherLocationName.trim() : storageLocation;
-      if (!locationVal) return toast.warning("Please specify a storage location");
-    } else {
-      if (!patientDetails.firstName.trim() || !patientDetails.lastName.trim()) {
-        return toast.warning("Please enter the patient's first name and last name");
-      }
-      if (!patientDetails.age || isNaN(Number(patientDetails.age))) return toast.warning("Please enter a valid age");
-      if (!patientDetails.disease) return toast.warning("Please select a disease");
-      if (patientDetails.disease === "OTHER" && !patientDetails.otherDiseaseName.trim()) {
-        return toast.warning("Please specify the disease name");
-      }
-    }
-
-    // Clinical Indication issuance is a one-off legacy dispatch — not
-    // tracked as an editable/deletable batch entity, unlike STORAGE.
-    if (isClinicalIndication) {
-      const bagsPayload = [];
-      storageBags.forEach((comp) => comp.groups.forEach((group) => {
-        if (group.selectedBags?.length) bagsPayload.push({ bloodGroup: group.bloodGroup, bagIds: group.selectedBags });
-      }));
-      if (bagsPayload.length === 0) return toast.warning("Please select at least one blood bag to send to storage");
-
-      try {
-        setStorageSubmitting(true);
-        await apiClient.post(`/api/inventory/send-to-storage`, {
-          location: storageLocation,
-          otherLocationName: otherLocationName.trim(),
-          bags: bagsPayload,
-          userId: user?._id || user?.id,
-          dispatchType,
-          sentDate: null,
-          clinicalIndicationPatient: {
-            ...patientDetails,
-            firstName: patientDetails.firstName.trim(),
-            middleName: patientDetails.middleName.trim(),
-            lastName: patientDetails.lastName.trim(),
-            address: patientDetails.address.trim(),
-            age: Number(patientDetails.age),
-            otherDiseaseName: patientDetails.disease === "OTHER" ? patientDetails.otherDiseaseName.trim() : "",
-          },
-        });
-        toast.success("Issued for the clinical indication successfully");
-        closeStorageForm();
-      } catch (e) {
-        toast.error(e?.message || "Failed to issue blood units");
-      } finally {
-        setStorageSubmitting(false);
-      }
-      return;
-    }
-
-    // STORAGE dispatch — build the StorageTransfer batch's item list.
     const unitsForLookup = storageEditTarget ? [...availableUnits, ...storageEditExtraUnits] : availableUnits;
     const items = [];
     storageBags.forEach((comp) => comp.groups.forEach((group) => {
@@ -282,11 +220,9 @@ export function useStorageTransfer({ mainTab, user, availableUnits, fetchAvailab
     storageViewOpen, setStorageViewOpen, storageViewItem, setStorageViewItem,
     // form
     storageFormOpen, setStorageFormOpen, storageSubmitting,
-    dispatchType, setDispatchType,
     storageLocation, setStorageLocation,
     otherLocationName, setOtherLocationName,
     sentDate, setSentDate,
-    patientDetails, setPatientDetails,
     storageBags, setStorageBags,
     storageEditTarget,
     openCreateStorage, openEditStorage, closeStorageForm, handleStorageSubmit,

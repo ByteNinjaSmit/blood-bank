@@ -1,5 +1,6 @@
 import React from 'react';
 import { Loader2, MapPin, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { formatDateTime } from '@/lib/format-date';
 
 // Day/month/year with month as a number (e.g. 19/07/2026).
@@ -14,6 +15,7 @@ export default function DiseaseTab({
   fetchThalassemia,
   diseaseLabel,
   onViewBag,
+  onIssueClinicalIndication,
 }) {
   return (
     <div className="bg-white shadow-md rounded-xl overflow-hidden">
@@ -30,6 +32,12 @@ export default function DiseaseTab({
           >
             {thalLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : '↻'} Refresh
           </button>
+          <Button
+            onClick={onIssueClinicalIndication}
+            className="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white shadow-sm flex items-center gap-1.5 h-9 px-4 rounded-lg"
+          >
+            <MapPin className="w-4 h-4" /> Issue for Clinical Indication / Disease
+          </Button>
         </div>
       </div>
 

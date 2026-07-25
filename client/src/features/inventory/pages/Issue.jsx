@@ -9,11 +9,13 @@ import DiseaseTab from "./issue-tabs/DiseaseTab";
 import BulkTransferTab from "./issue-tabs/BulkTransferTab";
 import IssueStockTab from "./issue-tabs/IssueStockTab";
 import SendToStorageModal from "./issue-tabs/SendToStorageModal";
+import IssueClinicalIndicationModal from "./issue-tabs/IssueClinicalIndicationModal";
 import BulkTransferFormModal from "./issue-tabs/BulkTransferFormModal";
 import IssueViewModals from "./issue-tabs/IssueViewModals";
 import IssuePrintPrompts from "./issue-tabs/IssuePrintPrompts";
 import { useBulkTransfer } from "./hooks/useBulkTransfer";
 import { useStorageTransfer } from "./hooks/useStorageTransfer";
+import { useClinicalIndication } from "./hooks/useClinicalIndication";
 import { useIssueExport } from "./hooks/useIssueExport";
 import { formatDate as formatDateBase, formatDateTime as formatDateTimeBase } from "@/lib/format-date";
 
@@ -146,7 +148,14 @@ const Issue = () => {
   };
 
   // Storage register (Send to Storage batches — list/create/edit/delete)
-  const storage = useStorageTransfer({ mainTab, user, availableUnits, fetchAvailableUnits });
+  const storage = useStorageTransfer({ mainTab, availableUnits, fetchAvailableUnits });
+
+  // Clinical Indication / Disease issuance (separate one-off dispatch flow)
+  const clinical = useClinicalIndication({
+    user,
+    fetchAvailableUnits,
+    onIssued: () => fetchThalassemia(1),
+  });
 
   // Bulk Transfer register (list/create/edit/delete + cover-letter/certificate/invoice prints)
   const bulk = useBulkTransfer({ mainTab, availableUnits, fetchAvailableUnits });
@@ -240,6 +249,7 @@ const Issue = () => {
             fetchThalassemia={fetchThalassemia}
             diseaseLabel={diseaseLabel}
             onViewBag={(r) => { setThalViewItem(r); setThalViewOpen(true); }}
+            onIssueClinicalIndication={clinical.openCreate}
           />
         )}
 
@@ -276,26 +286,36 @@ const Issue = () => {
         )}
       </div>
 
-      {/* ── Send to Storage / Edit Storage Batch / Issue for Clinical Indication ── */}
+      {/* ── Send to Storage / Edit Storage Batch ──────────── */}
       <SendToStorageModal
         open={storage.storageFormOpen}
         onClose={storage.closeStorageForm}
         isEdit={Boolean(storage.storageEditTarget)}
-        dispatchType={storage.dispatchType}
-        setDispatchType={storage.setDispatchType}
         storageLocation={storage.storageLocation}
         setStorageLocation={storage.setStorageLocation}
         otherLocationName={storage.otherLocationName}
         setOtherLocationName={storage.setOtherLocationName}
         sentDate={storage.sentDate}
         setSentDate={storage.setSentDate}
-        patientDetails={storage.patientDetails}
-        setPatientDetails={storage.setPatientDetails}
         storageBags={storage.storageBags}
         setStorageBags={storage.setStorageBags}
         availableUnits={availableUnits}
         handleSendToStorage={storage.handleStorageSubmit}
         isLoading={storage.storageSubmitting}
+        loadingAvailable={loadingAvailable}
+      />
+
+      {/* ── Issue for Clinical Indication / Disease ───────── */}
+      <IssueClinicalIndicationModal
+        open={clinical.formOpen}
+        onClose={clinical.closeForm}
+        patientDetails={clinical.patientDetails}
+        setPatientDetails={clinical.setPatientDetails}
+        clinicalBags={clinical.clinicalBags}
+        setClinicalBags={clinical.setClinicalBags}
+        availableUnits={availableUnits}
+        handleSubmit={clinical.handleSubmit}
+        isLoading={clinical.submitting}
         loadingAvailable={loadingAvailable}
       />
 
