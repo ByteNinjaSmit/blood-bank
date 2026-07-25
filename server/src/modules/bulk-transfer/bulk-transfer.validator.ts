@@ -52,6 +52,7 @@ export const ListBulkTransferQuery = z.object({
   limit: z.coerce.number().int().min(1).max(5000).default(20),
   fromDate: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.date().optional()),
   toDate: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.date().optional()),
+  deletedOnly: z.preprocess((v) => v === 'true' || v === true, z.boolean().default(false)),
 });
 
 export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid id') });

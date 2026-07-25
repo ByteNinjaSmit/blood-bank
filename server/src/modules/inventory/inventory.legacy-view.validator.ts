@@ -40,8 +40,10 @@ const SendToStorageBody = z.object({
     .min(1, 'bags must be a non-empty array'),
   userId: z.string().trim().optional(),
   dispatchType: z.string().trim().optional(),
-  clinicalIndicationPatient: ClinicalIndicationPatient.optional(),
-  sentDate: z.string().trim().optional(),
+  // The client always sends this key — `null` for STORAGE dispatches,
+  // a patient object for CLINICAL_INDICATION — so both must validate.
+  clinicalIndicationPatient: ClinicalIndicationPatient.nullable().optional(),
+  sentDate: z.string().trim().nullable().optional(),
 });
 
 const UpdateStorageBody = z.object({

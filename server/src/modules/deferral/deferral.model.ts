@@ -35,6 +35,9 @@ const DeferralSchema = new Schema(
 );
 
 DeferralSchema.index({ donor: 1, type: 1, untilDate: 1 });
+// Active-deferral lookup (donor.enrichment.populateLastDonationId): find
+// currently-active deferrals for a set of donors.
+DeferralSchema.index({ donor: 1, liftedAt: 1 });
 
 export type Deferral = InferSchemaType<typeof DeferralSchema>;
 export type DeferralModel = Model<Deferral>;

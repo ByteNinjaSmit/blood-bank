@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { RotateCcw, Users, Droplets, Building2, Home, Truck, Hospital as HospitalIcon, AlertTriangle, Trash2, Tent, RefreshCw } from 'lucide-react';
+import { RotateCcw, Users, Droplets, Building2, Home, Truck, Hospital as HospitalIcon, AlertTriangle, Trash2, Tent, RefreshCw, Eye } from 'lucide-react';
+import DeletedStockTransferModal from '@/features/mis/components/DeletedStockTransferModal';
 import { toast } from 'sonner';
 import { useDonorList, useRestoreDonor, usePermanentDeleteDonor } from '@/features/donor/queries';
 import { useDonationList, useRestoreDonation, usePermanentDeleteDonation } from '@/features/donation/queries';
 import { useHospitalList, useRestoreHospital, usePermanentDeleteHospital } from '@/features/hospital/queries';
 import { useCampList, useRestoreCamp, usePermanentDeleteCamp } from '@/features/camp/queries';
 import { useAffectedRecords } from '@/features/affected-records/queries';
-import { useAuditSearch } from '@/features/audit/queries';
+import { useBulkTransferList, useRestoreBulkTransfer } from '@/features/bulk-transfer/queries';
+import { useStorageTransferList, useRestoreStorageTransfer } from '@/features/storage-transfer/queries';
 import { useAuth } from '@/store/auth';
 import CustomModal from '@/components/CustomModal';
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
@@ -19,8 +21,6 @@ const TABS = [
   { key: 'camp', label: 'Camp', icon: Tent },
   { key: 'affected', label: 'Affected Records', icon: AlertTriangle },
 ];
-
-const STOCK_TRANSFER_MODULES = ['bulk-transfer', 'inventory-storage'];
 
 const PERMANENT_DELETE_ROLES = ['system-admin'];
 const READ_ROLES = ['system-admin', 'bbo', 'qa-manager', 'auditor'];
@@ -79,11 +79,12 @@ export default function RecycleBin() {
   const [activeTab, setActiveTab] = useState('donor');
   const [restoreTarget, setRestoreTarget] = useState(null);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [stockTransferDetail, setStockTransferDetail] = useState(null); // { record, module }
 
   const donorQuery = useDonorList({ deletedOnly: true, page: 1, pageSize: 500 });
   const donationQuery = useDonationList({ deletedOnly: true, page: 1, pageSize: 500 });
-  const bulkTransferLogsQuery = useAuditSearch({ module: 'bulk-transfer' }, 1, 200);
-  const storageLogsQuery = useAuditSearch({ module: 'inventory-storage' }, 1, 200);
+  const bulkTransferQuery = useBulkTransferList({ deletedOnly: true, page: 1, limit: 200 });
+  const storageTransferQuery = useStorageTransferList({ deletedOnly: true, page: 1, limit: 200 });
   const hospitalQuery = useHospitalList({ deletedOnly: true, limit: 500 });
   const campQuery = useCampList({ deletedOnly: true });
   const affectedQuery = useAffectedRecords();
@@ -92,6 +93,8 @@ export default function RecycleBin() {
   const restoreDonationMutation = useRestoreDonation();
   const restoreHospitalMutation = useRestoreHospital();
   const restoreCampMutation = useRestoreCamp();
+  const restoreBulkTransferMutation = useRestoreBulkTransfer();
+  const restoreStorageTransferMutation = useRestoreStorageTransfer();
 
   const permanentDeleteDonor = usePermanentDeleteDonor();
   const permanentDeleteDonation = usePermanentDeleteDonation();
@@ -100,8 +103,10 @@ export default function RecycleBin() {
 
   const donorItems = donorQuery.data?.items ?? [];
   const donationItems = donationQuery.data?.items ?? [];
-  const stockTransferLogs = [...(bulkTransferLogsQuery.data?.data ?? []), ...(storageLogsQuery.data?.data ?? [])]
-    .sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
+  const stockTransferItems = [
+    ...(bulkTransferQuery.data?.data ?? []).map((r) => ({ ...r, __module: 'bulk-transfer' })),
+    ...(storageTransferQuery.data?.data ?? []).map((r) => ({ ...r, __module: 'storage-transfer' })),
+  ].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
   const hospitalItems = hospitalQuery.data?.items ?? [];
   const campItems = campQuery.data ?? [];
   const affectedItems = affectedQuery.data ?? [];
@@ -130,8 +135,17 @@ export default function RecycleBin() {
       } else if (activeTab === 'camp') {
         await restoreCampMutation.mutateAsync(restoreTarget._id || restoreTarget.id);
         toast.success('Camp restored');
+      } else if (activeTab === 'stockTransfers') {
+        if (restoreTarget.__module === 'bulk-transfer') {
+          await restoreBulkTransferMutation.mutateAsync(restoreTarget.id);
+        } else {
+          await restoreStorageTransferMutation.mutateAsync(restoreTarget.id);
+        }
+        toast.success('Stock transfer restored — bags re-claimed from stock');
       }
     } catch (e) {
+      // Bags are always available or the whole restore is refused — this
+      // is the guard the user relies on, so surface the exact reason.
       toast.error(e?.message ?? 'Failed to restore record');
     }
     closeRestoreModal();
@@ -168,7 +182,7 @@ export default function RecycleBin() {
   const isLoading =
     (activeTab === 'donor' && donorQuery.isLoading) ||
     (activeTab === 'donation' && donationQuery.isLoading) ||
-    (activeTab === 'stockTransfers' && (bulkTransferLogsQuery.isLoading || storageLogsQuery.isLoading)) ||
+    (activeTab === 'stockTransfers' && (bulkTransferQuery.isLoading || storageTransferQuery.isLoading)) ||
     (activeTab === 'hospital' && hospitalQuery.isLoading) ||
     (activeTab === 'camp' && campQuery.isLoading) ||
     (activeTab === 'affected' && affectedQuery.isLoading);
@@ -176,7 +190,7 @@ export default function RecycleBin() {
   const isError =
     (activeTab === 'donor' && donorQuery.isError) ||
     (activeTab === 'donation' && donationQuery.isError) ||
-    (activeTab === 'stockTransfers' && (bulkTransferLogsQuery.isError || storageLogsQuery.isError)) ||
+    (activeTab === 'stockTransfers' && (bulkTransferQuery.isError || storageTransferQuery.isError)) ||
     (activeTab === 'hospital' && hospitalQuery.isError) ||
     (activeTab === 'camp' && campQuery.isError) ||
     (activeTab === 'affected' && affectedQuery.isError);
@@ -184,7 +198,7 @@ export default function RecycleBin() {
   const isFetching =
     (activeTab === 'donor' && donorQuery.isFetching) ||
     (activeTab === 'donation' && donationQuery.isFetching) ||
-    (activeTab === 'stockTransfers' && (bulkTransferLogsQuery.isFetching || storageLogsQuery.isFetching)) ||
+    (activeTab === 'stockTransfers' && (bulkTransferQuery.isFetching || storageTransferQuery.isFetching)) ||
     (activeTab === 'hospital' && hospitalQuery.isFetching) ||
     (activeTab === 'camp' && campQuery.isFetching) ||
     (activeTab === 'affected' && affectedQuery.isFetching);
@@ -192,7 +206,7 @@ export default function RecycleBin() {
   const refetchActive = () => {
     if (activeTab === 'donor') donorQuery.refetch();
     else if (activeTab === 'donation') donationQuery.refetch();
-    else if (activeTab === 'stockTransfers') { bulkTransferLogsQuery.refetch(); storageLogsQuery.refetch(); }
+    else if (activeTab === 'stockTransfers') { bulkTransferQuery.refetch(); storageTransferQuery.refetch(); }
     else if (activeTab === 'hospital') hospitalQuery.refetch();
     else if (activeTab === 'camp') campQuery.refetch();
     else if (activeTab === 'affected') affectedQuery.refetch();
@@ -418,16 +432,28 @@ export default function RecycleBin() {
             )
           ) : activeTab === 'stockTransfers' ? (
             <SimpleTable
-              emptyLabel="No bulk transfer or storage activity logged yet."
-              rowKey={(l) => String(l._id)}
+              emptyLabel="No deleted bulk transfers or storage batches."
+              rowKey={(r) => `${r.__module}-${r.id}`}
               columns={[
-                { key: 'at', label: 'When', render: (l) => new Date(l.at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) },
-                { key: 'module', label: 'Source', render: (l) => (l.module === 'bulk-transfer' ? 'Bulk Transfer' : 'Storage') },
-                { key: 'action', label: 'Action' },
-                { key: 'entityLabel', label: 'Record' },
-                { key: 'reason', label: 'Reason', render: (l) => l.reason || <span className="text-gray-400">—</span> },
+                { key: 'module', label: 'Source', render: (r) => (r.__module === 'bulk-transfer' ? 'Bulk Transfer' : 'Storage') },
+                { key: 'transferId', label: 'Transfer ID' },
+                { key: 'bags', label: 'Bags', render: (r) => `${r.items?.length || 0} bag${(r.items?.length || 0) !== 1 ? 's' : ''}` },
+                { key: 'updatedAt', label: 'Deleted On', render: (r) => formatDate(r.updatedAt) },
               ]}
-              rows={stockTransferLogs}
+              rows={stockTransferItems}
+              renderActions={(r) => (
+                <div className="flex items-center justify-end gap-1.5">
+                  <button
+                    onClick={() => setStockTransferDetail({ record: r, module: r.__module })}
+                    title="View bag details"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-xs font-medium transition-colors"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    View Bags
+                  </button>
+                  <RestoreButton onClick={() => openRestoreModal(r)} />
+                </div>
+              )}
             />
           ) : activeTab === 'hospital' ? (
             <SimpleTable
@@ -498,6 +524,12 @@ export default function RecycleBin() {
       />
 
       {PermanentDeleteDialog}
+
+      <DeletedStockTransferModal
+        record={stockTransferDetail?.record}
+        module={stockTransferDetail?.module}
+        onClose={() => setStockTransferDetail(null)}
+      />
     </div>
   );
 }

@@ -34,6 +34,7 @@ import bagInspectionRouter from '@/modules/bag-inspection/bag-inspection.routes'
 import bagIssueRouter from '@/modules/bag-issue/bag-issue.routes';
 import bagDiscardRouter from '@/modules/bag-discard/bag-discard.routes';
 import bulkTransferRouter from '@/modules/bulk-transfer/bulk-transfer.routes';
+import storageTransferRouter from '@/modules/storage-transfer/storage-transfer.routes';
 import componentRouter from '@/modules/component/component.routes';
 import chemicalInventoryRouter from '@/modules/chemical-inventory/chemical-inventory.routes';
 import monthlyReportRouter from '@/modules/monthly-report/monthly-report.routes';
@@ -76,6 +77,7 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/bag-issue', router: bagIssueRouter },
   { path: '/bag-discard', router: bagDiscardRouter },
   { path: '/bulk-transfer', router: bulkTransferRouter },
+  { path: '/storage-transfer', router: storageTransferRouter },
   { path: '/component', router: componentRouter },
   { path: '/chemical-inventory', router: chemicalInventoryRouter },
   { path: '/monthly-report', router: monthlyReportRouter },

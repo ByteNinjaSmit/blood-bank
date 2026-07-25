@@ -13,6 +13,7 @@ const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 export default function SendToStorageModal({
   open,
   onClose,
+  isEdit = false,
   dispatchType,
   setDispatchType,
   storageLocation,
@@ -30,8 +31,12 @@ export default function SendToStorageModal({
   isLoading,
   loadingAvailable,
 }) {
+  const title = isEdit
+    ? "Edit Storage Batch"
+    : dispatchType === "CLINICAL_INDICATION" ? "Issue for Clinical Indication / Disease" : "Send to Storage Form";
+
   return (
-    <CustomModal open={open} onCancel={onClose} title={dispatchType === "CLINICAL_INDICATION" ? "Issue for Clinical Indication / Disease" : "Send to Storage Form"} size="xl" hideFooter>
+    <CustomModal open={open} onCancel={onClose} title={title} size="xl" hideFooter>
       <div className="space-y-6 text-sm p-2">
 
         <div className="flex flex-col md:w-1/2">
@@ -41,11 +46,15 @@ export default function SendToStorageModal({
           <select
             value={dispatchType}
             onChange={(e) => setDispatchType(e.target.value)}
-            className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm font-bold text-red-800 focus:ring-1 focus:ring-red-500"
+            disabled={isEdit}
+            className="h-10 px-3 border rounded-md text-sm bg-white shadow-sm font-bold text-red-800 focus:ring-1 focus:ring-red-500 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <option value="STORAGE">Send to Storage</option>
-            <option value="CLINICAL_INDICATION">Issue for Clinical Indication / Disease</option>
+            <option value="CLINICAL_INDICATION" disabled={isEdit}>Issue for Clinical Indication / Disease</option>
           </select>
+          {isEdit && (
+            <p className="text-[11px] text-gray-400 mt-1">Only Storage batches can be edited here.</p>
+          )}
         </div>
 
         {dispatchType === "STORAGE" ? (
@@ -420,10 +429,10 @@ export default function SendToStorageModal({
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Dispatching...
+                {isEdit ? "Saving..." : "Dispatching..."}
               </>
             ) : (
-              "Send to Storage"
+              isEdit ? "Save Changes" : "Send to Storage"
             )}
           </Button>
         </div>

@@ -144,8 +144,18 @@ export async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto
 // per-row interval logic in populateLastDonationId so the "recently-donated"
 // filter and the displayed status agree.
 export async function donorIdsWithinDonationWindow(now = new Date()): Promise<Set<string>> {
+  // 120 days covers the longest (female) waiting period, so any donation
+  // older than that can never keep a donor "within window" — scoping the
+  // match to it lets the index on collectedAt prune the vast majority of
+  // historical donations before the aggregation groups by donor.
+  const windowStart = new Date(now.getTime() - 120 * 86_400_000);
   const lastDonations = await DonationModel.aggregate([
-    { $match: { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] } },
+    {
+      $match: {
+        collectedAt: { $gte: windowStart },
+        $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+      },
+    },
     { $sort: { collectedAt: -1 } },
     { $group: { _id: '$donor', lastDate: { $first: '$collectedAt' } } },
   ]);

@@ -109,19 +109,27 @@ export function createDonorRepo(): DonorRepo {
         filter.eligibilityStatus = input.eligibilityStatus;
       }
 
-      if (input.source === 'camp') {
-        const campDonations = await DonationModel.find({ campId: { $ne: null } }, { donor: 1 }).lean();
-        const campDonorIds = campDonations.map(d => d.donor?.toString()).filter(Boolean);
-        const camps = await CampModel.find({}, { donorData: 1 }).lean();
+      // Computed once (not per-branch) and reused for both the source
+      // filter and the result-tagging step below — previously this pair of
+      // full-collection scans ran up to twice per request.
+      let allCampDonorIdsCache: string[] | null = null;
+      const getAllCampDonorIds = async (): Promise<string[]> => {
+        if (allCampDonorIdsCache) return allCampDonorIdsCache;
+        const [campDonations, camps] = await Promise.all([
+          DonationModel.find({ campId: { $ne: null } }, { donor: 1 }).lean(),
+          CampModel.find({}, { donorData: 1 }).lean(),
+        ]);
+        const campDonorIds = campDonations.map(d => d.donor?.toString()).filter(Boolean) as string[];
         const campDataDonorIds = camps.flatMap(c => c.donorData || []).map(id => id.toString());
-        const allCampDonorIds = Array.from(new Set([...campDonorIds, ...campDataDonorIds]));
+        allCampDonorIdsCache = Array.from(new Set([...campDonorIds, ...campDataDonorIds]));
+        return allCampDonorIdsCache;
+      };
+
+      if (input.source === 'camp') {
+        const allCampDonorIds = await getAllCampDonorIds();
         filter._id = { $in: allCampDonorIds.map(id => new Types.ObjectId(id)) };
       } else if (input.source === 'inhouse') {
-        const campDonations = await DonationModel.find({ campId: { $ne: null } }, { donor: 1 }).lean();
-        const campDonorIds = campDonations.map(d => d.donor?.toString()).filter(Boolean);
-        const camps = await CampModel.find({}, { donorData: 1 }).lean();
-        const campDataDonorIds = camps.flatMap(c => c.donorData || []).map(id => id.toString());
-        const allCampDonorIds = Array.from(new Set([...campDonorIds, ...campDataDonorIds]));
+        const allCampDonorIds = await getAllCampDonorIds();
         filter._id = { $nin: allCampDonorIds.map(id => new Types.ObjectId(id)) };
       }
 
@@ -191,13 +199,7 @@ export function createDonorRepo(): DonorRepo {
       } else if (input.source === 'inhouse') {
         campDonorIdSet = new Set();
       } else {
-        const [campDonationsAll, campsAll] = await Promise.all([
-          DonationModel.find({ campId: { $ne: null } }, { donor: 1 }).lean(),
-          CampModel.find({}, { donorData: 1 }).lean(),
-        ]);
-        const campDonorIdsAll = campDonationsAll.map(d => d.donor?.toString()).filter(Boolean) as string[];
-        const campDataDonorIdsAll = campsAll.flatMap(c => c.donorData || []).map(id => id.toString());
-        campDonorIdSet = new Set([...campDonorIdsAll, ...campDataDonorIdsAll]);
+        campDonorIdSet = new Set(await getAllCampDonorIds());
       }
 
       const taggedDtos = populatedDtos.map(dto => ({

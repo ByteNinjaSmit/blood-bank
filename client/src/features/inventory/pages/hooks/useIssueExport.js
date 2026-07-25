@@ -11,7 +11,7 @@ export function useIssueExport(deps) {
 
   const handleExportRegister = async (registerKey, scope) => {
     const {
-      storageSubTab, thalPagination, bulkPagination, pagination,
+      thalPagination, bulkPagination, pagination,
       status, componentType, search, bloodGroup, expiryFrom, expiryTo, sortBy, order,
     } = deps;
     const exportAll = scope === 'all';
@@ -19,18 +19,12 @@ export function useIssueExport(deps) {
       setExcelLoading(true);
 
       if (registerKey === 'storage') {
-        let dataToExport;
-        if (exportAll) {
-          const res = await apiClient.get(`/api/inventory`, {
-            params: { page: 1, limit: 5000, status: 'issued', storageLocation: 'ALL', sortBy: 'issuedAt', order: 'desc' },
-          });
-          dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
-        } else {
-          const res = await apiClient.get(`/api/inventory`, {
-            params: { page: 1, limit: 500, status: 'issued', storageLocation: storageSubTab, sortBy: 'issuedAt', order: 'desc' },
-          });
-          dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
-        }
+        // Storage batches aren't split by location tab anymore — always
+        // export every bag currently in storage, regardless of scope.
+        const res = await apiClient.get(`/api/inventory`, {
+          params: { page: 1, limit: exportAll ? 5000 : 500, status: 'issued', storageLocation: 'ALL', sortBy: 'issuedAt', order: 'desc' },
+        });
+        const dataToExport = Array.isArray(res.data?.data) ? res.data.data : [];
         if (dataToExport.length === 0) return toast.info("No storage records to export");
         await exportStorageBags(dataToExport);
         return;

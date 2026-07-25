@@ -74,12 +74,21 @@ export interface CreateBulkTransferInput {
   notes?: string;
 }
 
+export interface LoanStockSummaryItem {
+  componentType: string;
+  aboGroup: string;
+  rhFactor: string;
+  count: number;
+}
+
 export interface BulkTransferRepo {
   list(f: ListBulkTransferInput): Promise<{ items: BulkTransferDto[]; total: number }>;
   findById(id: string): Promise<BulkTransferDto>;
   create(input: CreateBulkTransferInput, actorId: string): Promise<BulkTransferDto>;
   update(id: string, input: UpdateBulkTransferInput, actorId: string): Promise<BulkTransferDto>;
   remove(id: string, actorId: string): Promise<BulkTransferDto>;
+  restore(id: string, actorId: string): Promise<BulkTransferDto>;
+  loanStockSummary(): Promise<LoanStockSummaryItem[]>;
 }
 
 // Bags given on loan leave our stock (ISSUED); deleting that transfer puts
@@ -165,7 +174,7 @@ async function restoreUnitsFromLoan(unitIds: string[], actorId: string): Promise
 export function createBulkTransferRepo(): BulkTransferRepo {
   return {
     async list(f) {
-      const filter: Record<string, any> = { deletedAt: null };
+      const filter: Record<string, any> = { deletedAt: f.deletedOnly ? { $ne: null } : null };
       if (f.transferType) filter.transferType = f.transferType;
       if (f.search) {
         filter.$or = [
@@ -266,6 +275,49 @@ export function createBulkTransferRepo(): BulkTransferRepo {
       raw.updatedBy = new Types.ObjectId(actorId);
       await raw.save();
       return toDto(raw.toObject());
+    },
+
+    async restore(id, actorId) {
+      const raw = await BulkTransferModel.findOne({ _id: id });
+      if (!raw || !raw.deletedAt) throw new NotFoundError('BulkTransfer', id);
+
+      // GIVE_LOAN bags must still be sitting unclaimed in stock — if any
+      // moved on (issued, reserved, discarded...) since this transfer was
+      // deleted, markUnitsIssuedForLoan rejects the whole restore rather
+      // than silently dropping bags from the recovered transfer. TAKE_LOAN
+      // items never had a BloodUnit record, so there's nothing to reclaim.
+      if (raw.transferType === 'GIVE_LOAN') {
+        const unitIds = (raw.items || [])
+          .map((it: any) => it.unitId)
+          .filter(Boolean)
+          .map((u: any) => u.toString());
+        await markUnitsIssuedForLoan(unitIds, actorId);
+      }
+
+      (raw as any).deletedAt = null;
+      raw.updatedBy = new Types.ObjectId(actorId);
+      await raw.save();
+      return toDto(raw.toObject());
+    },
+
+    async loanStockSummary() {
+      // TAKE_LOAN bags are always "in stock" — this module never tracks
+      // them being issued out (no BloodUnit record exists to transition).
+      const docs = await BulkTransferModel.find({ transferType: 'TAKE_LOAN', deletedAt: null })
+        .select('items')
+        .lean();
+      const counts = new Map<string, LoanStockSummaryItem>();
+      docs.forEach((t: any) => {
+        (t.items || []).forEach((it: any) => {
+          const rhFactor = it.bloodGroup?.endsWith('-') ? 'NEGATIVE' : 'POSITIVE';
+          const aboGroup = (it.bloodGroup || '').replace(/[+-]/, '');
+          const key = `${it.componentType}|${aboGroup}|${rhFactor}`;
+          const existing = counts.get(key);
+          if (existing) existing.count += 1;
+          else counts.set(key, { componentType: it.componentType, aboGroup, rhFactor, count: 1 });
+        });
+      });
+      return [...counts.values()];
     },
   };
 }

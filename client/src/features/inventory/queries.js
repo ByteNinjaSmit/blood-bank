@@ -2,15 +2,15 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { inventoryApi } from './api';
 
 export const inventoryKeys = {
-  summary: () => ['inventory', 'summary'],
+  summary: (includeLoan) => ['inventory', 'summary', includeLoan ? 'with-loan' : 'own'],
   nearExpiry: (p) => ['inventory', 'near-expiry', p ?? {}],
   select: (p) => ['inventory', 'select', p ?? {}],
 };
 
-export function useStockSummary() {
+export function useStockSummary(includeLoan = false) {
   return useQuery({
-    queryKey: inventoryKeys.summary(),
-    queryFn: inventoryApi.stockSummary,
+    queryKey: inventoryKeys.summary(includeLoan),
+    queryFn: () => inventoryApi.stockSummary(includeLoan),
     staleTime: 30_000,
     refetchInterval: 60_000,
   });

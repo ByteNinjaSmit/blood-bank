@@ -17,5 +17,6 @@ router.get('/:id', authenticate, requireRole([...ROLES]), requirePermission('bul
 router.post('/', authenticate, requireRole([...ROLES]), requirePermission('bulk-transfer:create'), controllers.create);
 router.patch('/:id', authenticate, requireRole([...ROLES]), requirePermission('bulk-transfer:update'), controllers.update);
 router.delete('/:id', authenticate, requireRole([...ROLES]), requirePermission('bulk-transfer:delete'), controllers.remove);
+router.post('/:id/restore', authenticate, requireRole([...ROLES]), requirePermission('bulk-transfer:update'), controllers.restore);
 
 export default router;

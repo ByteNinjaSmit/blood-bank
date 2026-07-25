@@ -83,7 +83,14 @@ export function createInventoryLegacyViewService(deps: {
           severity: 'warning',
           reason,
         },
-        { storageLocation: returned.storageLocation },
+        {
+          bagNo: returned.bagNo,
+          storageLocation: returned.storageLocation,
+          componentType: returned.componentType,
+          bloodGroup: returned.aboGroup,
+          rhFactor: returned.rhFactor,
+          segmentNo: returned.segmentNo,
+        },
         undefined,
       );
       return returned;

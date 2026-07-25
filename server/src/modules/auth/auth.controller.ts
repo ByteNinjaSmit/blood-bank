@@ -1,8 +1,20 @@
 import type { NextFunction, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { ValidateAuth } from './auth.validator';
 import { authService } from './auth.service';
 import { setRefreshCookie, clearRefreshCookie, REFRESH_COOKIE_NAME } from './auth.cookies';
-import { UnauthorizedError } from '@/shared/errors';
+import { UnauthorizedError, ExternalServiceError } from '@/shared/errors';
+
+// Mongo/network failures surface as plain MongooseError/MongoError
+// subclasses, not AppError, so they'd otherwise fall through to a slow,
+// generic 500. Caught explicitly here so a dropped DB connection fails
+// the refresh call fast with a clear, retryable status instead of
+// hanging the client's request.
+function isDbConnectivityError(err: unknown): boolean {
+  if (mongoose.connection.readyState !== 1) return true;
+  const name = (err as { name?: string })?.name ?? '';
+  return name === 'MongoNetworkError' || name === 'MongooseServerSelectionError' || name === 'MongoServerSelectionError';
+}
 
 function ip(req: Request): string | undefined {
   return req.ip;
@@ -74,6 +86,14 @@ export const authController = {
       });
     } catch (e) {
       clearRefreshCookie(res);
+      if (e instanceof UnauthorizedError) {
+        next(e);
+        return;
+      }
+      if (isDbConnectivityError(e)) {
+        next(new ExternalServiceError('database', e));
+        return;
+      }
       next(e);
     }
   },

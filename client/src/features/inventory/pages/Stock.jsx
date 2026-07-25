@@ -25,7 +25,7 @@ const formatDate = (dateStr) => {
 };
 
 const Stock = () => {
-  const { data: stockSummaryData } = useStockSummary();
+  const { data: stockSummaryData } = useStockSummary(true);
 
   const [isLoading, setIsLoading] = useState(false);
   const [excelLoading, setExcelLoading] = useState(false);

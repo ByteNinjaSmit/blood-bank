@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
-import { Button } from "@/components/ui/button";
 import { PackageCheck, Warehouse, MapPin, ArrowLeftRight, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import RegisterExportDropdown from "@/components/shared/RegisterExportDropdown";
@@ -11,10 +10,10 @@ import BulkTransferTab from "./issue-tabs/BulkTransferTab";
 import IssueStockTab from "./issue-tabs/IssueStockTab";
 import SendToStorageModal from "./issue-tabs/SendToStorageModal";
 import BulkTransferFormModal from "./issue-tabs/BulkTransferFormModal";
-import StorageEditModal from "./issue-tabs/StorageEditModal";
 import IssueViewModals from "./issue-tabs/IssueViewModals";
 import IssuePrintPrompts from "./issue-tabs/IssuePrintPrompts";
 import { useBulkTransfer } from "./hooks/useBulkTransfer";
+import { useStorageTransfer } from "./hooks/useStorageTransfer";
 import { useIssueExport } from "./hooks/useIssueExport";
 import { formatDate as formatDateBase, formatDateTime as formatDateTimeBase } from "@/lib/format-date";
 
@@ -23,13 +22,10 @@ import { formatDate as formatDateBase, formatDateTime as formatDateTimeBase } fr
 // default abbreviated month.
 const formatDate = (v) => formatDateBase(v, { day: "2-digit", month: "2-digit", year: "numeric" });
 const formatDateTime = (v) => formatDateTimeBase(v, { day: "2-digit", month: "2-digit", year: "numeric" });
-import { useEditWithReason } from "@/hooks/useEditWithReason";
-import { useDeleteWithReason } from "@/hooks/useDeleteWithReason";
-import { useUpdateStorageBag, useReturnFromStorage } from "@/features/inventory/queries";
 
 const ISSUE_REGISTERS = [
   { key: 'issue', label: 'Issue Stock Register' },
-  { key: 'storage', label: 'Storage Register', filteredLabel: 'Current Location', allLabel: 'All Locations' },
+  { key: 'storage', label: 'Storage Register', filteredLabel: 'Current Page', allLabel: 'All Records' },
   { key: 'disease', label: 'Clinical Indication / Disease Register' },
   { key: 'bulkTransfer', label: 'Bulk Transfer Register', filteredLabel: 'Current Page', allLabel: 'All Records' },
 ];
@@ -39,23 +35,6 @@ const Issue = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [rows, setRows] = useState([]);
-  const [storageOpen, setStorageOpen] = useState(false);
-  const [storageLocation, setStorageLocation] = useState("SJS [Kopargaon]");
-  const [otherLocationName, setOtherLocationName] = useState("");
-  const [dispatchType, setDispatchType] = useState("STORAGE"); // STORAGE | CLINICAL_INDICATION
-  const [sentDate, setSentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [patientDetails, setPatientDetails] = useState({
-    firstName: "",
-    middleName: "",
-    lastName: "",
-    address: "",
-    age: "",
-    sex: "M",
-    bloodGroup: "A+",
-    disease: "THALASSEMIA",
-    otherDiseaseName: "",
-  });
-  const [storageBags, setStorageBags] = useState([{ componentType: "PRBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
   const [availableUnits, setAvailableUnits] = useState([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
@@ -75,63 +54,15 @@ const Issue = () => {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewItem, setViewItem] = useState(null);
 
-  // ── Storage tabs state ──────────────────────────────
-  const [mainTab, setMainTab] = useState('issue'); // 'issue' | 'storage' | 'disease'
-  const [storageSubTab, setStorageSubTab] = useState('SJS'); // 'SJS' | 'Anand'
-  const [storageBagRows, setStorageBagRows] = useState([]);
-  const [storageLoading, setStorageLoading] = useState(false);
-  const [storageViewOpen, setStorageViewOpen] = useState(false);
-  const [storageViewItem, setStorageViewItem] = useState(null);
-  const [expandedDates, setExpandedDates] = useState(new Set()); // dates open in accordion
+  // ── Main tab bar ─────────────────────────────────────
+  const [mainTab, setMainTab] = useState('issue'); // 'issue' | 'storage' | 'disease' | 'bulkTransfer'
 
-  // ── Storage bag edit / delete ─────────────────────────
-  const [storageEditOpen, setStorageEditOpen] = useState(false);
-  const [storageEditTarget, setStorageEditTarget] = useState(null);
-  const updateStorageBagMutation = useUpdateStorageBag();
-  const returnFromStorageMutation = useReturnFromStorage();
-
-  const openStorageEdit = (bag) => { setStorageEditTarget(bag); setStorageEditOpen(true); };
-  const closeStorageEdit = () => { setStorageEditOpen(false); setStorageEditTarget(null); };
-
-  const { wrappedSave: saveStorageEdit, EditReasonDialog: StorageEditReasonDialog } = useEditWithReason({
-    onSave: async (payload, reason) => {
-      try {
-        await updateStorageBagMutation.mutateAsync({ id: storageEditTarget._id, data: { ...payload, reason } });
-        toast.success('Storage location updated');
-        closeStorageEdit();
-        fetchStorageBags(storageSubTab);
-      } catch (e) {
-        toast.error(e?.message || 'Failed to update storage location');
-        throw e;
-      }
-    },
-    title: 'Confirm Storage Location Change',
-    message: "Please provide a reason for changing this bag's storage location. It will be recorded in the audit trail.",
-  });
-
-  const { requestDelete: requestStorageDelete, DeleteReasonDialog: StorageDeleteReasonDialog } = useDeleteWithReason({
-    onDelete: async (bag, reason) => {
-      try {
-        await returnFromStorageMutation.mutateAsync({ id: bag._id, reason });
-        toast.success('Bag removed from storage — returned to stock');
-        fetchStorageBags(storageSubTab);
-      } catch (e) {
-        toast.error(e?.message || 'Failed to remove bag from storage');
-        throw e;
-      }
-    },
-    title: 'Remove Bag From Storage',
-    message: 'This bag will be returned to available stock and removed from the storage register.',
-    fieldLabel: 'Reason for Removal',
-  });
-
-  // ── Thalassemia tab state ────────────────────────────
+  // ── Thalassemia (Clinical Indication) tab state ──────
   const [thalRows, setThalRows] = useState([]);
   const [thalLoading, setThalLoading] = useState(false);
   const [thalViewOpen, setThalViewOpen] = useState(false);
   const [thalViewItem, setThalViewItem] = useState(null);
   const [thalPagination, setThalPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
-
 
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
@@ -153,7 +84,7 @@ const Issue = () => {
       setRows(Array.isArray(res.data?.data) ? res.data.data : []);
       setPagination((p) => ({ ...p, ...(res.data?.pagination || {}) }));
     } catch (e) {
-      toast.error(e?.response?.data?.message || "Failed to fetch inventory");
+      toast.error(e?.message || "Failed to fetch inventory");
       setRows([]);
     } finally {
       setIsLoading(false);
@@ -178,91 +109,6 @@ const Issue = () => {
     }
   };
 
-  const handleSendToStorage = async () => {
-    const isClinicalIndication = dispatchType === "CLINICAL_INDICATION";
-    let locationVal = null;
-    if (!isClinicalIndication) {
-      locationVal = storageLocation === 'Others' ? otherLocationName.trim() : storageLocation;
-      if (!locationVal) {
-        return toast.warning("Please specify a storage location");
-      }
-    } else {
-      if (!patientDetails.firstName.trim() || !patientDetails.lastName.trim()) {
-        return toast.warning("Please enter the patient's first name and last name");
-      }
-      if (!patientDetails.age || isNaN(Number(patientDetails.age))) {
-        return toast.warning("Please enter a valid age");
-      }
-      if (!patientDetails.disease) {
-        return toast.warning("Please select a disease");
-      }
-      if (patientDetails.disease === "OTHER" && !patientDetails.otherDiseaseName.trim()) {
-        return toast.warning("Please specify the disease name");
-      }
-    }
-
-    const bagsPayload = [];
-    storageBags.forEach(comp => {
-      comp.groups.forEach(group => {
-        if (group.selectedBags && group.selectedBags.length > 0) {
-          bagsPayload.push({
-            bloodGroup: group.bloodGroup,
-            bagIds: group.selectedBags,
-          });
-        }
-      });
-    });
-
-    if (bagsPayload.length === 0) {
-      return toast.warning("Please select at least one blood bag to send to storage");
-    }
-
-    try {
-      setIsLoading(true);
-      await apiClient.post(`/api/inventory/send-to-storage`, {
-        location: storageLocation,
-        otherLocationName: otherLocationName.trim(),
-        bags: bagsPayload,
-        userId: user?._id || user?.id,
-        dispatchType,
-        sentDate: isClinicalIndication ? null : sentDate,
-        clinicalIndicationPatient: isClinicalIndication ? {
-          ...patientDetails,
-          firstName: patientDetails.firstName.trim(),
-          middleName: patientDetails.middleName.trim(),
-          lastName: patientDetails.lastName.trim(),
-          address: patientDetails.address.trim(),
-          age: Number(patientDetails.age),
-          otherDiseaseName: patientDetails.disease === "OTHER" ? patientDetails.otherDiseaseName.trim() : "",
-        } : null,
-      });
-
-      toast.success(isClinicalIndication ? "Issued for the clinical indication successfully" : "Blood bags sent to storage successfully");
-      setStorageOpen(false);
-      setStorageLocation("SJS [Kopargaon]");
-      setOtherLocationName("");
-      setDispatchType("STORAGE");
-      setSentDate(new Date().toISOString().split('T')[0]);
-      setPatientDetails({
-        firstName: "",
-        middleName: "",
-        lastName: "",
-        address: "",
-        age: "",
-        sex: "M",
-        bloodGroup: "A+",
-        disease: "THALASSEMIA",
-        otherDiseaseName: "",
-      });
-      setStorageBags([{ componentType: "PRBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]);
-      fetchRows(pagination.page);
-    } catch (e) {
-      toast.error(e?.response?.data?.message || "Failed to issue blood units");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
     fetchRows(1, pagination.limit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -270,58 +116,6 @@ const Issue = () => {
 
   const openView = (item) => { setViewItem(item); setViewOpen(true); };
   const closeView = () => { setViewOpen(false); setViewItem(null); };
-
-  const fetchStorageBags = async (location = storageSubTab) => {
-    setStorageLoading(true);
-    setExpandedDates(new Set()); // reset expanded on location change
-    try {
-      const res = await apiClient.get(`/api/inventory`, {
-        params: { page: 1, limit: 500, status: 'issued', storageLocation: location, sortBy: 'issuedAt', order: 'desc' },
-      });
-      const data = Array.isArray(res.data?.data) ? res.data.data : [];
-      setStorageBagRows(data);
-      // Auto-expand the most recent date group
-      if (data.length > 0) {
-        const latestDate = formatDate(data[0].issuedAt);
-        setExpandedDates(new Set([latestDate]));
-      }
-    } catch {
-      toast.error('Failed to fetch storage bags');
-      setStorageBagRows([]);
-    } finally {
-      setStorageLoading(false);
-    }
-  };
-
-  const toggleDateGroup = (dateKey) => {
-    setExpandedDates(prev => {
-      const next = new Set(prev);
-      if (next.has(dateKey)) next.delete(dateKey);
-      else next.add(dateKey);
-      return next;
-    });
-  };
-
-  // Group storage bags by sent date
-  const storageBagsByDate = React.useMemo(() => {
-    const groups = {};
-    storageBagRows.forEach(r => {
-      const dateKey = r.issuedAt ? formatDate(r.issuedAt) : 'Unknown Date';
-      if (!groups[dateKey]) groups[dateKey] = [];
-      groups[dateKey].push(r);
-    });
-    // Return as sorted array (most recent first)
-    return Object.entries(groups).sort((a, b) => {
-      const da = a[1][0]?.issuedAt ? new Date(a[1][0].issuedAt) : 0;
-      const db = b[1][0]?.issuedAt ? new Date(b[1][0].issuedAt) : 0;
-      return db - da;
-    });
-  }, [storageBagRows]);
-
-  useEffect(() => {
-    if (mainTab === 'storage') fetchStorageBags(storageSubTab);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mainTab, storageSubTab]);
 
   const fetchThalassemia = async (page = thalPagination.page, limit = thalPagination.limit) => {
     setThalLoading(true);
@@ -351,12 +145,15 @@ const Issue = () => {
     return p.otherDiseaseName || 'Other';
   };
 
+  // Storage register (Send to Storage batches — list/create/edit/delete)
+  const storage = useStorageTransfer({ mainTab, user, availableUnits, fetchAvailableUnits });
+
   // Bulk Transfer register (list/create/edit/delete + cover-letter/certificate/invoice prints)
   const bulk = useBulkTransfer({ mainTab, availableUnits, fetchAvailableUnits });
 
   // Per-register Excel export
   const { excelLoading, handleExportRegister } = useIssueExport({
-    storageSubTab, thalPagination, bulkPagination: bulk.bulkPagination, pagination,
+    thalPagination, bulkPagination: bulk.bulkPagination, pagination,
     status, componentType, search, bloodGroup, expiryFrom, expiryTo, sortBy, order,
   });
 
@@ -377,21 +174,18 @@ const Issue = () => {
             <button
               type="button"
               onClick={() => {
-                if (mainTab === 'storage') fetchStorageBags(storageSubTab);
+                if (mainTab === 'storage') storage.fetchStorageTransfers(storage.storagePagination.page);
                 else if (mainTab === 'disease') fetchThalassemia(thalPagination.page);
                 else if (mainTab === 'bulkTransfer') bulk.fetchBulkTransfers(bulk.bulkPagination.page);
                 else fetchRows(pagination.page);
               }}
-              disabled={mainTab === 'storage' ? storageLoading : mainTab === 'disease' ? thalLoading : mainTab === 'bulkTransfer' ? bulk.bulkLoading : isLoading}
+              disabled={mainTab === 'storage' ? storage.storageLoading : mainTab === 'disease' ? thalLoading : mainTab === 'bulkTransfer' ? bulk.bulkLoading : isLoading}
               title="Refresh"
               aria-label="Refresh"
               className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <RefreshCw className={`w-4 h-4 ${(mainTab === 'storage' ? storageLoading : mainTab === 'disease' ? thalLoading : mainTab === 'bulkTransfer' ? bulk.bulkLoading : isLoading) ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${(mainTab === 'storage' ? storage.storageLoading : mainTab === 'disease' ? thalLoading : mainTab === 'bulkTransfer' ? bulk.bulkLoading : isLoading) ? 'animate-spin' : ''}`} />
             </button>
-            <Button onClick={() => { setStorageOpen(true); fetchAvailableUnits(); }} className="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white shadow-sm flex items-center gap-1.5 h-10 px-4 rounded-lg">
-              <Warehouse className="w-4 h-4" /> Send to Storage
-            </Button>
             <RegisterExportDropdown onExport={handleExportRegister} isLoading={excelLoading} registers={ISSUE_REGISTERS} />
           </div>
         </div>
@@ -424,17 +218,16 @@ const Issue = () => {
         {/* ── Storage tab ──────────────────────────────────── */}
         {mainTab === 'storage' && (
           <StorageTab
-            storageSubTab={storageSubTab}
-            setStorageSubTab={setStorageSubTab}
-            storageLoading={storageLoading}
-            storageBagRows={storageBagRows}
-            storageBagsByDate={storageBagsByDate}
-            expandedDates={expandedDates}
-            toggleDateGroup={toggleDateGroup}
-            fetchStorageBags={fetchStorageBags}
-            onViewBag={(r) => { setStorageViewItem(r); setStorageViewOpen(true); }}
-            onEditBag={openStorageEdit}
-            onDeleteBag={requestStorageDelete}
+            storageRows={storage.storageRows}
+            storageLoading={storage.storageLoading}
+            storagePagination={storage.storagePagination}
+            fetchStorageTransfers={storage.fetchStorageTransfers}
+            storageLocationTab={storage.storageLocationTab}
+            changeStorageLocationTab={storage.changeStorageLocationTab}
+            onSendToStorage={storage.openCreateStorage}
+            onViewTransfer={(r) => { storage.setStorageViewItem(r); storage.setStorageViewOpen(true); }}
+            onEditTransfer={storage.openEditStorage}
+            onDeleteTransfer={storage.requestDeleteStorage}
           />
         )}
 
@@ -483,27 +276,28 @@ const Issue = () => {
         )}
       </div>
 
+      {/* ── Send to Storage / Edit Storage Batch / Issue for Clinical Indication ── */}
       <SendToStorageModal
-        open={storageOpen}
-        onClose={() => setStorageOpen(false)}
-        dispatchType={dispatchType}
-        setDispatchType={setDispatchType}
-        storageLocation={storageLocation}
-        setStorageLocation={setStorageLocation}
-        otherLocationName={otherLocationName}
-        setOtherLocationName={setOtherLocationName}
-        sentDate={sentDate}
-        setSentDate={setSentDate}
-        patientDetails={patientDetails}
-        setPatientDetails={setPatientDetails}
-        storageBags={storageBags}
-        setStorageBags={setStorageBags}
+        open={storage.storageFormOpen}
+        onClose={storage.closeStorageForm}
+        isEdit={Boolean(storage.storageEditTarget)}
+        dispatchType={storage.dispatchType}
+        setDispatchType={storage.setDispatchType}
+        storageLocation={storage.storageLocation}
+        setStorageLocation={storage.setStorageLocation}
+        otherLocationName={storage.otherLocationName}
+        setOtherLocationName={storage.setOtherLocationName}
+        sentDate={storage.sentDate}
+        setSentDate={storage.setSentDate}
+        patientDetails={storage.patientDetails}
+        setPatientDetails={storage.setPatientDetails}
+        storageBags={storage.storageBags}
+        setStorageBags={storage.setStorageBags}
         availableUnits={availableUnits}
-        handleSendToStorage={handleSendToStorage}
-        isLoading={isLoading}
+        handleSendToStorage={storage.handleStorageSubmit}
+        isLoading={storage.storageSubmitting}
         loadingAvailable={loadingAvailable}
       />
-
 
       {/* ── Send Bulk (Give/Take Loan) Form Modal ─────────── */}
       <BulkTransferFormModal
@@ -534,10 +328,10 @@ const Issue = () => {
         closeView={closeView}
         viewItem={viewItem}
         status={status}
-        storageViewOpen={storageViewOpen}
-        setStorageViewOpen={setStorageViewOpen}
-        storageViewItem={storageViewItem}
-        setStorageViewItem={setStorageViewItem}
+        storageViewOpen={storage.storageViewOpen}
+        setStorageViewOpen={storage.setStorageViewOpen}
+        storageViewItem={storage.storageViewItem}
+        setStorageViewItem={storage.setStorageViewItem}
         thalViewOpen={thalViewOpen}
         setThalViewOpen={setThalViewOpen}
         thalViewItem={thalViewItem}
@@ -551,16 +345,9 @@ const Issue = () => {
       {/* ── Bulk transfer print prompts (cover letter / testing cert / invoice) ── */}
       <IssuePrintPrompts bulk={bulk} />
 
-      {/* ── Storage bag edit (location) + reason dialogs ──── */}
-      <StorageEditModal
-        open={storageEditOpen}
-        onClose={closeStorageEdit}
-        bag={storageEditTarget}
-        submitting={updateStorageBagMutation.isPending}
-        onSubmit={(payload) => { setStorageEditOpen(false); saveStorageEdit(payload); }}
-      />
-      {StorageEditReasonDialog}
-      {StorageDeleteReasonDialog}
+      {/* ── Storage batch edit / delete reason dialogs ────── */}
+      {storage.StorageEditReasonDialog}
+      {storage.StorageDeleteReasonDialog}
 
       {/* ── Bulk transfer edit reason dialog ──────────────── */}
       {bulk.BulkEditReasonDialog}

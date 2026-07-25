@@ -178,6 +178,9 @@ RequisitionSchema.index({ patientId: 1, status: 1 });
 // Urgency queue: sort by requiredAt for PENDING/MATCHED.
 RequisitionSchema.index({ status: 1, requiredAt: 1 });
 RequisitionSchema.index({ createdAt: -1 });
+// Donor donation-history lookback: find the requisition a given unit was
+// matched into.
+RequisitionSchema.index({ 'matchedUnits.unitId': 1 });
 
 export type Requisition = InferSchemaType<typeof RequisitionSchema>;
 export type RequisitionModel = Model<Requisition>;

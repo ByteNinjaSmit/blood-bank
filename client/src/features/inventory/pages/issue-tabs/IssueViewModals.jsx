@@ -144,49 +144,59 @@ export default function IssueViewModals({
           </div>
         )}
       </CustomModal>
-      {/* ── Storage Bag View Modal ──────────────────────── */}
-      <CustomModal open={storageViewOpen} onCancel={() => { setStorageViewOpen(false); setStorageViewItem(null); }} title="Storage Bag Details" size="lg" hideFooter>
+      {/* ── Storage Transfer (batch) View Modal ───────────── */}
+      <CustomModal open={storageViewOpen} onCancel={() => { setStorageViewOpen(false); setStorageViewItem(null); }} title="Storage Batch Details" size="lg" hideFooter>
         {storageViewItem && (() => {
-          const r = storageViewItem;
-          const rh = r?.bag?.rh === 'Positive' ? '+' : r?.bag?.rh === 'Negative' ? '-' : r?.bag?.rh || '';
+          const t = storageViewItem;
           return (
-            <div className="space-y-4 text-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Bag No</div>
-                  <div className="font-bold text-gray-800">{r?.bag?.bagNo || r.bagNo || '—'}</div>
+            <div className="space-y-5 text-sm">
+              <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                <h4 className="text-xs font-black text-red-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Warehouse className="w-3.5 h-3.5" /> Batch Information
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Transfer ID</div>
+                    <div className="font-bold text-gray-800 font-mono">{t.transferId}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Storage Location</div>
+                    <div className="font-bold text-red-700 flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{t.otherLocationName || t.location}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Sent Date</div>
+                    <div className="text-gray-700">{formatDate(t.sentDate)}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Segment No</div>
-                  <div className="font-mono text-gray-700">{r.segmentNo || '—'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Component</div>
-                  <div className="font-semibold text-gray-800">{r?.component?.componentType || '—'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Group</div>
-                  <div className="font-bold text-gray-800">{r?.bag?.bloodGroup}{rh}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Volume</div>
-                  <div className="text-gray-700">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Expiry Date</div>
-                  <div className="text-gray-700">{formatDate(r?.component?.expiryDate)}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Storage Location</div>
-                  <div className="font-semibold text-gray-800 flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-red-600" />{r.storageLocation || '—'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Sent At</div>
-                  <div className="text-gray-700">{formatDateTime(r.issuedAt)}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Type of Bag</div>
-                  <div className="text-gray-700">{r.typeOfBag || '—'}</div>
+              </div>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
+                <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider p-4 pb-0">Blood Bags ({t.items?.length || 0})</h4>
+                <div className="overflow-x-auto p-4 pt-3">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-gray-500 text-xs uppercase font-semibold">
+                        <th className="px-3 py-2">Component</th>
+                        <th className="px-3 py-2">Blood Group</th>
+                        <th className="px-3 py-2">Bag No</th>
+                        <th className="px-3 py-2">Segment No</th>
+                        <th className="px-3 py-2">Volume</th>
+                        <th className="px-3 py-2">Expiry</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {(t.items || []).map((it, idx) => (
+                        <tr key={idx} className="bg-white">
+                          <td className="px-3 py-2.5 text-gray-700 font-medium">{it.componentType}</td>
+                          <td className="px-3 py-2.5 font-bold text-gray-800">{it.bloodGroup}{it.rhFactor === 'NEGATIVE' ? '-' : '+'}</td>
+                          <td className="px-3 py-2.5 font-mono font-bold text-gray-800">{it.bagNo}</td>
+                          <td className="px-3 py-2.5 font-mono text-gray-600">{it.segmentNo || '—'}</td>
+                          <td className="px-3 py-2.5 text-gray-600">{it.volumeMl ? `${it.volumeMl} mL` : '—'}</td>
+                          <td className="px-3 py-2.5 text-gray-600">{formatDate(it.expiresAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

@@ -4,7 +4,8 @@ const BASE = '/api/v2/inventory';
 const LEGACY_BASE = '/api/inventory';
 
 export const inventoryApi = {
-  stockSummary: () => apiClient.get(`${BASE}/summary`).then(unwrap),
+  stockSummary: (includeLoan = false) =>
+    apiClient.get(`${BASE}/summary`, { params: includeLoan ? { includeLoan: true } : undefined }).then(unwrap),
   // FEFO selection — pass params as query string (GET)
   selectFefo: (params) => apiClient.get(`${BASE}/select`, { params }).then(unwrap),
   reserveByCriteria: (payload) => apiClient.post(`${BASE}/reserve`, payload).then(res => res.data),

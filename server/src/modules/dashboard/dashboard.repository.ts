@@ -15,6 +15,7 @@ import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { DonorCardModel } from '@/modules/donor-card/donor-card.model';
 import { IssueModel } from '@/modules/issue/issue.model';
+import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 import type { ChemicalInventoryRepo } from '@/modules/chemical-inventory/chemical-inventory.repository';
 import type { BagStockRepo, BagStockSummaryItem, LowBoxBatchDto } from '@/modules/bag-stock/bag-stock.repository';
 import type { BulkTransferRepo, BulkTransferDto } from '@/modules/bulk-transfer/bulk-transfer.repository';
@@ -65,7 +66,7 @@ export function createDashboardRepo(deps: {
         if (toDate) matrixMatch.collectedAt.$lte = toDate;
       }
 
-      const [donors, donations, inStock, reserved, issued, discarded, transfusions, matrixAgg] = await Promise.all([
+      const [donors, donations, inStock, reserved, issued, discarded, transfusions, matrixAgg, loanTransfers] = await Promise.all([
         DonorModel.countDocuments({ deletedAt: null, ...buildDateQuery('createdAt', fromDate, toDate) }),
         DonationModel.countDocuments({ deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
         BloodUnitModel.countDocuments({ status: 'RELEASED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
@@ -82,6 +83,11 @@ export function createDashboardRepo(deps: {
             },
           },
         ]),
+        BulkTransferModel.find({
+          transferType: 'TAKE_LOAN',
+          deletedAt: null,
+          ...buildDateQuery('transferDate', fromDate, toDate),
+        }).lean(),
       ]);
 
       const stockMatrix = matrixAgg.map((r: any) => ({
@@ -91,8 +97,24 @@ export function createDashboardRepo(deps: {
         count: r.count,
       }));
 
+      // Bags taken on loan from other blood banks — no BloodUnit record,
+      // so fold them into the matrix/in-stock totals separately.
+      let loanTotal = 0;
+      loanTransfers.forEach((t: any) => {
+        (t.items || []).forEach((it: any) => {
+          loanTotal += 1;
+          const rh = it.bloodGroup?.endsWith('-') ? 'Negative' : 'Positive';
+          const bloodGroup = (it.bloodGroup || '').replace(/[+-]/, '');
+          const existing = stockMatrix.find(
+            (m) => m.componentType === it.componentType && m.bloodGroup === bloodGroup && m.rh === rh,
+          );
+          if (existing) existing.count += 1;
+          else stockMatrix.push({ componentType: it.componentType, bloodGroup, rh, count: 1 });
+        });
+      });
+
       return {
-        totals: { donors, donations, inStock, reserved, issued, discarded, transfusions },
+        totals: { donors, donations, inStock: inStock + loanTotal, reserved, issued, discarded, transfusions },
         stockMatrix,
       };
     },

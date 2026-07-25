@@ -37,3 +37,11 @@ export function useDeleteBulkTransfer() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['bulk-transfer', 'list'] }),
   });
 }
+
+export function useRestoreBulkTransfer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => bulkTransferApi.restore(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bulk-transfer', 'list'] }),
+  });
+}

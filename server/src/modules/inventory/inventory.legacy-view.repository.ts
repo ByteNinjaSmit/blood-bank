@@ -50,8 +50,8 @@ export interface SendToStorageInput {
     disease: string;
     otherDiseaseName?: string;
     [key: string]: unknown;
-  };
-  sentDate?: string;
+  } | null;
+  sentDate?: string | null;
   actorId: string;
 }
 
@@ -66,6 +66,10 @@ export interface StorageUnitSummary {
   id: string;
   bagNo: string;
   storageLocation?: string;
+  componentType?: string;
+  aboGroup?: string;
+  rhFactor?: string;
+  segmentNo?: string;
 }
 
 export interface InventoryLegacyViewRepo {
@@ -569,8 +573,16 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       await unit.save();
       await invalidate('inventory:*');
 
-      const donation = await DonationModel.findOne({ donationId: unit.donationId }).select('bagNo').lean();
-      return { id: unit._id.toString(), bagNo: donation?.bagNo || unit.donationId, storageLocation: fromLocation };
+      const donation = await DonationModel.findOne({ donationId: unit.donationId }).select('bagNo segmentNo').lean();
+      return {
+        id: unit._id.toString(),
+        bagNo: donation?.bagNo || unit.donationId,
+        storageLocation: fromLocation,
+        componentType: unit.componentType,
+        aboGroup: unit.aboGroup,
+        rhFactor: unit.rhFactor,
+        segmentNo: donation?.segmentNo || undefined,
+      };
     },
   };
 }

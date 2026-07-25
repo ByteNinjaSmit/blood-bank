@@ -10,6 +10,7 @@ export interface BulkTransferService {
   create(input: CreateBulkTransferInput, actorId: string): Promise<BulkTransferDto>;
   update(id: string, input: UpdateBulkTransferInput, actorId: string, reason?: string): Promise<BulkTransferDto>;
   remove(id: string, actorId: string, reason?: string): Promise<BulkTransferDto>;
+  restore(id: string, actorId: string): Promise<BulkTransferDto>;
 }
 
 function generateTransferId(): string {
@@ -102,6 +103,18 @@ export function createBulkTransferService(deps: { bulkTransfers: BulkTransferRep
         undefined,
       );
       return removed;
+    },
+
+    async restore(id, actorId) {
+      const restored = await deps.bulkTransfers.restore(id, actorId);
+      log.info({ transferId: restored.transferId, actorId }, 'bulk transfer restored');
+      void withAudit(
+        { actorId },
+        { module: 'bulk-transfer', action: 'UPDATE', entityType: 'BulkTransfer', entityId: id, entityLabel: restored.transferId },
+        { deletedAt: true },
+        { deletedAt: null },
+      );
+      return restored;
     },
   };
 }

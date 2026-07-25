@@ -54,7 +54,11 @@ const MultiBagSelect = ({ availableBags, selectedBags, onChange }) => {
                     className="rounded text-red-600 focus:ring-red-500 h-4 w-4"
                   />
                   <div className="flex flex-col">
-                    <span>Bag: {bag.bagNo} ({bag.component?.componentType || '—'}) — {bag.component?.volumeMl ? `${bag.component.volumeMl} mL` : 'Vol: —'}</span>
+                    <span>
+                      Bag: {bag.bagNo} ({bag.component?.componentType || '—'}
+                      {bag.bag?.bloodGroup ? `, ${bag.bag.bloodGroup}${bag.bag.rh === 'Positive' ? '+' : bag.bag.rh === 'Negative' ? '-' : ''}` : ''}) —{' '}
+                      {bag.component?.volumeMl ? `${bag.component.volumeMl} mL` : 'Vol: —'}
+                    </span>
                     <span className="text-xs text-gray-400">Exp: {bag.component?.expiryDate ? new Date(bag.component.expiryDate).toLocaleDateString() : '—'}</span>
                   </div>
                 </label>

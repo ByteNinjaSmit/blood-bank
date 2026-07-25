@@ -8,4 +8,5 @@ export const bulkTransferApi = {
   create: (data)                => apiClient.post(V, data).then(unwrap),
   update: (id, data, editReason) => apiClient.patch(`${V}/${id}`, { ...data, _editReason: editReason }).then(unwrap),
   remove: (id, reason)          => apiClient.delete(`${V}/${id}`, { data: { reason } }).then(unwrap),
+  restore: (id)                 => apiClient.post(`${V}/${id}/restore`).then(unwrap),
 };

@@ -5,6 +5,7 @@ import { createUnitRepo } from '@/modules/unit/unit.repository';
 import { createPatientRepo } from '@/modules/patient/patient.repository';
 import { createRequisitionRepo } from '@/modules/requisition/requisition.repository';
 import { createDonationRepo } from '@/modules/donation/donation.repository';
+import { createBulkTransferRepo } from '@/modules/bulk-transfer/bulk-transfer.repository';
 import { createInventoryService } from '@/modules/inventory/inventory.service';
 import { createInventoryControllers } from '@/modules/inventory/inventory.controller';
 
@@ -13,6 +14,7 @@ const service = createInventoryService({
   patients: createPatientRepo(),
   requisitions: createRequisitionRepo(),
   donations: createDonationRepo(),
+  bulkTransfer: createBulkTransferRepo(),
 });
 const controllers = createInventoryControllers(service);
 
