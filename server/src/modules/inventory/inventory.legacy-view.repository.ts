@@ -148,13 +148,13 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
           unitFilter.storageLocation = { $ne: null };
         } else if (storageLocation) {
           unitFilter.storageLocation = new RegExp(storageLocation, 'i');
-        } else {
-          // Default "Issue Stock" view: every issued bag not sitting in
-          // external storage — plain hospital/requisition issues AND
-          // Clinical Indication / Disease issues both belong here (Storage
-          // batches get their own tab, so storageLocation stays excluded).
-          unitFilter.storageLocation = { $eq: null };
         }
+        // Default "Issue Stock" view (no dispatchType/storageLocation
+        // filter): every issued bag, full stop — plain hospital/
+        // requisition issues, Storage-batch dispatches, Clinical
+        // Indication / Disease issues, and Bulk Transfer (Given Loan)
+        // bags all belong here. Storage/Disease/Bulk Transfer each also
+        // get their own dedicated tab with a narrower filtered view.
       } else {
         if (storageLocation) unitFilter.storageLocation = new RegExp(storageLocation, 'i');
         if (dispatchType === 'CLINICAL_INDICATION') {
@@ -234,6 +234,28 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         }
       });
 
+      // Bags given out on loan (BulkTransfer transferType=GIVE_LOAN) are
+      // ISSUED units with no storageLocation/clinicalIndicationPatient of
+      // their own — the "who took it" info lives on the BulkTransfer doc,
+      // not the BloodUnit. Look it up once per page so the Issue Stock
+      // tab can show "<company name> — Given Loan" instead of "—".
+      const issuedUnitIds = units.filter((u) => u.status === 'ISSUED').map((u) => u._id);
+      const givenLoanMap = new Map<string, string>();
+      if (issuedUnitIds.length > 0) {
+        const givenLoanTransfers = await BulkTransferModel.find({
+          transferType: 'GIVE_LOAN',
+          deletedAt: null,
+          'items.unitId': { $in: issuedUnitIds },
+        })
+          .select('bloodBankName items.unitId')
+          .lean();
+        givenLoanTransfers.forEach((t: any) => {
+          (t.items || []).forEach((it: any) => {
+            if (it.unitId) givenLoanMap.set(it.unitId.toString(), t.bloodBankName);
+          });
+        });
+      }
+
       const data = units.map((u) => {
         let legacyStatus = 'in-stock';
         if (u.status === 'RELEASED') legacyStatus = 'in-stock';
@@ -282,6 +304,7 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         const segmentNo = donObj?.segmentNo || u.unitDin || u.unitId || '—';
         const typeOfBag = donObj?.typeOfBag || 'SB';
 
+        const givenLoanCompany = givenLoanMap.get(u._id.toString());
         if (u.storageLocation) {
           hospitalName = u.storageLocation;
         } else if (u.clinicalIndicationPatient) {
@@ -293,6 +316,8 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
                 ? 'Sickle Cell Anaemia'
                 : p.otherDiseaseName || 'Other';
           hospitalName = `${diseaseLabel}: ${p.firstName} ${p.lastName} (${p.bloodGroup})`;
+        } else if (givenLoanCompany) {
+          hospitalName = `${givenLoanCompany} — Given Loan`;
         }
 
         return {

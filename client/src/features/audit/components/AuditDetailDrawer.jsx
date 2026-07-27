@@ -2,10 +2,19 @@ import React from 'react';
 import Modal from '@/components/shared/Modal';
 import { User, Clock, Globe, Monitor, Hash } from 'lucide-react';
 
+// Internal/technical DTO fields that duplicate what's already shown in
+// the entry header (entity type/label, timestamps) — noise in a
+// before/after diff, not a meaningful business-field change. Most
+// module DTOs carry a raw Mongo `id`/`_id`, which otherwise renders as
+// a confusing bare ObjectId row (e.g. a bulk-transfer DELETE's "id: 68f2…").
+const NOISE_DIFF_KEYS = new Set(['id', '_id', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy']);
+
 function diffRows(before, after, changedFields) {
   const keys = changedFields?.length
     ? changedFields
-    : Array.from(new Set([...Object.keys(before || {}), ...Object.keys(after || {})]));
+    : Array.from(new Set([...Object.keys(before || {}), ...Object.keys(after || {})])).filter(
+        (key) => !NOISE_DIFF_KEYS.has(key),
+      );
   return keys.map((key) => ({
     key,
     before: before && key in before ? before[key] : undefined,
