@@ -16,6 +16,9 @@ const READ = [
   'store-keeper',
   'auditor',
   'camp-organiser',
+  // Camp Donor Appointment List (appointment.routes.ts allows counsellor)
+  // looks up camps/voluntary-donations here to populate its own picker.
+  'counsellor',
 ] as const;
 
 const MANAGE_PERM = requirePermission('camp:manage');

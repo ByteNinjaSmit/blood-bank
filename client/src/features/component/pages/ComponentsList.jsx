@@ -9,14 +9,15 @@ import { Button } from "@/components/ui/button";
 import { ComponentDetailsModal, ComponentEditModal } from "@/components/blood-components";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportComponents } from "@/utils/excelExportHelper";
-import { checkAccess } from "@/atoms/static";
+import useAccess from "@/features/access/useAccess";
 import ComponentFilterBar from "../components/ComponentFilterBar";
 import ComponentsTable from "../components/ComponentsTable";
 
 const ComponentsList = () => {
-  const { API, user } = useAuth();
+  const { API } = useAuth();
   const navigate = useNavigate();
-  const canEdit = checkAccess(user, "Component", "update");
+  const { can } = useAccess();
+  const canEdit = can("component", "update", "component-list");
 
   const [excelLoading, setExcelLoading] = useState(false);
 

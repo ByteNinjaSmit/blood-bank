@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import TestAPI from "@/components/TestAPI"
-import { useAuth } from "@/store/auth"
-import { checkAccess } from "@/atoms/static"
+import useAccess from "@/features/access/useAccess"
 // import SidebarDemo from "@/components/SidebarDemo"
 import {
   Users,
@@ -41,11 +40,30 @@ export default function BloodBankWelcome() {
     setMounted(true)
   }, [])
 
-  const { user } = useAuth()
+  const { canViewModule: canViewRegistryModule } = useAccess()
+
+  // This capabilities list predates the canonical access-registry module
+  // ids and keys tiles by display name — map onto the registry rather than
+  // rewriting every tile below.
+  const DISPLAY_NAME_TO_REGISTRY_MODULE = {
+    Dashboard: 'dashboard',
+    Requisition: 'requisition',
+    Hospital: 'hospital',
+    Camp: 'camp',
+    Component: 'component',
+    Labs: 'labs',
+    Inventory: 'inventory',
+    'Master Register': 'donor',
+    Appointment: 'appointment',
+    Discard: 'discard',
+    Admin: 'admin',
+    MIS: 'mis',
+  }
 
   const canViewModule = (moduleName) => {
     if (!moduleName) return true
-    return checkAccess(user, moduleName, 'view')
+    const registryId = DISPLAY_NAME_TO_REGISTRY_MODULE[moduleName]
+    return registryId ? canViewRegistryModule(registryId) : false
   }
 
   const rawBloodBankCapabilities = [

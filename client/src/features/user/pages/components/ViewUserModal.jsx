@@ -32,7 +32,8 @@ export default function ViewUserModal({ user, onClose }) {
               <table className="min-w-full text-xs border rounded-lg overflow-hidden">
                 <thead className="bg-slate-50/80">
                   <tr>
-                    <th className="px-2 py-1 text-left">Module</th>
+                    <th className="px-2 py-1 text-left">Resource</th>
+                    <th className="px-2 py-1 text-left">Scope</th>
                     <th className="px-2 py-1 text-center">View</th>
                     <th className="px-2 py-1 text-center">Create</th>
                     <th className="px-2 py-1 text-center">Update</th>
@@ -40,9 +41,10 @@ export default function ViewUserModal({ user, onClose }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {(user.permissions || []).map(p => (
-                    <tr key={p.moduleName} className="hover:bg-slate-50/60">
+                  {(user.permissions || []).map((p, i) => (
+                    <tr key={`${p.moduleName}-${p.pageId || 'module'}-${i}`} className="hover:bg-slate-50/60">
                       <td className="px-2 py-1">{p.moduleName}</td>
+                      <td className="px-2 py-1 text-slate-500">{p.pageId ? `page: ${p.pageId}` : 'whole module'}</td>
                       <td className="px-2 py-1 text-center">{p.view ? '✔' : '—'}</td>
                       <td className="px-2 py-1 text-center">{p.create ? '✔' : '—'}</td>
                       <td className="px-2 py-1 text-center">{p.update ? '✔' : '—'}</td>

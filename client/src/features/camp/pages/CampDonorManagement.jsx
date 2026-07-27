@@ -7,8 +7,7 @@ import DonorDetails from '@/features/donor/components/DonorDetails';
 import Modal from '@/components/shared/Modal';
 import CustomModal from '@/components/CustomModal';
 import { useDonor } from '@/hooks/useDonor';
-import { useAuth } from '@/store/auth';
-import { checkAccess } from '@/features/user/pages/utils/access';
+import useAccess from '@/features/access/useAccess';
 import EnhancedLoader from '@/components/utils/Spinner';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
@@ -55,8 +54,11 @@ const ConfirmDeleteModal = ({ isOpen, title, message, onConfirm, onClose }) => {
 const CampDonorManagement = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
-  const donorAccess = checkAccess(user, ["donor","donors","donor management"]);
+  const { hasPermission } = useAccess();
+  const donorAccess = {
+    canUpdate: hasPermission('donor:update'),
+    canDelete: hasPermission('donor:delete'),
+  };
 
   const {
     donors,

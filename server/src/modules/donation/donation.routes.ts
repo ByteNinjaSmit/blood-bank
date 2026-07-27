@@ -56,6 +56,9 @@ router.get(
     'apheresis-tech',
     'qa-manager',
     'auditor',
+    // Camp Donation Management (allowed on the /list route above) also
+    // opens a single donation's detail from that same screen.
+    'camp-organiser',
   ]),
   requirePermission('donation:read'),
   controllers.get,

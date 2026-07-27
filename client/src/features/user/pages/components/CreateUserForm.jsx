@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
+import PermissionsEditor from "../../components/permissions-editor/PermissionsEditor";
 
 export default function CreateUserForm({
   form,
@@ -9,8 +10,6 @@ export default function CreateUserForm({
   loading,
   onSubmit,
   onCancel,
-  setPerm,
-  setAllForModule,
 }) {
   useEffect(() => {
     const onKey = (e) => {
@@ -75,42 +74,13 @@ export default function CreateUserForm({
 
           <div className="mt-2">
             <div className="font-medium mb-2 text-slate-800">Permissions</div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm border rounded-lg overflow-hidden">
-                <thead className="bg-slate-50/80">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Module</th>
-                    <th className="px-3 py-2 text-center">All</th>
-                    <th className="px-3 py-2 text-center">View</th>
-                    <th className="px-3 py-2 text-center">Create</th>
-                    <th className="px-3 py-2 text-center">Update</th>
-                    <th className="px-3 py-2 text-center">Delete</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {form.permissions.map((p) => (
-                    <tr key={p.moduleName} className="hover:bg-slate-50/60">
-                      <td className="px-3 py-2">{p.moduleName}</td>
-                      <td className="px-3 py-2 text-center">
-                        <input type="checkbox" checked={p.view && p.create && p.update && p.delete} onChange={(e)=>setAllForModule(p.moduleName, e.target.checked)} />
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input type="checkbox" checked={p.view} onChange={(e)=>setPerm(p.moduleName, 'view', e.target.checked)} />
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input type="checkbox" checked={p.create} onChange={(e)=>setPerm(p.moduleName, 'create', e.target.checked)} />
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input type="checkbox" checked={p.update} onChange={(e)=>setPerm(p.moduleName, 'update', e.target.checked)} />
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input type="checkbox" checked={p.delete} onChange={(e)=>setPerm(p.moduleName, 'delete', e.target.checked)} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <p className="text-xs text-slate-500 mb-2">
+              Grant a whole module at once, or expand it to set permissions per page.
+            </p>
+            <PermissionsEditor
+              draft={form.permissionsDraft}
+              onChange={(permissionsDraft) => setForm((v) => ({ ...v, permissionsDraft }))}
+            />
           </div>
 
           <div className="flex justify-end gap-2">

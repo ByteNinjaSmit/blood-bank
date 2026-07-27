@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { useDonationList, useDonationDetail, useDeleteDonation } from '@/features/donation/queries';
 import { donationApi } from '@/features/donation/api';
 import { useAuth } from '@/store/auth';
-import { checkAccess } from '@/features/user/pages/utils/access';
+import useAccess from '@/features/access/useAccess';
 import { exportDonationRegister } from '@/features/donation/donationRegisterExport';
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
 import { PAGE_SIZE } from './constants';
@@ -13,7 +13,8 @@ import { donationStatus } from './donationRegister.utils';
 // Register tabs. Keeps the page shell purely presentational.
 export function useDonationRegister(activeTab, setActiveTab) {
   const { user } = useAuth();
-  const donationAccess = checkAccess(user, ['donation', 'donations', 'donation management']);
+  const { can } = useAccess();
+  const donationAccess = { canDelete: can('donor', 'delete', 'donation-list') };
   const deleteMutation = useDeleteDonation();
 
   const [currentPage, setCurrentPage] = useState(1);

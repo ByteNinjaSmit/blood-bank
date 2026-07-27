@@ -3,12 +3,32 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, ChevronRight, ChevronDown, Lock, Shield, User, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/store/auth';
-import { checkAccess } from '@/atoms/static';
+import useAccess from '@/features/access/useAccess';
 import { GiDrop } from 'react-icons/gi';
 import { MODULES } from './nav-modules';
 
-// Access helper wrappers around user.permissions
-const canViewModule = (user, moduleName) => checkAccess(user, moduleName, 'view');
+// nav-modules.jsx's ids predate the canonical access-registry module ids —
+// this maps the (cosmetic) sidebar structure onto the real registry so the
+// sidebar's view-gating uses the same module/page permission resolution as
+// everywhere else, instead of the old flat ModuleArray-keyed checkAccess().
+const NAV_ID_TO_REGISTRY_MODULE = {
+  dashboard: 'dashboard',
+  requisition: 'requisition',
+  hospital: 'hospital',
+  camp: 'camp',
+  component: 'component',
+  labs: 'labs',
+  inventory: 'inventory',
+  'master-register': 'donor',
+  procurement: 'bag-procurement',
+  'chemical-inventory': 'chemical-inventory',
+  appointments: 'appointment',
+  discard: 'discard',
+  'audit-trail': 'audit',
+  admin: 'admin',
+  mis: 'mis',
+  'recycle-bin': 'mis',
+};
 
 const Sidebar = ({
   isOpen,
@@ -19,6 +39,15 @@ const Sidebar = ({
   const { user, LogoutUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { canViewModule: canViewRegistryModule } = useAccess();
+
+  const canViewModule = useCallback(
+    (_user, moduleId) => {
+      const registryId = NAV_ID_TO_REGISTRY_MODULE[moduleId];
+      return registryId ? canViewRegistryModule(registryId) : false;
+    },
+    [canViewRegistryModule],
+  );
 
   // State declarations with proper initialization
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,9 +61,9 @@ const Sidebar = ({
     MODULES.filter(
       (module) =>
         module.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        (module.always || canViewModule(user, module.name))
+        (module.always || canViewModule(user, module.id))
     ),
-    [searchQuery, user]
+    [searchQuery, user, canViewModule]
   );
 
   // Set current module and submodule based on location
@@ -61,7 +90,7 @@ const Sidebar = ({
 
   // Handle module click with sidebar auto-open for submodules
   const handleModuleClick = useCallback((module) => {
-    if (!module.always && !canViewModule(user, module.name)) {
+    if (!module.always && !canViewModule(user, module.id)) {
       toast.error("ACCESS DENIED!!", {
         description: "You don't have permission to access this section"
       });
@@ -99,11 +128,11 @@ const Sidebar = ({
       // Close temporary sidebar if it was opened for submodules
       setTempOpenForSubmodule(false);
     }
-  }, [user, navigate, isMobile, onCloseMobile, isOpen]);
+  }, [user, navigate, isMobile, onCloseMobile, isOpen, canViewModule]);
 
   const handleSubModuleClick = useCallback((module, subModule) => {
     // Default to requiring view access for submodules unless always allowed
-    if (!module.always && !canViewModule(user, module.name)) {
+    if (!module.always && !canViewModule(user, module.id)) {
       toast.error("ACCESS DENIED!!", {
         description: "You don't have permission to access this section"
       });
@@ -116,7 +145,7 @@ const Sidebar = ({
     }
     // Close temporary sidebar after submodule selection
     setTempOpenForSubmodule(false);
-  }, [user, navigate, isMobile, onCloseMobile]);
+  }, [user, navigate, isMobile, onCloseMobile, canViewModule]);
 
   // Close temporary sidebar when clicking outside or when main sidebar is toggled open
   useEffect(() => {
@@ -254,7 +283,7 @@ const Sidebar = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm">{module.name}</span>
-                          {!canViewModule(user, module.name) && (
+                          {!canViewModule(user, module.id) && (
                             <Lock className="w-3 h-3 text-red-300" />
                           )}
                         </div>
@@ -271,7 +300,7 @@ const Sidebar = ({
                       <div className="text-xs opacity-80 truncate">{module.description}</div>
                     </div>
                   )}
-                  {!shouldDisplayOpen && !canViewModule(user, module.name) && (
+                  {!shouldDisplayOpen && !canViewModule(user, module.id) && (
                     <Lock className="w-2 h-2 absolute top-1 right-1 text-red-300" />
                   )}
                 </div>
@@ -310,7 +339,7 @@ const Sidebar = ({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">{subModule.name}</span>
-                              {!canViewModule(user, module.name) && (
+                              {!canViewModule(user, module.id) && (
                                 <Lock className="w-3 h-3 text-red-300" />
                               )}
                             </div>

@@ -17,6 +17,7 @@ import {
 import { notificationService } from '@/modules/notification/notification.service';
 import { authRepo, type UserRecord } from './auth.repository';
 import { userRepo } from '@/modules/user/user.repository';
+import { resolveRole, projectClientPermissions, type LegacyPermissionEntry } from '@/shared/role-map';
 import {
   signAccessToken,
   signRefreshToken,
@@ -39,6 +40,17 @@ export interface PublicUser {
   phone?: string;
   role: string;
   permissions: unknown[];
+  // The resolved flat permission-string set (role defaults or, once
+  // configured, this user's explicit grid grants — module-wide or
+  // page-scoped alike) used by the frontend's useAccess() as its
+  // page-visibility baseline. NOT identical to what requirePermission(...)
+  // checks server-side — see role-map.ts's projectClientPermissions() vs
+  // projectPermissions(): a handful of low-sensitivity lookup permissions
+  // (hospital:read, bag-stock:read) are granted to every user server-side
+  // so cross-module dropdowns keep working, but are deliberately omitted
+  // here so that alone doesn't make the Hospital/Bag Inventory pages
+  // themselves appear unlocked to someone who was never granted them.
+  effectivePermissions: string[];
 }
 
 export interface TokenPair {
@@ -49,6 +61,11 @@ export interface TokenPair {
 }
 
 function toPublic(u: UserRecord): PublicUser {
+  const resolvedRole = resolveRole(u.role);
+  const effectivePermissions = projectClientPermissions(
+    resolvedRole,
+    (u.permissions ?? []) as LegacyPermissionEntry[],
+  );
   return {
     userId: u.id,
     publicId: u.publicId,
@@ -57,6 +74,7 @@ function toPublic(u: UserRecord): PublicUser {
     phone: u.phone,
     role: u.role,
     permissions: u.permissions,
+    effectivePermissions: [...effectivePermissions],
   };
 }
 

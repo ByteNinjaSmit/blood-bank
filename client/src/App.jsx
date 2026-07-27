@@ -1,6 +1,7 @@
 import React from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { AuthenticatedRoute } from './components/auth/Authentic-Routes';
+import PageGuard from './features/access/PageGuard';
 import ScrollToTop from './features/dashboard/pages/layout/ScrollToTop';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
@@ -117,93 +118,93 @@ const App = () => {
             <MasterLayout />
           </AuthenticatedRoute>
         }>
-          <Route index element={<Home />} />
-          <Route path="dashboard" element={<Dashboard />} />
+          <Route index element={<PageGuard module="dashboard" page="home"><Home /></PageGuard>} />
+          <Route path="dashboard" element={<PageGuard module="dashboard" page="dashboard"><Dashboard /></PageGuard>} />
 
           {/* Camp */}
-          <Route path="camp-registration" element={<CampRegistration />} />
-          <Route path="camp-details" element={<CampDetails />} />
-          <Route path="camp-listing" element={<CampListing />} />
-          <Route path="camp-donors" element={<CampDonorManagement />} />
-          <Route path="camp-donation" element={<CampDonationManagement />} />
-          <Route path="camp-reports" element={<CampReports />} />
+          <Route path="camp-registration" element={<PageGuard module="camp" page="camp-registration"><CampRegistration /></PageGuard>} />
+          <Route path="camp-details" element={<PageGuard module="camp" page="camp-details"><CampDetails /></PageGuard>} />
+          <Route path="camp-listing" element={<PageGuard module="camp" page="camp-listing"><CampListing /></PageGuard>} />
+          <Route path="camp-donors" element={<PageGuard module="camp" page="camp-donors"><CampDonorManagement /></PageGuard>} />
+          <Route path="camp-donation" element={<PageGuard module="camp" page="camp-donation"><CampDonationManagement /></PageGuard>} />
+          <Route path="camp-reports" element={<PageGuard module="camp" page="camp-reports"><CampReports /></PageGuard>} />
 
           {/* Component */}
-          <Route path="component/list" element={<ComponentsList />} />
-          <Route path="component/separate" element={<ComponentSeparate />} />
-          <Route path="component/near-expiry" element={<NearExpiry />} />
-          <Route path="discard" element={<ViewDiscarded />} />
+          <Route path="component/list" element={<PageGuard module="component" page="component-list"><ComponentsList /></PageGuard>} />
+          <Route path="component/separate" element={<PageGuard module="component" page="component-separate"><ComponentSeparate /></PageGuard>} />
+          <Route path="component/near-expiry" element={<PageGuard module="component" page="component-near-expiry"><NearExpiry /></PageGuard>} />
+          <Route path="discard" element={<PageGuard module="discard" page="discard-list"><ViewDiscarded /></PageGuard>} />
 
           {/* Inventory */}
-          <Route path="inventory/stock" element={<Stock />} />
-          <Route path="inventory/reserve" element={<Reserve />} />
-          <Route path="inventory/reserve/new" element={<ReserveWizard />} />
-          <Route path="inventory/issue" element={<Issue />} />
-          <Route path="inventory/near-expiry" element={<InventoryNearExpiry />} />
+          <Route path="inventory/stock" element={<PageGuard module="inventory" page="inventory-stock"><Stock /></PageGuard>} />
+          <Route path="inventory/reserve" element={<PageGuard module="inventory" page="inventory-reserve"><Reserve /></PageGuard>} />
+          <Route path="inventory/reserve/new" element={<PageGuard module="inventory" page="inventory-reserve-new"><ReserveWizard /></PageGuard>} />
+          <Route path="inventory/issue" element={<PageGuard module="inventory" page="inventory-issue"><Issue /></PageGuard>} />
+          <Route path="inventory/near-expiry" element={<PageGuard module="inventory" page="inventory-near-expiry"><InventoryNearExpiry /></PageGuard>} />
 
-          <Route path="procurement/po" element={<PurchaseOrders />} />
-          <Route path="procurement/grn" element={<GoodsReceipt />} />
-          <Route path="procurement/inspection" element={<BagInspection />} />
-          <Route path="procurement/issue" element={<BagIssuance />} />
-          <Route path="procurement/discard" element={<ViewDiscarded />} />
-          <Route path="procurement/inventory" element={<BagInventory />} />
+          <Route path="procurement/po" element={<PageGuard module="bag-procurement" page="procurement-po"><PurchaseOrders /></PageGuard>} />
+          <Route path="procurement/grn" element={<PageGuard module="bag-procurement" page="procurement-grn"><GoodsReceipt /></PageGuard>} />
+          <Route path="procurement/inspection" element={<PageGuard module="bag-procurement" page="procurement-inspection"><BagInspection /></PageGuard>} />
+          <Route path="procurement/issue" element={<PageGuard module="bag-procurement" page="procurement-issue"><BagIssuance /></PageGuard>} />
+          <Route path="procurement/discard" element={<PageGuard module="bag-procurement" page="procurement-discard"><ViewDiscarded /></PageGuard>} />
+          <Route path="procurement/inventory" element={<PageGuard module="bag-procurement" page="procurement-inventory"><BagInventory /></PageGuard>} />
 
           {/* Chemical Inventory */}
-          <Route path="chemical-inventory/dashboard" element={<ChemicalDashboard />} />
-          <Route path="chemical-inventory/chemicals" element={<ChemicalMaster />} />
-          <Route path="chemical-inventory/suppliers" element={<Suppliers />} />
-          <Route path="chemical-inventory/manufacturers" element={<Manufacturers />} />
-          <Route path="chemical-inventory/purchase" element={<PurchaseEntry />} />
-          <Route path="chemical-inventory/usage" element={<StockUsage />} />
-          <Route path="chemical-inventory/expiry" element={<ExpiryMonitoring />} />
-          <Route path="chemical-inventory/reports" element={<Reports />} />
-          <Route path="chemical-inventory/history" element={<AuditHistory />} />
+          <Route path="chemical-inventory/dashboard" element={<PageGuard module="chemical-inventory" page="chemical-dashboard"><ChemicalDashboard /></PageGuard>} />
+          <Route path="chemical-inventory/chemicals" element={<PageGuard module="chemical-inventory" page="chemical-master"><ChemicalMaster /></PageGuard>} />
+          <Route path="chemical-inventory/suppliers" element={<PageGuard module="chemical-inventory" page="chemical-suppliers"><Suppliers /></PageGuard>} />
+          <Route path="chemical-inventory/manufacturers" element={<PageGuard module="chemical-inventory" page="chemical-manufacturers"><Manufacturers /></PageGuard>} />
+          <Route path="chemical-inventory/purchase" element={<PageGuard module="chemical-inventory" page="chemical-purchase"><PurchaseEntry /></PageGuard>} />
+          <Route path="chemical-inventory/usage" element={<PageGuard module="chemical-inventory" page="chemical-usage"><StockUsage /></PageGuard>} />
+          <Route path="chemical-inventory/expiry" element={<PageGuard module="chemical-inventory" page="chemical-expiry"><ExpiryMonitoring /></PageGuard>} />
+          <Route path="chemical-inventory/reports" element={<PageGuard module="chemical-inventory" page="chemical-reports"><Reports /></PageGuard>} />
+          <Route path="chemical-inventory/history" element={<PageGuard module="chemical-inventory" page="chemical-history"><AuditHistory /></PageGuard>} />
 
           {/* Audit Trail */}
-          <Route path="audit-trail" element={<AuditTrail />} />
+          <Route path="audit-trail" element={<PageGuard module="audit" page="audit-trail"><AuditTrail /></PageGuard>} />
 
-          <Route path="reports/monthly" element={<MonthlyReport />} />
+          <Route path="reports/monthly" element={<PageGuard module="monthly-report" page="monthly-report"><MonthlyReport /></PageGuard>} />
 
           {/* Serology */}
-          <Route path="labs/serology" element={<Serology />} />
-          <Route path="labs/serology-results" element={<SerologyResults />} />
+          <Route path="labs/serology" element={<PageGuard module="labs" page="labs-serology"><Serology /></PageGuard>} />
+          <Route path="labs/serology-results" element={<PageGuard module="labs" page="labs-serology-results"><SerologyResults /></PageGuard>} />
 
           {/* Donation + Donor */}
-          <Route path="master-register/donors" element={<MasterDonors />} />
-          <Route path="master-register/donations" element={<MasterDonations />} />
-          <Route path="master-register/donor-creation" element={<DonorCreation />} />
+          <Route path="master-register/donors" element={<PageGuard module="donor" page="donor-list"><MasterDonors /></PageGuard>} />
+          <Route path="master-register/donations" element={<PageGuard module="donor" page="donation-list"><MasterDonations /></PageGuard>} />
+          <Route path="master-register/donor-creation" element={<PageGuard module="donor" page="donor-creation"><DonorCreation /></PageGuard>} />
 
           {/* Appointments */}
-          <Route path="appointments/donors" element={<DonorAppointmentList />} />
-          <Route path="appointments/camps" element={<CampDonorAppointmentList />} />
+          <Route path="appointments/donors" element={<PageGuard module="appointment" page="appointment-donors"><DonorAppointmentList /></PageGuard>} />
+          <Route path="appointments/camps" element={<PageGuard module="appointment" page="appointment-camps"><CampDonorAppointmentList /></PageGuard>} />
 
           {/* Admin */}
-          <Route path="admin/user-manage" element={<UserManage />} />
+          <Route path="admin/user-manage" element={<PageGuard module="admin" page="user-manage"><UserManage /></PageGuard>} />
 
           {/* Hospital */}
-          <Route path="hospital/add" element={<AddHospital />} />
-          <Route path="hospital/list" element={<ListHospital />} />
+          <Route path="hospital/add" element={<PageGuard module="hospital" page="hospital-add"><AddHospital /></PageGuard>} />
+          <Route path="hospital/list" element={<PageGuard module="hospital" page="hospital-list"><ListHospital /></PageGuard>} />
 
           {/* Requisition */}
-          <Route path="requisition" element={<RequisitionManagement />} />
-          <Route path="requisition/:id" element={<RequisitionManagement />} />
-          <Route path="requisition/list" element={<RequisitionList />} />
+          <Route path="requisition" element={<PageGuard module="requisition" page="requisition-manage"><RequisitionManagement /></PageGuard>} />
+          <Route path="requisition/:id" element={<PageGuard module="requisition" page="requisition-manage"><RequisitionManagement /></PageGuard>} />
+          <Route path="requisition/list" element={<PageGuard module="requisition" page="requisition-list"><RequisitionList /></PageGuard>} />
 
           {/* MIS */}
-          <Route path="mis/donors" element={<DonorMIS />} />
-          <Route path="mis/donations" element={<DonationMIS />} />
-          <Route path="mis/camps" element={<CampMIS />} />
-          <Route path="mis/bags" element={<BagMIS />} />
-          <Route path="mis/components" element={<ComponentMIS />} />
-          <Route path="mis/inventory" element={<InventoryMIS />} />
-          <Route path="mis/issues" element={<IssueMIS />} />
-          <Route path="mis/discards" element={<DiscardMIS />} />
-          <Route path="mis/testing" element={<TestingMIS />} />
-          <Route path="mis/exceptions" element={<ExceptionMIS />} />
-          <Route path="mis/regulatory" element={<RegulatoryMIS />} />
-          <Route path="mis/executive" element={<ExecutiveMIS />} />
-          <Route path="mis/analytics" element={<AnalyticsMIS />} />
-          <Route path="mis/recycle-bin" element={<RecycleBin />} />
+          <Route path="mis/donors" element={<PageGuard module="mis" page="mis-donors"><DonorMIS /></PageGuard>} />
+          <Route path="mis/donations" element={<PageGuard module="mis" page="mis-donations"><DonationMIS /></PageGuard>} />
+          <Route path="mis/camps" element={<PageGuard module="mis" page="mis-camps"><CampMIS /></PageGuard>} />
+          <Route path="mis/bags" element={<PageGuard module="mis" page="mis-bags"><BagMIS /></PageGuard>} />
+          <Route path="mis/components" element={<PageGuard module="mis" page="mis-components"><ComponentMIS /></PageGuard>} />
+          <Route path="mis/inventory" element={<PageGuard module="mis" page="mis-inventory"><InventoryMIS /></PageGuard>} />
+          <Route path="mis/issues" element={<PageGuard module="mis" page="mis-issues"><IssueMIS /></PageGuard>} />
+          <Route path="mis/discards" element={<PageGuard module="mis" page="mis-discards"><DiscardMIS /></PageGuard>} />
+          <Route path="mis/testing" element={<PageGuard module="mis" page="mis-testing"><TestingMIS /></PageGuard>} />
+          <Route path="mis/exceptions" element={<PageGuard module="mis" page="mis-exceptions"><ExceptionMIS /></PageGuard>} />
+          <Route path="mis/regulatory" element={<PageGuard module="mis" page="mis-regulatory"><RegulatoryMIS /></PageGuard>} />
+          <Route path="mis/executive" element={<PageGuard module="mis" page="mis-executive"><ExecutiveMIS /></PageGuard>} />
+          <Route path="mis/analytics" element={<PageGuard module="mis" page="mis-analytics"><AnalyticsMIS /></PageGuard>} />
+          <Route path="mis/recycle-bin" element={<PageGuard module="mis" page="mis-recycle-bin"><RecycleBin /></PageGuard>} />
 
           <Route path="*" element={<NotFound />} />
         </Route>

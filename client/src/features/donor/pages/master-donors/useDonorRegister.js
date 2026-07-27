@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { useDonor, useDonorList } from '@/hooks/useDonor';
 import { useAuth } from '@/store/auth';
-import { checkAccess } from '@/features/user/pages/utils/access';
+import useAccess from '@/features/access/useAccess';
 import { exportRegisterChoice } from '@/features/donor/donorRegisterExport';
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
 import { getEffectiveEligibility } from '@/features/donor/donor-eligibility';
@@ -15,9 +15,10 @@ export function useDonorRegister(activeTab) {
   const { user } = useAuth();
   const { updateDonor, deleteDonor } = useDonor();
   // This hook backs the Master Register donor pages specifically — gate it
-  // on the "Master Register" permission, not the general "Donor" module,
-  // so granting Donor access elsewhere doesn't silently unlock this page.
-  const donorAccess = checkAccess(user, ['master register', 'master-register']);
+  // on the donor-list page's own delete permission, not a generic module
+  // check, so granting Donor access elsewhere doesn't silently unlock this.
+  const { can } = useAccess();
+  const donorAccess = { canDelete: can('donor', 'delete', 'donor-list') };
 
   // ── Filters ──
   const [page, setPage] = useState(1);

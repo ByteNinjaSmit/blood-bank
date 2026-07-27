@@ -4,7 +4,9 @@
 // re-register. Refine these mappings once user.role values are
 // migrated to the new vocabulary.
 
-import type { Role, Permission } from './enums';
+import { ROLE, type Role, type Permission } from './enums';
+
+const NEW_ROLES = new Set<string>(ROLE);
 
 const LEGACY_TO_NEW: Readonly<Record<string, Role>> = {
   admin: 'system-admin',
@@ -202,6 +204,11 @@ const ROLE_DEFAULT_PERMISSIONS: Readonly<Record<Role, ReadonlyArray<Permission>>
 
 export interface LegacyPermissionEntry {
   moduleName: string;
+  // Page-scoped grants carry a pageId — see PermissionSchema in
+  // user.model.ts. It's frontend-only metadata: projectPermissions()
+  // below treats a page-scoped entry identically to a module-wide one,
+  // since the backend still only enforces at the Permission-string level.
+  pageId?: string | null;
   view?: boolean;
   create?: boolean;
   update?: boolean;
@@ -212,33 +219,82 @@ export function mapLegacyRole(legacy: string): Role {
   return LEGACY_TO_NEW[legacy] ?? 'auditor';
 }
 
-// Legacy admin-panel module names whose actual enforced route permission
-// keys don't follow the generic `{module}:{action}` convention below.
-// "Component" is the known offender: its routes require `unit:read` (list/
-// bags-to-separate/near-expiry/detail/edit) and `component:separate`
-// (separate/complete), not `component:read/create/update/delete` — so a
-// grant made via the admin panel's "Component" checkboxes previously
-// produced permissions the server never checked, 403-ing the page.
+// If the stored role is already one of the 14 new-vocabulary roles, use it
+// directly; only run the legacy→new mapping for old 6-role values. Shared
+// by authenticate.ts (route-level enforcement) and auth.service.ts (the
+// /login and /current response) so both resolve the same effective role.
+export function resolveRole(rawRole: string): Role {
+  return NEW_ROLES.has(rawRole) ? (rawRole as Role) : mapLegacyRole(rawRole);
+}
+
+// Module (resource-prefix) names whose actual enforced route permission
+// keys don't follow the generic `{module}:{action}` convention below —
+// most non-CRUD-shaped resources need one of these. Each entry is derived
+// directly from the page → permission mappings declared in
+// client/src/config/access-registry/*.js, so the admin panel's per-module
+// or per-page grid checkboxes always translate into a permission string
+// the corresponding route's requirePermission(...) actually checks.
 const LEGACY_MODULE_PERMISSION_OVERRIDES: Partial<
   Record<string, Partial<Record<'view' | 'create' | 'update' | 'delete', Permission>>>
 > = {
+  // Component Separation: no component:read/create/update exist — its
+  // pages actually gate on unit:read (list/near-expiry) and
+  // component:separate (the separation action itself).
   component: {
     view: 'unit:read',
     create: 'component:separate',
     update: 'unit:read',
   },
+  // BloodUnit: "create" on the Reserve page really means unit:reserve;
+  // "update" on the Issue page really means unit:issue.
+  unit: {
+    create: 'unit:reserve',
+    update: 'unit:issue',
+  },
+  po: { update: 'po:approve' },
+  'bag-discard': { update: 'bag-discard:approve' },
+  // Chemical/reagent inventory only has read + one combined manage
+  // permission server-side — every mutation gates on chemical:manage.
+  chemical: { create: 'chemical:manage', update: 'chemical:manage' },
+  report: { create: 'report:generate' },
+  tti: { create: 'tti:edit', update: 'tti:edit' },
+  user: { delete: 'user:deactivate' },
+  hospital: { create: 'hospital:manage', update: 'hospital:manage' },
+  requisition: { update: 'requisition:approve', delete: 'requisition:reject' },
+  camp: { create: 'camp:manage', update: 'camp:manage' },
+  audit: { update: 'audit:write' },
 };
 
-/**
- * Project a legacy user's role + permission grid into the new
- * permission vocabulary. Combines role-default permissions with any
- * explicit grants in the legacy permissions[] array. Custom modules
- * use the convention `{moduleName}:{action}`, unless overridden above.
- */
-export function projectPermissions(
+// Granted to every authenticated user server-side, regardless of role or
+// grid, so cross-module lookups embedded in pages the user does have
+// access to (e.g. Requisition's hospital picker, Donor Creation's
+// bag-batch picker) succeed. report:export/upload:write/dashboard:read
+// are safe to also expose to the client as-is: no access-registry page
+// uses them as a *view* gate (Dashboard's pages are `alwaysAllowed` and
+// bypass permission checks entirely), so including them client-side never
+// unlocks a page nobody granted.
+const UNIVERSAL_PERMISSIONS: readonly Permission[] = ['report:export', 'upload:write', 'dashboard:read'];
+
+// Same as above, but these ALSO happen to be the primary view-gate for a
+// real, dedicated page (hospital:read → Hospital List; bag-stock:read →
+// Bag Inventory) — granting them universally server-side must not, on its
+// own, make those specific pages appear unlocked to users who were never
+// given Hospital/Bag Procurement access. Kept in the server's enforcement
+// set (so the lookup API calls succeed) but stripped back out before the
+// permission list is sent to the client for page-visibility purposes —
+// see projectClientPermissions() below.
+const DEPENDENCY_ONLY_PERMISSIONS: readonly Permission[] = ['hospital:read', 'bag-stock:read'];
+
+// What the user has actually earned, from their role defaults (or, once
+// the grid is authoritative, from it instead) plus explicit grid grants —
+// before either UNIVERSAL_PERMISSIONS or DEPENDENCY_ONLY_PERMISSIONS are
+// layered on. Shared by both projections below so a legitimately-earned
+// hospital:read (e.g. a hospital-user's own role default) is never
+// confused with the blanket dependency-only grant everyone else gets.
+function earnedPermissions(
   newRole: Role,
-  legacyPermissions: ReadonlyArray<LegacyPermissionEntry> = [],
-): ReadonlyArray<Permission> {
+  legacyPermissions: ReadonlyArray<LegacyPermissionEntry>,
+): Permission[] {
   const defaults = ROLE_DEFAULT_PERMISSIONS[newRole] ?? [];
   const explicit: Permission[] = [];
   for (const p of legacyPermissions) {
@@ -249,12 +305,59 @@ export function projectPermissions(
     if (p.update) explicit.push((overrides?.update ?? `${m}:update`) as Permission);
     if (p.delete) explicit.push((overrides?.delete ?? `${m}:delete`) as Permission);
   }
-  // Every authenticated staff role may export the report they're already
-  // authorized to view and attach images to the forms they fill; grant
-  // these generic, cross-cutting permissions globally so the shared
-  // /export/excel and /upload endpoints are reachable without widening
-  // report:read or coupling them to any one module.
+
+  // system-admin/bbo always keep full role-default access regardless of
+  // any per-user grid — matches the frontend's FULL_ACCESS_ROLES treatment
+  // (useAccess.js) and guarantees a stray/leftover grid entry can never
+  // accidentally lock out an administrator.
+  const alwaysFullAccess = newRole === 'system-admin' || newRole === 'bbo';
+  const base = alwaysFullAccess || legacyPermissions.length === 0 ? defaults : [];
+
+  return [...base, ...explicit];
+}
+
+/**
+ * Project a legacy user's role + permission grid into the new
+ * permission vocabulary. Custom modules use the convention
+ * `{moduleName}:{action}`, unless overridden above. This is the set
+ * `authenticate.ts` attaches to `req.user.permissions` for actual
+ * server-side requirePermission(...) enforcement.
+ *
+ * Once an admin has explicitly configured ANY permission for a user via
+ * the Permissions editor, that grid becomes authoritative — role
+ * defaults are NOT also blended in, otherwise a deliberately narrow grant
+ * (e.g. "view only" on Requisition) would be silently widened back out by
+ * whatever broad access the user's role happens to carry by default. A
+ * user nobody has ever configured (empty grid) still gets the role's
+ * baseline access so new accounts aren't locked out of everything before
+ * an admin gets around to setting permissions.
+ */
+export function projectPermissions(
+  newRole: Role,
+  legacyPermissions: ReadonlyArray<LegacyPermissionEntry> = [],
+): ReadonlyArray<Permission> {
+  const earned = earnedPermissions(newRole, legacyPermissions);
   return Array.from(
-    new Set<Permission>([...defaults, ...explicit, 'report:export', 'upload:write']),
+    new Set<Permission>([...earned, ...UNIVERSAL_PERMISSIONS, ...DEPENDENCY_ONLY_PERMISSIONS]),
   );
+}
+
+/**
+ * Same underlying grant (role defaults or grid, whichever is
+ * authoritative) as projectPermissions(), but for the permission list
+ * sent to the CLIENT (auth.service.ts toPublic()) — used there purely for
+ * page-visibility gating (useAccess.js), not for authorizing any API
+ * call. Omits the blanket DEPENDENCY_ONLY_PERMISSIONS add-on so a user
+ * who was never granted Hospital/Bag Procurement access doesn't see those
+ * pages unlock just because some other page they do have access to
+ * depends on the same underlying lookup permission — a user who actually
+ * earned hospital:read/bag-stock:read (via role default or an explicit
+ * grid grant) keeps seeing it, since that came from `earned`, not here.
+ */
+export function projectClientPermissions(
+  newRole: Role,
+  legacyPermissions: ReadonlyArray<LegacyPermissionEntry> = [],
+): ReadonlyArray<Permission> {
+  const earned = earnedPermissions(newRole, legacyPermissions);
+  return Array.from(new Set<Permission>([...earned, ...UNIVERSAL_PERMISSIONS]));
 }

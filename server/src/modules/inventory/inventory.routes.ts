@@ -25,6 +25,9 @@ const READ_ROLES = [
   'qa-manager',
   'auditor',
   'hospital-user',
+  // Bag Issuance (bag-issue.routes.ts allows phlebotomist) looks up the
+  // stock summary here to populate its own picker.
+  'phlebotomist',
 ] as const;
 
 router.get(

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { ArrowUpDown, Undo2, Activity, Ban, Clock } from 'lucide-react';
-import { useAuth } from '@/store/auth';
-import { checkAccess } from '@/features/user/pages/utils/access';
+import useAccess from '@/features/access/useAccess';
 import { useDeferralList, useLiftDeferral } from '@/features/deferral/queries';
 import CustomModal from '@/components/CustomModal';
 import SearchBox from '@/components/shared/SearchBox';
@@ -66,10 +65,10 @@ function StatusBadge({ entry }) {
 }
 
 export default function DeferralRegister() {
-  const { user } = useAuth();
-  // Deferral Register lives under Master Register — gate it on that
-  // permission, not the general Donor module (see useDonorRegister.js).
-  const access = checkAccess(user, ['master register', 'master-register']);
+  // Deferral Register lives under Master Register (registry module
+  // "donor") — gate it on the donor list page's update permission.
+  const { can } = useAccess();
+  const access = { canUpdate: can('donor', 'update', 'donor-list') };
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

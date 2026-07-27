@@ -5,6 +5,12 @@ import { ROLE } from '@/shared/enums';
 const PermissionSchema = new Schema(
   {
     moduleName: { type: String, required: true },
+    // Absent = a module-wide grant (cascades to every page under this
+    // module). Present = a page-scoped override — only meaningful to the
+    // frontend's access registry (client/src/config/access-registry); the
+    // backend still projects it into the same flat Permission[] set a
+    // module-wide entry would (see role-map.ts projectPermissions()).
+    pageId: { type: String, default: null },
     view: { type: Boolean, default: false },
     create: { type: Boolean, default: false },
     update: { type: Boolean, default: false },

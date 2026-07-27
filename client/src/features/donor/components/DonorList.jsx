@@ -5,8 +5,7 @@ import Button from '@/components/shared/Button';
 import CustomModal from '@/components/CustomModal';
 import { toast } from 'sonner';
 import { useDonor } from '@/hooks/useDonor';
-import { useAuth } from '@/store/auth';
-import { checkAccess } from '@/features/user/pages/utils/access';
+import useAccess from '@/features/access/useAccess';
 import EnhancedLoader from '@/components/utils/Spinner';
 import { exportMasterDonors } from '@/utils/excelExportHelper';
 
@@ -18,8 +17,11 @@ const DonorList = ({
   campId = null 
 }) => {
   const { donors, loading, error, fetchDonors, deleteDonor, fetchCampDonors } = useDonor();
-  const { user } = useAuth();
-  const donorAccess = checkAccess(user, ["donor","donors","donor management"]);
+  const { hasPermission } = useAccess();
+  const donorAccess = {
+    canUpdate: hasPermission('donor:update'),
+    canDelete: hasPermission('donor:delete'),
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodGroupFilter, setBloodGroupFilter] = useState('');
   const [eligibilityFilter, setEligibilityFilter] = useState('');

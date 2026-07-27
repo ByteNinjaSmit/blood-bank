@@ -7,6 +7,20 @@ const OBJECT_ID = /^[a-f0-9]{24}$/i;
 const blank = <T extends z.ZodTypeAny>(s: T) =>
   z.preprocess((v) => (v === '' || v === null ? undefined : v), s);
 
+// One row of the admin panel's permission grid. Module-wide grants omit
+// pageId; page-scoped overrides (from the new module→page Permissions
+// editor) set it to one of client/src/config/access-registry's page ids —
+// the backend doesn't validate that pageId against anything (it's opaque,
+// frontend-only metadata), just that it's a reasonable string when present.
+const PermissionEntry = z.object({
+  moduleName: z.string().trim().min(1).max(80),
+  pageId: blank(z.string().trim().max(80).optional()),
+  view: z.boolean().optional(),
+  create: z.boolean().optional(),
+  update: z.boolean().optional(),
+  delete: z.boolean().optional(),
+});
+
 export const CreateUserBody = z.object({
   firstName: z.string().trim().min(1).max(80),
   lastName: z.string().trim().min(1).max(80),
@@ -19,7 +33,7 @@ export const CreateUserBody = z.object({
   ),
   role: z.enum(ROLE),
   password: z.string().min(8),
-  permissions: z.array(z.unknown()).optional(),
+  permissions: z.array(PermissionEntry).optional(),
   campId: blank(z.string().regex(OBJECT_ID).optional()),
 });
 
@@ -35,7 +49,7 @@ export const UpdateUserBody = z.object({
   ),
   role: z.enum(ROLE).optional(),
   password: blank(z.string().min(8).optional()),
-  permissions: z.array(z.unknown()).optional(),
+  permissions: z.array(PermissionEntry).optional(),
   campId: blank(z.string().regex(OBJECT_ID).optional()),
   status: z.enum(['active', 'inactive', 'pending', 'blocked', 'rejected']).optional(),
 });

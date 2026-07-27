@@ -6,22 +6,18 @@ import { hospitalController } from './hospital.controller';
 const router = Router();
 
 const MANAGE = ['system-admin', 'bbo'] as const;
-const READ = [
-  'system-admin',
-  'bbo',
-  'medical-officer',
-  'issue-counter',
-  'store-keeper',
-  'auditor',
-  'hospital-user',
-] as const;
 
 const MANAGE_PERM = requirePermission('hospital:manage');
 const READ_PERM = requirePermission('hospital:read');
 
 router.post('/', authenticate, requireRole([...MANAGE]), MANAGE_PERM, hospitalController.create);
-router.get('/', authenticate, requireRole([...READ]), READ_PERM, hospitalController.list);
-router.get('/:id', authenticate, requireRole([...READ]), READ_PERM, hospitalController.get);
+// No requireRole on the read-only lookups — hospital:read is a universal
+// permission (role-map.ts projectPermissions()) precisely because other
+// pages (Requisition, Reservation) depend on this list to populate their
+// own hospital picker regardless of the user's role; requirePermission
+// alone is the real, meaningful gate here.
+router.get('/', authenticate, READ_PERM, hospitalController.list);
+router.get('/:id', authenticate, READ_PERM, hospitalController.get);
 router.put('/:id', authenticate, requireRole([...MANAGE]), MANAGE_PERM, hospitalController.update);
 router.delete('/:id', authenticate, requireRole([...MANAGE]), MANAGE_PERM, hospitalController.remove);
 router.post('/:id/restore', authenticate, requireRole([...MANAGE]), MANAGE_PERM, hospitalController.restore);

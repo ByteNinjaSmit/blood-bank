@@ -13,11 +13,8 @@ import { statusChipClass } from "./utils/ui";
 import axios from "axios";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
-import { ModuleArray, RoleArray } from "@/atoms/static";
-
-const emptyPerm = () => (
-  ModuleArray.map((m) => ({ moduleName: m, view: false, create: false, update: false, delete: false }))
-);
+import { RoleArray } from "@/atoms/static";
+import { emptyDraft, draftFromGrid, gridFromDraft } from "../components/permissions-editor/grid-conversion";
 
 const initialForm = {
   publicId: "",
@@ -28,7 +25,7 @@ const initialForm = {
   role: "auditor",
   password: "",
   status: "active",
-  permissions: emptyPerm(),
+  permissionsDraft: emptyDraft(),
 };
 
 export default function UserManage() {
@@ -159,19 +156,10 @@ export default function UserManage() {
       role: u.role || "auditor",
       password: "",
       status: u.status || "active",
-      permissions: mergePermissions(u.permissions || []),
+      permissionsDraft: draftFromGrid(u.permissions || []),
     };
     setForm(f);
     setShowModal(true);
-  };
-
-  const mergePermissions = (existing) => {
-    const map = new Map(existing.map(p => [String(p.moduleName).toLowerCase(), p]));
-    return ModuleArray.map(m => {
-      const k = m.toLowerCase();
-      const p = map.get(k);
-      return p ? { moduleName: m, view: !!p.view, create: !!p.create, update: !!p.update, delete: !!p.delete } : { moduleName: m, view: false, create: false, update: false, delete: false };
-    });
   };
 
   const generatePublicId = () => {
@@ -179,24 +167,6 @@ export default function UserManage() {
     const y = now.getFullYear();
     const rnd = Math.floor(Math.random() * 9000) + 1000;
     return `USR-${y}-${rnd}`;
-  };
-
-  const setPerm = (moduleName, key, val) => {
-    setForm((prev) => ({
-      ...prev,
-      permissions: prev.permissions.map((p) =>
-        p.moduleName === moduleName ? { ...p, [key]: val } : p
-      ),
-    }));
-  };
-
-  const setAllForModule = (moduleName, val) => {
-    setForm((prev) => ({
-      ...prev,
-      permissions: prev.permissions.map((p) =>
-        p.moduleName === moduleName ? { ...p, view: val, create: val, update: val, delete: val } : p
-      ),
-    }));
   };
 
   const saveUser = async (payload, editReason) => {
@@ -245,7 +215,7 @@ export default function UserManage() {
       role: form.role,
       password: form.password || undefined,
       status: form.status,
-      permissions: form.permissions,
+      permissions: gridFromDraft(form.permissionsDraft),
     };
     wrappedSaveUser(payload);
   };
@@ -414,8 +384,6 @@ export default function UserManage() {
           loading={loading}
           onSubmit={onSubmit}
           onCancel={() => setShowModal(false)}
-          setPerm={setPerm}
-          setAllForModule={setAllForModule}
         />
       )}
 
