@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createDonorRepo } from '@/modules/donor/donor.repository';
 import { createDonationRepo } from '@/modules/donation/donation.repository';
 import { createDeferralRepo } from '@/modules/deferral/deferral.repository';
@@ -23,20 +23,6 @@ const router = Router();
 router.get(
   '/',
   authenticate,
-  requireRole([
-    'system-admin',
-    'bbo',
-    'medical-officer',
-    'phlebotomist',
-    'lab-tech-component',
-    'lab-tech-serology',
-    'store-keeper',
-    'issue-counter',
-    'apheresis-tech',
-    'qa-manager',
-    'auditor',
-    'camp-organiser',
-  ]),
   requirePermission('donation:read'),
   controllers.list,
 );
@@ -44,22 +30,6 @@ router.get(
 router.get(
   '/:id',
   authenticate,
-  requireRole([
-    'system-admin',
-    'bbo',
-    'medical-officer',
-    'phlebotomist',
-    'lab-tech-component',
-    'lab-tech-serology',
-    'store-keeper',
-    'issue-counter',
-    'apheresis-tech',
-    'qa-manager',
-    'auditor',
-    // Camp Donation Management (allowed on the /list route above) also
-    // opens a single donation's detail from that same screen.
-    'camp-organiser',
-  ]),
   requirePermission('donation:read'),
   controllers.get,
 );
@@ -67,7 +37,6 @@ router.get(
 router.post(
   '/',
   authenticate,
-  requireRole(['system-admin', 'phlebotomist', 'apheresis-tech', 'medical-officer']),
   requirePermission('donation:create'),
   controllers.create,
 );
@@ -75,21 +44,18 @@ router.post(
 router.delete(
   '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo']),
   requirePermission('donation:delete'),
   controllers.remove,
 );
 router.post(
   '/:id/restore',
   authenticate,
-  requireRole(['system-admin', 'bbo']),
   requirePermission('donation:delete'),
   controllers.restore,
 );
 router.delete(
   '/:id/permanent',
   authenticate,
-  requireRole(['system-admin']),
   requirePermission('donation:permanent-delete'),
   controllers.permanentDelete,
 );

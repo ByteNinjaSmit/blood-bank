@@ -2,21 +2,16 @@ import { useMemo } from 'react';
 import { useAuth } from '@/store/auth';
 import { findModule, findPage } from '@/config/access-registry';
 
-// system-admin/bbo (and the legacy 'admin' role string) always have full
-// access — matches the existing behavior in both of the app's previous
-// checkAccess() implementations.
-const FULL_ACCESS_ROLES = new Set(['system-admin', 'bbo', 'admin']);
-
 function prefixOf(permissionString) {
   const i = permissionString.lastIndexOf(':');
   return i === -1 ? permissionString : permissionString.slice(0, i);
 }
 
 // Baseline access comes from `user.effectivePermissions` — the backend's
-// already-resolved flat permission-string set (role defaults + this
-// user's explicit grid grants, merged — see auth.service.ts toPublic()).
-// Consulting this directly means roles that get their access purely from
-// ROLE_DEFAULT_PERMISSIONS (no admin-panel grant ever made) still work.
+// already-resolved flat permission-string set, derived entirely from this
+// user's explicit grid grants (see auth.service.ts toPublic() /
+// role-map.ts). role is a free-text label with no bearing on this at all
+// — a user with an empty grid and isFullAccess=false has no permissions.
 //
 // The raw per-user grid (`user.permissions[]`) is only consulted to
 // *narrow* access for pages that share one backend permission string with
@@ -29,7 +24,9 @@ export default function useAccess() {
   const { user } = useAuth();
   const grid = Array.isArray(user?.permissions) ? user.permissions : [];
   const effective = new Set(Array.isArray(user?.effectivePermissions) ? user.effectivePermissions : []);
-  const fullAccess = FULL_ACCESS_ROLES.has(user?.role);
+  // role is a free-text display label with no authorization meaning —
+  // isFullAccess is the sole "this account can do everything" flag.
+  const fullAccess = !!user?.isFullAccess;
 
   return useMemo(() => {
     function isPageMode(moduleId) {

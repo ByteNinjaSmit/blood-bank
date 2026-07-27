@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requireRole, requirePermission } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createBagInspectionRepo } from '@/modules/bag-inspection/bag-inspection.repository';
 import { createBagInspectionService } from '@/modules/bag-inspection/bag-inspection.service';
 import { createBagInspectionControllers } from '@/modules/bag-inspection/bag-inspection.controller';
@@ -19,7 +19,6 @@ const router = Router();
 router.get(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'qa-manager']),
   requirePermission('bag-inspection:read'),
   controllers.list,
 );
@@ -27,7 +26,6 @@ router.get(
 router.get(
   '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'qa-manager']),
   requirePermission('bag-inspection:read'),
   controllers.get,
 );
@@ -35,7 +33,6 @@ router.get(
 router.post(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'qa-manager']),
   requirePermission('bag-inspection:create'),
   controllers.create,
 );
@@ -43,7 +40,6 @@ router.post(
 router.patch(
   '/:id/report',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'qa-manager']),
   requirePermission('bag-inspection:create'),
   controllers.updateReport,
 );

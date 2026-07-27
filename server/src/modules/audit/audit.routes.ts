@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { auditController } from './audit.controller';
 
 const router = Router();
@@ -20,7 +20,6 @@ const PRINT_ROLES = [
 router.get(
   '/',
   authenticate,
-  requireRole([...READ_ROLES]),
   requirePermission('audit:read'),
   auditController.search,
 );
@@ -31,7 +30,6 @@ router.get(
 router.get(
   '/export',
   authenticate,
-  requireRole([...EXPORT_ROLES]),
   requirePermission('audit:export'),
   auditController.export,
 );
@@ -42,7 +40,6 @@ router.get(
 router.post(
   '/print-event',
   authenticate,
-  requireRole([...PRINT_ROLES]),
   requirePermission('audit:write'),
   auditController.logPrintEvent,
 );
@@ -51,7 +48,6 @@ router.post(
 router.get(
   '/:entityType/:entityId',
   authenticate,
-  requireRole([...READ_ROLES]),
   requirePermission('audit:read'),
   auditController.listForEntity,
 );

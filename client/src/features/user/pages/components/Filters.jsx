@@ -13,7 +13,6 @@ export default function Filters({
   total,
   startIndex,
   endIndex,
-  RoleArray,
   sortBy,
   onSortBy,
   order,
@@ -38,10 +37,12 @@ export default function Filters({
           <label className="text-xs text-slate-600">Role</label>
           <div className="relative">
             <FilterIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <select className="w-full border rounded-lg pl-9 pr-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={roleFilter} onChange={(e)=>onRoleFilter(e.target.value)}>
-              <option value="">All</option>
-              {RoleArray.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
+            <input
+              className="w-full border rounded-lg pl-9 pr-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300"
+              placeholder="Filter by role"
+              value={roleFilter}
+              onChange={(e) => onRoleFilter(e.target.value)}
+            />
           </div>
         </div>
         <div>

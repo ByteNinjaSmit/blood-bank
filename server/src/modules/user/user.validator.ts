@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { Request } from 'express';
-import { ROLE } from '@/shared/enums';
 import { ValidationError } from '@/shared/errors';
 
 const OBJECT_ID = /^[a-f0-9]{24}$/i;
@@ -31,7 +30,10 @@ export const CreateUserBody = z.object({
       .regex(/^\d{10}$/)
       .optional(),
   ),
-  role: z.enum(ROLE),
+  // Free-text display label — no authorization meaning. See
+  // server/src/shared/role-map.ts and User.isFullAccess.
+  role: z.string().trim().min(1).max(80),
+  isFullAccess: z.boolean().optional(),
   password: z.string().min(8),
   permissions: z.array(PermissionEntry).optional(),
   campId: blank(z.string().regex(OBJECT_ID).optional()),
@@ -47,7 +49,8 @@ export const UpdateUserBody = z.object({
       .regex(/^\d{10}$/)
       .optional(),
   ),
-  role: z.enum(ROLE).optional(),
+  role: blank(z.string().trim().min(1).max(80).optional()),
+  isFullAccess: z.boolean().optional(),
   password: blank(z.string().min(8).optional()),
   permissions: z.array(PermissionEntry).optional(),
   campId: blank(z.string().regex(OBJECT_ID).optional()),
@@ -55,7 +58,7 @@ export const UpdateUserBody = z.object({
 });
 
 export const ListUsersQuery = z.object({
-  role: z.enum(ROLE).optional(),
+  role: blank(z.string().trim().max(80).optional()),
   status: z.string().optional(),
   campId: blank(z.string().regex(OBJECT_ID).optional()),
   search: z.string().trim().max(120).optional(),

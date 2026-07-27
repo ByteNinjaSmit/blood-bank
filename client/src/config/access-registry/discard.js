@@ -5,6 +5,6 @@ export default {
   id: 'discard',
   label: 'Discard',
   pages: [
-    { id: 'discard-list', label: 'Discard Register', route: '/discard', actions: { view: ['discard:read'], create: ['discard:create'] } },
+    { id: 'discard-list', label: 'Discard Register', route: '/discard', actions: { view: ['discard:read'], create: ['discard:create', 'donation:read', 'bag-inspection:read'] } },
   ],
 };

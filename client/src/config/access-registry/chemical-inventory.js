@@ -9,7 +9,7 @@ export default {
     { id: 'chemical-master', label: 'Chemical Master', route: '/chemical-inventory/chemicals', actions: { view: ['chemical:read'], update: ['chemical:manage'] } },
     { id: 'chemical-suppliers', label: 'Suppliers', route: '/chemical-inventory/suppliers', actions: { view: ['chemical:read'], update: ['chemical:manage'] } },
     { id: 'chemical-manufacturers', label: 'Manufacturers', route: '/chemical-inventory/manufacturers', actions: { view: ['chemical:read'], update: ['chemical:manage'] } },
-    { id: 'chemical-purchase', label: 'Purchase Entry', route: '/chemical-inventory/purchase', actions: { view: ['chemical:read'], create: ['chemical:manage'] } },
+    { id: 'chemical-purchase', label: 'Purchase Entry', route: '/chemical-inventory/purchase', actions: { view: ['chemical:read'], create: ['chemical:manage', 'upload:write'] } },
     { id: 'chemical-usage', label: 'Stock Usage', route: '/chemical-inventory/usage', actions: { view: ['chemical:read'], update: ['chemical:manage'] } },
     { id: 'chemical-expiry', label: 'Expiry Monitoring', route: '/chemical-inventory/expiry', actions: { view: ['chemical:read'] } },
     { id: 'chemical-reports', label: 'Reports', route: '/chemical-inventory/reports', actions: { view: ['chemical:read'] } },

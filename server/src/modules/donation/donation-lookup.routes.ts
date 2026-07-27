@@ -4,7 +4,7 @@
 // call to /api/donation/lookup/:bagNo keeps working unchanged.
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createDonationRepo } from '@/modules/donation/donation.repository';
 import { NotFoundError } from '@/shared/errors';
 
@@ -14,14 +14,6 @@ const router = Router();
 router.get(
   '/lookup/:bagNo',
   authenticate,
-  requireRole([
-    'system-admin',
-    'bbo',
-    'lab-tech-component',
-    'lab-tech-serology',
-    'qa-manager',
-    'store-keeper',
-  ]),
   requirePermission('donation:read'),
   async (req, res, next) => {
     try {

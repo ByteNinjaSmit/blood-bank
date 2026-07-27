@@ -21,6 +21,24 @@ export default {
     misPage('mis-regulatory', 'Regulatory MIS', '/mis/regulatory'),
     misPage('mis-executive', 'Executive Dashboard', '/mis/executive'),
     misPage('mis-analytics', 'Analytics MIS', '/mis/analytics'),
-    { id: 'mis-recycle-bin', label: 'Recycle Bin', route: '/mis/recycle-bin', actions: { view: ['report:read'], update: ['audit:write'] } },
+    // Recycle Bin surfaces soft-deleted records from every module and can
+    // restore or permanently delete them — its view/update actions must
+    // cover every underlying resource's read/delete permission, not just
+    // the shared report:read used by the other MIS pages.
+    {
+      id: 'mis-recycle-bin',
+      label: 'Recycle Bin',
+      route: '/mis/recycle-bin',
+      actions: {
+        // hospital:read is deliberately omitted — it's a server-only
+        // DEPENDENCY_ONLY_PERMISSIONS grant (role-map.ts), excluded from
+        // the client's effective set, so listing it here would block
+        // this whole action for everyone instead of just gating hospital
+        // recycle-bin rows.
+        view: ['report:read', 'donor:read', 'donation:read', 'bulk-transfer:read', 'unit:read', 'camp:read', 'audit:read'],
+        update: ['donor:delete', 'donation:delete', 'hospital:manage', 'camp:manage', 'bulk-transfer:update', 'unit:read'],
+        delete: ['donor:permanent-delete', 'donation:permanent-delete', 'hospital:manage', 'camp:manage'],
+      },
+    },
   ],
 };

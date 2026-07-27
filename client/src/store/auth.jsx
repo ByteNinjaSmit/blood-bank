@@ -13,7 +13,10 @@ export const AuthProvider = ({ children }) => {
   const isLoggingOutRef = useRef(false);
 
   const isLoggedIn = Boolean(token);
-  const isAdmin = user?.role === 'system-admin' || user?.role === 'bbo';
+  // role is a free-text display label with no authorization meaning —
+  // isFullAccess is the sole source of "this account can do everything"
+  // (see server/src/shared/role-map.ts).
+  const isAdmin = !!user?.isFullAccess;
   const authorizationToken = token ? `Bearer ${token}` : '';
   const API = import.meta.env.VITE_APP_URI_API;
   const storeTokenInCookies = (t) => setToken(t); // deprecated alias

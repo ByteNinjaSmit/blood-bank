@@ -4,7 +4,7 @@
 // while the implementation lives in the proper tti module.
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { ttiRepo, ttiService } from '@/modules/tti/tti.instance';
 import { createTtiLegacyViewRepo } from '@/modules/tti/tti.legacy-view.repository';
 import { createTtiLegacyViewService } from '@/modules/tti/tti.legacy-view.service';
@@ -33,7 +33,6 @@ const READ_ROLES = [
 router.get(
   '/bags',
   authenticate,
-  requireRole([...READ_ROLES]),
   requirePermission('tti:read'),
   controllers.listQuarantined,
 );
@@ -41,7 +40,6 @@ router.get(
 router.get(
   '/results',
   authenticate,
-  requireRole([...READ_ROLES]),
   requirePermission('tti:read'),
   controllers.listDecided,
 );
@@ -49,7 +47,6 @@ router.get(
 router.post(
   '/results/:id',
   authenticate,
-  requireRole(['system-admin', 'lab-tech-serology']),
   requirePermission(['tti:edit', 'tti:release']),
   controllers.recordAndFinalize,
 );

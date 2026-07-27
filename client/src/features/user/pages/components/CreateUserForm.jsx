@@ -6,7 +6,6 @@ export default function CreateUserForm({
   form,
   setForm,
   editingId,
-  RoleArray,
   loading,
   onSubmit,
   onCancel,
@@ -52,9 +51,13 @@ export default function CreateUserForm({
             </div>
             <div>
               <label className="text-xs text-slate-600">Role</label>
-              <select className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={form.role} onChange={(e)=>setForm(v=>({...v, role:e.target.value}))}>
-                {RoleArray.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
+              <input
+                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300"
+                placeholder="e.g. Medical Officer"
+                value={form.role}
+                onChange={(e) => setForm(v => ({ ...v, role: e.target.value }))}
+              />
+              <p className="text-[11px] text-slate-400 mt-0.5">Display label only — access is controlled entirely by Permissions below.</p>
             </div>
             <div>
               <label className="text-xs text-slate-600">Status</label>
@@ -72,7 +75,20 @@ export default function CreateUserForm({
             </div>
           </div>
 
-          <div className="mt-2">
+          <div className="mt-2 p-3 rounded-lg border border-amber-200 bg-amber-50 flex items-start gap-2">
+            <input
+              type="checkbox"
+              id="isFullAccess"
+              className="mt-0.5"
+              checked={!!form.isFullAccess}
+              onChange={(e) => setForm(v => ({ ...v, isFullAccess: e.target.checked }))}
+            />
+            <label htmlFor="isFullAccess" className="text-sm text-amber-900">
+              <span className="font-semibold">Full Access</span> — bypasses every permission check below; this user can do everything, regardless of what's granted.
+            </label>
+          </div>
+
+          <div className={`mt-2 ${form.isFullAccess ? 'opacity-50 pointer-events-none' : ''}`}>
             <div className="font-medium mb-2 text-slate-800">Permissions</div>
             <p className="text-xs text-slate-500 mb-2">
               Grant a whole module at once, or expand it to set permissions per page.

@@ -3,7 +3,7 @@ import multer from 'multer';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { env } from '@/core/config/env';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { ROLE } from '@/shared/enums';
 import { ValidationError } from '@/shared/errors';
 import { ValidateUpload } from '@/modules/upload/upload.validator';
@@ -37,7 +37,6 @@ const router = Router();
 router.post(
   '/',
   authenticate,
-  requireRole([...ROLE]),
   requirePermission('upload:write'),
   upload.single('file'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -89,7 +88,6 @@ router.post(
 router.delete(
   '/',
   authenticate,
-  requireRole([...ROLE]),
   requirePermission('upload:write'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

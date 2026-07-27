@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requireRole, requirePermission } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createAppointmentRepo } from '@/modules/appointment/appointment.repository';
 import { createAppointmentService } from '@/modules/appointment/appointment.service';
 import { createAppointmentControllers } from '@/modules/appointment/appointment.controller';
@@ -13,12 +13,11 @@ const ROLES = ['system-admin', 'bbo', 'counsellor', 'camp-organiser', 'medical-o
 
 const router = Router();
 
-router.get('/', authenticate, requireRole([...ROLES]), requirePermission('appointment:read'), controllers.list);
-router.get('/summary', authenticate, requireRole([...ROLES]), requirePermission('appointment:read'), controllers.summary);
+router.get('/', authenticate, requirePermission('appointment:read'), controllers.list);
+router.get('/summary', authenticate, requirePermission('appointment:read'), controllers.summary);
 router.patch(
   '/:id/status',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'counsellor']),
   requirePermission('appointment:update'),
   controllers.updateStatus,
 );

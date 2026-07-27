@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requireRole, requirePermission } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createBagIssueRepo } from '@/modules/bag-issue/bag-issue.repository';
 import { createBagIssueService } from '@/modules/bag-issue/bag-issue.service';
 import { createBagIssueControllers } from '@/modules/bag-issue/bag-issue.controller';
@@ -17,7 +17,6 @@ const router = Router();
 router.get(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'phlebotomist']),
   requirePermission('bag-issue:read'),
   controllers.list,
 );
@@ -25,7 +24,6 @@ router.get(
 router.get(
   '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'phlebotomist']),
   requirePermission('bag-issue:read'),
   controllers.get,
 );
@@ -33,7 +31,6 @@ router.get(
 router.post(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'phlebotomist']),
   requirePermission('bag-issue:create'),
   controllers.issue,
 );
@@ -41,7 +38,6 @@ router.post(
 router.patch(
   '/:id/mark-used',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'phlebotomist']),
   requirePermission('bag-issue:create'),
   controllers.markUsed,
 );
@@ -49,7 +45,6 @@ router.patch(
 router.patch(
   '/:id/return',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'phlebotomist']),
   requirePermission('bag-issue:create'),
   controllers.markReturned,
 );
@@ -57,7 +52,6 @@ router.patch(
 router.patch(
   '/:id/mark-damaged',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'phlebotomist']),
   requirePermission('bag-issue:create'),
   controllers.markDamaged,
 );

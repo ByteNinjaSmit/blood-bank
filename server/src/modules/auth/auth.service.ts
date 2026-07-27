@@ -17,7 +17,7 @@ import {
 import { notificationService } from '@/modules/notification/notification.service';
 import { authRepo, type UserRecord } from './auth.repository';
 import { userRepo } from '@/modules/user/user.repository';
-import { resolveRole, projectClientPermissions, type LegacyPermissionEntry } from '@/shared/role-map';
+import { projectClientPermissions, type LegacyPermissionEntry } from '@/shared/role-map';
 import {
   signAccessToken,
   signRefreshToken,
@@ -39,17 +39,20 @@ export interface PublicUser {
   email: string;
   phone?: string;
   role: string;
+  // Unconditional full-access bypass, decoupled from the (now purely
+  // cosmetic) role label — see rbac.ts requirePermission().
+  isFullAccess: boolean;
   permissions: unknown[];
-  // The resolved flat permission-string set (role defaults or, once
-  // configured, this user's explicit grid grants — module-wide or
-  // page-scoped alike) used by the frontend's useAccess() as its
-  // page-visibility baseline. NOT identical to what requirePermission(...)
-  // checks server-side — see role-map.ts's projectClientPermissions() vs
-  // projectPermissions(): a handful of low-sensitivity lookup permissions
-  // (hospital:read, bag-stock:read) are granted to every user server-side
-  // so cross-module dropdowns keep working, but are deliberately omitted
-  // here so that alone doesn't make the Hospital/Bag Inventory pages
-  // themselves appear unlocked to someone who was never granted them.
+  // The resolved flat permission-string set (this user's explicit grid
+  // grants — module-wide or page-scoped alike) used by the frontend's
+  // useAccess() as its page-visibility baseline. NOT identical to what
+  // requirePermission(...) checks server-side — see role-map.ts's
+  // projectClientPermissions() vs projectPermissions(): a handful of
+  // low-sensitivity lookup permissions (hospital:read, bag-stock:read)
+  // are granted to every user server-side so cross-module dropdowns keep
+  // working, but are deliberately omitted here so that alone doesn't make
+  // the Hospital/Bag Inventory pages themselves appear unlocked to
+  // someone who was never granted them.
   effectivePermissions: string[];
 }
 
@@ -61,9 +64,8 @@ export interface TokenPair {
 }
 
 function toPublic(u: UserRecord): PublicUser {
-  const resolvedRole = resolveRole(u.role);
   const effectivePermissions = projectClientPermissions(
-    resolvedRole,
+    u.isFullAccess,
     (u.permissions ?? []) as LegacyPermissionEntry[],
   );
   return {
@@ -73,6 +75,7 @@ function toPublic(u: UserRecord): PublicUser {
     email: u.email,
     phone: u.phone,
     role: u.role,
+    isFullAccess: u.isFullAccess,
     permissions: u.permissions,
     effectivePermissions: [...effectivePermissions],
   };

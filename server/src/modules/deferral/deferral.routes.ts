@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createDeferralRepo } from '@/modules/deferral/deferral.repository';
 import { createDeferralControllers } from '@/modules/deferral/deferral.controller';
 
@@ -12,15 +12,6 @@ const router = Router();
 router.get(
   '/',
   authenticate,
-  requireRole([
-    'system-admin',
-    'bbo',
-    'medical-officer',
-    'counsellor',
-    'phlebotomist',
-    'lab-tech-serology',
-    'auditor',
-  ]),
   requirePermission('donor:read'),
   controllers.list,
 );
@@ -28,15 +19,6 @@ router.get(
 router.get(
   '/donor/:donorId',
   authenticate,
-  requireRole([
-    'system-admin',
-    'bbo',
-    'medical-officer',
-    'counsellor',
-    'phlebotomist',
-    'lab-tech-serology',
-    'auditor',
-  ]),
   requirePermission('donor:read'),
   controllers.listByDonor,
 );
@@ -44,7 +26,6 @@ router.get(
 router.post(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer', 'counsellor', 'lab-tech-serology']),
   requirePermission('donor:update'),
   controllers.create,
 );
@@ -53,7 +34,6 @@ router.post(
 router.post(
   '/:id/lift',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer']),
   requirePermission('donor:update'),
   controllers.lift,
 );

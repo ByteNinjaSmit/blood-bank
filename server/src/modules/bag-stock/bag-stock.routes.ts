@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requireRole, requirePermission } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createBagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
 import { createBagStockService } from '@/modules/bag-stock/bag-stock.service';
 import { createBagStockControllers } from '@/modules/bag-stock/bag-stock.controller';
@@ -25,7 +25,6 @@ router.get('/:id', authenticate, requirePermission('bag-stock:read'), controller
 router.patch(
   '/:id/status',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper']),
   requirePermission('bag-stock:update'),
   controllers.updateStatus,
 );
@@ -33,7 +32,6 @@ router.patch(
 router.post(
   '/:id/open-box',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper']),
   requirePermission('bag-stock:update'),
   controllers.openBox,
 );

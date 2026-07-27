@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requireRole, requirePermission } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createMisRepo } from '@/modules/mis/mis.repository';
 import { createMisService } from '@/modules/mis/mis.service';
 import { createMisControllers } from '@/modules/mis/mis.controller';
@@ -13,7 +13,7 @@ const ROLES = ['system-admin', 'bbo', 'qa-manager', 'auditor', 'medical-officer'
 
 const router = Router();
 
-const gate = [authenticate, requireRole([...ROLES]), requirePermission('report:read')] as const;
+const gate = [authenticate, requirePermission('report:read')] as const;
 
 router.get('/donors', ...gate, controllers.donors);
 router.get('/donations', ...gate, controllers.donations);

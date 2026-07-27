@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requireRole, requirePermission } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createDonorRepo } from '@/modules/donor/donor.repository';
 import { createDonorService } from '@/modules/donor/donor.service';
 import { createDonorControllers } from '@/modules/donor/donor.controller';
@@ -34,14 +34,12 @@ const router = Router();
 router.get(
   '/search',
   authenticate,
-  requireRole([...READ_ROLES]),
   requirePermission('donor:read'),
   controllers.search,
 );
 router.post(
   '/search/vector',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer', 'counsellor']),
   requirePermission('donor:read'),
   controllers.vectorSearch,
 );
@@ -49,7 +47,6 @@ router.post(
 router.get(
   '/',
   authenticate,
-  requireRole([...READ_ROLES]),
   requirePermission('donor:read'),
   controllers.list,
 );
@@ -60,7 +57,6 @@ router.get(
 router.get(
   '/register-export',
   authenticate,
-  requireRole([...READ_ROLES]),
   requirePermission('donor:read'),
   async (req, res, next) => {
     try {
@@ -194,7 +190,6 @@ router.get(
 router.get(
   '/:id',
   authenticate,
-  requireRole([...READ_ROLES]),
   requirePermission('donor:read'),
   controllers.get,
 );
@@ -202,28 +197,24 @@ router.get(
 router.post(
   '/',
   authenticate,
-  requireRole(['system-admin', 'phlebotomist', 'counsellor', 'apheresis-tech', 'camp-organiser']),
   requirePermission('donor:create'),
   controllers.create,
 );
 router.put(
   '/:id',
   authenticate,
-  requireRole(['system-admin', 'phlebotomist', 'counsellor', 'medical-officer', 'apheresis-tech']),
   requirePermission('donor:update'),
   controllers.update,
 );
 router.delete(
   '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo']),
   requirePermission('donor:delete'),
   controllers.remove,
 );
 router.post(
   '/:id/restore',
   authenticate,
-  requireRole(['system-admin', 'bbo']),
   requirePermission('donor:delete'),
   controllers.restore,
 );
@@ -232,7 +223,6 @@ router.post(
 router.delete(
   '/:id/permanent',
   authenticate,
-  requireRole(['system-admin']),
   requirePermission('donor:permanent-delete'),
   controllers.permanentDelete,
 );

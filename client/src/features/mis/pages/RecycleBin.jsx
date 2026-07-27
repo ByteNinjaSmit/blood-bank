@@ -9,7 +9,7 @@ import { useCampList, useRestoreCamp, usePermanentDeleteCamp } from '@/features/
 import { useAffectedRecords } from '@/features/affected-records/queries';
 import { useBulkTransferList, useRestoreBulkTransfer } from '@/features/bulk-transfer/queries';
 import { useStorageTransferList, useRestoreStorageTransfer } from '@/features/storage-transfer/queries';
-import { useAuth } from '@/store/auth';
+import useAccess from '@/features/access/useAccess';
 import CustomModal from '@/components/CustomModal';
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
 
@@ -21,9 +21,6 @@ const TABS = [
   { key: 'camp', label: 'Camp', icon: Tent },
   { key: 'affected', label: 'Affected Records', icon: AlertTriangle },
 ];
-
-const PERMANENT_DELETE_ROLES = ['system-admin'];
-const READ_ROLES = ['system-admin', 'bbo', 'qa-manager', 'auditor'];
 
 const formatDate = (value) =>
   value
@@ -72,9 +69,9 @@ function SimpleTable({ columns, rows, rowKey, emptyLabel, renderActions }) {
 }
 
 export default function RecycleBin() {
-  const { user } = useAuth();
-  const canPermanentDelete = user && PERMANENT_DELETE_ROLES.includes(user.role);
-  const canView = user && READ_ROLES.includes(user.role);
+  const { can, canViewPage } = useAccess();
+  const canPermanentDelete = can('mis', 'delete', 'mis-recycle-bin');
+  const canView = canViewPage('mis', 'mis-recycle-bin');
 
   const [activeTab, setActiveTab] = useState('donor');
   const [restoreTarget, setRestoreTarget] = useState(null);
@@ -239,7 +236,7 @@ export default function RecycleBin() {
         <div className="text-center text-gray-500">
           <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-red-400" />
           <p className="font-semibold">Access restricted</p>
-          <p className="text-sm">Only system-admin, BBO, QA Manager, and Auditor roles can view the Recycle Bin.</p>
+          <p className="text-sm">You don't have permission to view the Recycle Bin. Contact an administrator to request access.</p>
         </div>
       </div>
     );

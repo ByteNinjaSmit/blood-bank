@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requireRole, requirePermission } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createStorageTransferRepo } from '@/modules/storage-transfer/storage-transfer.repository';
 import { createStorageTransferService } from '@/modules/storage-transfer/storage-transfer.service';
 import { createStorageTransferControllers } from '@/modules/storage-transfer/storage-transfer.controller';
@@ -16,11 +16,11 @@ const ROLES: Role[] = ['system-admin', 'bbo', 'medical-officer', 'lab-tech-serol
 
 const router = Router();
 
-router.get('/', authenticate, requireRole(ROLES), requirePermission('unit:read'), controllers.list);
-router.get('/:id', authenticate, requireRole(ROLES), requirePermission('unit:read'), controllers.get);
-router.post('/', authenticate, requireRole(ROLES), requirePermission('unit:read'), controllers.create);
-router.patch('/:id', authenticate, requireRole(ROLES), requirePermission('unit:read'), controllers.update);
-router.delete('/:id', authenticate, requireRole(ROLES), requirePermission('unit:read'), controllers.remove);
-router.post('/:id/restore', authenticate, requireRole(ROLES), requirePermission('unit:read'), controllers.restore);
+router.get('/', authenticate, requirePermission('unit:read'), controllers.list);
+router.get('/:id', authenticate, requirePermission('unit:read'), controllers.get);
+router.post('/', authenticate, requirePermission('unit:read'), controllers.create);
+router.patch('/:id', authenticate, requirePermission('unit:read'), controllers.update);
+router.delete('/:id', authenticate, requirePermission('unit:read'), controllers.remove);
+router.post('/:id/restore', authenticate, requirePermission('unit:read'), controllers.restore);
 
 export default router;

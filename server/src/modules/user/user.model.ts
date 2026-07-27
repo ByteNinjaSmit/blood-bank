@@ -1,6 +1,5 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { ROLE } from '@/shared/enums';
 
 const PermissionSchema = new Schema(
   {
@@ -28,7 +27,13 @@ const UserSchema = new Schema(
     },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     phone: { type: String, trim: true, index: true },
-    role: { type: String, enum: ROLE, required: true, index: true },
+    // Free-text display label only — carries no authorization weight.
+    // What a user can do is governed entirely by isFullAccess + permissions
+    // below (see server/src/shared/role-map.ts).
+    role: { type: String, required: true, trim: true, index: true },
+    // Unconditional bypass of every requirePermission(...) check,
+    // decoupled from the (cosmetic) role label above.
+    isFullAccess: { type: Boolean, default: false },
     password: { type: String, required: true, select: false },
     status: {
       type: String,

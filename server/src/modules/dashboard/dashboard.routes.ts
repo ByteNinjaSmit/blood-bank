@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createDashboardRepo } from '@/modules/dashboard/dashboard.repository';
 import { createDashboardService } from '@/modules/dashboard/dashboard.service';
 import { createDashboardControllers } from '@/modules/dashboard/dashboard.controller';
@@ -28,7 +28,7 @@ const ROLES = [
 
 const router = Router();
 
-router.get('/', authenticate, requireRole([...ROLES]), requirePermission('dashboard:read'), controllers.getDashboard);
-router.get('/alerts', authenticate, requireRole([...ROLES]), requirePermission('dashboard:read'), controllers.getAlerts);
+router.get('/', authenticate, requirePermission('dashboard:read'), controllers.getDashboard);
+router.get('/alerts', authenticate, requirePermission('dashboard:read'), controllers.getAlerts);
 
 export default router;

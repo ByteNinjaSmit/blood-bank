@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { ROLE } from '@/shared/enums';
 import { notificationCenterService } from './notification-center.service';
 import { createNotificationControllers } from './notification.controller';
@@ -12,7 +12,6 @@ const router = Router();
 router.get(
   '/',
   authenticate,
-  requireRole([...ROLE]),
   requirePermission('notification:read'),
   controllers.list,
 );
@@ -20,7 +19,6 @@ router.get(
 router.get(
   '/unread-count',
   authenticate,
-  requireRole([...ROLE]),
   requirePermission('notification:read'),
   controllers.unreadCount,
 );
@@ -28,7 +26,6 @@ router.get(
 router.patch(
   '/mark-all-read',
   authenticate,
-  requireRole([...ROLE]),
   requirePermission('notification:manage'),
   controllers.markAllRead,
 );
@@ -36,7 +33,6 @@ router.patch(
 router.delete(
   '/clear-read',
   authenticate,
-  requireRole([...ROLE]),
   requirePermission('notification:manage'),
   controllers.clearRead,
 );
@@ -44,7 +40,6 @@ router.delete(
 router.patch(
   '/:id/read',
   authenticate,
-  requireRole([...ROLE]),
   requirePermission('notification:manage'),
   controllers.markRead,
 );
@@ -52,7 +47,6 @@ router.patch(
 router.patch(
   '/:id/unread',
   authenticate,
-  requireRole([...ROLE]),
   requirePermission('notification:manage'),
   controllers.markUnread,
 );
@@ -60,7 +54,6 @@ router.patch(
 router.delete(
   '/:id',
   authenticate,
-  requireRole([...ROLE]),
   requirePermission('notification:manage'),
   controllers.remove,
 );

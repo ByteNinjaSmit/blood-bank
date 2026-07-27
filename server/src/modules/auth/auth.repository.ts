@@ -9,6 +9,7 @@ export interface UserRecord {
   email: string;
   phone?: string;
   role: string;
+  isFullAccess: boolean;
   status: string;
   permissions: unknown[];
   passwordHash: string;
@@ -21,6 +22,7 @@ interface RawUser {
   email: string;
   phone?: string;
   role: string;
+  isFullAccess?: boolean;
   status: string;
   permissions?: unknown[];
   password: string;
@@ -34,6 +36,7 @@ function toUser(raw: RawUser): UserRecord {
     email: raw.email,
     phone: raw.phone,
     role: raw.role,
+    isFullAccess: !!raw.isFullAccess,
     status: raw.status,
     permissions: raw.permissions ?? [],
     passwordHash: raw.password,

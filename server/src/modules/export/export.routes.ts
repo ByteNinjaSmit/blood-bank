@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { ROLE } from '@/shared/enums';
 import { exportControllers } from '@/modules/export/export.controller';
 
@@ -12,7 +12,6 @@ const router = Router();
 router.post(
   '/excel',
   authenticate,
-  requireRole([...ROLE]),
   requirePermission('report:export'),
   exportControllers.exportExcel,
 );

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Shield, AlertTriangle, RefreshCw } from 'lucide-react';
-import { useAuth } from '@/store/auth';
+import useAccess from '@/features/access/useAccess';
 import { useAuditSearch } from '../queries';
 import { auditApi } from '../api';
 import AuditFilterBar from '../components/AuditFilterBar';
@@ -8,8 +8,6 @@ import AuditDetailDrawer from '../components/AuditDetailDrawer';
 import Pagination from '@/features/user/pages/components/Pagination';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { downloadExcelReport } from '@/utils/excelExportHelper';
-
-const READ_ROLES = ['system-admin', 'bbo', 'qa-manager', 'auditor'];
 
 // "indeterminate" is the internal TTI decision/result value — the lab
 // term shown to staff everywhere else in the app is "Shadeness".
@@ -132,7 +130,7 @@ function groupAuditRows(rows) {
 }
 
 export default function AuditTrail() {
-  const { user } = useAuth();
+  const { canViewPage } = useAccess();
   const [filters, setFilters] = useState({
     module: '', action: '', severity: '', actor: '', entityId: '', q: '', dateFrom: '', dateTo: '',
   });
@@ -151,7 +149,7 @@ export default function AuditTrail() {
   const groups = useMemo(() => groupAuditRows(rows), [rows]);
   const pagination = data?.pagination || { totalPages: 1, total: 0 };
 
-  const canView = user && READ_ROLES.includes(user.role);
+  const canView = canViewPage('audit', 'audit-trail');
 
   const handleExport = async (exportAll) => {
     setExporting(true);
@@ -196,7 +194,7 @@ export default function AuditTrail() {
         <div className="text-center text-gray-500">
           <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-red-400" />
           <p className="font-semibold">Access restricted</p>
-          <p className="text-sm">Only system-admin, BBO, QA Manager, and Auditor roles can view the audit trail.</p>
+          <p className="text-sm">You don't have permission to view the Audit Trail. Contact an administrator to request access.</p>
         </div>
       </div>
     );

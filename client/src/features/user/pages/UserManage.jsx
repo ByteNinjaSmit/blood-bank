@@ -8,12 +8,11 @@ import Pagination from "./components/Pagination";
 import CustomModal from "@/components/CustomModal";
 import ReasonForChangeModal from "@/components/shared/ReasonForChangeModal";
 import { useEditWithReason } from "@/hooks/useEditWithReason";
-import { checkAccess } from "./utils/access";
+import useAccess from "@/features/access/useAccess";
 import { statusChipClass } from "./utils/ui";
 import axios from "axios";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
-import { RoleArray } from "@/atoms/static";
 import { emptyDraft, draftFromGrid, gridFromDraft } from "../components/permissions-editor/grid-conversion";
 
 const initialForm = {
@@ -22,14 +21,15 @@ const initialForm = {
   lastName: "",
   email: "",
   phone: "",
-  role: "auditor",
+  role: "",
+  isFullAccess: false,
   password: "",
   status: "active",
   permissionsDraft: emptyDraft(),
 };
 
 export default function UserManage() {
-  const { API, authorizationToken, user } = useAuth();
+  const { API, authorizationToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -101,7 +101,7 @@ export default function UserManage() {
         (u.email || "").toLowerCase().includes(q) ||
         (u.phone || "").toLowerCase().includes(q) ||
         (`${u?.name?.first || ""} ${u?.name?.last || ""}`.trim().toLowerCase().includes(q));
-      const matchesRole = !roleFilter || u.role === roleFilter;
+      const matchesRole = !roleFilter || (u.role || "").toLowerCase().includes(roleFilter.trim().toLowerCase());
       const matchesStatus = !statusFilter || u.status === statusFilter;
       return matchesQuery && matchesRole && matchesStatus;
     });
@@ -136,7 +136,11 @@ export default function UserManage() {
     setSelectedIds(new Set());
   }, [search, roleFilter, statusFilter, sortBy, order, rowsPerPage]);
 
-  const { canView, canCreate, canUpdate, canDelete } = checkAccess(user);
+  const { can } = useAccess();
+  const canView = can('admin', 'view', 'user-manage');
+  const canCreate = can('admin', 'create', 'user-manage');
+  const canUpdate = can('admin', 'update', 'user-manage');
+  const canDelete = can('admin', 'delete', 'user-manage');
 
   const openCreate = () => {
     if (!canCreate) { toast.error('You do not have permission to create users'); return; }
@@ -153,7 +157,8 @@ export default function UserManage() {
       lastName: u?.name?.last || "",
       email: u.email || "",
       phone: u.phone || "",
-      role: u.role || "auditor",
+      role: u.role || "",
+      isFullAccess: !!u.isFullAccess,
       password: "",
       status: u.status || "active",
       permissionsDraft: draftFromGrid(u.permissions || []),
@@ -213,6 +218,7 @@ export default function UserManage() {
       email: form.email,
       phone: form.phone,
       role: form.role,
+      isFullAccess: form.isFullAccess,
       password: form.password || undefined,
       status: form.status,
       permissions: gridFromDraft(form.permissionsDraft),
@@ -299,7 +305,6 @@ export default function UserManage() {
         total={total}
         startIndex={startIndex}
         endIndex={endIndex}
-        RoleArray={RoleArray}
       />
 
       {/* Bulk actions */}
@@ -380,7 +385,6 @@ export default function UserManage() {
           form={form}
           setForm={setForm}
           editingId={editingId}
-          RoleArray={RoleArray}
           loading={loading}
           onSubmit={onSubmit}
           onCancel={() => setShowModal(false)}

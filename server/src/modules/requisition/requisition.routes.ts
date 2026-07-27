@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createRequisitionRepo } from '@/modules/requisition/requisition.repository';
 import { createPatientRepo } from '@/modules/patient/patient.repository';
 import { createUnitRepo } from '@/modules/unit/unit.repository';
@@ -59,28 +59,18 @@ const CLINICAL_READ = [
 router.get(
   '/',
   authenticate,
-  requireRole([...CLINICAL_READ]),
   requirePermission('requisition:read'),
   controllers.list,
 );
 router.post(
   '/patient',
   authenticate,
-  requireRole([
-    'system-admin',
-    'bbo',
-    'medical-officer',
-    'lab-tech-serology',
-    'issue-counter',
-    'hospital-user',
-  ]),
   requirePermission('requisition:create'),
   controllers.createPatient,
 );
 router.post(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer', 'hospital-user', 'issue-counter']),
   requirePermission('requisition:create'),
   controllers.create,
 );
@@ -88,7 +78,6 @@ router.post(
 router.put(
   '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer', 'hospital-user', 'issue-counter']),
   requirePermission('requisition:create'),
   controllers.update,
 );
@@ -96,7 +85,6 @@ router.put(
 router.get(
   '/:id',
   authenticate,
-  requireRole([...CLINICAL_READ]),
   requirePermission('requisition:read'),
   controllers.get,
 );
@@ -104,49 +92,42 @@ router.get(
 router.post(
   '/:id/match',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'lab-tech-serology', 'store-keeper']),
   requirePermission('unit:reserve'),
   controllers.match,
 );
 router.post(
   '/:id/approve',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer']),
   requirePermission('requisition:approve'),
   controllers.approve,
 );
 router.patch(
   '/:id/approve',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer']),
   requirePermission('requisition:approve'),
   controllers.approve,
 );
 router.post(
   '/:id/complete',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'issue-counter']),
   requirePermission('requisition:approve'),
   controllers.complete,
 );
 router.patch(
   '/:id/complete',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'issue-counter']),
   requirePermission('requisition:approve'),
   controllers.complete,
 );
 router.post(
   '/:id/reject',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer']),
   requirePermission('requisition:reject'),
   controllers.reject,
 );
 router.patch(
   '/:id/reject',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer']),
   requirePermission('requisition:reject'),
   controllers.reject,
 );
@@ -155,28 +136,24 @@ router.patch(
 router.post(
   '/crossmatch',
   authenticate,
-  requireRole(['system-admin', 'lab-tech-serology']),
   requirePermission('crossmatch:perform'),
   controllers.crossmatch,
 );
 router.post(
   '/issue',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer', 'issue-counter']),
   requirePermission('unit:issue'),
   controllers.issue,
 );
 router.post(
   '/:id/issue',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer', 'issue-counter']),
   requirePermission('unit:issue'),
   controllers.issueAll,
 );
 router.patch(
   '/:id/issue',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer', 'issue-counter']),
   requirePermission('unit:issue'),
   controllers.issueAll,
 );
@@ -185,7 +162,6 @@ router.patch(
 router.patch(
   '/:id/crossmatch',
   authenticate,
-  requireRole(['system-admin', 'lab-tech-serology']),
   requirePermission('crossmatch:perform'),
   controllers.updateCrossmatchLegacy,
 );
@@ -194,7 +170,6 @@ router.patch(
 router.get(
   '/:id/available-units',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'lab-tech-serology', 'store-keeper']),
   requirePermission('unit:reserve'),
   controllers.availableUnits,
 );
@@ -203,7 +178,6 @@ router.get(
 router.patch(
   '/:id/matched-unit',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'lab-tech-serology', 'store-keeper']),
   requirePermission('unit:reserve'),
   controllers.swapMatchedUnit,
 );
@@ -212,7 +186,6 @@ router.patch(
 router.patch(
   '/:id/grouping',
   authenticate,
-  requireRole(['system-admin', 'lab-tech-serology']),
   requirePermission('crossmatch:perform'),
   controllers.setRecipientGrouping,
 );
@@ -221,7 +194,6 @@ router.patch(
 router.patch(
   '/:id/matched-unit/grouping',
   authenticate,
-  requireRole(['system-admin', 'lab-tech-serology']),
   requirePermission('crossmatch:perform'),
   controllers.setMatchedUnitGrouping,
 );
@@ -230,7 +202,6 @@ router.patch(
 router.patch(
   '/:id/matched-unit/confirm-compatibility',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'lab-tech-serology']),
   requirePermission('crossmatch:perform'),
   controllers.confirmCompatibility,
 );
@@ -239,7 +210,6 @@ router.patch(
 router.patch(
   '/:id/component/reject',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer']),
   requirePermission('requisition:reject'),
   controllers.rejectComponent,
 );

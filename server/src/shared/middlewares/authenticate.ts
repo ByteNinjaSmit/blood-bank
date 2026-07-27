@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UnauthorizedError } from '@/shared/errors';
 import { env } from '@/core/config/env';
-import { resolveRole, projectPermissions } from '@/shared/role-map';
+import { projectPermissions } from '@/shared/role-map';
 import type { AuthenticatedUser } from './rbac';
 import { UserModel } from '@/modules/user/user.model';
 
@@ -43,8 +43,10 @@ export async function authenticate(
   const rawUser = userDoc as {
     _id: { toString(): string };
     role: string;
+    isFullAccess?: boolean;
     permissions?: Array<{
       moduleName: string;
+      pageId?: string | null;
       view?: boolean;
       create?: boolean;
       update?: boolean;
@@ -58,9 +60,14 @@ export async function authenticate(
     return next(new UnauthorizedError('Account is not active'));
   }
 
-  const resolvedRole = resolveRole(rawUser.role);
-  const permissions = projectPermissions(resolvedRole, rawUser.permissions ?? []);
+  const isFullAccess = !!rawUser.isFullAccess;
+  const permissions = projectPermissions(isFullAccess, rawUser.permissions ?? []);
 
-  req.user = { id: rawUser._id.toString(), role: resolvedRole, permissions } as AuthenticatedUser;
+  req.user = {
+    id: rawUser._id.toString(),
+    role: rawUser.role,
+    isFullAccess,
+    permissions,
+  } as AuthenticatedUser;
   next();
 }

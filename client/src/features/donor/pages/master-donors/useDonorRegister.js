@@ -15,10 +15,14 @@ export function useDonorRegister(activeTab) {
   const { user } = useAuth();
   const { updateDonor, deleteDonor } = useDonor();
   // This hook backs the Master Register donor pages specifically — gate it
-  // on the donor-list page's own delete permission, not a generic module
-  // check, so granting Donor access elsewhere doesn't silently unlock this.
+  // on the donor-list page's own permissions, not a generic module check,
+  // so granting Donor access elsewhere doesn't silently unlock this.
   const { can } = useAccess();
-  const donorAccess = { canDelete: can('donor', 'delete', 'donor-list') };
+  const donorAccess = {
+    canView: can('donor', 'view', 'donor-list'),
+    canUpdate: can('donor', 'update', 'donor-list'),
+    canDelete: can('donor', 'delete', 'donor-list'),
+  };
 
   // ── Filters ──
   const [page, setPage] = useState(1);
