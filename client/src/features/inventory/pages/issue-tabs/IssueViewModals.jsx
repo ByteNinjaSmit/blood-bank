@@ -204,14 +204,11 @@ export default function IssueViewModals({
         })()}
       </CustomModal>
 
-      {/* ── Thalassemia Patient View Modal ──────────────── */}
+      {/* ── Clinical Indication / Disease Requisition View Modal ──────────── */}
       <CustomModal open={thalViewOpen} onCancel={() => { setThalViewOpen(false); setThalViewItem(null); }} title="Clinical Indication / Disease Patient Details" size="lg" hideFooter>
         {thalViewItem && (() => {
           const r = thalViewItem;
-          const p = r.clinicalIndicationPatient || {};
-          const fullName = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ') || '—';
-          const rh = r?.bag?.rh === 'Positive' ? '+' : r?.bag?.rh === 'Negative' ? '-' : r?.bag?.rh || '';
-          const req = r.requisition;
+          const p = r.patient || {};
           return (
             <div className="space-y-5 text-sm">
               {/* Patient details section */}
@@ -222,14 +219,10 @@ export default function IssueViewModals({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Full Name</div>
-                    <div className="font-bold text-gray-800 text-base">{fullName}</div>
+                    <div className="font-bold text-gray-800 text-base">{p.name || '—'}</div>
                   </div>
                   <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Group</div>
-                    <div className="font-bold text-red-700 text-base">{p.bloodGroup || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Disease</div>
+                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Indication</div>
                     <div className="font-semibold text-gray-800">{diseaseLabel(p)}</div>
                   </div>
                   <div>
@@ -249,75 +242,63 @@ export default function IssueViewModals({
                 </div>
               </div>
 
-              {/* Blood bag details section */}
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider mb-3">Blood Bag Details</h4>
+              {/* Requisition + matched bags */}
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                <h4 className="text-xs font-black text-blue-800 uppercase tracking-wider mb-3">Requisition Details</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Bag No</div>
-                    <div className="font-bold text-gray-800 font-mono">{r?.bag?.bagNo || r.bagNo || '—'}</div>
+                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Requisition ID</div>
+                    <div className="font-mono font-bold text-gray-800">{r.requestId || '—'}</div>
                   </div>
                   <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Segment No</div>
-                    <div className="font-mono text-gray-700">{r.segmentNo || '—'}</div>
+                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Status</div>
+                    <div className="text-gray-700 capitalize">{r.status || '—'}</div>
                   </div>
+                  {r.doctorName && (
+                    <div>
+                      <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Doctor / Clinician</div>
+                      <div className="text-gray-700">{r.doctorName}</div>
+                    </div>
+                  )}
                   <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Component</div>
-                    <div className="font-semibold text-gray-800">{r?.component?.componentType || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Group</div>
-                    <div className="font-bold text-gray-800">{r?.bag?.bloodGroup}{rh}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Volume</div>
-                    <div className="text-gray-700">{r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Expiry Date</div>
-                    <div className="text-gray-700">{formatDate(r?.component?.expiryDate)}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Type of Bag</div>
-                    <div className="text-gray-700">{r.typeOfBag || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Issued At</div>
-                    <div className="text-gray-700">{formatDateTime(r.issuedAt)}</div>
+                    <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Hospital</div>
+                    <div className="text-gray-700">{r.hospitalId?.name || '—'}</div>
                   </div>
                 </div>
               </div>
 
-              {/* Requisition details if present */}
-              {req && (
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                  <h4 className="text-xs font-black text-blue-800 uppercase tracking-wider mb-3">Requisition Details</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Requisition ID</div>
-                      <div className="font-mono font-bold text-gray-800">{req.requisitionId || '—'}</div>
-                    </div>
-                    {req.doctorName && (
-                      <div>
-                        <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Doctor / Clinician</div>
-                        <div className="text-gray-700">{req.doctorName}</div>
-                      </div>
-                    )}
-                    {req.requiredAt && (
-                      <div>
-                        <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Required At</div>
-                        <div className="text-gray-700">{formatDateTime(req.requiredAt)}</div>
-                      </div>
-                    )}
-                    {req.patient && (
-                      <div className="md:col-span-2">
-                        <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Requisition Patient</div>
-                        <div className="text-gray-700">{req.patient.name || '—'} · {req.patient.age ? `${req.patient.age} yrs` : ''} {req.patient.sex || ''}</div>
-                      </div>
-                    )}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider mb-3">Matched Bags</h4>
+                {Array.isArray(r.matchedInventory) && r.matchedInventory.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-gray-500 text-xs uppercase">
+                          <th className="py-1 pr-4">Bag No</th>
+                          <th className="py-1 pr-4">Component</th>
+                          <th className="py-1 pr-4">Blood Group</th>
+                          <th className="py-1 pr-4">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {r.matchedInventory.map((mi) => {
+                          const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+                          return (
+                            <tr key={inv?._id || mi.inventoryId} className="border-t border-gray-100">
+                              <td className="py-1.5 pr-4 font-mono">{inv?.bagNo?.bagNo || '—'}</td>
+                              <td className="py-1.5 pr-4">{inv?.componentId?.componentType || '—'}</td>
+                              <td className="py-1.5 pr-4">{inv?.bagNo?.bloodGroup} {inv?.bagNo?.rh}</td>
+                              <td className="py-1.5 pr-4 capitalize">{inv?.status || '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <p className="text-gray-500 text-sm">No bags matched yet.</p>
+                )}
+              </div>
             </div>
           );
         })()}

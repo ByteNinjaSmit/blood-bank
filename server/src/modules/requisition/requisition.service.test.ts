@@ -52,6 +52,7 @@ function reqDto(over: Partial<RequisitionDto> = {}): RequisitionDto {
     hospitalId: 'hosp-1',
     patientId: 'pat-1',
     clinicianName: 'Dr Who',
+    purpose: 'REQUISITION',
     requestedComponents: [
       { componentType: 'PRBC', units: 2, aboGroup: 'A', rhFactor: 'POSITIVE', urgency: 'ROUTINE' },
     ],

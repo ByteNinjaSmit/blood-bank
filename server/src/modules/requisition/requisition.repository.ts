@@ -74,6 +74,8 @@ export interface RequisitionPatientDto {
   mrn?: string;
   diagnosis?: string;
   indication?: string;
+  indicationCategory?: 'THALASSEMIA' | 'SICKLE_CELL_ANAEMIA' | 'OTHER' | null;
+  otherDiseaseName?: string;
   hb?: number;
   specialNeeds?: string[];
   history?: {
@@ -96,6 +98,7 @@ export interface RequisitionDto {
   patientId: string;
   clinicianName: string;
   doctorName?: string;
+  purpose: 'REQUISITION' | 'RESERVATION';
   patient?: RequisitionPatientDto;
   recipientGrouping?: GroupingWorksheetDto | null;
   requestedComponents: RequestedComponentDto[];
@@ -116,6 +119,7 @@ interface RawReq {
   patientId: { toString(): string };
   clinicianName: string;
   doctorName?: string;
+  purpose?: 'REQUISITION' | 'RESERVATION';
   patient?: RequisitionPatientDto;
   recipientGrouping?: GroupingWorksheetDto | null;
   requestedComponents: RequestedComponentDto[];
@@ -138,6 +142,9 @@ function toDto(raw: RawReq): RequisitionDto {
     patientId: raw.patientId ? raw.patientId.toString() : '',
     clinicianName: raw.clinicianName || '',
     doctorName: raw.doctorName || raw.clinicianName || '',
+    // Pre-migration documents lack this field entirely — default so they
+    // display on the Requisition list rather than vanishing/misclassifying.
+    purpose: raw.purpose || 'REQUISITION',
     patient: raw.patient ? {
       name: raw.patient.name,
       address: raw.patient.address,
@@ -146,6 +153,8 @@ function toDto(raw: RawReq): RequisitionDto {
       mrn: raw.patient.mrn,
       diagnosis: raw.patient.diagnosis,
       indication: raw.patient.indication,
+      indicationCategory: raw.patient.indicationCategory ?? null,
+      otherDiseaseName: raw.patient.otherDiseaseName,
       hb: raw.patient.hb,
       specialNeeds: Array.isArray(raw.patient.specialNeeds) ? raw.patient.specialNeeds : [],
       history: raw.patient.history ? {
@@ -178,6 +187,7 @@ export interface CreateRequisitionInput {
   patientId: string;
   clinicianName: string;
   doctorName?: string;
+  purpose?: 'REQUISITION' | 'RESERVATION';
   patient?: RequisitionPatientDto;
   requiredAt?: Date;
   requestedComponents: RequestedComponentDto[];
@@ -185,8 +195,12 @@ export interface CreateRequisitionInput {
 
 export interface ListRequisitionsFilter {
   status?: RequisitionStatus;
+  excludeStatus?: RequisitionStatus;
   hospitalId?: string;
   patientId?: string;
+  purpose?: 'REQUISITION' | 'RESERVATION';
+  hasClinicalIndication?: boolean;
+  indicationCategory?: 'THALASSEMIA' | 'SICKLE_CELL_ANAEMIA' | 'OTHER';
   search?: string;
   urgency?: 'ROUTINE' | 'URGENT' | 'EMERGENCY';
   componentType?: ComponentType;
@@ -274,8 +288,12 @@ export function createRequisitionRepo(): RequisitionRepo {
     async list(f) {
       const query: Record<string, any> = { deletedAt: null };
       if (f.status) query.status = f.status;
+      else if (f.excludeStatus) query.status = { $ne: f.excludeStatus };
       if (f.hospitalId) query.hospitalId = new Types.ObjectId(f.hospitalId);
       if (f.patientId) query.patientId = new Types.ObjectId(f.patientId);
+      if (f.purpose) query.purpose = f.purpose;
+      if (f.hasClinicalIndication) query['patient.indicationCategory'] = { $ne: null };
+      if (f.indicationCategory) query['patient.indicationCategory'] = f.indicationCategory;
       if (f.urgency) query['requestedComponents.urgency'] = f.urgency;
       if (f.componentType) query['requestedComponents.componentType'] = f.componentType;
 

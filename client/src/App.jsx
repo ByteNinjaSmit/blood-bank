@@ -29,7 +29,7 @@ import ViewDiscarded from './features/discard/components/View-Discarded';
 // Inventory
 import Stock from './features/inventory/pages/Stock';
 import Reserve from './features/inventory/pages/Reserve';
-import ReserveWizard from './features/inventory/pages/ReserveWizard';
+import ReserveWizard from './features/inventory/pages/reserve-wizard/ReserveWizard';
 import Issue from './features/inventory/pages/Issue';
 import InventoryNearExpiry from './features/inventory/pages/NearExpiry';
 

@@ -18,9 +18,8 @@ export function checkHasChanges(doc, payload) {
   if ((doc.patient?.diagnosis || '') !== (payload.patient.diagnosis || '')) return true;
   if (Number(doc.patient?.hb || 0) !== Number(payload.patient.hb || 0)) return true;
   if ((doc.patient?.indication || '') !== (payload.patient.indication || '')) return true;
-  const docSpecialNeeds = [...(doc.patient?.specialNeeds || [])].sort();
-  const paySpecialNeeds = [...(payload.patient.specialNeeds || [])].sort();
-  if (docSpecialNeeds.length !== paySpecialNeeds.length || docSpecialNeeds.some((v, i) => v !== paySpecialNeeds[i])) return true;
+  if ((doc.patient?.indicationCategory || null) !== (payload.patient.indicationCategory || null)) return true;
+  if ((doc.patient?.otherDiseaseName || '') !== (payload.patient.otherDiseaseName || '')) return true;
 
   // Transfusion history
   if (Number(doc.patient?.history?.previousTransfusions || 0) !== Number(payload.patient.history.previousTransfusions || 0)) return true;

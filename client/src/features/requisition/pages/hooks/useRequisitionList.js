@@ -143,7 +143,9 @@ export function useRequisitionList() {
 
   const fetchList = async () => {
     setLoading(true);
-    const params = { ...filters, page, limit };
+    // Reservation-origin requisitions have their own dedicated list at
+    // /inventory/reserve — keep them out of the normal requisition worklist.
+    const params = { ...filters, page, limit, purpose: 'REQUISITION' };
     try {
       const res = await requisitionApi.listRequests(params);
       if (!res.success) {
@@ -243,7 +245,9 @@ export function useRequisitionList() {
     // stepper's gate so approving straight from the list can't skip them.
     if (act === 'approve') return s === 'matched' && requisitionApprovalBlockers(row).length === 0;
     if (act === 'issue') {
-      if (s === 'rejected' || s === 'pending') return false;
+      // Issue is only available once the requisition has been approved —
+      // a matched-but-not-yet-approved request must not be issuable.
+      if (s === 'rejected' || s === 'pending' || s === 'matched') return false;
       // Approved requests can be issued even before any components have
       // been matched/reserved yet — matching happens as part of issuing.
       if (s === 'approved') return true;

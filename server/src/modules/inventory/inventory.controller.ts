@@ -1,11 +1,9 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ValidateInventory } from '@/modules/inventory/inventory.validator';
 import type { InventoryService } from '@/modules/inventory/inventory.service';
-import { UnauthorizedError } from '@/shared/errors';
 
 export interface InventoryControllers {
   select: (req: Request, res: Response, next: NextFunction) => Promise<void>;
-  reserve: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   summary: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   nearExpiry: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
@@ -31,20 +29,6 @@ export function createInventoryControllers(service: InventoryService): Inventory
           },
           requestId: req.id,
         });
-      } catch (e) {
-        next(e);
-      }
-    },
-
-    async reserve(req, res, next) {
-      try {
-        const body = ValidateInventory.reserveBody(req);
-        const actorId = req.user?.id;
-        if (!actorId) throw new UnauthorizedError();
-
-        const data = await service.reserve(body, actorId);
-
-        res.status(200).json({ success: true, data, requestId: req.id });
       } catch (e) {
         next(e);
       }

@@ -26,6 +26,7 @@ export default function MatchReviewStep({
   onSaveRecipientGrouping, onSaveBagGrouping, groupingSaving,
   onConfirmCompatibility, onResetCrossmatch, onRejectComponent, step2Reasons = [],
   isPartialMatch = false,
+  variant = 'requisition',
 }) {
   const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
   const [rejectComponentTarget, setRejectComponentTarget] = useState(null);
@@ -123,7 +124,9 @@ export default function MatchReviewStep({
           <p className="font-medium">
             {isPartialMatch
               ? 'Outstanding for the available components (you can continue — crossmatch is enforced before issue):'
-              : 'Complete these before continuing to Approve & Issue:'}
+              : variant === 'reservation'
+                ? 'Complete these before creating the reservation:'
+                : 'Complete these before continuing to Approve & Issue:'}
           </p>
           <ul className="mt-2 text-sm list-disc pl-5 space-y-1">
             {step2Reasons.map((r, idx) => (<li key={idx}>{r}</li>))}
@@ -150,11 +153,6 @@ export default function MatchReviewStep({
                 {s.available === 0 && (
                   <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gray-200 border border-gray-300 text-gray-700">
                     Unavailable
-                  </span>
-                )}
-                {Array.isArray(s.specialNeeds) && s.specialNeeds.length > 0 && (
-                  <span className="block text-xs text-amber-800 mt-0.5">
-                    Filtered by patient special needs: <strong>{s.specialNeeds.join(', ')}</strong> — only units carrying these attributes qualify.
                   </span>
                 )}
               </li>

@@ -37,20 +37,13 @@ export interface StockListFilters {
   expiryFrom?: string;
   expiryTo?: string;
   source?: string;
+  purpose?: 'REQUISITION' | 'RESERVATION';
 }
 
 export interface SendToStorageInput {
   location?: string;
   otherLocationName?: string;
   bags: Array<{ bagIds: string[] }>;
-  dispatchType?: string;
-  clinicalIndicationPatient?: {
-    firstName: string;
-    lastName: string;
-    disease: string;
-    otherDiseaseName?: string;
-    [key: string]: unknown;
-  } | null;
   sentDate?: string | null;
   actorId: string;
 }
@@ -85,7 +78,7 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
     async listStock(filters) {
       const {
         page, limit, status, componentType, siteId, search, sortBy, order,
-        storageLocation, dispatchType, bloodGroup, rh, expiryFrom, expiryTo, source,
+        storageLocation, dispatchType, bloodGroup, rh, expiryFrom, expiryTo, source, purpose,
       } = filters;
 
       const wantsOwn = status !== 'in-stock' || source !== 'loan';
@@ -109,6 +102,11 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
 
       if (componentType) {
         unitFilter.componentType = componentType;
+      }
+
+      if (purpose) {
+        const reqIds = await RequisitionModel.find({ purpose }).select('_id').lean();
+        unitFilter.reservedFor = { $in: reqIds.map((r) => r._id) };
       }
 
       if (siteId) unitFilter.campId = new Types.ObjectId(siteId);
@@ -293,8 +291,7 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
             requisitionId: reqDoc.requisitionId,
             doctorName: reqDoc.doctorName || reqDoc.clinicianName,
             requiredAt: reqDoc.requiredAt ? reqDoc.requiredAt.toISOString() : undefined,
-            medicalOfficerSignature: reqDoc.medicalOfficerSignature,
-            hospitalSeal: reqDoc.hospitalSeal,
+            purpose: reqDoc.purpose || 'REQUISITION',
             patient: reqDoc.patient,
           };
         }
@@ -452,30 +449,11 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       }
     },
 
-    async sendToStorage({ location, otherLocationName, bags, dispatchType, clinicalIndicationPatient, sentDate, actorId }) {
-      const isClinicalIndication = dispatchType === 'CLINICAL_INDICATION';
-
+    async sendToStorage({ location, otherLocationName, bags, sentDate, actorId }) {
       let finalLocation: string | null = null;
-      if (!isClinicalIndication) {
-        if (!location) throw new ValidationError('Location is required');
-        finalLocation = location === 'Others' ? (otherLocationName ?? null) : location;
-        if (!finalLocation) throw new ValidationError('Location name is required');
-      } else {
-        if (
-          !clinicalIndicationPatient ||
-          !clinicalIndicationPatient.firstName ||
-          !clinicalIndicationPatient.lastName ||
-          !clinicalIndicationPatient.disease
-        ) {
-          throw new ValidationError('Patient details and disease are required');
-        }
-        if (
-          clinicalIndicationPatient.disease === 'OTHER' &&
-          !String(clinicalIndicationPatient.otherDiseaseName || '').trim()
-        ) {
-          throw new ValidationError('Please specify the disease name');
-        }
-      }
+      if (!location) throw new ValidationError('Location is required');
+      finalLocation = location === 'Others' ? (otherLocationName ?? null) : location;
+      if (!finalLocation) throw new ValidationError('Location name is required');
 
       const unitIds: string[] = [];
       for (const group of bags) {
@@ -502,44 +480,22 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         }
         const unit = claimed;
 
-        if (isClinicalIndication && clinicalIndicationPatient) {
-          const diseaseLabel =
-            clinicalIndicationPatient.disease === 'THALASSEMIA'
-              ? 'Thalassemia'
-              : clinicalIndicationPatient.disease === 'SICKLE_CELL_ANAEMIA'
-                ? 'Sickle Cell Anaemia'
-                : clinicalIndicationPatient.otherDiseaseName || 'Other';
-          (unit as any).storageLocation = null;
-          (unit as any).clinicalIndicationPatient = clinicalIndicationPatient;
-          unit.statusHistory.push({
-            from: 'RELEASED',
-            to: 'ISSUED',
-            event: 'ISSUE',
-            actor: actorObjId,
-            at: new Date(),
-            reason: `Issued to ${diseaseLabel} Patient: ${clinicalIndicationPatient.firstName} ${clinicalIndicationPatient.lastName}`,
-          } as any);
-        } else {
-          unit.storageLocation = finalLocation as any;
-          (unit as any).clinicalIndicationPatient = null;
-          unit.statusHistory.push({
-            from: 'RELEASED',
-            to: 'ISSUED',
-            event: 'SEND_TO_STORAGE',
-            actor: actorObjId,
-            at: new Date(),
-            reason: `Sent to storage at ${finalLocation}`,
-          } as any);
-        }
+        unit.storageLocation = finalLocation as any;
+        unit.statusHistory.push({
+          from: 'RELEASED',
+          to: 'ISSUED',
+          event: 'SEND_TO_STORAGE',
+          actor: actorObjId,
+          at: new Date(),
+          reason: `Sent to storage at ${finalLocation}`,
+        } as any);
 
         await unit.save();
       }
 
       await invalidate('inventory:*');
 
-      const baseMessage = isClinicalIndication
-        ? 'Blood units successfully issued for the clinical indication.'
-        : 'Blood units successfully sent to storage.';
+      const baseMessage = 'Blood units successfully sent to storage.';
       const message =
         skipped.length > 0
           ? `${baseMessage} ${skipped.length} bag(s) were skipped because they were no longer in stock.`

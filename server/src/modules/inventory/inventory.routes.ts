@@ -2,18 +2,12 @@ import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
 import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
 import { createUnitRepo } from '@/modules/unit/unit.repository';
-import { createPatientRepo } from '@/modules/patient/patient.repository';
-import { createRequisitionRepo } from '@/modules/requisition/requisition.repository';
-import { createDonationRepo } from '@/modules/donation/donation.repository';
 import { createBulkTransferRepo } from '@/modules/bulk-transfer/bulk-transfer.repository';
 import { createInventoryService } from '@/modules/inventory/inventory.service';
 import { createInventoryControllers } from '@/modules/inventory/inventory.controller';
 
 const service = createInventoryService({
   units: createUnitRepo(),
-  patients: createPatientRepo(),
-  requisitions: createRequisitionRepo(),
-  donations: createDonationRepo(),
   bulkTransfer: createBulkTransferRepo(),
 });
 const controllers = createInventoryControllers(service);
@@ -61,19 +55,4 @@ router.get(
   requirePermission('unit:read'),
   controllers.select,
 );
-router.post(
-  '/reserve',
-  authenticate,
-  requireRole([
-    'system-admin',
-    'bbo',
-    'medical-officer',
-    'lab-tech-serology',
-    'store-keeper',
-    'issue-counter',
-  ]),
-  requirePermission('unit:reserve'),
-  controllers.reserve,
-);
-
 export default router;

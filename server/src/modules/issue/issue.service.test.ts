@@ -17,6 +17,7 @@ function reqDto(): RequisitionDto {
     hospitalId: 'h',
     patientId: 'pat-1',
     clinicianName: 'Dr',
+    purpose: 'REQUISITION',
     requestedComponents: [],
     matchedUnits: [
       {

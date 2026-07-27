@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import hospitalApi from '@/services/hospitalApi';
 import requisitionApi from '@/services/requisitionApi';
 import { donorCardApi } from '@/features/donor-card/api';
-import { defaultDonorCard, defaultPatient, defaultRequestedComponent } from './requisition-defaults';
+import { defaultDonorCard, defaultPatient, defaultRequestedComponent, buildPatientPayload } from './requisition-defaults';
 import { checkHasChanges } from './dirty-tracking';
 export { defaultDonorCard, defaultPatient, defaultRequestedComponent } from './requisition-defaults';
 
@@ -87,7 +87,8 @@ export default function useRequisition(authToken) {
           diagnosis: requestDoc.patient?.diagnosis || '',
           hb: requestDoc.patient?.hb || '',
           indication: requestDoc.patient?.indication || '',
-          specialNeeds: Array.isArray(requestDoc.patient?.specialNeeds) ? requestDoc.patient.specialNeeds : [],
+          indicationCategory: requestDoc.patient?.indicationCategory || null,
+          otherDiseaseName: requestDoc.patient?.otherDiseaseName || '',
           history: {
             previousTransfusions: requestDoc.patient?.history?.previousTransfusions || 0,
             approximateDate: requestDoc.patient?.history?.approximateDate || '',
@@ -219,27 +220,7 @@ export default function useRequisition(authToken) {
         hospitalId: form.hospitalId,
         doctorName: form.doctorName || undefined,
         requiredAt: form.requiredAt || undefined,
-        patient: {
-          name: form.patient.name,
-          address: form.patient.address || undefined,
-          age: Number(form.patient.age),
-          sex: form.patient.sex,
-          mrn: form.patient.mrn || undefined,
-          diagnosis: form.patient.diagnosis || undefined,
-          hb: form.patient.hb ? Number(form.patient.hb) : undefined,
-          indication: form.patient.indication || undefined,
-          specialNeeds: form.patient.specialNeeds || [],
-          history: {
-            previousTransfusions: Number(form.patient.history?.previousTransfusions || 0),
-            approximateDate: form.patient.history?.approximateDate || undefined,
-            presenceOfReaction: form.patient.history?.presenceOfReaction || 'None',
-          },
-          pregnancy: {
-            numPregnancies: Number(form.patient.pregnancy?.numPregnancies || 0),
-            numMiscarriages: Number(form.patient.pregnancy?.numMiscarriages || 0),
-            numChildrenWithHemolyticDisease: Number(form.patient.pregnancy?.numChildrenWithHemolyticDisease || 0),
-          },
-        },
+        patient: buildPatientPayload(form.patient),
         requestedComponents: form.requestedComponents.map((r) => ({
           componentType: r.componentType,
           units: Number(r.units),
@@ -411,27 +392,7 @@ export default function useRequisition(authToken) {
         hospitalId: form.hospitalId,
         doctorName: form.doctorName || undefined,
         requiredAt: form.requiredAt || undefined,
-        patient: {
-          name: form.patient.name,
-          address: form.patient.address || undefined,
-          age: Number(form.patient.age),
-          sex: form.patient.sex,
-          mrn: form.patient.mrn || undefined,
-          diagnosis: form.patient.diagnosis || undefined,
-          hb: form.patient.hb ? Number(form.patient.hb) : undefined,
-          indication: form.patient.indication || undefined,
-          specialNeeds: form.patient.specialNeeds || [],
-          history: {
-            previousTransfusions: Number(form.patient.history?.previousTransfusions || 0),
-            approximateDate: form.patient.history?.approximateDate || undefined,
-            presenceOfReaction: form.patient.history?.presenceOfReaction || 'None',
-          },
-          pregnancy: {
-            numPregnancies: Number(form.patient.pregnancy?.numPregnancies || 0),
-            numMiscarriages: Number(form.patient.pregnancy?.numMiscarriages || 0),
-            numChildrenWithHemolyticDisease: Number(form.patient.pregnancy?.numChildrenWithHemolyticDisease || 0),
-          },
-        },
+        patient: buildPatientPayload(form.patient),
         requestedComponents: form.requestedComponents.map((r) => ({
           componentType: r.componentType,
           units: Number(r.units),
@@ -579,27 +540,7 @@ export default function useRequisition(authToken) {
       hospitalId: form.hospitalId,
       doctorName: form.doctorName || undefined,
       requiredAt: form.requiredAt || undefined,
-      patient: {
-        name: form.patient.name,
-        address: form.patient.address || undefined,
-        age: Number(form.patient.age),
-        sex: form.patient.sex,
-        mrn: form.patient.mrn || undefined,
-        diagnosis: form.patient.diagnosis || undefined,
-        hb: form.patient.hb ? Number(form.patient.hb) : undefined,
-        indication: form.patient.indication || undefined,
-        specialNeeds: form.patient.specialNeeds || [],
-        history: {
-          previousTransfusions: Number(form.patient.history?.previousTransfusions || 0),
-          approximateDate: form.patient.history?.approximateDate || undefined,
-          presenceOfReaction: form.patient.history?.presenceOfReaction || 'None',
-        },
-        pregnancy: {
-          numPregnancies: Number(form.patient.pregnancy?.numPregnancies || 0),
-          numMiscarriages: Number(form.patient.pregnancy?.numMiscarriages || 0),
-          numChildrenWithHemolyticDisease: Number(form.patient.pregnancy?.numChildrenWithHemolyticDisease || 0),
-        },
-      },
+      patient: buildPatientPayload(form.patient),
       requestedComponents: form.requestedComponents.map((r) => ({
         componentType: r.componentType,
         units: Number(r.units),

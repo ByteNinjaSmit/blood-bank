@@ -8,7 +8,6 @@ export const inventoryApi = {
     apiClient.get(`${BASE}/summary`, { params: includeLoan ? { includeLoan: true } : undefined }).then(unwrap),
   // FEFO selection — pass params as query string (GET)
   selectFefo: (params) => apiClient.get(`${BASE}/select`, { params }).then(unwrap),
-  reserveByCriteria: (payload) => apiClient.post(`${BASE}/reserve`, payload).then(res => res.data),
   nearExpiry: (params) => apiClient.get(`${BASE}/near-expiry`, { params }).then(unwrap),
 
   // Legacy /api/inventory stock register — storage bag edit/return actions.

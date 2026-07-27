@@ -13,3 +13,9 @@ export const SEX_TYPES = [
   { value: 'F', label: 'Female' },
   { value: 'O', label: 'Other' },
 ];
+
+export const INDICATION_CATEGORY_LABELS = {
+  THALASSEMIA: 'Thalassemia',
+  SICKLE_CELL_ANAEMIA: 'Sickle Cell Anemia',
+  OTHER: 'Other',
+};

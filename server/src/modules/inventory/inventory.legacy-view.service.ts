@@ -47,7 +47,7 @@ export function createInventoryLegacyViewService(deps: {
           entityId: `batch:send-to-storage:${bagIds.length}`,
         },
         undefined,
-        { location: input.location, dispatchType: input.dispatchType, bagIds, skipped: result.skipped },
+        { location: input.location, bagIds, skipped: result.skipped },
       );
       return result;
     },

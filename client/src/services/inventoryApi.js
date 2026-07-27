@@ -6,6 +6,5 @@ export default {
   list: inventoryApi.stockSummary,
   stockSummary: inventoryApi.stockSummary,
   selectFefo: inventoryApi.selectFefo,
-  reserveByCriteria: inventoryApi.reserveByCriteria,
   nearExpiry: inventoryApi.nearExpiry,
 };

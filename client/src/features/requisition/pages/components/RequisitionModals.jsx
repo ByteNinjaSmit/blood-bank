@@ -2,6 +2,13 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import requisitionApi from '@/services/requisitionApi';
 import CustomModal from '@/components/CustomModal';
+import { INDICATION_CATEGORY_LABELS } from '@/features/requisition/pages/constants';
+
+function clinicalIndicationLabel(patient) {
+  if (!patient?.indicationCategory) return null;
+  if (patient.indicationCategory === 'OTHER') return patient.otherDiseaseName || 'Other';
+  return INDICATION_CATEGORY_LABELS[patient.indicationCategory] || null;
+}
 
 const COMPATIBILITY_RESULT_LABELS = {
   MAJOR_COMPATIBLE: 'Major Compatible',
@@ -58,6 +65,11 @@ export default function RequisitionModals({
               <div>
                 <div className="text-gray-600">Indication for Transfusion</div>
                 <div className="font-medium">{viewDoc.patient?.indication || '—'}</div>
+                {clinicalIndicationLabel(viewDoc.patient) && (
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    Clinical Indication / Disease Patients: <span className="font-medium text-gray-700">{clinicalIndicationLabel(viewDoc.patient)}</span>
+                  </div>
+                )}
               </div>
             </div>
             {(() => {

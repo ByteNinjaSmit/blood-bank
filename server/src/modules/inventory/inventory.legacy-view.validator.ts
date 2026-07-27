@@ -18,19 +18,16 @@ const StockListQuery = z.object({
   expiryFrom: z.string().trim().optional(),
   expiryTo: z.string().trim().optional(),
   source: z.string().trim().optional(),
+  // Distinguishes true stock reservations (Reserve Wizard) from units that
+  // are merely RESERVED pending issue on a normal, already-approved
+  // requisition — both share BloodUnit.status='RESERVED' otherwise.
+  purpose: z.enum(['REQUISITION', 'RESERVATION']).optional(),
 });
 
 const UnreserveBody = z.object({
   inventoryIds: z.array(z.string().trim().min(1)).min(1, 'inventoryIds must be a non-empty array'),
   userId: z.string().trim().optional(),
 });
-
-const ClinicalIndicationPatient = z.object({
-  firstName: z.string().trim().min(1),
-  lastName: z.string().trim().min(1),
-  disease: z.string().trim().min(1),
-  otherDiseaseName: z.string().trim().optional(),
-}).passthrough();
 
 const SendToStorageBody = z.object({
   location: z.string().trim().optional(),
@@ -39,10 +36,6 @@ const SendToStorageBody = z.object({
     .array(z.object({ bagIds: z.array(z.string().trim().min(1)).default([]) }))
     .min(1, 'bags must be a non-empty array'),
   userId: z.string().trim().optional(),
-  dispatchType: z.string().trim().optional(),
-  // The client always sends this key — `null` for STORAGE dispatches,
-  // a patient object for CLINICAL_INDICATION — so both must validate.
-  clinicalIndicationPatient: ClinicalIndicationPatient.nullable().optional(),
   sentDate: z.string().trim().nullable().optional(),
 });
 

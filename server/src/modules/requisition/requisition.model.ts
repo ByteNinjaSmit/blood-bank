@@ -2,7 +2,7 @@
 // patient. Drives the match → crossmatch → issue flow.
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
-import { ABO_GROUP, COMPONENT_TYPE, GRADING_REACTION, RH_FACTOR, SPECIAL_NEED } from '@/shared/enums';
+import { ABO_GROUP, CLINICAL_DISEASE, COMPONENT_TYPE, GRADING_REACTION, RH_FACTOR, SPECIAL_NEED } from '@/shared/enums';
 import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 // One agglutination-grading cell. Every worksheet reagent is stored as
@@ -126,7 +126,18 @@ const RequisitionPatientSchema = new Schema(
     sex: { type: String, enum: ['M', 'F', 'O'], required: true },
     mrn: { type: String, trim: true },
     diagnosis: { type: String, trim: true },
+    // Free text (or the literal enum string when a named disease is picked
+    // via the dropdown, or the typed "Other" text). See indicationCategory
+    // for the unambiguous, non-string-matching signal used to filter the
+    // Clinical Indication / Disease Patients view — kept as a separate field
+    // rather than repurposing `indication` so legacy free-text values remain
+    // valid without migration.
     indication: { type: String, trim: true },
+    indicationCategory: { type: String, enum: CLINICAL_DISEASE, default: null },
+    // Free-text disease name when indicationCategory === 'OTHER' — kept
+    // separate from `indication` (which stays a plain free-text "Indication
+    // for Transfusion" field, independent of this structured classification).
+    otherDiseaseName: { type: String, trim: true },
     hb: { type: Number },
     specialNeeds: { type: [String], enum: SPECIAL_NEED, default: [] },
     history: { type: PatientHistorySchema, default: () => ({}) },
@@ -144,6 +155,11 @@ const RequisitionSchema = new Schema(
     doctorName: { type: String, trim: true },
     requiredAt: { type: Date, index: true },
     requestedAt: { type: Date, default: Date.now },
+    // Distinguishes a reservation (create -> match -> grouping/crossmatch ->
+    // approve, then stop) from a normal requisition (which continues to
+    // issue/complete) — same document shape and pipeline either way, only
+    // the origin/intent differs.
+    purpose: { type: String, enum: ['REQUISITION', 'RESERVATION'], default: 'REQUISITION', index: true },
     patient: { type: RequisitionPatientSchema },
     // Recipient (patient-side) blood-grouping worksheet, entered once in
     // Match Review.
@@ -178,6 +194,8 @@ RequisitionSchema.index({ patientId: 1, status: 1 });
 // Urgency queue: sort by requiredAt for PENDING/MATCHED.
 RequisitionSchema.index({ status: 1, requiredAt: 1 });
 RequisitionSchema.index({ createdAt: -1 });
+// Reserve list / Requisition list split by purpose.
+RequisitionSchema.index({ purpose: 1, status: 1, createdAt: -1 });
 // Donor donation-history lookback: find the requisition a given unit was
 // matched into.
 RequisitionSchema.index({ 'matchedUnits.unitId': 1 });

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Request } from 'express';
-import { ABO_GROUP, COMPONENT_TYPE, GRADING_REACTION, RH_FACTOR, SPECIAL_NEED } from '@/shared/enums';
+import { ABO_GROUP, CLINICAL_DISEASE, COMPONENT_TYPE, GRADING_REACTION, RH_FACTOR, SPECIAL_NEED } from '@/shared/enums';
 import { ValidationError } from '@/shared/errors';
 
 const OBJECT_ID = /^[a-f0-9]{24}$/i;
@@ -46,6 +46,8 @@ const RequisitionPatient = z.object({
   mrn: z.string().trim().max(80).optional(),
   diagnosis: z.string().trim().optional(),
   indication: z.string().trim().optional(),
+  indicationCategory: z.enum(CLINICAL_DISEASE).optional(),
+  otherDiseaseName: z.string().trim().optional(),
   hb: z.coerce.number().optional(),
   specialNeeds: z.array(z.enum(SPECIAL_NEED)).optional(),
   history: PatientHistory.optional(),
@@ -58,6 +60,9 @@ export const CreateRequisitionBody = z.object({
   clinicianName: z.string().trim().min(1).max(200),
   doctorName: z.string().trim().max(200).optional(),
   requiredAt: z.coerce.date().optional(),
+  // Set once at creation, never editable via UpdateRequisitionBody — a
+  // reservation must not silently become a requisition (or vice versa).
+  purpose: z.enum(['REQUISITION', 'RESERVATION']).default('REQUISITION'),
   patient: RequisitionPatient.optional(),
   requestedComponents: z.array(RequestedComponent).min(1),
 });
@@ -151,10 +156,22 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T
 export const ListRequisitionsQuery = z.object({
   status: z
     .preprocess((val) => (val === '' ? undefined : val), z.enum(['PENDING', 'MATCHED', 'CROSSMATCHED', 'APPROVED', 'ISSUED', 'COMPLETED', 'REJECTED']).optional()),
+  // Disease/Clinical Indication tab: hide rejected requisitions without
+  // pinning the list to one exact status (unlike `status` above).
+  excludeStatus: z
+    .preprocess((val) => (val === '' ? undefined : val), z.enum(['PENDING', 'MATCHED', 'CROSSMATCHED', 'APPROVED', 'ISSUED', 'COMPLETED', 'REJECTED']).optional()),
   hospitalId: z
     .preprocess((val) => (val === '' ? undefined : val), z.string().regex(OBJECT_ID).optional()),
   patientId: z
     .preprocess((val) => (val === '' ? undefined : val), z.string().regex(OBJECT_ID).optional()),
+  purpose: z
+    .preprocess((val) => (val === '' ? undefined : val), z.enum(['REQUISITION', 'RESERVATION']).optional()),
+  // Disease/Clinical Indication tab: any requisition with a categorized
+  // indication (Thalassemia/Sickle Cell Anaemia/Other), regardless of which.
+  hasClinicalIndication: z
+    .preprocess((val) => (val === '' ? undefined : val), z.coerce.boolean().optional()),
+  indicationCategory: z
+    .preprocess((val) => (val === '' ? undefined : val), z.enum(CLINICAL_DISEASE).optional()),
   search: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
   urgency: z
     .preprocess((val) => (val === '' ? undefined : val), z.enum(['ROUTINE', 'URGENT', 'EMERGENCY']).optional()),

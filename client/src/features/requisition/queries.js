@@ -100,3 +100,79 @@ export function useIssueUnit() {
     },
   });
 }
+
+export function useIssueAllForRequisition() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, unitIds }) => requisitionApi.issueAll(id, unitIds),
+    onSuccess: (_d, { id }) => {
+      qc.invalidateQueries({ queryKey: requisitionKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: requisitionKeys.all });
+      qc.invalidateQueries({ queryKey: ['inventory'] });
+    },
+  });
+}
+
+export function useAvailableUnits(id, params) {
+  return useQuery({
+    queryKey: ['requisition', 'available-units', id, params ?? {}],
+    queryFn: () => requisitionApi.availableUnits(id, params),
+    enabled: Boolean(id && params?.componentType),
+  });
+}
+
+export function useSwapMatchedUnit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => requisitionApi.swapMatchedUnit(id, data),
+    onSuccess: (_d, { id }) => qc.invalidateQueries({ queryKey: requisitionKeys.detail(id) }),
+  });
+}
+
+export function useSaveRecipientGrouping() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, grouping }) => requisitionApi.setRecipientGrouping(id, grouping),
+    onSuccess: (_d, { id }) => qc.invalidateQueries({ queryKey: requisitionKeys.detail(id) }),
+  });
+}
+
+export function useSaveBagGrouping() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, unitId, grouping }) => requisitionApi.setMatchedUnitGrouping(id, { unitId, grouping }),
+    onSuccess: (_d, { id }) => qc.invalidateQueries({ queryKey: requisitionKeys.detail(id) }),
+  });
+}
+
+export function useConfirmCompatibility() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, unitId, confirmed }) => requisitionApi.confirmCompatibility(id, { unitId, confirmed }),
+    onSuccess: (_d, { id }) => qc.invalidateQueries({ queryKey: requisitionKeys.detail(id) }),
+  });
+}
+
+export function useUpdateCrossmatchLegacy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => requisitionApi.updateCrossmatch(id, data),
+    onSuccess: (_d, { id }) => qc.invalidateQueries({ queryKey: requisitionKeys.detail(id) }),
+  });
+}
+
+export function useResetCrossmatch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, unitId }) => requisitionApi.resetCrossmatch(id, unitId),
+    onSuccess: (_d, { id }) => qc.invalidateQueries({ queryKey: requisitionKeys.detail(id) }),
+  });
+}
+
+export function useRejectComponent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, componentType, reason }) => requisitionApi.rejectComponent(id, { componentType, reason }),
+    onSuccess: (_d, { id }) => qc.invalidateQueries({ queryKey: requisitionKeys.detail(id) }),
+  });
+}

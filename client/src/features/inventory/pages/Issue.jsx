@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { apiClient } from "@/core/api-client";
-import { useAuth } from "@/store/auth";
 import { PackageCheck, Warehouse, MapPin, ArrowLeftRight, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import RegisterExportDropdown from "@/components/shared/RegisterExportDropdown";
@@ -9,14 +9,14 @@ import DiseaseTab from "./issue-tabs/DiseaseTab";
 import BulkTransferTab from "./issue-tabs/BulkTransferTab";
 import IssueStockTab from "./issue-tabs/IssueStockTab";
 import SendToStorageModal from "./issue-tabs/SendToStorageModal";
-import IssueClinicalIndicationModal from "./issue-tabs/IssueClinicalIndicationModal";
 import BulkTransferFormModal from "./issue-tabs/BulkTransferFormModal";
 import IssueViewModals from "./issue-tabs/IssueViewModals";
 import IssuePrintPrompts from "./issue-tabs/IssuePrintPrompts";
 import { useBulkTransfer } from "./hooks/useBulkTransfer";
 import { useStorageTransfer } from "./hooks/useStorageTransfer";
-import { useClinicalIndication } from "./hooks/useClinicalIndication";
 import { useIssueExport } from "./hooks/useIssueExport";
+import { requisitionApi } from "@/features/requisition/api";
+import { INDICATION_CATEGORY_LABELS } from "@/features/requisition/pages/constants";
 import { formatDate as formatDateBase, formatDateTime as formatDateTimeBase } from "@/lib/format-date";
 
 // Day/month/year with month as a number (e.g. 19/07/2026), used across
@@ -33,7 +33,7 @@ const ISSUE_REGISTERS = [
 ];
 
 const Issue = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
   const [rows, setRows] = useState([]);
@@ -127,14 +127,25 @@ const Issue = () => {
   const openView = (item) => { setViewItem(item); setViewOpen(true); };
   const closeView = () => { setViewOpen(false); setViewItem(null); };
 
+  // Clinical Indication / Disease Patients tab: a read view over real
+  // Requisitions whose patient.indicationCategory is set (Thalassemia /
+  // Sickle Cell Anaemia / Other) — created via the normal Requisition flow,
+  // not a bespoke form. Issuing is done from the requisition itself so
+  // crossmatch/TTI/issue-gate enforcement applies exactly as it does for
+  // any other requisition (no more direct-dispatch bypass).
   const fetchThalassemia = async (page = thalPagination.page, limit = thalPagination.limit) => {
     setThalLoading(true);
     try {
-      const res = await apiClient.get(`/api/inventory`, {
-        params: { page, limit, status: 'issued', dispatchType: 'CLINICAL_INDICATION', sortBy: 'issuedAt', order: 'desc' },
+      const { items, pagination: pg } = await requisitionApi.listPaged({
+        page,
+        limit,
+        hasClinicalIndication: true,
+        excludeStatus: 'REJECTED',
+        sortBy: 'updatedAt',
+        order: 'desc',
       });
-      setThalRows(Array.isArray(res.data?.data) ? res.data.data : []);
-      setThalPagination(p => ({ ...p, ...(res.data?.pagination || {}), page }));
+      setThalRows(items);
+      setThalPagination((p) => ({ ...p, ...pg, page }));
     } catch {
       toast.error('Failed to fetch clinical indication / disease records');
       setThalRows([]);
@@ -148,22 +159,14 @@ const Issue = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mainTab]);
 
-  const diseaseLabel = (p) => {
-    if (!p) return '—';
-    if (p.disease === 'THALASSEMIA') return 'Thalassemia';
-    if (p.disease === 'SICKLE_CELL_ANAEMIA') return 'Sickle Cell Anaemia';
-    return p.otherDiseaseName || 'Other';
+  const diseaseLabel = (patient) => {
+    if (!patient) return '—';
+    if (patient.indicationCategory === 'OTHER') return patient.otherDiseaseName || 'Other';
+    return INDICATION_CATEGORY_LABELS[patient.indicationCategory] || '—';
   };
 
   // Storage register (Send to Storage batches — list/create/edit/delete)
   const storage = useStorageTransfer({ mainTab, availableUnits, fetchAvailableUnits });
-
-  // Clinical Indication / Disease issuance (separate one-off dispatch flow)
-  const clinical = useClinicalIndication({
-    user,
-    fetchAvailableUnits,
-    onIssued: () => fetchThalassemia(1),
-  });
 
   // Bulk Transfer register (list/create/edit/delete + cover-letter/certificate/invoice prints)
   const bulk = useBulkTransfer({ mainTab, availableUnits, fetchAvailableUnits });
@@ -256,8 +259,8 @@ const Issue = () => {
             thalPagination={thalPagination}
             fetchThalassemia={fetchThalassemia}
             diseaseLabel={diseaseLabel}
-            onViewBag={(r) => { setThalViewItem(r); setThalViewOpen(true); }}
-            onIssueClinicalIndication={clinical.openCreate}
+            onViewRequisition={(r) => { setThalViewItem(r); setThalViewOpen(true); }}
+            onIssueRequisition={(r) => navigate(`/requisition/${r._id}`)}
           />
         )}
 
@@ -310,20 +313,6 @@ const Issue = () => {
         availableUnits={availableUnits}
         handleSendToStorage={storage.handleStorageSubmit}
         isLoading={storage.storageSubmitting}
-        loadingAvailable={loadingAvailable}
-      />
-
-      {/* ── Issue for Clinical Indication / Disease ───────── */}
-      <IssueClinicalIndicationModal
-        open={clinical.formOpen}
-        onClose={clinical.closeForm}
-        patientDetails={clinical.patientDetails}
-        setPatientDetails={clinical.setPatientDetails}
-        clinicalBags={clinical.clinicalBags}
-        setClinicalBags={clinical.setClinicalBags}
-        availableUnits={availableUnits}
-        handleSubmit={clinical.handleSubmit}
-        isLoading={clinical.submitting}
         loadingAvailable={loadingAvailable}
       />
 
