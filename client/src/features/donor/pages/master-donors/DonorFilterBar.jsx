@@ -1,5 +1,6 @@
 import React from 'react';
-import { Search, ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown } from 'lucide-react';
+import SearchBox from '@/components/shared/SearchBox';
 
 // Presentational filter bar for the donor register. All state lives in the
 // parent hook; this component only renders inputs and calls setters.
@@ -15,6 +16,7 @@ export default function DonorFilterBar({
   setPage,
   toggleOrder,
   resetFilters,
+  submitSearch,
 }) {
   const { searchQuery, bloodGroupFilter, rhFilter, eligibilityFilter, fromDate, toDate, sortBy, order } = filters;
 
@@ -22,19 +24,14 @@ export default function DonorFilterBar({
     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search by name or donor ID..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
-              }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-            />
-          </div>
+          <SearchBox
+            placeholder="Search by name or donor ID..."
+            value={searchQuery}
+            onChange={setSearchQuery}
+            onSearch={submitSearch}
+            className="h-10"
+            inputClassName="h-10 rounded-lg border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+          />
         </div>
         <div className="flex flex-wrap gap-4">
           <select

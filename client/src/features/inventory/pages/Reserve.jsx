@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { COMPONENT_TYPES, SEX_TYPES } from "@/features/requisition/pages/constants";
 import CustomModal from "@/components/CustomModal";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
+import SearchBox from "@/components/shared/SearchBox";
 import { exportReserve } from "@/utils/excelExportHelper";
 import ReserveDetailModal from "../components/ReserveDetailModal";
 
@@ -101,6 +102,7 @@ const Reserve = () => {
   // filters
   const [componentType, setComponentType] = useState("");
   const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [bloodGroup, setBloodGroup] = useState("");
   const [order, setOrder] = useState("desc");
   const [sortBy] = useState("createdAt");
@@ -239,7 +241,14 @@ const Reserve = () => {
               </div>
               <div className="flex flex-col md:col-span-2">
                 <label className="text-xs text-gray-600 mb-1">Search Bag No</label>
-                <input value={search} onChange={(e)=>{setSearch(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm" placeholder="Bag ID" />
+                <SearchBox
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  onSearch={() => { setSearch(searchInput); setPagination(p=>({...p,page:1})); }}
+                  placeholder="Bag ID"
+                  disabled={isLoading}
+                  inputClassName="h-10"
+                />
               </div>
               <div className="flex flex-col">
                 <label className="text-xs text-gray-600 mb-1">Order</label>

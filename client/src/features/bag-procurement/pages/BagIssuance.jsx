@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Syringe, Search, RefreshCw } from 'lucide-react';
+import { Syringe, RefreshCw } from 'lucide-react';
 import { useBagIssueList } from '../queries';
 import { useStockSummary } from '@/features/inventory/queries';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import ComponentStockLines from '@/components/shared/ComponentStockLines';
+import SearchBox from '@/components/shared/SearchBox';
 import { exportProcurementIssue } from '@/utils/excelExportHelper';
 import ViewIssueModal from '../components/issuance/ViewIssueModal';
 
@@ -23,6 +24,7 @@ export default function BagIssuance() {
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [dateFilterType, setDateFilterType] = useState('all'); // 'all', 'today', 'custom'
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -166,16 +168,13 @@ export default function BagIssuance() {
               <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
                 Search Bag Info
               </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search Bag No, Segment, Batch..."
-                  className="w-full pl-9 pr-4 py-2 border border-gray-250 rounded-lg text-sm focus:ring-2 focus:ring-orange-800/20 focus:border-orange-800 outline-none transition-all border-gray-200"
-                />
-              </div>
+              <SearchBox
+                value={searchInput}
+                onChange={setSearchInput}
+                onSearch={() => setSearchQuery(searchInput)}
+                placeholder="Search Bag No, Segment, Batch..."
+                inputClassName="rounded-lg border-gray-200 focus:ring-2 focus:ring-orange-800/20 focus:border-orange-800"
+              />
             </div>
 
             <div className="w-full md:w-48">
@@ -230,6 +229,7 @@ export default function BagIssuance() {
               <button
                 onClick={() => {
                   setSearchQuery('');
+                  setSearchInput('');
                   setDateFilterType('all');
                   setFromDate('');
                   setToDate('');

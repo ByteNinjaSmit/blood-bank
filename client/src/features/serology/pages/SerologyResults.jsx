@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "@/core/api-client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Microscope, Search, Calendar, X, ChevronLeft, ChevronRight, Pencil, RefreshCw } from "lucide-react";
+import { Loader2, Microscope, Calendar, X, ChevronLeft, ChevronRight, Pencil, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportSerologyResults } from "@/utils/excelExportHelper";
 import { ComponentDetailsModal } from "@/components/blood-components";
+import SearchBox from "@/components/shared/SearchBox";
 import SerologyDetailModal from "../components/SerologyDetailModal";
 import { statusBadge, formatBlood } from "../components/serology-helpers";
 
@@ -84,6 +85,9 @@ const SerologyResults = () => {
   });
   const [order, setOrder] = useState("desc");
   const [sortBy] = useState("updatedAt");
+  // Draft search text bound to the SearchBox; only committed into
+  // filters.search (the actual fetch dependency) on explicit submit.
+  const [searchInput, setSearchInput] = useState("");
   const [selectedBag, setSelectedBag] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showComponents, setShowComponents] = useState(false);
@@ -115,10 +119,7 @@ const SerologyResults = () => {
   };
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchBags(1, pagination.limit);
-    }, 300);
-    return () => clearTimeout(timeoutId);
+    fetchBags(1, pagination.limit);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, order, sortBy]);
 
@@ -128,6 +129,7 @@ const SerologyResults = () => {
   };
 
   const clearFilters = () => {
+    setSearchInput("");
     setFilters({ search: "", status: "all", fromDate: "", toDate: "" });
     setPagination(prev => ({ ...prev, page: 1 }));
   };
@@ -222,16 +224,14 @@ const SerologyResults = () => {
                 {/* Search - Flexible Width */}
                 <div className="flex-1 min-w-[240px] space-y-1">
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Search</label>
-                  <div className="relative group">
-                    <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 w-3.5 h-3.5 transition-colors" />
-                    <Input
-                      placeholder="Search Bag Number..."
-                      value={filters.search}
-                      onChange={(e) => handleFilterChange("search", e.target.value)}
-                      className="pl-8 h-9 text-xs border-gray-200 bg-gray-50/50 focus:bg-white focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-all shadow-none"
-                      disabled={isLoading}
-                    />
-                  </div>
+                  <SearchBox
+                    placeholder="Search Bag Number..."
+                    value={searchInput}
+                    onChange={setSearchInput}
+                    onSearch={() => handleFilterChange("search", searchInput)}
+                    disabled={isLoading}
+                    inputClassName="border-gray-200 bg-gray-50/50 focus:bg-white focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-all shadow-none"
+                  />
                 </div>
 
                 {/* Status Dropdown */}

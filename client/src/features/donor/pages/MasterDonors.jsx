@@ -124,6 +124,7 @@ const MasterDonors = () => {
               setPage={reg.setPage}
               toggleOrder={reg.toggleOrder}
               resetFilters={reg.resetFilters}
+              submitSearch={reg.submitSearch}
             />
             <DonorRegisterTable
               activeTab={activeTab}

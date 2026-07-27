@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "@/core/api-client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Boxes, Search, ChevronLeft, ChevronRight, X, RefreshCw, Eye } from "lucide-react";
+import { Loader2, Boxes, ChevronLeft, ChevronRight, X, RefreshCw, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStockSummary } from "@/features/inventory/queries";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
+import SearchBox from "@/components/shared/SearchBox";
 import { exportStock } from "@/utils/excelExportHelper";
 import { COMPONENT_TYPES } from "@/constants/component-types";
 import ComponentStockLines from "@/components/shared/ComponentStockLines";
@@ -39,6 +40,7 @@ const Stock = () => {
   const [status, setStatus] = useState("in-stock");
   const [siteId] = useState("");
   const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [bloodGroup, setBloodGroup] = useState("");
   const [rh, setRh] = useState("");
   const [expiryFrom, setExpiryFrom] = useState("");
@@ -132,16 +134,14 @@ const Stock = () => {
               {/* Search */}
               <div className="flex-1 min-w-[240px] space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Search Bag Number</label>
-                <div className="relative group">
-                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 w-3.5 h-3.5 transition-colors" />
-                  <Input
-                    placeholder="Enter Bag Number..."
-                    value={search}
-                    onChange={(e) => {setSearch(e.target.value); setPagination(p=>({...p,page:1}));}}
-                    className="pl-8 h-9 text-xs border-gray-200 bg-gray-50/50 focus:bg-white focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-all shadow-none"
-                    disabled={isLoading}
-                  />
-                </div>
+                <SearchBox
+                  placeholder="Enter Bag Number..."
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  onSearch={() => { setSearch(searchInput); setPagination(p => ({ ...p, page: 1 })); }}
+                  disabled={isLoading}
+                  inputClassName="border-gray-200 bg-gray-50/50 focus:bg-white focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-all shadow-none"
+                />
               </div>
 
               {/* Component Type */}
@@ -289,7 +289,7 @@ const Stock = () => {
                 {(search || componentType || status !== "in-stock" || bloodGroup || rh || expiryFrom || expiryTo || source !== "all") && (
                   <button
                     onClick={() => {
-                      setSearch(""); setComponentType(""); setStatus("in-stock");
+                      setSearch(""); setSearchInput(""); setComponentType(""); setStatus("in-stock");
                       setBloodGroup(""); setRh(""); setExpiryFrom(""); setExpiryTo("");
                       setSortBy("createdAt"); setOrder("desc"); setSource("all");
                       setPagination(p=>({...p,page:1}));

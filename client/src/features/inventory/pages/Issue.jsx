@@ -43,6 +43,9 @@ const Issue = () => {
   // filters
   const [componentType, setComponentType] = useState("");
   const [search, setSearch] = useState("");
+  // Draft value bound to the search box; only committed into `search`
+  // (the fetch-effect dependency) on Enter/button click — see SearchBox.
+  const [searchInput, setSearchInput] = useState("");
   const [bloodGroup, setBloodGroup] = useState("");
   const [expiryFrom, setExpiryFrom] = useState("");
   const [expiryTo, setExpiryTo] = useState("");
@@ -115,6 +118,11 @@ const Issue = () => {
     fetchRows(1, pagination.limit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, componentType, search, bloodGroup, expiryFrom, expiryTo, order, sortBy]);
+
+  const commitSearch = () => {
+    setSearch(searchInput);
+    setPagination((p) => ({ ...p, page: 1 }));
+  };
 
   const openView = (item) => { setViewItem(item); setViewOpen(true); };
   const closeView = () => { setViewOpen(false); setViewItem(null); };
@@ -273,7 +281,7 @@ const Issue = () => {
             status={status} setStatus={setStatus}
             componentType={componentType} setComponentType={setComponentType}
             bloodGroup={bloodGroup} setBloodGroup={setBloodGroup}
-            search={search} setSearch={setSearch}
+            searchInput={searchInput} setSearchInput={setSearchInput} onSearch={commitSearch}
             expiryFrom={expiryFrom} setExpiryFrom={setExpiryFrom}
             expiryTo={expiryTo} setExpiryTo={setExpiryTo}
             order={order} setOrder={setOrder}

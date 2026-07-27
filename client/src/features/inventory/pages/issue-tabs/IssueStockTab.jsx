@@ -1,6 +1,7 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import SearchBox from '@/components/shared/SearchBox';
 import { COMPONENT_TYPES } from '@/constants/component-types';
 import { formatDate as formatDateBase } from '@/lib/format-date';
 
@@ -14,7 +15,7 @@ export default function IssueStockTab({
   status, setStatus,
   componentType, setComponentType,
   bloodGroup, setBloodGroup,
-  search, setSearch,
+  searchInput, setSearchInput, onSearch,
   expiryFrom, setExpiryFrom,
   expiryTo, setExpiryTo,
   order, setOrder,
@@ -61,7 +62,13 @@ export default function IssueStockTab({
           </div>
           <div className="flex flex-col">
             <label className="text-xs text-gray-600 mb-1">Search Bag No</label>
-            <input value={search} onChange={(e)=>{setSearch(e.target.value); resetPage();}} className="h-10 px-3 border rounded-md text-sm" placeholder="Bag ID" />
+            <SearchBox
+              value={searchInput}
+              onChange={setSearchInput}
+              onSearch={() => { onSearch(); resetPage(); }}
+              placeholder="Bag ID"
+              inputClassName="h-10"
+            />
           </div>
           <div className="flex flex-col">
             <label className="text-xs text-gray-600 mb-1">Expiry From</label>

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useLotList } from '../queries';
-import { Calendar, Search, AlertCircle, ShieldAlert, CheckCircle, ShieldCheck, Clock, RefreshCw } from 'lucide-react';
+import { Calendar, AlertCircle, ShieldAlert, CheckCircle, ShieldCheck, Clock, RefreshCw } from 'lucide-react';
+import SearchBox from '@/components/shared/SearchBox';
 
 export default function ExpiryMonitoring() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [expiryFilter, setExpiryFilter] = useState('');
 
   const { data: lotsData, isLoading, isFetching, refetch } = useLotList({
@@ -79,14 +81,13 @@ export default function ExpiryMonitoring() {
 
       {/* Filter and Search Panel */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
+        <div className="w-full md:w-80">
+          <SearchBox
             placeholder="Search by lot number, chemical..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400"
+            value={searchInput}
+            onChange={setSearchInput}
+            onSearch={() => setSearchQuery(searchInput)}
+            inputClassName="bg-gray-50 border-gray-200 focus:ring-red-400"
           />
         </div>
         <div className="flex gap-2 w-full md:w-auto overflow-x-auto scrollbar-none">

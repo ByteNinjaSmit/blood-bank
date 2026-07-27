@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { useState } from "react"
-import { AlertTriangle, Search, Calendar, X, ChevronLeft, ChevronRight, Loader2, Layers, Plus, RefreshCw } from "lucide-react"
+import { AlertTriangle, Calendar, X, ChevronLeft, ChevronRight, Loader2, Layers, Plus, RefreshCw } from "lucide-react"
 import { apiClient } from "@/core/api-client"
 import { useAuth } from "@/store/auth"
 import DiscardTable from "./DiscardTable"
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown"
 import IframePreviewModal from "@/components/shared/IframePreviewModal"
+import SearchBox from "@/components/shared/SearchBox"
 import { exportProcurementDiscard } from "@/utils/excelExportHelper"
 import { toast } from "sonner"
 import { formatDateTime } from "@/lib/format-date"
@@ -36,6 +37,7 @@ const ViewDiscarded = () => {
       fromDate: "",
       toDate: ""
     });
+    const [searchInput, setSearchInput] = useState("");
     const [sortBy] = useState("discardedAt");
     const [order, setOrder] = useState("desc");
     // const [sites, setSites] = useState([]);
@@ -165,6 +167,7 @@ const ViewDiscarded = () => {
 
     const clearFilters = () => {
       setFilters({ search: "", itemType: "all", fromDate: "", toDate: "" });
+      setSearchInput("");
       setCurrentPage(1);
     };
 
@@ -254,16 +257,14 @@ const ViewDiscarded = () => {
                                     {/* Search */}
                                     <div className="flex-1 min-w-[240px] space-y-1">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Search Bag Number</label>
-                                        <div className="relative group">
-                                            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 w-3.5 h-3.5 transition-colors" />
-                                            <Input
-                                                placeholder="Enter Bag Number..."
-                                                value={filters.search}
-                                                onChange={(e) => handleFilterChange("search", e.target.value)}
-                                                className="pl-8 h-9 text-xs border-gray-200 bg-gray-50/50 focus:bg-white focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-all shadow-none"
-                                                disabled={isLoading}
-                                            />
-                                        </div>
+                                        <SearchBox
+                                            placeholder="Enter Bag Number..."
+                                            value={searchInput}
+                                            onChange={setSearchInput}
+                                            onSearch={() => handleFilterChange("search", searchInput)}
+                                            disabled={isLoading}
+                                            inputClassName="border-gray-200 bg-gray-50/50 focus:bg-white focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-all shadow-none"
+                                        />
                                     </div>
 
                                     {/* Item Type */}

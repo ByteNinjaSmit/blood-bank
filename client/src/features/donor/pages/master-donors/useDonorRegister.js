@@ -22,6 +22,7 @@ export function useDonorRegister(activeTab) {
   // ── Filters ──
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [bloodGroupFilter, setBloodGroupFilter] = useState('');
   const [rhFilter, setRhFilter] = useState('');
   const [eligibilityFilter, setEligibilityFilter] = useState('');
@@ -33,8 +34,17 @@ export function useDonorRegister(activeTab) {
 
   const toggleOrder = () => setOrder((o) => (o === 'desc' ? 'asc' : 'desc'));
 
+  // Search only hits the API once the user submits (Enter / search button),
+  // not on every keystroke — searchQuery is the typed draft, appliedSearch
+  // is what actually feeds useDonorList below.
+  const submitSearch = () => {
+    setAppliedSearch(searchQuery);
+    setPage(1);
+  };
+
   const resetFilters = () => {
     setSearchQuery('');
+    setAppliedSearch('');
     setBloodGroupFilter('');
     setRhFilter('');
     setEligibilityFilter('');
@@ -50,7 +60,7 @@ export function useDonorRegister(activeTab) {
       setExcelLoading(true);
       const generatedBy = user?.name ? [user.name.first, user.name.last].filter(Boolean).join(' ') : (user?.username || 'System User');
       const filters = {
-        search: searchQuery || undefined,
+        search: appliedSearch || undefined,
         bloodGroup: bloodGroupFilter || undefined,
         rh: rhFilter || undefined,
         eligibilityStatus: eligibilityFilter || undefined,
@@ -129,7 +139,7 @@ export function useDonorRegister(activeTab) {
     source: sourceParam,
     page,
     pageSize: PAGE_SIZE,
-    search: searchQuery || undefined,
+    search: appliedSearch || undefined,
     bloodGroup: bloodGroupFilter || undefined,
     rh: rhFilter || undefined,
     eligibilityStatus: eligibilityFilter || undefined,
@@ -159,7 +169,7 @@ export function useDonorRegister(activeTab) {
     filters: { searchQuery, bloodGroupFilter, rhFilter, eligibilityFilter, fromDate, toDate, sortBy, order },
     setSearchQuery, setBloodGroupFilter, setRhFilter, setEligibilityFilter,
     setFromDate, setToDate, setSortBy, setPage,
-    toggleOrder, resetFilters,
+    toggleOrder, resetFilters, submitSearch,
     // export
     excelLoading, handleExportRegister,
     // data

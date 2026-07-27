@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, X, ChevronDown, ChevronUp, Search, RefreshCw } from 'lucide-react';
+import { FileText, Plus, X, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import {
   usePOList,
   useCreatePO,
@@ -11,6 +11,7 @@ import {
 import { formatBloodBagQty } from '../utils/qtyHelper';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import SearchBox from '@/components/shared/SearchBox';
 import { exportProcurementPO } from '@/utils/excelExportHelper';
 import { useEditWithReason } from '@/hooks/useEditWithReason';
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
@@ -327,6 +328,7 @@ export default function PurchaseOrders() {
   const [editPO, setEditPO] = useState(null);
   const [excelLoading, setExcelLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [vendorFilter, setVendorFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -435,15 +437,13 @@ export default function PurchaseOrders() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-end gap-3">
           <div className="relative flex-1 min-w-[220px]">
             <label className="block text-xs font-medium text-gray-500 mb-1">Search PO Number</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="PO Number..."
-                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-              />
-            </div>
+            <SearchBox
+              value={searchInput}
+              onChange={setSearchInput}
+              onSearch={() => setSearch(searchInput)}
+              placeholder="PO Number..."
+              inputClassName="focus:ring-orange-400 focus:border-orange-400"
+            />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Vendor</label>
@@ -470,7 +470,7 @@ export default function PurchaseOrders() {
           </div>
           {(search || vendorFilter || fromDate || toDate) && (
             <button
-              onClick={() => { setSearch(''); setVendorFilter(''); setFromDate(''); setToDate(''); }}
+              onClick={() => { setSearch(''); setSearchInput(''); setVendorFilter(''); setFromDate(''); setToDate(''); }}
               className="px-3 py-2 text-sm text-orange-800 hover:bg-orange-50 rounded-lg font-medium"
             >
               Reset

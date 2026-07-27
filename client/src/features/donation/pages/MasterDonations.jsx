@@ -97,6 +97,7 @@ export default function MasterDonations() {
           toggleOrder={reg.toggleOrder}
           resetFilters={reg.resetFilters}
           onFilterChange={reg.handleFilterChange}
+          onSearchSubmit={reg.runSearchLookup}
         />
         <DonationRegisterTable
           activeTab={activeTab}

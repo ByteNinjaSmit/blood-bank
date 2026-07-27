@@ -1,11 +1,12 @@
-import { Search, Calendar, X, Loader2 } from "lucide-react";
+import { Calendar, X, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { COMPONENT_TYPES } from "@/constants/component-types";
+import SearchBox from "@/components/shared/SearchBox";
 import { STATUS_OPTIONS } from "../component-helpers";
 
-export default function ComponentFilterBar({ filters, isLoading, onFilterChange, onClear }) {
+export default function ComponentFilterBar({ filters, isLoading, onFilterChange, onSearchSubmit, onClear }) {
   return (
     <Card className="mb-4 border-red-50 shadow-sm">
       <CardContent className="p-3">
@@ -13,16 +14,14 @@ export default function ComponentFilterBar({ filters, isLoading, onFilterChange,
           {/* Search - Flexible Width */}
           <div className="flex-1 min-w-[240px] space-y-1">
             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Search</label>
-            <div className="relative group">
-              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 w-3.5 h-3.5 transition-colors" />
-              <Input
-                placeholder="Bag No, ID, or blood group..."
-                value={filters.search}
-                onChange={(e) => onFilterChange("search", e.target.value)}
-                className="pl-8 h-9 text-xs border-gray-200 bg-gray-50/50 focus:bg-white focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-all shadow-none"
-                disabled={isLoading}
-              />
-            </div>
+            <SearchBox
+              placeholder="Bag No, ID, or blood group..."
+              value={filters.search}
+              onChange={(val) => onFilterChange("search", val)}
+              onSearch={onSearchSubmit}
+              disabled={isLoading}
+              inputClassName="border-gray-200 bg-gray-50/50 focus:bg-white focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-all shadow-none"
+            />
           </div>
 
           {/* Type Dropdown */}

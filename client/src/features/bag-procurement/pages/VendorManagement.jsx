@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Truck, Plus, X, CheckCircle, Ban, Trash2, Users, Search, RefreshCw } from 'lucide-react';
+import { Truck, Plus, X, CheckCircle, Ban, Trash2, Users, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useVendorList,
@@ -9,6 +9,7 @@ import {
   useDeleteVendor,
 } from '../queries';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import SearchBox from '@/components/shared/SearchBox';
 import { exportVendors } from '@/utils/excelExportHelper';
 import { useEditWithReason } from '@/hooks/useEditWithReason';
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
@@ -156,6 +157,7 @@ export default function VendorManagement() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [editVendor, setEditVendor] = useState(null);
   const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [approvalStatus, setApprovalStatus] = useState('');
   const { data, isLoading, refetch, isFetching } = useVendorList({ search: search || undefined, approvalStatus: approvalStatus || undefined });
   const updateStatus = useUpdateVendorStatus();
@@ -245,12 +247,12 @@ export default function VendorManagement() {
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+            <SearchBox
+              value={searchInput}
+              onChange={setSearchInput}
+              onSearch={() => setSearch(searchInput)}
               placeholder="Search vendor name, license or GST..."
-              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              inputClassName="focus:ring-orange-400 focus:border-orange-400"
             />
           </div>
           <select
@@ -266,7 +268,7 @@ export default function VendorManagement() {
           </select>
           {(search || approvalStatus) && (
             <button
-              onClick={() => { setSearch(''); setApprovalStatus(''); }}
+              onClick={() => { setSearch(''); setSearchInput(''); setApprovalStatus(''); }}
               className="px-3 py-2 text-sm text-orange-800 hover:bg-orange-50 rounded-lg font-medium"
             >
               Reset

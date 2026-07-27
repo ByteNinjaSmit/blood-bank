@@ -1,5 +1,5 @@
-import React from 'react';
-import { Search } from 'lucide-react';
+import React, { useState } from 'react';
+import SearchBox from '@/components/shared/SearchBox';
 
 const AUDIT_ACTIONS = [
   'CREATE', 'UPDATE', 'DELETE', 'STATE_TRANSITION', 'RELEASE',
@@ -12,11 +12,13 @@ const fieldClass =
   'border border-gray-200 rounded px-2.5 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-400';
 
 export default function AuditFilterBar({ filters, onChange, modules = [] }) {
+  const [qDraft, setQDraft] = useState(filters.q || '');
   const set = (patch) => onChange({ ...filters, ...patch });
 
   const hasActiveFilters = Object.values(filters).some(Boolean);
 
-  const reset = () =>
+  const reset = () => {
+    setQDraft('');
     onChange({
       module: '',
       action: '',
@@ -27,6 +29,7 @@ export default function AuditFilterBar({ filters, onChange, modules = [] }) {
       dateFrom: '',
       dateTo: '',
     });
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap gap-4 items-end">
@@ -59,16 +62,14 @@ export default function AuditFilterBar({ filters, onChange, modules = [] }) {
       </div>
       <div>
         <label className="block text-[10px] font-bold text-gray-400 uppercase mb-0.5">Entity / Search</label>
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
-          <input
-            type="text"
-            placeholder="Entity ID, label..."
-            value={filters.q || ''}
-            onChange={(e) => set({ q: e.target.value })}
-            className={`${fieldClass} pl-8 w-48`}
-          />
-        </div>
+        <SearchBox
+          placeholder="Entity ID, label..."
+          value={qDraft}
+          onChange={setQDraft}
+          onSearch={() => set({ q: qDraft })}
+          className="w-56"
+          inputClassName="h-9 w-40 rounded border-gray-200"
+        />
       </div>
       <div>
         <label className="block text-[10px] font-bold text-gray-400 uppercase mb-0.5">From Date</label>

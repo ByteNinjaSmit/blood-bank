@@ -1,5 +1,6 @@
 import React from 'react';
-import { Search, ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown } from 'lucide-react';
+import SearchBox from '@/components/shared/SearchBox';
 
 // Presentational filter bar for the donation register.
 export default function DonationFilterBar({
@@ -14,6 +15,7 @@ export default function DonationFilterBar({
   toggleOrder,
   resetFilters,
   onFilterChange,
+  onSearchSubmit,
 }) {
   const { searchQuery, bagTypeFilter, bloodGroupFilter, statusFilter, fromDate, toDate, sortBy, order } = filters;
 
@@ -21,16 +23,13 @@ export default function DonationFilterBar({
     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search by bag number or donor name..."
-              value={searchQuery}
-              onChange={(e) => onFilterChange(setSearchQuery, e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-            />
-          </div>
+          <SearchBox
+            placeholder="Search by bag number or donor name..."
+            value={searchQuery}
+            onChange={(val) => onFilterChange(setSearchQuery, val)}
+            onSearch={onSearchSubmit}
+            inputClassName="focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+          />
         </div>
         <div className="flex flex-wrap gap-4">
           <select

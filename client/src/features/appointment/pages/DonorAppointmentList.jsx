@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { CalendarCheck, Search, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { CalendarCheck, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppointmentList, useAppointmentSummary, useUpdateAppointmentStatus } from '../queries';
 import { appointmentApi } from '../api';
 import { formatDate, formatDateTime } from '@/lib/format-date';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportAppointments } from '@/utils/excelExportHelper';
+import SearchBox from '@/components/shared/SearchBox';
 
 const STATUS_BADGE = {
   pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -89,6 +90,7 @@ export default function DonorAppointmentList() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [selected, setSelected] = useState(null);
   const limit = 20;
 
@@ -161,13 +163,13 @@ export default function DonorAppointmentList() {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          <div className="flex-1 min-w-[220px]">
+            <SearchBox
+              value={searchInput}
+              onChange={setSearchInput}
+              onSearch={() => { setSearch(searchInput); setPage(1); }}
               placeholder="Search name, mobile or email..."
-              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              inputClassName="border-gray-200 focus:ring-orange-400"
             />
           </div>
           <select
@@ -182,7 +184,7 @@ export default function DonorAppointmentList() {
           </select>
           {(search || status) && (
             <button
-              onClick={() => { setSearch(''); setStatus(''); setPage(1); }}
+              onClick={() => { setSearch(''); setSearchInput(''); setStatus(''); setPage(1); }}
               className="px-3 py-2 text-sm text-orange-800 hover:bg-orange-50 rounded-lg font-medium"
             >
               Reset

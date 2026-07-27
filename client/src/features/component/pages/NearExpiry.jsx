@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Clock, Search, X, Loader2 } from "lucide-react";
+import { Clock, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDate as formatDateKolkata } from "@/lib/format-date";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +10,7 @@ import { ComponentDetailsModal } from "@/components/blood-components";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportNearExpiryComponents } from "@/utils/excelExportHelper";
 import { COMPONENT_TYPES } from "@/constants/component-types";
+import SearchBox from "@/components/shared/SearchBox";
 import NearExpiryTable from "../components/NearExpiryTable";
 
 const STATUS_OPTIONS = [
@@ -48,6 +48,10 @@ const NearExpiry = () => {
     isOpen: false,
     selectedComponentId: null,
   });
+
+  // Draft search text bound to the SearchBox; only committed into
+  // state.filters.search (the actual fetch dependency) on explicit submit.
+  const [searchInput, setSearchInput] = useState("");
 
   // Single responsibility: Fetch near-expiry components data
   const fetchNearExpiryComponents = useCallback(async () => {
@@ -103,23 +107,14 @@ const NearExpiry = () => {
     }
   }, [state.pagination.page, state.pagination.limit, state.filters]);
 
-  // Debounced search effect
+  // Fetch data whenever pagination or any applied filter (including the
+  // explicitly-submitted search) changes. Search no longer triggers a
+  // fetch on keystroke — only on SearchBox submit (Enter/button), which
+  // commits searchInput into state.filters.search.
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchNearExpiryComponents();
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
+    fetchNearExpiryComponents();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.filters.search]);
-
-  // Effect to fetch data when other dependencies change
-  useEffect(() => {
-    if (state.filters.search === "") {
-      fetchNearExpiryComponents();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.pagination.page, state.pagination.limit, state.filters.days, state.filters.componentType, state.filters.status]);
+  }, [state.pagination.page, state.pagination.limit, state.filters.days, state.filters.componentType, state.filters.status, state.filters.search]);
 
   // Single responsibility: Handle filter changes
   const handleFilterChange = (filterType, value) => {
@@ -152,6 +147,7 @@ const NearExpiry = () => {
 
   // Single responsibility: Clear all filters
   const clearFilters = () => {
+    setSearchInput("");
     setState(prev => ({
       ...prev,
       filters: {
@@ -249,16 +245,14 @@ const NearExpiry = () => {
               {/* Search - Flexible Width */}
               <div className="flex-1 min-w-[240px] space-y-1">
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Search</label>
-                <div className="relative group">
-                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-yellow-500 w-3.5 h-3.5 transition-colors" />
-                  <Input
-                    placeholder="Search ID or bag number..."
-                    value={state.filters.search}
-                    onChange={(e) => handleFilterChange("search", e.target.value)}
-                    className="pl-8 h-9 text-xs border-gray-200 bg-gray-50/50 focus:bg-white focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 transition-all shadow-none"
-                    disabled={state.isLoading}
-                  />
-                </div>
+                <SearchBox
+                  placeholder="Search ID or bag number..."
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  onSearch={() => handleFilterChange("search", searchInput)}
+                  disabled={state.isLoading}
+                  inputClassName="border-gray-200 bg-gray-50/50 focus:bg-white focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 transition-all shadow-none"
+                />
               </div>
 
               {/* Days Filter */}

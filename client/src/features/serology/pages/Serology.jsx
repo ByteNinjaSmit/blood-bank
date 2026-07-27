@@ -7,6 +7,7 @@ import { Loader2, Microscope, TestTube, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateTime } from "@/lib/format-date";
 import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
+import SearchBox from "@/components/shared/SearchBox";
 
 const DEFAULT_TESTS = [
   { key: "HIV", label: "HIV" },
@@ -23,6 +24,7 @@ const Serology = () => {
   const [bags, setBags] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
   const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [order, setOrder] = useState("desc");
@@ -206,11 +208,13 @@ const Serology = () => {
               >
                 <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
               </button>
-              <input
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPagination(p => ({...p, page: 1})); }}
+              <SearchBox
+                value={searchInput}
+                onChange={setSearchInput}
+                onSearch={() => { setSearch(searchInput); setPagination(p => ({...p, page: 1})); }}
                 placeholder="Search Bag No"
-                className="h-9 px-3 py-2 border rounded-md text-sm"
+                disabled={isLoading}
+                inputClassName="h-9"
               />
               <input
                 type="date"

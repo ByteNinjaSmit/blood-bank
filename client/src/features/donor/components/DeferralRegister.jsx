@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Search, ArrowUpDown, Undo2, Activity, Ban, Clock } from 'lucide-react';
+import { ArrowUpDown, Undo2, Activity, Ban, Clock } from 'lucide-react';
 import { useAuth } from '@/store/auth';
 import { checkAccess } from '@/features/user/pages/utils/access';
 import { useDeferralList, useLiftDeferral } from '@/features/deferral/queries';
 import CustomModal from '@/components/CustomModal';
+import SearchBox from '@/components/shared/SearchBox';
 
 const PAGE_SIZE = 20;
 
@@ -72,6 +73,7 @@ export default function DeferralRegister() {
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [type, setType] = useState('');
   const [status, setStatus] = useState('active');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -96,6 +98,7 @@ export default function DeferralRegister() {
 
   const resetFilters = () => {
     setSearch('');
+    setSearchInput('');
     setType('');
     setStatus('active');
     setSortOrder('desc');
@@ -159,16 +162,13 @@ export default function DeferralRegister() {
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search by donor name, ID, or phone..."
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
-            </div>
+            <SearchBox
+              placeholder="Search by donor name, ID, or phone..."
+              value={searchInput}
+              onChange={setSearchInput}
+              onSearch={() => { setSearch(searchInput); setPage(1); }}
+              inputClassName="border-gray-300 focus:ring-orange-500 focus:border-orange-500"
+            />
           </div>
           <div className="flex flex-wrap gap-4">
             <select

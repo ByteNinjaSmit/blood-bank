@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FlaskConical, Play, CheckCircle, RefreshCw } from 'lucide-react';
+import { FlaskConical, Play, CheckCircle, RefreshCw } from 'lucide-react';
 import { useLotList, useUpdateUsage } from '../queries';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportChemicalUsage } from '@/utils/excelExportHelper';
 import { chemicalInventoryApi } from '../api';
+import SearchBox from '@/components/shared/SearchBox';
 
 function FinishBoxModal({ isOpen, lot, onClose, onConfirm, isPending }) {
   const [remaining, setRemaining] = useState('0');
@@ -62,6 +63,7 @@ function FinishBoxModal({ isOpen, lot, onClose, onConfirm, isPending }) {
 
 export default function StockUsageTab() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [finishModalLot, setFinishModalLot] = useState(null);
 
@@ -180,14 +182,13 @@ export default function StockUsageTab() {
 
       {/* Filter and Search Panel */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
+        <div className="w-full md:w-80">
+          <SearchBox
             placeholder="Search by lot, batch, chemical name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400"
+            value={searchInput}
+            onChange={setSearchInput}
+            onSearch={() => setSearchQuery(searchInput)}
+            inputClassName="bg-gray-50 border-gray-200 focus:ring-red-400"
           />
         </div>
         <div className="flex gap-2 w-full md:w-auto">

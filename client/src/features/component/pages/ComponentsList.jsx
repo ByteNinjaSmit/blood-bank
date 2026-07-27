@@ -73,7 +73,7 @@ const ComponentsList = () => {
           ...(state.filters.expiryBefore && { expiryBefore: state.filters.expiryBefore }),
           ...(state.filters.fromDate && { fromDate: state.filters.fromDate }),
           ...(state.filters.toDate && { toDate: state.filters.toDate }),
-          ...(state.filters.search && { search: state.filters.search }),
+          ...(appliedSearch && { search: appliedSearch }),
           order: state.filters.order,
         };
         const response = await apiClient.get(`/api/v2/component/list`, { params });
@@ -119,6 +119,12 @@ const ComponentsList = () => {
     },
   });
 
+  // The search box in ComponentFilterBar is generic and writes its draft
+  // value straight into state.filters.search via onFilterChange("search", ...).
+  // The actual fetch only depends on appliedSearch, which is committed from
+  // the draft on explicit submit (Enter/button) — never on keystroke.
+  const [appliedSearch, setAppliedSearch] = useState("");
+
   // Modal state
   const [modalState, setModalState] = useState({
     isOpen: false,
@@ -144,7 +150,7 @@ const ComponentsList = () => {
         ...(state.filters.expiryBefore && { expiryBefore: state.filters.expiryBefore }),
         ...(state.filters.fromDate && { fromDate: state.filters.fromDate }),
         ...(state.filters.toDate && { toDate: state.filters.toDate }),
-        ...(state.filters.search && { search: state.filters.search }),
+        ...(appliedSearch && { search: appliedSearch }),
         order: state.filters.order,
       };
 
@@ -186,25 +192,16 @@ const ComponentsList = () => {
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [state.pagination.page, state.pagination.limit, state.filters]);
+  }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore, state.filters.fromDate, state.filters.toDate, state.filters.order, appliedSearch]);
 
-  // Debounced search effect
+  // Fetch whenever pagination or any applied filter changes. Search no
+  // longer triggers a fetch on keystroke — only when the user explicitly
+  // submits via the SearchBox (Enter/button), which commits the draft
+  // filters.search value into appliedSearch.
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchComponents();
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
+    fetchComponents();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.filters.search]);
-
-  // Effect to fetch data when other dependencies change
-  useEffect(() => {
-    if (state.filters.search === "") {
-      fetchComponents();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore, state.filters.fromDate, state.filters.toDate, state.filters.order]);
+  }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore, state.filters.fromDate, state.filters.toDate, state.filters.order, appliedSearch]);
 
   // Single responsibility: Handle filter changes
   const handleFilterChange = (filterType, value) => {
@@ -212,6 +209,16 @@ const ComponentsList = () => {
       ...prev,
       filters: { ...prev.filters, [filterType]: value },
       pagination: { ...prev.pagination, page: 1 }, // Reset to first page
+    }));
+  };
+
+  // Commits the draft search text (state.filters.search) into appliedSearch,
+  // the actual fetch dependency. Called only on explicit SearchBox submit.
+  const handleSearchSubmit = () => {
+    setAppliedSearch(state.filters.search);
+    setState(prev => ({
+      ...prev,
+      pagination: { ...prev.pagination, page: 1 },
     }));
   };
 
@@ -237,6 +244,7 @@ const ComponentsList = () => {
 
   // Single responsibility: Clear all filters
   const clearFilters = () => {
+    setAppliedSearch("");
     setState(prev => ({
       ...prev,
       filters: {
@@ -338,6 +346,7 @@ const ComponentsList = () => {
           filters={state.filters}
           isLoading={state.isLoading}
           onFilterChange={handleFilterChange}
+          onSearchSubmit={handleSearchSubmit}
           onClear={clearFilters}
         />
 

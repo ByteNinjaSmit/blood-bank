@@ -71,9 +71,32 @@ export function useDonationRegister(activeTab, setActiveTab) {
 
   const allItems = useMemo(() => data?.items ?? [], [data]);
 
-  // If the search term matches no loaded item, try a direct detail lookup so a
-  // known bag/donation ID surfaces even when it's outside the loaded page.
+  // Reset the fallback lookup result whenever the search box is cleared or
+  // the term now matches something already loaded — this is just cleanup,
+  // not a network call, so it's safe to run on every keystroke.
   useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      setSearchedDonation(null);
+      return;
+    }
+
+    const exists = allItems.some(
+      (d) =>
+        (d.donationId || '').toLowerCase() === trimmed.toLowerCase() ||
+        (d.bagNo || '').toLowerCase() === trimmed.toLowerCase()
+    );
+
+    if (exists) {
+      setSearchedDonation(null);
+    }
+  }, [searchQuery, allItems]);
+
+  // Fallback network lookup: if the search term matches no loaded item, try
+  // a direct detail lookup so a known bag/donation ID surfaces even when
+  // it's outside the loaded page. Fires only on explicit search submit
+  // (Enter/button) — never on a timer.
+  const runSearchLookup = async () => {
     const trimmed = searchQuery.trim();
     if (!trimmed) {
       setSearchedDonation(null);
@@ -91,18 +114,13 @@ export function useDonationRegister(activeTab, setActiveTab) {
       return;
     }
 
-    const fetchSearched = async () => {
-      try {
-        const res = await donationApi.detail(trimmed);
-        setSearchedDonation(res || null);
-      } catch {
-        setSearchedDonation(null);
-      }
-    };
-
-    const timer = setTimeout(fetchSearched, 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery, allItems]);
+    try {
+      const res = await donationApi.detail(trimmed);
+      setSearchedDonation(res || null);
+    } catch {
+      setSearchedDonation(null);
+    }
+  };
 
   const baseItems = [...allItems];
   if (searchedDonation) {
@@ -197,7 +215,7 @@ export function useDonationRegister(activeTab, setActiveTab) {
     // filters
     filters: { searchQuery, bagTypeFilter, bloodGroupFilter, statusFilter, fromDate, toDate, sortBy, order },
     setSearchQuery, setBagTypeFilter, setBloodGroupFilter, setStatusFilter, setFromDate, setToDate, setSortBy,
-    toggleOrder, resetFilters, switchTab, handleFilterChange,
+    toggleOrder, resetFilters, switchTab, handleFilterChange, runSearchLookup,
     // export
     excelLoading, handleExportRegister,
     // data
