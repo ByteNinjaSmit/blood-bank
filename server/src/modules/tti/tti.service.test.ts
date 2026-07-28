@@ -57,7 +57,7 @@ function mocks(ttiDto: TtiResultDto) {
     findByRelatedDonation: vi.fn().mockResolvedValue(null),
   };
   const donations = {
-    findById: vi.fn().mockResolvedValue({ donor: 'donor-1' }),
+    findByDonationId: vi.fn().mockResolvedValue({ donor: 'donor-1' }),
   } as unknown as DonationRepo;
   return { tti, units, deferrals, donations };
 }

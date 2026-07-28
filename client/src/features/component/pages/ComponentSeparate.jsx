@@ -9,6 +9,7 @@ import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
 import SeparateComponentModal from "../components/separate/SeparateComponentModal";
 import SignatureModal from "../components/separate/SignatureModal";
 import EditSeparationModal from "../components/separate/EditSeparationModal";
+import CountdownCell from "../components/separate/CountdownCell";
 
 // Component separation from a whole-blood donation only ever yields these four
 // derived products — WB is never re-selected here.
@@ -19,6 +20,7 @@ const ComponentSeparate = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [bags, setBags] = useState([]);
+  const [now, setNow] = useState(() => Date.now());
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [showSeparateModal, setShowSeparateModal] = useState(false);
   const [activeBag, setActiveBag] = useState(null);
@@ -86,6 +88,12 @@ const ComponentSeparate = () => {
 
   useEffect(() => {
     fetchBags();
+  }, []);
+
+  // Single shared tick driving every row's holding-time countdown.
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const toLocalDateTimeInput = (date) => {
@@ -254,8 +262,8 @@ const ComponentSeparate = () => {
           componentType: c.componentType,
           volumeMl: Number(c.volumeMl),
         })),
-        rpmFirstSpin: editRpmFirstSpin || undefined,
-        rpmSecondSpin: editRpmSecondSpin || undefined,
+        rpmFirstSpin: editRpmFirstSpin,
+        rpmSecondSpin: editRpmSecondSpin,
         separationTime: editSeparationTime ? new Date(editSeparationTime).toISOString() : undefined,
         // Server requires a non-empty reason, but staff shouldn't have to
         // type one every time they fix an RPM/volume entry from this page.
@@ -352,13 +360,14 @@ const ComponentSeparate = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Collected</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Components</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Holding Time</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan="7" className="px-4 py-8 text-center">
+                    <td colSpan="8" className="px-4 py-8 text-center">
                       <div className="inline-flex items-center gap-2 text-gray-500">
                         <Loader2 className="w-5 h-5 animate-spin" /> Loading bags...
                       </div>
@@ -366,7 +375,7 @@ const ComponentSeparate = () => {
                   </tr>
                 ) : bags.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">No collected blood bags found.</td>
+                    <td colSpan="8" className="px-4 py-8 text-center text-gray-500">No collected blood bags found.</td>
                   </tr>
                 ) : (
                   bags.map((bag, idx) => (
@@ -398,6 +407,9 @@ const ComponentSeparate = () => {
                         ) : (
                           <span className="text-xs text-gray-400">None</span>
                         )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        <CountdownCell deadline={bag.collectionDate} now={now} />
                       </td>
                       <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-2">

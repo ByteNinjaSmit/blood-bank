@@ -357,17 +357,13 @@ export default function RequisitionModals({
                                         const fresh = await requisitionApi.getRequest(issueDoc._id);
                                         if (fresh.success) {
                                           setIssueDoc(fresh.data);
-                                          // Check if all units are issued to complete it automatically
-                                          const allDone = fresh.data.matchedInventory.every(
-                                            (m) => (typeof m.inventoryId === 'object' ? m.inventoryId?.status : '') === 'ISSUED'
-                                          );
-                                          if (allDone) {
-                                            const completeRes = await requisitionApi.complete(issueDoc._id);
-                                            if (completeRes.success) {
-                                              toast.success('All components issued. Requisition completed.');
-                                              setIssueModalOpen(false);
-                                              setIssueDoc(null);
-                                            }
+                                          // Server auto-completes the requisition once all matched
+                                          // units are issued (requisition.service.ts issueAll) — just
+                                          // react to that status, don't call complete() again.
+                                          if (fresh.data.status === 'COMPLETED') {
+                                            toast.success('All components issued. Requisition completed.');
+                                            setIssueModalOpen(false);
+                                            setIssueDoc(null);
                                           }
                                         }
                                         fetchList();

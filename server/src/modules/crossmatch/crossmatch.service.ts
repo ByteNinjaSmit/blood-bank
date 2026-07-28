@@ -127,7 +127,7 @@ export function createCrossmatchService(deps: {
                 severity: 'SUCCESS',
                 relatedRecordId: crossmatchId,
                 relatedRecordType: 'Crossmatch',
-                actionLink: `/requisition-management/${req.id}`,
+                actionLink: `/requisition/${req.id}`,
               }
             : {
                 title: 'Cross match failed',
@@ -137,7 +137,7 @@ export function createCrossmatchService(deps: {
                 severity: 'CRITICAL',
                 relatedRecordId: crossmatchId,
                 relatedRecordType: 'Crossmatch',
-                actionLink: `/requisition-management/${req.id}`,
+                actionLink: `/requisition/${req.id}`,
               },
         )
         .catch(() => undefined);

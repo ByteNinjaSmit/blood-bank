@@ -35,7 +35,7 @@ export function createAppointmentService(repo: AppointmentRepo): AppointmentServ
             severity: notif.severity,
             relatedRecordId: id,
             relatedRecordType: 'Appointment',
-            actionLink: `/appointments`,
+            actionLink: `/appointments/donors`,
           })
           .catch(() => undefined);
       }

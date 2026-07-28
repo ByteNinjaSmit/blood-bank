@@ -28,8 +28,6 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
         withCredentials: true,
       });
 
-      console.log("Component details response:", response.data);
-
       if (response.data?.component) {
         setState(prev => ({
           ...prev,

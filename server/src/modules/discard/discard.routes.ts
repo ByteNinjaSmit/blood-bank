@@ -7,9 +7,11 @@ import { requirePermission } from '@/shared/middlewares/rbac';
 import { createDiscardRepo } from '@/modules/discard/discard.repository';
 import { createDiscardService } from '@/modules/discard/discard.service';
 import { createDiscardControllers } from '@/modules/discard/discard.controller';
+import { createUnitRepo } from '@/modules/unit/unit.repository';
+import { ttiService } from '@/modules/tti/tti.instance';
 import type { Role } from '@/shared/enums';
 
-const service = createDiscardService({ repo: createDiscardRepo() });
+const service = createDiscardService({ repo: createDiscardRepo({ units: createUnitRepo(), ttiService }) });
 const controllers = createDiscardControllers(service);
 
 const router = Router();

@@ -1,4 +1,4 @@
-import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose, { Types } from 'mongoose';
 
@@ -86,6 +86,71 @@ async function seed(donationId: string, unitStatus: string = 'QUARANTINE') {
   });
 }
 
+async function seedReactive(donationId: string) {
+  const donor = await DonorModel.create({
+    donorId: 'DNR-SHADE-0002',
+    name: { firstName: 'Test', lastName: 'Donor' },
+    dob: new Date('2000-01-01'),
+    sex: 'M',
+    phone: '9000000002',
+    address: { city: 'Pune', district: 'Pune', state: 'MH' },
+    weightKg: 60,
+    bloodGroup: 'A',
+    rh: 'POSITIVE',
+    createdBy: actorId,
+  });
+
+  await DonationModel.create({
+    donationId,
+    donor: donor._id,
+    donationType: 'WHOLE_BLOOD',
+    collectedAt: new Date(),
+    createdBy: actorId,
+    updatedBy: actorId,
+  });
+
+  await BloodUnitModel.create({
+    unitId: 'U-SHADE-0002',
+    donationId,
+    componentType: 'PRBC',
+    aboGroup: 'A',
+    rhFactor: 'POSITIVE',
+    volumeMl: 350,
+    status: 'DISCARDED',
+    discardReason: 'TTI_POSITIVE',
+    collectedAt: new Date(),
+    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+    createdBy: actorId,
+    updatedBy: actorId,
+  });
+
+  await TtiResultModel.create({
+    donationId,
+    tests: [
+      { testName: 'HIV', method: 'ELISA', result: 'REACTIVE', technicianId: actorId, performedAt: new Date() },
+      { testName: 'HBSAG', method: 'ELISA', result: 'NEGATIVE', technicianId: actorId, performedAt: new Date() },
+      { testName: 'HCV', method: 'ELISA', result: 'NEGATIVE', technicianId: actorId, performedAt: new Date() },
+      { testName: 'SYPHILIS', method: 'ELISA', result: 'NEGATIVE', technicianId: actorId, performedAt: new Date() },
+      { testName: 'MALARIA', method: 'ELISA', result: 'NEGATIVE', technicianId: actorId, performedAt: new Date() },
+    ],
+    releaseDecision: 'reactive',
+    createdBy: actorId,
+    updatedBy: actorId,
+  });
+
+  const deferralRepo = createDeferralRepo();
+  await deferralRepo.create(
+    {
+      donor: donor._id.toString(),
+      type: 'PERMANENT',
+      reason: 'TTI reactive: HIV reactive',
+      source: 'TTI_REACTIVE',
+      relatedDonationId: donationId,
+    },
+    actorId,
+  );
+}
+
 function service() {
   const units = createUnitRepo();
   return createTtiService({
@@ -118,4 +183,49 @@ describe('correcting a shadeness (indeterminate) result', () => {
       );
     });
   }
+});
+
+describe('correcting a reactive (discarded) result down to indeterminate', () => {
+  it('reinstates the unit out of DISCARDED into QUARANTINE, not left behind', async () => {
+    const donationId = 'DN-REACTIVE-TO-INDETERMINATE';
+    await seedReactive(donationId);
+    const svc = service();
+
+    await svc.recordAndFinalize(
+      donationId,
+      [{ testName: 'HIV', method: 'ELISA', result: 'INDETERMINATE', performedAt: new Date() }],
+      actorId,
+    );
+
+    const unit = await BloodUnitModel.findOne({ donationId }).lean();
+    expect(unit?.status).toBe('QUARANTINE');
+    expect(unit?.discardReason ?? null).toBeNull();
+
+    const deferrals = createDeferralRepo();
+    const reactiveDeferral = await deferrals.findByRelatedDonation(donationId, 'TTI_REACTIVE');
+    expect(reactiveDeferral).toBeNull();
+    const indeterminateDeferral = await deferrals.findByRelatedDonation(donationId, 'TTI_INDETERMINATE');
+    expect(indeterminateDeferral).not.toBeNull();
+  });
+
+  it('then correcting to negative releases the unit and clears it out of discard', async () => {
+    const donationId = 'DN-REACTIVE-TO-INDETERMINATE-TO-RELEASED';
+    await seedReactive(donationId);
+    const svc = service();
+
+    await svc.recordAndFinalize(
+      donationId,
+      [{ testName: 'HIV', method: 'ELISA', result: 'INDETERMINATE', performedAt: new Date() }],
+      actorId,
+    );
+    await svc.recordAndFinalize(
+      donationId,
+      [{ testName: 'HIV', method: 'ELISA', result: 'NEGATIVE', performedAt: new Date() }],
+      actorId,
+    );
+
+    const unit = await BloodUnitModel.findOne({ donationId }).lean();
+    expect(unit?.status).toBe('RELEASED');
+    expect(unit?.discardReason ?? null).toBeNull();
+  });
 });

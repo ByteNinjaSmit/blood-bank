@@ -205,7 +205,7 @@ export function createDonationService(deps: {
             severity: 'INFORMATION',
             relatedRecordId: created.id,
             relatedRecordType: 'Donation',
-            actionLink: `/donation-management/${created.id}`,
+            actionLink: `/master-register/donations`,
           })
           .catch(() => undefined);
         void notificationCenterService
@@ -217,7 +217,7 @@ export function createDonationService(deps: {
             severity: 'WARNING',
             relatedRecordId: created.id,
             relatedRecordType: 'Donation',
-            actionLink: `/component-separation`,
+            actionLink: `/component/separate`,
             dedupeKey: `COMPONENT_SEPARATION_PENDING:${created.id}`,
           })
           .catch(() => undefined);
@@ -231,7 +231,7 @@ export function createDonationService(deps: {
             severity: 'WARNING',
             relatedRecordId: created.id,
             relatedRecordType: 'Donation',
-            actionLink: `/donation-management/${created.id}`,
+            actionLink: `/master-register/donations`,
           })
           .catch(() => undefined);
       }

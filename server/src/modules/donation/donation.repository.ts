@@ -72,6 +72,8 @@ interface CreateInput {
 export interface DonationRepo {
   createAtomic(c: CreateInput): Promise<DonationWithUnitsDto>;
   findById(id: string): Promise<DonationWithUnitsDto | null>;
+  /** Same enriched shape as findById, keyed by the public donationId (not the Mongo _id). */
+  findByDonationId(donationId: string): Promise<DonationWithUnitsDto | null>;
   findRawStatus(id: string): Promise<{ deletedAt: Date | null } | null>;
   list(q: ListDonationsInput): Promise<{ items: DonationDto[]; total: number }>;
   findLatestByDonor(donorId: string): Promise<{ collectedAt: Date; donationType: string } | null>;
@@ -82,6 +84,103 @@ export interface DonationRepo {
   lookupByBagNo(bagNo: string): Promise<{ lotNo: string; segmentNo: string } | null>;
   /** Map of donationId -> bagNo (falls back to donationId) for a set of donations. */
   bagNosByDonationIds(donationIds: string[]): Promise<Record<string, string>>;
+}
+
+// Shared by findById (keyed by Mongo _id) and findByDonationId (keyed by
+// the public donationId) so both return the identical enriched shape.
+async function loadDonationWithUnits(mongoId: string): Promise<DonationWithUnitsDto | null> {
+  const doc = await DonationModel.findById(mongoId)
+    .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string } } }>('donor', 'name')
+    .populate<{ campId?: { _id: Types.ObjectId; name?: string; address?: string } }>('campId', 'name address')
+    .lean();
+  if (!doc) return null;
+  const donorDoc = doc.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string } };
+  const campDoc = doc.campId as unknown as { _id: Types.ObjectId; name?: string; address?: string } | undefined;
+  const [units, tti] = await Promise.all([
+    BloodUnitModel.find({ donationId: doc.donationId })
+      .select('unitId componentType volumeMl expiresAt status aboGroup rhFactor')
+      .lean(),
+    TtiResultModel.findOne({ donationId: doc.donationId }).select('_id releaseDecision aboGroupConfirmed rhFactorConfirmed').lean(),
+  ]);
+
+  const unitIds = units.map(u => u.unitId);
+
+  const requisitions = await RequisitionModel.find({
+    'matchedUnits.unitId': { $in: unitIds },
+    deletedAt: null
+  })
+  .populate('hospitalId')
+  .populate('patientId')
+  .lean();
+
+  const issues = await IssueModel.find({
+    unitId: { $in: unitIds }
+  }).lean();
+
+  const requisitionsInfo = units.map(u => {
+    const req = requisitions.find(r => r.matchedUnits.some(mu => mu.unitId === u.unitId));
+    const issue = issues.find(i => i.unitId === u.unitId);
+    const hospital = req?.hospitalId as any;
+    const patient = req?.patientId as any;
+
+    return {
+      unitId: u.unitId,
+      componentType: u.componentType,
+      status: u.status,
+      aboGroup: u.aboGroup,
+      rhFactor: u.rhFactor,
+      expiresAt: u.expiresAt ? u.expiresAt.toISOString() : '',
+      requisitionId: req?.requisitionId || undefined,
+      requisitionDbId: req?._id?.toString() || undefined,
+      hospitalName: hospital?.name || undefined,
+      patientName: patient?.name || undefined,
+      clinicianName: req?.clinicianName || undefined,
+      requiredAt: req?.requiredAt ? req.requiredAt.toISOString() : undefined,
+      requisitionStatus: req?.status || undefined,
+      issue: issue ? {
+        issueId: issue.issueId,
+        issuedAt: issue.issuedAt.toISOString(),
+        collectedByName: issue.collectedByName || undefined,
+      } : null,
+    };
+  });
+
+  return {
+    id: doc._id.toString(),
+    donationId: doc.donationId,
+    donor: donorDoc?._id?.toString() ?? doc.donor?.toString() ?? '',
+    donorName: donorDoc?.name
+      ? [donorDoc.name.firstName, donorDoc.name.middleName, donorDoc.name.lastName].filter(Boolean).join(' ')
+      : undefined,
+    donationType: doc.donationType,
+    typeOfBag: doc.typeOfBag,
+    bagNo: doc.bagNo,
+    segmentNo: doc.segmentNo,
+    lotNo: doc.lotNo,
+    collectedAt: doc.collectedAt.toISOString(),
+    bloodGroup: tti?.aboGroupConfirmed ?? '',
+    rhFactor: tti?.rhFactorConfirmed ?? '',
+    unitCount: units.length,
+    campId: campDoc?._id?.toString(),
+    camp: campDoc?._id
+      ? { id: campDoc._id.toString(), name: campDoc.name || '', address: campDoc.address }
+      : undefined,
+    donorFitness: doc.donorFitness as { isFit: boolean; rejectionReason?: string; rejectedAtStep?: string } | undefined,
+    medicalExam: doc.medicalExam as Record<string, unknown> | undefined,
+    isFit: doc.donorFitness?.isFit,
+    createdAt: (doc as unknown as { createdAt: Date }).createdAt.toISOString(),
+    updatedAt: (doc as unknown as { updatedAt: Date }).updatedAt.toISOString(),
+    units: units.map((u) => ({
+      unitId: u.unitId,
+      componentType: u.componentType,
+      volumeMl: u.volumeMl,
+      expiresAt: u.expiresAt.toISOString(),
+      status: u.status,
+    })),
+    ttiResultId: tti?._id?.toString(),
+    ttiReleaseDecision: tti?.releaseDecision,
+    requisitions: requisitionsInfo,
+  };
 }
 
 export function createDonationRepo(): DonationRepo {
@@ -308,98 +407,13 @@ export function createDonationRepo(): DonationRepo {
     },
 
     async findById(id) {
-      const doc = await DonationModel.findById(id)
-        .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string } } }>('donor', 'name')
-        .populate<{ campId?: { _id: Types.ObjectId; name?: string; address?: string } }>('campId', 'name address')
-        .lean();
-      if (!doc) return null;
-      const donorDoc = doc.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string } };
-      const campDoc = doc.campId as unknown as { _id: Types.ObjectId; name?: string; address?: string } | undefined;
-      const [units, tti] = await Promise.all([
-        BloodUnitModel.find({ donationId: doc.donationId })
-          .select('unitId componentType volumeMl expiresAt status aboGroup rhFactor')
-          .lean(),
-        TtiResultModel.findOne({ donationId: doc.donationId }).select('_id releaseDecision aboGroupConfirmed rhFactorConfirmed').lean(),
-      ]);
+      return loadDonationWithUnits(id);
+    },
 
-      const unitIds = units.map(u => u.unitId);
-
-      const requisitions = await RequisitionModel.find({
-        'matchedUnits.unitId': { $in: unitIds },
-        deletedAt: null
-      })
-      .populate('hospitalId')
-      .populate('patientId')
-      .lean();
-
-      const issues = await IssueModel.find({
-        unitId: { $in: unitIds }
-      }).lean();
-
-      const requisitionsInfo = units.map(u => {
-        const req = requisitions.find(r => r.matchedUnits.some(mu => mu.unitId === u.unitId));
-        const issue = issues.find(i => i.unitId === u.unitId);
-        const hospital = req?.hospitalId as any;
-        const patient = req?.patientId as any;
-
-        return {
-          unitId: u.unitId,
-          componentType: u.componentType,
-          status: u.status,
-          aboGroup: u.aboGroup,
-          rhFactor: u.rhFactor,
-          expiresAt: u.expiresAt ? u.expiresAt.toISOString() : '',
-          requisitionId: req?.requisitionId || undefined,
-          requisitionDbId: req?._id?.toString() || undefined,
-          hospitalName: hospital?.name || undefined,
-          patientName: patient?.name || undefined,
-          clinicianName: req?.clinicianName || undefined,
-          requiredAt: req?.requiredAt ? req.requiredAt.toISOString() : undefined,
-          requisitionStatus: req?.status || undefined,
-          issue: issue ? {
-            issueId: issue.issueId,
-            issuedAt: issue.issuedAt.toISOString(),
-            collectedByName: issue.collectedByName || undefined,
-          } : null,
-        };
-      });
-
-      return {
-        id: doc._id.toString(),
-        donationId: doc.donationId,
-        donor: donorDoc?._id?.toString() ?? doc.donor?.toString() ?? '',
-        donorName: donorDoc?.name
-          ? [donorDoc.name.firstName, donorDoc.name.middleName, donorDoc.name.lastName].filter(Boolean).join(' ')
-          : undefined,
-        donationType: doc.donationType,
-        typeOfBag: doc.typeOfBag,
-        bagNo: doc.bagNo,
-        segmentNo: doc.segmentNo,
-        lotNo: doc.lotNo,
-        collectedAt: doc.collectedAt.toISOString(),
-        bloodGroup: tti?.aboGroupConfirmed ?? '',
-        rhFactor: tti?.rhFactorConfirmed ?? '',
-        unitCount: units.length,
-        campId: campDoc?._id?.toString(),
-        camp: campDoc?._id
-          ? { id: campDoc._id.toString(), name: campDoc.name || '', address: campDoc.address }
-          : undefined,
-        donorFitness: doc.donorFitness as { isFit: boolean; rejectionReason?: string; rejectedAtStep?: string } | undefined,
-        medicalExam: doc.medicalExam as Record<string, unknown> | undefined,
-        isFit: doc.donorFitness?.isFit,
-        createdAt: (doc as unknown as { createdAt: Date }).createdAt.toISOString(),
-        updatedAt: (doc as unknown as { updatedAt: Date }).updatedAt.toISOString(),
-        units: units.map((u) => ({
-          unitId: u.unitId,
-          componentType: u.componentType,
-          volumeMl: u.volumeMl,
-          expiresAt: u.expiresAt.toISOString(),
-          status: u.status,
-        })),
-        ttiResultId: tti?._id?.toString(),
-        ttiReleaseDecision: tti?.releaseDecision,
-        requisitions: requisitionsInfo,
-      };
+    async findByDonationId(donationId) {
+      const ref = await DonationModel.findOne({ donationId }).select('_id').lean();
+      if (!ref) return null;
+      return loadDonationWithUnits(ref._id.toString());
     },
 
     async list(q) {

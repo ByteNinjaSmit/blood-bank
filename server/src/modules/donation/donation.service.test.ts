@@ -92,6 +92,7 @@ function mockDonations(): DonationRepo {
       }),
     ),
     findById: vi.fn(),
+    findByDonationId: vi.fn(),
     findRawStatus: vi.fn(),
     list: vi.fn(),
     findLatestByDonor: vi.fn().mockResolvedValue(null),

@@ -109,7 +109,7 @@ const CampRegistration = () => {
         contactInfo: { ...formData.contactInfo, [field]: value },
       })
     } else {
-      setFormData({ ...formData, [name]: value })
+      setFormData({ ...formData, [name]: name === "siteId" ? value.toUpperCase() : value })
     }
   }
 

@@ -86,7 +86,7 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
           severity: 'INFORMATION',
           relatedRecordId: created.id,
           relatedRecordType: 'Donor',
-          actionLink: `/donor-management/${created.id}`,
+          actionLink: `/master-register/donors`,
         })
         .catch(() => undefined);
       return created;

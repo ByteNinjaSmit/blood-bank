@@ -25,6 +25,7 @@ export function useCampDetail(id) {
     queryFn: () => campApi.detail(id),
     enabled: Boolean(id),
     staleTime: 60_000,
+    refetchOnMount: 'always',
   });
 }
 

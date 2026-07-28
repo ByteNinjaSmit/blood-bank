@@ -125,7 +125,7 @@ export function createIssueService(deps: {
           severity: gate.usedOverride ? 'WARNING' : 'SUCCESS',
           relatedRecordId: issueId,
           relatedRecordType: 'Issue',
-          actionLink: `/requisition-management/${req.id}`,
+          actionLink: `/requisition/${req.id}`,
         })
         .catch(() => undefined);
       return { issueId: issue.issueId, unitId: input.unitId };

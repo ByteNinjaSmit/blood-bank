@@ -76,7 +76,7 @@ export function createComponentService(deps: { repo: ComponentRepo }): Component
           severity: 'SUCCESS',
           relatedRecordId: publicDonationId,
           relatedRecordType: 'Donation',
-          actionLink: `/donation-management/${publicDonationId}`,
+          actionLink: `/master-register/donations`,
         })
         .catch(() => undefined);
     },

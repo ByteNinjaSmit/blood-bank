@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss()],
   server: {
     host: '127.0.0.1',
@@ -13,6 +13,12 @@ export default defineConfig({
       host: '127.0.0.1',
       protocol: 'ws',
     },
+  },
+  esbuild: {
+    // Strip console.log/debug from production bundles (console.warn/error kept
+    // so ops can still see real failures in a deployed build).
+    drop: command === 'build' ? ['debugger'] : [],
+    pure: command === 'build' ? ['console.log', 'console.debug'] : [],
   },
   resolve: {
     alias: {
@@ -27,4 +33,4 @@ export default defineConfig({
       "@/shared": path.resolve(__dirname, "./src/shared"),
     },
   },
-})
+}))

@@ -102,7 +102,7 @@ export function createTtiService(deps: {
           { match: { discardReason: 'TTI_POSITIVE' }, set: { discardReason: null }, requestId },
         );
 
-        const priorDonation = await deps.donations.findById(donationId).catch(() => null);
+        const priorDonation = await deps.donations.findByDonationId(donationId).catch(() => null);
         if (priorDonation && priorDonation.lotNo && priorDonation.typeOfBag && deps.bagStock) {
           const mappedBagType =
             priorDonation.typeOfBag === 'DB' ? 'DOUBLE' : priorDonation.typeOfBag === 'TB' ? 'TRIPLE' : null;
@@ -175,7 +175,7 @@ export function createTtiService(deps: {
           severity: 'SUCCESS',
           relatedRecordId: donationId,
           relatedRecordType: 'Donation',
-          actionLink: `/serology/${donationId}`,
+          actionLink: `/labs/serology-results`,
         })
         .catch(() => undefined);
     } else if (evaluation.decision === 'reactive') {
@@ -190,7 +190,7 @@ export function createTtiService(deps: {
         'TTI reactive',
         { set: { discardReason: 'TTI_POSITIVE' }, requestId },
       );
-      const donation = await deps.donations.findById(donationId).catch(() => null);
+      const donation = await deps.donations.findByDonationId(donationId).catch(() => null);
       const donorId = donation?.donor;
 
       if (donation && donation.lotNo && donation.typeOfBag) {
@@ -268,17 +268,73 @@ export function createTtiService(deps: {
           severity: 'CRITICAL',
           relatedRecordId: donationId,
           relatedRecordType: 'Donation',
-          actionLink: `/serology/${donationId}`,
+          actionLink: `/labs/serology-results`,
         })
         .catch(() => undefined);
     } else if (evaluation.decision === 'indeterminate') {
-      // Shadeness: do NOT release or discard anything. Any unit already
-      // sitting in stock (RELEASED) for this donation is pulled back
+      // If this donation was previously reactive (units discarded), a
+      // correction down to indeterminate must first pull those units out
+      // of DISCARDED — REINSTATE lands them directly in QUARANTINE, which
+      // is exactly where a shadeness hold belongs — and reverse the
+      // BagStock discard counters + permanent deferral raised for the
+      // reactive finding, mirroring the reactive->released reversal above.
+      let reinstatedFromDiscard = 0;
+      if (tti.releaseDecision === 'reactive') {
+        reinstatedFromDiscard = await deps.units.applyEventToDonation(
+          donationId,
+          'REINSTATE',
+          actorId,
+          ['DISCARDED'],
+          'TTI result corrected: reactive -> indeterminate',
+          { match: { discardReason: 'TTI_POSITIVE' }, set: { discardReason: null }, requestId },
+        );
+
+        const priorDonation = await deps.donations.findByDonationId(donationId).catch(() => null);
+        if (priorDonation && priorDonation.lotNo && priorDonation.typeOfBag && deps.bagStock) {
+          const mappedBagType =
+            priorDonation.typeOfBag === 'DB' ? 'DOUBLE' : priorDonation.typeOfBag === 'TB' ? 'TRIPLE' : null;
+          if (mappedBagType) {
+            try {
+              const bagStock = await deps.bagStock.findByBatchAndType(priorDonation.lotNo, mappedBagType);
+              if (bagStock) {
+                await deps.bagStock.decrementDiscarded(bagStock.id, 1, actorId);
+                await deps.bagStock.incrementIssued(bagStock.id, 1, actorId);
+                log.info(
+                  { donationId, batchNumber: priorDonation.lotNo, bagType: mappedBagType },
+                  'Bag stock reverted: discarded decremented, issued incremented after TTI reactive->indeterminate correction',
+                );
+              }
+            } catch (err) {
+              log.error(
+                { err: (err as Error).message },
+                'Failed to revert BagStock after TTI reactive->indeterminate correction',
+              );
+            }
+          }
+        }
+
+        const reactiveDeferral = await deps.deferrals.findByRelatedDonation(donationId, 'TTI_REACTIVE');
+        if (reactiveDeferral) {
+          await deps.deferrals.lift(
+            reactiveDeferral.id,
+            actorId,
+            'TTI result corrected: reactive finding downgraded to indeterminate',
+          );
+        }
+
+        log.warn(
+          { donationId, reinstatedFromDiscard },
+          'TTI correction: reactive discard reversed to quarantine, permanent deferral lifted',
+        );
+      }
+
+      // Shadeness: do NOT release or discard anything further. Any unit
+      // already sitting in stock (RELEASED) for this donation is pulled back
       // into QUARANTINE — invisible to requisition matching (selectable()
       // only looks at RELEASED units) — until the result resolves.
       // Units still upstream of release (COLLECTED/IN_TESTING/QUARANTINE)
       // are simply left alone; they were never released in the first place.
-      unitsAffected = await deps.units.applyEventToDonation(
+      const quarantinedFromReleased = await deps.units.applyEventToDonation(
         donationId,
         'QUARANTINE_HOLD',
         actorId,
@@ -286,8 +342,9 @@ export function createTtiService(deps: {
         `TTI shadeness: ${evaluation.reasons.join(', ')}`,
         { requestId },
       );
+      unitsAffected = reinstatedFromDiscard + quarantinedFromReleased;
 
-      const donation = await deps.donations.findById(donationId).catch(() => null);
+      const donation = await deps.donations.findByDonationId(donationId).catch(() => null);
       const donorId = donation?.donor;
 
       // Only raise one active shadeness deferral per donation — a

@@ -7,6 +7,8 @@ import DonorDetails from '@/features/donor/components/DonorDetails';
 import Modal from '@/components/shared/Modal';
 import CustomModal from '@/components/CustomModal';
 import { useDonor } from '@/hooks/useDonor';
+import { useQueryClient } from '@tanstack/react-query';
+import { campKeys } from '@/features/camp/queries';
 import useAccess from '@/features/access/useAccess';
 import EnhancedLoader from '@/components/utils/Spinner';
 import { toast } from 'sonner';
@@ -69,6 +71,7 @@ const CampDonorManagement = () => {
     updateDonor,
     deleteDonor,
   } = useDonor();
+  const queryClient = useQueryClient();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -132,6 +135,8 @@ const CampDonorManagement = () => {
     if (result.success) {
       setShowCreateModal(false);
       fetchCampDonors(campId);
+      queryClient.invalidateQueries({ queryKey: campKeys.detail(campId) });
+      queryClient.invalidateQueries({ queryKey: campKeys.list() });
     }
     setActionLoading(false);
   };
@@ -148,6 +153,7 @@ const CampDonorManagement = () => {
       setShowEditModal(false);
       setSelectedDonor(null);
       fetchCampDonors(campId);
+      queryClient.invalidateQueries({ queryKey: campKeys.detail(campId) });
     }
     setActionLoading(false);
   };
@@ -173,6 +179,8 @@ const CampDonorManagement = () => {
         if (result.success) {
           setDeleteTarget(null);
           fetchCampDonors(campId);
+          queryClient.invalidateQueries({ queryKey: campKeys.detail(campId) });
+          queryClient.invalidateQueries({ queryKey: campKeys.list() });
           return;
         }
 

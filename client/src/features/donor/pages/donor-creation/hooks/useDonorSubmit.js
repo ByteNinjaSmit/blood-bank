@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
 import { QUESTIONS } from "@/features/donor/donor-constants";
 import { calculateUntilDate } from "../donor-creation-utils";
+import { campKeys } from "@/features/camp/queries";
 
 // Owns donor search + all donor/deferral/donation persistence for the
 // creation wizard. Keeps axios out of the page/step components (CLAUDE.md #1).
 export function useDonorSubmit({ form, campId, draftId }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { API, authorizationToken } = useAuth();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -337,6 +340,7 @@ export function useDonorSubmit({ form, campId, draftId }) {
         }
 
         toast.success(`Donor successfully registered and deferred for ${reasonObj.days === 0 ? "indefinite" : `${reasonObj.days} days`}`);
+        if (campId) queryClient.invalidateQueries({ queryKey: campKeys.detail(campId) });
         navigate(campId ? `/camp-details?id=${campId}` : "/master-register/donors");
       } else {
         const medicalQuestions = {};
@@ -404,6 +408,7 @@ export function useDonorSubmit({ form, campId, draftId }) {
         }
 
         toast.success("Donor registered and fit donation saved successfully");
+        if (campId) queryClient.invalidateQueries({ queryKey: campKeys.detail(campId) });
         navigate(campId ? `/camp-details?id=${campId}` : "/master-register/donations");
       }
     } catch (err) {

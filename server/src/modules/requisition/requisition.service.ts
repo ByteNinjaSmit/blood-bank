@@ -477,6 +477,9 @@ export function createRequisitionService(deps: {
 
     async complete(id, actorId) {
       const req = await deps.requisitions.findById(id);
+      if (req.status === 'COMPLETED') {
+        return req;
+      }
       if (req.status !== 'ISSUED' && req.status !== 'APPROVED') {
         throw new ConflictError(`Cannot complete requisition in status ${req.status}.`);
       }

@@ -9,6 +9,10 @@ import { TtiResultModel } from '@/modules/tti/tti.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { invalidate } from '@/core/cache';
 import { NotFoundError, ValidationError } from '@/shared/errors';
+import type { UnitRepo } from '@/modules/unit/unit.repository';
+import type { TtiService } from '@/modules/tti/tti.service';
+import type { TtiTestEntryInput } from '@/modules/tti/tti.repository';
+import type { TtiResult } from '@/shared/enums';
 
 export interface DiscardListFilters {
   page?: number;
@@ -38,7 +42,7 @@ export interface DiscardRepo {
   create(input: DiscardCreateInput): Promise<{ unitsDiscarded: number; bagNo: string }>;
 }
 
-export function createDiscardRepo(): DiscardRepo {
+export function createDiscardRepo(deps: { units: UnitRepo; ttiService: TtiService }): DiscardRepo {
   return {
     async list(filters) {
       const { page, limit, search, fromDate, toDate, sortBy, order } = filters;
@@ -192,27 +196,41 @@ export function createDiscardRepo(): DiscardRepo {
       const units = await BloodUnitModel.find({ donationId: donation.donationId, deletedAt: null });
       if (units.length === 0) throw new NotFoundError('Blood units for donation', donation.donationId);
 
-      const actorObjId = new Types.ObjectId(actorId);
+      const manualDiscardReason = `Manually discarded via procurement portal. Description: ${description || 'N/A'}. Segment: ${segmentNo || donation.segmentNo || 'N/A'}, Batch: ${batchNo || donation.lotNo || 'N/A'}`;
+
+      if (reason === 'TTI_POSITIVE' && ttiResults) {
+        // Delegate the whole panel + cascade to the guarded TTI service
+        // (merge-preserving test recording, state-machine DISCARD, donor
+        // deferral, lookback, BagStock, notification) so this manual
+        // entry point produces the exact same side effects as the
+        // Serology screen instead of a divergent, partial copy.
+        const mappedTests: TtiTestEntryInput[] = (
+          ['HIV', 'HBSAG', 'HCV', 'SYPHILIS', 'MALARIA'] as const
+        ).map((testName) => ({
+          testName,
+          method: 'ELISA',
+          result: (ttiResults[testName] as TtiResult) || 'NEGATIVE',
+          performedAt: new Date(),
+        }));
+        await deps.ttiService.recordAndFinalize(donation.donationId, mappedTests, actorId);
+      } else {
+        for (const unit of units) {
+          await deps.units.applyEvent({
+            unitId: unit.unitId,
+            event: 'DISCARD',
+            actorId,
+            reason: manualDiscardReason,
+            set: {
+              discardReason: reason,
+              reservedFor: null,
+              reservedAt: null,
+              reservedUntil: null,
+            } as any,
+          });
+        }
+      }
 
       for (const unit of units) {
-        const oldStatus = unit.status;
-        unit.status = 'DISCARDED';
-        unit.discardReason = reason as any;
-        unit.discardNotes = description || undefined;
-        unit.reservedFor = null as any;
-        unit.reservedUntil = null as any;
-        unit.reservedAt = null as any;
-
-        unit.statusHistory.push({
-          from: oldStatus,
-          to: 'DISCARDED',
-          event: 'MANUAL_DISCARD',
-          actor: actorObjId,
-          at: new Date(),
-          reason: `Manually discarded via procurement portal. Description: ${description || 'N/A'}. Segment: ${segmentNo || donation.segmentNo || 'N/A'}, Batch: ${batchNo || donation.lotNo || 'N/A'}`,
-        } as any);
-        await unit.save();
-
         const reqs = await RequisitionModel.find({ 'matchedUnits.unitId': unit.unitId });
         for (const r of reqs) {
           r.matchedUnits = r.matchedUnits.filter((mu: any) => mu.unitId !== unit.unitId) as any;
@@ -220,32 +238,6 @@ export function createDiscardRepo(): DiscardRepo {
             r.status = 'PENDING';
           }
           await r.save();
-        }
-      }
-
-      if (reason === 'TTI_POSITIVE' && ttiResults) {
-        const testsArray = [
-          { testName: 'HIV', method: 'ELISA', result: ttiResults.HIV || 'NEGATIVE', technicianId: actorObjId, performedAt: new Date() },
-          { testName: 'HBSAG', method: 'ELISA', result: ttiResults.HBSAG || 'NEGATIVE', technicianId: actorObjId, performedAt: new Date() },
-          { testName: 'HCV', method: 'ELISA', result: ttiResults.HCV || 'NEGATIVE', technicianId: actorObjId, performedAt: new Date() },
-          { testName: 'SYPHILIS', method: 'ELISA', result: ttiResults.SYPHILIS || 'NEGATIVE', technicianId: actorObjId, performedAt: new Date() },
-          { testName: 'MALARIA', method: 'ELISA', result: ttiResults.MALARIA || 'NEGATIVE', technicianId: actorObjId, performedAt: new Date() },
-        ];
-
-        const existingTti = await TtiResultModel.findOne({ donationId: donation.donationId });
-        if (existingTti) {
-          existingTti.tests = testsArray as any;
-          existingTti.releaseDecision = 'reactive';
-          existingTti.updatedBy = actorObjId;
-          await existingTti.save();
-        } else {
-          await TtiResultModel.create({
-            donationId: donation.donationId,
-            tests: testsArray,
-            releaseDecision: 'reactive',
-            createdBy: actorObjId,
-            updatedBy: actorObjId,
-          });
         }
       }
 
