@@ -527,7 +527,7 @@ export const MODULES = [
     id: "recycle-bin",
     name: "Recycle Bin",
     icon: <RotateCcw className="w-5 h-5" />,
-    href: "/mis/recycle-bin",
+    href: "/recycle-bin",
     permissions: ["read"],
     description: "Deleted donors and donations — restore or view",
   },

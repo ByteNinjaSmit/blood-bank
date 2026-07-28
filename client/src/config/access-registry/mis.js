@@ -28,7 +28,7 @@ export default {
     {
       id: 'mis-recycle-bin',
       label: 'Recycle Bin',
-      route: '/mis/recycle-bin',
+      route: '/recycle-bin',
       actions: {
         // hospital:read is deliberately omitted — it's a server-only
         // DEPENDENCY_ONLY_PERMISSIONS grant (role-map.ts), excluded from

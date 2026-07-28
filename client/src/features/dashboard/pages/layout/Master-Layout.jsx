@@ -96,7 +96,7 @@ function MasterLayout() {
                                 </Link>
                                 <ChevronRight className="text-slate-400 w-4 h-4" />
                                 <h1 className="text-lg md:text-xl font-semibold text-slate-800">
-                                    Blood Bank - Sanjivani, Kopargaon
+                                    Sanjivani Blood Bank, Kopargaon
                                 </h1>
                             </div>
                         </div>

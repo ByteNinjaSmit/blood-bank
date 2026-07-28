@@ -9,7 +9,7 @@ const COMPONENT_COLUMNS = [
   { key: "prbc", label: "Packed Red Blood Cells (PRBC)" },
   { key: "ffp", label: "Fresh Frozen Plasma (FFP)" },
   { key: "rdp", label: "Random Donor Platelets (RDP)" },
-  { key: "cryo", label: "Cryoprecipitate" },
+  { key: "cryo", label: "Cryo" },
   { key: "sdp", label: "Single Donor Platelet (SDP)" },
 ];
 

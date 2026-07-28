@@ -207,8 +207,8 @@ const Sidebar = ({
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h1 className="text-xl font-bold text-white">Blood Bank</h1>
-                    <p className="text-red-100 text-sm font-medium">Sanjivani, Kopargoan</p>
+                    <h1 className="text-xl font-bold text-white">Sanjivani Blood Bank</h1>
+                    <p className="text-red-100 text-sm font-medium">Kopargoan</p>
                     <div className="flex items-center gap-2 mt-2">
                       <div className="flex items-center gap-1">
                         <User className="w-3 h-3 text-red-200" />

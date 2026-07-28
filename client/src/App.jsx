@@ -204,7 +204,7 @@ const App = () => {
           <Route path="mis/regulatory" element={<PageGuard module="mis" page="mis-regulatory"><RegulatoryMIS /></PageGuard>} />
           <Route path="mis/executive" element={<PageGuard module="mis" page="mis-executive"><ExecutiveMIS /></PageGuard>} />
           <Route path="mis/analytics" element={<PageGuard module="mis" page="mis-analytics"><AnalyticsMIS /></PageGuard>} />
-          <Route path="mis/recycle-bin" element={<PageGuard module="mis" page="mis-recycle-bin"><RecycleBin /></PageGuard>} />
+          <Route path="recycle-bin" element={<PageGuard module="mis" page="mis-recycle-bin"><RecycleBin /></PageGuard>} />
 
           <Route path="*" element={<NotFound />} />
         </Route>
