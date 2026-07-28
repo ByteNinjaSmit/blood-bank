@@ -47,9 +47,10 @@ function RegisterDamageModal({ isOpen, onClose, lots, onSubmit, isPending }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={onClose}>
       <form
         onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
         className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-md w-full p-6 space-y-4"
       >
         <div className="flex items-center justify-between">
@@ -149,9 +150,10 @@ function EditDamageModal({ damage, onClose, onSubmit, isPending }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={onClose}>
       <form
         onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
         className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-md w-full p-6 space-y-4"
       >
         <div className="flex items-center justify-between">

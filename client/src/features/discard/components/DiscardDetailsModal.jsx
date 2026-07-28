@@ -68,8 +68,11 @@ const renderTestResults = (testResultsStr) => {
 const DiscardDetailsModal = ({ selectedItem, showBagDetails, onClose, onToggleBagDetails }) => {
   if (!selectedItem) return null;
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div
+        className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between p-6 border-b border-red-100">
           <h3 className="text-xl font-semibold text-slate-800">Item Details</h3>
           <Button onClick={onClose} variant="outline" size="sm" className="text-slate-500 hover:text-slate-700 bg-transparent">

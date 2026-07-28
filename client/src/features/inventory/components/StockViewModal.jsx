@@ -5,8 +5,8 @@ export default function StockViewModal({ item, onClose, formatDate }) {
   if (!item) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 normal-case">
-      <div className="bg-white rounded-2xl p-6 max-w-4xl w-full shadow-2xl relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 normal-case" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-6 max-w-4xl w-full shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"

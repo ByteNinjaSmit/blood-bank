@@ -23,8 +23,14 @@ export default function RequisitionPrintModals({
 
       {/* Requisition Label Print Preview Modal */}
       {selectedPrintLabelDoc && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-xs no-print select-none py-8">
-          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-2xl relative flex flex-col items-center my-auto">
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-xs no-print select-none py-8"
+          onClick={() => setSelectedPrintLabelDoc(null)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-2xl relative flex flex-col items-center my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setSelectedPrintLabelDoc(null)}
               className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
@@ -75,8 +81,14 @@ export default function RequisitionPrintModals({
 
       {/* Requisition Issue Report Print Preview Modal (shows both pages before printing) */}
       {selectedPrintReportDoc && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-xs no-print select-none py-8">
-          <div className="bg-white rounded-2xl p-6 max-w-4xl w-full shadow-2xl relative flex flex-col items-center my-auto">
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-xs no-print select-none py-8"
+          onClick={() => setSelectedPrintReportDoc(null)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 max-w-4xl w-full shadow-2xl relative flex flex-col items-center my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setSelectedPrintReportDoc(null)}
               className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"

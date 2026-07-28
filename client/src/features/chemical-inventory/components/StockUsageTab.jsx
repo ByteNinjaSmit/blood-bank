@@ -19,8 +19,11 @@ function FinishBoxModal({ isOpen, lot, onClose, onConfirm, isPending }) {
   const maxUnits = lot.unitsPerPack || 96;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-sm w-full p-6 space-y-4">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-sm w-full p-6 space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div>
           <h3 className="text-base font-bold text-gray-900">Finish Box — {lot.chemicalId?.name}</h3>
           <p className="text-xs text-gray-500 mt-1">

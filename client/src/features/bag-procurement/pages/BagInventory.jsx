@@ -290,8 +290,14 @@ export default function BagInventory() {
 
       {/* Confirmation Modal */}
       {confirmOpenBoxId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-gray-100 transform scale-100 transition-all">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-fadeIn"
+          onClick={() => { setConfirmOpenBoxId(null); setConfirmOpenBoxBatch(''); }}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-gray-100 transform scale-100 transition-all"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex flex-col items-center text-center">
               <div className="p-3 bg-green-55 rounded-full text-green-600 mb-4 border border-green-100">
                 <Warehouse className="w-8 h-8" />

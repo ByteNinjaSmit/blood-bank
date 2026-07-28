@@ -21,8 +21,11 @@ const CampEditModal = ({
   const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers()
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-      <div className="bg-white w-full max-w-3xl mx-4 rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="bg-white w-full max-w-3xl mx-4 rounded-2xl shadow-2xl border border-slate-200 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-orange-800 flex items-center justify-center">

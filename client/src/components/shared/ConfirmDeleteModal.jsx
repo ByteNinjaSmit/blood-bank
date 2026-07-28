@@ -7,8 +7,14 @@ import { AlertTriangle } from 'lucide-react';
 export default function ConfirmDeleteModal({ isOpen, title, message, onConfirm, onClose }) {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4 backdrop-blur-sm transition-opacity animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-sm w-full p-6 animate-in fade-in zoom-in-95 duration-200">
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-sm w-full p-6 animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start gap-4">
           <div className="p-3 bg-red-50 text-red-600 rounded-xl shrink-0 animate-bounce">
             <AlertTriangle className="w-6 h-6" />
