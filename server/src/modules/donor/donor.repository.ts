@@ -146,6 +146,22 @@ export function createDonorRepo(): DonorRepo {
 
       if (input.search) {
         const term = input.search.trim();
+        // donationId/bagNo/segmentNo/lotNo live on Donation, not Donor —
+        // resolve matching donations first and OR their donor ids in, so a
+        // staff member can find a donor by any of the identifiers printed
+        // on the physical bag/segment, not just donor-side fields.
+        const matchingDonations = await DonationModel.find({
+          $or: [
+            { donationId: { $regex: term, $options: 'i' } },
+            { bagNo: { $regex: term, $options: 'i' } },
+            { segmentNo: { $regex: term, $options: 'i' } },
+            { lotNo: { $regex: term, $options: 'i' } },
+          ],
+        })
+          .select('donor')
+          .lean();
+        const donorIdsFromDonations = [...new Set(matchingDonations.map((d) => d.donor?.toString()).filter(Boolean))];
+
         filter.$or = [
           { 'name.firstName': { $regex: term, $options: 'i' } },
           { 'name.lastName': { $regex: term, $options: 'i' } },
@@ -153,6 +169,9 @@ export function createDonorRepo(): DonorRepo {
           { phone: { $regex: term, $options: 'i' } },
           { uid: { $regex: term, $options: 'i' } },
           { email: { $regex: term, $options: 'i' } },
+          ...(donorIdsFromDonations.length
+            ? [{ _id: { $in: donorIdsFromDonations.map((id) => new Types.ObjectId(id)) } }]
+            : []),
         ];
       }
 

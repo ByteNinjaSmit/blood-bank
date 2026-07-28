@@ -96,7 +96,7 @@ export default function CreateDiscardModal({ isOpen, onClose, onSuccess, API, to
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bag No / Donation ID *</label>
-            <input required value={bagNo} onChange={(e) => setBagNo(e.target.value)} className={fieldClass} placeholder="e.g. SN-TB-CUSTOM-0008" />
+            <input required value={bagNo} onChange={(e) => setBagNo(e.target.value.toUpperCase())} className={fieldClass} placeholder="e.g. SN-TB-CUSTOM-0008" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

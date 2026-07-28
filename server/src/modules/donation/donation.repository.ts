@@ -24,6 +24,8 @@ export interface DonationDto {
   lotNo?: string | null;
   donor: string;
   donorName?: string;
+  donorPublicId?: string;
+  phone?: string;
   donationType: string;
   typeOfBag?: string;
   collectedAt: string;
@@ -90,11 +92,11 @@ export interface DonationRepo {
 // the public donationId) so both return the identical enriched shape.
 async function loadDonationWithUnits(mongoId: string): Promise<DonationWithUnitsDto | null> {
   const doc = await DonationModel.findById(mongoId)
-    .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string } } }>('donor', 'name')
+    .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string }; donorId?: string } }>('donor', 'name donorId')
     .populate<{ campId?: { _id: Types.ObjectId; name?: string; address?: string } }>('campId', 'name address')
     .lean();
   if (!doc) return null;
-  const donorDoc = doc.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string } };
+  const donorDoc = doc.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string }; donorId?: string };
   const campDoc = doc.campId as unknown as { _id: Types.ObjectId; name?: string; address?: string } | undefined;
   const [units, tti] = await Promise.all([
     BloodUnitModel.find({ donationId: doc.donationId })
@@ -152,6 +154,7 @@ async function loadDonationWithUnits(mongoId: string): Promise<DonationWithUnits
     donorName: donorDoc?.name
       ? [donorDoc.name.firstName, donorDoc.name.middleName, donorDoc.name.lastName].filter(Boolean).join(' ')
       : undefined,
+    donorPublicId: donorDoc?.donorId,
     donationType: doc.donationType,
     typeOfBag: doc.typeOfBag,
     bagNo: doc.bagNo,
@@ -439,7 +442,7 @@ export function createDonationRepo(): DonationRepo {
       const skip = (q.page - 1) * q.pageSize;
       const [docs, total] = await Promise.all([
         DonationModel.find(filter)
-          .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string }; bloodGroup?: string; rh?: string } }>('donor', 'name bloodGroup rh')
+          .populate<{ donor: { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string }; bloodGroup?: string; rh?: string; donorId?: string; phone?: string } }>('donor', 'name bloodGroup rh donorId phone')
           .sort({ collectedAt: -1 })
           .skip(skip)
           .limit(q.pageSize)
@@ -476,7 +479,7 @@ export function createDonationRepo(): DonationRepo {
       const ttiMap = new Map(ttiResults.map((t) => [t.donationId, t]));
       return {
         items: docs.map((d) => {
-          const donorDoc = d.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string }; bloodGroup?: string; rh?: string };
+          const donorDoc = d.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string }; bloodGroup?: string; rh?: string; donorId?: string; phone?: string };
           const tti = ttiMap.get(d.donationId);
           const units = unitMap.get(d.donationId) || [];
           const statuses = units.map((u) => u.status);
@@ -504,6 +507,8 @@ export function createDonationRepo(): DonationRepo {
             donorName: donorDoc?.name
               ? [donorDoc.name.firstName, donorDoc.name.middleName, donorDoc.name.lastName].filter(Boolean).join(' ')
               : undefined,
+            donorPublicId: donorDoc?.donorId,
+            phone: donorDoc?.phone,
             donationType: d.donationType,
             typeOfBag: d.typeOfBag,
             bagNo: d.bagNo,

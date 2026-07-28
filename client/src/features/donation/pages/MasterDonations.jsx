@@ -87,7 +87,7 @@ export default function MasterDonations() {
         />
         <DonationFilterBar
           filters={reg.filters}
-          setSearchQuery={reg.setSearchQuery}
+          setSearchInput={reg.setSearchInput}
           setBagTypeFilter={reg.setBagTypeFilter}
           setBloodGroupFilter={reg.setBloodGroupFilter}
           setStatusFilter={reg.setStatusFilter}

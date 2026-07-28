@@ -5,7 +5,7 @@ import SearchBox from '@/components/shared/SearchBox';
 // Presentational filter bar for the donation register.
 export default function DonationFilterBar({
   filters,
-  setSearchQuery,
+  setSearchInput,
   setBagTypeFilter,
   setBloodGroupFilter,
   setStatusFilter,
@@ -17,7 +17,7 @@ export default function DonationFilterBar({
   onFilterChange,
   onSearchSubmit,
 }) {
-  const { searchQuery, bagTypeFilter, bloodGroupFilter, statusFilter, fromDate, toDate, sortBy, order } = filters;
+  const { searchInput, bagTypeFilter, bloodGroupFilter, statusFilter, fromDate, toDate, sortBy, order } = filters;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
@@ -25,8 +25,8 @@ export default function DonationFilterBar({
         <div className="flex-1">
           <SearchBox
             placeholder="Search by bag number or donor name..."
-            value={searchQuery}
-            onChange={(val) => onFilterChange(setSearchQuery, val)}
+            value={searchInput}
+            onChange={setSearchInput}
             onSearch={onSearchSubmit}
             inputClassName="focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
           />

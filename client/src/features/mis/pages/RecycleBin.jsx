@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { RotateCcw, Users, Droplets, Building2, Home, Truck, Hospital as HospitalIcon, AlertTriangle, Trash2, Tent, RefreshCw, Eye } from 'lucide-react';
+import { RotateCcw, Users, Droplets, Building2, Home, Truck, Hospital as HospitalIcon, AlertTriangle, Trash2, Tent, RefreshCw, Eye, FileSpreadsheet, Loader2 } from 'lucide-react';
 import DeletedStockTransferModal from '@/features/mis/components/DeletedStockTransferModal';
 import { toast } from 'sonner';
+import { downloadExcelReport, buildExportMeta } from '@/utils/excelExportHelper';
+import { buildRecycleBinSheet } from '@/features/mis/recycleBinExcel';
 import { useDonorList, useRestoreDonor, usePermanentDeleteDonor } from '@/features/donor/queries';
 import { useDonationList, useRestoreDonation, usePermanentDeleteDonation } from '@/features/donation/queries';
 import { useHospitalList, useRestoreHospital, usePermanentDeleteHospital } from '@/features/hospital/queries';
@@ -39,9 +41,7 @@ const formatBloodGroup = (bloodGroup, rhFactor) => {
 // Transfers, Hospital, Affected Records) — reuses one table shell instead
 // of duplicating the donor/donation table structure for every module.
 function SimpleTable({ columns, rows, rowKey, emptyLabel, renderActions }) {
-  if (rows.length === 0) {
-    return <div className="p-12 text-center text-gray-400 text-sm">{emptyLabel}</div>;
-  }
+  const colSpan = columns.length + (renderActions ? 1 : 0);
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -54,14 +54,20 @@ function SimpleTable({ columns, rows, rowKey, emptyLabel, renderActions }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {rows.map((row) => (
-            <tr key={rowKey(row)} className="bg-gray-50/50 hover:bg-gray-100 transition-colors">
-              {columns.map((c) => (
-                <td key={c.key} className="px-4 py-3 text-gray-700">{c.render ? c.render(row) : (row[c.key] ?? '—')}</td>
-              ))}
-              {renderActions && <td className="px-4 py-3 text-right">{renderActions(row)}</td>}
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={colSpan} className="p-12 text-center text-gray-400 text-sm">{emptyLabel}</td>
             </tr>
-          ))}
+          ) : (
+            rows.map((row) => (
+              <tr key={rowKey(row)} className="bg-gray-50/50 hover:bg-gray-100 transition-colors">
+                {columns.map((c) => (
+                  <td key={c.key} className="px-4 py-3 text-gray-700">{c.render ? c.render(row) : (row[c.key] ?? '—')}</td>
+                ))}
+                {renderActions && <td className="px-4 py-3 text-right">{renderActions(row)}</td>}
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
@@ -77,6 +83,7 @@ export default function RecycleBin() {
   const [restoreTarget, setRestoreTarget] = useState(null);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [stockTransferDetail, setStockTransferDetail] = useState(null); // { record, module }
+  const [exporting, setExporting] = useState(false);
 
   const donorQuery = useDonorList({ deletedOnly: true, page: 1, pageSize: 500 });
   const donationQuery = useDonationList({ deletedOnly: true, page: 1, pageSize: 500 });
@@ -107,6 +114,22 @@ export default function RecycleBin() {
   const hospitalItems = hospitalQuery.data?.items ?? [];
   const campItems = campQuery.data ?? [];
   const affectedItems = affectedQuery.data ?? [];
+
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      const meta = buildExportMeta({}, {});
+      const sheet = buildRecycleBinSheet(
+        { donorItems, donationItems, stockTransferItems, hospitalItems, campItems, affectedItems },
+        meta,
+      );
+      await downloadExcelReport([sheet], `Recycle_Bin_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } catch (e) {
+      toast.error('Failed to generate Excel report');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const openRestoreModal = (item) => {
     setRestoreTarget(item);
@@ -257,16 +280,28 @@ export default function RecycleBin() {
                 <p className="text-gray-500 text-sm">Deleted records across the system — restore them, or view records preserved (not deleted) because they already participate in a completed workflow.</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={refetchActive}
-              disabled={isFetching}
-              title="Refresh"
-              aria-label="Refresh"
-              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleExportExcel}
+                disabled={exporting}
+                title="Export all Recycle Bin tabs to Excel"
+                className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 text-green-600" />}
+                Export Excel
+              </button>
+              <button
+                type="button"
+                onClick={refetchActive}
+                disabled={isFetching}
+                title="Refresh"
+                aria-label="Refresh"
+                className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -300,9 +335,6 @@ export default function RecycleBin() {
           ) : isError ? (
             <div className="p-10 text-center text-red-600 text-sm">Failed to load records.</div>
           ) : activeTab === 'donor' ? (
-            donorItems.length === 0 ? (
-              <div className="p-12 text-center text-gray-400 text-sm">No deleted donors.</div>
-            ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b border-gray-200">
@@ -321,7 +353,9 @@ export default function RecycleBin() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {donorItems.map((donor) => {
+                    {donorItems.length === 0 ? (
+                      <tr><td colSpan={11} className="p-12 text-center text-gray-400 text-sm">No deleted donors.</td></tr>
+                    ) : donorItems.map((donor) => {
                       const donorSource = donor.source || 'inhouse';
                       return (
                         <tr key={donor._id || donor.id} className="bg-gray-50/50 hover:bg-gray-100 transition-colors">
@@ -358,11 +392,7 @@ export default function RecycleBin() {
                   </tbody>
                 </table>
               </div>
-            )
           ) : activeTab === 'donation' ? (
-            donationItems.length === 0 ? (
-              <div className="p-12 text-center text-gray-400 text-sm">No deleted donations.</div>
-            ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b border-gray-200">
@@ -380,7 +410,9 @@ export default function RecycleBin() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {donationItems.map((d) => {
+                    {donationItems.length === 0 ? (
+                      <tr><td colSpan={10} className="p-12 text-center text-gray-400 text-sm">No deleted donations.</td></tr>
+                    ) : donationItems.map((d) => {
                       const isCamp = !!d.campId;
                       return (
                         <tr key={d.id} className="bg-gray-50/50 hover:bg-gray-100 transition-colors">
@@ -426,7 +458,6 @@ export default function RecycleBin() {
                   </tbody>
                 </table>
               </div>
-            )
           ) : activeTab === 'stockTransfers' ? (
             <SimpleTable
               emptyLabel="No deleted bulk transfers or storage batches."

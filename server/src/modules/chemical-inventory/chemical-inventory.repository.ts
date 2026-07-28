@@ -353,6 +353,7 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
         paymentStatus: doc.paymentStatus ?? 'Pending',
         installments: doc.installments ?? [],
         remarks: doc.remarks,
+        invoiceImage: doc.invoiceImage ?? null,
         createdBy: actor,
         updatedBy: actor,
       });
@@ -378,10 +379,48 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
     },
 
     async listChemicalPurchases() {
-      return ChemicalPurchaseModel.find({ deletedAt: null })
+      const purchases = await ChemicalPurchaseModel.find({ deletedAt: null })
         .populate('supplierId', 'name contactPerson phone email')
         .sort({ purchaseDate: -1 })
         .lean();
+
+      // Line items (chemical/batch/qty/GST breakdown) live on ChemicalStockLot,
+      // linked by purchaseId — the purchase invoice itself only holds
+      // invoice-level totals. Attach them here so callers (the purchase
+      // ledger export) that expect a per-invoice `items` array actually get one.
+      const purchaseIds = purchases.map((p) => p._id);
+      const lots = await ChemicalStockLotModel.find({
+        purchaseId: { $in: purchaseIds },
+        deletedAt: null,
+      })
+        .populate('chemicalId', 'name')
+        .populate('manufacturerId', 'name')
+        .lean();
+
+      const lotsByPurchase = new Map<string, typeof lots>();
+      for (const lot of lots) {
+        const key = lot.purchaseId?.toString();
+        if (!key) continue;
+        if (!lotsByPurchase.has(key)) lotsByPurchase.set(key, []);
+        lotsByPurchase.get(key)!.push(lot);
+      }
+
+      return purchases.map((p) => ({
+        ...p,
+        items: (lotsByPurchase.get(p._id.toString()) || []).map((lot) => ({
+          chemicalId: lot.chemicalId,
+          chemicalName: (lot.chemicalId as any)?.name || '',
+          manufacturer: (lot.manufacturerId as any)?.name || '',
+          packType: lot.packType,
+          batchNumber: lot.batchNumber,
+          expiryDate: lot.expiryDate,
+          qtyPurchased: lot.qtyPurchased,
+          costPerUnit: lot.costPerUnit,
+          cgstAmount: lot.cgstAmount,
+          sgstAmount: lot.sgstAmount,
+          totalAmount: lot.totalAmount,
+        })),
+      }));
     },
 
     async createHistoryLog(log) {

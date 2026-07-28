@@ -124,6 +124,11 @@ const DonationDetails = ({ donation }) => {
                 <span className="font-medium">Donor:</span> {donorName}
               </p>
             )}
+            {donation.donorPublicId && (
+              <p>
+                <span className="font-medium">Donor ID:</span> {donation.donorPublicId}
+              </p>
+            )}
             {(donation.donor || bloodGroup) && (
               <p>
                 <span className="font-medium">Donor Blood Group:</span>{' '}

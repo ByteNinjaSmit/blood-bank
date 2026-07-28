@@ -68,13 +68,29 @@ const Serology = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, fromDate, toDate, order, sortBy]);
 
+  // Server stores/returns results as raw uppercase enum values (NEGATIVE,
+  // REACTIVE, INDETERMINATE) except the legacy view already remaps
+  // INDETERMINATE -> "Shadeness". The dropdown's <option> values are
+  // Title-case, so an un-normalized "NEGATIVE"/"REACTIVE" never matches any
+  // option and silently falls back to the blank "Select" placeholder.
+  const normalizeResult = (raw) => {
+    if (!raw) return "";
+    const upper = String(raw).toUpperCase();
+    if (upper === "NEGATIVE") return "Negative";
+    if (upper === "REACTIVE") return "Reactive";
+    if (upper === "INDETERMINATE" || upper === "SHADENESS") return "Shadeness";
+    return raw;
+  };
+
   const openEnterResults = (bag) => {
     setActiveBag(bag);
     // Pre-fill from existing results if present
     const existing = Array.isArray(bag.testResults) ? bag.testResults : [];
     const mapped = DEFAULT_TESTS.map(t => {
-      const found = existing.find(e => e.test === t.key);
-      return { test: t.key, result: found?.result || "" };
+      // Server returns test names case-sensitively as stored (e.g. "HBSAG"),
+      // not matching this page's display key ("HBsAg") — compare case-insensitively.
+      const found = existing.find(e => e.test?.toUpperCase() === t.key.toUpperCase());
+      return { test: t.key, result: normalizeResult(found?.result) };
     });
     setTests(mapped);
     setEditReason("");

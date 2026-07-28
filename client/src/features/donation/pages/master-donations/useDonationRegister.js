@@ -23,6 +23,10 @@ export function useDonationRegister(activeTab, setActiveTab) {
   const [searchedDonation, setSearchedDonation] = useState(null);
 
   // Filter states
+  // `searchInput` is the draft value bound to the search box; `searchQuery`
+  // is the applied value that actually drives filtering — only committed
+  // from `runSearchLookup` (Enter / search button), never on keystroke.
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [bagTypeFilter, setBagTypeFilter] = useState('');
   const [bloodGroupFilter, setBloodGroupFilter] = useState('');
@@ -98,7 +102,9 @@ export function useDonationRegister(activeTab, setActiveTab) {
   // it's outside the loaded page. Fires only on explicit search submit
   // (Enter/button) — never on a timer.
   const runSearchLookup = async () => {
-    const trimmed = searchQuery.trim();
+    const trimmed = searchInput.trim();
+    setSearchQuery(searchInput);
+    setCurrentPage(1);
     if (!trimmed) {
       setSearchedDonation(null);
       return;
@@ -131,13 +137,16 @@ export function useDonationRegister(activeTab, setActiveTab) {
     }
   }
 
-  // Client-side filtering
+  // Client-side filtering — matches donation ID, bag no, segment no, batch
+  // no, donor ID, phone, or donor name against the search term.
   const filteredItems = baseItems.filter((d) => {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const bagNoMatch = (d.bagNo || d.donationId || '').toLowerCase().includes(q);
-      const donorMatch = (d.donorName || '').toLowerCase().includes(q);
-      if (!bagNoMatch && !donorMatch) return false;
+      const matches = [
+        d.donationId, d.bagNo, d.segmentNo, d.lotNo,
+        d.donorPublicId, d.phone, d.donorName,
+      ].some((field) => (field || '').toLowerCase().includes(q));
+      if (!matches) return false;
     }
     if (bagTypeFilter && d.typeOfBag !== bagTypeFilter) return false;
     if (bloodGroupFilter && d.bloodGroup !== bloodGroupFilter) return false;
@@ -168,6 +177,7 @@ export function useDonationRegister(activeTab, setActiveTab) {
   const displayedItems = filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const resetFilters = () => {
+    setSearchInput('');
     setSearchQuery('');
     setBagTypeFilter('');
     setBloodGroupFilter('');
@@ -214,8 +224,8 @@ export function useDonationRegister(activeTab, setActiveTab) {
   return {
     donationAccess,
     // filters
-    filters: { searchQuery, bagTypeFilter, bloodGroupFilter, statusFilter, fromDate, toDate, sortBy, order },
-    setSearchQuery, setBagTypeFilter, setBloodGroupFilter, setStatusFilter, setFromDate, setToDate, setSortBy,
+    filters: { searchInput, searchQuery, bagTypeFilter, bloodGroupFilter, statusFilter, fromDate, toDate, sortBy, order },
+    setSearchInput, setSearchQuery, setBagTypeFilter, setBloodGroupFilter, setStatusFilter, setFromDate, setToDate, setSortBy,
     toggleOrder, resetFilters, switchTab, handleFilterChange, runSearchLookup,
     // export
     excelLoading, handleExportRegister,
