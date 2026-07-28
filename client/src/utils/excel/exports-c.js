@@ -217,17 +217,18 @@ export async function exportProcurementInventory(items, meta = {}) {
   }], 'Procurement_Bags_Inventory.xlsx');
 }
 
-// 15. Procurement Discard
+// 15. Procurement Discard — Blood Unit Discard (clinical BloodUnit register)
 export async function exportProcurementDiscard(items, meta = {}) {
-  const headers = ['Sr No', 'Bag No', 'Component No', 'Type', 'Item Name', 'Reason', 'Discarded Date'];
-  const alignments = ['center', 'center', 'center', 'center', 'left', 'left', 'center'];
+  const headers = ['Sr No', 'Bag No', 'Segment No', 'Component No', 'Type', 'Item', 'Reason', 'Discarded Date'];
+  const alignments = ['center', 'center', 'center', 'center', 'center', 'left', 'left', 'center'];
 
   const rows = items.map((r, i) => [
     i + 1,
     r.bagNo || '—',
+    r.segmentNo || '—',
     r.componentNo || r.componentId || '—',
     r.itemType || '—',
-    r.itemName || '—',
+    r.itemName || r.componentType || '—',
     r.reason || '—',
     formatDateTime(r.discardedAt || r.createdAt),
   ]);
@@ -239,15 +240,49 @@ export async function exportProcurementDiscard(items, meta = {}) {
   ];
 
   await downloadExcelReport([{
-    name: 'Discards',
+    name: 'Blood Unit Discards',
     title: 'SANJIVANI BLOOD BANK, KOPARGAON',
-    subtitle: 'Inventory Discard & Waste Registry',
+    subtitle: 'Blood Unit Discard & Waste Registry',
     headers,
     rows,
     alignments,
     stats,
     ...meta,
-  }], 'Discards_And_Wastes_Report.xlsx');
+  }], 'Blood_Unit_Discard_Report.xlsx');
+}
+
+// 15b. Procurement Discard — Batch Discard (rejected bag-inspection batches)
+export async function exportBatchDiscard(items, meta = {}) {
+  const headers = ['Sr No', 'Batch No', 'GRN Ref', 'Inspection Date', 'Testing Type', 'Bag No', 'Segment No', 'Testing Lab', 'Decision', 'Rejection Reason'];
+  const alignments = ['center', 'center', 'center', 'center', 'center', 'center', 'center', 'left', 'center', 'left'];
+
+  const rows = items.map((r, i) => [
+    i + 1,
+    r.batchNumber || '—',
+    r.grn?.grnNumber || r.grnId || '—',
+    formatDateTime(r.inspectionDate || r.createdAt),
+    r.testingType || '—',
+    r.bagNo || '—',
+    r.segmentNo || '—',
+    r.testingLab || '—',
+    r.decision || '—',
+    r.rejectionReason || '—',
+  ]);
+
+  const stats = [
+    { label: 'Total Batches Discarded', value: items.length },
+  ];
+
+  await downloadExcelReport([{
+    name: 'Batch Discards',
+    title: 'SANJIVANI BLOOD BANK, KOPARGAON',
+    subtitle: 'Rejected Batch Discard Registry',
+    headers,
+    rows,
+    alignments,
+    stats,
+    ...meta,
+  }], 'Batch_Discard_Report.xlsx');
 }
 
 // 14b. Vendor Management

@@ -112,7 +112,24 @@ export interface BagStockRepo {
 export function createBagStockRepo(): BagStockRepo {
   return {
     async list(q) {
-      const filter: Record<string, unknown> = { deletedAt: null };
+      const filter: Record<string, unknown> = {
+        deletedAt: null,
+        // A batch only counts as usable inventory once accepted (closing
+        // stock > 0) — rows still pending QC or corrected to REJECTED sit
+        // at zero and must not appear here at all (they're not "stock",
+        // they never cleared or were rejected).
+        $expr: {
+          $gt: [
+            {
+              $subtract: [
+                { $add: ['$openingStock', '$receivedQty'] },
+                { $add: ['$issuedQty', '$damagedQty', '$discardedQty'] },
+              ],
+            },
+            0,
+          ],
+        },
+      };
       if (q.bagType) filter.bagType = q.bagType;
       if (q.status) filter.status = q.status;
       if (q.expiryBefore) filter.expiryDate = { $lte: q.expiryBefore };

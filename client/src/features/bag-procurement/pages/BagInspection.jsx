@@ -14,6 +14,7 @@ import { TESTING_TYPE_LABELS } from '../components/inspection/inspection-constan
 export default function BagInspection() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [showReportDrawer, setShowReportDrawer] = useState(false);
+  const [showEditRequestDrawer, setShowEditRequestDrawer] = useState(false);
   const [selectedInspection, setSelectedInspection] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [drawerMode, setDrawerMode] = useState('update'); // 'update' or 'edit'
@@ -219,8 +220,7 @@ export default function BagInspection() {
                             <button
                               onClick={() => {
                                 setSelectedInspection(ins);
-                                setDrawerMode('edit');
-                                setShowReportDrawer(true);
+                                setShowEditRequestDrawer(true);
                               }}
                               className="px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
                             >
@@ -262,6 +262,17 @@ export default function BagInspection() {
       </div>
 
       {showDrawer && <InspectionDrawer onClose={() => setShowDrawer(false)} grns={grns} />}
+      {showEditRequestDrawer && selectedInspection && (
+        <InspectionDrawer
+          onClose={() => {
+            setShowEditRequestDrawer(false);
+            setSelectedInspection(null);
+          }}
+          grns={grns}
+          inspection={selectedInspection}
+          mode="edit"
+        />
+      )}
       {showReportDrawer && selectedInspection && (
         <UpdateReportDrawer
           onClose={() => {

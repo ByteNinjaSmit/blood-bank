@@ -143,25 +143,42 @@ export function createBagInspectionService(deps: {
         { decision },
       );
 
-      if (updated.testingType === 'EMPTY' && !isFailed) {
+      // Batch discard is a derived view (decision === 'REJECTED'), so it
+      // already updates itself the moment `decision` changes above — no
+      // separate discard entity to create/remove. What must be kept in
+      // sync explicitly is BagStock: bags only count as usable inventory
+      // once a batch is ACCEPTED, and that must reverse cleanly if a
+      // report is later corrected back to REJECTED. This applies to every
+      // testingType (not just EMPTY) — the type only selects which QC
+      // protocol ran on the sample, not whether the batch counts as stock.
+      // Stock is only ever touched inside this method, never at create()
+      // time — so "already stocked" means a report was already filed
+      // (testingStatus was REPORT_RECEIVED before this call) AND that
+      // prior report was accepted. A first-time report filing (status
+      // was still SENT) has never touched stock regardless of what the
+      // pre-report physical-check decision happened to be.
+      const wasStocked = inspection.testingStatus === 'REPORT_RECEIVED' && inspection.decision === 'ACCEPTED';
+      const nowAccepted = decision === 'ACCEPTED';
+
+      if (nowAccepted !== wasStocked) {
         const grn = await deps.grns.findById(updated.grnId);
-        if (grn) {
-          const line = grn.batchLines.find((l) => l.batchNumber === updated.batchNumber);
-          if (line) {
-            const quantityReceived = line.quantityReceived;
-            const unopenedBoxes = Math.floor(quantityReceived / 45);
-            await deps.bagStock.setReceivedQtyAndBoxes(
-              updated.batchNumber,
-              line.bagType,
-              quantityReceived,
-              unopenedBoxes,
-              actorId
-            );
-            log.info(
-              { batchNumber: updated.batchNumber, bagType: line.bagType, quantityReceived },
-              'sterile check passed: bag units added to inventory'
-            );
-          }
+        const line = grn?.batchLines.find((l) => l.batchNumber === updated.batchNumber);
+        if (line) {
+          const quantityReceived = nowAccepted ? line.quantityReceived : 0;
+          const unopenedBoxes = nowAccepted ? Math.floor(line.quantityReceived / 45) : 0;
+          await deps.bagStock.setReceivedQtyAndBoxes(
+            updated.batchNumber,
+            line.bagType,
+            quantityReceived,
+            unopenedBoxes,
+            actorId,
+          );
+          log.info(
+            { batchNumber: updated.batchNumber, bagType: line.bagType, quantityReceived, nowAccepted },
+            nowAccepted
+              ? 'batch accepted: bag units added to inventory'
+              : 'batch corrected to rejected: bag units removed from inventory',
+          );
         }
       }
 

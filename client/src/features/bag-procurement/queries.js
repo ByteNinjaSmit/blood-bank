@@ -247,7 +247,13 @@ export function useUpdateBagInspectionReport() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }) => bagProcurementApi.bagInspection.updateReport(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bag-inspection', 'list'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bag-inspection', 'list'] });
+      // An ACCEPTED/REJECTED decision change cascades to BagStock — keep
+      // the Inventory page's cache in sync instead of requiring a manual refresh.
+      qc.invalidateQueries({ queryKey: ['bag-stock', 'list'] });
+      qc.invalidateQueries({ queryKey: ['bag-stock', 'summary'] });
+    },
   });
 }
 

@@ -141,8 +141,10 @@ export function createDiscardRepo(deps: { units: UnitRepo; ttiService: TtiServic
         return {
           id: u._id.toString(),
           bagNo: donation?.bagNo || u.donationId,
+          segmentNo: donation?.segmentNo || '',
           componentId: u.unitId,
           componentType: u.componentType,
+          itemName: u.componentType === 'WB' ? 'Whole Blood' : u.componentType,
           itemType: u.componentType === 'WB' ? 'Bag' : 'Component',
           reason: u.discardReason || 'QC_FAIL',
           description: u.discardNotes || '',

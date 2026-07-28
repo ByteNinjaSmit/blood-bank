@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown"
 import IframePreviewModal from "@/components/shared/IframePreviewModal"
 import SearchBox from "@/components/shared/SearchBox"
-import { exportProcurementDiscard } from "@/utils/excelExportHelper"
+import { exportProcurementDiscard, exportBatchDiscard } from "@/utils/excelExportHelper"
 import { toast } from "sonner"
 import { formatDateTime } from "@/lib/format-date"
 
@@ -56,6 +56,16 @@ const ViewDiscarded = () => {
     const handleExportExcel = async (exportAll = false) => {
         try {
             setExcelLoading(true);
+
+            if (activeTab === "batch") {
+                if (batchDiscards.length === 0) {
+                    toast.info("No records to export");
+                    return;
+                }
+                await exportBatchDiscard(batchDiscards);
+                return;
+            }
+
             let rawData = [];
             if (exportAll) {
                 const response = await apiClient.get(`/api/discard/get-list`, {
@@ -83,9 +93,10 @@ const ViewDiscarded = () => {
             // Map frontend naming/keys to what excelExportHelper expects
             const mappedData = rawData.map(r => ({
                 bagNo: r.bagNo,
+                segmentNo: r.segmentNo,
                 componentId: r.componentId || r.componentNo,
                 itemType: r.itemType,
-                itemName: r.componentType || r.itemName || "—",
+                itemName: r.itemName || r.componentType || "—",
                 reason: r.reason,
                 discardedAt: r.discardedAt || r.createdAt
             }));

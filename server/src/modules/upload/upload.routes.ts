@@ -1,6 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import multer from 'multer';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { NodeHttpHandler } from '@smithy/node-http-handler';
 import { env } from '@/core/config/env';
 import { authenticate } from '@/shared/middlewares/authenticate';
 import { requirePermission } from '@/shared/middlewares/rbac';
@@ -8,6 +9,9 @@ import { ROLE } from '@/shared/enums';
 import { ValidationError } from '@/shared/errors';
 import { ValidateUpload } from '@/modules/upload/upload.validator';
 
+// A hung/unreachable S3 endpoint must fail fast with a clear error rather
+// than hang until the client's own axios timeout fires — short connection
+// timeout, one retry, and a short-ish request timeout.
 const s3Client = new S3Client({
   endpoint: env.S3_ENDPOINT || undefined,
   region: env.S3_REGION || 'us-east-1',
@@ -16,6 +20,11 @@ const s3Client = new S3Client({
     secretAccessKey: env.S3_SECRET_KEY,
   },
   forcePathStyle: true,
+  maxAttempts: 2,
+  requestHandler: new NodeHttpHandler({
+    connectionTimeout: 5_000,
+    requestTimeout: 10_000,
+  }),
 });
 
 const upload = multer({

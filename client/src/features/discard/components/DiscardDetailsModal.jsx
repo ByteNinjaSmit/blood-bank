@@ -145,7 +145,7 @@ const DiscardDetailsModal = ({ selectedItem, showBagDetails, onClose, onToggleBa
                   <h4 className="font-semibold text-slate-800 border-b border-slate-300 pb-2">Bag Information</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div><span className="font-medium text-slate-600">Bag Number:</span><div className="text-slate-800">{selectedItem.bagNo}</div></div>
-                    <div><span className="font-medium text-slate-600">Segment ID:</span><div className="text-slate-800">{selectedItem.segmentId}</div></div>
+                    <div><span className="font-medium text-slate-600">Segment No:</span><div className="text-slate-800">{selectedItem.segmentNo || selectedItem.segmentId}</div></div>
                     <div><span className="font-medium text-slate-600">Collection Date:</span><div className="text-slate-800">{selectedItem.collectionDate}</div></div>
                     <div><span className="font-medium text-slate-600">Expiry Date:</span><div className="text-slate-800">{selectedItem.expiryDate}</div></div>
                     <div><span className="font-medium text-slate-600">Status:</span><div className="text-slate-800">{selectedItem.status}</div></div>

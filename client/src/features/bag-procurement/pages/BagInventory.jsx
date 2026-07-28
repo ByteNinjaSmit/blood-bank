@@ -49,7 +49,9 @@ function isNearExpiry(dateStr) {
 
 
 export default function BagInventory() {
-  const { data, isLoading, refetch, isFetching } = useBagStockList({});
+  // No pagination UI on this page — request the backend's max page size
+  // (200) so every stock row renders, not just the first 20 by expiry.
+  const { data, isLoading, refetch, isFetching } = useBagStockList({ pageSize: 200 });
   const openBoxMutation = useOpenBagStockBox();
 
   const [confirmOpenBoxId, setConfirmOpenBoxId] = useState(null);
