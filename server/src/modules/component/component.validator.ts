@@ -12,6 +12,8 @@ const ListQuery = z.object({
   toDate: z.string().trim().optional(),
   search: z.string().trim().max(120).optional(),
   order: z.enum(['asc', 'desc']).optional(),
+  site: z.enum(['inhouse', 'camp']).optional(),
+  campId: z.string().trim().optional(),
 });
 
 const NearExpiryQuery = z.object({

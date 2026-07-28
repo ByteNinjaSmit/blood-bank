@@ -6,7 +6,7 @@ import { componentSlot } from './component.helpers';
 import type { ComponentListFilters } from './component.helpers';
 
 export async function componentList(filters: ComponentListFilters) {
-      const { page, limit, type, status, expiryBefore, fromDate, toDate, search, order } = filters;
+      const { page, limit, type, status, expiryBefore, fromDate, toDate, search, order, site, campId } = filters;
 
       const unitFilter: any = { deletedAt: null, status: { $ne: 'COLLECTED' } };
       if (type) unitFilter.componentType = type;
@@ -40,6 +40,13 @@ export async function componentList(filters: ComponentListFilters) {
       }
       if (search && !matchingDonationIds.length && !hasUnitFilters) {
         donationFilter.donationId = new RegExp(search, 'i');
+      }
+      if (campId) {
+        donationFilter.campId = campId;
+      } else if (site === 'inhouse') {
+        donationFilter.campId = null;
+      } else if (site === 'camp') {
+        donationFilter.campId = { $ne: null };
       }
 
       const pageNum = Number(page) || 1;

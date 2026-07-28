@@ -74,13 +74,14 @@ const UNIVERSAL_PERMISSIONS: readonly Permission[] = ['report:export', 'upload:w
 
 // Same as above, but these ALSO happen to be the primary view-gate for a
 // real, dedicated page (hospital:read → Hospital List; bag-stock:read →
-// Bag Inventory) — granting them universally server-side must not, on its
-// own, make those specific pages appear unlocked to users who were never
-// given Hospital/Bag Procurement access. Kept in the server's enforcement
-// set (so the lookup API calls succeed) but omitted from the permission
-// list sent to the client for page-visibility purposes — see
-// projectClientPermissions() below.
-const DEPENDENCY_ONLY_PERMISSIONS: readonly Permission[] = ['hospital:read', 'bag-stock:read'];
+// Bag Inventory; camp:read → Camp Listing/Details) — granting them
+// universally server-side must not, on its own, make those specific
+// pages appear unlocked to users who were never given Hospital/Bag
+// Procurement/Camp access. Kept in the server's enforcement set (so the
+// lookup API calls succeed — e.g. the Camp filter dropdown on Component
+// List) but omitted from the permission list sent to the client for
+// page-visibility purposes — see projectClientPermissions() below.
+const DEPENDENCY_ONLY_PERMISSIONS: readonly Permission[] = ['hospital:read', 'bag-stock:read', 'camp:read'];
 
 // Converts the raw per-user grid into real backend Permission strings.
 // This is the ENTIRE source of a non-full-access user's authorization —

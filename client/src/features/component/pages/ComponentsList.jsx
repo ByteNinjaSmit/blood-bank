@@ -10,6 +10,7 @@ import { ComponentDetailsModal, ComponentEditModal } from "@/components/blood-co
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportComponents } from "@/utils/excelExportHelper";
 import useAccess from "@/features/access/useAccess";
+import { useCampList } from "@/features/camp/queries";
 import ComponentFilterBar from "../components/ComponentFilterBar";
 import ComponentsTable from "../components/ComponentsTable";
 
@@ -20,6 +21,8 @@ const ComponentsList = () => {
   const canEdit = can("component", "update", "component-list");
 
   const [excelLoading, setExcelLoading] = useState(false);
+  const { data: campsData } = useCampList();
+  const camps = campsData?.items ?? campsData ?? [];
 
   // One row per BAG (not per component) — each bag's prepared components
   // are collected into a single `components` array so the export can list
@@ -75,6 +78,8 @@ const ComponentsList = () => {
           ...(state.filters.fromDate && { fromDate: state.filters.fromDate }),
           ...(state.filters.toDate && { toDate: state.filters.toDate }),
           ...(appliedSearch && { search: appliedSearch }),
+          ...(state.filters.site && { site: state.filters.site }),
+          ...(state.filters.campId && { campId: state.filters.campId }),
           order: state.filters.order,
         };
         const response = await apiClient.get(`/api/v2/component/list`, { params });
@@ -117,6 +122,8 @@ const ComponentsList = () => {
       toDate: "",
       search: "",
       order: "desc",
+      site: "",
+      campId: "",
     },
   });
 
@@ -152,6 +159,8 @@ const ComponentsList = () => {
         ...(state.filters.fromDate && { fromDate: state.filters.fromDate }),
         ...(state.filters.toDate && { toDate: state.filters.toDate }),
         ...(appliedSearch && { search: appliedSearch }),
+        ...(state.filters.site && { site: state.filters.site }),
+        ...(state.filters.campId && { campId: state.filters.campId }),
         order: state.filters.order,
       };
 
@@ -193,7 +202,7 @@ const ComponentsList = () => {
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore, state.filters.fromDate, state.filters.toDate, state.filters.order, appliedSearch]);
+  }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore, state.filters.fromDate, state.filters.toDate, state.filters.order, state.filters.site, state.filters.campId, appliedSearch]);
 
   // Fetch whenever pagination or any applied filter changes. Search no
   // longer triggers a fetch on keystroke — only when the user explicitly
@@ -202,13 +211,19 @@ const ComponentsList = () => {
   useEffect(() => {
     fetchComponents();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore, state.filters.fromDate, state.filters.toDate, state.filters.order, appliedSearch]);
+  }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore, state.filters.fromDate, state.filters.toDate, state.filters.order, state.filters.site, state.filters.campId, appliedSearch]);
 
   // Single responsibility: Handle filter changes
   const handleFilterChange = (filterType, value) => {
     setState(prev => ({
       ...prev,
-      filters: { ...prev.filters, [filterType]: value },
+      filters: {
+        ...prev.filters,
+        [filterType]: value,
+        // Switching site away from "camp" (or clearing it) drops any
+        // previously selected camp — it's only meaningful when site=camp.
+        ...(filterType === "site" && value !== "camp" ? { campId: "" } : {}),
+      },
       pagination: { ...prev.pagination, page: 1 }, // Reset to first page
     }));
   };
@@ -256,6 +271,8 @@ const ComponentsList = () => {
         toDate: "",
         search: "",
         order: "desc",
+        site: "",
+        campId: "",
       },
       pagination: { ...prev.pagination, page: 1 },
     }));
@@ -349,6 +366,7 @@ const ComponentsList = () => {
           onFilterChange={handleFilterChange}
           onSearchSubmit={handleSearchSubmit}
           onClear={clearFilters}
+          camps={camps}
         />
 
         <ComponentsTable

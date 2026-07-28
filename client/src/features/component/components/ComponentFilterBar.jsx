@@ -6,7 +6,7 @@ import { COMPONENT_TYPES } from "@/constants/component-types";
 import SearchBox from "@/components/shared/SearchBox";
 import { STATUS_OPTIONS } from "../component-helpers";
 
-export default function ComponentFilterBar({ filters, isLoading, onFilterChange, onSearchSubmit, onClear }) {
+export default function ComponentFilterBar({ filters, isLoading, onFilterChange, onSearchSubmit, onClear, camps = [] }) {
   return (
     <Card className="mb-4 border-red-50 shadow-sm">
       <CardContent className="p-3">
@@ -59,6 +59,41 @@ export default function ComponentFilterBar({ filters, isLoading, onFilterChange,
               </SelectContent>
             </Select>
           </div>
+
+          {/* Site Dropdown */}
+          <div className="w-36 space-y-1">
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Site</label>
+            <Select value={filters.site || "all"} onValueChange={(value) => onFilterChange("site", value === "all" ? "" : value)}>
+              <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                <SelectValue placeholder="All Sites" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sites</SelectItem>
+                <SelectItem value="inhouse">Inhouse</SelectItem>
+                <SelectItem value="camp">Camp</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Camp Dropdown — only meaningful once Site=Camp is selected */}
+          {filters.site === "camp" && (
+            <div className="w-44 space-y-1">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Camp</label>
+              <Select value={filters.campId || "all"} onValueChange={(value) => onFilterChange("campId", value === "all" ? "" : value)}>
+                <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                  <SelectValue placeholder="All Camps" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Camps</SelectItem>
+                  {camps.map((camp) => (
+                    <SelectItem key={camp._id || camp.id} value={camp._id || camp.id} className="text-xs">
+                      {camp.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Expiry Field */}
           <div className="w-36 space-y-1">

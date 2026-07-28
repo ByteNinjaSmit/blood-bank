@@ -30,12 +30,12 @@ export default {
       label: 'Recycle Bin',
       route: '/recycle-bin',
       actions: {
-        // hospital:read is deliberately omitted — it's a server-only
-        // DEPENDENCY_ONLY_PERMISSIONS grant (role-map.ts), excluded from
-        // the client's effective set, so listing it here would block
-        // this whole action for everyone instead of just gating hospital
-        // recycle-bin rows.
-        view: ['report:read', 'donor:read', 'donation:read', 'bulk-transfer:read', 'unit:read', 'camp:read', 'audit:read'],
+        // hospital:read and camp:read are deliberately omitted — both are
+        // server-only DEPENDENCY_ONLY_PERMISSIONS grants (role-map.ts),
+        // excluded from the client's effective set, so listing either here
+        // would block this whole action for everyone instead of just
+        // gating hospital/camp recycle-bin rows.
+        view: ['report:read', 'donor:read', 'donation:read', 'bulk-transfer:read', 'unit:read', 'audit:read'],
         update: ['donor:delete', 'donation:delete', 'hospital:manage', 'camp:manage', 'bulk-transfer:update', 'unit:read'],
         delete: ['donor:permanent-delete', 'donation:permanent-delete', 'hospital:manage', 'camp:manage'],
       },

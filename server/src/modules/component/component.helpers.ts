@@ -12,6 +12,8 @@ export interface ComponentListFilters {
   toDate?: string;
   search?: string;
   order?: 'asc' | 'desc';
+  site?: 'inhouse' | 'camp';
+  campId?: string;
 }
 
 export interface NearExpiryFilters {
