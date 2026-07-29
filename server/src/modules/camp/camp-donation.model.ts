@@ -20,12 +20,6 @@ const CampDonationSchema = new Schema(
     lastDonationDate: { type: Date },
     totalDonations: { type: Number, default: 0 },
     emergencyConsent: { type: Boolean, default: true },
-    weight: { type: Number, required: true },
-    hb: { type: Number, required: true },
-    temp: { type: Number, required: true },
-    pulse: { type: Number, required: true },
-    bp: { type: String, required: true },
-    o2Level: { type: Number, required: true },
     bloodGroup: { type: String, required: true, index: true },
     clinicalFindings: {
       pedalOedema: { type: Boolean, default: false },

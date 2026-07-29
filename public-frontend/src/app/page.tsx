@@ -3,6 +3,7 @@ import Hero from '@/components/page-hero-section'
 import Footer from '@/components/layout/main-footer'
 import ContactSection from '@/components/contact-section'
 import StatisticsSection from '@/components/statistical-section'
+import CampDonationSection from '@/components/camp-donation-section'
 import FeaturesSection from '@/components/features-section' // Corrected import path
 import SafetySection from '@/components/safety-section'
 import EducationSection from '@/components/education-section'
@@ -17,6 +18,7 @@ const page = () => {
       <Hero />
       <FeaturesSection />
       <AboutSection />
+      <CampDonationSection />
       <StatisticsSection />
       <EducationSection />
       <CampaignSection />

@@ -61,6 +61,14 @@ export function useVoluntaryDonations(params) {
   });
 }
 
+export function useUpdateVoluntaryStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }) => campApi.updateVoluntaryStatus(id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: campKeys.all }),
+  });
+}
+
 export function useCreateCamp() {
   const qc = useQueryClient();
   return useMutation({

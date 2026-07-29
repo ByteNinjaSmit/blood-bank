@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { GiCampingTent } from 'react-icons/gi';
-import { ArrowLeft, MapPin, Calendar, Users, Search, RefreshCw } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Users, Search, RefreshCw, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
 import { useCampList } from '@/features/camp/queries';
-import { useVoluntaryDonations } from '@/features/camp/queries';
+import { useVoluntaryDonations, useUpdateVoluntaryStatus } from '@/features/camp/queries';
 import { formatDate, formatDateTime } from '@/lib/format-date';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
@@ -14,11 +14,73 @@ const STATUS_BADGE = {
   REJECTED: 'bg-red-50 text-red-700 border-red-200',
 };
 
+const STATUS_LABEL = {
+  PENDING: 'Pending',
+  DONATED: 'Confirmed',
+  REJECTED: 'Cancelled',
+};
+
 function StatusBadge({ status }) {
   return (
     <span className={`px-2 py-0.5 rounded-full text-xs border font-medium ${STATUS_BADGE[status] ?? 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-      {status}
+      {STATUS_LABEL[status] ?? status}
     </span>
+  );
+}
+
+const SEX_LABEL = { M: 'Male', F: 'Female', OTHER: 'Other' };
+
+function DetailsDrawer({ donation, onClose }) {
+  if (!donation) return null;
+  const d = donation;
+  const row = (label, value) => {
+    if (value === null || value === undefined || value === '') return null;
+    return (
+      <div className="flex justify-between gap-4 py-1.5 border-b border-gray-50 last:border-0">
+        <span className="text-xs font-medium text-gray-500">{label}</span>
+        <span className="text-sm text-gray-800 text-right">{value}</span>
+      </div>
+    );
+  };
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-orange-800 sticky top-0">
+          <h2 className="text-base font-semibold text-white">Appointment Details</h2>
+          <button onClick={onClose} className="text-orange-200 hover:text-white text-sm">Close</button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Personal</h3>
+            {row('Full Name', [d.firstName, d.middleName, d.lastName].filter(Boolean).join(' '))}
+            {row('Gender', SEX_LABEL[d.sex] || d.sex)}
+            {row('Date of Birth', d.dob ? formatDate(d.dob) : undefined)}
+            {row('Age', d.age)}
+            {row('Occupation', d.occupation)}
+            {row('Blood Group', d.bloodGroup)}
+            {row('Mobile', d.mobile)}
+            {row('Email', d.email)}
+            {row('Pincode', d.pincode)}
+            {row('Address', d.address)}
+          </div>
+          <div>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Appointment</h3>
+            {row('Camp', d.campId?.name)}
+            {row('Status', <StatusBadge status={d.status} />)}
+            {row('Submitted On', formatDateTime(d.createdAt))}
+          </div>
+          <div>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Donation History</h3>
+            {row('First-Time Donor', d.isFirstTime ? 'Yes' : 'No')}
+            {row('Repeated Donor', d.isRepeated ? 'Yes' : 'No')}
+            {row('Last Donation', d.lastDonationDate ? formatDate(d.lastDonationDate) : undefined)}
+            {row('Total Donations', d.totalDonations)}
+            {row('Emergency Consent', d.emergencyConsent ? 'Yes' : 'No')}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -51,6 +113,17 @@ function CampAppointmentsTable({ camp, onBack }) {
   const { data, isLoading, isFetching, refetch } = useVoluntaryDonations({ campId: camp._id, limit: 200, sortBy: 'createdAt', sortOrder: 'desc' });
   const items = data?.items ?? [];
   const [excelLoading, setExcelLoading] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const updateStatus = useUpdateVoluntaryStatus();
+
+  const handleStatus = (id, next) => {
+    updateStatus.mutate(
+      { id, status: next },
+      {
+        onError: () => toast.error('Failed to update status'),
+      },
+    );
+  };
 
   const handleExportExcel = async () => {
     if (items.length === 0) {
@@ -101,7 +174,7 @@ function CampAppointmentsTable({ camp, onBack }) {
           <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50">
               <tr>
-                {['Name', 'Mobile', 'Blood Group', 'Age/Sex', 'Weight/HB', 'BP/Pulse', 'Status', 'Submitted'].map((h) => (
+                {['Name', 'Gender', 'Mobile', 'Blood Group', 'Age', 'Status', 'Submitted', 'Actions'].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -112,24 +185,51 @@ function CampAppointmentsTable({ camp, onBack }) {
               ) : items.length === 0 ? (
                 <tr><td colSpan={8} className="py-12 text-center text-sm text-gray-500">No appointments for this camp yet.</td></tr>
               ) : items.map((d) => (
-                <tr key={d._id} className="hover:bg-orange-50/30 transition-colors">
+                <tr key={d._id} className="hover:bg-orange-50/30 transition-colors cursor-pointer" onClick={() => setSelected(d)}>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">
                     {[d.firstName, d.middleName, d.lastName].filter(Boolean).join(' ')}
                     {d.isFirstTime && <span className="ml-1.5 text-[10px] text-blue-600 font-semibold">NEW</span>}
                   </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{SEX_LABEL[d.sex] || d.sex || '—'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 font-mono">{d.mobile}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{d.bloodGroup}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{d.age} / {d.sex}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{d.weight}kg / {d.hb}g%</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{d.bp} / {d.pulse}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{d.age}</td>
                   <td className="px-4 py-3"><StatusBadge status={d.status} /></td>
                   <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(d.createdAt)}</td>
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => setSelected(d)}
+                        className="p-1.5 text-orange-700 hover:bg-orange-50 rounded-md border border-orange-200" title="View Details">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      {d.status !== 'DONATED' && (
+                        <button onClick={() => handleStatus(d._id, 'DONATED')}
+                          className="p-1.5 text-green-600 hover:bg-green-50 rounded-md" title="Confirm">
+                          <CheckCircle className="w-4 h-4" />
+                        </button>
+                      )}
+                      {d.status !== 'REJECTED' && (
+                        <button onClick={() => handleStatus(d._id, 'REJECTED')}
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-md" title="Cancel">
+                          <XCircle className="w-4 h-4" />
+                        </button>
+                      )}
+                      {d.status !== 'PENDING' && (
+                        <button onClick={() => handleStatus(d._id, 'PENDING')}
+                          className="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded-md" title="Mark Pending">
+                          <Clock className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {selected && <DetailsDrawer donation={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }

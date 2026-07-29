@@ -2,15 +2,17 @@
 
 import connectToDatabase from "@/lib/db";
 import CampDonation from "@/models/voluntary-camp-donation-model";
+import Camp from "@/models/camp-model";
 
 import { voluntaryCampDonationSchema } from "@/schemas/voluntary-camp-donation-schema";
 
 const yn = (v: unknown) => v === "yes" || v === true;
 
-// The form collects "yes"/"no" strings and flat clinical-exam fields for a
-// simpler UI, but the shared CampDonation collection (same one the admin
-// panel's Camp Donor Appointment view reads) stores booleans and nests them
-// under clinicalFindings — convert here rather than reshape the whole form.
+// The form collects "yes"/"no" strings for a simpler UI, but the shared
+// CampDonation collection (same one the admin panel's Camp Donor Appointment
+// view reads) stores booleans — convert here rather than reshape the whole form.
+// Vitals and clinical exam findings are intentionally not collected on this
+// initial public registration — staff record them in person at the camp.
 function toCampDonationDoc(data: Record<string, any>) {
     return {
         firstName: data.firstName,
@@ -29,25 +31,7 @@ function toCampDonationDoc(data: Record<string, any>) {
         lastDonationDate: data.lastDonationDate || undefined,
         totalDonations: Number(data.totalDonations) || 0,
         emergencyConsent: yn(data.emergencyConsent),
-        weight: Number(data.weight),
-        hb: Number(data.hb),
-        temp: Number(data.temp),
-        pulse: Number(data.pulse),
-        bp: data.bp,
-        o2Level: Number(data.o2Level),
         bloodGroup: data.bloodGroup,
-        clinicalFindings: {
-            pedalOedema: yn(data.pedalOedema),
-            lymphadenopathy: yn(data.lymphadenopathy),
-            cyanosis: yn(data.cyanosis),
-            cvs: data.cvs || "normal",
-            rs: data.rs || "normal",
-            pa: data.pa || "normal",
-            cns: data.cns || "normal",
-            gis: data.gis || "normal",
-            freeFromSkinDisease: yn(data.freeFromSkinDisease),
-            freeFromScars: yn(data.freeFromScars),
-        },
         campId: data.campId,
     };
 }
@@ -63,34 +47,29 @@ export async function createVoluntaryCampDonation(data: any) {
             return { success: false, message: `Validation failed: ${errorMsg}` };
         }
 
+        // The campId comes from client state (a URL query param on the
+        // registration page), so it must be re-checked against a real,
+        // still-open camp here — never trust it just because it looks like
+        // a valid ObjectId.
+        const camp = await Camp.findOne({ _id: validation.data.campId, dateTo: { $gte: new Date() } })
+            .select("_id")
+            .lean();
+        if (!camp) {
+            return { success: false, message: "Selected camp is not valid or has already ended." };
+        }
+
         const newDonation = await CampDonation.create(toCampDonationDoc(validation.data));
 
         return {
             success: true,
             message: "Voluntary camp donation registered successfully",
-            data: JSON.parse(JSON.stringify(newDonation))
+            data: { id: newDonation._id.toString() }
         };
     } catch (error: any) {
         console.error("Error creating voluntary camp donation:", error);
         return {
             success: false,
             message: error.message || "Failed to register donation"
-        };
-    }
-}
-
-export async function getVoluntaryDonationsByCamp(campId: string) {
-    try {
-        await connectToDatabase();
-        const donations = await CampDonation.find({ campId }).sort({ createdAt: -1 });
-        return {
-            success: true,
-            data: JSON.parse(JSON.stringify(donations))
-        };
-    } catch (error: any) {
-        return {
-            success: false,
-            message: error.message
         };
     }
 }

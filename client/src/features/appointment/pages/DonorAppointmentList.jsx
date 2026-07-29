@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarCheck, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { CalendarCheck, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, RefreshCw, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppointmentList, useAppointmentSummary, useUpdateAppointmentStatus } from '../queries';
 import { appointmentApi } from '../api';
@@ -31,15 +31,20 @@ function StatusBadge({ status }) {
   );
 }
 
+const YES_NO_LABEL = { yes: 'Yes', no: 'No' };
+
 function DetailsDrawer({ appointment, onClose }) {
   if (!appointment) return null;
   const a = appointment;
-  const row = (label, value) => (
-    <div className="flex justify-between gap-4 py-1.5 border-b border-gray-50 last:border-0">
-      <span className="text-xs font-medium text-gray-500">{label}</span>
-      <span className="text-sm text-gray-800 text-right">{value ?? '—'}</span>
-    </div>
-  );
+  const row = (label, value) => {
+    if (value === null || value === undefined || value === '') return null;
+    return (
+      <div className="flex justify-between gap-4 py-1.5 border-b border-gray-50 last:border-0">
+        <span className="text-xs font-medium text-gray-500">{label}</span>
+        <span className="text-sm text-gray-800 text-right">{value}</span>
+      </div>
+    );
+  };
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
@@ -69,9 +74,9 @@ function DetailsDrawer({ appointment, onClose }) {
           </div>
           <div>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Medical History</h3>
-            {row('Recent Illness', a.recentIllness)}
-            {row('Recent Surgery', a.surgery)}
-            {row('On Medication', a.medication)}
+            {row('Recent Illness', YES_NO_LABEL[a.recentIllness])}
+            {row('Recent Surgery', YES_NO_LABEL[a.surgery])}
+            {row('On Medication', YES_NO_LABEL[a.medication])}
             {row('Last Donation', a.lastDonation ? formatDate(a.lastDonation) : undefined)}
             {row('Donation Frequency (per yr)', a.donationFrequency)}
           </div>
@@ -200,19 +205,20 @@ export default function DonorAppointmentList() {
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
-                  {['Name', 'Mobile', 'Blood Group', 'Preferred Date', 'Status', 'Submitted', 'Actions'].map((h) => (
+                  {['Name', 'Gender', 'Mobile', 'Blood Group', 'Preferred Date', 'Status', 'Submitted', 'Actions'].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {isLoading ? (
-                  <tr><td colSpan={7} className="py-12 text-center text-sm text-gray-500">Loading...</td></tr>
+                  <tr><td colSpan={8} className="py-12 text-center text-sm text-gray-500">Loading...</td></tr>
                 ) : appointments.length === 0 ? (
-                  <tr><td colSpan={7} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
+                  <tr><td colSpan={8} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
                 ) : appointments.map((a) => (
                   <tr key={a.id} className="hover:bg-orange-50/30 transition-colors cursor-pointer" onClick={() => setSelected(a)}>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{a.fullName || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{a.gender || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 font-mono">{a.mobileNo}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{a.bloodGroup || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{a.appointmentDate ? formatDate(a.appointmentDate) : '—'}</td>
@@ -220,6 +226,10 @@ export default function DonorAppointmentList() {
                     <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(a.createdAt)}</td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1.5">
+                        <button onClick={() => setSelected(a)}
+                          className="p-1.5 text-orange-700 hover:bg-orange-50 rounded-md border border-orange-200" title="View Details">
+                          <Eye className="w-4 h-4" />
+                        </button>
                         {a.status !== 'confirmed' && (
                           <button onClick={() => handleStatus(a.id, 'confirmed')}
                             className="p-1.5 text-green-600 hover:bg-green-50 rounded-md" title="Confirm">

@@ -40,6 +40,14 @@ export type ContentData = {
         lives: string;
         livesLabel: string;
     };
+    campDonation: {
+        badge: string;
+        title: string;
+        titleHighlight: string;
+        description: string;
+        points: { title: string; desc: string }[];
+        cta: string;
+    };
     features: {
         title: string;
         items: { title: string; desc: string }[];
@@ -406,6 +414,19 @@ export const content: Record<'en' | 'mr', ContentData> = {
             lives: "1,00,000+",
             livesLabel: "Lives Served"
         },
+        campDonation: {
+            badge: "Voluntary Camp Donation",
+            title: "Bring a Blood Donation",
+            titleHighlight: "Camp to Your Community",
+            description: "We organize voluntary blood donation camps at colleges, workplaces, and community events across Kopargaon and nearby talukas — complete with certified medical staff, free screening, and refreshments for every donor.",
+            points: [
+                { title: "On-site Medical Team", desc: "Qualified doctors and technicians handle screening and collection safely." },
+                { title: "Free Health Check-up", desc: "Every donor gets a basic health screening at no cost." },
+                { title: "For Groups & Institutions", desc: "Ideal for colleges, companies, and community organizations." },
+                { title: "Easy Online Registration", desc: "Check ongoing and upcoming camps and register in minutes." }
+            ],
+            cta: "Check & Register for Camp Donation"
+        },
         features: {
             title: "Why Trust Sanjivani Blood Bank?",
             items: [
@@ -430,7 +451,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
             title: "Celebrate Your Birthday by Saving Lives",
             subtitle: "Instead of cutting a cake, give someone a second chance at life.",
             occasions: ["Birthday", "Anniversary", "Special Occasions"],
-            cta: "Register Your Pledge"
+            cta: "Donate Now!"
         },
         education: {
             shortageTitle: "Seasonal Blood Shortage Awareness",
@@ -881,6 +902,19 @@ export const content: Record<'en' | 'mr', ContentData> = {
             lives: "१,००,०००+",
             livesLabel: "रुग्ण सेवा"
         },
+        campDonation: {
+            badge: "स्वैच्छिक शिबिर रक्तदान",
+            title: "आपल्या परिसरात रक्तदान",
+            titleHighlight: "शिबिर आयोजित करा",
+            description: "आम्ही कोपरगाव आणि आसपासच्या तालुक्यांमध्ये महाविद्यालये, कार्यालये आणि सामुदायिक कार्यक्रमांमध्ये स्वैच्छिक रक्तदान शिबिरे आयोजित करतो — प्रमाणित वैद्यकीय कर्मचारी, मोफत तपासणी आणि प्रत्येक दात्यासाठी अल्पोपाहारासह.",
+            points: [
+                { title: "वैद्यकीय पथक उपलब्ध", desc: "पात्र डॉक्टर आणि तंत्रज्ञ तपासणी व संकलन सुरक्षितपणे करतात." },
+                { title: "मोफत आरोग्य तपासणी", desc: "प्रत्येक दात्याला विनामूल्य मूलभूत आरोग्य तपासणी मिळते." },
+                { title: "संस्था व गटांसाठी योग्य", desc: "महाविद्यालये, कंपन्या आणि सामुदायिक संस्थांसाठी आदर्श." },
+                { title: "सोपी ऑनलाइन नोंदणी", desc: "सुरू असलेली व आगामी शिबिरे पहा आणि काही मिनिटांत नोंदणी करा." }
+            ],
+            cta: "शिबिर रक्तदानासाठी तपासा व नोंदणी करा"
+        },
         features: {
             title: "संजीवनी ब्लड बँक का निवडाल?",
             items: [
@@ -905,7 +939,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
             title: "वाढदिवस साजरा करा जीवदान देऊन",
             subtitle: "केक कापण्याऐवजी, कोणालातरी जीवनाची दुसरी संधी द्या.",
             occasions: ["वाढदिवस", "लग्नाचा वाढदिवस", "विशेष प्रसंग"],
-            cta: "रक्तदानाची शपथ घ्या"
+            cta: "आता रक्तदान करा!"
         },
         education: {
             shortageTitle: "रक्त तुटवड्याची जागरूकता",

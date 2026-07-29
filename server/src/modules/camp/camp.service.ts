@@ -241,4 +241,8 @@ export const campService = {
       },
     };
   },
+
+  async updateVoluntaryStatus(id: string, status: string) {
+    return campRepo.updateVoluntaryStatus(id, status);
+  },
 };

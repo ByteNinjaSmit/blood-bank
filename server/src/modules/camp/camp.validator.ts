@@ -43,6 +43,10 @@ export const VoluntaryQuery = z.object({
 
 export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid camp id') });
 export const CampIdParam = z.object({ campId: z.string().regex(OBJECT_ID, 'Invalid camp id') });
+export const VoluntaryIdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid donation id') });
+export const UpdateVoluntaryStatusBody = z.object({
+  status: z.enum(['PENDING', 'DONATED', 'REJECTED']),
+});
 
 export const DeleteReasonBody = z.object({
   reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
@@ -58,6 +62,9 @@ export const ValidateCamp = {
   createBody: (req: Request) => parseOrThrow(CreateCampBody, req.body, 'request body'),
   updateBody: (req: Request) => parseOrThrow(UpdateCampBody, req.body, 'request body'),
   voluntaryQuery: (req: Request) => parseOrThrow(VoluntaryQuery, req.query, 'query string'),
+  voluntaryIdParam: (req: Request) => parseOrThrow(VoluntaryIdParam, req.params, 'path params'),
+  updateVoluntaryStatusBody: (req: Request) =>
+    parseOrThrow(UpdateVoluntaryStatusBody, req.body, 'request body'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
   campIdParam: (req: Request) => parseOrThrow(CampIdParam, req.params, 'path params'),
   deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),

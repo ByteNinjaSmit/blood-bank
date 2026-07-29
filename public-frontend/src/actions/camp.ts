@@ -11,9 +11,15 @@ interface DonationTotal {
   count: number;
 }
 
-// Attaches donorCount / donationCount to each camp. Donor count comes
-// straight off the denormalized donorData array; donation count is a
-// single grouped aggregate across all camps to avoid N+1 queries.
+// Only these fields are safe to send to the public, unauthenticated site.
+// Internal references — staff, createdBy, lastUpdatedBy, donorData,
+// unitData — must never leave the server: they're raw ObjectIds pointing
+// at staff accounts, donor records and blood units, and their presence
+// would let anyone poking at the public API enumerate internal record ids.
+const PUBLIC_CAMP_PROJECTION = "campId name description address contactInfo dateFrom dateTo donorData";
+
+// Attaches donorCount / donationCount to each camp, then strips the raw
+// donorData id array — only the derived count is public-safe.
 async function withCounts<T extends { _id: unknown; donorData?: unknown[] }>(camps: T[]) {
   if (camps.length === 0) return [];
 
@@ -26,11 +32,21 @@ async function withCounts<T extends { _id: unknown; donorData?: unknown[] }>(cam
     donationTotals.map((d) => [String(d._id), d.count])
   );
 
-  return camps.map((camp) => ({
-    ...camp,
-    donorCount: Array.isArray(camp.donorData) ? camp.donorData.length : 0,
-    donationCount: donationCountByCamp.get(String(camp._id)) ?? 0,
-  }));
+  return camps.map((camp) => {
+    const { donorData, ...rest } = camp;
+    return {
+      ...rest,
+      donorCount: Array.isArray(donorData) ? donorData.length : 0,
+      donationCount: donationCountByCamp.get(String(camp._id)) ?? 0,
+    };
+  });
+}
+
+// Camps with no activity yet (upcoming) never went through withCounts, so
+// they still carry the raw donorData array — strip it and zero the counts.
+function withoutDonorData<T extends { donorData?: unknown[] }>(camp: T) {
+  const { donorData, ...rest } = camp;
+  return { ...rest, donorCount: 0, donationCount: 0 };
 }
 
 export async function getActiveCamps() {
@@ -42,6 +58,7 @@ export async function getActiveCamps() {
     const camps = await Camp.find({
       dateTo: { $gte: now },
     })
+      .select(PUBLIC_CAMP_PROJECTION)
       .sort({ dateFrom: 1 })
       .lean();
 
@@ -50,7 +67,8 @@ export async function getActiveCamps() {
     const ongoing = camps.filter((c) => new Date(c.dateFrom) <= now);
     const upcoming = camps.filter((c) => new Date(c.dateFrom) > now);
     const ongoingWithCounts = await withCounts(ongoing);
-    const merged = [...ongoingWithCounts, ...upcoming].sort(
+    const upcomingWithoutCounts = upcoming.map(withoutDonorData);
+    const merged = [...ongoingWithCounts, ...upcomingWithoutCounts].sort(
       (a, b) => new Date(a.dateFrom).getTime() - new Date(b.dateFrom).getTime()
     );
 
@@ -73,6 +91,7 @@ export async function getPastCamps() {
     const camps = await Camp.find({
       dateTo: { $lt: now, $gte: windowStart },
     })
+      .select(PUBLIC_CAMP_PROJECTION)
       .sort({ dateFrom: -1 })
       .lean();
 

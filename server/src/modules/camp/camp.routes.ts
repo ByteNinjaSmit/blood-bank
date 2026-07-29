@@ -40,5 +40,11 @@ router.get(
 );
 router.get('/donors/:campId', authenticate, READ_PERM, campController.campDonors);
 router.get('/voluntary-donations', authenticate, READ_PERM, campController.voluntary);
+router.patch(
+  '/voluntary-donations/:id/status',
+  authenticate,
+  MANAGE_PERM,
+  campController.updateVoluntaryStatus,
+);
 
 export default router;

@@ -156,4 +156,10 @@ export const campRepo = {
     ]);
     return { items, total };
   },
+
+  async updateVoluntaryStatus(id: string, status: string) {
+    const updated = await CampDonationModel.findByIdAndUpdate(id, { status }, { new: true }).lean();
+    if (!updated) throw new NotFoundError('Voluntary camp donation not found');
+    return updated;
+  },
 };

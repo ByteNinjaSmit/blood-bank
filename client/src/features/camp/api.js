@@ -14,4 +14,6 @@ export const campApi = {
   campDonations: (campId) => apiClient.get(`${BASE}/donations/${campId}`).then(unwrap),
   campDonors: (campId) => apiClient.get(`${BASE}/donors/${campId}`).then(unwrap),
   voluntaryDonations: (params) => apiClient.get(`${BASE}/voluntary-donations`, { params }).then(unwrap),
+  updateVoluntaryStatus: (id, status) =>
+    apiClient.patch(`${BASE}/voluntary-donations/${id}/status`, { status }).then(unwrap),
 };
