@@ -62,18 +62,6 @@ export default function Navbar() {
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)]' : 'bg-white'
                 }`}
         >
-            {/* Top Bar (Subtle) */}
-            <div className="bg-gray-50/80 border-b border-gray-100/50 py-1.5 overflow-hidden">
-                <div className="max-w-7xl mx-auto px-4 md:px-8 flex justify-end">
-                    <Link
-                        href="/hospital-services/login"
-                        className="text-[10px] md:text-[11px] font-semibold text-gray-400 hover:text-gray-900 transition-colors tracking-widest uppercase font-inter"
-                    >
-                        Hospital Services
-                    </Link>
-                </div>
-            </div>
-
             {/* Main Navbar */}
             <div className={`max-w-7xl mx-auto px-4 md:px-8 transition-all duration-500 ${isScrolled ? 'py-3' : 'py-5'
                 }`}>
@@ -98,27 +86,30 @@ export default function Navbar() {
 
                     {/* Desktop Navigation */}
                     <div className="hidden lg:flex items-center gap-2">
-                        {t.mainLinks.map((item, index) => (
-                            <div
-                                key={index}
-                                className="relative h-full flex items-center"
-                                onMouseEnter={() => handleMouseEnter(index)}
-                                onMouseLeave={handleMouseLeave}
-                            >
-                                <Link
-                                    href={item.href}
-                                    className={`flex items-center gap-1 px-4 py-2 text-[15px] font-semibold transition-all duration-300 rounded-lg group ${activeDropdown === index
-                                            ? 'bg-rose-50 text-[#8B0000]'
-                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                                        }`}
+                        {t.mainLinks.map((item, index) => {
+                            const isActive = item.href !== '/' && pathname.startsWith(item.href)
+                            return (
+                                <div
+                                    key={index}
+                                    className="relative h-full flex items-center"
+                                    onMouseEnter={() => handleMouseEnter(index)}
+                                    onMouseLeave={handleMouseLeave}
                                 >
-                                    {item.label}
-                                    {item.columns && (
-                                        <ChevronDown size={14} className={`transition-transform duration-300 ${activeDropdown === index ? 'rotate-180' : ''}`} />
-                                    )}
-                                </Link>
-                            </div>
-                        ))}
+                                    <Link
+                                        href={item.href}
+                                        className={`flex items-center gap-1 px-4 py-2 text-[15px] font-semibold transition-all duration-300 rounded-lg group ${activeDropdown === index || isActive
+                                                ? 'bg-rose-50 text-[#8B0000]'
+                                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        {item.label}
+                                        {item.columns && (
+                                            <ChevronDown size={14} className={`transition-transform duration-300 ${activeDropdown === index ? 'rotate-180' : ''}`} />
+                                        )}
+                                    </Link>
+                                </div>
+                            )
+                        })}
                     </div>
 
                     {/* Primary CTA & Tools */}
@@ -254,13 +245,6 @@ export default function Navbar() {
                             ))}
 
                             <div className="pt-4 mt-2 border-t border-gray-100 flex flex-col gap-4">
-                                <Link
-                                    href="/hospital-services/login"
-                                    className="text-xs font-bold text-gray-400 hover:text-gray-900 font-inter tracking-widest uppercase py-1"
-                                    onClick={() => setMobileOpen(false)}
-                                >
-                                    Hospital Services
-                                </Link>
                                 <Link
                                     href="/donate"
                                     className="flex items-center justify-center gap-3 bg-[#8B0000] text-white px-6 py-4 rounded-2xl text-[15px] font-bold shadow-lg font-poppins active:scale-95 transition-transform"

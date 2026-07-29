@@ -8,7 +8,6 @@ export type ContentData = {
         trustedBy: string;
     };
     nav: {
-        topLinks: { label: string; href: string }[];
         mainLinks: {
             label: string;
             href: string;
@@ -318,12 +317,6 @@ export const content: Record<'en' | 'mr', ContentData> = {
             trustedBy: "Trusted by 100,000+ lives served"
         },
         nav: {
-            topLinks: [
-                { label: "Hospital Services", href: "/" },
-                { label: "Research", href: "/" },
-                { label: "Careers", href: "/" },
-                { label: "Shop", href: "/" }
-            ],
             bookNow: "BOOK NOW",
             mainLinks: [
                 {
@@ -334,7 +327,6 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             title: "Am I eligible to donate blood?",
                             links: [
                                 { label: "Explore eligibility criteria", href: "/eligibility-criteria" },
-                                { label: "Take our eligibility quiz", href: "/" },
                                 { label: "Recent changes to donation criteria", href: "/donation-criteria-changes" }
                             ]
                         },
@@ -344,13 +336,10 @@ export const content: Record<'en' | 'mr', ContentData> = {
                                 { label: "First-time donor", href: "/donate" },
                                 { label: "What is my blood type?", href: "/blood-type" },
                                 { label: "Donation process", href: "/donation-process" },
-                                { label: "Donor questionnaire", href: "/" },
                                 { label: "Donor wellness and safety", href: "/donor-wellness" }
                             ]
                         }
-                    ],
-                    viewAllLabel: "View all Blood info",
-                    viewAllHref: "/"
+                    ]
                 },
 
                 {
@@ -360,14 +349,10 @@ export const content: Record<'en' | 'mr', ContentData> = {
                         {
                             title: "Donation options",
                             links: [
-                                { label: "Book an appointment", href: "/donate" },
-                                { label: "Donor centres hours & locations", href: "/" },
-                                { label: "Recognition programs", href: "/" }
+                                { label: "Book an appointment", href: "/donate" }
                             ]
                         }
-                    ],
-                    viewAllLabel: "View all Ways to Donate",
-                    viewAllHref: "/donate"
+                    ]
                 },
                 {
                     label: "About Us",
@@ -377,18 +362,14 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             title: "Our organization",
                             links: [
                                 { label: "Our mission", href: "/about" },
-                                { label: "Our history", href: "/about" },
-                                { label: "Contact us", href: "/" },
-                                { label: "Accessibility in donor centres", href: "/" }
+                                { label: "Our history", href: "/about" }
                             ]
                         }
-                    ],
-                    viewAllLabel: "View all About Us",
-                    viewAllHref: "/about"
+                    ]
                 },
                 {
                     label: "Donation",
-                    href: "#",
+                    href: "/onsite-donor",
                     columns: [
                         {
                             title: "Donation Services",
@@ -811,12 +792,6 @@ export const content: Record<'en' | 'mr', ContentData> = {
             trustedBy: "१,००,०००+ रुग्णांचा विश्वास"
         },
         nav: {
-            topLinks: [
-                { label: "रुग्णालय सेवा", href: "/" },
-                { label: "संशोधन", href: "/" },
-                { label: "करिअर", href: "/" },
-                { label: "शॉप", href: "/" }
-            ],
             bookNow: "बुक करा",
             mainLinks: [
                 {
@@ -827,7 +802,6 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             title: "मी रक्तदान करू शकतो का?",
                             links: [
                                 { label: "पात्रता निकष जाणून घ्या", href: "/eligibility-criteria" },
-                                { label: "पात्रता चाचणी घ्या", href: "/" },
                                 { label: "दान निकषातील अलीकडील बदल", href: "/donation-criteria-changes" }
                             ]
                         },
@@ -837,13 +811,10 @@ export const content: Record<'en' | 'mr', ContentData> = {
                                 { label: "प्रथमच रक्तदाता", href: "/donate" },
                                 { label: "माझा रक्तगट कोणता?", href: "/blood-type" },
                                 { label: "दान प्रक्रिया", href: "/donation-process" },
-                                { label: "दाता प्रश्नावली", href: "/" },
                                 { label: "दाता कल्याण आणि सुरक्षा", href: "/donor-wellness" }
                             ]
                         }
-                    ],
-                    viewAllLabel: "सर्व रक्त माहिती पहा",
-                    viewAllHref: "/"
+                    ]
                 },
 
                 {
@@ -853,14 +824,10 @@ export const content: Record<'en' | 'mr', ContentData> = {
                         {
                             title: "दान पर्याय",
                             links: [
-                                { label: "अपॉइंटमेंट बुक करा", href: "/donate" },
-                                { label: "दाता केंद्रे तास आणि स्थाने", href: "/" },
-                                { label: "ओळख कार्यक्रम", href: "/" }
+                                { label: "अपॉइंटमेंट बुक करा", href: "/donate" }
                             ]
                         }
-                    ],
-                    viewAllLabel: "सर्व दान मार्ग पहा",
-                    viewAllHref: "/donate"
+                    ]
                 },
                 {
                     label: "आमच्याबद्दल",
@@ -870,18 +837,14 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             title: "आमची संस्था",
                             links: [
                                 { label: "आमचे ध्येय", href: "/about" },
-                                { label: "आमचा इतिहास", href: "/about" },
-                                { label: "संपर्क करा", href: "/" },
-                                { label: "दाता केंद्रांमध्ये सुलभता", href: "/" }
+                                { label: "आमचा इतिहास", href: "/about" }
                             ]
                         }
-                    ],
-                    viewAllLabel: "सर्व आमच्याबद्दल पहा",
-                    viewAllHref: "/about"
+                    ]
                 },
                 {
                     label: "रक्तदान",
-                    href: "#",
+                    href: "/onsite-donor",
                     columns: [
                         {
                             title: "रक्तदान सेवा",
