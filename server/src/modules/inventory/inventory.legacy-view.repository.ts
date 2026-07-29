@@ -292,6 +292,7 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
             }
           }
           requisitionObj = {
+            _id: reqDoc._id ? reqDoc._id.toString() : undefined,
             requisitionId: reqDoc.requisitionId,
             doctorName: reqDoc.doctorName || reqDoc.clinicianName,
             requiredAt: reqDoc.requiredAt ? reqDoc.requiredAt.toISOString() : undefined,

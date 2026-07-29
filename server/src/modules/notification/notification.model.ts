@@ -24,13 +24,20 @@ const InAppNotificationSchema = new Schema(
     actionLink: { type: String, default: null },
     // Identifies the triggering event for duplicate suppression, e.g.
     // "LOW_STOCK:chemicalId" or "TTI_TESTING_PENDING:donationId:2026-07-13".
-    dedupeKey: { type: String, default: null, index: true },
+    dedupeKey: { type: String, default: null },
   },
   { timestamps: true },
 );
 
 InAppNotificationSchema.index({ userId: 1, read: 1, createdAt: -1 });
-InAppNotificationSchema.index({ dedupeKey: 1, createdAt: -1 });
+// Unique (but sparse via partialFilterExpression) so duplicate-prevention is
+// enforced atomically at the DB level instead of via a racy exists-then-create
+// check in the service layer. Notifications without a dedupeKey (most of them)
+// are excluded from the filter, so unlimited nulls are still allowed.
+InAppNotificationSchema.index(
+  { dedupeKey: 1 },
+  { unique: true, partialFilterExpression: { dedupeKey: { $type: 'string' } } },
+);
 
 export type InAppNotification = InferSchemaType<typeof InAppNotificationSchema>;
 export type InAppNotificationModel = Model<InAppNotification>;

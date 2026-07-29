@@ -5,6 +5,7 @@ import { invalidate } from '@/core/cache';
 import { createUnitRepo } from '@/modules/unit/unit.repository';
 import { auditService } from '@/modules/audit/audit.service';
 import { notificationService } from '@/modules/notification/notification.service';
+import { notificationCenterService } from '@/modules/notification/notification-center.service';
 import { sendMail } from '@/core/mail';
 import { renderEmail } from '@/shared/email/templates';
 import {
@@ -47,6 +48,21 @@ export async function runAutoUnreserveScan(): Promise<number> {
         } as any,
       });
       unreservedCount++;
+
+      const dayBucket = new Date().toISOString().slice(0, 10);
+      await notificationCenterService
+        .notify({
+          title: 'Reservation auto-expired',
+          message: `Unit ${unit.unitId} (${unit.componentType} ${unit.aboGroup}${unit.rhFactor}) reservation auto-cancelled after 3-day limit`,
+          module: 'INVENTORY',
+          category: 'RESERVATION_EXPIRED',
+          severity: 'INFORMATION',
+          relatedRecordId: unit.unitId,
+          relatedRecordType: 'BloodUnit',
+          actionLink: '/inventory',
+          dedupeKey: `RESERVATION_EXPIRED:${unit.unitId}:${dayBucket}`,
+        })
+        .catch(() => undefined);
     } catch (err) {
       log.warn({ unitId: unit.unitId, err: (err as Error).message }, 'auto-unreserve skipped');
     }

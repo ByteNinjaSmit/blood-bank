@@ -5,19 +5,21 @@
 // this is new code with no existing consumer to stay compatible with —
 // the first full example of the "no axios in components" pattern for this
 // feature area.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { requisitionApi } from '@/features/requisition/api';
 import { useHospitalList, useCreateHospital } from '@/features/hospital/queries';
+import { donorCardApi } from '@/features/donor-card/api';
 import {
+  defaultDonorCard,
   defaultPatient,
   defaultRequestedComponent,
   buildPatientPayload,
 } from '@/features/requisition/pages/hooks/requisition-defaults';
 import { checkHasChanges } from '@/features/requisition/pages/hooks/dirty-tracking';
 
-export { defaultPatient, defaultRequestedComponent };
+export { defaultDonorCard, defaultPatient, defaultRequestedComponent };
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -45,6 +47,7 @@ export default function useReservationWizard() {
     reservedUntil: '',
     patient: { ...defaultPatient },
     requestedComponents: [{ ...defaultRequestedComponent }],
+    donorCard: { ...defaultDonorCard },
   });
 
   const [requestDoc, setRequestDoc] = useState(null);
@@ -55,6 +58,53 @@ export default function useReservationWizard() {
   const [crossmatchUpdating, setCrossmatchUpdating] = useState(false);
   const [swapping, setSwapping] = useState(false);
   const [groupingSaving, setGroupingSaving] = useState(false);
+
+  // Donor card lives in a separate collection (not embedded on the
+  // requisition), so it has to be fetched independently — mirrors
+  // useRequisition.js exactly.
+  useEffect(() => {
+    if (!requestDoc?._id) return;
+    let cancelled = false;
+    (async () => {
+      let donorCard = { ...defaultDonorCard };
+      try {
+        const found = await donorCardApi.getByRequisition(requestDoc._id);
+        if (found) {
+          donorCard = {
+            brought: true,
+            name: found.name || '',
+            address: found.address || '',
+            bloodGroup: found.bloodGroup || 'A+',
+            donationCardNumber: found.donationCardNumber || '',
+          };
+        }
+      } catch {
+        // no card saved yet, or lookup failed — fall back to defaults
+      }
+      if (!cancelled) {
+        setForm((prev) => ({ ...prev, donorCard }));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [requestDoc?._id]);
+
+  // Best-effort — the reservation itself already succeeded, so a donor
+  // card save failure shouldn't block the wizard from proceeding. Uses an
+  // upsert on the server, so this is safe to call again on later edits.
+  const saveDonorCardIfNeeded = async (requisitionId) => {
+    if (!form.donorCard?.brought || !requisitionId) return;
+    try {
+      await donorCardApi.create({
+        requisitionId,
+        name: form.donorCard.name,
+        address: form.donorCard.address,
+        bloodGroup: form.donorCard.bloodGroup,
+        donationCardNumber: form.donorCard.donationCardNumber,
+      });
+    } catch {
+      toast.warning('Reservation saved, but saving the donor card details failed.');
+    }
+  };
 
   const addRequestLine = () => {
     setForm((prev) => ({
@@ -172,6 +222,7 @@ export default function useReservationWizard() {
         const updated = await requisitionApi.update(requestDoc._id, payload);
         setRequestDoc(updated);
         toast.success('Changes updated');
+        await saveDonorCardIfNeeded(updated._id);
         await handleMatch(updated._id);
         setCurrentStep(2);
       } catch (e) {
@@ -184,6 +235,7 @@ export default function useReservationWizard() {
       const created = await requisitionApi.create(payload);
       setRequestDoc(created);
       toast.success('Reservation request created');
+      await saveDonorCardIfNeeded(created._id);
       await handleMatch(created._id);
       setCurrentStep(2);
     } catch (e) {

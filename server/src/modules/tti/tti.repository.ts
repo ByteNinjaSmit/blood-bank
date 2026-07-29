@@ -85,6 +85,8 @@ export interface TtiRepo {
   ): Promise<TtiResultDto>;
   /** Records who corrected an already-finalized result, and why. */
   setEditMeta(donationId: string, reason: string, actorId: string): Promise<TtiResultDto>;
+  /** Count of donations still awaiting a TTI release decision. */
+  countPendingTesting(): Promise<number>;
 }
 
 export function createTtiRepo(): TtiRepo {
@@ -148,6 +150,10 @@ export function createTtiRepo(): TtiRepo {
       ).lean()) as RawTti | null;
       if (!updated) throw new NotFoundError('TtiResult', donationId);
       return toDto(updated);
+    },
+
+    async countPendingTesting() {
+      return TtiResultModel.countDocuments({ releaseDecision: 'pending' });
     },
   };
 }

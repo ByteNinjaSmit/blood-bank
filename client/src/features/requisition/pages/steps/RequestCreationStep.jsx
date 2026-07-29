@@ -152,7 +152,7 @@ export default function RequestCreationStep({
           onAddHospital={openAddHospital}
           doctorName={displayForm.doctorName}
           onDoctorNameChange={(v) => setForm((p) => ({ ...p, doctorName: v }))}
-          dateFieldLabel="Date & Time of Requirement"
+          dateFieldLabel="Reserved Until (optional — default 3 days)"
           dateValue={displayForm.requiredAt}
           onDateChange={(v) => setForm((p) => ({ ...p, requiredAt: v }))}
           readOnly={readOnly}

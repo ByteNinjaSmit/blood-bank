@@ -32,6 +32,7 @@ function mocks(ttiDto: TtiResultDto) {
     recordTests: vi.fn().mockResolvedValue(ttiDto),
     setDecision: vi.fn().mockResolvedValue(ttiDto),
     setEditMeta: vi.fn().mockResolvedValue(ttiDto),
+    countPendingTesting: vi.fn().mockResolvedValue(0),
   };
   const units: UnitRepo = {
     findByUnitId: vi.fn(),

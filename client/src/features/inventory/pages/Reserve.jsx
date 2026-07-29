@@ -310,9 +310,9 @@ const Reserve = () => {
                           <td className="px-4 py-3.5 text-sm font-semibold text-gray-900">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span>{first?.requisition?.requisitionId || reqKey}</span>
-                              {first?.requisition?.requiredAt && (
+                              {first?.reservedUntil && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200">
-                                  Required by: {formatDateTimeDMY(first.requisition.requiredAt)}
+                                  Reserved Until: {formatDateTimeDMY(first.reservedUntil)}
                                 </span>
                               )}
                             </div>

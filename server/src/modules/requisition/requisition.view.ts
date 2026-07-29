@@ -79,6 +79,7 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
         crossmatchRequired: mu.crossmatchRequired,
         crossmatchStatus: mu.crossmatchStatus.toLowerCase(),
         reservedAt: mu.reservedAt,
+        reservedUntil: unit.reservedUntil ? new Date(unit.reservedUntil).toISOString() : null,
         compatibilityResult: mu.compatibilityResult || null,
         crossmatchDoneAt: mu.crossmatchDoneAt ? new Date(mu.crossmatchDoneAt).toISOString() : null,
         crossmatchSeenAt: mu.crossmatchSeenAt ? new Date(mu.crossmatchSeenAt).toISOString() : null,
@@ -138,6 +139,14 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
     rejectedByDoc = (await UserModel.findById(reqDto.rejectedBy).select('name username').lean()) as any;
   }
 
+  // Single merged "Reserved Until" date: the real, unit-level reservedUntil
+  // once units are actually reserved (set at approve() — equals the user's
+  // requiredAt when it's a valid future date, else defaults to +3 days),
+  // falling back to the raw requiredAt the user entered before that point.
+  const reservedUntil =
+    matchedInventory.find((m: any) => m?.reservedUntil)?.reservedUntil ??
+    (reqDto.requiredAt ? new Date(reqDto.requiredAt).toISOString() : null);
+
   return {
     ...reqDto,
     _id: reqDto.id || reqDto._id || '',
@@ -146,6 +155,7 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
     recipientGrouping: reqDto.recipientGrouping || null,
     requestedComponents,
     matchedInventory,
+    reservedUntil,
     status: reqDto.status?.toLowerCase(),
     hospitalId: hospitalDoc ? { _id: reqDto.hospitalId, name: hospitalDoc.name } : reqDto.hospitalId,
     patient: patientData,

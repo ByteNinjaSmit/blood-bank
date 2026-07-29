@@ -1,7 +1,25 @@
-import { X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CreditCard, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { donorCardApi } from "@/features/donor-card/api";
 
 export default function ReserveDetailModal({ reserve, onClose, formatDateDMY, formatDateTimeDMY }) {
+  const [donorCard, setDonorCard] = useState(null);
+
+  useEffect(() => {
+    const requisitionId = reserve?.requisition?._id;
+    if (!requisitionId) {
+      setDonorCard(null);
+      return;
+    }
+    let cancelled = false;
+    donorCardApi
+      .getByRequisition(requisitionId)
+      .then((found) => { if (!cancelled) setDonorCard(found || null); })
+      .catch(() => { if (!cancelled) setDonorCard(null); });
+    return () => { cancelled = true; };
+  }, [reserve?.requisition?._id]);
+
   if (!reserve) return null;
 
   return (
@@ -40,12 +58,6 @@ export default function ReserveDetailModal({ reserve, onClose, formatDateDMY, fo
               <div>
                 <span className="font-semibold text-gray-500">Doctor / Clinician Name:</span>
                 <div className="text-slate-800 mt-0.5 font-medium">{reserve.requisition?.doctorName || '—'}</div>
-              </div>
-              <div>
-                <span className="font-semibold text-gray-500">Required By:</span>
-                <div className="text-slate-800 mt-0.5 font-medium">
-                  {reserve.requisition?.requiredAt ? formatDateTimeDMY(reserve.requisition.requiredAt) : '—'}
-                </div>
               </div>
               <div>
                 <span className="font-semibold text-gray-500">Reserved Until:</span>
@@ -199,6 +211,36 @@ export default function ReserveDetailModal({ reserve, onClose, formatDateDMY, fo
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Card 5: Donor Card */}
+          <div className="bg-white p-4 rounded-xl border border-gray-150 shadow-sm space-y-3">
+            <h4 className="font-bold text-sm text-orange-900 border-b pb-1.5 uppercase tracking-wide flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              Donor Card
+            </h4>
+            {donorCard ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <span className="font-semibold text-gray-500">Name:</span>
+                  <div className="text-slate-800 mt-0.5 font-medium">{donorCard.name || '—'}</div>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-500">Address:</span>
+                  <div className="text-slate-800 mt-0.5 font-medium">{donorCard.address || '—'}</div>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-500">Blood Group:</span>
+                  <div className="text-slate-800 mt-0.5 font-medium">{donorCard.bloodGroup || '—'}</div>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-500">Blood Donation Card Number:</span>
+                  <div className="text-slate-800 mt-0.5 font-medium">{donorCard.donationCardNumber || '—'}</div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 italic">No donor card was brought / recorded for this reservation.</p>
+            )}
           </div>
 
         </div>

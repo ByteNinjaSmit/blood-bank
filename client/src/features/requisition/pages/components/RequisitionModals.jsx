@@ -46,8 +46,8 @@ export default function RequisitionModals({
                 <div className="font-medium">{fmt(viewDoc.requestedAt)}</div>
               </div>
               <div>
-                <div className="text-gray-600">Required By</div>
-                <div className="font-medium">{viewDoc.requiredAt ? fmt(viewDoc.requiredAt) : '—'}</div>
+                <div className="text-gray-600">Reserved Until</div>
+                <div className="font-medium">{viewDoc.reservedUntil ? fmt(viewDoc.reservedUntil) : '—'}</div>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -74,8 +74,8 @@ export interface ListNotificationFilters {
 }
 
 export interface NotificationRepo {
-  create(input: CreateNotificationInput): Promise<NotificationDto>;
-  existsByDedupeKey(dedupeKey: string): Promise<boolean>;
+  /** Returns null instead of throwing when `dedupeKey` collides with an existing row (atomic dedupe via unique index). */
+  create(input: CreateNotificationInput): Promise<NotificationDto | null>;
   list(
     userId: string,
     filters: ListNotificationFilters,
@@ -99,24 +99,26 @@ function scopeToUser(userId: string) {
 export function createNotificationRepo(): NotificationRepo {
   return {
     async create(input) {
-      const doc = await InAppNotificationModel.create({
-        userId: input.userId ? new Types.ObjectId(input.userId) : null,
-        title: input.title,
-        message: input.message,
-        module: input.module,
-        category: input.category,
-        severity: input.severity,
-        relatedRecordId: input.relatedRecordId ?? null,
-        relatedRecordType: input.relatedRecordType ?? null,
-        actionLink: input.actionLink ?? null,
-        dedupeKey: input.dedupeKey ?? null,
-      });
-      return toDto(doc.toObject() as RawNotification);
-    },
-
-    async existsByDedupeKey(dedupeKey) {
-      const found = await InAppNotificationModel.exists({ dedupeKey });
-      return found !== null;
+      try {
+        const doc = await InAppNotificationModel.create({
+          userId: input.userId ? new Types.ObjectId(input.userId) : null,
+          title: input.title,
+          message: input.message,
+          module: input.module,
+          category: input.category,
+          severity: input.severity,
+          relatedRecordId: input.relatedRecordId ?? null,
+          relatedRecordType: input.relatedRecordType ?? null,
+          actionLink: input.actionLink ?? null,
+          dedupeKey: input.dedupeKey ?? null,
+        });
+        return toDto(doc.toObject() as RawNotification);
+      } catch (err) {
+        // Duplicate dedupeKey — another concurrent request already created this
+        // notification. Treat as a no-op instead of throwing.
+        if ((err as { code?: number }).code === 11000) return null;
+        throw err;
+      }
     },
 
     async list(userId, filters, page, pageSize) {

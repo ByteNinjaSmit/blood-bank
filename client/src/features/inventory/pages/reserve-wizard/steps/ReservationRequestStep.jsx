@@ -5,10 +5,11 @@ import PatientForm from '@/features/requisition/pages/components/PatientForm';
 import TransfusionHistoryCard from '@/features/requisition/pages/components/TransfusionHistoryCard';
 import PregnancyHistoryCard from '@/features/requisition/pages/components/PregnancyHistoryCard';
 import RequestedComponentsList from '@/features/requisition/pages/components/RequestedComponentsList';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 // Step 1 of the Reservation wizard — same fields/UX as Requisition's
-// RequestCreationStep, minus the Donor Card section and the (now removed)
-// Hospital Seal / Medical Officer Signature card.
+// RequestCreationStep, including the Donor Card section and Enter-to-next-field
+// navigation; minus the (removed) Hospital Seal / Medical Officer Signature card.
 export default function ReservationRequestStep({
   hospitals,
   hospitalsLoading,
@@ -33,8 +34,10 @@ export default function ReservationRequestStep({
     setForm((p) => ({ ...p, patient: { ...p.patient, pregnancy: { ...(p.patient.pregnancy || {}), ...patch } } }));
   };
 
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
+
   return (
-    <div className="p-6 space-y-6 bg-gray-50/50 rounded-xl">
+    <div className="p-6 space-y-6 bg-gray-50/50 rounded-xl" onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <HospitalDoctorDetailsCard
           hospitals={hospitals}
@@ -78,6 +81,80 @@ export default function ReservationRequestStep({
           onAdd={addRequestLine}
           onRemove={removeRequestLine}
         />
+      </div>
+
+      {/* Donor Card */}
+      <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-sm space-y-4">
+        <div className="flex items-center gap-2 border-b pb-2 text-orange-800">
+          <CreditCard className="w-5 h-5" />
+          <h3 className="font-semibold text-gray-800">Donor Card</h3>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-700 mb-2">
+            Did the person bring a donor card while collecting this blood?
+          </label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="radio"
+                name="reserveDonorCardBrought"
+                checked={form.donorCard?.brought === true}
+                onChange={() => setForm((p) => ({ ...p, donorCard: { ...p.donorCard, brought: true } }))}
+              />
+              Yes
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="radio"
+                name="reserveDonorCardBrought"
+                checked={!form.donorCard?.brought}
+                onChange={() => setForm((p) => ({ ...p, donorCard: { ...p.donorCard, brought: false } }))}
+              />
+              No
+            </label>
+          </div>
+        </div>
+
+        {form.donorCard?.brought && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Name</label>
+              <input
+                className="w-full px-3 py-2 border rounded-lg bg-white"
+                value={form.donorCard?.name || ''}
+                onChange={(e) => setForm((p) => ({ ...p, donorCard: { ...p.donorCard, name: e.target.value } }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Address</label>
+              <input
+                className="w-full px-3 py-2 border rounded-lg bg-white"
+                value={form.donorCard?.address || ''}
+                onChange={(e) => setForm((p) => ({ ...p, donorCard: { ...p.donorCard, address: e.target.value } }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Blood Group</label>
+              <select
+                className="w-full px-3 py-2 border rounded-lg bg-white"
+                value={form.donorCard?.bloodGroup || 'A+'}
+                onChange={(e) => setForm((p) => ({ ...p, donorCard: { ...p.donorCard, bloodGroup: e.target.value } }))}
+              >
+                {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) => (
+                  <option key={bg} value={bg}>{bg}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Blood Donation Card Number</label>
+              <input
+                className="w-full px-3 py-2 border rounded-lg bg-white"
+                value={form.donorCard?.donationCardNumber || ''}
+                onChange={(e) => setForm((p) => ({ ...p, donorCard: { ...p.donorCard, donationCardNumber: e.target.value } }))}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {Array.isArray(shortages) && shortages.length > 0 && (

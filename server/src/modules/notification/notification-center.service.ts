@@ -44,7 +44,7 @@ export interface NotificationCenterService {
   checkAndCreateStockSummary(): Promise<void>;
 }
 
-const STOCK_SUMMARY_INTERVAL_MS = 2 * 60 * 60 * 1000;
+const STOCK_SUMMARY_INTERVAL_MS = 30 * 60 * 1000;
 
 export function createNotificationCenterService(deps: {
   repo: NotificationRepo;
@@ -54,15 +54,15 @@ export function createNotificationCenterService(deps: {
 
   return {
     async notify(input) {
-      if (input.dedupeKey) {
-        const exists = await repo.existsByDedupeKey(input.dedupeKey);
-        if (exists) return null;
-      }
+      // Dedupe is enforced atomically by the repo (unique index on dedupeKey) —
+      // create() returns null on collision instead of throwing.
       const created = await repo.create(input);
-      log.info(
-        { module: input.module, category: input.category, severity: input.severity },
-        'notification created',
-      );
+      if (created) {
+        log.info(
+          { module: input.module, category: input.category, severity: input.severity },
+          'notification created',
+        );
+      }
       return created;
     },
 
@@ -95,18 +95,20 @@ export function createNotificationCenterService(deps: {
     },
 
     async checkAndCreateStockSummary() {
-      const last = await repo.lastByCategory('STOCK_SUMMARY');
-      const now = Date.now();
-      if (last && now - new Date(last.createdAt).getTime() < STOCK_SUMMARY_INTERVAL_MS) return;
-
       const counts = await repo.releasedComponentCounts();
       const hash = hashCounts(counts);
+
+      const last = await repo.lastByCategory('STOCK_SUMMARY');
       if (last && last.relatedRecordId === hash) return; // no change since last summary
 
       const total = Object.values(counts).reduce((a, b) => a + b, 0);
       const lines = COMPONENT_TYPE.map((c) => `${c}: ${counts[c] ?? 0}`).join(', ');
+      // Time-bucketed dedupeKey: the DB's unique index (not this read) is what
+      // actually prevents two concurrent callers in the same bucket from both
+      // inserting — see notification.repository.ts create().
+      const bucket = Math.floor(Date.now() / STOCK_SUMMARY_INTERVAL_MS);
 
-      await repo.create({
+      const created = await repo.create({
         userId: null,
         title: 'Current Blood Stock',
         message: `${lines}, Total Units: ${total}`,
@@ -115,8 +117,9 @@ export function createNotificationCenterService(deps: {
         severity: 'INFORMATION',
         relatedRecordId: hash,
         relatedRecordType: 'STOCK_SUMMARY_HASH',
+        dedupeKey: `STOCK_SUMMARY:${bucket}`,
       });
-      log.info({ counts, total }, 'stock summary notification created');
+      if (created) log.info({ counts, total }, 'stock summary notification created');
     },
   };
 
