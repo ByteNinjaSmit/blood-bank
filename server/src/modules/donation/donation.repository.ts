@@ -61,6 +61,7 @@ export interface DonationWithUnitsDto extends DonationDto {
   }>;
   ttiResultId?: string;
   ttiReleaseDecision?: string;
+  ttiReason?: string | null;
   requisitions?: any[];
 }
 
@@ -99,10 +100,16 @@ async function loadDonationWithUnits(mongoId: string): Promise<DonationWithUnits
   const donorDoc = doc.donor as unknown as { _id: Types.ObjectId; name?: { firstName?: string; middleName?: string; lastName?: string }; donorId?: string };
   const campDoc = doc.campId as unknown as { _id: Types.ObjectId; name?: string; address?: string } | undefined;
   const [units, tti] = await Promise.all([
-    BloodUnitModel.find({ donationId: doc.donationId })
+    // deletedAt: null — soft-deleted placeholder units (e.g. the 'WB' bag
+    // unit cleared out by component.repository.ts separate()) must not
+    // resurface here, or an already-separated donation shows both the
+    // placeholder and its real component(s).
+    BloodUnitModel.find({ donationId: doc.donationId, deletedAt: null })
       .select('unitId componentType volumeMl expiresAt status aboGroup rhFactor')
       .lean(),
-    TtiResultModel.findOne({ donationId: doc.donationId }).select('_id releaseDecision aboGroupConfirmed rhFactorConfirmed').lean(),
+    TtiResultModel.findOne({ donationId: doc.donationId })
+      .select('_id releaseDecision aboGroupConfirmed rhFactorConfirmed decisionNotes')
+      .lean(),
   ]);
 
   const unitIds = units.map(u => u.unitId);
@@ -182,6 +189,7 @@ async function loadDonationWithUnits(mongoId: string): Promise<DonationWithUnits
     })),
     ttiResultId: tti?._id?.toString(),
     ttiReleaseDecision: tti?.releaseDecision,
+    ttiReason: tti?.decisionNotes || null,
     requisitions: requisitionsInfo,
   };
 }

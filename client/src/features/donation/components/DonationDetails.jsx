@@ -42,6 +42,11 @@ const DonationDetails = ({ donation }) => {
       : undefined
   } : undefined);
   const components = donation.components || donation.units || [];
+  // SDP is collected by apheresis as a single already-separated product —
+  // the 'WB' componentType on its unit is only an internal placeholder
+  // (same derivation path whole-blood uses) and should never reach staff.
+  const displayComponentType = (componentType) =>
+    donation.donationType === 'SDP' && componentType === 'WB' ? 'SDP' : componentType;
 
   return (
     <div className="space-y-6 text-sm text-slate-800">
@@ -51,14 +56,26 @@ const DonationDetails = ({ donation }) => {
           <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">
             Donation overview
           </p>
-          <span className="inline-flex items-center gap-1.5 shrink-0">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
-              Donation ID
+          <div className="flex flex-wrap items-center gap-2">
+            {donation.donorPublicId && (
+              <span className="inline-flex items-center gap-1.5 shrink-0">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                  Donor ID
+                </span>
+                <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-1 rounded-md shadow-sm whitespace-nowrap">
+                  {donation.donorPublicId}
+                </span>
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1.5 shrink-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                Donation ID
+              </span>
+              <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-1 rounded-md shadow-sm whitespace-nowrap">
+                {donation.donationId || '—'}
+              </span>
             </span>
-            <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-1 rounded-md shadow-sm whitespace-nowrap">
-              {donation.donationId || '—'}
-            </span>
-          </span>
+          </div>
         </div>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
@@ -192,19 +209,22 @@ const DonationDetails = ({ donation }) => {
                 className="px-3 py-2 text-xs flex justify-between"
               >
                 <div className="space-y-0.5">
-                  <p className="font-medium text-slate-800">{comp.componentType}</p>
+                  <p className="font-medium text-slate-800">{displayComponentType(comp.componentType)}</p>
                 </div>
                 <div className="text-right space-y-0.5">
                   {comp.volumeMl && (
                     <p className="text-slate-600">Volume: {comp.volumeMl} mL</p>
                   )}
                   {comp.status && (() => {
-                    const raw = comp.status === 'RELEASED' ? 'INSTOCK' : comp.status;
+                    const raw = comp.status === 'RELEASED' ? 'INSTOCK'
+                      : comp.status === 'TRANSFUSED' ? 'ISSUED'
+                      : comp.status === 'QUARANTINE' ? 'QUARANTINED'
+                      : comp.status;
                     const cls =
                       raw === 'ISSUED'                    ? 'bg-blue-50 text-blue-700 border-blue-200' :
                       raw === 'INSTOCK'                   ? 'bg-green-50 text-green-700 border-green-200' :
                       raw === 'COLLECTED'                 ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                      raw === 'QUARANTINE'                ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                      raw === 'QUARANTINED'               ? 'bg-orange-50 text-orange-700 border-orange-200' :
                       raw === 'DISCARDED' || raw === 'EXPIRED' ? 'bg-red-50 text-red-700 border-red-200' :
                       'bg-gray-50 text-gray-600 border-gray-200';
                     return (

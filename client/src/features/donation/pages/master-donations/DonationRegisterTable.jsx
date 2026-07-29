@@ -96,10 +96,11 @@ export default function DonationRegisterTable({
                     </td>
                     <td className="px-4 py-3 text-center text-gray-700 font-medium">{d.unitCount}</td>
                     <td className="px-4 py-3">
-                      {/* A TTI-reactive donation is Unfit regardless of the stored fitness flag. */}
-                      {isReactive
-                        ? <span className="px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-200 font-medium">Unfit</span>
-                        : d.isFit === true  ? <span className="px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200 font-medium">Fit</span>
+                      {/* Donor fitness (pre-donation health screening) is independent of
+                          TTI outcome (post-donation lab result) — TTI reactive donations
+                          are already flagged separately via the "TTI Reactive" badge above,
+                          so this column reflects only the actual fitness assessment. */}
+                      {d.isFit === true  ? <span className="px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200 font-medium">Fit</span>
                         : d.isFit === false ? <span className="px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-200 font-medium">Unfit</span>
                         : <span className="text-gray-400 text-xs">—</span>}
                     </td>
