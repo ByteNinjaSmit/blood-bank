@@ -32,9 +32,9 @@ export function createInventoryLegacyViewControllers(
 
     async unreserve(req, res, next) {
       try {
-        const { inventoryIds, userId } = ValidateInventoryLegacyView.unreserveBody(req);
+        const { inventoryIds, reason, userId } = ValidateInventoryLegacyView.unreserveBody(req);
         const actorId = req.user?.id || userId;
-        await service.unreserve(inventoryIds, actorId as string);
+        await service.unreserve(inventoryIds, actorId as string, reason);
         res.json({ success: true, message: 'Blood units successfully unreserved.' });
       } catch (e) {
         next(e);

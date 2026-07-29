@@ -56,6 +56,10 @@ export default function IssueViewModals({
                   </div>
                 </div>
                 <div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Component ID</div>
+                  <div className="font-bold text-gray-800 font-mono">{viewItem?.component?.componentId || viewItem?.unitId || '—'}</div>
+                </div>
+                <div>
                   <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Group</div>
                   <div className="font-bold text-red-700 text-base">
                     {viewItem?.bag ? `${viewItem.bag.bloodGroup} ${viewItem.bag.rh === 'Positive' ? '+' : viewItem.bag.rh === 'Negative' ? '-' : viewItem.bag.rh}` : '—'}

@@ -62,10 +62,14 @@ export default function StockViewModal({ item, onClose, formatDate }) {
 
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Component</p>
-            <div className="grid grid-cols-5 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
+            <div className="grid grid-cols-6 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
               <div>
                 <p className="text-[10px] text-gray-500">Component Name</p>
                 <p className="font-semibold text-gray-800">{item?.component?.componentType || '—'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-500">Component ID</p>
+                <p className="font-semibold text-gray-800 font-mono">{item?.component?.componentId || item?.unitId || '—'}</p>
               </div>
               <div>
                 <p className="text-[10px] text-gray-500">Volume</p>

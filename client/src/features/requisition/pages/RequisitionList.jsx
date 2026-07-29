@@ -10,7 +10,7 @@ const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'reject
 
 export default function RequisitionList() {
   const rl = useRequisitionList();
-  const { allSelectedIds,applyFilters,bulkAction,callAction,can,canManage,clearSelection,closeView,componentFulfillment,data,excelLoading,exportCsv,exportDropdownOpen,fetchList,filters,fmt,handleConfirmReject,handleExportExcel,handleOpenReject,handlePrint,hospitals,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocReqId,rejectModalOpen,rejectSubmitting,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setExportDropdownOpen,setFilters,setIssueDoc,setIssueModalOpen,setIssuingRowId,setLimit,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintType,setRejectModalOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen } = rl;
+  const { allSelectedIds,applyFilters,bulkAction,callAction,can,canManage,clearSelection,closeView,componentFulfillment,data,excelLoading,exportDropdownOpen,fetchList,filters,fmt,handleConfirmReject,handleExportExcel,handleOpenReject,handlePrint,hospitals,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocReqId,rejectModalOpen,rejectSubmitting,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setExportDropdownOpen,setFilters,setIssueDoc,setIssueModalOpen,setIssuingRowId,setLimit,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintType,setRejectModalOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen } = rl;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -88,8 +88,7 @@ export default function RequisitionList() {
               </button>
               <button type="button" onClick={applyFilters} className="px-4 py-2 rounded-lg bg-orange-800 text-white hover:bg-orange-900" disabled={loading}>Apply</button>
               <button type="button" onClick={resetFilters} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50" disabled={loading}>Reset</button>
-              <button type="button" onClick={exportCsv} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50" disabled={loading}>Export CSV</button>
-              
+
               <div className="relative inline-block text-left">
                 <button
                   type="button"

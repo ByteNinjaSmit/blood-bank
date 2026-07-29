@@ -331,25 +331,6 @@ export function useRequisitionList() {
     }
   };
 
-  const exportCsv = () => {
-    const cols = ['Request ID','Hospital','Patient','Age','Sex','Requested At','Status'];
-    const rows = data.map((r) => [
-      r.requestId,
-      r.hospitalId?.name || '',
-      r.patient?.name || '',
-      r.patient?.age ?? '',
-      r.patient?.sex || '',
-      r.requestedAt ? new Date(r.requestedAt).toISOString() : '',
-      r.status
-    ]);
-    const csv = ['\uFEFF' + cols.join(','), ...rows.map((row) => row.map((v) => `"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'requisitions.csv'; a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const handleExportExcel = async (exportAll = false) => {
     try {
       setExcelLoading(true);
@@ -504,5 +485,5 @@ export function useRequisitionList() {
       RequisitionPrintService.print('report');
     }, 100);
   };
-  return { allSelectedIds,applyFilters,bulkAction,callAction,can,canManage,clearSelection,closeView,componentFulfillment,data,excelLoading,exportCsv,exportDropdownOpen,fetchList,filters,fmt,getReqLabel,handleConfirmReject,handleExportExcel,handleOpenIssueModal,handleOpenReject,handlePrint,hospitals,isApprovedForIssue,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocId,rejectingDocReqId,rejectModalOpen,rejectSubmitting,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setData,setExcelLoading,setExportDropdownOpen,setFilters,setHospitals,setIssueDoc,setIssueLoading,setIssueModalOpen,setIssuingRowId,setLimit,setLoading,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintLoading,setPrintReportPage,setPrintType,setRejectingDocId,setRejectingDocReqId,setRejectModalOpen,setRejectSubmitting,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,setTotal,setViewDoc,setViewLoading,setViewOpen,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen,user,authorizationToken };
+  return { allSelectedIds,applyFilters,bulkAction,callAction,can,canManage,clearSelection,closeView,componentFulfillment,data,excelLoading,exportDropdownOpen,fetchList,filters,fmt,getReqLabel,handleConfirmReject,handleExportExcel,handleOpenIssueModal,handleOpenReject,handlePrint,hospitals,isApprovedForIssue,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocId,rejectingDocReqId,rejectModalOpen,rejectSubmitting,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setData,setExcelLoading,setExportDropdownOpen,setFilters,setHospitals,setIssueDoc,setIssueLoading,setIssueModalOpen,setIssuingRowId,setLimit,setLoading,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintLoading,setPrintReportPage,setPrintType,setRejectingDocId,setRejectingDocReqId,setRejectModalOpen,setRejectSubmitting,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,setTotal,setViewDoc,setViewLoading,setViewOpen,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen,user,authorizationToken };
 }

@@ -119,7 +119,8 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                     {COMPONENT_PRINT_LABEL[comp.componentType] || comp.componentType || 'Blood Component'}
                   </h4>
                   <div className="grid grid-cols-[auto_1fr] gap-x-1.5 gap-y-1 font-extrabold">
-                    <span>Donor ID</span><span>: {bag.bagNo || doc.requestId}</span>
+                    <span>Donor ID</span><span>: {bag.donorPublicId || '—'}</span>
+                    <span>Bag/Component ID</span><span>: {bag.bagNo || '—'}/{inv._id || '—'}</span>
                     <span>Volume</span><span>: {comp.volumeMl || '—'} ml</span>
                     <span>Collected on</span><span>: {collnDateFormatted}</span>
                     <span>Expires on</span><span>: {expiryDateFormatted}</span>

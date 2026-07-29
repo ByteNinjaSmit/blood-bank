@@ -61,6 +61,8 @@ export interface DerivedUnit {
 
 export interface DeriveUnitsInput {
   donationId: string;
+  /** Physical bag number — preferred root for unitId (e.g. "BAG993-PRBC"). Falls back to donationId when absent. */
+  bagNo?: string;
   donationType: DonationType;
   collectedAt: Date;
   /** Override the default templates (e.g. partial separation, custom volume). */
@@ -73,13 +75,22 @@ export function deriveUnits(input: DeriveUnitsInput): DerivedUnit[] {
     throw new Error(`No unit templates configured for donation type ${input.donationType}`);
   }
 
-  return templates.map((t, idx) => {
+  const idRoot = input.bagNo || input.donationId;
+  // Same componentType can appear twice in one donation (e.g. DOUBLE_RED_CELL
+  // splits into two PRBC units) — the plain `${bagNo}-${componentType}` id
+  // would collide, so only the 2nd+ occurrence gets a numeric suffix.
+  const typeCounts = new Map<string, number>();
+
+  return templates.map((t) => {
     const shelfLifeDays = t.shelfLifeDays ?? getShelfDays(t.componentType);
     const expiresAt = new Date(input.collectedAt);
     expiresAt.setDate(expiresAt.getDate() + shelfLifeDays);
     const productCode = PRODUCT_CODE[t.componentType];
+    const occurrence = (typeCounts.get(t.componentType) ?? 0) + 1;
+    typeCounts.set(t.componentType, occurrence);
+    const unitId = occurrence > 1 ? `${idRoot}-${t.componentType}-${occurrence}` : `${idRoot}-${t.componentType}`;
     return {
-      unitId: `${input.donationId}-${productCode}-${idx + 1}`,
+      unitId,
       productCode,
       componentType: t.componentType,
       volumeMl: t.volumeMl,

@@ -67,7 +67,11 @@ export interface StorageUnitSummary {
 
 export interface InventoryLegacyViewRepo {
   listStock(filters: StockListFilters): Promise<{ data: any[]; total: number; totalPages: number; page: number; limit: number }>;
-  unreserve(inventoryIds: string[], actorId: string): Promise<void>;
+  unreserve(
+    inventoryIds: string[],
+    actorId: string,
+    reason: string,
+  ): Promise<Array<{ unitId: string; componentType: string; bagNo: string }>>;
   sendToStorage(input: SendToStorageInput): Promise<{ skipped: string[]; message: string }>;
   updateStorage(input: UpdateStorageInput): Promise<StorageUnitSummary>;
   returnFromStorage(id: string, actorId: string): Promise<StorageUnitSummary>;
@@ -319,6 +323,7 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
 
         return {
           _id: u._id.toString(),
+          unitId: u.unitId,
           bagNo: displayBagNo,
           segmentNo,
           storageLocation: u.storageLocation || undefined,
@@ -342,6 +347,7 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
             componentType: legacyType,
             volumeMl: u.volumeMl,
             expiryDate: u.expiresAt ? u.expiresAt.toISOString() : '',
+            componentId: u.unitId,
           },
           status: legacyStatus,
           reservedUntil: u.reservedUntil ? u.reservedUntil.toISOString() : undefined,
@@ -433,7 +439,8 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       return { data: pageData, total: combinedTotal, totalPages: Math.ceil(combinedTotal / limitNum), page: pageNum, limit: limitNum };
     },
 
-    async unreserve(inventoryIds, actorId) {
+    async unreserve(inventoryIds, actorId, reason) {
+      const affected: Array<{ unitId: string; componentType: string; bagNo: string }> = [];
       for (const id of inventoryIds) {
         let unit = await BloodUnitModel.findById(id);
         if (!unit) unit = await BloodUnitModel.findOne({ unitId: id });
@@ -443,10 +450,18 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
           unitId: unit.unitId,
           event: 'UNRESERVE',
           actorId,
-          reason: 'Manual unreserve from inventory screen',
+          reason,
           set: { reservedFor: null, reservedUntil: null, reservedAt: null } as any,
         });
+
+        const donation = await DonationModel.findOne({ donationId: unit.donationId }).select('bagNo').lean();
+        affected.push({
+          unitId: unit.unitId,
+          componentType: unit.componentType,
+          bagNo: donation?.bagNo || unit.donationId,
+        });
       }
+      return affected;
     },
 
     async sendToStorage({ location, otherLocationName, bags, sentDate, actorId }) {

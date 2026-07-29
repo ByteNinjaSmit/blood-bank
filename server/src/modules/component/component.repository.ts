@@ -206,8 +206,10 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         rhFactor = donor?.rh === 'POSITIVE' ? 'POSITIVE' : 'NEGATIVE';
       }
 
-      const unitCount = await BloodUnitModel.countDocuments({ donationId: resolvedDonationId });
-      const unitId = `${resolvedDonationId}-${productCode}-${unitCount + 1}`;
+      // Same componentType per donation is guarded above (ConflictError), so
+      // no numeric-suffix collision is possible here — one clean id per component.
+      const idRoot = donation.bagNo || resolvedDonationId;
+      const unitId = `${idRoot}-${mappedType}`;
 
       return BloodUnitModel.create({
         unitId,

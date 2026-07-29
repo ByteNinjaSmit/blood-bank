@@ -8,7 +8,7 @@ import type {
 
 export interface InventoryLegacyViewService {
   listStock(filters: StockListFilters): ReturnType<InventoryLegacyViewRepo['listStock']>;
-  unreserve(inventoryIds: string[], actorId: string): Promise<void>;
+  unreserve(inventoryIds: string[], actorId: string, reason: string): Promise<void>;
   sendToStorage(input: SendToStorageInput): ReturnType<InventoryLegacyViewRepo['sendToStorage']>;
   updateStorage(input: UpdateStorageInput, reason: string): ReturnType<InventoryLegacyViewRepo['updateStorage']>;
   returnFromStorage(id: string, actorId: string, reason: string): ReturnType<InventoryLegacyViewRepo['returnFromStorage']>;
@@ -20,8 +20,8 @@ export function createInventoryLegacyViewService(deps: {
   return {
     listStock: (filters) => deps.repo.listStock(filters),
 
-    async unreserve(inventoryIds, actorId) {
-      await deps.repo.unreserve(inventoryIds, actorId);
+    async unreserve(inventoryIds, actorId, reason) {
+      const affected = await deps.repo.unreserve(inventoryIds, actorId, reason);
       void withAudit(
         { actorId },
         {
@@ -29,9 +29,13 @@ export function createInventoryLegacyViewService(deps: {
           action: 'STATE_TRANSITION',
           entityType: 'BloodUnit',
           entityId: `batch:unreserve:${inventoryIds.length}`,
+          reason,
         },
         undefined,
-        { event: 'UNRESERVE', unitIds: inventoryIds },
+        {
+          event: 'UNRESERVE',
+          units: affected.map((u) => ({ componentType: u.componentType, bagNo: u.bagNo })),
+        },
       );
     },
 

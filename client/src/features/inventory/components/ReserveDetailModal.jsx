@@ -179,6 +179,10 @@ export default function ReserveDetailModal({ reserve, onClose, formatDateDMY, fo
                 <div className="text-slate-800 mt-0.5 font-bold">{reserve.component?.componentType}</div>
               </div>
               <div>
+                <span className="font-semibold text-gray-500">Component ID:</span>
+                <div className="text-slate-800 mt-0.5 font-bold font-mono">{reserve.component?.componentId || reserve.unitId || '—'}</div>
+              </div>
+              <div>
                 <span className="font-semibold text-gray-500">Blood Group / Rh:</span>
                 <div className="text-slate-800 mt-0.5 font-bold">
                   {reserve.bag?.bloodGroup} {reserve.bag?.rh}

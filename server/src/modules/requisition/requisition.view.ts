@@ -33,13 +33,13 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
   const donationMap = new Map(donations.map((d) => [d.donationId, d]));
 
   const donorIds = donations.map((d) => d.donor).filter(Boolean);
-  const donors = (await DonorModel.find({ _id: { $in: donorIds } }).select('_id name').lean()) as any[];
+  const donors = (await DonorModel.find({ _id: { $in: donorIds } }).select('_id name donorId').lean()) as any[];
   const donorMap = new Map(
     donors.map((d) => {
       const fullName = d.name
         ? [d.name.firstName, d.name.middleName, d.name.lastName].filter(Boolean).join(' ')
         : 'Unknown';
-      return [d._id.toString(), fullName];
+      return [d._id.toString(), { fullName, donorId: d.donorId }];
     }),
   );
 
@@ -48,6 +48,7 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
       const unit = unitMap.get(mu.unitId);
       if (!unit) return null;
       const donation = donationMap.get(unit.donationId);
+      const donorInfo = donation?.donor ? donorMap.get(donation.donor.toString()) : undefined;
       return {
         inventoryId: {
           _id: unit.unitId,
@@ -55,7 +56,8 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
             bagNo: donation?.bagNo || unit.donationId,
             bloodGroup: unit.aboGroup,
             rh: unit.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
-            donorName: donation?.donor ? donorMap.get(donation.donor.toString()) || 'Unknown' : 'Unknown',
+            donorName: donorInfo?.fullName || 'Unknown',
+            donorPublicId: donorInfo?.donorId,
             collectedAt: donation?.collectedAt
               ? donation.collectedAt.toISOString()
               : unit.collectedAt

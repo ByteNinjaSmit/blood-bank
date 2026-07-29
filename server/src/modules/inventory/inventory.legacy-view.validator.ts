@@ -26,6 +26,7 @@ const StockListQuery = z.object({
 
 const UnreserveBody = z.object({
   inventoryIds: z.array(z.string().trim().min(1)).min(1, 'inventoryIds must be a non-empty array'),
+  reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
   userId: z.string().trim().optional(),
 });
 

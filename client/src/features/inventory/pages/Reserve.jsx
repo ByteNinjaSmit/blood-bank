@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Hand, X, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { COMPONENT_TYPES, SEX_TYPES } from "@/features/requisition/pages/constants";
-import CustomModal from "@/components/CustomModal";
+import ReasonForChangeModal from "@/components/shared/ReasonForChangeModal";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import SearchBox from "@/components/shared/SearchBox";
 import { exportReserve } from "@/utils/excelExportHelper";
@@ -165,18 +165,19 @@ const Reserve = () => {
     setUnreserveModalOpen(true);
   };
 
-  const handleUnreserveConfirm = async () => {
+  const handleUnreserveConfirm = async (reason) => {
     if (!targetUnreserveId) return;
-    setUnreserveModalOpen(false);
     setIsLoading(true);
     try {
       const res = await apiClient.post(`/api/inventory/unreserve`, {
         inventoryIds: [targetUnreserveId],
+        reason,
         userId: user?._id,
       });
       if (res.data?.success) {
         toast.success("Blood bag successfully unreserved and returned to stock.");
         fetchRows(pagination.page);
+        setUnreserveModalOpen(false);
       } else {
         toast.error(res.data?.message || "Failed to unreserve blood bag.");
       }
@@ -436,16 +437,15 @@ const Reserve = () => {
         </div>
       </div>
 
-      <CustomModal
-        open={unreserveModalOpen}
+      <ReasonForChangeModal
+        isOpen={unreserveModalOpen}
         title="Confirm Unreservation"
-        description="Are you sure you want to unreserve this blood bag? It will be returned to the active inventory stock."
-        confirmText="Yes, Unreserve"
-        cancelText="Cancel"
-        confirmVariant="danger"
-        size="sm"
+        message="Are you sure you want to unreserve this blood bag? It will be returned to the active inventory stock."
+        actionLabel="Yes, Unreserve"
+        fieldLabel="Reason for Unreserving"
+        submitting={isLoading}
         onConfirm={handleUnreserveConfirm}
-        onCancel={() => {
+        onClose={() => {
           setUnreserveModalOpen(false);
           setTargetUnreserveId(null);
         }}

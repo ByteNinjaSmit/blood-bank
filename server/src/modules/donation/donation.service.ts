@@ -123,6 +123,7 @@ export function createDonationService(deps: {
       const units = input.donorFitness.isFit
         ? deriveUnits({
             donationId: donationPublicId,
+            bagNo: input.bagNo,
             donationType: input.donationType,
             collectedAt: input.collectedAt,
             overrideTemplates: input.unitTemplates,

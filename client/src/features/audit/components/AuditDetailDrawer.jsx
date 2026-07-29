@@ -29,10 +29,22 @@ function humanize(text) {
   return text.replace(/indeterminate/gi, 'Shadeness');
 }
 
+// A list of affected blood units — e.g. an inventory-storage batch
+// UNRESERVE — renders as "FFP,BAG003; PRBC,BAG039" instead of a raw
+// array of Mongo ObjectId/unitId strings.
+function isUnitList(v) {
+  return Array.isArray(v) && v.length > 0 && v.every((x) => x && typeof x === 'object' && 'componentType' in x && 'bagNo' in x);
+}
+
+function formatUnitsList(units) {
+  return units.map((u) => `${u.componentType},${u.bagNo}`).join('; ');
+}
+
 function renderValue(v) {
   if (v === undefined) return <span className="text-gray-300 italic">—</span>;
   if (v === null) return <span className="text-gray-400 italic">null</span>;
   if (typeof v === 'string') return humanize(v);
+  if (isUnitList(v)) return <span className="font-mono">{formatUnitsList(v)}</span>;
   if (typeof v === 'object') return <span className="font-mono">{JSON.stringify(v)}</span>;
   return String(v);
 }
