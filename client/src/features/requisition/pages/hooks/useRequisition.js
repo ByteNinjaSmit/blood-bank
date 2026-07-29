@@ -16,10 +16,6 @@ export default function useRequisition(authToken) {
   const [hospitals, setHospitals] = useState([]);
   const [hospitalsLoading, setHospitalsLoading] = useState(false);
 
-  const [addHospitalOpen, setAddHospitalOpen] = useState(false);
-  const [addHospitalForm, setAddHospitalForm] = useState({ name: '', address: '', contactPerson: '', phone: '' });
-  const [addingHospital, setAddingHospital] = useState(false);
-
   const [form, setForm] = useState({
     hospitalId: '',
     doctorName: '',
@@ -134,45 +130,6 @@ export default function useRequisition(authToken) {
       setHospitalsLoading(false);
     })();
   }, [authToken]);
-
-  const handleCreateHospital = async () => {
-    if (!addHospitalForm.name || !addHospitalForm.address || !addHospitalForm.contactPerson || !addHospitalForm.phone) {
-      toast.error('Fill all hospital fields');
-      return;
-    }
-    try {
-      setAddingHospital(true);
-      const res = await hospitalApi.createHospital(addHospitalForm);
-      setAddingHospital(false);
-      if (!res.success) {
-        return toast.error(res.error || 'Failed to add hospital');
-      }
-      const created = res?.data?.data;
-      toast.success(res?.data?.message || 'Hospital added');
-      if (created?._id) {
-        setForm((p) => ({ ...p, hospitalId: created._id }));
-      }
-      // Optimistically add then refresh
-      if (created) {
-        setHospitals((p) => (Array.isArray(p) ? [created, ...p] : [created]));
-      }
-      setAddHospitalOpen(false);
-      // Refresh list in background
-      setHospitalsLoading(true);
-      const resp = await hospitalApi.getHospitals({ limit: 100 });
-      const list = Array.isArray(resp?.data?.data)
-        ? resp.data.data
-        : Array.isArray(resp?.data)
-          ? resp.data
-          : [];
-      setHospitals(list);
-      setHospitalsLoading(false);
-      setAddHospitalForm({ name: '', address: '', contactPerson: '', phone: '' });
-    } catch (e) {
-      setAddingHospital(false);
-      toast.error('Network error while adding hospital');
-    }
-  };
 
   const addRequestLine = () => {
     setForm((prev) => ({
@@ -559,11 +516,6 @@ export default function useRequisition(authToken) {
     setCurrentStep,
     hospitals,
     hospitalsLoading,
-    addHospitalOpen,
-    setAddHospitalOpen,
-    addHospitalForm,
-    setAddHospitalForm,
-    addingHospital,
     form,
     setForm,
     requestDoc,
@@ -580,7 +532,6 @@ export default function useRequisition(authToken) {
     hasChanges,
 
     // actions
-    handleCreateHospital,
     addRequestLine,
     removeRequestLine,
     handleCreate,

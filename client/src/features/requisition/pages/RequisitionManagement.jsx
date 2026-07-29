@@ -9,7 +9,6 @@ import RequestCreationStep from './steps/RequestCreationStep';
 import MatchReviewStep from './steps/MatchReviewStep';
 import ApproveIssueStep from './steps/ApproveIssueStep';
 import CompleteStep from './steps/CompleteStep';
-import AddHospitalModal from './components/AddHospitalModal';
 import { requisitionApprovalBlockers } from '../requisition-gating';
 
 const RequisitionManagement = () => {
@@ -22,11 +21,6 @@ const RequisitionManagement = () => {
     setCurrentStep,
     hospitals,
     hospitalsLoading,
-    addHospitalOpen,
-    setAddHospitalOpen,
-    addHospitalForm,
-    setAddHospitalForm,
-    addingHospital,
     form,
     setForm,
     requestDoc,
@@ -40,7 +34,6 @@ const RequisitionManagement = () => {
     swapping,
     groupingSaving,
     hasChanges,
-    handleCreateHospital,
     addRequestLine,
     removeRequestLine,
     handleCreate,
@@ -145,7 +138,6 @@ const RequisitionManagement = () => {
     (currentStep === 4 && !canProceedFromStep4);
 
   return (
-    <>
       <div className="min-h-screen bg-gray-50">
         <RequisitionHeader />
 
@@ -188,7 +180,7 @@ const RequisitionManagement = () => {
                 handleCreate={handleCreate}
                 requestDoc={requestDoc}
                 hasChanges={hasChanges}
-                openAddHospital={() => setAddHospitalOpen(true)}
+                openAddHospital={() => navigate('/hospital/add')}
                 onReject={handleRejectAndExit}
               />
             </Step>
@@ -240,15 +232,6 @@ const RequisitionManagement = () => {
           </Stepper>
         </div>
       </div>
-      <AddHospitalModal
-        isOpen={addHospitalOpen}
-        onClose={() => setAddHospitalOpen(false)}
-        form={addHospitalForm}
-        onChange={(patch) => setAddHospitalForm((p) => ({ ...p, ...patch }))}
-        saving={addingHospital}
-        onSave={handleCreateHospital}
-      />
-    </>
   );
 };
 
