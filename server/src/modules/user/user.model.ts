@@ -34,6 +34,11 @@ const UserSchema = new Schema(
     // Unconditional bypass of every requirePermission(...) check,
     // decoupled from the (cosmetic) role label above.
     isFullAccess: { type: Boolean, default: false },
+    // Which Role template was last applied to prefill `role`/`permissions`
+    // below (see server/src/modules/role). Display/prefill metadata only —
+    // applying a role COPIES its grid onto this user; roleId is not read by
+    // role-map.ts and later edits to the Role do not cascade here.
+    roleId: { type: Schema.Types.ObjectId, ref: 'Role', default: null },
     password: { type: String, required: true, select: false },
     status: {
       type: String,

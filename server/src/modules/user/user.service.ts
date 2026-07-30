@@ -11,6 +11,7 @@ export interface CreateUserInput {
   email: string;
   phone?: string;
   role: string;
+  roleId?: string;
   isFullAccess?: boolean;
   password: string;
   permissions?: unknown[];
@@ -23,6 +24,7 @@ export interface UpdateUserInput {
   email?: string;
   phone?: string;
   role?: string;
+  roleId?: string;
   isFullAccess?: boolean;
   password?: string;
   permissions?: unknown[];
@@ -47,6 +49,7 @@ export const userService = {
       email: input.email.toLowerCase(),
       phone: input.phone,
       role: input.role,
+      roleId: input.roleId ?? null,
       isFullAccess: input.isFullAccess ?? false,
       password: input.password,
       permissions: input.permissions ?? [],
@@ -113,6 +116,7 @@ export const userService = {
     if (input.email) patch.email = input.email.toLowerCase();
     if (input.phone) patch.phone = input.phone;
     if (input.role) patch.role = input.role;
+    if (input.roleId !== undefined) patch.roleId = input.roleId;
     if (input.isFullAccess !== undefined) patch.isFullAccess = input.isFullAccess;
     if (input.permissions) patch.permissions = input.permissions;
     if (input.campId) patch.campId = input.campId;
@@ -149,6 +153,7 @@ export const userService = {
     if (input.email) { before.email = existing.email; after.email = input.email.toLowerCase(); }
     if (input.phone) { before.phone = existing.phone; after.phone = input.phone; }
     if (input.role) { before.role = existing.role; after.role = input.role; }
+    if (input.roleId !== undefined) { before.roleId = existing.roleId; after.roleId = input.roleId; }
     if (input.isFullAccess !== undefined) { before.isFullAccess = existing.isFullAccess; after.isFullAccess = input.isFullAccess; }
     if (input.permissions) { before.permissions = existing.permissions; after.permissions = input.permissions; }
     if (input.campId) { before.campId = existing.campId; after.campId = input.campId; }

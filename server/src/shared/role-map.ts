@@ -65,12 +65,20 @@ const LEGACY_MODULE_PERMISSION_OVERRIDES: Partial<
 // Granted to every authenticated user server-side, regardless of grid, so
 // cross-module lookups embedded in pages the user does have access to
 // (e.g. Requisition's hospital picker, Donor Creation's bag-batch picker)
-// succeed. report:export/upload:write/dashboard:read are safe to also
-// expose to the client as-is: no access-registry page uses them as a
-// *view* gate (Dashboard's pages are `alwaysAllowed` and bypass
-// permission checks entirely), so including them client-side never
-// unlocks a page nobody granted.
-const UNIVERSAL_PERMISSIONS: readonly Permission[] = ['report:export', 'upload:write', 'dashboard:read'];
+// succeed. report:export/upload:write/dashboard:read/notification:read/
+// notification:manage are safe to also expose to the client as-is: no
+// access-registry page uses any of them as a *view* gate (Dashboard's
+// pages are `alwaysAllowed` and bypass permission checks entirely; the
+// notification bell is global chrome rendered for every logged-in user in
+// Master-Layout, not a gated access-registry page), so including them
+// client-side never unlocks a page nobody granted.
+const UNIVERSAL_PERMISSIONS: readonly Permission[] = [
+  'report:export',
+  'upload:write',
+  'dashboard:read',
+  'notification:read',
+  'notification:manage',
+];
 
 // Same as above, but these ALSO happen to be the primary view-gate for a
 // real, dedicated page (hospital:read → Hospital List; bag-stock:read →

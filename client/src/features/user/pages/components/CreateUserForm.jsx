@@ -1,6 +1,8 @@
 import React, { useEffect } from "react";
 import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
 import PermissionsEditor from "../../components/permissions-editor/PermissionsEditor";
+import { draftFromGrid } from "../../components/permissions-editor/grid-conversion";
+import { useRoleList } from "@/features/role/queries";
 
 export default function CreateUserForm({
   form,
@@ -19,6 +21,31 @@ export default function CreateUserForm({
   }, [onCancel]);
 
   const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
+
+  const { data: roles } = useRoleList();
+  const roleOptions = roles ?? [];
+
+  const onRoleChange = (e) => {
+    const roleId = e.target.value;
+    if (!roleId) {
+      // "— Custom —" placeholder: only clears the applied-role link, the
+      // permission grid is left exactly as it is (never silently wiped).
+      setForm((v) => ({ ...v, roleId: null }));
+      return;
+    }
+    const role = roleOptions.find((r) => r.id === roleId);
+    if (!role) return;
+    // One-time template copy — applying a role overwrites the grid now,
+    // but the user's permissions stay independently editable afterward,
+    // and later edits to the role itself never cascade back here.
+    setForm((v) => ({
+      ...v,
+      role: role.name,
+      roleId: role.id,
+      isFullAccess: role.isFullAccess,
+      permissionsDraft: draftFromGrid(role.permissions || []),
+    }));
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
@@ -51,13 +78,17 @@ export default function CreateUserForm({
             </div>
             <div>
               <label className="text-xs text-slate-600">Role</label>
-              <input
+              <select
                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300"
-                placeholder="e.g. Medical Officer"
-                value={form.role}
-                onChange={(e) => setForm(v => ({ ...v, role: e.target.value }))}
-              />
-              <p className="text-[11px] text-slate-400 mt-0.5">Display label only — access is controlled entirely by Permissions below.</p>
+                value={form.roleId || ""}
+                onChange={onRoleChange}
+              >
+                <option value="">— Custom (no role) —</option>
+                {roleOptions.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+              <p className="text-[11px] text-slate-400 mt-0.5">Selecting a role fills in the checklist below from that role's template — you can still adjust individual permissions afterward. Later changes to the role itself won't retroactively affect this user.</p>
             </div>
             <div>
               <label className="text-xs text-slate-600">Status</label>

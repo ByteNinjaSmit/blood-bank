@@ -1,7 +1,7 @@
 import React from "react";
-import { RefreshCw, Plus, UserCog } from "lucide-react";
+import { RefreshCw, Plus, UserCog, Shield } from "lucide-react";
 
-export default function Header({ onRefresh, onNew, canCreate, isRefreshing }) {
+export default function Header({ onRefresh, onNew, canCreate, isRefreshing, onManageRoles, canManageRoles }) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -24,6 +24,11 @@ export default function Header({ onRefresh, onNew, canCreate, isRefreshing }) {
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
         </button>
+        {canManageRoles && (
+          <button onClick={onManageRoles} className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm">
+            <Shield className="w-4 h-4" /> Manage Roles
+          </button>
+        )}
         {canCreate && (
           <button onClick={onNew} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-red-700 text-white hover:bg-red-800 shadow-sm">
             <Plus className="w-4 h-4" /> New User

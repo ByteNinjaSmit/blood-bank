@@ -8,6 +8,7 @@ export interface UserDto {
   email: string;
   phone?: string;
   role: string;
+  roleId?: string | null;
   isFullAccess: boolean;
   status: string;
   permissions: unknown[];
@@ -23,6 +24,7 @@ interface RawUser {
   email: string;
   phone?: string;
   role: string;
+  roleId?: { toString(): string } | null;
   isFullAccess?: boolean;
   status: string;
   permissions?: unknown[];
@@ -39,6 +41,7 @@ function toDto(raw: RawUser): UserDto {
     email: raw.email,
     phone: raw.phone,
     role: raw.role,
+    roleId: raw.roleId ? raw.roleId.toString() : null,
     isFullAccess: !!raw.isFullAccess,
     status: raw.status,
     permissions: raw.permissions ?? [],

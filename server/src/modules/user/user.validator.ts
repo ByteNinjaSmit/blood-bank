@@ -33,6 +33,7 @@ export const CreateUserBody = z.object({
   // Free-text display label — no authorization meaning. See
   // server/src/shared/role-map.ts and User.isFullAccess.
   role: z.string().trim().min(1).max(80),
+  roleId: blank(z.string().regex(OBJECT_ID).optional()),
   isFullAccess: z.boolean().optional(),
   password: z.string().min(8),
   permissions: z.array(PermissionEntry).optional(),
@@ -50,6 +51,7 @@ export const UpdateUserBody = z.object({
       .optional(),
   ),
   role: blank(z.string().trim().min(1).max(80).optional()),
+  roleId: blank(z.string().regex(OBJECT_ID).optional()),
   isFullAccess: z.boolean().optional(),
   password: blank(z.string().min(8).optional()),
   permissions: z.array(PermissionEntry).optional(),

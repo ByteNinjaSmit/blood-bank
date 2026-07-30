@@ -24,6 +24,7 @@ import adverseReactionRouter from '@/modules/adverse-reaction/adverse-reaction.r
 import lookbackRouter from '@/modules/lookback/lookback.routes';
 import auditRouter from '@/modules/audit/audit.routes';
 import userRouter from '@/modules/user/user.routes';
+import roleRouter from '@/modules/role/role.routes';
 import hospitalRouter from '@/modules/hospital/hospital.routes';
 import campRouter from '@/modules/camp/camp.routes';
 import vendorRouter from '@/modules/vendor/vendor.routes';
@@ -68,6 +69,7 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/lookback', router: lookbackRouter },
   { path: '/audit', router: auditRouter },
   { path: '/user', router: userRouter },
+  { path: '/role', router: roleRouter },
   { path: '/hospital', router: hospitalRouter },
   { path: '/camp', router: campRouter },
   { path: '/vendor', router: vendorRouter },

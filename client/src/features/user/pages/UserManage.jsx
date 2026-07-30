@@ -14,6 +14,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
 import { emptyDraft, draftFromGrid, gridFromDraft } from "../components/permissions-editor/grid-conversion";
+import ManageRolesModal from "@/features/role/components/ManageRolesModal";
 
 const initialForm = {
   publicId: "",
@@ -22,6 +23,7 @@ const initialForm = {
   email: "",
   phone: "",
   role: "",
+  roleId: null,
   isFullAccess: false,
   password: "",
   status: "active",
@@ -39,6 +41,7 @@ export default function UserManage() {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [confirmModal, setConfirmModal] = useState({ open: false });
+  const [showRolesModal, setShowRolesModal] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState(null);
   const [deactivating, setDeactivating] = useState(false);
 
@@ -141,6 +144,7 @@ export default function UserManage() {
   const canCreate = can('admin', 'create', 'user-manage');
   const canUpdate = can('admin', 'update', 'user-manage');
   const canDelete = can('admin', 'delete', 'user-manage');
+  const canManageRoles = can('admin', 'view', 'manage-roles');
 
   const openCreate = () => {
     if (!canCreate) { toast.error('You do not have permission to create users'); return; }
@@ -158,6 +162,7 @@ export default function UserManage() {
       email: u.email || "",
       phone: u.phone || "",
       role: u.role || "",
+      roleId: u.roleId || null,
       isFullAccess: !!u.isFullAccess,
       password: "",
       status: u.status || "active",
@@ -217,7 +222,8 @@ export default function UserManage() {
       lastName: form.lastName,
       email: form.email,
       phone: form.phone,
-      role: form.role,
+      role: form.role || "Custom",
+      roleId: form.roleId || undefined,
       isFullAccess: form.isFullAccess,
       password: form.password || undefined,
       status: form.status,
@@ -287,7 +293,14 @@ export default function UserManage() {
   return (
     <div className="p-4 md:p-6 space-y-4">
       {/* Header */}
-      <Header onRefresh={loadUsers} onNew={openCreate} canCreate={canCreate} isRefreshing={loading} />
+      <Header
+        onRefresh={loadUsers}
+        onNew={openCreate}
+        canCreate={canCreate}
+        isRefreshing={loading}
+        canManageRoles={canManageRoles}
+        onManageRoles={() => setShowRolesModal(true)}
+      />
 
       <Filters
         search={search}
@@ -418,6 +431,10 @@ export default function UserManage() {
         submitting={deactivating}
       />
       {userEditReasonDialog}
+
+      {showRolesModal && (
+        <ManageRolesModal onClose={() => setShowRolesModal(false)} />
+      )}
     </div>
   );
 }

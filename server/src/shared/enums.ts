@@ -77,6 +77,10 @@ export const PERMISSION = [
   'user:create',
   'user:update',
   'user:deactivate',
+  'role:read',
+  'role:create',
+  'role:update',
+  'role:delete',
   // ── Blood Bag Procurement & Stock Management ──
   'vendor:read',
   'vendor:create',

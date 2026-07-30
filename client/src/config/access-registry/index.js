@@ -50,6 +50,20 @@ export function findPage(moduleId, pageId) {
   return mod.pages.find((p) => p.id === pageId) || null;
 }
 
+// Resolves a route path to the registry page that owns it — lets nav/sidebar
+// code gate each link on its actual page-level permissions instead of only
+// the coarser module-wide check. When more than one page shares a route
+// (e.g. admin.js's user-manage/manage-roles both route to
+// /admin/user-manage — the latter is a modal launched from the former, not
+// a separate nav destination), the first match wins.
+export function findPageByRoute(route) {
+  for (const mod of ACCESS_MODULES) {
+    const page = mod.pages.find((p) => p.route === route);
+    if (page) return { moduleId: mod.id, pageId: page.id, page };
+  }
+  return null;
+}
+
 // Union of every action any page in the module supports — drives which
 // checkbox columns the module-level row in the admin UI shows.
 export function getModuleActions(moduleId) {

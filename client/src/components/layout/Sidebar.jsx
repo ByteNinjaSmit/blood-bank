@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, ChevronRight, ChevronDown, Lock, Shield, User, LogOut } from 'lucide-react';
+import { Search, ChevronRight, ChevronDown, Shield, User, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/store/auth';
 import useAccess from '@/features/access/useAccess';
+import { findPageByRoute } from '@/config/access-registry';
 import { GiDrop } from 'react-icons/gi';
 import { MODULES } from './nav-modules';
 
@@ -39,7 +40,7 @@ const Sidebar = ({
   const { user, LogoutUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { canViewModule: canViewRegistryModule } = useAccess();
+  const { canViewModule: canViewRegistryModule, canViewPage } = useAccess();
 
   const canViewModule = useCallback(
     (_user, moduleId) => {
@@ -49,6 +50,31 @@ const Sidebar = ({
     [canViewRegistryModule],
   );
 
+  // Per-item gate: resolves a nav href to its actual registry page (via
+  // route match) and checks that page's own view permission, instead of
+  // the module-wide `canViewModule` above — a module having *some* visible
+  // page must not make every one of its sibling submodules render too.
+  // Falls back to visible for hrefs with no registry entry (nothing to
+  // gate on) rather than hiding something we haven't audited.
+  const canViewHref = useCallback(
+    (href) => {
+      if (!href) return true;
+      const match = findPageByRoute(href);
+      if (!match) return true;
+      return canViewPage(match.moduleId, match.pageId);
+    },
+    [canViewPage],
+  );
+
+  // Which of a module's subModules the current user can actually open —
+  // the module header itself is only shown once this is non-empty (see
+  // filteredModules below), so a module never renders as an empty,
+  // all-locked expandable group.
+  const visibleSubModules = useCallback(
+    (module) => (module.subModules ? module.subModules.filter((sub) => canViewHref(sub.href)) : null),
+    [canViewHref],
+  );
+
   // State declarations with proper initialization
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedModules, setExpandedModules] = useState(() => new Set());
@@ -56,14 +82,20 @@ const Sidebar = ({
   const [, setSelectedSubModule] = useState(null);
   const [tempOpenForSubmodule, setTempOpenForSubmodule] = useState(false);
 
-  // Memoize filtered modules to prevent unnecessary re-renders
+  // Memoize filtered modules to prevent unnecessary re-renders. A grouped
+  // module (has subModules) is shown only if at least one of its actual
+  // nav items is visible; a standalone module (no subModules, just its own
+  // href) is gated directly on that href's page permission.
   const filteredModules = useMemo(() =>
-    MODULES.filter(
-      (module) =>
-        module.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        (module.always || canViewModule(user, module.id))
-    ),
-    [searchQuery, user, canViewModule]
+    MODULES.filter((module) => {
+      if (!module.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (module.always) return true;
+      if (module.subModules && module.subModules.length > 0) {
+        return visibleSubModules(module).length > 0;
+      }
+      return canViewHref(module.href);
+    }),
+    [searchQuery, canViewHref, visibleSubModules]
   );
 
   // Set current module and submodule based on location
@@ -283,9 +315,6 @@ const Sidebar = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm">{module.name}</span>
-                          {!canViewModule(user, module.id) && (
-                            <Lock className="w-3 h-3 text-red-300" />
-                          )}
                         </div>
                         {module.subModules && module.subModules.length > 0 && (
                           <div className="transition-transform duration-200">
@@ -299,9 +328,6 @@ const Sidebar = ({
                       </div>
                       <div className="text-xs opacity-80 truncate">{module.description}</div>
                     </div>
-                  )}
-                  {!shouldDisplayOpen && !canViewModule(user, module.id) && (
-                    <Lock className="w-2 h-2 absolute top-1 right-1 text-red-300" />
                   )}
                 </div>
 
@@ -317,7 +343,7 @@ const Sidebar = ({
                     `}
                   >
                     <div className="ml-6 mr-2 space-y-1">
-                      {module.subModules.map((subModule, index) => (
+                      {visibleSubModules(module).map((subModule, index) => (
                         <div
                           key={`${module.id}-${index}`}
                           onClick={(e) => {
@@ -339,9 +365,6 @@ const Sidebar = ({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">{subModule.name}</span>
-                              {!canViewModule(user, module.id) && (
-                                <Lock className="w-3 h-3 text-red-300" />
-                              )}
                             </div>
                             <div className="text-xs opacity-75 truncate">{subModule.description}</div>
                           </div>
