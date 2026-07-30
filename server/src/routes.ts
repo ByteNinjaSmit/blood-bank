@@ -44,6 +44,7 @@ import dashboardRouter from '@/modules/dashboard/dashboard.routes';
 import donorCardRouter from '@/modules/donor-card/donor-card.routes';
 import monthlyReportInputRouter from '@/modules/monthly-report-input/monthly-report-input.routes';
 import appointmentRouter from '@/modules/appointment/appointment.routes';
+import feedbackRouter from '@/modules/feedback/feedback.routes';
 import misRouter from '@/modules/mis/mis.routes';
 import affectedRecordsRouter from '@/modules/affected-records/affected-records.routes';
 import notificationRouter from '@/modules/notification/notification.routes';
@@ -87,6 +88,7 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/donor-card', router: donorCardRouter },
   { path: '/monthly-report-input', router: monthlyReportInputRouter },
   { path: '/appointment', router: appointmentRouter },
+  { path: '/feedback', router: feedbackRouter },
   { path: '/mis', router: misRouter },
   { path: '/affected-records', router: affectedRecordsRouter },
   { path: '/notification', router: notificationRouter },

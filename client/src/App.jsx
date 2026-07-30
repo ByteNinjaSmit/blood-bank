@@ -79,6 +79,7 @@ import RequisitionList from './features/requisition/pages/RequisitionList';
 // Appointment
 import DonorAppointmentList from './features/appointment/pages/DonorAppointmentList';
 import CampDonorAppointmentList from './features/appointment/pages/CampDonorAppointmentList';
+import FeedbackList from './features/appointment/pages/FeedbackList';
 
 // MIS
 import DonorMIS from './features/mis/pages/DonorMIS';
@@ -177,6 +178,7 @@ const App = () => {
           {/* Appointments */}
           <Route path="appointments/donors" element={<PageGuard module="appointment" page="appointment-donors"><DonorAppointmentList /></PageGuard>} />
           <Route path="appointments/camps" element={<PageGuard module="appointment" page="appointment-camps"><CampDonorAppointmentList /></PageGuard>} />
+          <Route path="appointments/feedback" element={<PageGuard module="appointment" page="appointment-feedback"><FeedbackList /></PageGuard>} />
 
           {/* Admin */}
           <Route path="admin/user-manage" element={<PageGuard module="admin" page="user-manage"><UserManage /></PageGuard>} />

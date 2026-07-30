@@ -381,6 +381,13 @@ export const MODULES = [
         permissions: ["read"],
         description: "Camp-wise appointments for ongoing/upcoming camps",
       },
+      {
+        name: "Feedback",
+        icon: <List className="w-5 h-5" />,
+        href: "/appointments/feedback",
+        permissions: ["read"],
+        description: "Public site \"Your Feedback Matters\" submissions",
+      },
     ],
     description: "Manage donor appointments",
   },

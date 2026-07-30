@@ -1,11 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { appointmentApi } from './api';
+import { appointmentApi, feedbackApi } from './api';
 
 export const appointmentKeys = {
   all: ['appointment'],
   list: (params) => [...appointmentKeys.all, 'list', params],
   summary: () => [...appointmentKeys.all, 'summary'],
 };
+
+export const feedbackKeys = {
+  all: ['feedback'],
+  list: (params) => [...feedbackKeys.all, 'list', params],
+};
+
+export function useFeedbackList(params) {
+  return useQuery({
+    queryKey: feedbackKeys.list(params),
+    queryFn: () => feedbackApi.list(params),
+    staleTime: 30_000,
+  });
+}
 
 export function useAppointmentList(params) {
   return useQuery({
