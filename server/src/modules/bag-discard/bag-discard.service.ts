@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
+import { withAudit } from '@/shared/utils/with-audit';
 import { ConflictError, NotFoundError } from '@/shared/errors';
 import type { BagDiscardRepo, BagDiscardDto } from '@/modules/bag-discard/bag-discard.repository';
 import type { BagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
@@ -67,6 +68,20 @@ export function createBagDiscardService(deps: {
 
       await deps.bagStock.incrementDiscarded(input.stockId, input.quantity, actorId);
       log.warn({ discardId, stockId: input.stockId, quantity: input.quantity, reason: input.reason, actorId }, 'bag discard recorded');
+      void withAudit(
+        { actorId },
+        {
+          module: 'bag-discard',
+          action: 'DISCARD',
+          entityType: 'BagDiscard',
+          entityId: created.id,
+          entityLabel: discardId,
+          severity: 'warning',
+          reason: `${input.reason}${input.reasonDetail ? `: ${input.reasonDetail}` : ''}`,
+        },
+        undefined,
+        { discardId, stockId: input.stockId, quantity: input.quantity },
+      );
       return created;
     },
 
@@ -85,6 +100,21 @@ export function createBagDiscardService(deps: {
       }, actorId);
       if (!updated) throw new NotFoundError('BagDiscard', id);
       log.info({ discardId: id, actorId }, 'bag discard approved');
+      void withAudit(
+        {
+          actorId,
+        },
+        {
+          module: 'bag-discard',
+          action: 'UPDATE',
+          entityType: 'BagDiscard',
+          entityId: id,
+          entityLabel: discard.discardId,
+          reason: input.approvalNote,
+        },
+        { approvedById: null },
+        { approvedById: actorId, disposalMethod: input.disposalMethod },
+      );
       return updated;
     },
   };

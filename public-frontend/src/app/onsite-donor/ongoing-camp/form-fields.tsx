@@ -74,25 +74,3 @@ export const FormRadioGroup = ({ label, name, value, onChange, options, classNam
         </div>
     </div>
 )
-
-export const FormVitalsInput = ({ label, name, value, onChange, placeholder, unit, step = '1', className = '', error, type = 'number' }: FormFieldProps & { unit?: string, step?: string, type?: string }) => (
-    <div className={`space-y-1.5 ${className}`}>
-        <div className="flex justify-between items-center">
-            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{label} *</label>
-            {error && <span className="text-[10px] font-bold text-rose-500 animate-pulse">{error}</span>}
-        </div>
-        <div className="relative">
-            <input 
-                required 
-                name={name} 
-                type={type} 
-                {...(type === 'number' ? { step } : {})}
-                value={value} 
-                onChange={onChange} 
-                className={`w-full px-4 py-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-[#8B0000]/10 outline-none font-bold text-lg text-gray-900 ${error ? 'border-rose-200' : 'border-gray-100'}`} 
-                placeholder={placeholder} 
-            />
-            {unit && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 font-bold text-xs">{unit}</span>}
-        </div>
-    </div>
-)

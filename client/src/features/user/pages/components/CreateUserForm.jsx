@@ -1,15 +1,16 @@
 import React, { useEffect } from "react";
+import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
+import PermissionsEditor from "../../components/permissions-editor/PermissionsEditor";
+import { draftFromGrid } from "../../components/permissions-editor/grid-conversion";
+import { useRoleList } from "@/features/role/queries";
 
 export default function CreateUserForm({
   form,
   setForm,
   editingId,
-  RoleArray,
   loading,
   onSubmit,
   onCancel,
-  setPerm,
-  setAllForModule,
 }) {
   useEffect(() => {
     const onKey = (e) => {
@@ -19,6 +20,33 @@ export default function CreateUserForm({
     return () => document.removeEventListener("keydown", onKey);
   }, [onCancel]);
 
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
+
+  const { data: roles } = useRoleList();
+  const roleOptions = roles ?? [];
+
+  const onRoleChange = (e) => {
+    const roleId = e.target.value;
+    if (!roleId) {
+      // "— Custom —" placeholder: only clears the applied-role link, the
+      // permission grid is left exactly as it is (never silently wiped).
+      setForm((v) => ({ ...v, roleId: null }));
+      return;
+    }
+    const role = roleOptions.find((r) => r.id === roleId);
+    if (!role) return;
+    // One-time template copy — applying a role overwrites the grid now,
+    // but the user's permissions stay independently editable afterward,
+    // and later edits to the role itself never cascade back here.
+    setForm((v) => ({
+      ...v,
+      role: role.name,
+      roleId: role.id,
+      isFullAccess: role.isFullAccess,
+      permissionsDraft: draftFromGrid(role.permissions || []),
+    }));
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
       <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden" onClick={(e)=>e.stopPropagation()}>
@@ -26,7 +54,7 @@ export default function CreateUserForm({
           <div className="font-semibold text-slate-800">{editingId ? 'Edit User' : 'Create User'}</div>
           <button onClick={onCancel} className="px-2 py-1 rounded-md border hover:bg-slate-50">Close</button>
         </div>
-        <form onSubmit={onSubmit} className="p-4 md:p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={onSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="p-4 md:p-5 space-y-4 max-h-[80vh] overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-xs text-slate-600">Public ID</label>
@@ -50,9 +78,17 @@ export default function CreateUserForm({
             </div>
             <div>
               <label className="text-xs text-slate-600">Role</label>
-              <select className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={form.role} onChange={(e)=>setForm(v=>({...v, role:e.target.value}))}>
-                {RoleArray.map(r => <option key={r} value={r}>{r}</option>)}
+              <select
+                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300"
+                value={form.roleId || ""}
+                onChange={onRoleChange}
+              >
+                <option value="">— Custom (no role) —</option>
+                {roleOptions.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
               </select>
+              <p className="text-[11px] text-slate-400 mt-0.5">Selecting a role fills in the checklist below from that role's template — you can still adjust individual permissions afterward. Later changes to the role itself won't retroactively affect this user.</p>
             </div>
             <div>
               <label className="text-xs text-slate-600">Status</label>
@@ -70,44 +106,28 @@ export default function CreateUserForm({
             </div>
           </div>
 
-          <div className="mt-2">
+          <div className="mt-2 p-3 rounded-lg border border-amber-200 bg-amber-50 flex items-start gap-2">
+            <input
+              type="checkbox"
+              id="isFullAccess"
+              className="mt-0.5"
+              checked={!!form.isFullAccess}
+              onChange={(e) => setForm(v => ({ ...v, isFullAccess: e.target.checked }))}
+            />
+            <label htmlFor="isFullAccess" className="text-sm text-amber-900">
+              <span className="font-semibold">Full Access</span> — bypasses every permission check below; this user can do everything, regardless of what's granted.
+            </label>
+          </div>
+
+          <div className={`mt-2 ${form.isFullAccess ? 'opacity-50 pointer-events-none' : ''}`}>
             <div className="font-medium mb-2 text-slate-800">Permissions</div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm border rounded-lg overflow-hidden">
-                <thead className="bg-slate-50/80">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Module</th>
-                    <th className="px-3 py-2 text-center">All</th>
-                    <th className="px-3 py-2 text-center">View</th>
-                    <th className="px-3 py-2 text-center">Create</th>
-                    <th className="px-3 py-2 text-center">Update</th>
-                    <th className="px-3 py-2 text-center">Delete</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {form.permissions.map((p) => (
-                    <tr key={p.moduleName} className="hover:bg-slate-50/60">
-                      <td className="px-3 py-2">{p.moduleName}</td>
-                      <td className="px-3 py-2 text-center">
-                        <input type="checkbox" checked={p.view && p.create && p.update && p.delete} onChange={(e)=>setAllForModule(p.moduleName, e.target.checked)} />
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input type="checkbox" checked={p.view} onChange={(e)=>setPerm(p.moduleName, 'view', e.target.checked)} />
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input type="checkbox" checked={p.create} onChange={(e)=>setPerm(p.moduleName, 'create', e.target.checked)} />
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input type="checkbox" checked={p.update} onChange={(e)=>setPerm(p.moduleName, 'update', e.target.checked)} />
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input type="checkbox" checked={p.delete} onChange={(e)=>setPerm(p.moduleName, 'delete', e.target.checked)} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <p className="text-xs text-slate-500 mb-2">
+              Grant a whole module at once, or expand it to set permissions per page.
+            </p>
+            <PermissionsEditor
+              draft={form.permissionsDraft}
+              onChange={(permissionsDraft) => setForm((v) => ({ ...v, permissionsDraft }))}
+            />
           </div>
 
           <div className="flex justify-end gap-2">

@@ -23,12 +23,14 @@ export const ApproveBagDiscardBody = z.object({
   disposalMethod: z.string().trim().max(200).optional(),
   biomedicalWasteManifestNo: z.string().trim().max(100).optional(),
   disposalDate: z.coerce.date().optional(),
+  approvalNote: z.string().trim().max(500).optional(),
 });
 
 export const ListBagDiscardQuery = z.object({
   stockId: z.string().regex(OBJECT_ID).optional(),
   reason: z.enum(BAG_DISCARD_REASON).optional(),
   fromDate: z.coerce.date().optional(),
+  toDate: z.coerce.date().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(20),
 });

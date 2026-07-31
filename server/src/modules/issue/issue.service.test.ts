@@ -17,6 +17,7 @@ function reqDto(): RequisitionDto {
     hospitalId: 'h',
     patientId: 'pat-1',
     clinicianName: 'Dr',
+    purpose: 'REQUISITION',
     requestedComponents: [],
     matchedUnits: [
       {
@@ -46,6 +47,8 @@ function unitDto(over: Partial<UnitDto> = {}): UnitDto {
     expiresAt: '2026-07-01T00:00:00Z',
     status: 'CROSSMATCHED',
     specialAttributes: [],
+    storageLocation: null,
+    clinicalIndicationPatient: null,
     ...over,
   };
 }
@@ -85,10 +88,15 @@ function deps(opts: {
     inStockSummary: vi.fn(),
     findExpiredUnitIds: vi.fn(),
     findNearExpiry: vi.fn(),
+    findBestReplacement: vi.fn(),
+    allIssued: vi.fn(),
+    findDonationsWithIssuedUnit: vi.fn(),
+    availableForSelection: vi.fn().mockResolvedValue([]),
   };
   const patients: PatientRepo = {
     create: vi.fn(),
     findById: vi.fn().mockResolvedValue(opts.patient ?? patientDto()),
+    updateSnapshot: vi.fn(),
   };
   const crossmatches = {
     record: vi.fn(),

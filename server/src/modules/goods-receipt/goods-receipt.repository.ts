@@ -10,8 +10,6 @@ export interface BatchLineDto {
   manufacturingDate?: string;
   expiryDate: string;
   quantityReceived: number;
-  quantityAccepted: number;
-  quantityRejected: number;
 }
 
 export interface FinancialsDto {
@@ -25,18 +23,20 @@ export interface FinancialsDto {
 
 export interface GRNDto {
   id: string;
+  _id: string;
   grnNumber: string;
   poId: string;
-  vendorId: string;
-  invoiceNumber: string;
-  invoiceDate: string;
+  vendorName?: string;
+  invoiceNo: string;
+  billDate?: string;
   transportDetails?: string;
-  receivedDate: string;
-  receivedById: string;
+  receivedDate?: string;
+  receivedById?: string;
   batchLines: BatchLineDto[];
   financials?: FinancialsDto;
   status: string;
   notes?: string;
+  invoiceImage?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -50,20 +50,19 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     manufacturingDate: b.manufacturingDate ? (b.manufacturingDate as Date).toISOString() : undefined,
     expiryDate: (b.expiryDate as Date).toISOString(),
     quantityReceived: b.quantityReceived as number,
-    quantityAccepted: (b.quantityAccepted as number) ?? 0,
-    quantityRejected: (b.quantityRejected as number) ?? 0,
   }));
   const fin = doc.financials as Record<string, unknown> | undefined;
   return {
     id: doc._id.toString(),
+    _id: doc._id.toString(),
     grnNumber: doc.grnNumber as string,
     poId: (doc.poId as Types.ObjectId).toString(),
-    vendorId: (doc.vendorId as Types.ObjectId).toString(),
-    invoiceNumber: doc.invoiceNumber as string,
-    invoiceDate: (doc.invoiceDate as Date).toISOString(),
+    vendorName: doc.vendorName as string | undefined,
+    invoiceNo: doc.invoiceNo as string,
+    billDate: doc.billDate ? (doc.billDate as Date).toISOString() : undefined,
     transportDetails: doc.transportDetails as string | undefined,
-    receivedDate: (doc.receivedDate as Date).toISOString(),
-    receivedById: (doc.receivedById as Types.ObjectId).toString(),
+    receivedDate: doc.receivedDate ? (doc.receivedDate as Date).toISOString() : undefined,
+    receivedById: doc.receivedById ? (doc.receivedById as Types.ObjectId).toString() : undefined,
     batchLines,
     financials: fin ? {
       basicAmountRs: fin.basicAmountRs as number | undefined,
@@ -75,6 +74,7 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     } : undefined,
     status: doc.status as string,
     notes: doc.notes as string | undefined,
+    invoiceImage: (doc.invoiceImage as string) || undefined,
     createdAt: doc.createdAt ? doc.createdAt.toISOString() : '',
     updatedAt: doc.updatedAt ? doc.updatedAt.toISOString() : '',
   };
@@ -84,20 +84,30 @@ export interface GRNRepo {
   list(q: ListGRNInput): Promise<{ items: GRNDto[]; total: number }>;
   findById(id: string): Promise<GRNDto | null>;
   create(doc: {
-    grnNumber: string;
+    grnNumber?: string;
     poId: string;
-    vendorId: string;
-    invoiceNumber: string;
-    invoiceDate: Date;
+    vendorName?: string;
+    invoiceNo: string;
+    billDate?: Date;
     transportDetails?: string;
-    receivedDate: Date;
-    receivedById: string;
+    receivedDate?: Date;
+    receivedById?: string;
     batchLines: BatchLineDto[];
     financials?: FinancialsDto;
     notes?: string;
+    invoiceImage?: string | null;
     actorId: string;
   }): Promise<GRNDto>;
-  updateStatus(id: string, status: string, actorId: string): Promise<GRNDto | null>;
+  update(id: string, patch: Partial<{
+    invoiceNo: string;
+    billDate: Date;
+    transportDetails: string;
+    receivedDate: Date;
+    batchLines: BatchLineDto[];
+    financials: FinancialsDto;
+    notes: string;
+    invoiceImage: string | null;
+  }>, actorId: string): Promise<GRNDto | null>;
 }
 
 export function createGRNRepo(): GRNRepo {
@@ -105,7 +115,7 @@ export function createGRNRepo(): GRNRepo {
     async list(q) {
       const filter: Record<string, unknown> = { deletedAt: null };
       if (q.poId) filter.poId = new Types.ObjectId(q.poId);
-      if (q.vendorId) filter.vendorId = new Types.ObjectId(q.vendorId);
+      if (q.vendorName) filter.vendorName = new RegExp(q.vendorName, 'i');
       if (q.status) filter.status = q.status;
       if (q.fromDate || q.toDate) {
         const range: Record<string, Date> = {};
@@ -134,12 +144,12 @@ export function createGRNRepo(): GRNRepo {
       const doc = await GoodsReceiptModel.create({
         grnNumber: input.grnNumber,
         poId: new Types.ObjectId(input.poId),
-        vendorId: new Types.ObjectId(input.vendorId),
-        invoiceNumber: input.invoiceNumber,
-        invoiceDate: input.invoiceDate,
+        vendorName: input.vendorName,
+        invoiceNo: input.invoiceNo,
+        billDate: input.billDate,
         transportDetails: input.transportDetails,
         receivedDate: input.receivedDate,
-        receivedById: new Types.ObjectId(input.receivedById),
+        receivedById: input.receivedById ? new Types.ObjectId(input.receivedById) : actor,
         batchLines: input.batchLines.map((b) => ({
           ...b,
           manufacturingDate: b.manufacturingDate ? new Date(b.manufacturingDate) : undefined,
@@ -147,18 +157,19 @@ export function createGRNRepo(): GRNRepo {
         })),
         financials: input.financials,
         notes: input.notes,
-        status: 'PENDING',
+        invoiceImage: input.invoiceImage,
+        status: 'ACCEPTED',
         createdBy: actor,
         updatedBy: actor,
       });
       return toDto(doc.toObject() as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
     },
 
-    async updateStatus(id, status, actorId) {
+    async update(id, patch, actorId) {
       const actor = new Types.ObjectId(actorId);
       const doc = await GoodsReceiptModel.findOneAndUpdate(
         { _id: new Types.ObjectId(id), deletedAt: null },
-        { $set: { status, updatedBy: actor } },
+        { $set: { ...patch, updatedBy: actor } },
         { new: true },
       ).lean();
       if (!doc) return null;

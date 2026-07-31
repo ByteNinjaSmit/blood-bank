@@ -2,34 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import hospitalApi from '@/services/hospitalApi';
 import requisitionApi from '@/services/requisitionApi';
+import { donorCardApi } from '@/features/donor-card/api';
+import { defaultDonorCard, defaultPatient, defaultRequestedComponent, buildPatientPayload } from './requisition-defaults';
+import { checkHasChanges } from './dirty-tracking';
+export { defaultDonorCard, defaultPatient, defaultRequestedComponent } from './requisition-defaults';
 
-export const defaultPatient = {
-  name: '',
-  age: '',
-  sex: 'M',
-  mrn: '',
-  diagnosis: '',
-  hb: '',
-  indication: '',
-  history: {
-    previousTransfusions: 0,
-    approximateDate: '',
-    presenceOfReaction: 'None',
-  },
-  pregnancy: {
-    numPregnancies: 0,
-    numMiscarriages: 0,
-    numChildrenWithHemolyticDisease: 0,
-  },
-};
-
-export const defaultRequestedComponent = {
-  componentType: 'RBC',
-  units: 1,
-  bloodGroup: 'O',
-  rh: 'Positive',
-  urgency: 'regular',
-};
 
 export default function useRequisition(authToken) {
   // Step control
@@ -39,19 +16,13 @@ export default function useRequisition(authToken) {
   const [hospitals, setHospitals] = useState([]);
   const [hospitalsLoading, setHospitalsLoading] = useState(false);
 
-  const [addHospitalOpen, setAddHospitalOpen] = useState(false);
-  const [addHospitalForm, setAddHospitalForm] = useState({ name: '', address: '', contactPerson: '', phone: '' });
-  const [addingHospital, setAddingHospital] = useState(false);
-
-  // Create request form state
   const [form, setForm] = useState({
     hospitalId: '',
     doctorName: '',
     requiredAt: '',
-    medicalOfficerSignature: '',
-    hospitalSeal: '',
     patient: { ...defaultPatient },
     requestedComponents: [ { ...defaultRequestedComponent } ],
+    donorCard: { ...defaultDonorCard },
   });
 
   // Created request state
@@ -63,8 +34,82 @@ export default function useRequisition(authToken) {
   const [approving, setApproving] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [crossmatchUpdating, setCrossmatchUpdating] = useState(false);
+  const [swapping, setSwapping] = useState(false);
+  const [groupingSaving, setGroupingSaving] = useState(false);
 
   const canProceedToMatch = useMemo(() => !!requestDoc?._id, [requestDoc]);
+
+  useEffect(() => {
+    if (!requestDoc) return;
+
+    // Donor card lives in a separate collection (not embedded on the
+    // requisition), so it has to be fetched independently. Without this,
+    // the form reset below (which replaces the whole `form` object) would
+    // silently wipe out whatever the user entered/toggled — "Yes" flipping
+    // back to "No" right after Create/Update.
+    let cancelled = false;
+    (async () => {
+      let donorCard = { ...defaultDonorCard };
+      try {
+        const found = await donorCardApi.getByRequisition(requestDoc._id);
+        if (found) {
+          donorCard = {
+            brought: true,
+            name: found.name || '',
+            address: found.address || '',
+            bloodGroup: found.bloodGroup || 'A+',
+            donationCardNumber: found.donationCardNumber || '',
+          };
+        }
+      } catch {
+        // no card saved yet, or lookup failed — fall back to defaults
+      }
+      if (!cancelled) {
+        setForm((prev) => ({ ...prev, donorCard }));
+      }
+    })();
+
+    setForm((prev) => ({
+        ...prev,
+        hospitalId: requestDoc.hospitalId?._id || requestDoc.hospitalId || '',
+        doctorName: requestDoc.doctorName || requestDoc.clinicianName || '',
+        requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 16) : '',
+        patient: {
+          name: requestDoc.patient?.name || '',
+          address: requestDoc.patient?.address || '',
+          age: requestDoc.patient?.age || '',
+          sex: requestDoc.patient?.sex || 'M',
+          mrn: requestDoc.patient?.mrn || '',
+          diagnosis: requestDoc.patient?.diagnosis || '',
+          hb: requestDoc.patient?.hb || '',
+          indication: requestDoc.patient?.indication || '',
+          indicationCategory: requestDoc.patient?.indicationCategory || null,
+          otherDiseaseName: requestDoc.patient?.otherDiseaseName || '',
+          history: {
+            previousTransfusions: requestDoc.patient?.history?.previousTransfusions || 0,
+            approximateDate: requestDoc.patient?.history?.approximateDate || '',
+            presenceOfReaction: requestDoc.patient?.history?.presenceOfReaction || 'None',
+          },
+          pregnancy: {
+            numPregnancies: requestDoc.patient?.pregnancy?.numPregnancies || 0,
+            numMiscarriages: requestDoc.patient?.pregnancy?.numMiscarriages || 0,
+            numChildrenWithHemolyticDisease: requestDoc.patient?.pregnancy?.numChildrenWithHemolyticDisease || 0,
+          },
+        },
+        requestedComponents: (requestDoc.requestedComponents || []).map((rc) => ({
+          componentType: rc.componentType,
+          units: rc.units,
+          bloodGroup: rc.bloodGroup,
+          rh: rc.rh === 'Positive' || rc.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
+          urgency: rc.urgency?.toLowerCase() === 'routine' ? 'regular' : rc.urgency?.toLowerCase() || 'regular',
+          compatibilityMode: rc.compatibilityMode || 'UNIVERSAL',
+        })),
+    }));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requestDoc]);
 
   useEffect(() => {
     if (!authToken) return;
@@ -86,45 +131,6 @@ export default function useRequisition(authToken) {
     })();
   }, [authToken]);
 
-  const handleCreateHospital = async () => {
-    if (!addHospitalForm.name || !addHospitalForm.address || !addHospitalForm.contactPerson || !addHospitalForm.phone) {
-      toast.error('Fill all hospital fields');
-      return;
-    }
-    try {
-      setAddingHospital(true);
-      const res = await hospitalApi.createHospital(addHospitalForm);
-      setAddingHospital(false);
-      if (!res.success) {
-        return toast.error(res.error || 'Failed to add hospital');
-      }
-      const created = res?.data?.data;
-      toast.success(res?.data?.message || 'Hospital added');
-      if (created?._id) {
-        setForm((p) => ({ ...p, hospitalId: created._id }));
-      }
-      // Optimistically add then refresh
-      if (created) {
-        setHospitals((p) => (Array.isArray(p) ? [created, ...p] : [created]));
-      }
-      setAddHospitalOpen(false);
-      // Refresh list in background
-      setHospitalsLoading(true);
-      const resp = await hospitalApi.getHospitals({ limit: 100 });
-      const list = Array.isArray(resp?.data?.data)
-        ? resp.data.data
-        : Array.isArray(resp?.data)
-          ? resp.data
-          : [];
-      setHospitals(list);
-      setHospitalsLoading(false);
-      setAddHospitalForm({ name: '', address: '', contactPerson: '', phone: '' });
-    } catch (e) {
-      setAddingHospital(false);
-      toast.error('Network error while adding hospital');
-    }
-  };
-
   const addRequestLine = () => {
     setForm((prev) => ({
       ...prev,
@@ -142,6 +148,25 @@ export default function useRequisition(authToken) {
     }));
   };
 
+
+  // Best-effort — the requisition itself already succeeded, so a donor
+  // card save failure shouldn't block the wizard from proceeding. Uses an
+  // upsert on the server, so this is safe to call again on later edits.
+  const saveDonorCardIfNeeded = async (requisitionId) => {
+    if (!form.donorCard?.brought || !requisitionId) return;
+    try {
+      await donorCardApi.create({
+        requisitionId,
+        name: form.donorCard.name,
+        address: form.donorCard.address,
+        bloodGroup: form.donorCard.bloodGroup,
+        donationCardNumber: form.donorCard.donationCardNumber,
+      });
+    } catch {
+      toast.warning('Request saved, but saving the donor card details failed.');
+    }
+  };
+
   const handleCreate = async () => {
     try {
       // validation minimal
@@ -152,42 +177,47 @@ export default function useRequisition(authToken) {
         hospitalId: form.hospitalId,
         doctorName: form.doctorName || undefined,
         requiredAt: form.requiredAt || undefined,
-        medicalOfficerSignature: form.medicalOfficerSignature || undefined,
-        hospitalSeal: form.hospitalSeal || undefined,
-        patient: {
-          name: form.patient.name,
-          age: Number(form.patient.age),
-          sex: form.patient.sex,
-          mrn: form.patient.mrn || undefined,
-          diagnosis: form.patient.diagnosis || undefined,
-          hb: form.patient.hb ? Number(form.patient.hb) : undefined,
-          indication: form.patient.indication || undefined,
-          history: {
-            previousTransfusions: Number(form.patient.history?.previousTransfusions || 0),
-            approximateDate: form.patient.history?.approximateDate || undefined,
-            presenceOfReaction: form.patient.history?.presenceOfReaction || 'None',
-          },
-          pregnancy: {
-            numPregnancies: Number(form.patient.pregnancy?.numPregnancies || 0),
-            numMiscarriages: Number(form.patient.pregnancy?.numMiscarriages || 0),
-            numChildrenWithHemolyticDisease: Number(form.patient.pregnancy?.numChildrenWithHemolyticDisease || 0),
-          },
-        },
+        patient: buildPatientPayload(form.patient),
         requestedComponents: form.requestedComponents.map((r) => ({
           componentType: r.componentType,
           units: Number(r.units),
           bloodGroup: r.bloodGroup,
           rh: r.rh,
           urgency: r.urgency,
+          compatibilityMode: r.compatibilityMode || 'UNIVERSAL',
         })),
       };
+
+      if (requestDoc?._id) {
+        // Request is already created! Check for updates
+        const hasChanges = checkHasChanges(requestDoc, payload);
+        if (!hasChanges) {
+          toast.warning('Request is already created');
+          setCurrentStep(2);
+          return;
+        }
+
+        const res = await requisitionApi.updateRequest(requestDoc._id, payload);
+        if (!res.success) return toast.error(res.error || 'Failed to update request');
+        setRequestDoc(res.data);
+        toast.success('Changes updated');
+        await saveDonorCardIfNeeded(res.data?._id);
+        // auto match immediately after updating the request
+        await handleMatch(res.data?._id);
+        setCurrentStep(2);
+        return;
+      }
+
       const res = await requisitionApi.createRequest(payload);
       if (!res.success) return toast.error(res.error || 'Failed to create request');
       setRequestDoc(res.data);
       toast.success(res?.raw?.message || 'Request created');
-      // auto match immediately after creating the request; the user can
-      // then Continue to the Match Review step once matching succeeds.
+
+      await saveDonorCardIfNeeded(res.data?._id);
+
+      // auto match immediately after creating the request
       await handleMatch(res.data?._id);
+      setCurrentStep(2);
     } catch (e) {
       toast.error('Failed to create request');
     }
@@ -212,6 +242,7 @@ export default function useRequisition(authToken) {
       return false;
     }
     setRequestDoc(r.data);
+    setCurrentStep(statusToStep(r.data.status));
     return true;
   };
 
@@ -222,10 +253,11 @@ export default function useRequisition(authToken) {
     setMatching(false);
     if (!res.success) {
       const errMsg = res?.error || res?.raw?.message || 'Matching failed';
-      const sh = res?.errorData?.data?.shortages;
+      // A full shortage comes back as a 409 whose error body carries
+      // { shortages } under `details` (AppError shape from the middleware).
+      const sh = res?.errorData?.details?.shortages;
       if (Array.isArray(sh) && sh.length) {
         setShortages(sh);
-        // Show compact user message summarizing first shortage
         const s0 = sh[0];
         toast.error(`Insufficient stock: ${s0.available} of ${s0.required} ${s0.componentType} available`);
       } else {
@@ -236,10 +268,21 @@ export default function useRequisition(authToken) {
       await refreshRequest(id);
       return;
     }
+    // For multi-component requests, a 200 may still carry partial shortages
+    const partialShortages = res?.data?.shortages;
+    if (Array.isArray(partialShortages) && partialShortages.length > 0) {
+      setShortages(partialShortages);
+      toast.warning(
+        `Partial match: ${partialShortages.map((s) => `${s.componentType} unavailable`).join(', ')}. Proceeding with available components.`
+      );
+    } else {
+      setShortages(null);
+    }
     setMatchedResult(res.data);
-    setShortages(null);
     await refreshRequest(id);
-    toast.success('Matched and reserved');
+    if (!Array.isArray(partialShortages) || !partialShortages.length) {
+      toast.success('Matched and reserved');
+    }
   };
 
   const handleApprove = async () => {
@@ -252,10 +295,10 @@ export default function useRequisition(authToken) {
     toast.success('Approved');
   };
 
-  const handleIssue = async () => {
+  const handleIssue = async (unitIds = []) => {
     if (!requestDoc?._id) return;
     setIssuing(true);
-    const res = await requisitionApi.issue(requestDoc._id);
+    const res = await requisitionApi.issue(requestDoc._id, unitIds);
     setIssuing(false);
     if (!res.success) return toast.error(res.error || 'Issuing failed');
     await refreshRequest(requestDoc._id);
@@ -306,33 +349,14 @@ export default function useRequisition(authToken) {
         hospitalId: form.hospitalId,
         doctorName: form.doctorName || undefined,
         requiredAt: form.requiredAt || undefined,
-        medicalOfficerSignature: form.medicalOfficerSignature || undefined,
-        hospitalSeal: form.hospitalSeal || undefined,
-        patient: {
-          name: form.patient.name,
-          age: Number(form.patient.age),
-          sex: form.patient.sex,
-          mrn: form.patient.mrn || undefined,
-          diagnosis: form.patient.diagnosis || undefined,
-          hb: form.patient.hb ? Number(form.patient.hb) : undefined,
-          indication: form.patient.indication || undefined,
-          history: {
-            previousTransfusions: Number(form.patient.history?.previousTransfusions || 0),
-            approximateDate: form.patient.history?.approximateDate || undefined,
-            presenceOfReaction: form.patient.history?.presenceOfReaction || 'None',
-          },
-          pregnancy: {
-            numPregnancies: Number(form.patient.pregnancy?.numPregnancies || 0),
-            numMiscarriages: Number(form.patient.pregnancy?.numMiscarriages || 0),
-            numChildrenWithHemolyticDisease: Number(form.patient.pregnancy?.numChildrenWithHemolyticDisease || 0),
-          },
-        },
+        patient: buildPatientPayload(form.patient),
         requestedComponents: form.requestedComponents.map((r) => ({
           componentType: r.componentType,
           units: Number(r.units),
           bloodGroup: r.bloodGroup,
           rh: r.rh,
           urgency: r.urgency,
+          compatibilityMode: r.compatibilityMode || 'UNIVERSAL',
         })),
       };
       const createRes = await requisitionApi.createRequest(payload);
@@ -354,12 +378,15 @@ export default function useRequisition(authToken) {
     }
   };
 
-  const handleCrossmatchUpdate = async (inventoryId, status) => {
+  const handleCrossmatchUpdate = async (inventoryId, status, details = {}) => {
     if (!requestDoc?._id || !inventoryId) return false;
     setCrossmatchUpdating(true);
     const res = await requisitionApi.updateCrossmatch(requestDoc._id, {
       inventoryId,
       crossmatchStatus: status,
+      compatibilityResult: details.compatibilityResult,
+      crossmatchDoneAt: details.crossmatchDoneAt,
+      crossmatchSeenAt: details.crossmatchSeenAt,
     });
     setCrossmatchUpdating(false);
     if (!res.success) {
@@ -375,17 +402,120 @@ export default function useRequisition(authToken) {
     return true;
   };
 
+  // Fetch available in-stock bags for a component, optionally narrowed to a
+  // compatible ABO group. Returns { compatibleGroups, units } or null.
+  const fetchAvailableUnits = async (componentType, aboGroup) => {
+    if (!requestDoc?._id) return null;
+    const res = await requisitionApi.getAvailableUnits(requestDoc._id, { componentType, aboGroup });
+    if (!res.success) {
+      toast.error(res.error || 'Failed to load available bags');
+      return null;
+    }
+    return res.data;
+  };
+
+  const handleSwapBag = async (fromUnitId, toUnitId) => {
+    if (!requestDoc?._id || !toUnitId || fromUnitId === toUnitId) return false;
+    setSwapping(true);
+    const res = await requisitionApi.swapMatchedUnit(requestDoc._id, { fromUnitId, toUnitId });
+    setSwapping(false);
+    if (!res.success) {
+      toast.error(res.error || 'Failed to change bag');
+      return false;
+    }
+    await refreshRequest(requestDoc._id);
+    toast.success('Bag updated');
+    return true;
+  };
+
+  const handleSaveRecipientGrouping = async (grouping) => {
+    if (!requestDoc?._id) return false;
+    setGroupingSaving(true);
+    const res = await requisitionApi.saveRecipientGrouping(requestDoc._id, grouping);
+    setGroupingSaving(false);
+    if (!res.success) {
+      toast.error(res.error || 'Failed to save grouping');
+      return false;
+    }
+    await refreshRequest(requestDoc._id);
+    toast.success('Recipient grouping saved');
+    return true;
+  };
+
+  const handleSaveBagGrouping = async (unitId, grouping) => {
+    if (!requestDoc?._id || !unitId) return false;
+    setGroupingSaving(true);
+    const res = await requisitionApi.saveBagGrouping(requestDoc._id, { unitId, grouping });
+    setGroupingSaving(false);
+    if (!res.success) {
+      toast.error(res.error || 'Failed to save grouping');
+      return false;
+    }
+    await refreshRequest(requestDoc._id);
+    toast.success('Bag grouping saved');
+    return true;
+  };
+
+  const handleConfirmCompatibility = async (unitId, confirmed) => {
+    if (!requestDoc?._id || !unitId) return false;
+    const res = await requisitionApi.confirmCompatibility(requestDoc._id, { unitId, confirmed });
+    if (!res.success) {
+      toast.error(res.error || 'Failed to update compatibility');
+      return false;
+    }
+    await refreshRequest(requestDoc._id);
+    toast.success(confirmed ? 'Compatibility confirmed' : 'Compatibility confirmation removed');
+    return true;
+  };
+
+  const handleResetCrossmatch = async (unitId) => {
+    if (!requestDoc?._id || !unitId) return false;
+    const res = await requisitionApi.resetCrossmatch(requestDoc._id, unitId);
+    if (!res.success) {
+      toast.error(res.error || 'Failed to reopen crossmatch');
+      return false;
+    }
+    await refreshRequest(requestDoc._id);
+    return true;
+  };
+
+  const handleRejectComponent = async (componentType, reason) => {
+    if (!requestDoc?._id || !componentType) return false;
+    const res = await requisitionApi.rejectComponent(requestDoc._id, { componentType, reason });
+    if (!res.success) {
+      toast.error(res.error || 'Failed to reject component');
+      return false;
+    }
+    await refreshRequest(requestDoc._id);
+    toast.success(`${componentType} component rejected`);
+    return true;
+  };
+
+  const hasChanges = useMemo(() => {
+    if (!requestDoc) return false;
+    const payload = {
+      hospitalId: form.hospitalId,
+      doctorName: form.doctorName || undefined,
+      requiredAt: form.requiredAt || undefined,
+      patient: buildPatientPayload(form.patient),
+      requestedComponents: form.requestedComponents.map((r) => ({
+        componentType: r.componentType,
+        units: Number(r.units),
+        bloodGroup: r.bloodGroup,
+        rh: r.rh,
+        urgency: r.urgency,
+        compatibilityMode: r.compatibilityMode || 'UNIVERSAL',
+      })),
+    };
+    return checkHasChanges(requestDoc, payload);
+  }, [form, requestDoc]);
+
   return {
     // state
     currentStep,
     setCurrentStep,
     hospitals,
     hospitalsLoading,
-    addHospitalOpen,
-    setAddHospitalOpen,
-    addHospitalForm,
-    setAddHospitalForm,
-    addingHospital,
     form,
     setForm,
     requestDoc,
@@ -396,10 +526,12 @@ export default function useRequisition(authToken) {
     approving,
     completing,
     crossmatchUpdating,
+    swapping,
+    groupingSaving,
     canProceedToMatch,
+    hasChanges,
 
     // actions
-    handleCreateHospital,
     addRequestLine,
     removeRequestLine,
     handleCreate,
@@ -410,6 +542,14 @@ export default function useRequisition(authToken) {
     handleReject,
     handleCreateAndReject,
     handleCrossmatchUpdate,
+    fetchAvailableUnits,
+    handleSwapBag,
+    handleSaveRecipientGrouping,
+    handleSaveBagGrouping,
+    handleConfirmCompatibility,
+    handleResetCrossmatch,
+    handleRejectComponent,
     loadRequest,
+    refreshRequest,
   };
 }

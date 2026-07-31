@@ -1,0 +1,2042 @@
+[
+  {
+    "_id": {
+      "$oid": "6a3a99d0040507df5353d48c"
+    },
+    "donationId": "DN-KOP-F76JJ6",
+    "bagNo": "BAG-DB-SJI4N4-KOP-001",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-001",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99d0040507df5353d48a"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 62,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:00.976Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:00.976Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99d1040507df5353d495"
+    },
+    "donationId": "DN-KOP-LPK8OV",
+    "bagNo": "BAG-DB-SJI4N4-KOP-002",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-002",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99d1040507df5353d493"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 63,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:01.806Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:01.806Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99d2040507df5353d49e"
+    },
+    "donationId": "DN-KOP-AHLK3E",
+    "bagNo": "BAG-DB-SJI4N4-KOP-003",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-003",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99d2040507df5353d49c"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 64,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:02.822Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:02.822Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99d3040507df5353d4a7"
+    },
+    "donationId": "DN-KOP-45UL77",
+    "bagNo": "BAG-DB-SJI4N4-KOP-004",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-004",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99d3040507df5353d4a5"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 65,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:03.798Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:03.798Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99d4040507df5353d4b0"
+    },
+    "donationId": "DN-KOP-7ZOHZX",
+    "bagNo": "BAG-DB-SJI4N4-KOP-005",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-005",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99d4040507df5353d4ae"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 66,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:04.669Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:04.669Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99d5040507df5353d4b9"
+    },
+    "donationId": "DN-KOP-O2AQSY",
+    "bagNo": "BAG-DB-SJI4N4-KOP-006",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-006",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99d5040507df5353d4b7"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 67,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:05.532Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:05.532Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99d6040507df5353d4c2"
+    },
+    "donationId": "DN-KOP-INV7PE",
+    "bagNo": "BAG-DB-SJI4N4-KOP-007",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-007",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99d6040507df5353d4c0"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 68,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:06.765Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:06.765Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99d7040507df5353d4cb"
+    },
+    "donationId": "DN-KOP-A7A2JK",
+    "bagNo": "BAG-DB-SJI4N4-KOP-008",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-008",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99d7040507df5353d4c9"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 69,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:07.648Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:07.648Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99d8040507df5353d4d4"
+    },
+    "donationId": "DN-KOP-BECHC6",
+    "bagNo": "BAG-DB-SJI4N4-KOP-009",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-009",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99d8040507df5353d4d2"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 70,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:08.482Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:08.482Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99d9040507df5353d4dd"
+    },
+    "donationId": "DN-KOP-PERE9M",
+    "bagNo": "BAG-DB-SJI4N4-KOP-010",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-010",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99d9040507df5353d4db"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 71,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:09.305Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:09.305Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99da040507df5353d4e6"
+    },
+    "donationId": "DN-KOP-K96KK4",
+    "bagNo": "BAG-DB-SJI4N4-KOP-011",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-011",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99d9040507df5353d4e4"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 62,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:10.085Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:10.085Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99da040507df5353d4ef"
+    },
+    "donationId": "DN-KOP-9ONHWS",
+    "bagNo": "BAG-DB-SJI4N4-KOP-012",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-012",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99da040507df5353d4ed"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 63,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:10.859Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:10.859Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99db040507df5353d4f8"
+    },
+    "donationId": "DN-KOP-9SGXJ2",
+    "bagNo": "BAG-DB-SJI4N4-KOP-013",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-013",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99db040507df5353d4f6"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 64,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:11.602Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:11.602Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99dc040507df5353d501"
+    },
+    "donationId": "DN-KOP-2A6UJX",
+    "bagNo": "BAG-DB-SJI4N4-KOP-014",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-014",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99dc040507df5353d4ff"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 65,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:12.500Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:12.500Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99dd040507df5353d50a"
+    },
+    "donationId": "DN-KOP-1OC5O5",
+    "bagNo": "BAG-DB-SJI4N4-KOP-015",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-015",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99dd040507df5353d508"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 66,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:13.300Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:13.300Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99de040507df5353d513"
+    },
+    "donationId": "DN-KOP-52WJ06",
+    "bagNo": "BAG-DB-SJI4N4-KOP-016",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-016",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99dd040507df5353d511"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 67,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:14.116Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:14.116Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99df040507df5353d51c"
+    },
+    "donationId": "DN-KOP-MSJUXN",
+    "bagNo": "BAG-DB-SJI4N4-KOP-017",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-017",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99de040507df5353d51a"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 68,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:15.080Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:15.080Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99df040507df5353d525"
+    },
+    "donationId": "DN-KOP-U28R0E",
+    "bagNo": "BAG-DB-SJI4N4-KOP-018",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-018",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99df040507df5353d523"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 69,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:15.857Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:15.857Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99e0040507df5353d52e"
+    },
+    "donationId": "DN-KOP-422MLP",
+    "bagNo": "BAG-DB-SJI4N4-KOP-019",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-019",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99e0040507df5353d52c"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 70,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:16.681Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:16.681Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99e1040507df5353d537"
+    },
+    "donationId": "DN-KOP-4IIV5B",
+    "bagNo": "BAG-DB-SJI4N4-KOP-020",
+    "segmentNo": "SEG-DB-SJI4N4-KOP-020",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99e1040507df5353d535"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-22T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d43f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 71,
+      "hbGdl": 14.2,
+      "temperatureCelsius": 36.8,
+      "pulseBpm": 72,
+      "bloodPressure": {
+        "systolic": 120,
+        "diastolic": 80
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:17.406Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:17.406Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99e2040507df5353d541"
+    },
+    "donationId": "DN-SHI-7ILWRH",
+    "bagNo": "BAG-DB-SJI4N4-SHI-001",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-001",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99e2040507df5353d53f"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 65,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:18.385Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:18.385Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99e3040507df5353d54a"
+    },
+    "donationId": "DN-SHI-4VLNXB",
+    "bagNo": "BAG-DB-SJI4N4-SHI-002",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-002",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99e2040507df5353d548"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 66,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:19.145Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:19.145Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99e3040507df5353d553"
+    },
+    "donationId": "DN-SHI-UZPHTK",
+    "bagNo": "BAG-DB-SJI4N4-SHI-003",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-003",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99e3040507df5353d551"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 67,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:19.954Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:19.954Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99e4040507df5353d55c"
+    },
+    "donationId": "DN-SHI-ACUI57",
+    "bagNo": "BAG-DB-SJI4N4-SHI-004",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-004",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99e4040507df5353d55a"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 68,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:20.992Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:20.992Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99e5040507df5353d565"
+    },
+    "donationId": "DN-SHI-XPBY99",
+    "bagNo": "BAG-DB-SJI4N4-SHI-005",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-005",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99e5040507df5353d563"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 69,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:21.887Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:21.887Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99e6040507df5353d56e"
+    },
+    "donationId": "DN-SHI-W7F4EQ",
+    "bagNo": "BAG-DB-SJI4N4-SHI-006",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-006",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99e6040507df5353d56c"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 70,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:22.702Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:22.702Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99e7040507df5353d577"
+    },
+    "donationId": "DN-SHI-HRUKRZ",
+    "bagNo": "BAG-DB-SJI4N4-SHI-007",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-007",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99e7040507df5353d575"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 71,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:23.489Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:23.489Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99e8040507df5353d580"
+    },
+    "donationId": "DN-SHI-KMPIN9",
+    "bagNo": "BAG-DB-SJI4N4-SHI-008",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-008",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99e8040507df5353d57e"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 72,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:24.375Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:24.375Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99e9040507df5353d589"
+    },
+    "donationId": "DN-SHI-QRZ5JB",
+    "bagNo": "BAG-DB-SJI4N4-SHI-009",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-009",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99e9040507df5353d587"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 65,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:25.255Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:25.255Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99ea040507df5353d592"
+    },
+    "donationId": "DN-SHI-51JYE7",
+    "bagNo": "BAG-DB-SJI4N4-SHI-010",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-010",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99e9040507df5353d590"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 66,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:26.227Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:26.227Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99ea040507df5353d59b"
+    },
+    "donationId": "DN-SHI-WQ2O46",
+    "bagNo": "BAG-DB-SJI4N4-SHI-011",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-011",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99ea040507df5353d599"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 67,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:26.968Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:26.968Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99eb040507df5353d5a4"
+    },
+    "donationId": "DN-SHI-S81OSC",
+    "bagNo": "BAG-DB-SJI4N4-SHI-012",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-012",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99eb040507df5353d5a2"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 68,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:27.872Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:27.872Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99ec040507df5353d5ad"
+    },
+    "donationId": "DN-SHI-ZLNEZW",
+    "bagNo": "BAG-DB-SJI4N4-SHI-013",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-013",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99ec040507df5353d5ab"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 69,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:28.773Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:28.773Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99ed040507df5353d5b6"
+    },
+    "donationId": "DN-SHI-MPMF9A",
+    "bagNo": "BAG-DB-SJI4N4-SHI-014",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-014",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99ed040507df5353d5b4"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 70,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:29.609Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:29.609Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99ee040507df5353d5bf"
+    },
+    "donationId": "DN-SHI-S4PCM4",
+    "bagNo": "BAG-DB-SJI4N4-SHI-015",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-015",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99ee040507df5353d5bd"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 71,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:30.597Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:30.597Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99ef040507df5353d5c8"
+    },
+    "donationId": "DN-SHI-6QUW1P",
+    "bagNo": "BAG-DB-SJI4N4-SHI-016",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-016",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99ef040507df5353d5c6"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 72,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:31.326Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:31.326Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99f0040507df5353d5d1"
+    },
+    "donationId": "DN-SHI-VAFGDM",
+    "bagNo": "BAG-DB-SJI4N4-SHI-017",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-017",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99f0040507df5353d5cf"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 65,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:32.207Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:32.207Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99f0040507df5353d5da"
+    },
+    "donationId": "DN-SHI-XLZAOP",
+    "bagNo": "BAG-DB-SJI4N4-SHI-018",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-018",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99f0040507df5353d5d8"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 66,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:32.947Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:32.947Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99f1040507df5353d5e3"
+    },
+    "donationId": "DN-SHI-31QRUD",
+    "bagNo": "BAG-DB-SJI4N4-SHI-019",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-019",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99f1040507df5353d5e1"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 67,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:33.782Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:33.782Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99f2040507df5353d5ec"
+    },
+    "donationId": "DN-SHI-TNOO3I",
+    "bagNo": "BAG-DB-SJI4N4-SHI-020",
+    "segmentNo": "SEG-DB-SJI4N4-SHI-020",
+    "lotNo": "SJI4N4",
+    "donor": {
+      "$oid": "6a3a99f2040507df5353d5ea"
+    },
+    "donationType": "WHOLE_BLOOD",
+    "collectedAt": {
+      "$date": "2026-06-23T10:00:00Z"
+    },
+    "campId": {
+      "$oid": "6a3a99ca040507df5353d44f"
+    },
+    "phlebotomistId": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "medicalExam": {
+      "weightKg": 68,
+      "hbGdl": 13.8,
+      "temperatureCelsius": 36.6,
+      "pulseBpm": 68,
+      "bloodPressure": {
+        "systolic": 118,
+        "diastolic": 78
+      },
+      "volumeMl": 450
+    },
+    "donorFitness": {
+      "isFit": true
+    },
+    "typeOfBag": "DB",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:36:34.712Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:36:34.712Z"
+    },
+    "__v": 0
+  }
+]

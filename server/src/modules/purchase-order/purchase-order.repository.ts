@@ -8,23 +8,18 @@ export interface LineItemDto {
   anticoagulant: string;
   productCode?: string;
   quantityOrdered: number;
-  unitPriceRs?: number;
-  gstPercent?: number;
 }
 
 export interface PODto {
   id: string;
+  _id: string;
   poNumber: string;
   poDate: string;
   vendorId: string;
   lineItems: LineItemDto[];
-  totalAmountRs?: number;
   expectedDelivery?: string;
-  purchaseOfficerId: string;
-  approvalStatus: string;
-  approvedById?: string;
-  approvedAt?: string;
-  rejectionReason?: string;
+  manufacturer?: string;
+  billDate?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -33,17 +28,14 @@ export interface PODto {
 function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date }): PODto {
   return {
     id: doc._id.toString(),
+    _id: doc._id.toString(),
     poNumber: doc.poNumber as string,
     poDate: (doc.poDate as Date).toISOString(),
     vendorId: (doc.vendorId as Types.ObjectId).toString(),
     lineItems: (doc.lineItems as LineItemDto[]) ?? [],
-    totalAmountRs: doc.totalAmountRs as number | undefined,
     expectedDelivery: doc.expectedDelivery ? (doc.expectedDelivery as Date).toISOString() : undefined,
-    purchaseOfficerId: (doc.purchaseOfficerId as Types.ObjectId).toString(),
-    approvalStatus: doc.approvalStatus as string,
-    approvedById: doc.approvedById ? (doc.approvedById as Types.ObjectId).toString() : undefined,
-    approvedAt: doc.approvedAt ? (doc.approvedAt as Date).toISOString() : undefined,
-    rejectionReason: doc.rejectionReason as string | undefined,
+    manufacturer: doc.manufacturer as string | undefined,
+    billDate: doc.billDate ? (doc.billDate as Date).toISOString() : undefined,
     notes: doc.notes as string | undefined,
     createdAt: doc.createdAt ? doc.createdAt.toISOString() : '',
     updatedAt: doc.updatedAt ? doc.updatedAt.toISOString() : '',
@@ -58,32 +50,37 @@ export interface PORepo {
     poDate: Date;
     vendorId: string;
     lineItems: LineItemDto[];
-    totalAmountRs: number;
     expectedDelivery?: Date;
-    purchaseOfficerId: string;
+    manufacturer?: string;
+    billDate?: Date;
     notes?: string;
     actorId: string;
   }): Promise<PODto>;
   update(id: string, patch: Partial<{
     lineItems: LineItemDto[];
-    totalAmountRs: number;
     expectedDelivery: Date;
+    manufacturer: string;
+    billDate: Date;
     notes: string;
   }>, actorId: string): Promise<PODto | null>;
-  updateStatus(id: string, patch: {
-    approvalStatus: string;
-    approvedById?: string;
-    approvedAt?: Date;
-    rejectionReason?: string;
-  }, actorId: string): Promise<PODto | null>;
+  delete(id: string, actorId: string): Promise<boolean>;
+  restore(id: string, actorId: string): Promise<boolean>;
+  hardDelete(id: string): Promise<boolean>;
+  findByIdIncludingDeleted(id: string): Promise<PODto | null>;
 }
 
 export function createPORepo(): PORepo {
   return {
     async list(q) {
-      const filter: Record<string, unknown> = { deletedAt: null };
-      if (q.approvalStatus) filter.approvalStatus = q.approvalStatus;
+      const filter: Record<string, unknown> = { deletedAt: q.deletedOnly ? { $ne: null } : null };
       if (q.vendorId) filter.vendorId = new Types.ObjectId(q.vendorId);
+      if (q.search) filter.poNumber = { $regex: q.search, $options: 'i' };
+      if (q.from || q.to) {
+        const range: Record<string, Date> = {};
+        if (q.from) range.$gte = q.from;
+        if (q.to) range.$lte = q.to;
+        filter.poDate = range;
+      }
       const page = q.page ?? 1;
       const pageSize = q.pageSize ?? 20;
       const skip = (page - 1) * pageSize;
@@ -107,10 +104,9 @@ export function createPORepo(): PORepo {
         poDate: input.poDate,
         vendorId: new Types.ObjectId(input.vendorId),
         lineItems: input.lineItems,
-        totalAmountRs: input.totalAmountRs,
         expectedDelivery: input.expectedDelivery,
-        purchaseOfficerId: new Types.ObjectId(input.purchaseOfficerId),
-        approvalStatus: 'DRAFT',
+        manufacturer: input.manufacturer,
+        billDate: input.billDate,
         notes: input.notes,
         createdBy: actor,
         updatedBy: actor,
@@ -129,17 +125,31 @@ export function createPORepo(): PORepo {
       return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
     },
 
-    async updateStatus(id, patch, actorId) {
+    async delete(id, actorId) {
       const actor = new Types.ObjectId(actorId);
-      const update: Record<string, unknown> = { approvalStatus: patch.approvalStatus, updatedBy: actor };
-      if (patch.approvedById) update.approvedById = new Types.ObjectId(patch.approvedById);
-      if (patch.approvedAt) update.approvedAt = patch.approvedAt;
-      if (patch.rejectionReason) update.rejectionReason = patch.rejectionReason;
-      const doc = await PurchaseOrderModel.findOneAndUpdate(
+      const res = await PurchaseOrderModel.updateOne(
         { _id: new Types.ObjectId(id), deletedAt: null },
-        { $set: update },
-        { new: true },
-      ).lean();
+        { $set: { deletedAt: new Date(), updatedBy: actor } }
+      );
+      return res.modifiedCount > 0;
+    },
+
+    async restore(id, actorId) {
+      const actor = new Types.ObjectId(actorId);
+      const res = await PurchaseOrderModel.updateOne(
+        { _id: new Types.ObjectId(id) },
+        { $set: { deletedAt: null, updatedBy: actor } },
+      );
+      return res.modifiedCount > 0;
+    },
+
+    async hardDelete(id) {
+      const res = await PurchaseOrderModel.deleteOne({ _id: new Types.ObjectId(id) });
+      return res.deletedCount > 0;
+    },
+
+    async findByIdIncludingDeleted(id) {
+      const doc = await PurchaseOrderModel.findById(id).lean();
       if (!doc) return null;
       return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
     },

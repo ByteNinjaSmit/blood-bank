@@ -7,6 +7,7 @@ import {
   useCreateDonor,
   useUpdateDonor,
   useDeleteDonor,
+  useRestoreDonor,
   useDonorSearch,
 } from '@/features/donor/queries';
 
@@ -17,6 +18,7 @@ export {
   useCreateDonor,
   useUpdateDonor,
   useDeleteDonor,
+  useRestoreDonor,
   useDonorSearch,
 };
 
@@ -27,12 +29,14 @@ export function useDonor() {
   const createMutation = useCreateDonor();
   const updateMutation = useUpdateDonor();
   const deleteMutation = useDeleteDonor();
+  const restoreMutation = useRestoreDonor();
 
   const loading =
     listQuery.isLoading ||
     createMutation.isPending ||
     updateMutation.isPending ||
-    deleteMutation.isPending;
+    deleteMutation.isPending ||
+    restoreMutation.isPending;
 
   return {
     donors: listQuery.data?.items ?? (Array.isArray(listQuery.data) ? listQuery.data : []),
@@ -60,11 +64,16 @@ export function useDonor() {
         return { success: false };
       }
     },
-    deleteDonor: async (id) => {
+    deleteDonor: async (id, reason) => {
       try {
-        await deleteMutation.mutateAsync(id);
-        toast.success('Donor deleted successfully');
-        return { success: true };
+        const result = await deleteMutation.mutateAsync({ id, reason });
+        const permanentlyDeleted = Boolean(result?.permanentlyDeleted);
+        toast.success(
+          permanentlyDeleted
+            ? 'Donor permanently deleted'
+            : 'Donor deleted. It remains in the register and can be permanently removed next.',
+        );
+        return { success: true, permanentlyDeleted };
       } catch (e) {
         // Return structured error code if backend complains (e.g. donor has donations)
         if (e && e.code) {
@@ -74,13 +83,13 @@ export function useDonor() {
         return { success: false };
       }
     },
-    forceDeleteDonor: async (id) => {
+    restoreDonor: async (id) => {
       try {
-        await deleteMutation.mutateAsync(id);
-        toast.success('Donor force deleted successfully');
+        await restoreMutation.mutateAsync(id);
+        toast.success('Donor restored');
         return { success: true };
       } catch (e) {
-        toast.error(e?.message ?? 'Failed to force delete donor');
+        toast.error(e?.message ?? 'Failed to restore donor');
         return { success: false };
       }
     },

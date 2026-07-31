@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import FormField from '@/components/shared/FormField';
 import Button from '@/components/shared/Button';
 import { states } from '@/constants/states';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 const DonorForm = ({
   initialData = null,
@@ -74,8 +75,8 @@ const DonorForm = ({
 
   const watchDob = watch('dob');
   const watchWeight = watch('weightKg');
-  const watchEligibilityStatus = watch('eligibilityStatus');
-  const isDeferred = watchEligibilityStatus === 'deferred' || watchEligibilityStatus === 'temp-deferred';
+  const watchLastDonationDate = watch('lastDonationDate');
+  const watchSex = watch('sex');
 
   useEffect(() => {
     if (watchDob && watchWeight) {
@@ -87,12 +88,27 @@ const DonorForm = ({
 
       const weightNum = parseFloat(watchWeight);
       if (!isNaN(age) && !isNaN(weightNum)) {
-        // Eligibility Criteria: 18-65 years old and at least 45kg
-        const isEligible = age >= 18 && age <= 65 && weightNum >= 45;
-        setValue('eligibilityStatus', isEligible ? 'eligible' : 'deferred');
+        if (age < 18 || age > 65 || weightNum < 45) {
+          setValue('eligibilityStatus', 'deferred');
+        } else if (watchLastDonationDate && watchSex) {
+          const lDate = new Date(watchLastDonationDate);
+          const now = new Date();
+          lDate.setHours(0,0,0,0);
+          now.setHours(0,0,0,0);
+          const diffTime = now.getTime() - lDate.getTime();
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          const requiredInterval = watchSex === 'F' ? 120 : 90;
+          if (diffDays < requiredInterval) {
+            setValue('eligibilityStatus', 'temp-deferred');
+          } else {
+            setValue('eligibilityStatus', 'eligible');
+          }
+        } else {
+          setValue('eligibilityStatus', 'eligible');
+        }
       }
     }
-  }, [watchDob, watchWeight, setValue]);
+  }, [watchDob, watchWeight, watchLastDonationDate, watchSex, setValue]);
 
   useEffect(() => {
     if (initialData) {
@@ -211,10 +227,13 @@ const DonorForm = ({
   };
 
   const handleFormSubmit = (data) => {
+    // donorId is assigned by the server at registration time (unique,
+    // format DNR-YYYYMMDD-XXXXXX) regardless of eligibilityStatus.
+    const { donorId: _donorId, ...dataWithoutDonorId } = data;
+
     // Transform data to match API structure
     const transformedData = {
-      ...data,
-      donorId: isDeferred && !data.donorId ? `DFR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}` : data.donorId,
+      ...dataWithoutDonorId,
       name: {
         firstName: data.firstName,
         middleName: data.middleName,
@@ -234,35 +253,13 @@ const DonorForm = ({
     onSubmit(transformedData);
   };
 
-  return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-      {/* Basic Information */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Basic Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {!isDeferred && (
-            <FormField label="Donor ID" required error={errors.donorId?.message}>
-              <FormField.Input
-                {...register('donorId', { required: !isDeferred ? 'Donor ID is required' : false })}
-                placeholder="Enter Donor ID manually"
-              />
-            </FormField>
-          )}
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
-          <FormField label="UID (12 digits)" error={errors.uid?.message}>
-            <FormField.Input
-              {...register('uid', {
-                pattern: {
-                  value: /^\d{12}$/,
-                  message: 'UID must be exactly 12 digits'
-                }
-              })}
-              placeholder="123456789012"
-              maxLength={12}
-            />
-          </FormField>
-        </div>
-      </div>
+  return (
+    <form onSubmit={handleSubmit(handleFormSubmit)} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="space-y-6">
+      <input type="hidden" {...register('donorId')} />
+      <input type="hidden" {...register('uid')} />
+      <input type="hidden" {...register('eligibilityStatus')} />
 
       {/* Personal Details */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -274,9 +271,9 @@ const DonorForm = ({
             />
           </FormField>
 
-          <FormField label="Middle Name" error={errors.middleName?.message}>
+          <FormField label="Middle Name" required error={errors.middleName?.message}>
             <FormField.Input
-              {...register('middleName')}
+              {...register('middleName', { required: 'Middle name is required' })}
             />
           </FormField>
 
@@ -407,7 +404,7 @@ const DonorForm = ({
       {/* Medical Information */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Medical Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <FormField label="Blood Group" required error={errors.bloodGroup?.message}>
             <FormField.Select
               {...register('bloodGroup', { required: 'Blood group is required' })}
@@ -429,17 +426,6 @@ const DonorForm = ({
               <option value="Negative">Negative</option>
             </FormField.Select>
           </FormField>
-
-          <FormField label="Eligibility Status" required error={errors.eligibilityStatus?.message}>
-            <FormField.Select
-              {...register('eligibilityStatus', { required: 'Eligibility status is required' })}
-            >
-              <option value="">Select</option>
-              <option value="eligible">Eligible</option>
-              <option value="deferred">Deferred</option>
-              <option value="temp-deferred">Temporarily Deferred</option>
-            </FormField.Select>
-          </FormField>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -458,6 +444,23 @@ const DonorForm = ({
                 onChange: handleLastDonationDateDisplayChange
               })}
             />
+            {watchLastDonationDate && watchSex && (() => {
+              const lDate = new Date(watchLastDonationDate);
+              const now = new Date();
+              lDate.setHours(0,0,0,0);
+              now.setHours(0,0,0,0);
+              const diffTime = now.getTime() - lDate.getTime();
+              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+              const requiredInterval = watchSex === 'F' ? 120 : 90;
+              if (diffDays < requiredInterval) {
+                return (
+                  <p className="text-xs text-red-655 mt-1 font-semibold">
+                    Interval too short: last donation was {diffDays} days ago. Required is {requiredInterval === 120 ? '120 days (4 months)' : '90 days (3 months)'}.
+                  </p>
+                );
+              }
+              return null;
+            })()}
           </FormField>
         </div>
       </div>

@@ -1,12 +1,16 @@
 import { useState } from 'react';
-import { Trash2, Plus, X, CheckCircle } from 'lucide-react';
+import { Trash2, Plus, X, CheckCircle, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import { useBagDiscardList, useCreateBagDiscard, useApproveBagDiscard } from '../queries';
 import { useBagStockList } from '../queries';
+import { formatBloodBagQty, calcTotalBags } from '../utils/qtyHelper';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import { exportBagDiscardRegister } from '@/utils/excelExportHelper';
 
 const STATUS_BADGE = {
   PENDING_APPROVAL: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  APPROVED:         'bg-green-50 text-green-700 border-green-200',
-  DISPOSED:         'bg-gray-100 text-gray-600 border-gray-200',
+  APPROVED: 'bg-green-50 text-green-700 border-green-200',
+  DISPOSED: 'bg-gray-100 text-gray-600 border-gray-200',
 };
 
 const DISCARD_REASONS = [
@@ -37,11 +41,14 @@ function StatusBadge({ status }) {
 }
 
 function DiscardDrawer({ onClose, stockItems }) {
-  const [stockId, setStockId]         = useState('');
-  const [bagType, setBagType]         = useState('');
-  const [quantity, setQuantity]       = useState('');
-  const [reason, setReason]           = useState('');
+  const [stockId, setStockId] = useState('');
+  const [bagType, setBagType] = useState('');
+  const [boxes, setBoxes] = useState('');
+  const [packets, setPackets] = useState('');
+  const [bags, setBags] = useState('');
+  const [reason, setReason] = useState('');
   const [reasonDetail, setReasonDetail] = useState('');
+  const [discardDate, setDiscardDate] = useState(() => new Date().toISOString().slice(0, 10));
   const createDiscard = useCreateBagDiscard();
 
   const handleSelectStock = (id) => {
@@ -50,15 +57,18 @@ function DiscardDrawer({ onClose, stockItems }) {
     if (s) setBagType(s.bagType);
   };
 
+  const totalQty = calcTotalBags(boxes, packets, bags);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     createDiscard.mutateAsync({
       stockId,
       bagType,
-      quantity: Number(quantity),
+      quantity: totalQty,
       reason,
       reasonDetail,
-    }).then(onClose).catch(() => {});
+      discardDate,
+    }).then(onClose).catch(() => { });
   };
 
   const fieldClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white';
@@ -78,7 +88,7 @@ function DiscardDrawer({ onClose, stockItems }) {
               <option value="">Select stock...</option>
               {stockItems.map((s) => (
                 <option key={s._id} value={s._id}>
-                  {s.bagType} — Batch {s.batchNo}
+                  {s.bagType} — Batch {s.batchNo} (Avail: {formatBloodBagQty(s.closingStock ?? s.quantityAvailable ?? 0)})
                 </option>
               ))}
             </select>
@@ -88,8 +98,26 @@ function DiscardDrawer({ onClose, stockItems }) {
             <input readOnly value={bagType} className={`${fieldClass} bg-gray-50 cursor-not-allowed`} />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Quantity *</label>
-            <input required type="number" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} className={fieldClass} />
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Quantity to Discard *</label>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-0.5">Boxes</label>
+                <input type="number" min="0" value={boxes} onChange={(e) => setBoxes(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded px-2 py-1 text-xs text-center" />
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-0.5">Packets</label>
+                <input type="number" min="0" value={packets} onChange={(e) => setPackets(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded px-2 py-1 text-xs text-center" />
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-0.5">Loose Bags</label>
+                <input type="number" min="0" value={bags} onChange={(e) => setBags(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded px-2 py-1 text-xs text-center" />
+              </div>
+            </div>
+            <span className="text-[11px] text-gray-500 mt-1 block">Total Bags to Discard: <strong>{totalQty}</strong> bags</span>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Discard Date *</label>
+            <input required type="date" value={discardDate} onChange={(e) => setDiscardDate(e.target.value)} className={fieldClass} />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Reason *</label>
@@ -111,7 +139,7 @@ function DiscardDrawer({ onClose, stockItems }) {
               className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
               Cancel
             </button>
-            <button type="submit" disabled={createDiscard.isPending}
+            <button type="submit" disabled={createDiscard.isPending || totalQty <= 0}
               className="px-5 py-2 text-sm font-semibold text-white bg-orange-800 rounded-lg hover:bg-orange-900 disabled:opacity-60">
               {createDiscard.isPending ? 'Saving…' : 'Create Discard'}
             </button>
@@ -123,9 +151,9 @@ function DiscardDrawer({ onClose, stockItems }) {
 }
 
 function ApproveDrawer({ discard, onClose }) {
-  const [disposalMethod, setDisposalMethod]           = useState('');
-  const [manifestNo, setManifestNo]                   = useState('');
-  const [disposalDate, setDisposalDate]               = useState('');
+  const [disposalMethod, setDisposalMethod] = useState('');
+  const [manifestNo, setManifestNo] = useState('');
+  const [disposalDate, setDisposalDate] = useState('');
   const approveDiscard = useApproveBagDiscard();
 
   const handleSubmit = (e) => {
@@ -137,7 +165,7 @@ function ApproveDrawer({ discard, onClose }) {
         biomedicalWasteManifestNo: manifestNo,
         disposalDate,
       },
-    }).then(onClose).catch(() => {});
+    }).then(onClose).catch(() => { });
   };
 
   const fieldClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white';
@@ -158,7 +186,7 @@ function ApproveDrawer({ discard, onClose }) {
             </div>
             <div className="flex justify-between text-gray-600">
               <span className="font-medium">Quantity</span>
-              <span>{discard.quantity}</span>
+              <span className="font-bold">{formatBloodBagQty(discard.quantity)}</span>
             </div>
             <div className="flex justify-between text-gray-600">
               <span className="font-medium">Reason</span>
@@ -201,12 +229,35 @@ function ApproveDrawer({ discard, onClose }) {
 
 export default function BagDiscard() {
   const [showDiscardDrawer, setShowDiscardDrawer] = useState(false);
-  const [approveTarget, setApproveTarget]         = useState(null);
-  const { data, isLoading } = useBagDiscardList({});
+  const [approveTarget, setApproveTarget] = useState(null);
+  const [reasonFilter, setReasonFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const { data, isLoading, refetch, isFetching } = useBagDiscardList({
+    reason: reasonFilter || undefined,
+    fromDate: fromDate || undefined,
+    toDate: toDate || undefined,
+  });
   const { data: stockData } = useBagStockList({});
 
-  const discards   = data?.bagDiscards ?? data ?? [];
-  const stockItems = stockData?.bagStocks ?? stockData ?? [];
+  const discards = data?.items ?? data?.bagDiscards ?? (Array.isArray(data) ? data : []);
+  const stockItems = stockData?.items ?? stockData?.bagStocks ?? (Array.isArray(stockData) ? stockData : []);
+  const [excelLoading, setExcelLoading] = useState(false);
+
+  const handleExportExcel = async () => {
+    if (discards.length === 0) {
+      toast.info('No discard records to export');
+      return;
+    }
+    try {
+      setExcelLoading(true);
+      await exportBagDiscardRegister(discards);
+    } catch (e) {
+      toast.error('Failed to generate Excel report');
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   const fmtDate = (d) => d
     ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -217,22 +268,62 @@ export default function BagDiscard() {
       <div className="bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-br from-orange-700 to-orange-900 rounded-xl shadow-sm">
-              <Trash2 className="w-6 h-6 text-white" />
+            <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
+              <Trash2 className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Bag Discard Register</h1>
-              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Biomedical Waste Tracking</p>
+              <h1 className="text-2xl font-bold text-gray-900">Bag Discard Register</h1>
+              <p className="text-gray-500 text-sm">Biomedical Waste Tracking</p>
             </div>
           </div>
-          <button onClick={() => setShowDiscardDrawer(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">
-            <Plus className="w-4 h-4" /> Create Discard
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+            <button onClick={() => setShowDiscardDrawer(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">
+              <Plus className="w-4 h-4" /> Create Discard
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Reason</label>
+            <select value={reasonFilter} onChange={(e) => setReasonFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
+              <option value="">All Reasons</option>
+              {DISCARD_REASONS.map((r) => (<option key={r} value={r}>{r.replace(/_/g, ' ')}</option>))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Discard Date From</label>
+            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Discard Date To</label>
+            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          {(reasonFilter || fromDate || toDate) && (
+            <button onClick={() => { setReasonFilter(''); setFromDate(''); setToDate(''); }}
+              className="px-3 py-2 text-sm text-orange-800 hover:bg-orange-50 rounded-lg font-medium">
+              Reset
+            </button>
+          )}
+        </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-100">
@@ -253,7 +344,7 @@ export default function BagDiscard() {
                     <td className="px-4 py-3 text-sm font-mono font-medium text-gray-900">{d.discardId ?? d._id?.slice(-8).toUpperCase()}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{d.bagType}</td>
                     <td className="px-4 py-3 text-sm font-mono text-gray-600">{d.stock?.batchNo ?? d.batchNo ?? '—'}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-800 text-center">{d.quantity}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-800">{formatBloodBagQty(d.quantity)}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       <span className="px-1.5 py-0.5 bg-red-50 text-red-700 rounded text-xs font-medium">
                         {d.reason?.replace(/_/g, ' ')}

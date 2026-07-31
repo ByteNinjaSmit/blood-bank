@@ -36,7 +36,8 @@ export function createInventoryControllers(service: InventoryService): Inventory
 
     async summary(req, res, next) {
       try {
-        const data = await service.stockSummary();
+        const includeLoan = req.query.includeLoan === 'true';
+        const data = await service.stockSummary(includeLoan);
         res.json({ success: true, data, requestId: req.id });
       } catch (e) {
         next(e);

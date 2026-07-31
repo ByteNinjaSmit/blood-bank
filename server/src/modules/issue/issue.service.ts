@@ -3,6 +3,7 @@ import { childLogger } from '@/core/logger';
 import { ForbiddenError, NotFoundError } from '@/shared/errors';
 import type { IAuditService } from '@/shared/interfaces';
 import { auditService as defaultAudit } from '@/modules/audit/audit.service';
+import { notificationCenterService } from '@/modules/notification/notification-center.service';
 import { checkIssueGate } from './issue.gate';
 import type { IssueRepo } from '@/modules/issue/issue.repository';
 import type { RequisitionRepo } from '@/modules/requisition/requisition.repository';
@@ -46,7 +47,9 @@ export function createIssueService(deps: {
 
       const patient = await deps.patients.findById(req.patientId);
       const tti = await deps.tti.findByDonation(unit.donationId);
-      const ttiDecision = tti?.releaseDecision ?? 'pending';
+      const ttiDecision = tti?.releaseDecision ?? (
+        ['RELEASED', 'RESERVED', 'CROSSMATCHED'].includes(unit.status) ? 'released' : 'pending'
+      );
       const xm = await deps.crossmatches.findLatestForUnit(req.id, input.unitId);
 
       const gate = checkIssueGate({
@@ -89,10 +92,18 @@ export function createIssueService(deps: {
 
       await audit.record({
         actorId,
+        module: 'issue',
         action: gate.usedOverride ? 'OVERRIDE' : 'ISSUE',
         entityType: 'BloodUnit',
         entityId: input.unitId,
-        after: { status: 'ISSUED', issueId, requisitionId: req.requisitionId },
+        before: { status: unit.status },
+        after: {
+          status: 'ISSUED',
+          issueId,
+          requisitionId: req.requisitionId,
+          componentType: unit.componentType,
+          issuedAt: new Date(),
+        },
         reason: gate.usedOverride ? input.override?.reason : undefined,
       });
 
@@ -105,6 +116,18 @@ export function createIssueService(deps: {
         },
         gate.usedOverride ? 'unit ISSUED with override' : 'unit issued',
       );
+      void notificationCenterService
+        .notify({
+          title: gate.usedOverride ? 'Emergency issue (MO override)' : 'Blood issued successfully',
+          message: `Unit ${input.unitId} issued for requisition ${req.requisitionId}${gate.usedOverride ? ' with medical-officer override' : ''}`,
+          module: 'ISSUE_BLOOD',
+          category: gate.usedOverride ? 'EMERGENCY_ISSUE' : 'BLOOD_ISSUED',
+          severity: gate.usedOverride ? 'WARNING' : 'SUCCESS',
+          relatedRecordId: issueId,
+          relatedRecordType: 'Issue',
+          actionLink: `/requisition/${req.id}`,
+        })
+        .catch(() => undefined);
       return { issueId: issue.issueId, unitId: input.unitId };
     },
   };

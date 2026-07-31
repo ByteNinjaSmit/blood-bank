@@ -3,7 +3,7 @@
 import { useLanguage } from '@/context/language-context';
 import { content } from '@/lib/content';
 import Link from 'next/link'
-import { Facebook, Youtube, Instagram, Linkedin, Phone, Mail, MapPin, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Facebook, Instagram, Phone, Mail, MapPin, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function Footer() {
@@ -13,9 +13,7 @@ export default function Footer() {
 
     const socialLinks = [
         { icon: Facebook, label: 'Facebook', href: '#' },
-        { icon: Youtube, label: 'YouTube', href: '#' },
-        { icon: Instagram, label: 'Instagram', href: '#' },
-        { icon: Linkedin, label: 'Linkedin', href: '#' }
+        { icon: Instagram, label: 'Instagram', href: '#' }
     ]
 
     const quickLinks = nav.mainLinks.slice(0, 4)

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Save, Building2 } from 'lucide-react';
 import { useAuth } from '@/store/auth';
 import hospitalApi from '@/services/hospitalApi';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 const AddHospital = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const AddHospital = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
 
   const handleInputChange = (e) => {
@@ -33,20 +35,6 @@ const AddHospital = () => {
     }));
     
     // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const handleSelectChange = (value, name) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -72,7 +60,7 @@ const AddHospital = () => {
 
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^[+]?[\d\s\-\(\)]{10,15}$/.test(formData.phone)) {
+    } else if (!/^[+]?[\d\s\-()]{10,15}$/.test(formData.phone)) {
       newErrors.phone = 'Please enter a valid phone number';
     }
 
@@ -154,12 +142,12 @@ const AddHospital = () => {
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Building2 className="w-6 h-6 text-blue-600" />
+          <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
+            <Building2 className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Add New Hospital</h1>
-            <p className="text-gray-600">Register a new hospital in the system</p>
+            <h1 className="text-2xl font-bold text-gray-900">Add New Hospital</h1>
+            <p className="text-gray-500 text-sm">Register a new hospital / consignee</p>
           </div>
         </div>
       </div>
@@ -172,7 +160,7 @@ const AddHospital = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Hospital Name */}
               <div className="space-y-2">

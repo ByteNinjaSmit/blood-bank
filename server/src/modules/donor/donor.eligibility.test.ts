@@ -43,7 +43,7 @@ describe('donor eligibility — failure paths', () => {
   it('apheresis needs 50kg, not 45kg', () => {
     const r = checkEligibility({
       donor: baseSnap({ weightKg: 47 }),
-      proposedDonationType: 'PLATELETPHERESIS',
+      proposedDonationType: 'PLASMAPHERESIS',
       now: NOW,
     });
     expect(r.eligible).toBe(false);
@@ -135,7 +135,7 @@ describe('inter-donation interval (India NACO)', () => {
     expect(r.eligible).toBe(false);
   });
 
-  it('plateletpheresis only needs 2 days between any donations, 7 days same type', () => {
+  it('plasmapheresis only needs 2 days between any donations, 14 days same type', () => {
     const fourDaysAgo = new Date(NOW);
     fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
     // Last was a WHOLE_BLOOD; 4 days is >= 2 for cross-type rule → eligible.
@@ -144,17 +144,17 @@ describe('inter-donation interval (India NACO)', () => {
         lastDonationDate: fourDaysAgo,
         lastDonationType: 'WHOLE_BLOOD',
       }),
-      proposedDonationType: 'PLATELETPHERESIS',
+      proposedDonationType: 'PLASMAPHERESIS',
       now: NOW,
     });
     expect(okCross.eligible).toBe(true);
-    // Same type; need 7 days — 4 days is too soon.
+    // Same type; need 14 days — 4 days is too soon.
     const blockedSame = checkEligibility({
       donor: baseSnap({
         lastDonationDate: fourDaysAgo,
-        lastDonationType: 'PLATELETPHERESIS',
+        lastDonationType: 'PLASMAPHERESIS',
       }),
-      proposedDonationType: 'PLATELETPHERESIS',
+      proposedDonationType: 'PLASMAPHERESIS',
       now: NOW,
     });
     expect(blockedSame.eligible).toBe(false);

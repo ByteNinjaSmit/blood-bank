@@ -2,6 +2,7 @@
 // cold-chain start and who took it.
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const IssueSchema = new Schema(
   {
@@ -14,10 +15,14 @@ const IssueSchema = new Schema(
     collectedByName: { type: String, trim: true }, // porter / nurse who took it
     transportTempCelsius: Number,
     // Set when the unit comes back unused (within 30-min rule).
-    returnedAt: { type: Date, index: true },
+    returnedAt: { type: Date },
     returnedReason: String,
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+
+    deletedAt: { type: Date, default: null, index: true },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
   },
   { timestamps: true },
 );

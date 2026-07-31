@@ -1,164 +1,180 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { useAuth } from "@/store/auth";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import CustomModal from "@/components/CustomModal";
+import { apiClient } from "@/core/api-client";
+import { downloadExcelReport, formatDate, buildExportMeta } from "@/utils/excelExportHelper";
+import { toast } from "sonner";
+import { Droplets, FileSpreadsheet, Loader2, RefreshCw, ClipboardCheck } from "lucide-react";
+import { useDashboard } from "@/features/dashboard/queries";
+import MonthlyReportInputsModal from "@/features/dashboard/components/MonthlyReportInputsModal";
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
-import { Droplets, Users, Package, ClipboardList, Activity, AlertTriangle, TrendingUp, Truck, Calendar as CalendarIcon, Filter } from "lucide-react";
-
-const number = (v) => (typeof v === "number" ? v : 0);
+  SummaryStat,
+  CampOverviewSection,
+  ChemicalStockSection,
+  BagStockSection,
+  DonorCardSection,
+  BulkTransferSection,
+  DiseaseSection,
+  StorageBreakdownSection,
+  DiscardSection,
+  DeferralReasonSection,
+  DonorDonationSection,
+  BloodBagOverviewSection,
+  ComponentOverviewSection,
+  InventoryOverviewSection,
+  BloodGroupAvailabilitySection,
+  ComponentAvailabilitySection,
+  HospitalRequestOverviewSection,
+  TestingSerologySection,
+  CampKpiSection,
+  ExceptionAlertsSection,
+  OngoingCampsSection,
+  BloodBagStatusTable,
+} from "@/features/dashboard/components/DashboardSections";
+import { number, MATRIX_COMPONENTS, MATRIX_BLOOD_GROUPS, buildDashboardSheet } from "@/features/dashboard/dashboardExcel";
 
 export default function Dashboard() {
-  const { API } = useAuth();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [payload, setPayload] = useState(null);
+  const getPresetDates = (presetName) => {
+    const today = new Date();
+    // Set hours to local bounds
+    const now = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+    let from = new Date();
+    let to = now;
 
-  // Filters: presets and custom range
-  const [preset, setPreset] = useState("7d"); // 'all' | '1d' | '2d' | '7d' | '30d' | 'custom'
-  const [openCal, setOpenCal] = useState(false);
-  const [range, setRange] = useState({ from: null, to: null });
+    if (presetName === "today") {
+      from = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    } else if (presetName === "yesterday") {
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+      from = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0);
+      to = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+    } else if (presetName === "7d") {
+      from = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      from.setHours(0, 0, 0, 0);
+    } else if (presetName === "1m") {
+      from = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate(), 0, 0, 0, 0);
+    } else if (presetName === "yearly") {
+      from = new Date(today.getFullYear(), 0, 1, 0, 0, 0, 0);
+    } else {
+      return { from: null, to: null };
+    }
+    return { from, to };
+  };
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        const params = {};
-        if (preset === "all") {
-          params.range = "all";
-        } else if (["1d", "2d", "7d", "30d"].includes(preset)) {
-          params.range = preset;
-        } else if (preset === "custom" && range?.from && range?.to) {
-          const from = new Date(range.from);
-          const to = new Date(range.to);
-          const toISO = to.toISOString().slice(0, 10);
-          const fromISO = from.toISOString().slice(0, 10);
-          params.from = fromISO;
-          params.to = toISO;
-        } else {
-          params.range = "7d";
-        }
-        const res = await axios.get(`${API}/api/dashboard`, { withCredentials: true, params });
-        if (!mounted) return;
-        setPayload(res.data?.data || null);
-      } catch (e) {
-        if (!mounted) return;
-        setError(e?.response?.data?.message || e.message || "Failed to load dashboard");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
+  const formatInputDate = (date) => {
+    if (!date) return "";
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const [preset, setPreset] = React.useState("yearly");
+  const initialDates = getPresetDates("yearly");
+  const [customFrom, setCustomFrom] = React.useState(formatInputDate(initialDates.from));
+  const [customTo, setCustomTo] = React.useState(formatInputDate(initialDates.to));
+
+  const filters = React.useMemo(() => {
+    if (preset && preset !== "custom") {
+      const { from, to } = getPresetDates(preset);
+      return {
+        from: from ? from.toISOString() : undefined,
+        to: to ? to.toISOString() : undefined,
+      };
+    }
+    return {
+      from: customFrom ? new Date(customFrom + "T00:00:00").toISOString() : undefined,
+      to: customTo ? new Date(customTo + "T23:59:59").toISOString() : undefined,
     };
-  }, [API, preset, range?.from, range?.to]);
+  }, [preset, customFrom, customTo]);
 
-  const totals = payload?.totals || {};
-  const trends = payload?.trends || {};
+  const { data: payload, isLoading, isError, error, refetch, isFetching } = useDashboard(filters);
+  const [exporting, setExporting] = React.useState(false);
+  const [reportChecking, setReportChecking] = React.useState(false);
+  const [openChemicalsWarning, setOpenChemicalsWarning] = React.useState(null); // null | array
+  const [reportInputsOpen, setReportInputsOpen] = React.useState(false);
+  const [reportPeriod, setReportPeriod] = React.useState(null); // { month, year }
 
-  const stockByComponent = useMemo(() => (payload?.stockByComponent || []).map((x) => ({ name: x.componentType, value: x.value })), [payload]);
-  const nearExpiryByComponent = useMemo(() => (payload?.nearExpiryByComponent || []).map((x) => ({ name: x.componentType, value: x.value })), [payload]);
-
-  const donationsTrend = trends?.donations || [];
-  const issuedTrend = trends?.issued || [];
-  const discardedTrend = trends?.discarded || [];
-
-  // Compress long series for performance while keeping trend shape
-  const MAX_POINTS = 180;
-  const compress = (arr) => {
-    if (!Array.isArray(arr)) return [];
-    const n = arr.length;
-    if (n <= MAX_POINTS) return arr;
-    const step = Math.ceil(n / MAX_POINTS);
-    return arr.filter((_, i) => i % step === 0);
+  const handlePresetChange = (p) => {
+    setPreset(p);
+    const { from, to } = getPresetDates(p);
+    setCustomFrom(formatInputDate(from));
+    setCustomTo(formatInputDate(to));
   };
-  const donationsTrendData = compress(donationsTrend);
-  const issuedTrendData = compress(issuedTrend);
-  const discardedTrendData = compress(discardedTrend);
 
-  const requestsByStatus = (payload?.requests?.byStatus || []).map((x) => ({ name: x.status, value: x.value }));
-  const totalUnitsRequested = number(payload?.requests?.totalUnitsRequested);
-
-  const positivity = payload?.positivity || {};
-  const positivitySeries = Object.entries(positivity).map(([test, counts]) => ({
-    test,
-    Reactive: number(counts.Reactive),
-    Negative: number(counts.Negative),
-    Shadeness: number(counts.Shadeness),
-  }));
-
-  const periodTotals = payload?.periodTotals || {};
-  const nearExpiryTotal = number(payload?.nearExpiryTotal);
-  const statusLabelMap = {
-    collected: "Collected",
-    "component-separated": "Separated",
-    testing: "Testing",
-    passed: "In Stock",
-    failed: "Failed",
-    quarantined: "Quarantined",
-    issued: "Issued",
-    discarded: "Discarded",
+  const handleCustomFromChange = (e) => {
+    setPreset("custom");
+    setCustomFrom(e.target.value);
   };
-  const bloodbagStatusPie = (payload?.bloodbagStatusPie || []).map((x) => ({ name: statusLabelMap[x.status] || x.status, value: x.value, key: x.status }));
-  const componentMap = useMemo(() => {
-    const m = {};
-    for (const item of stockByComponent) m[item.name] = item.value;
-    return m;
-  }, [stockByComponent]);
 
-  const overview = payload?.overview || {};
-  const donorDonation = overview.donorDonation || {};
-  const bloodBags = overview.bloodBags || {};
-  const componentsOverview = overview.components || {};
-  const inventoryOverview = overview.inventory || {};
-  const inStockTotal = number(inventoryOverview.inStock);
-  const nearExpiryPercent = inStockTotal > 0 ? Math.round((nearExpiryTotal / inStockTotal) * 100) : 0;
-  const nearExpiryRiskLabel =
-    nearExpiryPercent >= 30 ? "Critical" :
-    nearExpiryPercent >= 15 ? "High" :
-    nearExpiryPercent > 0 ? "Moderate" :
-    "Healthy";
-  const nearExpiryRiskVariant =
-    nearExpiryPercent >= 30 ? "destructive" :
-    nearExpiryPercent >= 15 ? "default" :
-    nearExpiryPercent > 0 ? "outline" :
-    "secondary";
-  const bloodGroups = overview.bloodGroups || {};
-  const componentAvailability = overview.componentAvailability || {};
-  const hospitalRequests = overview.hospitalRequests || {};
-  const testingSerology = overview.testingSerology || {};
-  const camps = overview.camps || {};
-  const alerts = overview.alerts || {};
+  const handleCustomToChange = (e) => {
+    setPreset("custom");
+    setCustomTo(e.target.value);
+  };
 
-  if (loading) {
+  const handleExportExcel = async () => {
+    if (!payload) {
+      toast.error("Dashboard data is still loading");
+      return;
+    }
+    setExporting(true);
+    try {
+      const dateRangeStr =
+        preset !== "custom"
+          ? `${preset.toUpperCase()} (${formatDate(filters.from)} to ${formatDate(filters.to)})`
+          : `Custom Range (${formatDate(filters.from)} to ${formatDate(filters.to)})`;
+
+      const meta = buildExportMeta({}, {});
+      const sheet = {
+        ...buildDashboardSheet(payload, meta),
+        subtitle: `Operational Dashboard — ${dateRangeStr}`,
+      };
+      await downloadExcelReport([sheet], `Dashboard_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const lastFullMonthPeriod = () => {
+    const today = new Date();
+    const firstOfThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastMonthEnd = new Date(firstOfThisMonth.getTime() - 24 * 60 * 60 * 1000);
+    return { month: lastMonthEnd.getMonth() + 1, year: lastMonthEnd.getFullYear() };
+  };
+
+  const handleCreateMonthlyReport = async () => {
+    setReportChecking(true);
+    try {
+      const now = new Date();
+      const res = await apiClient.get("/api/v2/chemical-inventory/reports/monthly", {
+        params: { month: now.getMonth() + 1, year: now.getFullYear() },
+      });
+      const rows = res.data?.data || [];
+      const open = rows.filter((r) => number(r.inUse) > 0);
+      if (open.length > 0) {
+        setOpenChemicalsWarning(open);
+        return;
+      }
+      setOpenChemicalsWarning(null);
+      setReportPeriod(lastFullMonthPeriod());
+      setReportInputsOpen(true);
+    } catch (e) {
+      toast.error(e?.message || "Failed to check chemical stock status");
+    } finally {
+      setReportChecking(false);
+    }
+  };
+
+  const totals = payload?.stockOverview?.totals || {};
+  const matrix = payload?.stockOverview?.stockMatrix || [];
+  const getMatrixStock = (compKey, group, rh) => {
+    const match = matrix.find((x) => x.componentType === compKey && x.bloodGroup === group && x.rh === rh);
+    return match ? number(match.count) : 0;
+  };
+
+  if (isLoading) {
     return (
       <div className="p-6 grid gap-6 animate-pulse">
         <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -166,8 +182,7 @@ export default function Dashboard() {
             <div key={i} className="h-24 rounded-xl bg-gray-100" />
           ))}
         </div>
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="h-80 rounded-xl bg-gray-100" />
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="h-80 rounded-xl bg-gray-100" />
           <div className="h-80 rounded-xl bg-gray-100" />
         </div>
@@ -175,7 +190,7 @@ export default function Dashboard() {
     );
   }
 
-  if (error) {
+  if (isError) {
     return (
       <div className="p-6">
         <Card className="border-red-200">
@@ -183,7 +198,7 @@ export default function Dashboard() {
             <CardTitle className="text-red-700">Dashboard Error</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-red-600">{error}</p>
+            <p className="text-red-600">{error?.message || "Failed to load dashboard"}</p>
           </CardContent>
         </Card>
       </div>
@@ -192,515 +207,248 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Filters Strip */}
+      {/* Header / Actions */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-slate-600 flex items-center gap-2"><Filter className="w-4 h-4"/>Quick Range</span>
-            {[
-              { key: "all", label: "All" },
-              { key: "1d", label: "1d" },
-              { key: "2d", label: "2d" },
-              { key: "7d", label: "7d" },
-              { key: "30d", label: "30d" },
-            ].map((opt) => (
-              <Button
-                key={opt.key}
-                variant={preset === opt.key ? "default" : "outline"}
-                size="sm"
-                onClick={() => setPreset(opt.key)}
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
+                <Droplets className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Operational Dashboard</h1>
+                <p className="text-gray-500 text-sm">Live overview of donors, stock, and issuance</p>
+              </div>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => refetch()}
+                disabled={isFetching}
+                title="Refresh"
+                aria-label="Refresh"
+                className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {opt.label}
+                <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+              </button>
+              <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={exporting}>
+                {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />}
+                Export to Excel
               </Button>
-            ))}
-            <Popover open={openCal} onOpenChange={setOpenCal}>
-              <PopoverTrigger asChild>
-                <Button variant={preset === "custom" ? "default" : "outline"} size="sm" className="ml-2">
-                  <CalendarIcon className="w-4 h-4 mr-1" />
-                  {range?.from && range?.to
-                    ? `${new Date(range.from).toLocaleDateString()} - ${new Date(range.to).toLocaleDateString()}`
-                    : "Pick range"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="p-2 bg-white shadow-2xl border border-slate-200 rounded-xl z-50"
-                align="start"
-                sideOffset={8}
-              >
-                <Calendar
-                  mode="range"
-                  selected={range}
-                  onSelect={(r) => {
-                    setRange(r || { from: null, to: null });
-                    if (r?.from && r?.to) {
-                      setPreset('custom');
-                    }
-                  }}
-                  disabled={{ after: new Date() }}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
+              <Button variant="outline" size="sm" onClick={handleCreateMonthlyReport} disabled={reportChecking}>
+                {reportChecking ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ClipboardCheck className="w-4 h-4 mr-2 text-indigo-600" />}
+                {reportChecking ? "Checking..." : "Create Monthly Report"}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
-      {/* High-level KPIs strip */}
-      <Card className="border-slate-100 bg-slate-50/80 backdrop-blur-sm">
-        <CardContent className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <SummaryStat label="Donations (range)" value={totals.donations} />
-          <SummaryStat label="In-Stock Units" value={totals.inStock} />
-          <SummaryStat label="Reserved Units" value={totals.reserved} />
-          <SummaryStat label="Issued (range)" value={totals.issued} />
-          <SummaryStat label="Discarded (range)" value={totals.discarded} />
-          <SummaryStat label="Transfusions (range)" value={totals.transfusions} />
+
+      {/* Date Filter Toolbar */}
+      <Card className="border-slate-100 shadow-sm">
+        <CardContent className="p-4 flex flex-wrap items-center justify-between gap-4">
+          {/* Quick Presets */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-semibold text-slate-500 mr-2 uppercase tracking-wider">Date Filters:</span>
+            {[
+              { id: "today", label: "Today" },
+              { id: "yesterday", label: "Yesterday" },
+              { id: "7d", label: "7 Days" },
+              { id: "1m", label: "1 Month" },
+              { id: "yearly", label: "Yearly" },
+            ].map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => handlePresetChange(p.id)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  preset === p.id
+                    ? "bg-red-800 text-white shadow-sm"
+                    : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Custom Date Inputs */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Custom Range:</span>
+            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1">
+              <input
+                type="date"
+                value={customFrom}
+                onChange={handleCustomFromChange}
+                className="bg-transparent border-none text-xs text-slate-700 outline-none px-2 py-1 font-medium focus:ring-0 focus:outline-none"
+              />
+              <span className="text-slate-400 text-xs px-1">to</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={handleCustomToChange}
+                className="bg-transparent border-none text-xs text-slate-700 outline-none px-2 py-1 font-medium focus:ring-0 focus:outline-none"
+              />
+            </div>
+            {preset === "custom" && (
+              <button
+                type="button"
+                onClick={() => handlePresetChange("yearly")}
+                className="text-xs text-red-800 hover:text-red-950 font-semibold px-2"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </CardContent>
       </Card>
-      {/* KPI Cards (filtered) */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Users className="w-4 h-4 text-orange-600" />
-              Donor & Donation Overview
+
+      {/* High-level KPIs */}
+      <Card className="border-slate-100 bg-slate-50/80 backdrop-blur-sm">
+        <CardContent className="p-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          <SummaryStat label="Donors" value={totals.donors} />
+          <SummaryStat label="Donations" value={totals.donations} />
+          <SummaryStat label="In-Stock Units" value={totals.inStock} />
+          <SummaryStat label="Reserved Units" value={totals.reserved} />
+          <SummaryStat label="Issued Units" value={totals.issued} />
+          <SummaryStat label="Discarded Units" value={totals.discarded} />
+          <SummaryStat label="Transfusions" value={totals.transfusions} />
+        </CardContent>
+      </Card>
+
+      {/* Real-Time Blood Stock Inventory Matrix */}
+      <Card className="border-slate-100 shadow-md">
+        <CardHeader className="bg-gradient-to-r from-red-800 to-red-900 text-white rounded-t-xl py-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <Droplets className="w-5 h-5 text-red-200" />
+              Real-Time Blood Stock Inventory Matrix (ABO / Rh)
             </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Stat label="Total Donors" value={donorDonation.donors} />
-            <Stat label="New Donors (Range)" value={donorDonation.newDonors} />
-            <Stat label="Total Donations" value={donorDonation.donations} />
-            <Stat label="In-House Donations" value={donorDonation.donationsInHouse} />
-            <Stat label="Camp Donations" value={donorDonation.donationsCamp} />
-            <Stat label="Male Donors" value={donorDonation.maleDonors} />
-            <Stat label="Female Donors" value={donorDonation.femaleDonors} />
-            <Stat label="Other Donors" value={donorDonation.otherDonors} />
-            <Stat label="First-Time Donors" value={donorDonation.firstTimeDonors} />
-            <Stat label="Repeat Donors" value={donorDonation.repeatDonors} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Droplets className="w-4 h-4 text-red-600" />
-              Blood Bag Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Stat label="Total Bags Collected" value={bloodBags.bagsCollected} />
-            <Stat label="Bags Tested" value={bloodBags.bagsTested} />
-            <Stat label="Bags Passed" value={bloodBags.bagsPassed} />
-            <Stat label="Bags Failed" value={bloodBags.bagsFailed} />
-            <Stat label="Pending Testing" value={bloodBags.bagsPending} />
-            <Stat label="Quarantined" value={bloodBags.bagsQuarantined} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Package className="w-4 h-4 text-violet-600" />
-              Component Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Stat label="Total Components Produced" value={componentsOverview.componentsProduced} />
-            <Stat label="RBC Units Produced" value={componentsOverview.rbcProduced} />
-            <Stat label="Platelet Units Produced" value={componentsOverview.pltProduced} />
-            <Stat label="FFP Units Produced" value={componentsOverview.ffpProduced} />
-            <Stat label="Cryo Units Produced" value={componentsOverview.cryoProduced} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <ClipboardList className="w-4 h-4 text-amber-600" />
-              Inventory Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Stat label="Total In-Stock Units" value={inventoryOverview.inStock} />
-            <Stat label="Reserved Units" value={inventoryOverview.reserved} />
-            <Stat label="Issued Units (Range)" value={inventoryOverview.issued} />
-            <Stat label="Discarded Units (Range)" value={inventoryOverview.discarded} />
-            <Stat label="Near-Expiry Units" value={inventoryOverview.nearExpiryTotal} />
-            <Stat label="Expired Units" value={inventoryOverview.expiredUnits} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Droplets className="w-4 h-4 text-rose-600" />
-              Blood Group & Rh Availability
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Stat label="O+ Stock" value={bloodGroups.Opos} />
-            <Stat label="O- Stock" value={bloodGroups.Oneg} />
-            <Stat label="A+ Stock" value={bloodGroups.Apos} />
-            <Stat label="A- Stock" value={bloodGroups.Aneg} />
-            <Stat label="B+ Stock" value={bloodGroups.Bpos} />
-            <Stat label="B- Stock" value={bloodGroups.Bneg} />
-            <Stat label="AB+ Stock" value={bloodGroups.ABpos} />
-            <Stat label="AB- Stock" value={bloodGroups.ABneg} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Droplets className="w-4 h-4 text-sky-600" />
-              Component Type Availability
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Stat label="RBC In-Stock" value={componentAvailability.rbcStock} />
-            <Stat label="Platelet In-Stock" value={componentAvailability.pltStock} />
-            <Stat label="FFP In-Stock" value={componentAvailability.ffpStock} />
-            <Stat label="Cryo In-Stock" value={componentAvailability.cryoStock} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <ClipboardList className="w-4 h-4 text-blue-600" />
-              Hospital Request Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Stat label="Total Requests" value={hospitalRequests.totalRequests} />
-            <Stat label="Pending Requests" value={hospitalRequests.pendingRequests} />
-            <Stat label="Matched Requests" value={hospitalRequests.matchedRequests} />
-            <Stat label="Approved Requests" value={hospitalRequests.approvedRequests} />
-            <Stat label="Issued Requests" value={hospitalRequests.issuedRequests} />
-            <Stat label="Completed Requests" value={hospitalRequests.completedRequests} />
-            <Stat label="Rejected Requests" value={hospitalRequests.rejectedRequests} />
-            <Stat label="Total Units Requested" value={hospitalRequests.totalUnitsRequested} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Activity className="w-4 h-4 text-emerald-600" />
-              Testing & Serology Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Stat label="Total Tests Performed" value={testingSerology.testsTotal} />
-            <Stat label="HIV Reactive" value={testingSerology.hivPos} />
-            <Stat label="HBsAg Reactive" value={testingSerology.hbvPos} />
-            <Stat label="HCV Reactive" value={testingSerology.hcvPos} />
-            <Stat label="VDRL Reactive" value={testingSerology.vdrlPos} />
-            <Stat label="MP Reactive" value={testingSerology.mpPos} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Truck className="w-4 h-4 text-indigo-600" />
-              Camp Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Stat label="Camps Conducted" value={camps.campsConducted} />
-            <Stat label="Camp Donors" value={camps.campDonors} />
-            <Stat label="Camp Collections" value={camps.campCollections} />
-            <Stat label="Camp Serology Failures" value={camps.campFailures} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
-              Exception & Alerts
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Stat label="Units Expiring Today" value={alerts.expiringToday} />
-            <Stat label="Tests Pending" value={alerts.testsPending} />
-            <Stat label="Bags Delayed Testing (>24h)" value={alerts.delayedTesting} />
-            <Stat label="Components Missing Expiry" value={alerts.missingExpiry} />
-            <Stat label="Inactive Donors (>6 months)" value={alerts.inactiveDonors} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Trends */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <TrendCard title="Donations Trend" dataKey="value" data={donationsTrendData} color="var(--color-donations)" config={{ value: { label: "Donations", color: "#fb923c" } }} />
-        <TrendCard title="Issued Trend" dataKey="value" data={issuedTrendData} color="var(--color-issued)" config={{ value: { label: "Issued", color: "#22c55e" } }} />
-        <TrendCard title="Discarded Trend" dataKey="value" data={discardedTrendData} color="var(--color-discarded)" config={{ value: { label: "Discarded", color: "#94a3b8" } }} />
-      </div>
-
-      {/* Stock & Expiry */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Stock by Component</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{ value: { label: "Units", color: "#ef4444" } }}>
-              <BarChart data={stockByComponent} barCategoryGap={8}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" isAnimationActive={false} fill="var(--color-value)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Near Expiry by Component</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{ value: { label: "Units", color: "#f59e0b" } }}>
-              <BarChart data={nearExpiryByComponent} barCategoryGap={8}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" isAnimationActive={false} fill="var(--color-value)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
-            <div className="mt-4 flex flex-col gap-3">
-              <div className="text-sm text-slate-600 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
-                <span>
-                  Monitor near-expiry units to reduce wastage.
-                  <span className="font-semibold ml-1">Total: {nearExpiryTotal}</span>
-                </span>
-              </div>
-              {nearExpiryByComponent && nearExpiryByComponent.length > 0 && (
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {nearExpiryByComponent.map((item) => (
-                    <span
-                      key={item.name}
-                      className="px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100"
-                    >
-                      {item.name}: <span className="font-semibold ml-1">{number(item.value)}</span>
-                    </span>
+            <Badge variant="outline" className="text-white border-red-300 text-xs">
+              Status: Released / In-Stock
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Component Type</th>
+                  {MATRIX_BLOOD_GROUPS.map((bg) => (
+                    <th key={bg.label} className="px-4 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      {bg.label}
+                    </th>
                   ))}
-                </div>
-              )}
-              <div className="text-xs text-slate-500">
-                Thresholds: Platelet up to 1 day, RBC up to 7 days, FFP up to 30 days, Cryo up to 30 days.
-              </div>
-              <div className="mt-1">
-                <div className="flex items-center justify-between text-xs text-slate-600">
-                  <span>Near-expiry share of in-stock</span>
-                  <Badge variant={nearExpiryRiskVariant} className="text-[11px]">
-                    {nearExpiryPercent}% · {nearExpiryRiskLabel}
-                  </Badge>
-                </div>
-                <Progress className="mt-1" value={Math.min(100, nearExpiryPercent)} />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/inventory/near-expiry")}
-                >
-                  View inventory near expiry
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate("/component/near-expiry")}
-                >
-                  View components list
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-800 uppercase tracking-wider bg-gray-100">Total</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {MATRIX_COMPONENTS.map((comp) => {
+                  let rowTotal = 0;
+                  return (
+                    <tr key={comp.key} className="hover:bg-slate-50/30 transition-colors">
+                      <td className="px-6 py-4 text-sm font-medium text-slate-800 whitespace-nowrap">
+                        <span className={`px-2.5 py-1.5 rounded-lg text-xs font-extrabold border ${comp.theme}`}>{comp.label}</span>
+                      </td>
+                      {MATRIX_BLOOD_GROUPS.map((bg) => {
+                        const count = getMatrixStock(comp.key, bg.group, bg.rh);
+                        rowTotal += count;
+                        return (
+                          <td key={bg.label} className="px-4 py-4 whitespace-nowrap text-center">
+                            <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full text-xs ${count > 0 ? `${comp.theme.split(" ")[0]} font-extrabold border` : "text-gray-300 border border-gray-100"}`}>
+                              {count}
+                            </span>
+                          </td>
+                        );
+                      })}
+                      <td className="px-6 py-4 whitespace-nowrap text-center bg-gray-50/50 font-extrabold text-sm text-slate-800">{rowTotal}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Requests Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{ value: { label: "Requests", color: "#2563eb" } }}>
-              <BarChart data={requestsByStatus} barCategoryGap={8}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
-                <YAxis allowDecimals={false} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" isAnimationActive={false} fill="var(--color-value)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-sm">
-                <span>Total Units Requested</span>
-                <Badge variant="secondary" className="text-blue-700">{totalUnitsRequested}</Badge>
-              </div>
-              <Progress className="mt-2" value={Math.min(100, totalUnitsRequested % 100)} />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Detailed overview (restored) */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <DonorDonationSection data={payload?.legacyOverview?.donorDonation} />
+        <BloodBagOverviewSection data={payload?.legacyOverview?.bloodBags} />
+        <ComponentOverviewSection data={payload?.legacyOverview?.components} />
+        <InventoryOverviewSection data={payload?.legacyOverview?.inventory} />
+        <BloodGroupAvailabilitySection data={payload?.legacyOverview?.bloodGroups} />
+        <ComponentAvailabilitySection data={payload?.legacyOverview?.componentAvailability} />
+        <HospitalRequestOverviewSection data={payload?.legacyOverview?.hospitalRequests} hospitals={payload?.hospitalRequisitions} />
+        <TestingSerologySection data={payload?.legacyOverview?.testingSerology} />
+        <CampKpiSection data={payload?.legacyOverview?.camps} />
+        <ExceptionAlertsSection data={payload?.legacyOverview?.alerts} />
       </div>
 
-      {/* Components Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Kpi icon={Droplets} label="RBC (in stock)" value={number(componentMap.RBC || 0)} color="text-rose-700" />
-        <Kpi icon={Droplets} label="FFP (in stock)" value={number(componentMap.FFP || 0)} color="text-sky-700" />
-        <Kpi icon={Droplets} label="Platelet (in stock)" value={number(componentMap.Platelet || 0)} color="text-amber-700" />
-        <Kpi icon={Droplets} label="Cryo (in stock)" value={number(componentMap.Cryo || 0)} color="text-indigo-700" />
+      <OngoingCampsSection camps={payload?.legacyOverview?.ongoingCamps} />
+
+      <BloodBagStatusTable data={payload?.legacyOverview?.bloodbagStatusPie} />
+
+      {/* Operational sections */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <CampOverviewSection data={payload?.campOverview} />
+        <DonorCardSection data={payload?.donorCards} />
+        <BulkTransferSection data={payload?.bulkTransfer} />
+        <DiseaseSection data={payload?.diseasePatients} />
+        <StorageBreakdownSection data={payload?.storageBreakdown} />
+        <DiscardSection data={payload?.discards} />
+        <DeferralReasonSection data={payload?.deferrals} />
       </div>
 
-      {/* Positivity by Test */}
-      {/* BloodBag Status Pie */}
-      {(positivitySeries.length > 0 || bloodbagStatusPie.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {positivitySeries.length > 0 && (
-            <Card className="h-full">
-              <CardHeader className="pb-3">
-                <CardTitle>Test Results Distribution</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="h-72">
-                  <ChartContainer config={{ Reactive: { label: "Reactive", color: "#dc2626" }, Negative: { label: "Negative", color: "#16a34a" }, Shadeness: { label: "Shadeness", color: "#64748b" } }}>
-                    <BarChart data={positivitySeries}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="test" />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip content={<ChartTooltipContent />} />
-                      <Legend content={<ChartLegendContent />} />
-                      <Bar dataKey="Reactive" isAnimationActive={false} stackId="a" fill="var(--color-Reactive)" />
-                      <Bar dataKey="Negative" isAnimationActive={false} stackId="a" fill="var(--color-Negative)" />
-                      <Bar dataKey="Shadeness" isAnimationActive={false} stackId="a" fill="var(--color-Shadeness)" />
-                    </BarChart>
-                  </ChartContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+      {/* Chemical & Bag stock — moved to the bottom */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <ChemicalStockSection data={payload?.chemicalStock} />
+        <BagStockSection data={payload?.bagStock} />
+      </div>
 
-          {bloodbagStatusPie.length > 0 && (
-            <Card className="h-full">
-              <CardHeader className="pb-3">
-                <CardTitle>BloodBag Status (Period)</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="h-72 flex items-center justify-center">
-                  <ChartContainer config={{}}>
-                    <PieChart>
-                      <Tooltip content={<ChartTooltipContent />} />
-                      <Pie
-                        data={bloodbagStatusPie}
-                        isAnimationActive={false}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={110}
-                      >
-                        {bloodbagStatusPie.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={pieColor(entry.key || entry.name, index)} />
-                        ))}
-                      </Pie>
-                      <Legend />
-                    </PieChart>
-                  </ChartContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+      <CustomModal
+        open={Boolean(openChemicalsWarning)}
+        title="Open Chemicals Must Be Closed First"
+        onCancel={() => setOpenChemicalsWarning(null)}
+        hideFooter
+        size="lg"
+      >
+        <div className="space-y-3 text-sm text-slate-700">
+          <p>
+            The chemicals below are currently <strong>open / in-use</strong> and have not been fully consumed.
+            Count physical stock and close them out via Chemical Inventory &rsaquo; Stock Usage before generating
+            this month&apos;s report.
+          </p>
+          <div className="max-h-64 overflow-y-auto border rounded-lg divide-y">
+            {(openChemicalsWarning || []).map((c, i) => (
+              <div key={i} className="flex items-center justify-between px-3 py-2 text-xs">
+                <span className="font-medium">{c.chemicalName}</span>
+                <span className="text-amber-700">{c.inUse} {c.unitType} in use</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setOpenChemicalsWarning(null)}>
+              Close
+            </Button>
+            <Button size="sm" onClick={handleCreateMonthlyReport} disabled={reportChecking}>
+              {reportChecking ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Recheck
+            </Button>
+          </div>
         </div>
+      </CustomModal>
+
+      {reportPeriod && (
+        <MonthlyReportInputsModal
+          open={reportInputsOpen}
+          onClose={() => setReportInputsOpen(false)}
+          month={reportPeriod.month}
+          year={reportPeriod.year}
+          donorCountHint={number(payload?.legacyOverview?.donorDonation?.donors) * 2}
+        />
       )}
     </div>
   );
-}
-
-function Kpi({ icon: Icon, label, value, color }) {
-  return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg bg-slate-50 ${color}`}>
-            <Icon className="w-5 h-5" />
-          </div>
-          <div className="flex-1">
-            <div className="text-xs text-slate-500">{label}</div>
-            <div className="text-xl font-semibold text-slate-800">{value.toLocaleString()}</div>
-          </div>
-          <TrendingUp className="w-4 h-4 text-slate-400" />
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function SummaryStat({ label, value }) {
-  return (
-    <div className="flex flex-col">
-      <span className="text-xs text-slate-500 truncate">{label}</span>
-      <span className="text-sm font-semibold text-slate-900 tabular-nums">
-        {number(value).toLocaleString()}
-      </span>
-    </div>
-  );
-}
-
-function Stat({ label, value }) {
-  return (
-    <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
-      <span className="text-slate-500 truncate">{label}</span>
-      <span className="font-semibold text-slate-900 tabular-nums">
-        {number(value).toLocaleString()}
-      </span>
-    </div>
-  );
-}
-
-function TrendCard({ title, data, dataKey, color, config }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-slate-500" />
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer config={config}>
-          <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id={`${title}-fill`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.25} />
-                <stop offset="95%" stopColor={color} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
-            <YAxis allowDecimals={false} />
-            <Tooltip content={<ChartTooltipContent />} />
-            <Area type="monotone" dot={false} isAnimationActive={false} dataKey={dataKey} stroke={color} fill={`url(#${title}-fill)`} strokeWidth={2} />
-          </AreaChart>
-        </ChartContainer>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Color mapping for pie slices
-function pieColor(status, i) {
-  const map = {
-    collected: "#3b82f6",
-    "component-separated": "#6366f1",
-    testing: "#06b6d4",
-    passed: "#22c55e",
-    failed: "#ef4444",
-    quarantined: "#f59e0b",
-    issued: "#10b981",
-    discarded: "#64748b",
-  };
-  return map[status] || ["#a78bfa", "#34d399", "#f472b6", "#60a5fa", "#fcd34d", "#fca5a5"][i % 6];
 }

@@ -6,7 +6,9 @@
 
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
+import { withAudit } from '@/shared/utils/with-audit';
 import { ConflictError, NotFoundError } from '@/shared/errors';
+import { notificationCenterService } from '@/modules/notification/notification-center.service';
 import type { CrossmatchRepo } from '@/modules/crossmatch/crossmatch.repository';
 import type { RequisitionRepo } from '@/modules/requisition/requisition.repository';
 import type { UnitRepo } from '@/modules/unit/unit.repository';
@@ -17,6 +19,11 @@ export interface PerformCrossmatchInput {
   method: 'IS' | 'AHG' | 'ELECTRONIC';
   phases?: { immediateSpin?: string; coombsAhg?: string };
   result: 'COMPATIBLE' | 'INCOMPATIBLE';
+  // Manual crossmatch worksheet fields (operator-entered, per matched unit).
+  compatibilityResult?: 'MAJOR_COMPATIBLE' | 'MINOR_COMPATIBLE' | 'UNIVERSAL';
+  crossmatchDoneAt?: Date;
+  crossmatchSeenAt?: Date;
+  cardNumber?: string;
 }
 
 export interface CrossmatchService {
@@ -63,6 +70,13 @@ export function createCrossmatchService(deps: {
         actorId,
       );
 
+      const details = {
+        compatibilityResult: input.compatibilityResult,
+        crossmatchDoneAt: input.crossmatchDoneAt,
+        crossmatchSeenAt: input.crossmatchSeenAt,
+        cardNumber: input.cardNumber,
+      };
+
       let unitStatus: string;
       if (input.result === 'COMPATIBLE') {
         const u = await deps.units.applyEvent({
@@ -72,7 +86,7 @@ export function createCrossmatchService(deps: {
           reason: `Crossmatch ${crossmatchId} compatible`,
         });
         unitStatus = u.status;
-        await deps.requisitions.setCrossmatchStatus(req.id, input.unitId, 'COMPATIBLE', actorId);
+        await deps.requisitions.setCrossmatchStatus(req.id, input.unitId, 'COMPATIBLE', actorId, details);
       } else {
         const u = await deps.units.applyEvent({
           unitId: input.unitId,
@@ -81,13 +95,52 @@ export function createCrossmatchService(deps: {
           reason: `Crossmatch ${crossmatchId} incompatible`,
         });
         unitStatus = u.status;
-        await deps.requisitions.setCrossmatchStatus(req.id, input.unitId, 'INCOMPATIBLE', actorId);
+        await deps.requisitions.setCrossmatchStatus(req.id, input.unitId, 'INCOMPATIBLE', actorId, details);
       }
+
+      void withAudit(
+        { actorId },
+        {
+          module: 'crossmatch',
+          action: 'UPDATE',
+          entityType: 'Crossmatch',
+          entityId: crossmatchId,
+          entityLabel: `${crossmatchId} (unit ${input.unitId})`,
+          severity: input.result === 'INCOMPATIBLE' ? 'warning' : 'info',
+        },
+        undefined,
+        { requisitionId: req.requisitionId, unitId: input.unitId, method: input.method, result: input.result, unitStatus },
+      );
 
       log.info(
         { crossmatchId, unitId: input.unitId, result: input.result, unitStatus },
         'crossmatch recorded',
       );
+      void notificationCenterService
+        .notify(
+          input.result === 'COMPATIBLE'
+            ? {
+                title: 'Cross match completed',
+                message: `Crossmatch ${crossmatchId} compatible for unit ${input.unitId}`,
+                module: 'CROSSMATCH',
+                category: 'CROSSMATCH_COMPLETED',
+                severity: 'SUCCESS',
+                relatedRecordId: crossmatchId,
+                relatedRecordType: 'Crossmatch',
+                actionLink: `/requisition/${req.id}`,
+              }
+            : {
+                title: 'Cross match failed',
+                message: `Crossmatch ${crossmatchId} incompatible for unit ${input.unitId}`,
+                module: 'CROSSMATCH',
+                category: 'CROSSMATCH_FAILED',
+                severity: 'CRITICAL',
+                relatedRecordId: crossmatchId,
+                relatedRecordType: 'Crossmatch',
+                actionLink: `/requisition/${req.id}`,
+              },
+        )
+        .catch(() => undefined);
       return { crossmatchId, unitId: input.unitId, result: input.result, unitStatus };
     },
   };

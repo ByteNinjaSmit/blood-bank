@@ -29,6 +29,23 @@ export const DeferralIdParam = z.object({
   id: z.string().regex(OBJECT_ID, 'Invalid deferral id'),
 });
 
+const blank = <T extends z.ZodTypeAny>(s: T) =>
+  z.preprocess((v) => (v === '' || v === null ? undefined : v), s);
+
+export const LiftDeferralBody = z.object({
+  reason: blank(z.string().trim().max(300).optional()),
+});
+
+export const ListDeferralsQuery = z.object({
+  search: blank(z.string().trim().max(200).optional()),
+  type: blank(z.enum(DEFERRAL_TYPE).optional()),
+  status: blank(z.enum(['active', 'lifted', 'all']).optional().default('active')),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(10000).default(20),
+  sortBy: z.enum(['createdAt', 'untilDate']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {
   const r = schema.safeParse(value);
   if (!r.success) throw new ValidationError(`Invalid ${where}`, r.error.issues);
@@ -39,4 +56,6 @@ export const ValidateDeferral = {
   createBody: (req: Request) => parseOrThrow(CreateDeferralBody, req.body, 'request body'),
   donorIdParam: (req: Request) => parseOrThrow(DonorIdParam, req.params, 'path params'),
   idParam: (req: Request) => parseOrThrow(DeferralIdParam, req.params, 'path params'),
+  listQuery: (req: Request) => parseOrThrow(ListDeferralsQuery, req.query, 'query string'),
+  liftBody: (req: Request) => parseOrThrow(LiftDeferralBody, req.body, 'request body'),
 };

@@ -6,16 +6,15 @@ import CreateUserForm from "./components/CreateUserForm";
 import ViewUserModal from "./components/ViewUserModal";
 import Pagination from "./components/Pagination";
 import CustomModal from "@/components/CustomModal";
-import { checkAccess } from "./utils/access";
+import ReasonForChangeModal from "@/components/shared/ReasonForChangeModal";
+import { useEditWithReason } from "@/hooks/useEditWithReason";
+import useAccess from "@/features/access/useAccess";
 import { statusChipClass } from "./utils/ui";
 import axios from "axios";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
-import { ModuleArray, RoleArray } from "@/atoms/static";
-
-const emptyPerm = () => (
-  ModuleArray.map((m) => ({ moduleName: m, view: false, create: false, update: false, delete: false }))
-);
+import { emptyDraft, draftFromGrid, gridFromDraft } from "../components/permissions-editor/grid-conversion";
+import ManageRolesModal from "@/features/role/components/ManageRolesModal";
 
 const initialForm = {
   publicId: "",
@@ -23,14 +22,16 @@ const initialForm = {
   lastName: "",
   email: "",
   phone: "",
-  role: "viewer",
+  role: "",
+  roleId: null,
+  isFullAccess: false,
   password: "",
   status: "active",
-  permissions: emptyPerm(),
+  permissionsDraft: emptyDraft(),
 };
 
 export default function UserManage() {
-  const { API, authorizationToken, user } = useAuth();
+  const { API, authorizationToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -40,22 +41,27 @@ export default function UserManage() {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [confirmModal, setConfirmModal] = useState({ open: false });
+  const [showRolesModal, setShowRolesModal] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState(null);
+  const [deactivating, setDeactivating] = useState(false);
 
   // Filters & Pagination
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [sortBy, setSortBy] = useState("name");
+  const [order, setOrder] = useState("asc");
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(1);
 
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/api/admin/users`, {
+      const res = await axios.get(`${API}/api/v2/user?limit=1000`, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       });
-      setUsers(res.data.data || []);
+      setUsers((res.data.data || []).map(u => ({ ...u, _id: u.id || u._id })));
       setSelectedIds(new Set());
     } catch (e) {
       toast.error("Failed to load users");
@@ -65,20 +71,28 @@ export default function UserManage() {
   };
 
   const setStatus = async (id, action) => {
+    const actionMap = {
+      approve: 'active',
+      reject: 'rejected',
+      block: 'blocked',
+      deactivate: 'inactive',
+    };
+    const mappedStatus = actionMap[action] || action;
     try {
-      await axios.post(`${API}/api/admin/users/${id}/${action}` , {}, {
+      await axios.put(`${API}/api/v2/user/${id}`, { status: mappedStatus }, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       });
-      toast.success(`User ${action}d`);
+      toast.success(`User status updated to ${mappedStatus}`);
       loadUsers();
     } catch (e) {
-      toast.error(e?.response?.data?.message || `Failed to ${action}`);
+      toast.error(e?.response?.data?.message || `Failed to update status`);
     }
   };
 
   // using imported statusChipClass from utils/ui
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadUsers(); }, [API, authorizationToken]);
 
   // Derived filtered & paginated data
@@ -90,26 +104,47 @@ export default function UserManage() {
         (u.email || "").toLowerCase().includes(q) ||
         (u.phone || "").toLowerCase().includes(q) ||
         (`${u?.name?.first || ""} ${u?.name?.last || ""}`.trim().toLowerCase().includes(q));
-      const matchesRole = !roleFilter || u.role === roleFilter;
+      const matchesRole = !roleFilter || (u.role || "").toLowerCase().includes(roleFilter.trim().toLowerCase());
       const matchesStatus = !statusFilter || u.status === statusFilter;
       return matchesQuery && matchesRole && matchesStatus;
     });
   }, [users, search, roleFilter, statusFilter]);
 
-  const total = filteredUsers.length;
+  const sortedUsers = useMemo(() => {
+    const list = [...filteredUsers];
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (sortBy === "name") {
+        cmp = `${a?.name?.first || ""} ${a?.name?.last || ""}`.localeCompare(`${b?.name?.first || ""} ${b?.name?.last || ""}`);
+      } else if (sortBy === "createdAt") {
+        cmp = new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+      } else if (sortBy === "role") {
+        cmp = (a.role || "").localeCompare(b.role || "");
+      }
+      return order === "asc" ? cmp : -cmp;
+    });
+    return list;
+  }, [filteredUsers, sortBy, order]);
+
+  const total = sortedUsers.length;
   const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * rowsPerPage;
   const endIndex = Math.min(startIndex + rowsPerPage, total);
-  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+  const paginatedUsers = sortedUsers.slice(startIndex, endIndex);
 
   useEffect(() => {
     // reset to first page when filters change
     setPage(1);
     setSelectedIds(new Set());
-  }, [search, roleFilter, statusFilter, rowsPerPage]);
+  }, [search, roleFilter, statusFilter, sortBy, order, rowsPerPage]);
 
-  const { isAdmin, canView, canCreate, canUpdate, canDelete } = checkAccess(user);
+  const { can } = useAccess();
+  const canView = can('admin', 'view', 'user-manage');
+  const canCreate = can('admin', 'create', 'user-manage');
+  const canUpdate = can('admin', 'update', 'user-manage');
+  const canDelete = can('admin', 'delete', 'user-manage');
+  const canManageRoles = can('admin', 'view', 'manage-roles');
 
   const openCreate = () => {
     if (!canCreate) { toast.error('You do not have permission to create users'); return; }
@@ -126,22 +161,15 @@ export default function UserManage() {
       lastName: u?.name?.last || "",
       email: u.email || "",
       phone: u.phone || "",
-      role: u.role || "viewer",
+      role: u.role || "",
+      roleId: u.roleId || null,
+      isFullAccess: !!u.isFullAccess,
       password: "",
       status: u.status || "active",
-      permissions: mergePermissions(u.permissions || []),
+      permissionsDraft: draftFromGrid(u.permissions || []),
     };
     setForm(f);
     setShowModal(true);
-  };
-
-  const mergePermissions = (existing) => {
-    const map = new Map(existing.map(p => [String(p.moduleName).toLowerCase(), p]));
-    return ModuleArray.map(m => {
-      const k = m.toLowerCase();
-      const p = map.get(k);
-      return p ? { moduleName: m, view: !!p.view, create: !!p.create, update: !!p.update, delete: !!p.delete } : { moduleName: m, view: false, create: false, update: false, delete: false };
-    });
   };
 
   const generatePublicId = () => {
@@ -151,47 +179,17 @@ export default function UserManage() {
     return `USR-${y}-${rnd}`;
   };
 
-  const setPerm = (moduleName, key, val) => {
-    setForm((prev) => ({
-      ...prev,
-      permissions: prev.permissions.map((p) =>
-        p.moduleName === moduleName ? { ...p, [key]: val } : p
-      ),
-    }));
-  };
-
-  const setAllForModule = (moduleName, val) => {
-    setForm((prev) => ({
-      ...prev,
-      permissions: prev.permissions.map((p) =>
-        p.moduleName === moduleName ? { ...p, view: val, create: val, update: val, delete: val } : p
-      ),
-    }));
-  };
-
-  const onSubmit = async (e) => {
-    e?.preventDefault?.();
+  const saveUser = async (payload, editReason) => {
     try {
       setLoading(true);
-      const payload = {
-        publicId: form.publicId,
-        firstName: form.firstName,
-        lastName: form.lastName,
-        email: form.email,
-        phone: form.phone,
-        role: form.role,
-        password: form.password,
-        status: form.status,
-        permissions: form.permissions,
-      };
       if (editingId) {
-        await axios.patch(`${API}/api/admin/users/${editingId}`, payload, {
+        await axios.put(`${API}/api/v2/user/${editingId}`, { ...payload, _editReason: editReason }, {
           headers: { Authorization: authorizationToken },
           withCredentials: true,
         });
         toast.success("User updated");
       } else {
-        await axios.post(`${API}/api/admin/users`, payload, {
+        await axios.post(`${API}/api/v2/user`, { ...payload, password: payload.password || "default123" }, {
           headers: { Authorization: authorizationToken },
           withCredentials: true,
         });
@@ -208,26 +206,71 @@ export default function UserManage() {
     }
   };
 
-  const onDelete = async (id) => {
+  // Edit-Reason is mandatory when editing an existing user; creating a
+  // brand-new user has nothing to justify a "change" for, so it skips
+  // the dialog entirely.
+  const { wrappedSave: wrappedSaveUser, EditReasonDialog: userEditReasonDialog } = useEditWithReason({
+    onSave: saveUser,
+    skip: !editingId,
+    title: "Confirm User Changes",
+  });
+
+  const onSubmit = async (e) => {
+    e?.preventDefault?.();
+    const payload = {
+      firstName: form.firstName,
+      lastName: form.lastName,
+      email: form.email,
+      phone: form.phone,
+      role: form.role || "Custom",
+      roleId: form.roleId || undefined,
+      isFullAccess: form.isFullAccess,
+      password: form.password || undefined,
+      status: form.status,
+      permissions: gridFromDraft(form.permissionsDraft),
+    };
+    wrappedSaveUser(payload);
+  };
+
+  const onDelete = async (id, reason) => {
     try {
-      await axios.delete(`${API}/api/admin/users/${id}`, {
+      await axios.delete(`${API}/api/v2/user/${id}`, {
+        data: { reason },
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       });
-      toast.success("User deleted");
+      toast.success("User deactivated");
       loadUsers();
     } catch (e) {
-      toast.error("Delete failed");
+      toast.error("Deactivation failed");
+    }
+  };
+
+  const confirmDeactivate = async (reason) => {
+    if (!deactivateTarget) return;
+    setDeactivating(true);
+    try {
+      await onDelete(deactivateTarget, reason);
+    } finally {
+      setDeactivating(false);
+      setDeactivateTarget(null);
     }
   };
 
   const bulkSetStatus = async (action) => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) { toast.error('No users selected'); return; }
+    const actionMap = {
+      approve: 'active',
+      reject: 'rejected',
+      block: 'blocked',
+      deactivate: 'inactive',
+    };
+    const mappedStatus = actionMap[action] || action;
     let ok = 0, fail = 0;
     for (const id of ids) {
       try {
-        await axios.post(`${API}/api/admin/users/${id}/${action}`, {}, {
+        await axios.put(`${API}/api/v2/user/${id}`, { status: mappedStatus }, {
           headers: { Authorization: authorizationToken },
           withCredentials: true,
         });
@@ -236,8 +279,8 @@ export default function UserManage() {
         fail++;
       }
     }
-    if (ok) toast.success(`${action} successful for ${ok}`);
-    if (fail) toast.error(`${action} failed for ${fail}`);
+    if (ok) toast.success(`Status updated for ${ok} user(s)`);
+    if (fail) toast.error(`Failed to update status for ${fail} user(s)`);
     loadUsers();
   };
 
@@ -250,7 +293,14 @@ export default function UserManage() {
   return (
     <div className="p-4 md:p-6 space-y-4">
       {/* Header */}
-      <Header onRefresh={loadUsers} onNew={openCreate} canCreate={canCreate} />
+      <Header
+        onRefresh={loadUsers}
+        onNew={openCreate}
+        canCreate={canCreate}
+        isRefreshing={loading}
+        canManageRoles={canManageRoles}
+        onManageRoles={() => setShowRolesModal(true)}
+      />
 
       <Filters
         search={search}
@@ -259,12 +309,15 @@ export default function UserManage() {
         onRoleFilter={setRoleFilter}
         statusFilter={statusFilter}
         onStatusFilter={setStatusFilter}
+        sortBy={sortBy}
+        onSortBy={setSortBy}
+        order={order}
+        onOrder={setOrder}
         rowsPerPage={rowsPerPage}
         onRowsPerPage={setRowsPerPage}
         total={total}
         startIndex={startIndex}
         endIndex={endIndex}
-        RoleArray={RoleArray}
       />
 
       {/* Bulk actions */}
@@ -325,7 +378,7 @@ export default function UserManage() {
         onReject={(row)=>openConfirm({ title:'Reject User', description:'Reject this user?', confirmText:'Reject', confirmVariant:'danger', onConfirm:()=>{ closeConfirm(); setStatus(row._id,'reject'); }})}
         onBlock={(row)=>openConfirm({ title:'Block User', description:'Block this user? They will be unable to login.', confirmText:'Block', confirmVariant:'danger', onConfirm:()=>{ closeConfirm(); setStatus(row._id,'block'); }})}
         onDeactivate={(row)=>openConfirm({ title:'Deactivate User', description:'Deactivate this user?', confirmText:'Deactivate', onConfirm:()=>{ closeConfirm(); setStatus(row._id,'deactivate'); }})}
-        onDelete={(row)=>openConfirm({ title:'Delete User', description:'Delete this user?', confirmText:'Delete', confirmVariant:'danger', onConfirm:()=>{ closeConfirm(); onDelete(row._id); }})}
+        onDelete={(row)=>setDeactivateTarget(row._id)}
         openMenuId={openMenuId}
         setOpenMenuId={setOpenMenuId}
         selectedIds={selectedIds}
@@ -345,12 +398,9 @@ export default function UserManage() {
           form={form}
           setForm={setForm}
           editingId={editingId}
-          RoleArray={RoleArray}
           loading={loading}
           onSubmit={onSubmit}
           onCancel={() => setShowModal(false)}
-          setPerm={setPerm}
-          setAllForModule={setAllForModule}
         />
       )}
 
@@ -369,6 +419,22 @@ export default function UserManage() {
         onCancel={closeConfirm}
         onConfirm={confirmModal.onConfirm}
       />
+
+      <ReasonForChangeModal
+        isOpen={Boolean(deactivateTarget)}
+        onClose={() => setDeactivateTarget(null)}
+        onConfirm={confirmDeactivate}
+        title="Deactivate User"
+        actionLabel="Deactivate"
+        message="This user will no longer be able to log in. This action is logged to the audit trail."
+        fieldLabel="Reason for Deactivation"
+        submitting={deactivating}
+      />
+      {userEditReasonDialog}
+
+      {showRolesModal && (
+        <ManageRolesModal onClose={() => setShowRolesModal(false)} />
+      )}
     </div>
   );
 }

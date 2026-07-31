@@ -6,9 +6,6 @@ const router = Router();
 
 // Public — no auth.
 router.post('/login', authController.login);
-router.post('/login/start-otp', authController.startOtpLogin);
-router.post('/login/verify-otp', authController.verifyOtpLogin);
-router.post('/login/resend-otp', authController.resendOtpLogin);
 
 router.post('/register/start-otp', authController.startRegister);
 router.post('/register/verify-otp', authController.verifyRegister);

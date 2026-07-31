@@ -1,59 +1,40 @@
 import type { NextFunction, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { ValidateAuth } from './auth.validator';
 import { authService } from './auth.service';
 import { setRefreshCookie, clearRefreshCookie, REFRESH_COOKIE_NAME } from './auth.cookies';
-import { UnauthorizedError } from '@/shared/errors';
+import { UnauthorizedError, ExternalServiceError } from '@/shared/errors';
+
+// Mongo/network failures surface as plain MongooseError/MongoError
+// subclasses, not AppError, so they'd otherwise fall through to a slow,
+// generic 500. Caught explicitly here so a dropped DB connection fails
+// the refresh call fast with a clear, retryable status instead of
+// hanging the client's request.
+function isDbConnectivityError(err: unknown): boolean {
+  if (mongoose.connection.readyState !== 1) return true;
+  const name = (err as { name?: string })?.name ?? '';
+  return name === 'MongoNetworkError' || name === 'MongooseServerSelectionError' || name === 'MongoServerSelectionError';
+}
 
 function ip(req: Request): string | undefined {
   return req.ip;
+}
+
+function requestMeta(req: Request): { ip?: string; userAgent?: string } {
+  return { ip: req.ip, userAgent: req.headers['user-agent'] };
 }
 
 export const authController = {
   async login(req: Request, res: Response, next: NextFunction) {
     try {
       const { email, password } = ValidateAuth.login(req);
-      const pair = await authService.login(email, password, ip(req));
+      const pair = await authService.login(email, password, requestMeta(req));
       setRefreshCookie(res, pair.refreshToken);
       res.json({
         success: true,
         data: { user: pair.user, accessToken: pair.accessToken, expiresIn: pair.expiresIn },
         requestId: req.id,
       });
-    } catch (e) {
-      next(e);
-    }
-  },
-
-  async startOtpLogin(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { email, password } = ValidateAuth.startOtp(req);
-      const data = await authService.startOtpLogin(email, password);
-      res.json({ success: true, data, requestId: req.id });
-    } catch (e) {
-      next(e);
-    }
-  },
-
-  async verifyOtpLogin(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { email, txnId, code } = ValidateAuth.verifyOtp(req);
-      const pair = await authService.verifyOtpLogin(email, txnId, code, ip(req));
-      setRefreshCookie(res, pair.refreshToken);
-      res.json({
-        success: true,
-        data: { user: pair.user, accessToken: pair.accessToken, expiresIn: pair.expiresIn },
-        requestId: req.id,
-      });
-    } catch (e) {
-      next(e);
-    }
-  },
-
-  async resendOtpLogin(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { email, txnId } = ValidateAuth.resendOtp(req);
-      const data = await authService.resendOtp(email, txnId, 'LOGIN');
-      res.json({ success: true, data, requestId: req.id });
     } catch (e) {
       next(e);
     }
@@ -105,6 +86,14 @@ export const authController = {
       });
     } catch (e) {
       clearRefreshCookie(res);
+      if (e instanceof UnauthorizedError) {
+        next(e);
+        return;
+      }
+      if (isDbConnectivityError(e)) {
+        next(new ExternalServiceError('database', e));
+        return;
+      }
       next(e);
     }
   },
@@ -112,7 +101,7 @@ export const authController = {
   async logout(req: Request, res: Response, next: NextFunction) {
     try {
       const token = req.cookies?.[REFRESH_COOKIE_NAME];
-      await authService.logout(token, ip(req));
+      await authService.logout(token, requestMeta(req));
       clearRefreshCookie(res);
       res.json({ success: true, requestId: req.id });
     } catch (e) {

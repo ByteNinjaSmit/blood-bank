@@ -1,5 +1,5 @@
 import React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import {
   ArrowRight,
   Lock,
@@ -13,15 +13,15 @@ import {
   TestTube,
   UserCheck,
 } from "lucide-react"
-import { Link, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAuth } from "@/store/auth"
-import axios from "axios"
 import { toast } from "sonner"
+import { motion } from "framer-motion"
 
 export default function BloodBankDoctorLoginPage() {
   const navigate = useNavigate();
-  const { isLoggedIn, loginStartOtp, verifyOtpLogin, resendOtpLogin } = useAuth();
+  const { isLoggedIn, login } = useAuth();
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     username: "",
@@ -30,14 +30,6 @@ export default function BloodBankDoctorLoginPage() {
   const [mounted, setMounted] = useState(false)
   const isMobile = useIsMobile();
   const [isLoginLoading, setIsLoginLoading] = useState(false);
-  // OTP state
-  const [step, setStep] = useState("credentials"); // "credentials" | "otp"
-  const [txnId, setTxnId] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [expiresIn, setExpiresIn] = useState(0);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [verifying, setVerifying] = useState(false);
-  const otpRefs = useRef([]);
 
   useEffect(() => {
     setMounted(true)
@@ -50,103 +42,19 @@ export default function BloodBankDoctorLoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (step === "credentials") {
-      setIsLoginLoading(true);
-      try {
-        const res = await loginStartOtp(formData.username, formData.password);
-        setTxnId(res.txnId);
-        setExpiresIn(res.expiresInSeconds || 300);
-        setResendCooldown(res.resendCooldownSeconds || 30);
-        setStep("otp");
-        toast.success("OTP sent to your email");
-      } catch (error) {
-        const message = error?.response?.data?.message || error?.message || "Login failed. Please try again.";
-        toast.error(message);
-      } finally {
-        setIsLoginLoading(false);
-      }
-    } else if (step === "otp") {
-      const code = otp.join("");
-      if (code.length !== 6) {
-        return toast.error("Enter 6-digit OTP");
-      }
-      setVerifying(true);
-      try {
-        await verifyOtpLogin(formData.username, txnId, code);
-        toast.success("Login successful");
-        navigate("/");
-      } catch (error) {
-        const message = error?.response?.data?.message || error?.message || "Invalid OTP";
-        toast.error(message);
-      } finally {
-        setVerifying(false);
-      }
-    }
-  };
-
-  // Countdown timers
-  useEffect(() => {
-    if (step !== "otp") return;
-    if (expiresIn <= 0 && resendCooldown <= 0) return;
-    const t = setInterval(() => {
-      setExpiresIn((s) => (s > 0 ? s - 1 : 0));
-      setResendCooldown((s) => (s > 0 ? s - 1 : 0));
-    }, 1000);
-    return () => clearInterval(t);
-  }, [step, expiresIn, resendCooldown]);
-
-  const handleResend = async () => {
-    if (resendCooldown > 0) return;
+    setIsLoginLoading(true);
     try {
-      const res = await resendOtpLogin(formData.username, txnId);
-      setResendCooldown(res.resendCooldownSeconds || 30);
-      setExpiresIn(res.expiresInSeconds ?? expiresIn);
-      toast.success("OTP resent");
-    } catch (e) {
-      const msg = e?.response?.data?.message || e?.message || "Failed to resend OTP";
-      toast.error(msg);
+      await login(formData.username, formData.password);
+      toast.success("Login successful");
+      navigate("/");
+    } catch (error) {
+      const message = error?.response?.data?.message || error?.message || "Login failed. Please try again.";
+      toast.error(message);
+    } finally {
+      setIsLoginLoading(false);
     }
   };
 
-  const handleOtpChange = (idx, val) => {
-    const v = val.replace(/\D/g, "").slice(0, 1);
-    const next = [...otp];
-    next[idx] = v;
-    setOtp(next);
-    if (v && idx < otp.length - 1) {
-      otpRefs.current[idx + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (idx, e) => {
-    if (e.key === 'Backspace') {
-      if (!otp[idx] && idx > 0) {
-        otpRefs.current[idx - 1]?.focus();
-      }
-      return;
-    }
-    if (e.key === 'ArrowLeft' && idx > 0) {
-      e.preventDefault();
-      otpRefs.current[idx - 1]?.focus();
-    }
-    if (e.key === 'ArrowRight' && idx < otp.length - 1) {
-      e.preventDefault();
-      otpRefs.current[idx + 1]?.focus();
-    }
-  };
-
-  const handleOtpPaste = (e) => {
-    const data = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, otp.length);
-    if (!data) return;
-    e.preventDefault();
-    const next = [...otp];
-    for (let i = 0; i < data.length; i++) {
-      next[i] = data[i];
-    }
-    setOtp(next);
-    const focusIndex = Math.min(data.length, otp.length - 1);
-    otpRefs.current[focusIndex]?.focus();
-  };
   useEffect(() => {
     if (isLoggedIn) {
       navigate('/');
@@ -163,166 +71,215 @@ export default function BloodBankDoctorLoginPage() {
   ]
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#faf9f9] overflow-x-hidden">
       {/* Left side - Blood Bank Panel */}
-      <div className="w-full lg:w-1/2 bg-gradient-to-br from-red-800 via-red-700 to-red-900 relative overflow-hidden min-h-[50vh] lg:min-h-screen">
+      <div className="w-full lg:w-1/2 bg-gradient-to-br from-red-950 via-red-900 to-red-800 relative overflow-hidden min-h-[50vh] lg:min-h-screen flex flex-col justify-center">
+        
+        {/* Decorative floating animated blobs */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <motion.div
+            animate={{
+              x: [0, 30, 0],
+              y: [0, -30, 0],
+              scale: [1, 1.1, 1],
+            }}
+            transition={{
+              duration: 15,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            className="absolute -top-10 -left-10 w-72 h-72 rounded-full bg-red-600/10 blur-3xl"
+          />
+          <motion.div
+            animate={{
+              x: [0, -20, 0],
+              y: [0, 40, 0],
+              scale: [1, 1.05, 1],
+            }}
+            transition={{
+              duration: 18,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-rose-600/10 blur-3xl"
+          />
+        </div>
+
         <div
-          className={`absolute inset-0 flex flex-col items-center justify-center p-6 sm:p-8 lg:p-12 transition-opacity duration-1000 ${mounted ? "opacity-100" : "opacity-0"
-            }`}
+          className={`relative z-10 flex flex-col items-center justify-center p-6 sm:p-8 lg:p-12 transition-opacity duration-1000 ${
+            mounted ? "opacity-100" : "opacity-0"
+          }`}
         >
-          {/* Main Heart Icon */}
-          <div className="relative mb-4 sm:mb-6 lg:mb-8">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-32 lg:h-32 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center border-4 border-white/20 shadow-2xl">
-              <Heart className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 text-white" />
-            </div>
-            <div className="absolute -top-2 -right-2 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-red-600 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
-              <Droplets className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+          {/* Main Heart Icon with pulsing ring */}
+          <div className="relative mb-6 sm:mb-8">
+            <motion.div 
+              animate={{ scale: [1, 1.04, 1] }}
+              transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+              className="w-24 h-24 sm:w-28 sm:h-28 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20 shadow-2xl relative"
+            >
+              <div className="absolute inset-0 rounded-full border border-white/10 animate-ping opacity-30" />
+              <Heart className="w-10 h-10 sm:w-12 sm:h-12 text-white fill-white/10" />
+            </motion.div>
+            <div className="absolute -top-1 -right-1 w-8 h-8 sm:w-9 sm:h-9 bg-red-600 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
+              <Droplets className="w-4 h-4 text-white" />
             </div>
           </div>
 
           {/* Branding */}
-          <div className="text-center mb-6 sm:mb-8 lg:mb-12">
-            {/* <div className="flex items-center justify-center mb-3 sm:mb-4">
-              <div className="bg-white text-red-800 text-xl sm:text-3xl lg:text-5xl font-bold py-2 sm:py-2 lg:py-3 px-2 sm:px-3 lg:px-4 rounded-xl shadow-lg">
-                B
-              </div>
-              <div className="text-white text-xl sm:text-3xl lg:text-5xl font-bold ml-2 sm:ml-3">LOOD BANK</div>
-            </div> */}
-            <div className="border-4 border-red-300 text-white text-3xl font-bold rounded-2xl  flex flex-row shadow-2xl">
-              <div className="bg-red-800 text-white text-3xl font-bold py-1 px-2 rounded-l-md shadow-2xl">SANJIVANI</div>
-              <div className=" text-red-200 text-3xl font-bold py-1 px-2 rounded-md  shadow-2xl">BLOOD BANK</div>
-            </div>
-            <p className="text-white/90 text-sm sm:text-base lg:text-lg max-w-sm px-4 sm:px-0">
-              Secure medical access to blood bank management system
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-center mb-8 lg:mb-12 flex flex-col items-center"
+          >
+            <span className="text-[11px] sm:text-xs font-bold tracking-[0.25em] text-red-200/90 uppercase mb-2">
+              Sai Healthcare Foundation's
+            </span>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight drop-shadow-md leading-tight">
+              SANJIVANI BLOOD BANK
+            </h1>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 backdrop-blur-md text-white/95 rounded-full text-[10px] sm:text-xs font-semibold uppercase tracking-widest border border-white/20 shadow-inner mt-3">
+              Kopargaon
+            </span>
+            <p className="text-white/80 text-xs sm:text-sm max-w-sm mt-4 leading-relaxed">
+              Secure medical portal for blood inventory, testing and distribution operations
             </p>
-          </div>
+          </motion.div>
 
           {/* Blood Bank Features Grid */}
-          {!isMobile && <div className="grid grid-cols-2 lg:grid-cols-2 gap-2 sm:gap-3 lg:gap-4 w-full max-w-sm sm:max-w-md px-4 sm:px-0">
-            {bloodBankFeatures.map((feature, index) => (
-              <div
-                key={index}
-                className="bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-4 border border-white/20 shadow-lg hover:bg-white/15 transition-all duration-300"
-              >
-                <feature.icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white mb-1 sm:mb-2" />
-                <h3 className="text-white font-semibold text-xs sm:text-xs lg:text-sm mb-1">{feature.label}</h3>
-                <p className="text-white/70 text-xs leading-tight">{feature.description}</p>
-              </div>
-            ))}
-          </div>}
+          {!isMobile && (
+            <div className="grid grid-cols-2 gap-4 w-full max-w-sm sm:max-w-md px-4 sm:px-0">
+              {bloodBankFeatures.map((feature, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
+                  whileHover={{ y: -4, backgroundColor: "rgba(255, 255, 255, 0.08)" }}
+                  className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-lg transition-all duration-300 group cursor-default"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center mb-3 group-hover:bg-red-650 group-hover:text-white transition-colors duration-300">
+                    <feature.icon className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-white font-bold text-xs sm:text-sm mb-1">{feature.label}</h3>
+                  <p className="text-white/60 text-[11px] leading-relaxed">{feature.description}</p>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
-
-        {/* Decorative Elements - hidden on mobile for cleaner look */}
-        <div className="absolute top-20 right-20 w-20 h-20 bg-white/5 rounded-full hidden lg:block"></div>
-        <div className="absolute bottom-32 left-16 w-16 h-16 bg-white/5 rounded-full hidden lg:block"></div>
-        <div className="absolute top-1/3 left-8 w-12 h-12 bg-white/5 rounded-full hidden lg:block"></div>
       </div>
 
       {/* Right side - Login Form */}
-      <div
-        className={`w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-6 lg:p-12 xl:p-16 transition-all duration-1000 relative min-h-[50vh] lg:min-h-screen ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-          }`}
-      >
-        <div className="w-full max-w-md">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-            <Heart className="w-6 h-6 sm:w-8 sm:h-8 text-red-800" /> Doctor <span className="text-red-800">Login</span>
-          </h1>
-          <p className="text-gray-600 mb-6 sm:mb-8 text-sm sm:text-base">Sign in to access the blood bank system</p>
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-6 lg:p-12 xl:p-16 relative min-h-[50vh] lg:min-h-screen">
+        {/* Background decorative glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] bg-red-500/5 rounded-full blur-3xl pointer-events-none" />
 
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-            {step === "credentials" && (
-              <>
-                {/* Email */}
-                <div className="space-y-2">
-                  <label htmlFor="username" className="text-sm font-medium text-gray-700 block">Email ID</label>
-                  <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                      <User className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                    </div>
-                    <input id="username" name="username" type="email" required value={formData.username} onChange={handleChange}
-                      className="block w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-4 border-2 border-gray-200 rounded-xl sm:rounded-2xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-800 text-sm sm:text-base"
-                      placeholder="Enter your Email ID" />
-                  </div>
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-10 border border-slate-100 shadow-2xl shadow-slate-100/50 relative z-10"
+        >
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-2 flex items-center gap-2.5">
+              <Heart className="w-7 h-7 sm:w-8 sm:h-8 text-red-600 fill-red-500/10 animate-pulse shrink-0" /> 
+              <span className="bg-gradient-to-r from-red-800 to-red-600 bg-clip-text text-transparent">Login</span>
+            </h1>
+            <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">
+              Enter your credentials to access the Sanjivani Blood Bank operations portal.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label htmlFor="username" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                Email ID
+              </label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <User className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-slate-400 group-focus-within:text-red-600 transition-colors" />
                 </div>
-                {/* Password */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label htmlFor="password" className="text-sm font-medium text-gray-700 block">Password</label>
-                    <Link href="#" className="text-sm font-medium text-red-800 hover:text-red-900">Forgot password?</Link>
-                  </div>
-                  <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                      <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                    </div>
-                    <input id="password" name="password" type={showPassword ? "text" : "password"} required value={formData.password} onChange={handleChange}
-                      className="block w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-3 sm:py-4 border-2 border-gray-200 rounded-xl sm:rounded-2xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-800 text-sm sm:text-base"
-                      placeholder="••••••••" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute cursor-pointer right-0 pr-3 sm:pr-4 inset-y-0 flex items-center">
-                      {showPassword ? (<EyeOff className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />) : (<Eye className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />)}
-                    </button>
-                  </div>
-                </div>
-                <button type="submit" className={`w-full flex cursor-pointer items-center justify-center px-4 sm:px-6 py-3 sm:py-4 border border-transparent rounded-xl sm:rounded-2xl text-sm sm:text-base font-medium text-white bg-gradient-to-r from-red-800 to-red-900 hover:from-red-900 hover:to-red-950 transition-all duration-200 ${isLoginLoading ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isLoginLoading}>
-                  {isLoginLoading ? (
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path fill="currentColor" d="M4 12a8 8 0 1 1 16 0a8 8 0 0 1-16 0zm0 0a8 8 0 0 1 16 0a8 8 0 0 1-16 0z" className="opacity-50" /></svg>
-                  ) : (
-                    "Send OTP"
-                  )}
+                <input 
+                  id="username" 
+                  name="username" 
+                  type="email" 
+                  required 
+                  value={formData.username} 
+                  onChange={handleChange}
+                  className="block w-full pl-11 pr-4 py-3.5 border border-slate-200 rounded-xl bg-slate-50/50 text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-red-600 focus:ring-2 focus:ring-red-100 transition-all text-sm sm:text-base"
+                  placeholder="Enter your registered email" 
+                />
+              </div>
+            </div>
+            
+            {/* Password */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => toast.info('Contact your system administrator to reset your password.')}
+                  className="text-[11px] font-bold text-red-650 hover:text-red-750 hover:underline transition-colors"
+                >
+                  Forgot password?
                 </button>
-              </>
-            )}
+              </div>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Lock className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-slate-400 group-focus-within:text-red-600 transition-colors" />
+                </div>
+                <input 
+                  id="password" 
+                  name="password" 
+                  type={showPassword ? "text" : "password"} 
+                  required 
+                  value={formData.password} 
+                  onChange={handleChange}
+                  className="block w-full pl-11 pr-11 py-3.5 border border-slate-200 rounded-xl bg-slate-50/50 text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-red-600 focus:ring-2 focus:ring-red-100 transition-all text-sm sm:text-base"
+                  placeholder="••••••••" 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)} 
+                  className="absolute cursor-pointer right-3 inset-y-0 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4.5 w-4.5 sm:h-5 sm:w-5" /> : <Eye className="h-4.5 w-4.5 sm:h-5 sm:w-5" />}
+                </button>
+              </div>
+            </div>
 
-            {step === "otp" && (
-              <>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 block">Enter 6-digit OTP</label>
-                  <div className="flex items-center gap-2 justify-between">
-                    {otp.map((d, i) => (
-                      <input
-                        key={i}
-                        ref={(el) => (otpRefs.current[i] = el)}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength={1}
-                        value={otp[i]}
-                        onChange={(e) => handleOtpChange(i, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                        onPaste={i === 0 ? handleOtpPaste : undefined}
-                        className="w-11 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-semibold border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-800"
-                      />
-                    ))}
-                  </div>
-                  <div className="text-xs sm:text-sm text-gray-600 flex items-center justify-between mt-1">
-                    <span>Expires in {Math.floor(expiresIn/60)}:{String(expiresIn%60).padStart(2,'0')}</span>
-                    <button type="button" onClick={handleResend} disabled={resendCooldown>0}
-                      className={`text-red-800 hover:text-red-900 ${resendCooldown>0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
-                      {resendCooldown>0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
-                    </button>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <button type="button" onClick={() => setStep("credentials")} className="w-1/3 px-4 py-3 rounded-xl border-2 border-gray-200 text-gray-700">Back</button>
-                  <button type="submit" className={`flex-1 flex items-center justify-center px-4 py-3 rounded-xl text-white bg-gradient-to-r from-red-800 to-red-900 ${verifying ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} disabled={verifying}>
-                    {verifying ? 'Verifying…' : 'Verify & Login'}
-                  </button>
-                </div>
-              </>
-            )}
+            <motion.button 
+              whileTap={{ scale: 0.98 }}
+              type="submit" 
+              className={`w-full flex cursor-pointer items-center justify-center px-6 py-3.5 border border-transparent rounded-xl text-sm sm:text-base font-bold text-white bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 shadow-lg shadow-red-900/10 hover:shadow-red-900/20 transition-all duration-200 ${isLoginLoading ? 'opacity-50 cursor-not-allowed' : ''}`} 
+              disabled={isLoginLoading}
+            >
+              {isLoginLoading ? (
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" className="opacity-25" />
+                  <path fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              ) : (
+                "Sign In"
+              )}
+            </motion.button>
           </form>
 
           {/* Security Badge */}
-          <div className="mt-6 sm:mt-8 bg-red-800 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/20 shadow-lg">
-            <div className="flex items-center">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full flex items-center justify-center mr-3">
-                <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-red-800" />
-              </div>
-              <div>
-                <p className="text-white font-medium text-xs sm:text-sm">Medical Grade Security</p>
-                <p className="text-white/70 text-xs">HIPAA compliant and secure access</p>
-              </div>
+          <div className="mt-6 sm:mt-8 bg-slate-50 border border-slate-100 rounded-2xl p-4 transition-all duration-300 hover:bg-slate-100/50 flex items-center gap-3.5">
+            <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center shrink-0 shadow-inner">
+              <Shield className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-slate-800 font-bold text-xs sm:text-sm">Medical Grade Security</p>
+              <p className="text-slate-500 text-[10px] sm:text-xs">HIPAA compliant and secure authentication protocol</p>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   )

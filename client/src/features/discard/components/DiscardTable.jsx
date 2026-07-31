@@ -1,5 +1,6 @@
 import { Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatDateTime } from "@/lib/format-date";
 
 const DiscardTable = ({ items = [], isLoading, onView }) => {
   return (
@@ -8,6 +9,7 @@ const DiscardTable = ({ items = [], isLoading, onView }) => {
         <thead className="bg-gray-50">
           <tr>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag No</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segment No</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Component No</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
@@ -19,7 +21,7 @@ const DiscardTable = ({ items = [], isLoading, onView }) => {
         <tbody className="bg-white divide-y divide-gray-100">
           {isLoading ? (
             <tr>
-              <td colSpan="7" className="px-4 py-8 text-center">
+              <td colSpan="8" className="px-4 py-8 text-center">
                 <div className="inline-flex items-center gap-2 text-gray-500">
                   <Loader2 className="w-5 h-5 animate-spin" /> Loading records...
                 </div>
@@ -29,24 +31,25 @@ const DiscardTable = ({ items = [], isLoading, onView }) => {
             items.map((item) => (
               <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.bagNo}</td>
+                <td className="px-4 py-3 text-sm text-gray-700">{item?.segmentNo || "-"}</td>
                 <td className="px-4 py-3 text-sm text-gray-700">{item?.componentId || "-"}</td>
-                <td className="px-4 py-3 text-sm text-gray-700">{item?.componentType || "-"}</td>
                 <td className="px-4 py-3 text-sm">
                   <span
                     className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
                         item.itemType === "Donation" || item.itemType === "Bag"
-                        ? "bg-blue-50 text-blue-700 border-blue-100" 
+                        ? "bg-blue-50 text-blue-700 border-blue-100"
                         : "bg-emerald-50 text-emerald-700 border-emerald-100"
                     }`}
                   >
                     {item.itemType}
                   </span>
                 </td>
+                <td className="px-4 py-3 text-sm text-gray-700">{item?.itemName || item?.componentType || "-"}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={item.reason}>
                   {item.reason}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
-                  {item.discardedAt}
+                  {formatDateTime(item.discardedAt)}
                 </td>
                 <td className="px-4 py-3 text-sm">
                     <Button
@@ -62,7 +65,7 @@ const DiscardTable = ({ items = [], isLoading, onView }) => {
             ))
           ) : (
             <tr>
-              <td className="px-4 py-12 text-center text-gray-500" colSpan={7}>
+              <td className="px-4 py-12 text-center text-gray-500" colSpan={8}>
                 No discarded items found matching the selection.
               </td>
             </tr>

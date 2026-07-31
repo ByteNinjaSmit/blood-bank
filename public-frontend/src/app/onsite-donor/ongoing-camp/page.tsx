@@ -7,12 +7,9 @@ import {
     CheckCircle,
     ArrowRight,
     ArrowLeft,
-    Activity,
-    Stethoscope,
     History,
     Home,
-    AlertCircle,
-    HeartPulse
+    AlertCircle
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
@@ -21,9 +18,20 @@ import { useSearchParams } from 'next/navigation'
 import { useLanguage } from '@/context/language-context'
 import { content } from '@/lib/content'
 import { getActiveCamps } from '@/actions/camp'
-import { FormInput, FormSelect, FormRadioGroup, FormVitalsInput } from './form-fields'
+import { FormInput, FormSelect, FormRadioGroup } from './form-fields'
 import { voluntaryCampDonationSchema } from '@/schemas/voluntary-camp-donation-schema'
 import { z } from 'zod'
+
+function calculateAge(dobStr: string): string {
+    if (!dobStr) return ''
+    const dob = new Date(dobStr)
+    if (isNaN(dob.getTime())) return ''
+    const today = new Date()
+    let age = today.getFullYear() - dob.getFullYear()
+    const monthDiff = today.getMonth() - dob.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) age--
+    return age >= 0 ? String(age) : ''
+}
 
 export default function OnGoingCampRegistration() {
     return (
@@ -46,8 +54,6 @@ function OnGoingCampRegistrationForm() {
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
     const [camps, setCamps] = useState<any[]>([])
     const [loadingCamps, setLoadingCamps] = useState(true)
-
-    const selectedCamp = camps.find((c: any) => c._id === formData.siteId)
 
     const [formData, setFormData] = useState({
         // 1. Identity
@@ -73,35 +79,15 @@ function OnGoingCampRegistrationForm() {
         totalDonations: '0',
         emergencyConsent: 'yes',
 
-        // 4. Medical Vitals
-        weight: '',
-        hb: '',
-        temp: '',
-        pulse: '',
-        bp: '',
-        o2Level: '',
-
-        // 5. Clinical Examination
-        pedalOedema: 'no',
-        lymphadenopathy: 'no',
-        cyanosis: 'no',
-        cvs: 'normal',
-        rs: 'normal',
-        pa: 'normal',
-        cns: 'normal',
-        gis: 'normal',
-        freeFromSkinDisease: 'yes',
-        freeFromScars: 'yes',
-
-        siteId: campIdParam || ''
+        campId: campIdParam || ''
     })
 
+    const selectedCamp = camps.find((c: any) => c._id === formData.campId)
+
     const STEPS = [
-        { id: 1, title: t.onsiteRegistrationForm.steps.identity, icon: User, fields: ['firstName', 'middleName', 'lastName', 'sex', 'dob', 'age', 'bloodGroup', 'occupation', 'siteId'] },
+        { id: 1, title: t.onsiteRegistrationForm.steps.identity, icon: User, fields: ['firstName', 'middleName', 'lastName', 'sex', 'dob', 'age', 'bloodGroup', 'occupation', 'campId'] },
         { id: 2, title: t.onsiteRegistrationForm.steps.contact, icon: MapPin, fields: ['address', 'mobile', 'pincode', 'email'] },
-        { id: 3, title: t.onsiteRegistrationForm.steps.history, icon: History, fields: ['isFirstTime', 'isRepeated', 'lastDonationDate', 'totalDonations', 'emergencyConsent'] },
-        { id: 4, title: t.onsiteRegistrationForm.steps.vitals, icon: Activity, fields: ['weight', 'hb', 'temp', 'pulse', 'bp', 'o2Level'] },
-        { id: 5, title: t.onsiteRegistrationForm.steps.examination, icon: Stethoscope, fields: ['pedalOedema', 'lymphadenopathy', 'cyanosis', 'cvs', 'rs', 'pa', 'cns', 'gis', 'freeFromSkinDisease', 'freeFromScars'] }
+        { id: 3, title: t.onsiteRegistrationForm.steps.history, icon: History, fields: ['isFirstTime', 'isRepeated', 'lastDonationDate', 'totalDonations', 'emergencyConsent'] }
     ]
 
     useEffect(() => {
@@ -114,7 +100,7 @@ function OnGoingCampRegistrationForm() {
                         const now = new Date()
                         return new Date(c.dateFrom) <= now && new Date(c.dateTo) >= now
                     })
-                    if (ongoing) setFormData(prev => ({ ...prev, siteId: ongoing._id }))
+                    if (ongoing) setFormData(prev => ({ ...prev, campId: ongoing._id }))
                 }
             }
             setLoadingCamps(false)
@@ -123,12 +109,16 @@ function OnGoingCampRegistrationForm() {
     }, [campIdParam])
 
     useEffect(() => {
-        if (campIdParam) setFormData(prev => ({ ...prev, siteId: campIdParam }))
+        if (campIdParam) setFormData(prev => ({ ...prev, campId: campIdParam }))
     }, [campIdParam])
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target
-        setFormData(prev => ({ ...prev, [name]: value }))
+        setFormData(prev => ({
+            ...prev,
+            [name]: value,
+            ...(name === 'dob' ? { age: calculateAge(value) } : {})
+        }))
         // Clear error for this field
         if (fieldErrors[name]) {
             setFieldErrors(prev => {
@@ -182,7 +172,7 @@ function OnGoingCampRegistrationForm() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!validateStep(5)) return
+        if (!validateStep(STEPS.length)) return
 
         setLoading(true)
         try {
@@ -265,8 +255,14 @@ function OnGoingCampRegistrationForm() {
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <FormRadioGroup label={t.onsiteRegistrationForm.fields.sex} name="sex" value={formData.sex} onChange={handleInputChange} options={[{ value: 'M', label: language === 'mr' ? 'पुरुष' : 'Male' }, { value: 'F', label: language === 'mr' ? 'स्त्री' : 'Female' }]} error={fieldErrors.sex} />
                                         <FormInput label={t.onsiteRegistrationForm.fields.dob} name="dob" type="date" value={formData.dob} onChange={handleInputChange} error={fieldErrors.dob} />
-                                        <FormInput label={t.onsiteRegistrationForm.fields.age} name="age" type="number" value={formData.age} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.age} error={fieldErrors.age} />
-                                        <FormSelect label={t.onsiteRegistrationForm.fields.bloodGroup} name="bloodGroup" value={formData.bloodGroup} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.select} options={['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => ({ value: bg, label: bg }))} error={fieldErrors.bloodGroup} />
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{t.onsiteRegistrationForm.fields.age}</label>
+                                            <div className={`w-full px-4 py-3 bg-gray-50 border rounded-xl font-bold text-sm ${formData.age ? 'text-gray-900' : 'text-gray-300'} ${fieldErrors.age ? 'border-rose-200' : 'border-gray-100'}`}>
+                                                {formData.age || '—'}
+                                            </div>
+                                            {fieldErrors.age && <span className="text-[10px] font-bold text-rose-500">{fieldErrors.age}</span>}
+                                        </div>
+                                        <FormSelect label={t.onsiteRegistrationForm.fields.bloodGroup} name="bloodGroup" value={formData.bloodGroup} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.select} options={[...['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => ({ value: bg, label: bg })), { value: 'NOT_KNOWN', label: language === 'mr' ? 'माहित नाही' : 'Not Known' }]} error={fieldErrors.bloodGroup} />
                                     </div>
 
                                     {selectedCamp ? (
@@ -281,12 +277,12 @@ function OnGoingCampRegistrationForm() {
                                     ) : (
                                         <FormSelect
                                             label={t.onsiteRegistrationForm.fields.camp}
-                                            name="siteId"
-                                            value={formData.siteId}
+                                            name="campId"
+                                            value={formData.campId}
                                             onChange={handleInputChange}
                                             placeholder={loadingCamps ? "Loading..." : t.onsiteRegistrationForm.placeholders.select}
                                             options={camps.map(c => ({ value: c._id, label: `${c.name} (${new Date(c.dateFrom).toLocaleDateString()})` }))}
-                                            error={fieldErrors.siteId}
+                                            error={fieldErrors.campId}
                                         />
                                     )}
 
@@ -345,48 +341,6 @@ function OnGoingCampRegistrationForm() {
                                                 </button>
                                             ))}
                                         </div>
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {currentStep === 4 && (
-                                <motion.div key="step4" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-6">
-                                    <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100 flex items-center gap-4">
-                                        <HeartPulse size={18} className="text-[#8B0000]" />
-                                        <p className="text-[11px] font-bold text-amber-800/70">STAFF: Enter clinical measurements accurately.</p>
-                                    </div>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                                        <FormVitalsInput label={t.onsiteRegistrationForm.fields.weight} name="weight" value={formData.weight} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.weight} unit="kg" error={fieldErrors.weight} />
-                                        <FormVitalsInput label={t.onsiteRegistrationForm.fields.hb} name="hb" value={formData.hb} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.hb} unit="gm%" step="0.1" error={fieldErrors.hb} />
-                                        <FormVitalsInput label={t.onsiteRegistrationForm.fields.temp} name="temp" value={formData.temp} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.temp} unit="°C" step="0.1" error={fieldErrors.temp} />
-                                        <FormVitalsInput label={t.onsiteRegistrationForm.fields.pulse} name="pulse" value={formData.pulse} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.pulse} unit="/min" error={fieldErrors.pulse} />
-                                        <FormVitalsInput label={t.onsiteRegistrationForm.fields.bp} name="bp" value={formData.bp} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.bp} unit="mmHg" type="text" error={fieldErrors.bp} />
-                                        <FormVitalsInput label={t.onsiteRegistrationForm.fields.o2Level} name="o2Level" value={formData.o2Level} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.o2Level} unit="%" error={fieldErrors.o2Level} />
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {currentStep === 5 && (
-                                <motion.div key="step5" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.pedalOedema} name="pedalOedema" value={formData.pedalOedema} onChange={handleInputChange} options={[{ value: 'yes', label: 'YES' }, { value: 'no', label: 'NO' }]} error={fieldErrors.pedalOedema} />
-                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.lymphadenopathy} name="lymphadenopathy" value={formData.lymphadenopathy} onChange={handleInputChange} options={[{ value: 'yes', label: 'YES' }, { value: 'no', label: 'NO' }]} error={fieldErrors.lymphadenopathy} />
-                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.cyanosis} name="cyanosis" value={formData.cyanosis} onChange={handleInputChange} options={[{ value: 'yes', label: 'YES' }, { value: 'no', label: 'NO' }]} error={fieldErrors.cyanosis} />
-                                    </div>
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Systematic Exam (Click to toggle)</label>
-                                        <div className="grid grid-cols-5 gap-2">
-                                            {['cvs', 'rs', 'pa', 'cns', 'gis'].map(sys => (
-                                                <button key={sys} type="button" onClick={() => setFormData(p => ({ ...p, [sys]: p[sys as keyof typeof p] === 'normal' ? 'abnormal' : 'normal' }))} className={`py-3 rounded-xl border transition-all text-center ${formData[sys as keyof typeof formData] === 'normal' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-rose-50 border-rose-200 text-rose-700'}`}>
-                                                    <p className="text-[9px] font-black uppercase mb-0.5">{sys}</p>
-                                                    <p className="text-[8px] font-bold opacity-70">{formData[sys as keyof typeof formData] === 'normal' ? (language === 'mr' ? 'सामान्य' : 'Normal') : (language === 'mr' ? 'असामान्य' : 'Abnormal')}</p>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-50">
-                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.skinDisease} name="freeFromSkinDisease" value={formData.freeFromSkinDisease} onChange={handleInputChange} options={[{ value: 'yes', label: 'YES' }, { value: 'no', label: 'NO' }]} error={fieldErrors.freeFromSkinDisease} />
-                                        <FormRadioGroup label={t.onsiteRegistrationForm.fields.scars} name="freeFromScars" value={formData.freeFromScars} onChange={handleInputChange} options={[{ value: 'yes', label: 'YES' }, { value: 'no', label: 'NO' }]} error={fieldErrors.freeFromScars} />
                                     </div>
                                 </motion.div>
                             )}

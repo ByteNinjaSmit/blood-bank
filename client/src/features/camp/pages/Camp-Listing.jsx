@@ -1,24 +1,56 @@
 "use client"
 
-import React, { useState, useMemo } from "react"
-import { Plus, Eye, Edit, Trash2, Filter, X, Search, ChevronDown, MapPin, Users, Phone, Calendar, Droplets } from "lucide-react"
-import { useNavigate, Link } from "react-router-dom"
+import React, { useEffect, useState, useMemo } from "react"
+import { Plus, Eye, Edit, Trash2, Filter, X, Search, ChevronDown, MapPin, Users, Phone, Calendar, ArrowUpDown, FileSpreadsheet, RefreshCw } from "lucide-react"
+import { useNavigate, useLocation, Link } from "react-router-dom"
 import { apiClient } from "@/core/api-client"
 import { toast } from "sonner"
 
 import Loader from "@/components/utils/Spinner"
 import { PageHeader } from "@/components/Header"
 import CampEditModal from "./CampEditModal"
+import ReasonForChangeModal from "@/components/shared/ReasonForChangeModal"
 import { useCamp } from "@/hooks/useCamp"
+import { useAuth } from "@/store/auth"
+import { useEditWithReason } from "@/hooks/useEditWithReason"
+import { exportCampsExcel } from "@/features/camp/campExcelExport"
 
-const CampList = ({ OnBack }) => {
+const CampList = () => {
   const { camps, loading, fetchCamps, updateCamp, deleteCamp } = useCamp()
+  const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Camp-Registration lands here first (so the list is one back-step away),
+  // then we immediately forward into the just-created camp's detail view.
+  useEffect(() => {
+    const openCampId = location.state?.openCampId
+    if (openCampId) {
+      // Scrub the state off this history entry first, so pressing Back later
+      // from the detail page lands here without re-triggering the redirect.
+      navigate(location.pathname, { replace: true, state: null })
+      navigate(`/camp-details?id=${openCampId}`)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state])
 
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [showFilters, setShowFilters] = useState(false)
-  const [dateRangeFilter, setDateRangeFilter] = useState("all")
+  const [fromDate, setFromDate] = useState("")
+  const [toDate, setToDate] = useState("")
+  const [sortBy, setSortBy] = useState("dateFrom")
+  const [order, setOrder] = useState("desc")
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+
+  const toggleOrder = () => setOrder((o) => (o === "desc" ? "asc" : "desc"))
+
+  const handleExportExcel = () => {
+    const generatedBy = user?.name ? [user.name.first, user.name.last].filter(Boolean).join(' ') : (user?.username || 'System User')
+    exportCampsExcel(filteredCamps, generatedBy)
+    toast.success('Camp report downloaded successfully!')
+  }
 
   const [staffList, setStaffList] = useState([])
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -39,6 +71,7 @@ const CampList = ({ OnBack }) => {
   React.useEffect(() => {
     fetchCamps()
     getStaffNames()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const getStaffNames = async () => {
@@ -63,22 +96,43 @@ const CampList = ({ OnBack }) => {
   }
 
   const filteredCamps = useMemo(() => {
-    return camps.filter((camp) => {
+    const filtered = camps.filter((camp) => {
       const matchesSearch =
-        camp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        camp.siteId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        camp.description.toLowerCase().includes(searchTerm.toLowerCase())
+        (camp.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (camp.campId || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (camp.description || "").toLowerCase().includes(searchTerm.toLowerCase())
 
       const status = getProgressStatus(camp)
       const matchesStatus = statusFilter === "all" || status === statusFilter
 
-      return matchesSearch && matchesStatus
-    })
-  }, [camps, searchTerm, statusFilter])
+      const matchesFrom = !fromDate || (camp.dateFrom && new Date(camp.dateFrom) >= new Date(fromDate))
+      const matchesTo = !toDate || (camp.dateFrom && new Date(camp.dateFrom) <= new Date(`${toDate}T23:59:59`))
 
-  const handleDelete = async (camp) => {
-    if (!window.confirm(`Are you sure you want to delete "${camp.name}"?`)) return
-    await deleteCamp(camp._id)
+      return matchesSearch && matchesStatus && matchesFrom && matchesTo
+    })
+
+    filtered.sort((a, b) => {
+      let cmp = 0
+      if (sortBy === "dateFrom") cmp = new Date(a.dateFrom || 0) - new Date(b.dateFrom || 0)
+      else if (sortBy === "name") cmp = (a.name || "").localeCompare(b.name || "")
+      return order === "asc" ? cmp : -cmp
+    })
+
+    return filtered
+  }, [camps, searchTerm, statusFilter, fromDate, toDate, sortBy, order])
+
+  const handleDelete = (camp) => {
+    setDeleteTarget(camp)
+    setShowDeleteModal(true)
+  }
+
+  // Soft-delete only — the camp moves off this list into the Recycle Bin,
+  // where it can be restored or permanently deleted.
+  const handleDeleteConfirm = async (reason) => {
+    if (!deleteTarget) return
+    await deleteCamp(deleteTarget._id, reason)
+    setShowDeleteModal(false)
+    setDeleteTarget(null)
   }
 
   const getStatusBadge = (status) => {
@@ -162,32 +216,38 @@ const CampList = ({ OnBack }) => {
     return Object.keys(errs).length === 0
   }
 
+  const { wrappedSave: wrappedSaveCamp, EditReasonDialog: campEditReasonDialog } = useEditWithReason({
+    onSave: async (payload, editReason) => {
+      setEditSaving(true)
+      try {
+        const { success } = await updateCamp(editingCamp._id, payload, editReason)
+        if (success) {
+          setEditModalOpen(false)
+          setEditingCamp(null)
+        }
+      } finally {
+        setEditSaving(false)
+      }
+    },
+    title: "Confirm Camp Changes",
+  })
+
   const handleEditSubmit = async (e) => {
     e.preventDefault()
     if (!editingCamp) return
     if (!validateEditForm()) return
 
-    setEditSaving(true)
-    try {
-      const payload = {
-        name: editForm.name.trim(),
-        description: editForm.description,
-        address: editForm.address.trim(),
-        phone: editForm.phone.trim(),
-        email: editForm.email.trim(),
-        staff: editForm.staff,
-        dateFrom: editForm.dateFrom,
-        dateTo: editForm.dateTo,
-      }
-
-      const { success } = await updateCamp(editingCamp._id, payload)
-      if (success) {
-        setEditModalOpen(false)
-        setEditingCamp(null)
-      }
-    } finally {
-      setEditSaving(false)
+    const payload = {
+      name: editForm.name.trim(),
+      description: editForm.description,
+      address: editForm.address.trim(),
+      phone: editForm.phone.trim(),
+      email: editForm.email.trim(),
+      staff: editForm.staff,
+      dateFrom: editForm.dateFrom,
+      dateTo: editForm.dateTo,
     }
+    wrappedSaveCamp(payload)
   }
 
   if (loading) {
@@ -203,7 +263,7 @@ const CampList = ({ OnBack }) => {
         description="Manage and monitor all your blood donation camps"
         iconBgColor="bg-red-600"
         rightSection={
-          <Link to={"/donations/create-donation"}>
+          <Link to={"/master-register/donor-creation"}>
             <button className="bg-orange-800 cursor-pointer hover:bg-red-900 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors">
               <Plus className="w-4 h-4" />
               New Camp
@@ -213,20 +273,40 @@ const CampList = ({ OnBack }) => {
       /> */}
       <div className="py-8 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-orange-800 rounded-2xl flex items-center justify-center">
-            <Droplets className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+          <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
+            <MapPin className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Create Blood Donation Camp</h1>
-            <p className="text-gray-600 text-sm sm:text-base">Set up a new blood donation camp location</p>
+            <h1 className="text-2xl font-bold text-gray-900">Blood Donation Camps</h1>
+            <p className="text-gray-500 text-sm">All registered blood donation camps</p>
           </div>
         </div>
-        <Link to={"/camp-registration"}>
-          <button className="bg-orange-800 cursor-pointer hover:bg-red-900 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors">
-            <Plus className="w-4 h-4" />
-            New Camp
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => fetchCamps()}
+            disabled={loading}
+            title="Refresh"
+            aria-label="Refresh"
+            className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
-        </Link>
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="bg-white cursor-pointer hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-green-700" />
+            Export to Excel
+          </button>
+          <Link to={"/camp-registration"}>
+            <button className="bg-orange-800 cursor-pointer hover:bg-red-900 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors">
+              <Plus className="w-4 h-4" />
+              New Camp
+            </button>
+          </Link>
+        </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -254,7 +334,7 @@ const CampList = ({ OnBack }) => {
           </div>
 
           {showFilters && (
-            <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
                 <select
@@ -270,27 +350,59 @@ const CampList = ({ OnBack }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Date Range</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Start Date From</label>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Start Date To</label>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Sort By</label>
                 <select
-                  value={dateRangeFilter}
-                  onChange={(e) => setDateRangeFilter(e.target.value)}
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-700"
                 >
-                  <option value="all">All Dates</option>
-                  <option value="this-month">This Month</option>
-                  <option value="this-quarter">This Quarter</option>
-                  <option value="this-year">This Year</option>
+                  <option value="dateFrom">Start Date</option>
+                  <option value="name">Name</option>
                 </select>
               </div>
 
-              {(searchTerm || statusFilter !== "all" || dateRangeFilter !== "all") && (
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={toggleOrder}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <ArrowUpDown className="w-4 h-4" />
+                  {order === "desc" ? "Newest First" : "Oldest First"}
+                </button>
+              </div>
+
+              {(searchTerm || statusFilter !== "all" || fromDate || toDate) && (
                 <button
                   onClick={() => {
                     setSearchTerm("")
                     setStatusFilter("all")
-                    setDateRangeFilter("all")
+                    setFromDate("")
+                    setToDate("")
+                    setSortBy("dateFrom")
+                    setOrder("desc")
                   }}
-                  className="sm:col-span-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  className="sm:col-span-2 lg:col-span-5 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                 >
                   <X className="w-4 h-4" />
                   Clear Filters
@@ -313,13 +425,13 @@ const CampList = ({ OnBack }) => {
             {filteredCamps.map((camp) => (
               <div
                 key={camp._id}
-                className="bg-white rounded-xl shadow-md border border-slate-200 hover:shadow-lg transition-shadow overflow-hidden"
+                className="rounded-xl shadow-md border border-slate-200 transition-shadow overflow-hidden bg-white hover:shadow-lg"
               >
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-6 border-b border-slate-100">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-50 text-orange-700 border border-red-200">
-                        {camp.siteId}
+                        {camp.campId || "N/A"}
                       </span>
                       {getStatusBadge(getProgressStatus(camp))}
                     </div>
@@ -361,7 +473,7 @@ const CampList = ({ OnBack }) => {
                               key={member._id || index}
                               className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-200"
                             >
-                              {member.name.first}
+                              {member.name?.first || (typeof member.name === 'string' ? member.name : "Staff")}
                             </span>
                           ))}
                           {camp.staff.length > 3 && (
@@ -380,7 +492,7 @@ const CampList = ({ OnBack }) => {
                     <MapPin className="w-5 h-5 text-orange-700 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Site</p>
-                      <p className="text-sm font-medium text-slate-900 mt-1">{camp.siteId}</p>
+                      <p className="text-sm font-medium text-slate-900 mt-1">{camp.campId || "N/A"}</p>
                     </div>
                   </div>
                 </div>
@@ -435,6 +547,21 @@ const CampList = ({ OnBack }) => {
         onClose={closeEdit}
         onSubmit={handleEditSubmit}
       />
+
+      {/* Delete confirmation — soft delete, moves the camp to the Recycle Bin */}
+      <ReasonForChangeModal
+        isOpen={showDeleteModal && !!deleteTarget}
+        onClose={() => {
+          setShowDeleteModal(false)
+          setDeleteTarget(null)
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Camp"
+        actionLabel="Delete"
+        message={`Delete camp "${deleteTarget?.name || ""}"? It will be moved to the Recycle Bin, where it can be restored or permanently deleted.`}
+        fieldLabel="Reason for Deletion"
+      />
+      {campEditReasonDialog}
     </div>
   )
 }

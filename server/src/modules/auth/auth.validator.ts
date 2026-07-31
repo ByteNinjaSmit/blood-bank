@@ -8,8 +8,6 @@ export const LoginBody = z.object({
   password: z.string().min(1),
 });
 
-export const StartOtpBody = LoginBody;
-
 export const VerifyOtpBody = z.object({
   email: z.string().email(),
   txnId: z.string().min(1),
@@ -50,7 +48,6 @@ function parseOrThrow<T>(s: z.ZodType<T>, v: unknown, where: string): T {
 
 export const ValidateAuth = {
   login: (req: Request) => parseOrThrow(LoginBody, req.body, 'request body'),
-  startOtp: (req: Request) => parseOrThrow(StartOtpBody, req.body, 'request body'),
   verifyOtp: (req: Request) => parseOrThrow(VerifyOtpBody, req.body, 'request body'),
   resendOtp: (req: Request) => parseOrThrow(ResendOtpBody, req.body, 'request body'),
   startRegister: (req: Request) => parseOrThrow(StartRegisterBody, req.body, 'request body'),

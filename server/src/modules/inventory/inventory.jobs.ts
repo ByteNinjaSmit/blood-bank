@@ -5,6 +5,7 @@ import { invalidate } from '@/core/cache';
 import { createUnitRepo } from '@/modules/unit/unit.repository';
 import { auditService } from '@/modules/audit/audit.service';
 import { notificationService } from '@/modules/notification/notification.service';
+import { notificationCenterService } from '@/modules/notification/notification-center.service';
 import { sendMail } from '@/core/mail';
 import { renderEmail } from '@/shared/email/templates';
 import {
@@ -21,6 +22,66 @@ const log = childLogger({ module: 'inventory-jobs' });
 const SYSTEM_ACTOR = env.SYSTEM_USER_ID;
 
 const units = createUnitRepo();
+
+// ─── Auto-Unreserve scan ────────────────────────────────────────────────────────
+
+export async function runAutoUnreserveScan(): Promise<number> {
+  const now = new Date();
+  const reservedUnits = await BloodUnitModel.find({
+    status: 'RESERVED',
+    reservedUntil: { $lt: now },
+    deletedAt: null
+  });
+
+  let unreservedCount = 0;
+  for (const unit of reservedUnits) {
+    try {
+      await units.applyEvent({
+        unitId: unit.unitId,
+        event: 'UNRESERVE',
+        actorId: SYSTEM_ACTOR,
+        reason: 'Auto-cancelled reservation (expired after 3 days limit)',
+        set: {
+          reservedFor: null,
+          reservedUntil: null,
+          reservedAt: null,
+        } as any,
+      });
+      unreservedCount++;
+
+      const dayBucket = new Date().toISOString().slice(0, 10);
+      await notificationCenterService
+        .notify({
+          title: 'Reservation auto-expired',
+          message: `Unit ${unit.unitId} (${unit.componentType} ${unit.aboGroup}${unit.rhFactor}) reservation auto-cancelled after 3-day limit`,
+          module: 'INVENTORY',
+          category: 'RESERVATION_EXPIRED',
+          severity: 'INFORMATION',
+          relatedRecordId: unit.unitId,
+          relatedRecordType: 'BloodUnit',
+          actionLink: '/inventory',
+          dedupeKey: `RESERVATION_EXPIRED:${unit.unitId}:${dayBucket}`,
+        })
+        .catch(() => undefined);
+    } catch (err) {
+      log.warn({ unitId: unit.unitId, err: (err as Error).message }, 'auto-unreserve skipped');
+    }
+  }
+
+  if (unreservedCount > 0) {
+    await invalidate('inventory:*');
+    await auditService.record({
+      actorId: SYSTEM_ACTOR,
+      action: 'STATE_TRANSITION',
+      entityType: 'BloodUnit',
+      entityId: `batch:unreserve:${unreservedCount}`,
+      after: { event: 'UNRESERVE', count: unreservedCount },
+      reason: 'daily auto-unreserve scan',
+    });
+  }
+
+  return unreservedCount;
+}
 
 // ─── Expiry scan ──────────────────────────────────────────────────────────────
 
@@ -41,6 +102,16 @@ export async function runExpiryScan(): Promise<{ expired: number; nearExpiry: nu
     } catch (err) {
       log.warn({ unitId, err: (err as Error).message }, 'expire transition skipped');
     }
+  }
+
+  // 1.5 Auto-unreserve expired reservations.
+  try {
+    const unreserved = await runAutoUnreserveScan();
+    if (unreserved > 0) {
+      log.info({ unreserved }, 'auto-unreserve scan completed');
+    }
+  } catch (err) {
+    log.warn({ err: (err as Error).message }, 'auto-unreserve scan failed');
   }
   if (expired > 0) {
     await invalidate('inventory:*');

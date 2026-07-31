@@ -24,6 +24,7 @@ import adverseReactionRouter from '@/modules/adverse-reaction/adverse-reaction.r
 import lookbackRouter from '@/modules/lookback/lookback.routes';
 import auditRouter from '@/modules/audit/audit.routes';
 import userRouter from '@/modules/user/user.routes';
+import roleRouter from '@/modules/role/role.routes';
 import hospitalRouter from '@/modules/hospital/hospital.routes';
 import campRouter from '@/modules/camp/camp.routes';
 import vendorRouter from '@/modules/vendor/vendor.routes';
@@ -33,7 +34,21 @@ import bagStockRouter from '@/modules/bag-stock/bag-stock.routes';
 import bagInspectionRouter from '@/modules/bag-inspection/bag-inspection.routes';
 import bagIssueRouter from '@/modules/bag-issue/bag-issue.routes';
 import bagDiscardRouter from '@/modules/bag-discard/bag-discard.routes';
+import bulkTransferRouter from '@/modules/bulk-transfer/bulk-transfer.routes';
+import storageTransferRouter from '@/modules/storage-transfer/storage-transfer.routes';
 import componentRouter from '@/modules/component/component.routes';
+import chemicalInventoryRouter from '@/modules/chemical-inventory/chemical-inventory.routes';
+import monthlyReportRouter from '@/modules/monthly-report/monthly-report.routes';
+import uploadRouter from '@/modules/upload/upload.routes';
+import exportRouter from '@/modules/export/export.routes';
+import dashboardRouter from '@/modules/dashboard/dashboard.routes';
+import donorCardRouter from '@/modules/donor-card/donor-card.routes';
+import monthlyReportInputRouter from '@/modules/monthly-report-input/monthly-report-input.routes';
+import appointmentRouter from '@/modules/appointment/appointment.routes';
+import feedbackRouter from '@/modules/feedback/feedback.routes';
+import misRouter from '@/modules/mis/mis.routes';
+import affectedRecordsRouter from '@/modules/affected-records/affected-records.routes';
+import notificationRouter from '@/modules/notification/notification.routes';
 import { errorMiddleware } from '@/shared/middlewares/error';
 
 interface ModuleRoute {
@@ -54,6 +69,7 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/lookback', router: lookbackRouter },
   { path: '/audit', router: auditRouter },
   { path: '/user', router: userRouter },
+  { path: '/role', router: roleRouter },
   { path: '/hospital', router: hospitalRouter },
   { path: '/camp', router: campRouter },
   { path: '/vendor', router: vendorRouter },
@@ -63,7 +79,21 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/bag-inspection', router: bagInspectionRouter },
   { path: '/bag-issue', router: bagIssueRouter },
   { path: '/bag-discard', router: bagDiscardRouter },
+  { path: '/bulk-transfer', router: bulkTransferRouter },
+  { path: '/storage-transfer', router: storageTransferRouter },
   { path: '/component', router: componentRouter },
+  { path: '/chemical-inventory', router: chemicalInventoryRouter },
+  { path: '/monthly-report', router: monthlyReportRouter },
+  { path: '/upload', router: uploadRouter },
+  { path: '/export', router: exportRouter },
+  { path: '/dashboard', router: dashboardRouter },
+  { path: '/donor-card', router: donorCardRouter },
+  { path: '/monthly-report-input', router: monthlyReportInputRouter },
+  { path: '/appointment', router: appointmentRouter },
+  { path: '/feedback', router: feedbackRouter },
+  { path: '/mis', router: misRouter },
+  { path: '/affected-records', router: affectedRecordsRouter },
+  { path: '/notification', router: notificationRouter },
 ];
 
 export function registerRoutes(): Router {

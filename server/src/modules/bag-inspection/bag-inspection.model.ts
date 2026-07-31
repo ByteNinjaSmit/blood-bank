@@ -1,5 +1,6 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import { INSPECTION_DECISION } from '@/shared/enums';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const PhysicalChecksSchema = new Schema(
   {
@@ -29,7 +30,21 @@ const BagInspectionSchema = new Schema(
     observation: { type: String, trim: true },
     decision: { type: String, enum: INSPECTION_DECISION, required: true, index: true },
     rejectionReason: { type: String, trim: true },
+    testingType: { type: String, enum: ['EMPTY', 'WB', 'PRBC', 'FFP', 'RDP', 'CRYO', 'OTHER'] },
+    testingStatus: { type: String, enum: ['SENT', 'REPORT_RECEIVED'] },
+    sentDate: { type: Date },
+    reportDate: { type: Date },
+    testingLab: { type: String, trim: true },
+    bagNo: { type: String, trim: true },
+    segmentNo: { type: String, trim: true },
+    bloodGroup: { type: String, trim: true },
+    testResult: { type: String, trim: true },
+    factorVIII: { type: Number },
+    fibrinogen: { type: Number },
+    reportImage: { type: String, default: null },
     deletedAt: { type: Date, default: null, index: true },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requireRole, requirePermission } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createVendorRepo } from '@/modules/vendor/vendor.repository';
 import { createPORepo } from '@/modules/purchase-order/purchase-order.repository';
 import { createPOService } from '@/modules/purchase-order/purchase-order.service';
@@ -17,7 +17,6 @@ const router = Router();
 router.get(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper']),
   requirePermission('po:read'),
   controllers.list,
 );
@@ -25,7 +24,6 @@ router.get(
 router.get(
   '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper']),
   requirePermission('po:read'),
   controllers.get,
 );
@@ -33,7 +31,6 @@ router.get(
 router.post(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo']),
   requirePermission('po:create'),
   controllers.create,
 );
@@ -41,33 +38,29 @@ router.post(
 router.patch(
   '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo']),
   requirePermission('po:create'),
   controllers.update,
 );
 
-router.patch(
-  '/:id/submit',
+router.delete(
+  '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo']),
   requirePermission('po:create'),
-  controllers.submit,
+  controllers.remove,
 );
 
-router.patch(
-  '/:id/approve',
+router.post(
+  '/:id/restore',
   authenticate,
-  requireRole(['system-admin', 'bbo']),
-  requirePermission('po:approve'),
-  controllers.approve,
+  requirePermission('po:create'),
+  controllers.restore,
 );
 
-router.patch(
-  '/:id/reject',
+router.delete(
+  '/:id/permanent',
   authenticate,
-  requireRole(['system-admin', 'bbo']),
-  requirePermission('po:approve'),
-  controllers.reject,
+  requirePermission('po:permanent-delete'),
+  controllers.permanentDelete,
 );
 
 export default router;

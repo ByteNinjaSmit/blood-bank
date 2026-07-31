@@ -9,7 +9,7 @@ import RequestCreationStep from './steps/RequestCreationStep';
 import MatchReviewStep from './steps/MatchReviewStep';
 import ApproveIssueStep from './steps/ApproveIssueStep';
 import CompleteStep from './steps/CompleteStep';
-import AddHospitalModal from './components/AddHospitalModal';
+import { requisitionApprovalBlockers } from '../requisition-gating';
 
 const RequisitionManagement = () => {
   const navigate = useNavigate();
@@ -21,11 +21,6 @@ const RequisitionManagement = () => {
     setCurrentStep,
     hospitals,
     hospitalsLoading,
-    addHospitalOpen,
-    setAddHospitalOpen,
-    addHospitalForm,
-    setAddHospitalForm,
-    addingHospital,
     form,
     setForm,
     requestDoc,
@@ -36,7 +31,9 @@ const RequisitionManagement = () => {
     approving,
     completing,
     crossmatchUpdating,
-    handleCreateHospital,
+    swapping,
+    groupingSaving,
+    hasChanges,
     addRequestLine,
     removeRequestLine,
     handleCreate,
@@ -47,7 +44,15 @@ const RequisitionManagement = () => {
     handleReject,
     handleCreateAndReject,
     handleCrossmatchUpdate,
+    fetchAvailableUnits,
+    handleSwapBag,
+    handleSaveRecipientGrouping,
+    handleSaveBagGrouping,
+    handleConfirmCompatibility,
+    handleResetCrossmatch,
+    handleRejectComponent,
     loadRequest,
+    refreshRequest,
   } = useRequisition(authorizationToken);
 
   React.useEffect(() => {
@@ -55,7 +60,15 @@ const RequisitionManagement = () => {
       // Load existing request and jump to appropriate step
       loadRequest(params.id);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params?.id]);
+
+  React.useEffect(() => {
+    if (params?.id && currentStep) {
+      refreshRequest(params.id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, params?.id]);
 
   const nextLabel = React.useMemo(() => {
     if (currentStep === 1) return 'Continue to Match Review';
@@ -71,13 +84,35 @@ const RequisitionManagement = () => {
     return !!requestDoc?._id;
   }, [requestDoc]);
 
+  // Step 2 → Next is gated on completeness: every proposed bag crossmatched +
+  // compatibility-confirmed + grouped, and the recipient grouping saved.
+  const step2Reasons = React.useMemo(() => requisitionApprovalBlockers(requestDoc), [requestDoc]);
+
+  // A partial match (some requested components unavailable in stock) lets the
+  // operator advance with the available components — they explicitly accepted
+  // proceeding. Crossmatch safety is still enforced downstream at Approve &
+  // Issue (PRBC with pending/incompatible crossmatch cannot be issued). Read
+  // off the persisted component statuses so it survives a page reload, unlike
+  // the transient `shortages` state.
+  const isPartialMatch = React.useMemo(
+    () => (requestDoc?.requestedComponents || []).some((c) => c.status === 'UNAVAILABLE'),
+    [requestDoc],
+  );
+
   const canProceedFromStep2 = React.useMemo(() => {
     const okStatus = ['matched', 'approved', 'issued', 'completed'];
-    return !!requestDoc?._id && okStatus.includes(requestDoc?.status);
-  }, [requestDoc]);
+    if (!requestDoc?._id || !okStatus.includes(requestDoc?.status)) return false;
+    // Once past matching (approved/issued/completed) the gate already cleared.
+    if (requestDoc.status !== 'matched') return true;
+    // Recipient grouping, each proposed bag's grouping and crossmatch worksheet
+    // must be filled before advancing — even on a partial match. The blockers
+    // only cover the available (proposed) bags, so partial fulfilment still
+    // gates on exactly the components being carried forward.
+    return step2Reasons.length === 0;
+  }, [requestDoc, step2Reasons]);
 
   const canProceedFromStep3 = React.useMemo(() => {
-    const okStatus = ['issued', 'completed'];
+    const okStatus = ['approved', 'issued', 'completed'];
     return !!requestDoc?._id && okStatus.includes(requestDoc?.status);
   }, [requestDoc]);
 
@@ -103,12 +138,12 @@ const RequisitionManagement = () => {
     (currentStep === 4 && !canProceedFromStep4);
 
   return (
-    <>
       <div className="min-h-screen bg-gray-50">
-        <RequisitionHeader onBack={() => navigate(-1)} />
+        <RequisitionHeader />
 
         <div className="max-w-7xl mx-auto px-4 py-8">
           <Stepper
+            activeStep={currentStep}
             onStepChange={(s) => setCurrentStep(s)}
             onFinalStepCompleted={async () => {
               if (!requestDoc?._id) {
@@ -144,7 +179,8 @@ const RequisitionManagement = () => {
                 removeRequestLine={removeRequestLine}
                 handleCreate={handleCreate}
                 requestDoc={requestDoc}
-                openAddHospital={() => setAddHospitalOpen(true)}
+                hasChanges={hasChanges}
+                openAddHospital={() => navigate('/hospital/add')}
                 onReject={handleRejectAndExit}
               />
             </Step>
@@ -159,6 +195,17 @@ const RequisitionManagement = () => {
                 shortages={shortages}
                 onCrossmatchUpdate={handleCrossmatchUpdate}
                 crossmatchUpdating={crossmatchUpdating}
+                fetchAvailableUnits={fetchAvailableUnits}
+                onSwapBag={handleSwapBag}
+                swapping={swapping}
+                onSaveRecipientGrouping={handleSaveRecipientGrouping}
+                onSaveBagGrouping={handleSaveBagGrouping}
+                groupingSaving={groupingSaving}
+                onConfirmCompatibility={handleConfirmCompatibility}
+                onResetCrossmatch={handleResetCrossmatch}
+                onRejectComponent={handleRejectComponent}
+                step2Reasons={step2Reasons}
+                isPartialMatch={isPartialMatch}
               />
             </Step>
 
@@ -169,6 +216,8 @@ const RequisitionManagement = () => {
                 issuing={issuing}
                 onApprove={handleApprove}
                 onIssue={handleIssue}
+                shortages={shortages}
+                step2Reasons={step2Reasons}
               />
             </Step>
 
@@ -177,20 +226,12 @@ const RequisitionManagement = () => {
                 requestDoc={requestDoc}
                 completing={completing}
                 onComplete={handleComplete}
+                shortages={shortages}
               />
             </Step>
           </Stepper>
         </div>
       </div>
-      <AddHospitalModal
-        isOpen={addHospitalOpen}
-        onClose={() => setAddHospitalOpen(false)}
-        form={addHospitalForm}
-        onChange={(patch) => setAddHospitalForm((p) => ({ ...p, ...patch }))}
-        saving={addingHospital}
-        onSave={handleCreateHospital}
-      />
-    </>
   );
 };
 

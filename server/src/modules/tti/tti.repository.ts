@@ -22,6 +22,8 @@ export interface TtiResultDto {
   tests: Array<{ testName: string; method: string; result: string; performedAt: string }>;
   releaseDecision: ReleaseDecision;
   decidedAt?: string;
+  editReason?: string;
+  lastEditedAt?: string;
 }
 
 interface RawTti {
@@ -32,6 +34,8 @@ interface RawTti {
   tests: Array<{ testName: string; method: string; result: string; performedAt: Date }>;
   releaseDecision: ReleaseDecision;
   decidedAt?: Date;
+  editReason?: string;
+  lastEditedAt?: Date;
 }
 
 function toDto(raw: RawTti): TtiResultDto {
@@ -48,11 +52,26 @@ function toDto(raw: RawTti): TtiResultDto {
     })),
     releaseDecision: raw.releaseDecision,
     decidedAt: raw.decidedAt?.toISOString(),
+    editReason: raw.editReason,
+    lastEditedAt: raw.lastEditedAt?.toISOString(),
   };
 }
 
 export interface TtiRepo {
   findByDonation(donationId: string): Promise<TtiResultDto | null>;
+  /**
+   * Resolves a TtiResult by its own _id first, falling back to a
+   * donationId lookup only when `id` is itself a valid ObjectId
+   * string — mirrors the legacy serology-results lookup exactly so
+   * behavior is unchanged for existing callers.
+   */
+  resolveByIdOrDonation(id: string): Promise<TtiResultDto | null>;
+  /**
+   * Upserts each incoming test result by testName (replacing any prior
+   * entry for that test rather than appending a duplicate) — this is
+   * what makes re-submitting an edited panel actually correct instead
+   * of piling up stale + new entries for the same test.
+   */
   recordTests(
     donationId: string,
     tests: TtiTestEntryInput[],
@@ -64,6 +83,10 @@ export interface TtiRepo {
     actorId: string,
     notes?: string,
   ): Promise<TtiResultDto>;
+  /** Records who corrected an already-finalized result, and why. */
+  setEditMeta(donationId: string, reason: string, actorId: string): Promise<TtiResultDto>;
+  /** Count of donations still awaiting a TTI release decision. */
+  countPendingTesting(): Promise<number>;
 }
 
 export function createTtiRepo(): TtiRepo {
@@ -73,14 +96,28 @@ export function createTtiRepo(): TtiRepo {
       return raw ? toDto(raw) : null;
     },
 
+    async resolveByIdOrDonation(id) {
+      let raw = (await TtiResultModel.findById(id).lean()) as RawTti | null;
+      if (!raw && Types.ObjectId.isValid(id)) {
+        raw = (await TtiResultModel.findOne({ donationId: id }).lean()) as RawTti | null;
+      }
+      return raw ? toDto(raw) : null;
+    },
+
     async recordTests(donationId, tests, actorId) {
       const actor = new Types.ObjectId(actorId);
+      const existing = await TtiResultModel.findOne({ donationId }).lean();
+      if (!existing) throw new NotFoundError('TtiResult', donationId);
+
+      const incomingNames = new Set(tests.map((t) => t.testName));
+      const preserved = ((existing as any).tests || []).filter(
+        (t: any) => !incomingNames.has(t.testName),
+      );
+      const merged = [...preserved, ...tests.map((t) => ({ ...t, technicianId: actor }))];
+
       const updated = (await TtiResultModel.findOneAndUpdate(
         { donationId },
-        {
-          $push: { tests: { $each: tests.map((t) => ({ ...t, technicianId: actor })) } },
-          updatedBy: actor,
-        },
+        { tests: merged, updatedBy: actor },
         { new: true },
       ).lean()) as RawTti | null;
       if (!updated) throw new NotFoundError('TtiResult', donationId);
@@ -102,6 +139,21 @@ export function createTtiRepo(): TtiRepo {
       ).lean()) as RawTti | null;
       if (!updated) throw new NotFoundError('TtiResult', donationId);
       return toDto(updated);
+    },
+
+    async setEditMeta(donationId, reason, actorId) {
+      const actor = new Types.ObjectId(actorId);
+      const updated = (await TtiResultModel.findOneAndUpdate(
+        { donationId },
+        { editReason: reason, lastEditedAt: new Date(), lastEditedBy: actor },
+        { new: true },
+      ).lean()) as RawTti | null;
+      if (!updated) throw new NotFoundError('TtiResult', donationId);
+      return toDto(updated);
+    },
+
+    async countPendingTesting() {
+      return TtiResultModel.countDocuments({ releaseDecision: 'pending' });
     },
   };
 }

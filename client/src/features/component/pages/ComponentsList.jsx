@@ -1,33 +1,108 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, TestTube, Loader2, Filter, Search, ChevronLeft, ChevronRight, Calendar, Package, AlertTriangle, X, Eye } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { TestTube, Package, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
+import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
+import { formatDate as formatDateKolkata } from "@/lib/format-date";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ComponentDetailsModal } from "@/components/blood-components";
-
-const COMPONENT_TYPES = [
-  { value: "RBC", label: "Red Blood Cells" },
-  { value: "FFP", label: "Fresh Frozen Plasma" },
-  { value: "Platelet", label: "Platelets" },
-  { value: "Cryo", label: "Cryoprecipitate" },
-];
-
-const STATUS_OPTIONS = [
-  { value: "in-stock", label: "In Stock" },
-  { value: "reserved", label: "Reserved" },
-  { value: "issued", label: "Issued" },
-  { value: "discarded", label: "Discarded" },
-];
+import { ComponentDetailsModal, ComponentEditModal } from "@/components/blood-components";
+import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
+import { exportComponents } from "@/utils/excelExportHelper";
+import useAccess from "@/features/access/useAccess";
+import { useCampList } from "@/features/camp/queries";
+import ComponentFilterBar from "../components/ComponentFilterBar";
+import ComponentsTable from "../components/ComponentsTable";
 
 const ComponentsList = () => {
-  const { API, authorizationToken } = useAuth();
+  const { API } = useAuth();
   const navigate = useNavigate();
+  const { can } = useAccess();
+  const canEdit = can("component", "update", "component-list");
+
+  const [excelLoading, setExcelLoading] = useState(false);
+  const { data: campsData } = useCampList();
+  const camps = campsData?.items ?? campsData ?? [];
+
+  // One row per BAG (not per component) — each bag's prepared components
+  // are collected into a single `components` array so the export can list
+  // them on stacked lines under one serial number/row, instead of
+  // repeating the bag-level details (blood group, site, RPM, time,
+  // serology) once per component.
+  const flattenComponents = (bags) => {
+    return bags
+      .map(bag => {
+        const components = ['prbc', 'ffp', 'rdp', 'cryo', 'sdp']
+          .map(type => {
+            const comp = bag[type];
+            if (!comp || comp.status !== 'prepared') return null;
+            return {
+              type: type.toUpperCase(),
+              volumeMl: comp.volumeMl ?? '—',
+              expiryDate: comp.expiryDate,
+              status: comp.componentStatus || comp.status || 'prepared',
+              storageLocation: comp.storageLocation || 'Main Fridge',
+            };
+          })
+          .filter(Boolean);
+
+        return {
+          bagNo: bag.bagNo,
+          segmentNo: bag.segmentNo || '—',
+          bloodGroup: bag.bloodGroup || (bag.bag ? `${bag.bag.bloodGroup} ${bag.bag.rh || ''}` : '—'),
+          site: bag.site || '—',
+          createdAt: bag.createdAt,
+          rpmFirstSpin: bag.rpmFirstSpin,
+          rpmSecondSpin: bag.rpmSecondSpin,
+          collectionTime: bag.collectionTime,
+          separationTime: bag.separationTime,
+          serologyTests: bag.serologyTests,
+          components,
+        };
+      })
+      .filter(bag => bag.components.length > 0);
+  };
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      let dataToExport = [];
+      if (exportAll) {
+        // Fetch all components without pagination limit (up to 5000)
+        const params = {
+          page: 1,
+          limit: 5000,
+          ...(state.filters.type && { type: state.filters.type }),
+          ...(state.filters.status && { status: state.filters.status }),
+          ...(state.filters.expiryBefore && { expiryBefore: state.filters.expiryBefore }),
+          ...(state.filters.fromDate && { fromDate: state.filters.fromDate }),
+          ...(state.filters.toDate && { toDate: state.filters.toDate }),
+          ...(appliedSearch && { search: appliedSearch }),
+          ...(state.filters.site && { site: state.filters.site }),
+          ...(state.filters.campId && { campId: state.filters.campId }),
+          order: state.filters.order,
+        };
+        const response = await apiClient.get(`/api/v2/component/list`, { params });
+        if (response.data?.components) {
+          dataToExport = flattenComponents(response.data.components);
+        }
+      } else {
+        dataToExport = flattenComponents(state.components);
+      }
+
+      if (dataToExport.length === 0) {
+        toast.info("No components to export");
+        return;
+      }
+
+      await exportComponents(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
 
   // State management following SOLID principles
   const [state, setState] = useState({
@@ -46,8 +121,17 @@ const ComponentsList = () => {
       fromDate: "",
       toDate: "",
       search: "",
+      order: "desc",
+      site: "",
+      campId: "",
     },
   });
+
+  // The search box in ComponentFilterBar is generic and writes its draft
+  // value straight into state.filters.search via onFilterChange("search", ...).
+  // The actual fetch only depends on appliedSearch, which is committed from
+  // the draft on explicit submit (Enter/button) — never on keystroke.
+  const [appliedSearch, setAppliedSearch] = useState("");
 
   // Modal state
   const [modalState, setModalState] = useState({
@@ -55,10 +139,16 @@ const ComponentsList = () => {
     selectedComponentId: null,
   });
 
+  // Edit modal state
+  const [editModalState, setEditModalState] = useState({
+    isOpen: false,
+    selectedComponentId: null,
+  });
+
   // Single responsibility: Fetch components data
   const fetchComponents = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true }));
-    
+
     try {
       const params = {
         page: state.pagination.page,
@@ -68,18 +158,13 @@ const ComponentsList = () => {
         ...(state.filters.expiryBefore && { expiryBefore: state.filters.expiryBefore }),
         ...(state.filters.fromDate && { fromDate: state.filters.fromDate }),
         ...(state.filters.toDate && { toDate: state.filters.toDate }),
-        ...(state.filters.search && { search: state.filters.search }),
+        ...(appliedSearch && { search: appliedSearch }),
+        ...(state.filters.site && { site: state.filters.site }),
+        ...(state.filters.campId && { campId: state.filters.campId }),
+        order: state.filters.order,
       };
 
-      console.log("Fetching components with params:", params);
-
-      const response = await axios.get(`${API}/api/component/list`, {
-        params,
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
-      });
-
-      console.log("Components API response:", response.data);
+      const response = await apiClient.get(`/api/v2/component/list`, { params });
 
       if (response.data?.components) {
         setState(prev => ({
@@ -117,30 +202,39 @@ const ComponentsList = () => {
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [API, authorizationToken, state.pagination.page, state.pagination.limit, state.filters]);
+  }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore, state.filters.fromDate, state.filters.toDate, state.filters.order, state.filters.site, state.filters.campId, appliedSearch]);
 
-  // Debounced search effect
+  // Fetch whenever pagination or any applied filter changes. Search no
+  // longer triggers a fetch on keystroke — only when the user explicitly
+  // submits via the SearchBox (Enter/button), which commits the draft
+  // filters.search value into appliedSearch.
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchComponents();
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [state.filters.search]);
-
-  // Effect to fetch data when other dependencies change
-  useEffect(() => {
-    if (state.filters.search === "") {
-      fetchComponents();
-    }
-  }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore, state.filters.fromDate, state.filters.toDate]);
+    fetchComponents();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.pagination.page, state.pagination.limit, state.filters.type, state.filters.status, state.filters.expiryBefore, state.filters.fromDate, state.filters.toDate, state.filters.order, state.filters.site, state.filters.campId, appliedSearch]);
 
   // Single responsibility: Handle filter changes
   const handleFilterChange = (filterType, value) => {
     setState(prev => ({
       ...prev,
-      filters: { ...prev.filters, [filterType]: value },
+      filters: {
+        ...prev.filters,
+        [filterType]: value,
+        // Switching site away from "camp" (or clearing it) drops any
+        // previously selected camp — it's only meaningful when site=camp.
+        ...(filterType === "site" && value !== "camp" ? { campId: "" } : {}),
+      },
       pagination: { ...prev.pagination, page: 1 }, // Reset to first page
+    }));
+  };
+
+  // Commits the draft search text (state.filters.search) into appliedSearch,
+  // the actual fetch dependency. Called only on explicit SearchBox submit.
+  const handleSearchSubmit = () => {
+    setAppliedSearch(state.filters.search);
+    setState(prev => ({
+      ...prev,
+      pagination: { ...prev.pagination, page: 1 },
     }));
   };
 
@@ -156,16 +250,17 @@ const ComponentsList = () => {
   const handleRowsPerPageChange = (newLimit) => {
     setState(prev => ({
       ...prev,
-      pagination: { 
-        ...prev.pagination, 
-        limit: parseInt(newLimit), 
-        page: 1 
+      pagination: {
+        ...prev.pagination,
+        limit: parseInt(newLimit),
+        page: 1
       },
     }));
   };
 
   // Single responsibility: Clear all filters
   const clearFilters = () => {
+    setAppliedSearch("");
     setState(prev => ({
       ...prev,
       filters: {
@@ -175,6 +270,9 @@ const ComponentsList = () => {
         fromDate: "",
         toDate: "",
         search: "",
+        order: "desc",
+        site: "",
+        campId: "",
       },
       pagination: { ...prev.pagination, page: 1 },
     }));
@@ -196,38 +294,26 @@ const ComponentsList = () => {
     });
   };
 
+  // Single responsibility: Open component edit modal
+  const handleEditComponent = (componentId) => {
+    setEditModalState({
+      isOpen: true,
+      selectedComponentId: componentId,
+    });
+  };
+
+  // Single responsibility: Close component edit modal
+  const handleCloseEditModal = () => {
+    setEditModalState({
+      isOpen: false,
+      selectedComponentId: null,
+    });
+  };
+
   // Single responsibility: Format date
   const formatDate = (dateString) => {
     if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  // Single responsibility: Get status badge variant
-  const getStatusBadgeVariant = (status) => {
-    switch (status) {
-      case "in-stock": return "default";
-      case "reserved": return "secondary";
-      case "issued": return "outline";
-      case "discarded": return "destructive";
-      default: return "outline";
-    }
-  };
-
-  // Single responsibility: Check if component is near expiry
-  const isNearExpiry = (expiryDate) => {
-    if (!expiryDate) return false;
-    const today = new Date();
-    const expiry = new Date(expiryDate);
-    const daysUntilExpiry = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
-    return daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
-  };
-
-  // Single responsibility: Check if component is expired
-  const isExpired = (expiryDate) => {
-    if (!expiryDate) return false;
-    const today = new Date();
-    const expiry = new Date(expiryDate);
-    return expiry < today;
+    return formatDateKolkata(dateString);
   };
 
   return (
@@ -237,462 +323,62 @@ const ComponentsList = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-2.5 bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-sm">
-                <Package className="w-6 h-6 text-white" />
+              <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
+                <Package className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Components Inventory</h1>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                <h1 className="text-2xl font-bold text-gray-900">Components Inventory</h1>
+                <p className="text-gray-500 text-sm">
                   Management Portal
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
-                <Button 
-                    onClick={() => navigate("/component/separate")}
-                    variant="outline"
-                    size="sm"
-                    className="h-9 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
-                >
-                    <TestTube className="w-3.5 h-3.5 mr-1.5 text-red-500" />
-                    Separate
-                </Button>
-                <Button 
-                    onClick={() => navigate("/component/near-expiry")}
-                    variant="outline"
-                    size="sm"
-                    className="h-9 border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
-                >
-                    <AlertTriangle className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
-                    Near Expiry
-                </Button>
-              </div>
+              <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+              <Button
+                onClick={() => navigate("/component/separate")}
+                variant="outline"
+                size="sm"
+                className="h-9 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+              >
+                <TestTube className="w-3.5 h-3.5 mr-1.5 text-red-500" />
+                Separate
+              </Button>
+              <Button
+                onClick={() => navigate("/component/near-expiry")}
+                variant="outline"
+                size="sm"
+                className="h-9 border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
+                Near Expiry
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Filters Card */}
-        {/* Compact Filters Section */}
-        <Card className="mb-4 border-red-50 shadow-sm">
-          <CardContent className="p-3">
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Search - Flexible Width */}
-              <div className="flex-1 min-w-[240px] space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Search</label>
-                <div className="relative group">
-                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 w-3.5 h-3.5 transition-colors" />
-                  <Input
-                    placeholder="Bag No, ID, or blood group..."
-                    value={state.filters.search}
-                    onChange={(e) => handleFilterChange("search", e.target.value)}
-                    className="pl-8 h-9 text-xs border-gray-200 bg-gray-50/50 focus:bg-white focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-all shadow-none"
-                    disabled={state.isLoading}
-                  />
-                </div>
-              </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <ComponentFilterBar
+          filters={state.filters}
+          isLoading={state.isLoading}
+          onFilterChange={handleFilterChange}
+          onSearchSubmit={handleSearchSubmit}
+          onClear={clearFilters}
+          camps={camps}
+        />
 
-              {/* Type Dropdown */}
-              <div className="w-36 space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Type</label>
-                <Select value={state.filters.type || "all"} onValueChange={(value) => handleFilterChange("type", value === "all" ? "" : value)}>
-                  <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
-                    <SelectValue placeholder="All Types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    {COMPONENT_TYPES.map((type) => (
-                      <SelectItem key={type.value} value={type.value} className="text-xs">
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Status Dropdown */}
-              <div className="w-36 space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Status</label>
-                <Select value={state.filters.status || "all"} onValueChange={(value) => handleFilterChange("status", value === "all" ? "" : value)}>
-                  <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    {STATUS_OPTIONS.map((status) => (
-                      <SelectItem key={status.value} value={status.value} className="text-xs">
-                        {status.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Expiry Field */}
-              <div className="w-36 space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Expiry Before</label>
-                <div className="relative">
-                  <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5 pointer-events-none" />
-                  <Input
-                    type="date"
-                    value={state.filters.expiryBefore}
-                    onChange={(e) => handleFilterChange("expiryBefore", e.target.value)}
-                    className="pl-8 h-9 text-[10px] border-gray-200 bg-gray-50/50 shadow-none"
-                  />
-                </div>
-              </div>
-
-              {/* From Date */}
-              <div className="w-36 space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">From Date</label>
-                <div className="relative">
-                  <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5 pointer-events-none" />
-                  <Input
-                    type="date"
-                    value={state.filters.fromDate}
-                    onChange={(e) => handleFilterChange("fromDate", e.target.value)}
-                    className="pl-8 h-9 text-[10px] border-gray-200 bg-gray-50/50 shadow-none"
-                  />
-                </div>
-              </div>
-
-              {/* To Date */}
-              <div className="w-36 space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">To Date</label>
-                <div className="relative">
-                  <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5 pointer-events-none" />
-                  <Input
-                    type="date"
-                    value={state.filters.toDate}
-                    onChange={(e) => handleFilterChange("toDate", e.target.value)}
-                    className="pl-8 h-9 text-[10px] border-gray-200 bg-gray-50/50 shadow-none"
-                  />
-                </div>
-              </div>
-
-              {/* Compact Actions */}
-              <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
-                {Object.values(state.filters).some(filter => filter !== "") && (
-                  <button 
-                    onClick={clearFilters}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-100"
-                    title="Clear all filters"
-                  >
-                    <X className="w-3 h-3" />
-                    Reset
-                  </button>
-                )}
-                <div className="flex items-center gap-1">
-                   {state.isLoading && <Loader2 className="w-3 h-3 animate-spin text-gray-400" />}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Components Table */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CardTitle>Components Grouped by Blood Bag ({state.pagination.total})</CardTitle>
-                {state.filters.search && (
-                  <Badge variant="secondary" className="text-xs">
-                    Search: "{state.filters.search}"
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="text-xs text-gray-500">
-                  Page {state.pagination.page} of {state.pagination.totalPages}
-                </div>
-                <Button 
-                  onClick={fetchComponents} 
-                  variant="outline" 
-                  size="sm" 
-                  disabled={state.isLoading}
-                >
-                  {state.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Bag Number
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Red Blood Cells (RBC)
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Fresh Frozen Plasma (FFP)
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Platelets
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Cryoprecipitate
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Blood Group
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Site
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Created
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
-                  {state.isLoading ? (
-                    <tr>
-                      <td colSpan="9" className="px-4 py-8 text-center">
-                        <div className="inline-flex items-center gap-2 text-gray-500">
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Loading components inventory...
-                        </div>
-                      </td>
-                    </tr>
-                  ) : state.components.length === 0 ? (
-                    <tr>
-                      <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
-                        No blood bag groups found.
-                      </td>
-                    </tr>
-                  ) : (
-                    state.components.map((bag, idx) => (
-                      <tr key={`${bag.bagNo}-${idx}`} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-900">
-                          {bag.bagNo}
-                        </td>
-                        {/* RBC column */}
-                        <td className="px-4 py-3 text-sm">
-                          {bag.rbc.status === "prepared" ? (
-                            <div className="flex flex-col gap-0.5">
-                              <Badge variant={getStatusBadgeVariant(bag.rbc.componentStatus)} className="w-fit text-[9px] font-bold px-1 py-0 uppercase tracking-wider">
-                                Prepared
-                              </Badge>
-                              <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.rbc.volumeMl} mL</span>
-                              {isExpired(bag.rbc.expiryDate) && (
-                                <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
-                                  <AlertTriangle className="w-2.5 h-2.5" /> Expired
-                                </span>
-                              )}
-                              {isNearExpiry(bag.rbc.expiryDate) && !isExpired(bag.rbc.expiryDate) && (
-                                <span className="text-[9px] text-yellow-600 flex items-center gap-0.5 mt-0.5">
-                                  <AlertTriangle className="w-2.5 h-2.5" /> Near Expiry
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <Badge variant="outline" className="w-fit text-[9px] font-medium text-gray-400 border-gray-200 bg-gray-50/50 uppercase tracking-wider">
-                              Unprepared
-                            </Badge>
-                          )}
-                        </td>
-                        {/* FFP column */}
-                        <td className="px-4 py-3 text-sm">
-                          {bag.ffp.status === "prepared" ? (
-                            <div className="flex flex-col gap-0.5">
-                              <Badge variant={getStatusBadgeVariant(bag.ffp.componentStatus)} className="w-fit text-[9px] font-bold px-1 py-0 uppercase tracking-wider">
-                                Prepared
-                              </Badge>
-                              <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.ffp.volumeMl} mL</span>
-                              {isExpired(bag.ffp.expiryDate) && (
-                                <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
-                                  <AlertTriangle className="w-2.5 h-2.5" /> Expired
-                                </span>
-                              )}
-                              {isNearExpiry(bag.ffp.expiryDate) && !isExpired(bag.ffp.expiryDate) && (
-                                <span className="text-[9px] text-yellow-600 flex items-center gap-0.5 mt-0.5">
-                                  <AlertTriangle className="w-2.5 h-2.5" /> Near Expiry
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <Badge variant="outline" className="w-fit text-[9px] font-medium text-gray-400 border-gray-200 bg-gray-50/50 uppercase tracking-wider">
-                              Unprepared
-                            </Badge>
-                          )}
-                        </td>
-                        {/* Platelets column */}
-                        <td className="px-4 py-3 text-sm">
-                          {bag.platelet.status === "prepared" ? (
-                            <div className="flex flex-col gap-0.5">
-                              <Badge variant={getStatusBadgeVariant(bag.platelet.componentStatus)} className="w-fit text-[9px] font-bold px-1 py-0 uppercase tracking-wider">
-                                Prepared
-                              </Badge>
-                              <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.platelet.volumeMl} mL</span>
-                              {isExpired(bag.platelet.expiryDate) && (
-                                <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
-                                  <AlertTriangle className="w-2.5 h-2.5" /> Expired
-                                </span>
-                              )}
-                              {isNearExpiry(bag.platelet.expiryDate) && !isExpired(bag.platelet.expiryDate) && (
-                                <span className="text-[9px] text-yellow-600 flex items-center gap-0.5 mt-0.5">
-                                  <AlertTriangle className="w-2.5 h-2.5" /> Near Expiry
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <Badge variant="outline" className="w-fit text-[9px] font-medium text-gray-400 border-gray-200 bg-gray-50/50 uppercase tracking-wider">
-                              Unprepared
-                            </Badge>
-                          )}
-                        </td>
-                        {/* Cryo column */}
-                        <td className="px-4 py-3 text-sm">
-                          {bag.cryo.status === "prepared" ? (
-                            <div className="flex flex-col gap-0.5">
-                              <Badge variant={getStatusBadgeVariant(bag.cryo.componentStatus)} className="w-fit text-[9px] font-bold px-1 py-0 uppercase tracking-wider">
-                                Prepared
-                              </Badge>
-                              <span className="font-semibold text-gray-900 text-xs mt-0.5">{bag.cryo.volumeMl} mL</span>
-                              {isExpired(bag.cryo.expiryDate) && (
-                                <span className="text-[9px] text-red-600 flex items-center gap-0.5 mt-0.5">
-                                  <AlertTriangle className="w-2.5 h-2.5" /> Expired
-                                </span>
-                              )}
-                              {isNearExpiry(bag.cryo.expiryDate) && !isExpired(bag.cryo.expiryDate) && (
-                                <span className="text-[9px] text-yellow-600 flex items-center gap-0.5 mt-0.5">
-                                  <AlertTriangle className="w-2.5 h-2.5" /> Near Expiry
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <Badge variant="outline" className="w-fit text-[9px] font-medium text-gray-400 border-gray-200 bg-gray-50/50 uppercase tracking-wider">
-                              Unprepared
-                            </Badge>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-700">
-                          {bag.bloodGroup || "-"}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {bag.site || "-"}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {formatDate(bag.createdAt)}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewDetails(bag.id)}
-                            className="h-8 w-8 p-0 border-red-100 text-red-700 hover:bg-red-50"
-                            title="View Group Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex items-center justify-between mt-6 bg-gray-50/10 p-4 border-t rounded-b-xl">
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-gray-500">
-                  Showing {((state.pagination.page - 1) * state.pagination.limit) + 1} to{" "}
-                  {Math.min(state.pagination.page * state.pagination.limit, state.pagination.total)} of{" "}
-                  {state.pagination.total} results
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Rows per page:</span>
-                  <Select 
-                    value={state.pagination.limit.toString()} 
-                    onValueChange={handleRowsPerPageChange}
-                  >
-                    <SelectTrigger className="w-20 h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5</SelectItem>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="25">25</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              {state.pagination.totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(state.pagination.page - 1)}
-                    disabled={state.pagination.page === 1 || state.isLoading}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Previous
-                  </Button>
-                  
-                  <div className="flex items-center gap-1">
-                    {(() => {
-                      const totalPages = state.pagination.totalPages;
-                      const currentPage = state.pagination.page;
-                      const pages = [];
-                      
-                      // Calculate start and end page numbers
-                      let startPage = Math.max(1, currentPage - 2);
-                      let endPage = Math.min(totalPages, currentPage + 2);
-                      
-                      // Adjust if we're near the beginning or end
-                      if (endPage - startPage < 4) {
-                        if (startPage === 1) {
-                          endPage = Math.min(totalPages, startPage + 4);
-                        } else {
-                          startPage = Math.max(1, endPage - 4);
-                        }
-                      }
-                      
-                      for (let i = startPage; i <= endPage; i++) {
-                        pages.push(
-                          <Button
-                            key={i}
-                            variant={currentPage === i ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => handlePageChange(i)}
-                            disabled={state.isLoading}
-                            className="w-8 h-8 p-0"
-                          >
-                            {i}
-                          </Button>
-                        );
-                      }
-                      
-                      return pages;
-                    })()}
-                  </div>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(state.pagination.page + 1)}
-                    disabled={state.pagination.page === state.pagination.totalPages || state.isLoading}
-                  >
-                    Next
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <ComponentsTable
+          state={state}
+          canEdit={canEdit}
+          formatDate={formatDate}
+          onRefresh={() => fetchComponents()}
+          onView={handleViewDetails}
+          onEdit={handleEditComponent}
+          onPageChange={handlePageChange}
+          onRowsPerPageChange={handleRowsPerPageChange}
+        />
       </div>
 
       {/* Component Details Modal */}
@@ -700,6 +386,14 @@ const ComponentsList = () => {
         isOpen={modalState.isOpen}
         onClose={handleCloseModal}
         componentId={modalState.selectedComponentId}
+      />
+
+      {/* Component Edit Modal */}
+      <ComponentEditModal
+        isOpen={editModalState.isOpen}
+        onClose={handleCloseEditModal}
+        componentId={editModalState.selectedComponentId}
+        onSaved={fetchComponents}
       />
     </div>
   );

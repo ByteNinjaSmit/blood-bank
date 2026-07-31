@@ -1,16 +1,17 @@
 "use client"
 import { useEffect, useState } from "react"
-import { Droplets, CheckCircle, MapPin, Phone, Mail, Calendar, Users } from "lucide-react"
+import { Droplets, CheckCircle, ClipboardList, MapPin, Phone, Mail, Calendar, Users } from "lucide-react"
 import { toast } from "sonner"
 import { apiClient } from "@/core/api-client"
 import { useNavigate } from "react-router-dom"
 import Stepper, { Step } from "@/components/Stepper"
+import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav"
 
 const CampRegistration = () => {
   const navigate = useNavigate()
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [, setIsSubmitting] = useState(false)
   const [staffList, setStaffList] = useState([])
-  const [errors, setErrors] = useState({})
+  const [, setErrors] = useState({})
   const [stepErrors, setStepErrors] = useState({})
 
   const [formData, setFormData] = useState({
@@ -60,26 +61,26 @@ const CampRegistration = () => {
       if (response.status === 200) {
         setStaffList(response.data.data || [])
       }
-    } catch (error) {
-      console.log(error.response?.data?.message)
+    } catch {
+      // Staff list is non-critical; ignore load failures.
     }
   }
 
   useEffect(() => {
     getStaffNames();
-  }, [API])
+  }, [])
 
   const validateStep = (step) => {
     const newErrors = {}
 
     if (step === 1) {
-      if (!formData.siteId.trim()) newErrors.siteId = "Site ID is requiorange"
-      if (!formData.name.trim()) newErrors.name = "Camp name is requiorange"
+      if (!formData.siteId.trim()) newErrors.siteId = "Site ID is required"
+      if (!formData.name.trim()) newErrors.name = "Camp name is required"
     } else if (step === 2) {
-      if (!formData.address.trim()) newErrors.address = "Address is requiorange"
-      if (!formData.contactInfo.phone.trim()) newErrors.phone = "Phone is requiorange"
+      if (!formData.address.trim()) newErrors.address = "Address is required"
+      if (!formData.contactInfo.phone.trim()) newErrors.phone = "Phone is required"
       if (!formData.contactInfo.email.trim()) {
-        newErrors.email = "Email is requiorange"
+        newErrors.email = "Email is required"
       } else if (!/\S+@\S+\.\S+/.test(formData.contactInfo.email)) {
         newErrors.email = "Email format is invalid"
       }
@@ -88,8 +89,8 @@ const CampRegistration = () => {
         newErrors.phone = "Phone format should be 10 digits"
       }
     } else if (step === 3) {
-      if (!formData.dateFrom) newErrors.dateFrom = "Start date is requiorange"
-      if (!formData.dateTo) newErrors.dateTo = "End date is requiorange"
+      if (!formData.dateFrom) newErrors.dateFrom = "Start date is required"
+      if (!formData.dateTo) newErrors.dateTo = "End date is required"
       if (formData.dateFrom && formData.dateTo && new Date(formData.dateTo) < new Date(formData.dateFrom)) {
         newErrors.dateTo = "End date cannot be earlier than start date"
       }
@@ -108,7 +109,7 @@ const CampRegistration = () => {
         contactInfo: { ...formData.contactInfo, [field]: value },
       })
     } else {
-      setFormData({ ...formData, [name]: value })
+      setFormData({ ...formData, [name]: name === "siteId" ? value.toUpperCase() : value })
     }
   }
 
@@ -121,19 +122,24 @@ const CampRegistration = () => {
     })
   }
 
-  const handleStepChange = (step) => {
-    if (!validateStep(step - 1)) {
+  const handleStepChange = (step, fromStep) => {
+    // Only gate forward navigation — going back should never be blocked by
+    // validation on the step being left.
+    if (step > fromStep && !validateStep(fromStep)) {
       return false
     }
   }
 
   const handleSubmit = async () => {
-    if (!validateStep(3)) return
+    if (!validateForm()) {
+      toast.error("Please fill all required fields correctly")
+      return
+    }
 
     setIsSubmitting(true)
     try {
       const response = await apiClient.post('/api/v2/camp/new', {
-          siteId: formData.siteId,
+          campId: formData.siteId,
           name: formData.name,
           description: formData.description,
           address: formData.address,
@@ -145,6 +151,7 @@ const CampRegistration = () => {
         })
 
       if (response.status === 201) {
+        const created = response.data.data
         toast.success(response.data.message || "Camp created successfully")
         setFormData({
           siteId: "",
@@ -156,14 +163,21 @@ const CampRegistration = () => {
           dateFrom: "",
           dateTo: "",
         })
-        navigate("/camp-listing")
+        // Land on the camp list first (so it's one back-step away), then
+        // Camp-Listing forwards straight into the camp we just created.
+        navigate("/camp-listing", { state: { openCampId: created?._id } })
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Error creating camp")
+      // apiClient's response interceptor throws a plain ApiError (not a raw
+      // axios error), so the real validation reason lives on error.message —
+      // error.response is never set here.
+      toast.error(error.message || "Error creating camp")
     } finally {
       setIsSubmitting(false)
     }
   }
+
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers()
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
@@ -171,16 +185,17 @@ const CampRegistration = () => {
         {/* Header */}
         <div className="mb-8 sm:mb-12">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-orange-800 rounded-2xl flex items-center justify-center">
-              <Droplets className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+            <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
+              <ClipboardList className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Create Blood Donation Camp</h1>
-              <p className="text-gray-600 text-sm sm:text-base">Set up a new blood donation camp location</p>
+              <h1 className="text-2xl font-bold text-gray-900">Create Blood Donation Camp</h1>
+              <p className="text-gray-500 text-sm">Register a new camp</p>
             </div>
           </div>
         </div>
 
+        <div onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
         <Stepper
           initialStep={1}
           onStepChange={handleStepChange}
@@ -431,6 +446,7 @@ const CampRegistration = () => {
             </div>
           </Step>
         </Stepper>
+        </div>
       </div>
     </div>
   )

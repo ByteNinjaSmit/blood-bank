@@ -1,5 +1,13 @@
 import React from 'react';
-import { CheckCircle2, XCircle, Clock, Droplets, TestTube, Scissors, Package, Building2, User } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Droplets, TestTube, Scissors, Package, Building2, User, ClipboardCheck } from 'lucide-react';
+
+const formatBloodGroup = (bloodGroup, rhFactor) => {
+  if (!bloodGroup) return '';
+  const baseGroup = bloodGroup.replace(/[\s+−-]+$/, '');
+  const rh = String(rhFactor || '').toUpperCase();
+  const sign = rh === 'POSITIVE' ? ' +' : rh === 'NEGATIVE' ? ' −' : '';
+  return `${baseGroup}${sign}`;
+};
 
 const UNIT_STATUS_ORDER = [
   'COLLECTED', 'IN_TESTING', 'QUARANTINE', 'RELEASED',
@@ -14,11 +22,27 @@ const UNIT_STATUS_CLASSES = {
   RESERVED:    'bg-teal-50 text-teal-700 border-teal-200',
   CROSSMATCHED:'bg-indigo-50 text-indigo-700 border-indigo-200',
   ISSUED:      'bg-purple-50 text-purple-700 border-purple-200',
-  TRANSFUSED:  'bg-pink-50 text-pink-700 border-pink-200',
+  TRANSFUSED:  'bg-purple-50 text-purple-700 border-purple-200',
   DISCARDED:   'bg-red-50 text-red-700 border-red-200',
   EXPIRED:     'bg-gray-50 text-gray-500 border-gray-200',
   RETURNED_UNUSED: 'bg-gray-50 text-gray-600 border-gray-200',
 };
+
+// Bank-facing status vocabulary — TRANSFUSED is a clinical outcome that
+// happens after the unit already left the bank as ISSUED, so from the
+// bank's own inventory perspective it's still just "issued".
+const UNIT_STATUS_DISPLAY = {
+  RELEASED:   'INSTOCK',
+  QUARANTINE: 'QUARANTINED',
+  TRANSFUSED: 'ISSUED',
+};
+
+// SDP is collected by apheresis as a single already-separated product; the
+// 'WB' componentType on its unit is only an internal placeholder (same
+// derivation path whole-blood uses) and should never be shown to staff.
+function displayComponentType(donationType, componentType) {
+  return donationType === 'SDP' && componentType === 'WB' ? 'SDP' : componentType;
+}
 
 function maxStatusIndex(units) {
   if (!units || units.length === 0) return 0;
@@ -86,14 +110,31 @@ export default function DonationTimeline({ donation }) {
   const isCamp = Boolean(donation.campId);
   const maxIdx = maxStatusIndex(donation.units);
 
-  function unitReached(status) {
-    return maxIdx >= UNIT_STATUS_ORDER.indexOf(status) ? 'done' : 'pending';
-  }
-
   const ttiDecision = donation.ttiReleaseDecision;
   const ttiStatus =
     ttiDecision === 'released' ? 'done' :
-    ttiDecision === 'rejected' ? 'failed' : 'pending';
+    ttiDecision === 'reactive' ? 'failed' : 'pending';
+
+  // Separation has actually happened once any unit other than the raw
+  // collection placeholder ('WB') exists — units.length alone isn't
+  // reliable since a not-yet-separated donation still has exactly 1 unit.
+  const hasSeparated = donation.units && donation.units.some(u => u.componentType !== 'WB');
+
+  let releaseStatus;
+  let releaseDetail;
+  if (ttiDecision === 'reactive') {
+    releaseStatus = 'failed';
+    releaseDetail = 'TTI testing failed — components discarded';
+  } else if (maxIdx >= UNIT_STATUS_ORDER.indexOf('ISSUED')) {
+    releaseStatus = 'done';
+    releaseDetail = 'Units issued to patient / hospital';
+  } else if (maxIdx >= UNIT_STATUS_ORDER.indexOf('RELEASED')) {
+    releaseStatus = 'done';
+    releaseDetail = 'Units available in inventory';
+  } else {
+    releaseStatus = 'pending';
+    releaseDetail = 'Pending TTI clearance';
+  }
 
   const steps = [
     {
@@ -130,13 +171,20 @@ export default function DonationTimeline({ donation }) {
         : 'Pending fitness assessment',
     },
     {
+      icon: ClipboardCheck,
+      label: 'Donation Created',
+      timestamp: fmt(donation.createdAt) ?? fmt(donation.collectedAt),
+      status: 'done',
+      detail: 'Blood bag has been collected and recorded in the system',
+    },
+    {
       icon: Scissors,
       label: 'Component Separation',
       timestamp: null,
-      status: maxIdx >= UNIT_STATUS_ORDER.indexOf('IN_TESTING') ? 'done' : 'pending',
-      detail: donation.units && donation.units.length > 0
-        ? `${donation.units.length} component${donation.units.length !== 1 ? 's' : ''}: ${[...new Set(donation.units.map(u => u.componentType))].join(', ')}`
-        : 'No components yet',
+      status: hasSeparated ? 'done' : 'pending',
+      detail: hasSeparated
+        ? `${donation.units.length} component${donation.units.length !== 1 ? 's' : ''}: ${[...new Set(donation.units.map(u => displayComponentType(donation.donationType, u.componentType)))].join(', ')}`
+        : 'Not separated yet',
     },
     {
       icon: TestTube,
@@ -144,19 +192,15 @@ export default function DonationTimeline({ donation }) {
       timestamp: null,
       status: ttiStatus,
       detail: ttiDecision === 'released' ? 'All TTI tests cleared — units released from quarantine'
-        : ttiDecision === 'rejected' ? 'TTI tests failed — units quarantined / discarded'
+        : ttiDecision === 'reactive' ? `Donor tested positive — ${donation.ttiReason || 'reactive result, units discarded'}`
         : 'Awaiting serology results',
     },
     {
       icon: Package,
       label: 'Released to Inventory',
       timestamp: null,
-      status: unitReached('RELEASED'),
-      detail: maxIdx >= UNIT_STATUS_ORDER.indexOf('ISSUED')
-        ? 'Units issued to patient / hospital'
-        : maxIdx >= UNIT_STATUS_ORDER.indexOf('RELEASED')
-        ? 'Units available in inventory'
-        : 'Pending TTI clearance',
+      status: releaseStatus,
+      detail: releaseDetail,
     },
   ];
 
@@ -175,13 +219,16 @@ export default function DonationTimeline({ donation }) {
           </span>
           {donation.bloodGroup && (
             <span className="px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-200 font-medium">
-              {donation.bloodGroup}{donation.rhFactor === 'Positive' ? ' +' : donation.rhFactor === 'Negative' ? ' −' : ''}
+              {formatBloodGroup(donation.bloodGroup, donation.rhFactor)}
             </span>
           )}
         </div>
         <p className="text-xs font-mono text-gray-600 font-medium">{donation.donationId}</p>
         {donation.donorName && (
-          <p className="text-xs text-gray-500">Donor: {donation.donorName}</p>
+          <p className="text-xs text-gray-500">
+            Donor: {donation.donorName}
+            {donation.donorPublicId && <span className="font-mono text-gray-400"> ({donation.donorPublicId})</span>}
+          </p>
         )}
         <p className="text-xs text-gray-400">
           {donation.unitCount} unit{donation.unitCount !== 1 ? 's' : ''} derived
@@ -196,21 +243,23 @@ export default function DonationTimeline({ donation }) {
       </div>
 
       {/* Unit status grid */}
-      {donation.units && donation.units.length > 0 && (
+      {donation.units && donation.units.filter(u => u.componentType === 'WHOLE_BLOOD' || u.status !== 'COLLECTED').length > 0 && (
         <div className="mt-5 pt-5 border-t border-gray-200">
           <p className="text-xs font-semibold text-gray-600 mb-3 uppercase tracking-wide">Blood Units</p>
           <div className="space-y-2">
-            {donation.units.map((u, i) => (
+            {donation.units
+              .filter(u => u.componentType === 'WHOLE_BLOOD' || u.status !== 'COLLECTED')
+              .map((u, i) => (
               <div key={u.unitId ?? i} className="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-white">
                 <div>
-                  <p className="text-xs font-semibold text-gray-800">{u.componentType}</p>
+                  <p className="text-xs font-semibold text-gray-800">{displayComponentType(donation.donationType, u.componentType)}</p>
                   <p className="text-xs text-gray-400 font-mono mt-0.5">{u.unitId}</p>
                 </div>
                 <div className="text-right">
                   <span className={`px-2 py-0.5 rounded-full text-xs border font-medium ${
                     UNIT_STATUS_CLASSES[u.status] ?? 'bg-gray-50 text-gray-600 border-gray-200'
                   }`}>
-                    {u.status}
+                    {UNIT_STATUS_DISPLAY[u.status] ?? u.status}
                   </span>
                   {u.volumeMl && (
                     <p className="text-xs text-gray-400 mt-0.5">{u.volumeMl} mL</p>

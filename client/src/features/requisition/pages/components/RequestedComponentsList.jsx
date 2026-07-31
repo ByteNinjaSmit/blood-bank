@@ -22,7 +22,7 @@ export default function RequestedComponentsList({ items, onItemChange, onAdd, on
       </div>
       <div className="space-y-3">
         {items.map((r, idx) => (
-          <div key={idx} className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
+          <div key={idx} className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end p-3 rounded-lg border border-gray-100 bg-gray-50/40">
             <div>
               <label className="block text-sm text-gray-700 mb-1">Component <span className="text-red-600">*</span></label>
               <select

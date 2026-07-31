@@ -1,0 +1,812 @@
+[
+  {
+    "_id": {
+      "$oid": "6a3a94210659acdc26ab2299"
+    },
+    "name": "Anti-A",
+    "categoryId": {
+      "$oid": "6a3a94190659acdc26ab225a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "unitType": "Bottle",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:45.729Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:45.729Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94220659acdc26ab229c"
+    },
+    "name": "Anti-B",
+    "categoryId": {
+      "$oid": "6a3a94190659acdc26ab225a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "unitType": "Bottle",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:46.060Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:46.060Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94220659acdc26ab229f"
+    },
+    "name": "Anti-AB",
+    "categoryId": {
+      "$oid": "6a3a94190659acdc26ab225a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "unitType": "Bottle",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:46.379Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:46.379Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94220659acdc26ab22a2"
+    },
+    "name": "Anti-D (Rh)",
+    "categoryId": {
+      "$oid": "6a3a94190659acdc26ab225a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "unitType": "Bottle",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:46.700Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:46.700Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94230659acdc26ab22a5"
+    },
+    "name": "Anti-H (Lectin)",
+    "categoryId": {
+      "$oid": "6a3a94190659acdc26ab225a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "unitType": "Bottle",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:47.063Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:47.063Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94230659acdc26ab22a8"
+    },
+    "name": "Anti-A1 Lectin",
+    "categoryId": {
+      "$oid": "6a3a94190659acdc26ab225a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "unitType": "Bottle",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:47.432Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:47.432Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94230659acdc26ab22ab"
+    },
+    "name": "Albumin",
+    "categoryId": {
+      "$oid": "6a3a94190659acdc26ab225a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "unitType": "Bottle",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:47.866Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:47.866Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94240659acdc26ab22ae"
+    },
+    "name": "Anti Human Globulin (AHG)",
+    "categoryId": {
+      "$oid": "6a3a94190659acdc26ab225a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "unitType": "Bottle",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:48.198Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:48.198Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94240659acdc26ab22b1"
+    },
+    "name": "Gel Cards",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab2266"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941c0659acdc26ab227e"
+    },
+    "unitType": "Card",
+    "minStockLevel": 50,
+    "reorderLevel": 75,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:48.589Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:48.589Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94240659acdc26ab22b4"
+    },
+    "name": "Control Cells",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab2266"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941c0659acdc26ab227e"
+    },
+    "unitType": "Bottle",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:48.920Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:48.920Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94250659acdc26ab22b7"
+    },
+    "name": "Monocell I",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab2266"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941c0659acdc26ab2281"
+    },
+    "unitType": "Bottle",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:49.309Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:49.309Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94250659acdc26ab22ba"
+    },
+    "name": "Monocell II",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab2266"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941c0659acdc26ab2281"
+    },
+    "unitType": "Bottle",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:49.639Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:49.639Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94250659acdc26ab22bd"
+    },
+    "name": "Monocell III",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab2266"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941c0659acdc26ab2281"
+    },
+    "unitType": "Bottle",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:49.979Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:49.979Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94260659acdc26ab22c0"
+    },
+    "name": "HCV Microlisa",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab226f"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "unitType": "Kit",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:50.318Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:50.318Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94260659acdc26ab22c3"
+    },
+    "name": "HIV Microlisa",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab226f"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "unitType": "Kit",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:50.745Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:50.745Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94270659acdc26ab22c6"
+    },
+    "name": "HBsAg Microlisa",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab226f"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "unitType": "Kit",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:51.220Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:51.220Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94270659acdc26ab22c9"
+    },
+    "name": "Syphilis Microlisa",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab226f"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "unitType": "Kit",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:51.643Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:51.643Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94270659acdc26ab22cc"
+    },
+    "name": "Malaria Microlisa",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab226f"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "unitType": "Kit",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:51.981Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:51.981Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94280659acdc26ab22cf"
+    },
+    "name": "Hepalisa",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab226f"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "unitType": "Kit",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:52.363Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:52.363Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94280659acdc26ab22d2"
+    },
+    "name": "HIV Elisa Ag",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab226f"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "unitType": "Kit",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:52.785Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:52.785Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94290659acdc26ab22d5"
+    },
+    "name": "HCV Elisa Ag",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab226f"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "unitType": "Kit",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:53.281Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:53.281Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94290659acdc26ab22d8"
+    },
+    "name": "HBsAg Elisa",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab226f"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "unitType": "Kit",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:53.730Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:53.730Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a942a0659acdc26ab22db"
+    },
+    "name": "Blood Bag (Double Bag)",
+    "categoryId": {
+      "$oid": "6a3a941b0659acdc26ab2275"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2287"
+    },
+    "unitType": "Bag",
+    "minStockLevel": 100,
+    "reorderLevel": 150,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:54.058Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:54.058Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a942a0659acdc26ab22de"
+    },
+    "name": "Blood Bag (Triple Bag)",
+    "categoryId": {
+      "$oid": "6a3a941b0659acdc26ab2275"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2287"
+    },
+    "unitType": "Bag",
+    "minStockLevel": 100,
+    "reorderLevel": 150,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:54.439Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:54.439Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a942a0659acdc26ab22e1"
+    },
+    "name": "H. Pylori Kit",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab226f"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "unitType": "Kit",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:54.798Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:54.798Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a942b0659acdc26ab22e4"
+    },
+    "name": "Dexazyme / Anti-ADD Reagent",
+    "categoryId": {
+      "$oid": "6a3a941a0659acdc26ab226f"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "unitType": "Bottle",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:55.247Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:55.247Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a942b0659acdc26ab22e7"
+    },
+    "name": "Anti-D (Lectin/Reagent variant)",
+    "categoryId": {
+      "$oid": "6a3a94190659acdc26ab225a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "unitType": "Bottle",
+    "minStockLevel": 10,
+    "reorderLevel": 15,
+    "isActive": true,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:55.580Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:55.580Z"
+    },
+    "__v": 0
+  }
+]

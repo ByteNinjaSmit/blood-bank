@@ -5,7 +5,7 @@ import { ConflictError } from '@/shared/errors';
 
 function baseDonor(): Parameters<DonorRepo['create']>[0] {
   return {
-    name: { firstName: 'Asha', lastName: 'Patil' },
+    name: { firstName: 'Asha', middleName: 'Devi', lastName: 'Patil' },
     dob: new Date('2000-01-01'),
     sex: 'F',
     phone: '9876543210',
@@ -35,6 +35,8 @@ function mockRepo(overrides: Partial<DonorRepo> = {}): DonorRepo {
     findById: vi.fn().mockResolvedValue(dto),
     update: vi.fn().mockResolvedValue(dto),
     list: vi.fn().mockResolvedValue({ items: [dto], total: 1 }),
+    softDelete: vi.fn().mockResolvedValue(undefined),
+    restore: vi.fn().mockResolvedValue(undefined),
     delete: vi.fn().mockResolvedValue(undefined),
     findActiveByPhone: vi.fn().mockResolvedValue(null),
     ...overrides,
@@ -75,14 +77,14 @@ describe('donor-service.register', () => {
     await expect(svc.register({ ...baseDonor(), dob }, 'a')).rejects.toBeInstanceOf(ConflictError);
   });
 
-  it('rejects duplicate phone', async () => {
+  it('allows registration even when the phone is already used by another donor', async () => {
     const repo = mockRepo({
       findActiveByPhone: vi
         .fn()
         .mockResolvedValue({ id: 'existing', phone: '9876543210' } as DonorDto),
     });
     const svc = createDonorService({ repo });
-    await expect(svc.register(baseDonor(), 'a')).rejects.toBeInstanceOf(ConflictError);
-    expect(repo.create).not.toHaveBeenCalled();
+    await expect(svc.register(baseDonor(), 'a')).resolves.toBeDefined();
+    expect(repo.create).toHaveBeenCalled();
   });
 });

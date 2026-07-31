@@ -4,6 +4,7 @@ import type { ListBagStockInput } from '@/modules/bag-stock/bag-stock.validator'
 
 export interface BagStockDto {
   id: string;
+  _id?: string;
   stockId: string;
   bagType: string;
   capacityMl: number;
@@ -18,6 +19,7 @@ export interface BagStockDto {
   damagedQty: number;
   discardedQty: number;
   closingStock: number;
+  unopenedBoxes: number;
   status: string;
   lastUpdatedAt?: string;
   createdAt: string;
@@ -41,6 +43,7 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
   const discarded = (doc.discardedQty as number) ?? 0;
   return {
     id: doc._id.toString(),
+    _id: doc._id.toString(),
     stockId: doc.stockId as string,
     bagType: doc.bagType as string,
     capacityMl: doc.capacityMl as number,
@@ -55,6 +58,7 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     damagedQty: damaged,
     discardedQty: discarded,
     closingStock: opening + received - issued - damaged - discarded,
+    unopenedBoxes: doc.unopenedBoxes as number ?? 0,
     status: doc.status as string,
     lastUpdatedAt: doc.lastUpdatedAt ? (doc.lastUpdatedAt as Date).toISOString() : undefined,
     createdAt: doc.createdAt ? doc.createdAt.toISOString() : '',
@@ -62,11 +66,21 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
   };
 }
 
+export interface LowBoxBatchDto {
+  stockId: string;
+  bagType: string;
+  batchNumber: string;
+  unopenedBoxes: number;
+  capacityMl: number;
+  expiryDate: string;
+}
+
 export interface BagStockRepo {
   list(q: ListBagStockInput): Promise<{ items: BagStockDto[]; total: number }>;
   findById(id: string): Promise<BagStockDto | null>;
   findByBatchAndType(batchNumber: string, bagType: string): Promise<BagStockDto | null>;
   summary(): Promise<BagStockSummaryItem[]>;
+  lowBoxStock(threshold?: number): Promise<LowBoxBatchDto[]>;
   upsertFromGRN(doc: {
     stockId: string;
     bagType: string;
@@ -83,13 +97,39 @@ export interface BagStockRepo {
   decrementIssued(id: string, qty: number, actorId: string): Promise<BagStockDto | null>;
   incrementDamaged(id: string, qty: number, actorId: string): Promise<BagStockDto | null>;
   incrementDiscarded(id: string, qty: number, actorId: string): Promise<BagStockDto | null>;
+  decrementDiscarded(id: string, qty: number, actorId: string): Promise<BagStockDto | null>;
   updateStatus(id: string, status: string, actorId: string): Promise<BagStockDto | null>;
+  setReceivedQtyAndBoxes(
+    batchNumber: string,
+    bagType: string,
+    receivedQty: number,
+    unopenedBoxes: number,
+    actorId: string,
+  ): Promise<BagStockDto | null>;
+  openBox(id: string, actorId: string): Promise<BagStockDto | null>;
 }
 
 export function createBagStockRepo(): BagStockRepo {
   return {
     async list(q) {
-      const filter: Record<string, unknown> = { deletedAt: null };
+      const filter: Record<string, unknown> = {
+        deletedAt: null,
+        // A batch only counts as usable inventory once accepted (closing
+        // stock > 0) — rows still pending QC or corrected to REJECTED sit
+        // at zero and must not appear here at all (they're not "stock",
+        // they never cleared or were rejected).
+        $expr: {
+          $gt: [
+            {
+              $subtract: [
+                { $add: ['$openingStock', '$receivedQty'] },
+                { $add: ['$issuedQty', '$damagedQty', '$discardedQty'] },
+              ],
+            },
+            0,
+          ],
+        },
+      };
       if (q.bagType) filter.bagType = q.bagType;
       if (q.status) filter.status = q.status;
       if (q.expiryBefore) filter.expiryDate = { $lte: q.expiryBefore };
@@ -146,6 +186,25 @@ export function createBagStockRepo(): BagStockRepo {
       }));
     },
 
+    async lowBoxStock(threshold = 3) {
+      const docs = await BagStockModel.find({
+        deletedAt: null,
+        unopenedBoxes: { $lte: threshold },
+        status: { $ne: 'EXPIRED' },
+      })
+        .select('stockId bagType batchNumber unopenedBoxes capacityMl expiryDate')
+        .sort({ unopenedBoxes: 1 })
+        .lean();
+      return docs.map((d) => ({
+        stockId: (d._id as Types.ObjectId).toString(),
+        bagType: d.bagType as string,
+        batchNumber: d.batchNumber as string,
+        unopenedBoxes: (d.unopenedBoxes as number) ?? 0,
+        capacityMl: d.capacityMl as number,
+        expiryDate: (d.expiryDate as Date).toISOString(),
+      }));
+    },
+
     async upsertFromGRN(input) {
       const actor = new Types.ObjectId(input.actorId);
       const now = new Date();
@@ -165,6 +224,7 @@ export function createBagStockRepo(): BagStockRepo {
             issuedQty: 0,
             damagedQty: 0,
             discardedQty: 0,
+            unopenedBoxes: 0,
             status: 'AVAILABLE',
             createdBy: actor,
           },
@@ -220,11 +280,44 @@ export function createBagStockRepo(): BagStockRepo {
       return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
     },
 
+    async decrementDiscarded(id, qty, actorId) {
+      const actor = new Types.ObjectId(actorId);
+      const doc = await BagStockModel.findOneAndUpdate(
+        { _id: new Types.ObjectId(id), deletedAt: null },
+        { $inc: { discardedQty: -qty }, $set: { lastUpdatedAt: new Date(), updatedBy: actor } },
+        { new: true },
+      ).lean();
+      if (!doc) return null;
+      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+    },
+
     async updateStatus(id, status, actorId) {
       const actor = new Types.ObjectId(actorId);
       const doc = await BagStockModel.findOneAndUpdate(
         { _id: new Types.ObjectId(id), deletedAt: null },
         { $set: { status, lastUpdatedAt: new Date(), updatedBy: actor } },
+        { new: true },
+      ).lean();
+      if (!doc) return null;
+      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+    },
+
+    async setReceivedQtyAndBoxes(batchNumber, bagType, receivedQty, unopenedBoxes, actorId) {
+      const actor = new Types.ObjectId(actorId);
+      const doc = await BagStockModel.findOneAndUpdate(
+        { batchNumber, bagType, deletedAt: null },
+        { $set: { receivedQty, unopenedBoxes, lastUpdatedAt: new Date(), updatedBy: actor } },
+        { new: true },
+      ).lean();
+      if (!doc) return null;
+      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+    },
+
+    async openBox(id, actorId) {
+      const actor = new Types.ObjectId(actorId);
+      const doc = await BagStockModel.findOneAndUpdate(
+        { _id: new Types.ObjectId(id), unopenedBoxes: { $gt: 0 }, deletedAt: null },
+        { $inc: { unopenedBoxes: -1 }, $set: { lastUpdatedAt: new Date(), updatedBy: actor } },
         { new: true },
       ).lean();
       if (!doc) return null;

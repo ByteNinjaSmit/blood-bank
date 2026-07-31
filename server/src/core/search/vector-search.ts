@@ -79,6 +79,18 @@ export async function textSearch(
   const { query, filter = {}, limit = 20, skip = 0, indexName = 'default' } = opts;
   const coll = mongoose.connection.collection(collection);
 
+  // Helper: safely merge a search filter with the caller's filter without
+  // letting a $or in `filter` clobber a $or produced by the search clause.
+  const mergeFilters = (searchClause: Record<string, unknown>): Record<string, unknown> => {
+    if (!filter || Object.keys(filter).length === 0) return searchClause;
+    // If neither clause has a top-level $or we can just spread.
+    if (!('$or' in filter) && !('$and' in filter)) {
+      return { ...searchClause, ...filter };
+    }
+    // Wrap both in $and to avoid clobbering.
+    return { $and: [searchClause, filter] };
+  };
+
   // Tier 1: Atlas $search
   try {
     const pipeline: object[] = [
@@ -102,39 +114,59 @@ export async function textSearch(
       coll.aggregate(pipeline).toArray(),
       coll.aggregate(countPipeline).toArray(),
     ]);
-    return {
-      items,
-      total: (countResult[0] as { total?: number })?.total ?? items.length,
-      source: 'atlas',
-    };
+    if (items.length > 0) {
+      return {
+        items,
+        total: (countResult[0] as { total?: number })?.total ?? items.length,
+        source: 'atlas',
+      };
+    }
+    log.debug({ collection, query }, 'atlas $search returned 0 results, trying $text index');
   } catch {
     log.debug({ collection, query }, 'atlas $search unavailable, trying $text index');
   }
 
   // Tier 2: $text index
   try {
-    const textFilter = { $text: { $search: query }, ...filter };
+    const textClause = mergeFilters({ $text: { $search: query } });
     const [items, total] = await Promise.all([
       coll
-        .find(textFilter, { projection: { score: { $meta: 'textScore' } } })
+        .find(textClause, { projection: { score: { $meta: 'textScore' } } })
         .sort({ score: { $meta: 'textScore' } })
         .skip(skip)
         .limit(limit)
         .toArray(),
-      coll.countDocuments(textFilter),
+      coll.countDocuments(textClause),
     ]);
-    return { items, total, source: 'text-index' };
+    if (items.length > 0) {
+      return { items, total, source: 'text-index' };
+    }
+    log.debug({ collection, query }, '$text index returned 0 results, falling back to regex');
   } catch {
     log.debug({ collection, query }, '$text index unavailable, falling back to regex');
   }
 
   // Tier 3: Regex fallback
   const fields = opts.searchFields ?? ['name', 'email', 'phone'];
-  const rx = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-  const rxFilter = { $or: fields.map((f) => ({ [f]: rx })), ...filter };
+  const terms = query.trim().split(/\s+/).filter(Boolean);
+  
+  let rxClause;
+  if (terms.length > 1) {
+    rxClause = mergeFilters({
+      $and: terms.map(term => ({
+        $or: fields.map(f => ({ [f]: new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }))
+      }))
+    });
+  } else if (terms.length === 1) {
+    const rx = new RegExp(terms[0]!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    rxClause = mergeFilters({ $or: fields.map((f) => ({ [f]: rx })) });
+  } else {
+    rxClause = mergeFilters({});
+  }
+
   const [items, total] = await Promise.all([
-    coll.find(rxFilter).skip(skip).limit(limit).toArray(),
-    coll.countDocuments(rxFilter),
+    coll.find(rxClause).skip(skip).limit(limit).toArray(),
+    coll.countDocuments(rxClause),
   ]);
   return { items, total, source: 'regex' };
 }
@@ -142,7 +174,11 @@ export async function textSearch(
 // ─── Donor-specific search ────────────────────────────────────────────────────
 
 export async function searchDonors(opts: DonorSearchOptions): Promise<SearchResult> {
-  const filter: Record<string, unknown> = { deletedAt: null };
+  // Use $or to catch documents where deletedAt is null OR where the field doesn't exist yet
+  // (older documents created before the soft-delete field was added).
+  const filter: Record<string, unknown> = {
+    $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+  };
   if (opts.bloodGroup) filter.bloodGroup = opts.bloodGroup;
   if (opts.rh) filter.rh = opts.rh;
   if (opts.eligibilityStatus) filter.eligibilityStatus = opts.eligibilityStatus;

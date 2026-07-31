@@ -10,6 +10,11 @@ import httpLogger from '@/shared/middlewares/http-logger';
 import { errorMiddleware } from '@/shared/middlewares/error';
 import { registerRoutes } from '@/routes';
 import componentRouter from '@/modules/component/component.routes';
+import requisitionRouter from '@/modules/requisition/requisition.routes';
+import ttiLegacyRouter from '@/modules/tti/tti.legacy-routes';
+import inventoryLegacyRouter from '@/modules/inventory/inventory.legacy-routes';
+import discardRouter from '@/modules/discard/discard.routes';
+import donationLookupRouter from '@/modules/donation/donation-lookup.routes';
 import { getQueuesHealth } from '@/core/queue';
 
 // Connect-style middleware (IncomingMessage signatures) are narrowed to
@@ -56,7 +61,12 @@ export function buildApp(opts: BuildAppOptions = {}): Express {
   });
 
   app.use('/api/v2', registerRoutes());
+  app.use('/api/requests', requisitionRouter);
   app.use('/api/component', componentRouter);
+  app.use('/api/serology', ttiLegacyRouter);
+  app.use('/api/inventory', inventoryLegacyRouter);
+  app.use('/api/discard', discardRouter);
+  app.use('/api/donation', donationLookupRouter);
 
   app.use(errorMiddleware);
   return app;

@@ -11,6 +11,8 @@ export interface CreateUserInput {
   email: string;
   phone?: string;
   role: string;
+  roleId?: string;
+  isFullAccess?: boolean;
   password: string;
   permissions?: unknown[];
   campId?: string;
@@ -22,6 +24,8 @@ export interface UpdateUserInput {
   email?: string;
   phone?: string;
   role?: string;
+  roleId?: string;
+  isFullAccess?: boolean;
   password?: string;
   permissions?: unknown[];
   campId?: string;
@@ -45,6 +49,8 @@ export const userService = {
       email: input.email.toLowerCase(),
       phone: input.phone,
       role: input.role,
+      roleId: input.roleId ?? null,
+      isFullAccess: input.isFullAccess ?? false,
       password: input.password,
       permissions: input.permissions ?? [],
       campId: input.campId ?? null,
@@ -54,6 +60,7 @@ export const userService = {
     });
     await auditService.record({
       actorId,
+      module: 'user',
       action: 'CREATE',
       entityType: 'User',
       entityId: user.id,
@@ -68,7 +75,7 @@ export const userService = {
     // Cache simple unfiltered first-page staff roster (used by camp + donation forms).
     const isSimple = !filter.search && !filter.campId && filter.page === 1;
     const key = isSimple
-      ? `user:list:role=${filter.role ?? 'all'}:status=${filter.status ?? 'all'}`
+      ? `user:list:role=${filter.role ?? 'all'}:status=${filter.status ?? 'all'}:limit=${filter.limit}`
       : null;
 
     const fetch = async () => {
@@ -93,7 +100,7 @@ export const userService = {
     return user;
   },
 
-  async update(id: string, input: UpdateUserInput, actorId: string): Promise<UserDto> {
+  async update(id: string, input: UpdateUserInput, actorId: string, editReason?: string): Promise<UserDto> {
     const existing = await userRepo.findByIdOrPublicId(id);
     if (!existing) throw new NotFoundError('User', id);
 
@@ -109,24 +116,65 @@ export const userService = {
     if (input.email) patch.email = input.email.toLowerCase();
     if (input.phone) patch.phone = input.phone;
     if (input.role) patch.role = input.role;
+    if (input.roleId !== undefined) patch.roleId = input.roleId;
+    if (input.isFullAccess !== undefined) patch.isFullAccess = input.isFullAccess;
     if (input.permissions) patch.permissions = input.permissions;
     if (input.campId) patch.campId = input.campId;
     if (input.status) patch.status = input.status;
+    const passwordChanged = Boolean(input.password);
     if (input.password) patch.password = await bcrypt.hash(input.password, 10);
 
     const updated = await userRepo.updateByIdOrPublicId(id, patch);
     if (!updated) throw new NotFoundError('User', id);
-    await auditService.record({
-      actorId,
-      action: 'UPDATE',
-      entityType: 'User',
-      entityId: updated.id,
-    });
+
+    // Password changes are audited as their own event, with no before/after
+    // snapshot — the hash must never be constructed into a diffable object
+    // in the first place, not merely redacted downstream.
+    if (passwordChanged) {
+      await auditService.record({
+        actorId,
+        module: 'user',
+        action: 'UPDATE',
+        entityType: 'User',
+        entityId: updated.id,
+        changedFields: ['password'],
+        reason: actorId === id ? 'self-service password change' : 'admin password reset',
+        severity: 'warning',
+      });
+    }
+
+    // Non-password profile fields, if any, get a real before/after diff —
+    // the redaction map already strips password-family keys centrally, so
+    // there's no risk of a hash leaking through here.
+    const before: Record<string, unknown> = {};
+    const after: Record<string, unknown> = {};
+    if (input.firstName) { before.firstName = existing.name.first; after.firstName = input.firstName; }
+    if (input.lastName) { before.lastName = existing.name.last; after.lastName = input.lastName; }
+    if (input.email) { before.email = existing.email; after.email = input.email.toLowerCase(); }
+    if (input.phone) { before.phone = existing.phone; after.phone = input.phone; }
+    if (input.role) { before.role = existing.role; after.role = input.role; }
+    if (input.roleId !== undefined) { before.roleId = existing.roleId; after.roleId = input.roleId; }
+    if (input.isFullAccess !== undefined) { before.isFullAccess = existing.isFullAccess; after.isFullAccess = input.isFullAccess; }
+    if (input.permissions) { before.permissions = existing.permissions; after.permissions = input.permissions; }
+    if (input.campId) { before.campId = existing.campId; after.campId = input.campId; }
+    if (input.status) { before.status = existing.status; after.status = input.status; }
+    if (Object.keys(after).length > 0) {
+      await auditService.record({
+        actorId,
+        module: 'user',
+        action: 'UPDATE',
+        entityType: 'User',
+        entityId: updated.id,
+        before,
+        after,
+        reason: editReason,
+      });
+    }
     await invalidate('user:*');
     return updated;
   },
 
-  async deactivate(id: string, actorId: string): Promise<void> {
+  async deactivate(id: string, actorId: string, reason?: string): Promise<void> {
     const updated = await userRepo.updateByIdOrPublicId(id, {
       status: 'inactive',
       updatedBy: actorId,
@@ -134,10 +182,11 @@ export const userService = {
     if (!updated) throw new NotFoundError('User', id);
     await auditService.record({
       actorId,
+      module: 'user',
       action: 'DELETE',
       entityType: 'User',
       entityId: updated.id,
-      reason: 'soft delete (deactivate)',
+      reason: reason?.trim() || 'soft delete (deactivate)',
     });
     await invalidate('user:*');
     log.warn({ userId: updated.id, actorId }, 'user deactivated');

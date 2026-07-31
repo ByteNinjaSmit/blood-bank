@@ -21,11 +21,58 @@ const Button = ({ children, onClick, variant = "default", size = "default", clas
   );
 };
 
+const renderTestResults = (testResultsStr) => {
+  if (!testResultsStr) return <span className="text-slate-400 text-xs">No tests performed</span>;
+  
+  if (testResultsStr.includes(", ") || testResultsStr.includes(": ")) {
+    const parts = testResultsStr.split(", ");
+    return (
+      <div className="flex flex-wrap gap-1.5 mt-1.5">
+        {parts.map((p, idx) => {
+          const colonIdx = p.indexOf(":");
+          if (colonIdx === -1) {
+            return (
+              <span key={idx} className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                {p}
+              </span>
+            );
+          }
+          const name = p.substring(0, colonIdx).trim();
+          const val = p.substring(colonIdx + 1).trim();
+          
+          const valUpper = val.toUpperCase();
+          let badgeClass = "bg-amber-50 text-amber-700 border-amber-200";
+          if (valUpper === "REACTIVE" || valUpper === "POSITIVE") {
+            badgeClass = "bg-red-50 text-red-700 border-red-200";
+          } else if (valUpper === "NEGATIVE") {
+            badgeClass = "bg-emerald-50 text-emerald-700 border-emerald-200";
+          }
+          
+          return (
+            <span key={idx} className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${badgeClass}`}>
+              {name}: {val}
+            </span>
+          );
+        })}
+      </div>
+    );
+  }
+  
+  return (
+    <div className="mt-1.5 p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-700">
+      {testResultsStr}
+    </div>
+  );
+};
+
 const DiscardDetailsModal = ({ selectedItem, showBagDetails, onClose, onToggleBagDetails }) => {
   if (!selectedItem) return null;
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div
+        className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between p-6 border-b border-red-100">
           <h3 className="text-xl font-semibold text-slate-800">Item Details</h3>
           <Button onClick={onClose} variant="outline" size="sm" className="text-slate-500 hover:text-slate-700 bg-transparent">
@@ -81,6 +128,15 @@ const DiscardDetailsModal = ({ selectedItem, showBagDetails, onClose, onToggleBa
             </div>
           </div>
 
+          {selectedItem.description && (
+            <div>
+              <label className="text-sm font-medium text-slate-600">Remarks / Description</label>
+              <div className="mt-1 p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-700 text-sm">
+                {selectedItem.description}
+              </div>
+            </div>
+          )}
+
           <div className="border-t border-red-100 pt-6">
             <Button onClick={onToggleBagDetails} variant="outline" className="w-full text-red-600 border-red-200 hover:bg-red-50">
               <User className="w-4 h-4 mr-2" />
@@ -92,7 +148,7 @@ const DiscardDetailsModal = ({ selectedItem, showBagDetails, onClose, onToggleBa
                   <h4 className="font-semibold text-slate-800 border-b border-slate-300 pb-2">Bag Information</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div><span className="font-medium text-slate-600">Bag Number:</span><div className="text-slate-800">{selectedItem.bagNo}</div></div>
-                    <div><span className="font-medium text-slate-600">Segment ID:</span><div className="text-slate-800">{selectedItem.segmentId}</div></div>
+                    <div><span className="font-medium text-slate-600">Segment No:</span><div className="text-slate-800">{selectedItem.segmentNo || selectedItem.segmentId}</div></div>
                     <div><span className="font-medium text-slate-600">Collection Date:</span><div className="text-slate-800">{selectedItem.collectionDate}</div></div>
                     <div><span className="font-medium text-slate-600">Expiry Date:</span><div className="text-slate-800">{selectedItem.expiryDate}</div></div>
                     <div><span className="font-medium text-slate-600">Status:</span><div className="text-slate-800">{selectedItem.status}</div></div>
@@ -125,7 +181,7 @@ const DiscardDetailsModal = ({ selectedItem, showBagDetails, onClose, onToggleBa
                         <div><span className="font-medium text-slate-600">Component Type:</span> {selectedItem.componentType}</div>
                         <div className="mt-1">
                           <span className="font-medium text-slate-600">Test Results:</span>
-                          <div className="mt-1 p-2 bg-green-50 rounded border border-green-200">{selectedItem.testResults}</div>
+                          {renderTestResults(selectedItem.testResults)}
                         </div>
                       </div>
                     </>

@@ -18,6 +18,7 @@ export const UNIT_EVENT = [
   'BEGIN_TESTING',
   'AWAIT_TTI', // testing finished, results recorded but not yet released
   'RELEASE', // TTI cleared + grouping confirmed
+  'SEPARATION_COMPLETE', // component separation signed off; TTI still pending
   'RESERVE',
   'UNRESERVE',
   'CROSSMATCH_PASS',
@@ -27,6 +28,15 @@ export const UNIT_EVENT = [
   'RETURN_UNUSED',
   'DISCARD',
   'EXPIRE',
+  // Narrow, guarded reversal: a unit auto-discarded for a reactive TTI
+  // result gets one way back to QUARANTINE if that result is later
+  // corrected. Nothing else may leave DISCARDED.
+  'REINSTATE',
+  // A released (in-stock) unit whose TTI result is corrected to
+  // shadeness (indeterminate) gets pulled back off the shelf pending
+  // retest — not discarded, just held. RELEASE from QUARANTINE is the
+  // existing, already-legal way back out once retested clean.
+  'QUARANTINE_HOLD',
 ] as const;
 export type UnitEvent = (typeof UNIT_EVENT)[number];
 
@@ -34,6 +44,12 @@ type Transition = { from: UnitStatus; event: UnitEvent; to: UnitStatus };
 
 const TRANSITIONS: ReadonlyArray<Transition> = [
   { from: 'COLLECTED', event: 'BEGIN_TESTING', to: 'IN_TESTING' },
+  // Component-separation sign-off, TTI still pending -> QUARANTINE.
+  // (If TTI is already released by the time separation completes, that
+  // case chains BEGIN_TESTING -> AWAIT_TTI -> RELEASE instead — there is
+  // deliberately no COLLECTED -> RELEASED shortcut; the TTI gate must
+  // always be walked, never bypassed.)
+  { from: 'COLLECTED', event: 'SEPARATION_COMPLETE', to: 'QUARANTINE' },
   { from: 'COLLECTED', event: 'DISCARD', to: 'DISCARDED' },
   { from: 'COLLECTED', event: 'EXPIRE', to: 'EXPIRED' },
 
@@ -48,8 +64,10 @@ const TRANSITIONS: ReadonlyArray<Transition> = [
   { from: 'RELEASED', event: 'RESERVE', to: 'RESERVED' },
   { from: 'RELEASED', event: 'DISCARD', to: 'DISCARDED' },
   { from: 'RELEASED', event: 'EXPIRE', to: 'EXPIRED' },
+  { from: 'RELEASED', event: 'QUARANTINE_HOLD', to: 'QUARANTINE' },
 
   { from: 'RESERVED', event: 'UNRESERVE', to: 'RELEASED' },
+  { from: 'RESERVED', event: 'ISSUE', to: 'ISSUED' },
   { from: 'RESERVED', event: 'CROSSMATCH_PASS', to: 'CROSSMATCHED' },
   { from: 'RESERVED', event: 'CROSSMATCH_FAIL', to: 'RELEASED' },
   { from: 'RESERVED', event: 'DISCARD', to: 'DISCARDED' },
@@ -63,6 +81,8 @@ const TRANSITIONS: ReadonlyArray<Transition> = [
   { from: 'ISSUED', event: 'CONFIRM_TRANSFUSION', to: 'TRANSFUSED' },
   { from: 'ISSUED', event: 'RETURN_UNUSED', to: 'RETURNED_UNUSED' },
   { from: 'ISSUED', event: 'DISCARD', to: 'DISCARDED' },
+
+  { from: 'DISCARDED', event: 'REINSTATE', to: 'QUARANTINE' },
 ];
 
 // Build a fast lookup table once.

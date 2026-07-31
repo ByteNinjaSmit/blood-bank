@@ -1,4 +1,5 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const HospitalSchema = new Schema(
   {
@@ -9,6 +10,9 @@ const HospitalSchema = new Schema(
     phone: { type: String, required: true, trim: true },
     email: { type: String, trim: true, lowercase: true },
     isActive: { type: Boolean, default: true, index: true },
+    deletedAt: { type: Date, default: null, index: true },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },

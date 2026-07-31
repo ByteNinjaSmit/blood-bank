@@ -13,11 +13,14 @@ export default function Filters({
   total,
   startIndex,
   endIndex,
-  RoleArray,
+  sortBy,
+  onSortBy,
+  order,
+  onOrder,
 }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5 shadow-sm space-y-3">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
         <div className="md:col-span-2">
           <label className="text-xs text-slate-600">Search</label>
           <div className="relative">
@@ -34,10 +37,12 @@ export default function Filters({
           <label className="text-xs text-slate-600">Role</label>
           <div className="relative">
             <FilterIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <select className="w-full border rounded-lg pl-9 pr-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={roleFilter} onChange={(e)=>onRoleFilter(e.target.value)}>
-              <option value="">All</option>
-              {RoleArray.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
+            <input
+              className="w-full border rounded-lg pl-9 pr-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300"
+              placeholder="Filter by role"
+              value={roleFilter}
+              onChange={(e) => onRoleFilter(e.target.value)}
+            />
           </div>
         </div>
         <div>
@@ -53,6 +58,21 @@ export default function Filters({
               <option value="rejected">rejected</option>
             </select>
           </div>
+        </div>
+        <div>
+          <label className="text-xs text-slate-600">Sort By</label>
+          <select className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={sortBy} onChange={(e)=>onSortBy(e.target.value)}>
+            <option value="name">Name</option>
+            <option value="createdAt">Registered Date</option>
+            <option value="role">Role</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-slate-600">Order</label>
+          <select className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-100 focus:border-red-300" value={order} onChange={(e)=>onOrder(e.target.value)}>
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
         </div>
       </div>
       <div className="flex items-center justify-between gap-3 pt-1">

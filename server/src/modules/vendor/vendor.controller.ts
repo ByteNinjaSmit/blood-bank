@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { ValidateVendor } from '@/modules/vendor/vendor.validator';
 import type { VendorService } from '@/modules/vendor/vendor.service';
 import { UnauthorizedError } from '@/shared/errors';
+import { extractEditReason } from '@/shared/utils/edit-reason';
 
 export interface VendorControllers {
   list(req: Request, res: Response, next: NextFunction): Promise<void>;
@@ -10,6 +11,8 @@ export interface VendorControllers {
   update(req: Request, res: Response, next: NextFunction): Promise<void>;
   updateStatus(req: Request, res: Response, next: NextFunction): Promise<void>;
   remove(req: Request, res: Response, next: NextFunction): Promise<void>;
+  restore(req: Request, res: Response, next: NextFunction): Promise<void>;
+  permanentDelete(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export function createVendorControllers(service: VendorService): VendorControllers {
@@ -46,8 +49,9 @@ export function createVendorControllers(service: VendorService): VendorControlle
     async update(req, res, next) {
       try {
         const { id } = ValidateVendor.idParam(req);
+        const editReason = extractEditReason(req);
         const body = ValidateVendor.updateBody(req);
-        const data = await service.update(id, body, actorId(req));
+        const data = await service.update(id, body, actorId(req), editReason);
         res.json({ success: true, data, requestId: req.id });
       } catch (e) { next(e); }
     },
@@ -64,7 +68,25 @@ export function createVendorControllers(service: VendorService): VendorControlle
     async remove(req, res, next) {
       try {
         const { id } = ValidateVendor.idParam(req);
-        await service.softDelete(id, actorId(req));
+        const { reason } = ValidateVendor.deleteReasonBody(req);
+        await service.softDelete(id, actorId(req), reason);
+        res.status(204).end();
+      } catch (e) { next(e); }
+    },
+
+    async restore(req, res, next) {
+      try {
+        const { id } = ValidateVendor.idParam(req);
+        const data = await service.restore(id, actorId(req));
+        res.json({ success: true, data, requestId: req.id });
+      } catch (e) { next(e); }
+    },
+
+    async permanentDelete(req, res, next) {
+      try {
+        const { id } = ValidateVendor.idParam(req);
+        const { reason } = ValidateVendor.deleteReasonBody(req);
+        await service.permanentDelete(id, actorId(req), reason);
         res.status(204).end();
       } catch (e) { next(e); }
     },

@@ -2,7 +2,7 @@
 
 import { useLanguage } from '@/context/language-context';
 import { content } from '@/lib/content';
-import { Phone, Mail, MapPin, Clock, Smartphone, Globe, Facebook, Linkedin, Share2, ExternalLink } from 'lucide-react'
+import { Phone, Mail, MapPin, Clock, Smartphone, Facebook, Share2, ExternalLink } from 'lucide-react'
 
 export default function ContactSection() {
   const { language } = useLanguage();
@@ -21,8 +21,6 @@ export default function ContactSection() {
 
   const socialLinks = [
     { icon: Facebook, label: "Facebook", href: "#" },
-    { icon: Linkedin, label: "LinkedIn", href: "#" },
-    { icon: Globe, label: "Website", href: "#" },
     { icon: Share2, label: "Share Page", href: "#" }
   ]
 

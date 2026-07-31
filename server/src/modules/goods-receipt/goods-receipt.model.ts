@@ -1,5 +1,6 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import { BAG_TYPE, ANTICOAGULANT, GRN_STATUS } from '@/shared/enums';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const BatchLineSchema = new Schema(
   {
@@ -10,8 +11,6 @@ const BatchLineSchema = new Schema(
     manufacturingDate: { type: Date },
     expiryDate: { type: Date, required: true },
     quantityReceived: { type: Number, required: true, min: 1 },
-    quantityAccepted: { type: Number, min: 0, default: 0 },
-    quantityRejected: { type: Number, min: 0, default: 0 },
   },
   { _id: false },
 );
@@ -32,18 +31,20 @@ const GoodsReceiptSchema = new Schema(
   {
     grnNumber: { type: String, required: true, unique: true },
     poId: { type: Schema.Types.ObjectId, ref: 'PurchaseOrder', required: true, index: true },
-    vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true, index: true },
-    invoiceNumber: { type: String, required: true, trim: true },
-    invoiceDate: { type: Date, required: true },
+    vendorName: { type: String, trim: true },
+    invoiceNo: { type: String, required: true, trim: true },
+    billDate: { type: Date },
     transportDetails: { type: String, trim: true },
-    receivedDate: { type: Date, required: true },
-    receivedById: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    receivedDate: { type: Date },
+    receivedById: { type: Schema.Types.ObjectId, ref: 'User' },
     batchLines: { type: [BatchLineSchema], required: true },
     financials: { type: FinancialsSchema },
     status: { type: String, enum: GRN_STATUS, default: 'PENDING', index: true },
     notes: { type: String, trim: true },
+    invoiceImage: { type: String, default: null },
     deletedAt: { type: Date, default: null, index: true },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
@@ -51,7 +52,7 @@ const GoodsReceiptSchema = new Schema(
 );
 
 GoodsReceiptSchema.index({ receivedDate: -1 });
-GoodsReceiptSchema.index({ vendorId: 1, status: 1 });
+GoodsReceiptSchema.index({ vendorName: 1, status: 1 });
 
 export type GoodsReceipt = InferSchemaType<typeof GoodsReceiptSchema>;
 export type GoodsReceiptModel = Model<GoodsReceipt>;

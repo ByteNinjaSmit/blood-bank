@@ -45,11 +45,16 @@ export const UpdateVendorStatusBody = z.object({
 export const ListVendorsQuery = z.object({
   approvalStatus: z.enum(VENDOR_STATUS).optional(),
   search: z.string().trim().max(120).optional(),
+  deletedOnly: z.coerce.boolean().optional().default(false),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(20),
 });
 
 export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid id') });
+
+export const DeleteReasonBody = z.object({
+  reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
+});
 
 export type CreateVendorInput = z.infer<typeof CreateVendorBody>;
 export type UpdateVendorInput = z.infer<typeof UpdateVendorBody>;
@@ -62,4 +67,5 @@ export const ValidateVendor = {
   updateStatusBody: (req: Request) => parseOrThrow(UpdateVendorStatusBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListVendorsQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
+  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };

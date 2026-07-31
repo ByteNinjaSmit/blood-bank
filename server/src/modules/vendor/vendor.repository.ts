@@ -4,6 +4,7 @@ import type { ListVendorsInput } from '@/modules/vendor/vendor.validator';
 
 export interface VendorDto {
   id: string;
+  _id: string;
   vendorId: string;
   name: string;
   manufacturer: string;
@@ -24,6 +25,7 @@ export interface VendorDto {
 function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date }): VendorDto {
   return {
     id: doc._id.toString(),
+    _id: doc._id.toString(),
     vendorId: doc.vendorId as string,
     name: doc.name as string,
     manufacturer: doc.manufacturer as string,
@@ -75,12 +77,13 @@ export interface VendorRepo {
   }>, actorId: string): Promise<VendorDto | null>;
   updateStatus(id: string, approvalStatus: string, actorId: string): Promise<VendorDto | null>;
   softDelete(id: string, actorId: string): Promise<boolean>;
+  delete(id: string): Promise<boolean>;
 }
 
 export function createVendorRepo(): VendorRepo {
   return {
     async list(q) {
-      const filter: Record<string, unknown> = { deletedAt: null };
+      const filter: Record<string, unknown> = { deletedAt: q.deletedOnly ? { $ne: null } : null };
       if (q.approvalStatus) filter.approvalStatus = q.approvalStatus;
       if (q.search) {
         const rx = new RegExp(q.search, 'i');
@@ -158,6 +161,11 @@ export function createVendorRepo(): VendorRepo {
         { $set: { deletedAt: new Date(), deletedBy: actor, updatedBy: actor } },
       );
       return res.modifiedCount > 0;
+    },
+
+    async delete(id) {
+      const res = await VendorModel.deleteOne({ _id: new Types.ObjectId(id) });
+      return res.deletedCount > 0;
     },
   };
 }

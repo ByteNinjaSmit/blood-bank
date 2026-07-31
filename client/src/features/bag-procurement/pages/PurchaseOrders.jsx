@@ -1,35 +1,37 @@
-import { useState } from 'react';
-import { FileText, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FileText, Plus, X, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import {
   usePOList,
   useCreatePO,
-  useSubmitPO,
-  useApprovePO,
-  useRejectPO,
+  useUpdatePO,
+  useDeletePO,
+  useVendorList,
+  useCreateVendor,
 } from '../queries';
-import { useVendorList } from '../queries';
+import { formatBloodBagQty } from '../utils/qtyHelper';
+import { toast } from 'sonner';
+import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
+import SearchBox from '@/components/shared/SearchBox';
+import { exportProcurementPO } from '@/utils/excelExportHelper';
+import { useEditWithReason } from '@/hooks/useEditWithReason';
+import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
-const STATUS_BADGE = {
-  DRAFT:            'bg-gray-100 text-gray-600 border-gray-200',
-  PENDING_APPROVAL: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  APPROVED:         'bg-green-50 text-green-700 border-green-200',
-  REJECTED:         'bg-red-50 text-red-700 border-red-200',
-  FULFILLED:        'bg-blue-50 text-blue-700 border-blue-200',
-  CANCELLED:        'bg-gray-100 text-gray-500 border-gray-200',
-};
 
-const BAG_TYPES = ['SINGLE', 'DOUBLE', 'TRIPLE', 'QUADRUPLE'];
+
+const BAG_TYPES = ['DOUBLE', 'TRIPLE'];
 const ANTICOAGULANTS = ['CPDA-1', 'CPD', 'ACD', 'SAG-M'];
 
-const EMPTY_LINE = { bagType: 'SINGLE', capacity: '', anticoagulant: 'CPDA-1', quantity: '', unitPrice: '', gstPercent: '' };
+const ANTICOAGULANT_MAP = {
+  'CPDA-1': 'CPDA_1',
+  'CPD': 'CPD',
+  'ACD': 'ACD',
+  'SAG-M': 'SAG_MANNITOL',
+};
 
-function StatusBadge({ status }) {
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-xs border font-medium ${STATUS_BADGE[status] ?? 'bg-gray-100 text-gray-500 border-gray-200'}`}>
-      {status?.replace('_', ' ')}
-    </span>
-  );
-}
+const EMPTY_LINE = { bagType: 'DOUBLE', capacity: '350', anticoagulant: 'SAG-M', boxes: '', packets: '', bags: '' };
+
+
 
 function StatCard({ label, value, color }) {
   return (
@@ -40,69 +42,196 @@ function StatCard({ label, value, color }) {
   );
 }
 
-function PODrawer({ onClose, vendors }) {
-  const [vendorId, setVendorId] = useState('');
-  const [expectedDelivery, setExpectedDelivery] = useState('');
-  const [terms, setTerms] = useState('');
-  const [lines, setLines] = useState([{ ...EMPTY_LINE }]);
+function PODrawer({ onClose, vendors, poToEdit }) {
+  const [vendorSearchText, setVendorSearchText] = useState('');
+  const [manufacturer, setManufacturer] = useState(poToEdit?.manufacturer || '');
+  const [billDate, setBillDate] = useState(poToEdit?.billDate ? new Date(poToEdit.billDate).toISOString().split('T')[0] : '');
+  
+  const [lines, setLines] = useState(poToEdit?.lineItems?.length > 0 ? poToEdit.lineItems.map(l => {
+    const qty = l.quantityOrdered || 0;
+    return {
+      ...EMPTY_LINE,
+      bagType: l.bagType,
+      capacity: l.capacityMl,
+      anticoagulant: Object.keys(ANTICOAGULANT_MAP).find(k => ANTICOAGULANT_MAP[k] === l.anticoagulant) || l.anticoagulant,
+      boxes: qty ? String(Number((qty / 45).toFixed(2))) : '',
+      packets: qty ? String(Number((qty / 5).toFixed(2))) : '',
+      bags: qty ? String(qty) : ''
+    };
+  }) : [{ ...EMPTY_LINE }]);
+
   const createPO = useCreatePO();
+  const updatePO = useUpdatePO();
+  const createVendor = useCreateVendor();
+  const { wrappedSave: wrappedSavePO, EditReasonDialog } = useEditWithReason({
+    onSave: async (payload, editReason) => {
+      await updatePO.mutateAsync({ id: poToEdit?.id ?? poToEdit?._id, data: payload, editReason });
+      onClose();
+    },
+    title: 'Confirm Purchase Order Changes',
+  });
+  const [previousVendors, setPreviousVendors] = useState([]);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('previous_vendors') || '[]');
+      setPreviousVendors(saved);
+      if (saved.length > 0) {
+        setVendorSearchText(saved[0]);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   const updateLine = (i, k, v) => setLines((ls) => ls.map((l, idx) => idx === i ? { ...l, [k]: v } : l));
+  
+  const handleQtyChange = (i, field, val) => {
+    setLines((ls) =>
+      ls.map((l, idx) => {
+        if (idx !== i) return l;
+
+        const numVal = val === '' ? '' : parseFloat(val);
+        
+        if (numVal === '' || isNaN(numVal)) {
+          return { ...l, [field]: val, boxes: '', packets: '', bags: '' };
+        }
+
+        if (field === 'boxes') {
+          return {
+            ...l,
+            boxes: val,
+            packets: String(numVal * 9),
+            bags: String(numVal * 45),
+          };
+        } else if (field === 'packets') {
+          return {
+            ...l,
+            packets: val,
+            boxes: String(Number((numVal / 9).toFixed(2))),
+            bags: String(numVal * 5),
+          };
+        } else if (field === 'bags') {
+          return {
+            ...l,
+            bags: val,
+            packets: String(Number((numVal / 5).toFixed(2))),
+            boxes: String(Number((numVal / 45).toFixed(2))),
+          };
+        }
+
+        return { ...l, [field]: val };
+      })
+    );
+  };
+
   const addLine = () => setLines((ls) => [...ls, { ...EMPTY_LINE }]);
   const removeLine = (i) => setLines((ls) => ls.filter((_, idx) => idx !== i));
 
-  const lineTotal = (l) => {
-    const base = Number(l.quantity || 0) * Number(l.unitPrice || 0);
-    const gst  = base * (Number(l.gstPercent || 0) / 100);
-    return base + gst;
-  };
-  const grandTotal = lines.reduce((s, l) => s + lineTotal(l), 0);
 
-  const handleSubmit = (e) => {
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    createPO.mutateAsync({
-      vendorId,
-      expectedDeliveryDate: expectedDelivery,
-      termsAndConditions: terms,
-      items: lines.map((l) => ({
-        bagType: l.bagType,
-        capacity: Number(l.capacity),
-        anticoagulant: l.anticoagulant,
-        quantityOrdered: Number(l.quantity),
-        unitPrice: Number(l.unitPrice),
-        gstPercent: Number(l.gstPercent),
-      })),
-    }).then(onClose).catch(() => {});
+    try {
+      const text = vendorSearchText.trim();
+      let matchedVendor = (vendors ?? []).find(
+        (v) => (v.vendorName ?? v.name ?? '').trim().toLowerCase() === text.toLowerCase()
+      );
+
+      let finalVendorId = matchedVendor?._id;
+
+      if (!finalVendorId && text) {
+        const newVendor = await createVendor.mutateAsync({
+          name: text,
+          manufacturer: manufacturer || text,
+          drugLicenseNo: `DL-AUTO-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+          gstNo: `GST-AUTO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+          address: 'Auto-generated for typed vendor',
+          contactPerson: 'N/A',
+          contactPhone: '0000000000',
+          approvalStatus: 'APPROVED'
+        });
+        finalVendorId = newVendor._id ?? newVendor.id;
+      }
+
+      if (text) {
+        const updatedPrev = [text, ...previousVendors.filter(v => v !== text)].slice(0, 10);
+        localStorage.setItem('previous_vendors', JSON.stringify(updatedPrev));
+      }
+
+      const payload = {
+        poDate: poToEdit ? poToEdit.poDate : new Date().toISOString(),
+        vendorId: finalVendorId,
+        manufacturer: manufacturer || undefined,
+        billDate: billDate || undefined,
+        lineItems: lines.map((l) => ({
+          bagType: l.bagType,
+          capacityMl: Number(l.capacity) || 350,
+          anticoagulant: ANTICOAGULANT_MAP[l.anticoagulant] ?? l.anticoagulant,
+          quantityOrdered: Number(l.bags) || 1,
+        })),
+      };
+
+      if (poToEdit) {
+        await wrappedSavePO(payload);
+        // Dialog handles onClose itself once the reason is confirmed —
+        // don't close prematurely while it's still open.
+        return;
+      }
+      await createPO.mutateAsync(payload);
+      onClose();
+    } catch (err) {
+      console.error(err);
+    }
   };
+
+  const allVendorNames = Array.from(new Set([
+    ...(vendors ?? []).map(v => v.vendorName ?? v.name).filter(Boolean),
+    ...previousVendors
+  ]));
+
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-white z-50 shadow-2xl flex flex-col">
+      <div className="fixed right-0 top-0 h-full w-full max-w-3xl bg-white z-50 shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b bg-orange-800">
-          <h2 className="text-base font-semibold text-white">New Purchase Order</h2>
+          <h2 className="text-base font-semibold text-white">{poToEdit ? "Edit Purchase Order" : "New Purchase Order"}</h2>
           <button onClick={onClose} className="text-orange-200 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="flex-1 overflow-y-auto p-6 space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Vendor *</label>
-              <select required value={vendorId} onChange={(e) => setVendorId(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
-                <option value="">Select vendor...</option>
-                {(vendors ?? []).map((v) => (
-                  <option key={v._id} value={v._id}>{v.vendorName}</option>
+              <input required type="text" list="vendors-datalist" value={vendorSearchText} onChange={(e) => setVendorSearchText(e.target.value)}
+                placeholder="Type or select vendor..."
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white" />
+              <datalist id="vendors-datalist">
+                {allVendorNames.map((name) => (
+                  <option key={name} value={name} />
                 ))}
-              </select>
+              </datalist>
+              {previousVendors.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1 items-center">
+                  <span className="text-[10px] text-gray-400 font-semibold uppercase">Recommendations:</span>
+                  {previousVendors.slice(0, 3).map((v) => (
+                    <button key={v} type="button" onClick={() => setVendorSearchText(v)}
+                      className="px-2 py-0.5 bg-orange-50 hover:bg-orange-100 text-orange-800 text-[10px] rounded-full border border-orange-200 transition-colors">
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Expected Delivery</label>
-              <input type="date" value={expectedDelivery} onChange={(e) => setExpectedDelivery(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Manufacturer</label>
+              <input value={manufacturer} onChange={(e) => setManufacturer(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="e.g. Terumo Penpol" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Terms &amp; Conditions</label>
-              <input value={terms} onChange={(e) => setTerms(e.target.value)}
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bill Date</label>
+              <input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
           </div>
@@ -110,7 +239,7 @@ function PODrawer({ onClose, vendors }) {
           {/* Line Items */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Line Items</span>
+              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Line Items <span className="normal-case font-normal text-gray-400 text-[10px]">(1 Box = 9 Pkts = 45 bags, 1 Pkt = 5 bags)</span></span>
               <button type="button" onClick={addLine}
                 className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 hover:text-orange-900">
                 <Plus className="w-3.5 h-3.5" /> Add Row
@@ -120,8 +249,8 @@ function PODrawer({ onClose, vendors }) {
               <table className="min-w-full text-xs">
                 <thead className="bg-gray-50">
                   <tr>
-                    {['Bag Type', 'Cap (mL)', 'Anticoag.', 'Qty', 'Unit Price (₹)', 'GST %', 'Total', ''].map((h) => (
-                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    {['Bag Type', 'Cap (mL)', 'Anticoag.', 'Boxes', 'Pkts', 'Bags', 'Total Bags', ''].map((h) => (
+                      <th key={h} className="px-2 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -130,34 +259,37 @@ function PODrawer({ onClose, vendors }) {
                     <tr key={i}>
                       <td className="px-2 py-1.5">
                         <select value={l.bagType} onChange={(e) => updateLine(i, 'bagType', e.target.value)}
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs bg-white w-24">
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs bg-white w-20">
                           {BAG_TYPES.map((t) => <option key={t}>{t}</option>)}
                         </select>
                       </td>
                       <td className="px-2 py-1.5">
-                        <input value={l.capacity} onChange={(e) => updateLine(i, 'capacity', e.target.value)} type="number"
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-16" placeholder="450" />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <select value={l.anticoagulant} onChange={(e) => updateLine(i, 'anticoagulant', e.target.value)}
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs bg-white w-24">
-                          {ANTICOAGULANTS.map((a) => <option key={a}>{a}</option>)}
+                        <select value={l.capacity} onChange={(e) => updateLine(i, 'capacity', e.target.value)}
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs bg-white w-14">
+                          <option value="350">350</option>
+                          <option value="450">450</option>
                         </select>
                       </td>
                       <td className="px-2 py-1.5">
-                        <input value={l.quantity} onChange={(e) => updateLine(i, 'quantity', e.target.value)} type="number"
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-14" />
+                        <select value={l.anticoagulant} onChange={(e) => updateLine(i, 'anticoagulant', e.target.value)}
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs bg-white w-20">
+                          {ANTICOAGULANTS.map((a) => <option key={a}>{a}</option>)}
+                        </select>
                       </td>
-                      <td className="px-2 py-1.5">
-                        <input value={l.unitPrice} onChange={(e) => updateLine(i, 'unitPrice', e.target.value)} type="number"
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-20" />
+                      <td className="px-1 py-1.5">
+                        <input value={l.boxes} onChange={(e) => handleQtyChange(i, 'boxes', e.target.value)} type="number" min="0"
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-10 text-center font-medium" placeholder="0" />
                       </td>
-                      <td className="px-2 py-1.5">
-                        <input value={l.gstPercent} onChange={(e) => updateLine(i, 'gstPercent', e.target.value)} type="number"
-                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-12" placeholder="18" />
+                      <td className="px-1 py-1.5">
+                        <input value={l.packets} onChange={(e) => handleQtyChange(i, 'packets', e.target.value)} type="number" min="0"
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-10 text-center font-medium" placeholder="0" />
                       </td>
-                      <td className="px-2 py-1.5 font-medium text-gray-700">
-                        ₹{lineTotal(l).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                      <td className="px-1 py-1.5">
+                        <input value={l.bags} onChange={(e) => handleQtyChange(i, 'bags', e.target.value)} type="number" min="0"
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-10 text-center font-medium" placeholder="0" />
+                      </td>
+                      <td className="px-2 py-1.5 font-bold text-gray-700 text-center bg-gray-50/50">
+                        {Number(l.bags) || 0}
                       </td>
                       <td className="px-2 py-1.5">
                         {lines.length > 1 && (
@@ -171,9 +303,6 @@ function PODrawer({ onClose, vendors }) {
                 </tbody>
               </table>
             </div>
-            <div className="flex justify-end mt-2 text-sm font-semibold text-gray-800">
-              Grand Total: ₹{grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-            </div>
           </div>
 
           <div className="pt-4 border-t flex gap-3 justify-end">
@@ -183,11 +312,12 @@ function PODrawer({ onClose, vendors }) {
             </button>
             <button type="submit" disabled={createPO.isPending}
               className="px-5 py-2 text-sm font-semibold text-white bg-orange-800 rounded-lg hover:bg-orange-900 disabled:opacity-60">
-              {createPO.isPending ? 'Creating…' : 'Create PO'}
+              {poToEdit ? (updatePO.isPending ? 'Updating...' : 'Update PO') : (createPO.isPending ? 'Creating...' : 'Create PO')}
             </button>
           </div>
         </form>
       </div>
+      {EditReasonDialog}
     </>
   );
 }
@@ -195,53 +325,157 @@ function PODrawer({ onClose, vendors }) {
 export default function PurchaseOrders() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
-  const { data, isLoading } = usePOList({});
+  const [editPO, setEditPO] = useState(null);
+  const [excelLoading, setExcelLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [vendorFilter, setVendorFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
+  const { data, isLoading, refetch, isFetching } = usePOList({
+    search: search || undefined,
+    vendorId: vendorFilter || undefined,
+    from: fromDate || undefined,
+    to: toDate || undefined,
+  });
   const { data: vendorData } = useVendorList({});
-  const submitPO   = useSubmitPO();
-  const approvePO  = useApprovePO();
-  const rejectPO   = useRejectPO();
+  const deletePO = useDeletePO();
 
-  const orders  = data?.purchaseOrders ?? data ?? [];
-  const vendors = vendorData?.vendors ?? vendorData ?? [];
-
-  const stats = {
-    total:    orders.length,
-    draft:    orders.filter((o) => o.status === 'DRAFT').length,
-    pending:  orders.filter((o) => o.status === 'PENDING_APPROVAL').length,
-    approved: orders.filter((o) => o.status === 'APPROVED').length,
+  const mapPOForExport = (items, vendorsList) => {
+    return items.map(o => {
+      const vendorName = vendorsList.find(v => v._id === o.vendorId || v.id === o.vendorId)?.name ?? o.vendorId;
+      return {
+        poNumber: o.poNumber,
+        poDate: o.poDate,
+        vendorName: vendorName,
+        manufacturer: o.manufacturer,
+        billDate: o.billDate,
+        lineItems: o.lineItems ?? [],
+      };
+    });
   };
 
-  const fmtDate  = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-  const fmtMoney = (n) => n != null ? `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
+  const handleExportExcel = async (_exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      const dataToExport = mapPOForExport(orders, vendors);
+
+      if (dataToExport.length === 0) {
+        toast.info("No purchase orders to export");
+        return;
+      }
+
+      await exportProcurementPO(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
+  };
+
+  const orders = data?.items ?? data?.purchaseOrders ?? (Array.isArray(data) ? data : []);
+  const vendors = vendorData?.items ?? vendorData?.vendors ?? (Array.isArray(vendorData) ? vendorData : []);
+
+  const stats = {
+    total: orders.length,
+  };
+
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
   const toggleExpand = (id) => setExpandedId((prev) => (prev === id ? null : id));
+
+  const { requestDelete, DeleteReasonDialog } = useDeleteWithReason({
+    onDelete: async (po, reason) => {
+      await deletePO.mutateAsync({ id: po._id || po.id, reason });
+    },
+    title: 'Delete Purchase Order',
+    message: 'This purchase order and its goods receipts / unused stock will be moved to the Recycle Bin. Stock already issued for collection is preserved and marked affected, not deleted.',
+  });
+  const handleDelete = (po) => requestDelete(po);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-br from-orange-700 to-orange-900 rounded-xl shadow-sm">
-              <FileText className="w-6 h-6 text-white" />
+            <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
+              <FileText className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Purchase Orders</h1>
-              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest">Blood Bag Procurement</p>
+              <h1 className="text-2xl font-bold text-gray-900">Purchase Orders</h1>
+              <p className="text-gray-500 text-sm">Blood Bag Procurement</p>
             </div>
           </div>
-          <button onClick={() => setShowDrawer(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">
-            <Plus className="w-4 h-4" /> New PO
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+            <button onClick={() => { setEditPO(null); setShowDrawer(true); }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-orange-800 text-white text-sm font-semibold rounded-lg hover:bg-orange-900 shadow-sm">
+              <Plus className="w-4 h-4" /> New PO
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label="Total POs"        value={stats.total}    color="text-gray-900" />
-          <StatCard label="Draft"            value={stats.draft}    color="text-gray-600" />
-          <StatCard label="Pending Approval" value={stats.pending}  color="text-yellow-600" />
-          <StatCard label="Approved"         value={stats.approved} color="text-green-700" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <StatCard label="Total POs" value={stats.total} color="text-gray-900" />
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-end gap-3">
+          <div className="relative flex-1 min-w-[220px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Search PO Number</label>
+            <SearchBox
+              value={searchInput}
+              onChange={setSearchInput}
+              onSearch={() => setSearch(searchInput)}
+              placeholder="PO Number..."
+              inputClassName="focus:ring-orange-400 focus:border-orange-400"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Vendor</label>
+            <select
+              value={vendorFilter}
+              onChange={(e) => setVendorFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+            >
+              <option value="">All Vendors</option>
+              {vendors.map((v) => (
+                <option key={v._id ?? v.id} value={v._id ?? v.id}>{v.vendorName ?? v.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">PO Date From</label>
+            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">PO Date To</label>
+            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          {(search || vendorFilter || fromDate || toDate) && (
+            <button
+              onClick={() => { setSearch(''); setSearchInput(''); setVendorFilter(''); setFromDate(''); setToDate(''); }}
+              className="px-3 py-2 text-sm text-orange-800 hover:bg-orange-50 rounded-lg font-medium"
+            >
+              Reset
+            </button>
+          )}
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -249,16 +483,16 @@ export default function PurchaseOrders() {
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
-                  {['', 'PO Number', 'PO Date', 'Vendor', 'Total Amount', 'Expected Delivery', 'Status', 'Actions'].map((h) => (
+                  {['', 'PO Number', 'PO Date', 'Vendor', 'Actions'].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {isLoading ? (
-                  <tr><td colSpan={8} className="py-12 text-center text-sm text-gray-500">Loading...</td></tr>
+                  <tr><td colSpan={5} className="py-12 text-center text-sm text-gray-500">Loading...</td></tr>
                 ) : orders.length === 0 ? (
-                  <tr><td colSpan={8} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
+                  <tr><td colSpan={5} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
                 ) : orders.map((o) => (
                   <>
                     <tr key={o._id} className="hover:bg-orange-50/30 transition-colors">
@@ -268,56 +502,44 @@ export default function PurchaseOrders() {
                         </button>
                       </td>
                       <td className="px-4 py-3 text-sm font-mono font-medium text-gray-900">{o.poNumber}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(o.poDate ?? o.createdAt)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{o.vendor?.vendorName ?? o.vendorId}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-800">{fmtMoney(o.totalAmount)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(o.expectedDeliveryDate)}</td>
-                      <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(o.poDate)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{(vendors.find(v => v._id === o.vendorId || v.id === o.vendorId)?.name ?? o.vendorId)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
-                          {o.status === 'DRAFT' && (
-                            <button onClick={() => submitPO.mutate(o._id)}
-                              className="px-2.5 py-1 text-xs font-medium text-yellow-700 border border-yellow-200 rounded-md hover:bg-yellow-50">
-                              Submit
-                            </button>
-                          )}
-                          {o.status === 'PENDING_APPROVAL' && (
-                            <>
-                              <button onClick={() => approvePO.mutate(o._id)}
-                                className="px-2.5 py-1 text-xs font-medium text-green-700 border border-green-200 rounded-md hover:bg-green-50">
-                                Approve
-                              </button>
-                              <button onClick={() => rejectPO.mutate({ id: o._id, data: { reason: 'Rejected by manager' } })}
-                                className="px-2.5 py-1 text-xs font-medium text-red-600 border border-red-200 rounded-md hover:bg-red-50">
-                                Reject
-                              </button>
-                            </>
-                          )}
+                          <button onClick={() => { setEditPO(o); setShowDrawer(true); }}
+                            className="px-2.5 py-1 text-xs font-medium text-blue-700 border border-blue-200 rounded-md hover:bg-blue-50">
+                            Edit
+                          </button>
+                          <button onClick={() => handleDelete(o)} disabled={deletePO.isPending}
+                            className="px-2.5 py-1 text-xs font-medium text-red-700 border border-red-200 rounded-md hover:bg-red-50 disabled:opacity-50">
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
                     {expandedId === o._id && (
                       <tr key={`${o._id}-expand`} className="bg-orange-50/20">
-                        <td colSpan={8} className="px-8 py-4">
+                        <td colSpan={5} className="px-8 py-4">
+                          <div className="grid grid-cols-2 gap-4 mb-4 text-xs bg-white p-3 rounded-lg border border-gray-150 shadow-sm max-w-2xl">
+                            <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Manufacturer:</span> <span className="font-medium text-gray-800 ml-1">{o.manufacturer || '—'}</span></div>
+                            <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Bill Date:</span> <span className="font-medium text-gray-800 ml-1">{fmtDate(o.billDate)}</span></div>
+                          </div>
                           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Line Items</div>
                           <table className="min-w-full text-xs border border-gray-100 rounded-lg overflow-hidden">
                             <thead className="bg-gray-100">
                               <tr>
-                                {['Bag Type', 'Capacity', 'Anticoagulant', 'Qty Ordered', 'Unit Price', 'GST %', 'Line Total'].map((h) => (
+                                {['Bag Type', 'Capacity', 'Anticoagulant', 'Qty Ordered'].map((h) => (
                                   <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                                 ))}
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 bg-white">
-                              {(o.items ?? []).map((it, idx) => (
+                              {(o.lineItems ?? []).map((it, idx) => (
                                 <tr key={idx}>
                                   <td className="px-3 py-2 font-medium">{it.bagType}</td>
-                                  <td className="px-3 py-2">{it.capacity} mL</td>
+                                  <td className="px-3 py-2">{it.capacityMl} mL</td>
                                   <td className="px-3 py-2">{it.anticoagulant}</td>
-                                  <td className="px-3 py-2">{it.quantityOrdered}</td>
-                                  <td className="px-3 py-2">{fmtMoney(it.unitPrice)}</td>
-                                  <td className="px-3 py-2">{it.gstPercent}%</td>
-                                  <td className="px-3 py-2 font-semibold">{fmtMoney(it.lineTotal)}</td>
+                                  <td className="px-3 py-2 font-medium">{formatBloodBagQty((it.quantityOrdered))}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -333,7 +555,8 @@ export default function PurchaseOrders() {
         </div>
       </div>
 
-      {showDrawer && <PODrawer onClose={() => setShowDrawer(false)} vendors={vendors} />}
+      {showDrawer && <PODrawer onClose={() => { setShowDrawer(false); setEditPO(null); }} vendors={vendors} poToEdit={editPO} />}
+      {DeleteReasonDialog}
     </div>
   );
 }

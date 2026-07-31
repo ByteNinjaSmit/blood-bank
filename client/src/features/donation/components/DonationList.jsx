@@ -4,6 +4,8 @@ import Table from '@/components/shared/Table';
 import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { useDonation } from '@/hooks/useDonation';
+import { exportMasterDonations } from '@/utils/excelExportHelper';
+import { toast } from 'sonner';
 
 const DonationList = ({
   onAddDonation,
@@ -34,6 +36,7 @@ const DonationList = ({
 
       fetchDonations(queryParams);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campId, page, rowsPerPage, filters]);
 
   useEffect(() => {
@@ -85,9 +88,16 @@ const DonationList = ({
     }
   };
 
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    console.log('Export donations');
+  const handleExport = async () => {
+    if (!donations || donations.length === 0) {
+      toast.error('No donations to export');
+      return;
+    }
+    try {
+      await exportMasterDonations(donations);
+    } catch {
+      toast.error('Failed to export donations');
+    }
   };
 
   if (loading) {
@@ -208,54 +218,72 @@ const DonationList = ({
             </tr>
           </Table.Header>
           <Table.Body>
-            {donations.map((donation) => (
-              <Table.Row key={donation._id}>
-                <Table.Cell className="font-medium">{donation.bagNo}</Table.Cell>
-                <Table.Cell>
-                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                    {donation.typeOfBag || '-'}
-                  </span>
-                </Table.Cell>
-                <Table.Cell>
-                  {donation.donor?.name?.firstName} {donation.donor?.name?.lastName}
-                </Table.Cell>
-                <Table.Cell>
-                  {donation.bloodGroup} {donation.rh === "Positive" ? "+" : "-"}
-                </Table.Cell>
-                <Table.Cell>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      donation.donorFitness?.isFit
-                        ? 'bg-green-100 text-green-800 border border-green-200'
-                        : 'bg-red-100 text-red-800 border border-red-200'
-                    }`}
-                    title={donation.donorFitness?.rejectionReason || ''}
-                  >
-                    {donation.donorFitness?.isFit ? 'Fit' : 'Unfit'}
-                  </span>
-                </Table.Cell>
-                <Table.Cell>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(donation.status)}`}>
-                    {getStatusText(donation.status)}
-                  </span>
-                </Table.Cell>
-                <Table.Cell>
-                  {new Date(donation.collectionDate).toLocaleString()}
-                </Table.Cell>
-                <Table.Cell>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onViewDonation && onViewDonation(donation)}
-                      title="View Details"
+            {donations.map((donation) => {
+              const bagNo = donation.bagNo || donation.donationId || '-';
+              const typeOfBag = donation.typeOfBag || '-';
+              const donorName = donation.donorName || 
+                (donation.donor?.name 
+                  ? [donation.donor.name.firstName, donation.donor.name.middleName, donation.donor.name.lastName].filter(Boolean).join(' ') 
+                  : (typeof donation.donor === 'string' ? donation.donor : '-'));
+              const bloodGroup = donation.bloodGroup || '-';
+              const rhSymbol = donation.rhFactor
+                ? (donation.rhFactor === 'POSITIVE' || donation.rhFactor === 'Positive' ? '+' : '-')
+                : (donation.rh === 'Positive' || donation.rh === 'POSITIVE' ? '+' : donation.rh === 'Negative' || donation.rh === 'NEGATIVE' ? '-' : '');
+              const isFit = donation.isFit !== undefined
+                ? donation.isFit
+                : (donation.donorFitness?.isFit !== undefined ? donation.donorFitness.isFit : true);
+              const rejectionReason = donation.donorFitness?.rejectionReason || '';
+              const status = donation.status ||
+                (donation.ttiReleaseDecision === 'released' ? 'passed' : donation.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
+              const colDate = donation.collectedAt || donation.collectionDate;
+
+              return (
+                <Table.Row key={donation._id || donation.id}>
+                  <Table.Cell className="font-medium font-mono text-xs">{bagNo}</Table.Cell>
+                  <Table.Cell>
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      {typeOfBag}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell>{donorName}</Table.Cell>
+                  <Table.Cell className="font-semibold text-gray-800">
+                    {bloodGroup} {rhSymbol}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        isFit
+                          ? 'bg-green-100 text-green-800 border border-green-200'
+                          : 'bg-red-100 text-red-800 border border-red-200'
+                      }`}
+                      title={rejectionReason}
                     >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </Table.Cell>
-              </Table.Row>
-            ))}
+                      {isFit ? 'Fit' : 'Unfit'}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+                      {getStatusText(status)}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell className="text-gray-500 text-xs">
+                    {colDate ? new Date(colDate).toLocaleString() : '-'}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onViewDonation && onViewDonation(donation)}
+                        title="View Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </Table.Cell>
+                </Table.Row>
+              );
+            })}
           </Table.Body>
         </Table>
 

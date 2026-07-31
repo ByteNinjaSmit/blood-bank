@@ -1,22 +1,17 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Clock, AlertTriangle, Filter, Search, ChevronLeft, ChevronRight, Calendar, Package, X, Eye, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Clock, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
+import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDate as formatDateKolkata } from "@/lib/format-date";
+import { Card, CardContent } from "@/components/ui/card";
 import { ComponentDetailsModal } from "@/components/blood-components";
-
-const COMPONENT_TYPES = [
-  { value: "RBC", label: "Red Blood Cells" },
-  { value: "FFP", label: "Fresh Frozen Plasma" },
-  { value: "Platelet", label: "Platelets" },
-  { value: "Cryo", label: "Cryoprecipitate" },
-];
+import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
+import { exportNearExpiryComponents } from "@/utils/excelExportHelper";
+import { COMPONENT_TYPES } from "@/constants/component-types";
+import SearchBox from "@/components/shared/SearchBox";
+import NearExpiryTable from "../components/NearExpiryTable";
 
 const STATUS_OPTIONS = [
   { value: "in-stock", label: "In Stock" },
@@ -26,8 +21,9 @@ const STATUS_OPTIONS = [
 ];
 
 const NearExpiry = () => {
-  const { API, authorizationToken } = useAuth();
-  const navigate = useNavigate();
+  const { API } = useAuth();
+
+  const [excelLoading, setExcelLoading] = useState(false);
 
   // State management following SOLID principles
   const [state, setState] = useState({
@@ -53,6 +49,10 @@ const NearExpiry = () => {
     selectedComponentId: null,
   });
 
+  // Draft search text bound to the SearchBox; only committed into
+  // state.filters.search (the actual fetch dependency) on explicit submit.
+  const [searchInput, setSearchInput] = useState("");
+
   // Single responsibility: Fetch near-expiry components data
   const fetchNearExpiryComponents = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true }));
@@ -67,15 +67,7 @@ const NearExpiry = () => {
         ...(state.filters.search && { search: state.filters.search }),
       };
 
-      console.log("Fetching near-expiry components with params:", params);
-
-      const response = await axios.get(`${API}/api/component/near-expiry`, {
-        params,
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
-      });
-
-      console.log("Near-expiry components API response:", response.data);
+      const response = await apiClient.get(`/api/v2/component/near-expiry`, { params });
 
       if (response.data?.components) {
         setState(prev => ({
@@ -113,23 +105,16 @@ const NearExpiry = () => {
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [API, authorizationToken, state.pagination.page, state.pagination.limit, state.filters]);
+  }, [state.pagination.page, state.pagination.limit, state.filters]);
 
-  // Debounced search effect
+  // Fetch data whenever pagination or any applied filter (including the
+  // explicitly-submitted search) changes. Search no longer triggers a
+  // fetch on keystroke — only on SearchBox submit (Enter/button), which
+  // commits searchInput into state.filters.search.
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchNearExpiryComponents();
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [state.filters.search]);
-
-  // Effect to fetch data when other dependencies change
-  useEffect(() => {
-    if (state.filters.search === "") {
-      fetchNearExpiryComponents();
-    }
-  }, [state.pagination.page, state.pagination.limit, state.filters.days, state.filters.componentType, state.filters.status]);
+    fetchNearExpiryComponents();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.pagination.page, state.pagination.limit, state.filters.days, state.filters.componentType, state.filters.status, state.filters.search]);
 
   // Single responsibility: Handle filter changes
   const handleFilterChange = (filterType, value) => {
@@ -162,6 +147,7 @@ const NearExpiry = () => {
 
   // Single responsibility: Clear all filters
   const clearFilters = () => {
+    setSearchInput("");
     setState(prev => ({
       ...prev,
       filters: {
@@ -172,6 +158,39 @@ const NearExpiry = () => {
       },
       pagination: { ...prev.pagination, page: 1 },
     }));
+  };
+
+  const handleExportExcel = async (exportAll = false) => {
+    try {
+      setExcelLoading(true);
+      let dataToExport = [];
+      if (exportAll) {
+        const params = {
+          page: 1,
+          limit: 5000,
+          days: state.filters.days,
+          ...(state.filters.componentType && { componentType: state.filters.componentType }),
+          ...(state.filters.status && { status: state.filters.status }),
+          ...(state.filters.search && { search: state.filters.search }),
+        };
+        const response = await apiClient.get(`/api/v2/component/near-expiry`, { params });
+        dataToExport = response.data?.components || [];
+      } else {
+        dataToExport = state.components;
+      }
+
+      if (dataToExport.length === 0) {
+        toast.info("No near-expiry components to export");
+        return;
+      }
+
+      await exportNearExpiryComponents(dataToExport);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate Excel report");
+    } finally {
+      setExcelLoading(false);
+    }
   };
 
   // Single responsibility: Open component details modal
@@ -193,52 +212,7 @@ const NearExpiry = () => {
   // Single responsibility: Format date
   const formatDate = (dateString) => {
     if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  // Single responsibility: Get status badge variant
-  const getStatusBadgeVariant = (status) => {
-    switch (status) {
-      case "in-stock": return "default";
-      case "reserved": return "secondary";
-      case "issued": return "outline";
-      case "discarded": return "destructive";
-      default: return "outline";
-    }
-  };
-
-  // Single responsibility: Check if component is near expiry
-  const isNearExpiry = (expiryDate) => {
-    if (!expiryDate) return false;
-    const today = new Date();
-    const expiry = new Date(expiryDate);
-    const daysUntilExpiry = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
-    return daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
-  };
-
-  // Single responsibility: Check if component is expired
-  const isExpired = (expiryDate) => {
-    if (!expiryDate) return false;
-    const today = new Date();
-    const expiry = new Date(expiryDate);
-    return expiry < today;
-  };
-
-  // Single responsibility: Calculate days until expiry
-  const getDaysUntilExpiry = (expiryDate) => {
-    if (!expiryDate) return 0;
-    const today = new Date();
-    const expiry = new Date(expiryDate);
-    const diffTime = expiry - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  // Single responsibility: Get expiry color
-  const getExpiryColor = (days) => {
-    if (days <= 1) return "text-red-600 bg-red-100";
-    if (days <= 3) return "text-orange-600 bg-orange-100";
-    return "text-yellow-600 bg-yellow-100";
+    return formatDateKolkata(dateString);
   };
 
   return (
@@ -248,16 +222,17 @@ const NearExpiry = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-red-800 to-red-900 rounded-xl">
-                <Clock className="w-8 h-8 text-white" />
+              <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
+                <Clock className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Near-Expiry Components</h1>
-                <p className="text-gray-600 mt-1">
+                <h1 className="text-2xl font-bold text-gray-900">Near-Expiry Components</h1>
+                <p className="text-gray-500 text-sm">
                   Monitor and manage blood components approaching their expiry date
                 </p>
               </div>
             </div>
+            <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
           </div>
         </div>
       </div>
@@ -270,16 +245,14 @@ const NearExpiry = () => {
               {/* Search - Flexible Width */}
               <div className="flex-1 min-w-[240px] space-y-1">
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Search</label>
-                <div className="relative group">
-                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-yellow-500 w-3.5 h-3.5 transition-colors" />
-                  <Input
-                    placeholder="Search ID or bag number..."
-                    value={state.filters.search}
-                    onChange={(e) => handleFilterChange("search", e.target.value)}
-                    className="pl-8 h-9 text-xs border-gray-200 bg-gray-50/50 focus:bg-white focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 transition-all shadow-none"
-                    disabled={state.isLoading}
-                  />
-                </div>
+                <SearchBox
+                  placeholder="Search ID or bag number..."
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  onSearch={() => handleFilterChange("search", searchInput)}
+                  disabled={state.isLoading}
+                  inputClassName="border-gray-200 bg-gray-50/50 focus:bg-white focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 transition-all shadow-none"
+                />
               </div>
 
               {/* Days Filter */}
@@ -355,247 +328,14 @@ const NearExpiry = () => {
           </CardContent>
         </Card>
 
-        {/* Components Table */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CardTitle>Near-Expiry Components ({state.pagination.total})</CardTitle>
-                {state.filters.search && (
-                  <Badge variant="secondary" className="text-xs">
-                    Search: "{state.filters.search}"
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="text-xs text-gray-500">
-                  Page {state.pagination.page} of {state.pagination.totalPages}
-                </div>
-                <Button 
-                  onClick={fetchNearExpiryComponents} 
-                  variant="outline" 
-                  size="sm" 
-                  disabled={state.isLoading}
-                >
-                  {state.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Component ID
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Volume
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Expiry Date
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Days Left
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Bag Number
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Blood Group
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
-                  {state.isLoading ? (
-                    <tr>
-                      <td colSpan="9" className="px-4 py-8 text-center">
-                        <div className="inline-flex items-center gap-2 text-gray-500">
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Loading near-expiry components...
-                        </div>
-                      </td>
-                    </tr>
-                  ) : state.components.length === 0 ? (
-                    <tr>
-                      <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
-                        <div className="flex flex-col items-center gap-2">
-                          <AlertTriangle className="w-12 h-12 text-yellow-500" />
-                          <p className="text-lg font-medium">No near-expiry components found</p>
-                          <p className="text-sm">
-                            There are no components expiring within {state.filters.days} days that match your filters.
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    state.components.map((component, idx) => {
-                      const daysUntilExpiry = getDaysUntilExpiry(component.expiryDate);
-                      const expiryColor = getExpiryColor(daysUntilExpiry);
-                      
-                      return (
-                        <tr key={`${component.componentId}-${idx}`} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                            {component.componentId}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
-                            <Badge variant="outline">{component.type}</Badge>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
-                            {component.volumeMl} mL
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
-                            <Badge variant={getStatusBadgeVariant(component.status)}>
-                              {component.status}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
-                            <div className="flex items-center gap-2">
-                              {isExpired(component.expiryDate) && (
-                                <AlertTriangle className="w-4 h-4 text-red-500" />
-                              )}
-                              {isNearExpiry(component.expiryDate) && !isExpired(component.expiryDate) && (
-                                <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                              )}
-                              <span className={isExpired(component.expiryDate) ? "text-red-600" : ""}>
-                                {formatDate(component.expiryDate)}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
-                            <div className={`text-xs ${expiryColor} px-2 py-1 rounded-full inline-flex items-center`}>
-                              <Clock className="w-3 h-3 mr-1" />
-                              {daysUntilExpiry} {daysUntilExpiry === 1 ? "day" : "days"}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
-                            {component.bagNo || "-"}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
-                            {component.bloodGroup || "-"}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewDetails(component.id)}
-                              className="h-8 w-8 p-0"
-                              title="View Component Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            <div className="flex items-center justify-between mt-6">
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-gray-700">
-                  Showing {((state.pagination.page - 1) * state.pagination.limit) + 1} to{" "}
-                  {Math.min(state.pagination.page * state.pagination.limit, state.pagination.total)} of{" "}
-                  {state.pagination.total} results
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Rows per page:</span>
-                  <Select 
-                    value={state.pagination.limit.toString()} 
-                    onValueChange={handleRowsPerPageChange}
-                  >
-                    <SelectTrigger className="w-20">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5</SelectItem>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="25">25</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              {state.pagination.totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(state.pagination.page - 1)}
-                    disabled={state.pagination.page === 1 || state.isLoading}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Previous
-                  </Button>
-                  
-                  <div className="flex items-center gap-1">
-                    {(() => {
-                      const totalPages = state.pagination.totalPages;
-                      const currentPage = state.pagination.page;
-                      const pages = [];
-                      
-                      // Calculate start and end page numbers
-                      let startPage = Math.max(1, currentPage - 2);
-                      let endPage = Math.min(totalPages, currentPage + 2);
-                      
-                      // Adjust if we're near the beginning or end
-                      if (endPage - startPage < 4) {
-                        if (startPage === 1) {
-                          endPage = Math.min(totalPages, startPage + 4);
-                        } else {
-                          startPage = Math.max(1, endPage - 4);
-                        }
-                      }
-                      
-                      for (let i = startPage; i <= endPage; i++) {
-                        pages.push(
-                          <Button
-                            key={i}
-                            variant={currentPage === i ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => handlePageChange(i)}
-                            disabled={state.isLoading}
-                            className="w-8 h-8 p-0"
-                          >
-                            {i}
-                          </Button>
-                        );
-                      }
-                      
-                      return pages;
-                    })()}
-                  </div>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(state.pagination.page + 1)}
-                    disabled={state.pagination.page === state.pagination.totalPages || state.isLoading}
-                  >
-                    Next
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <NearExpiryTable
+          state={state}
+          formatDate={formatDate}
+          onRefresh={() => fetchNearExpiryComponents()}
+          onView={handleViewDetails}
+          onPageChange={handlePageChange}
+          onRowsPerPageChange={handleRowsPerPageChange}
+        />
       </div>
 
       {/* Component Details Modal */}

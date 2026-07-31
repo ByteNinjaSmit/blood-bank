@@ -54,6 +54,10 @@ export const CreateDonationBody = z.object({
   bloodGroup: z.enum(ABO_GROUP),
   rhFactor: z.enum(RH_FACTOR),
   unitTemplates: z.array(UnitTemplateSchema).optional(),
+  typeOfBag: z.enum(['SB', 'DB', 'TB', 'QB']).optional(),
+  bagNo: z.string().trim().min(1).max(100).optional(),
+  segmentNo: z.string().trim().min(1).max(100).optional(),
+  lotNo: z.string().trim().min(1).max(100).optional(),
 });
 export type CreateDonationInput = z.infer<typeof CreateDonationBody>;
 
@@ -61,10 +65,15 @@ export const ListDonationsQuery = z.object({
   donorId: blankToUndef(z.string().regex(OBJECT_ID).optional()),
   donationType: z.enum(DONATION_TYPE).optional(),
   source: z.enum(['inhouse', 'camp']).optional(),
+  campId: blankToUndef(z.string().regex(OBJECT_ID).optional()),
   fromDate: z.coerce.date().optional(),
   toDate: z.coerce.date().optional(),
+  includeDeleted: z.coerce.boolean().optional().default(false),
+  // Recycle Bin uses deletedOnly=true to list soft-deleted donations; Master
+  // Register never sets it, so soft-deleted donations stay hidden there.
+  deletedOnly: z.coerce.boolean().optional().default(false),
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(200).default(25),
+  pageSize: z.coerce.number().int().min(1).max(10000).default(25),
 });
 export type ListDonationsInput = z.infer<typeof ListDonationsQuery>;
 
@@ -72,10 +81,19 @@ export const DonationIdParam = z.object({
   id: z.string().regex(OBJECT_ID, 'Invalid donation id'),
 });
 
+export const DeleteReasonBody = z.object({
+  reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
+});
+
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {
   const result = schema.safeParse(value);
   if (!result.success) {
-    throw new ValidationError(`Invalid ${where}`, result.error.issues);
+    // Surface exactly which field failed and why — a bare "Invalid
+    // request body" gives neither the caller nor the server log enough
+    // to diagnose a rejected edit/create without reproducing it.
+    const first = result.error.issues[0];
+    const detail = first ? ` — ${first.path.join('.') || '(root)'}: ${first.message}` : '';
+    throw new ValidationError(`Invalid ${where}${detail}`, result.error.issues);
   }
   return result.data;
 }
@@ -84,4 +102,5 @@ export const ValidateDonation = {
   createBody: (req: Request) => parseOrThrow(CreateDonationBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListDonationsQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(DonationIdParam, req.params, 'path params'),
+  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };

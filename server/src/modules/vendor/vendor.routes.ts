@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requireRole, requirePermission } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createVendorRepo } from '@/modules/vendor/vendor.repository';
 import { createVendorService } from '@/modules/vendor/vendor.service';
 import { createVendorControllers } from '@/modules/vendor/vendor.controller';
@@ -13,7 +13,6 @@ const router = Router();
 router.get(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'qa-manager']),
   requirePermission('vendor:read'),
   controllers.list,
 );
@@ -21,7 +20,6 @@ router.get(
 router.get(
   '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'qa-manager']),
   requirePermission('vendor:read'),
   controllers.get,
 );
@@ -29,7 +27,6 @@ router.get(
 router.post(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo']),
   requirePermission('vendor:create'),
   controllers.create,
 );
@@ -37,7 +34,6 @@ router.post(
 router.patch(
   '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo']),
   requirePermission('vendor:update'),
   controllers.update,
 );
@@ -45,7 +41,6 @@ router.patch(
 router.patch(
   '/:id/status',
   authenticate,
-  requireRole(['system-admin', 'bbo']),
   requirePermission('vendor:update'),
   controllers.updateStatus,
 );
@@ -53,9 +48,22 @@ router.patch(
 router.delete(
   '/:id',
   authenticate,
-  requireRole(['system-admin']),
   requirePermission('vendor:delete'),
   controllers.remove,
+);
+
+router.post(
+  '/:id/restore',
+  authenticate,
+  requirePermission('vendor:delete'),
+  controllers.restore,
+);
+
+router.delete(
+  '/:id/permanent',
+  authenticate,
+  requirePermission('vendor:permanent-delete'),
+  controllers.permanentDelete,
 );
 
 export default router;

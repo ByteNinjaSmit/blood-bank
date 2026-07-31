@@ -5,9 +5,9 @@ import Button from '@/components/shared/Button';
 import CustomModal from '@/components/CustomModal';
 import { toast } from 'sonner';
 import { useDonor } from '@/hooks/useDonor';
-import { useAuth } from '@/store/auth';
-import { checkAccess } from '@/features/user/pages/utils/access';
+import useAccess from '@/features/access/useAccess';
 import EnhancedLoader from '@/components/utils/Spinner';
+import { exportMasterDonors } from '@/utils/excelExportHelper';
 
 const DonorList = ({ 
   onAddDonor, 
@@ -16,9 +16,12 @@ const DonorList = ({
   onDeleteDonor,
   campId = null 
 }) => {
-  const { donors, loading, error, fetchDonors, deleteDonor, forceDeleteDonor, fetchCampDonors } = useDonor();
-  const { user } = useAuth();
-  const donorAccess = checkAccess(user, ["donor","donors","donor management"]);
+  const { donors, loading, error, fetchDonors, deleteDonor, fetchCampDonors } = useDonor();
+  const { hasPermission } = useAccess();
+  const donorAccess = {
+    canUpdate: hasPermission('donor:update'),
+    canDelete: hasPermission('donor:delete'),
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodGroupFilter, setBloodGroupFilter] = useState('');
   const [eligibilityFilter, setEligibilityFilter] = useState('');
@@ -32,6 +35,7 @@ const DonorList = ({
     } else {
       fetchDonors();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campId]);
 
   const filteredDonors = donors.filter((donor) => {
@@ -108,34 +112,25 @@ const DonorList = ({
     }
 
     if (result.code === 'DONOR_HAS_DONATIONS') {
-      // Inform user about existing donations
       toast.error(result.message || 'Donor has donation history and cannot be deleted.');
-
-      // Offer force delete only if user has stronger access (admin/delete)
-      if (donorAccess.canDelete) {
-        setShowDeleteModal(false);
-        setShowForceModal(true);
-      }
+      setShowDeleteModal(false);
+      setShowForceModal(true);
     } else {
       setShowDeleteModal(false);
       setDeleteTarget(null);
     }
   };
 
-  const handleForceDeleteConfirm = async () => {
-    if (!deleteTarget) return;
-    const donor = deleteTarget;
-    const forceResult = await forceDeleteDonor(donor._id);
-    if (forceResult.success && onDeleteDonor) {
-      onDeleteDonor(donor);
+  const handleExport = async () => {
+    if (!donors || donors.length === 0) {
+      toast.error('No donors to export');
+      return;
     }
-    setShowForceModal(false);
-    setDeleteTarget(null);
-  };
-
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    console.log('Export donors');
+    try {
+      await exportMasterDonors(donors);
+    } catch {
+      toast.error('Failed to export donors');
+    }
   };
 
   if (loading) {
@@ -227,7 +222,7 @@ const DonorList = ({
         <Table>
           <Table.Header>
             <tr>
-              <Table.Head>Donor ID</Table.Head>
+              {!campId && <Table.Head>Donor ID</Table.Head>}
               <Table.Head>Full Name</Table.Head>
               <Table.Head>DOB</Table.Head>
               <Table.Head>Sex</Table.Head>
@@ -243,13 +238,17 @@ const DonorList = ({
               const isDeferred = donor.eligibilityStatus === 'deferred' || donor.eligibilityStatus === 'temp-deferred';
               return (
                 <Table.Row key={donor._id || donor.id || index}>
-                  <Table.Cell className="font-medium">{isDeferred ? '-' : donor.donorId}</Table.Cell>
+                  {!campId && (
+                    <Table.Cell className="font-medium">
+                      {isDeferred ? '-' : donor.donorId}
+                    </Table.Cell>
+                  )}
                   <Table.Cell>
                     {donor.name?.firstName} {donor.name?.middleName} {donor.name?.lastName}
                   </Table.Cell>
                   <Table.Cell>
                     <div className="flex items-center gap-2">
-                      <span>{donor.dob ? new Date(donor.dob).toLocaleDateString() : 'N/A'}</span>
+                      <span>{donor.dob ? new Date(donor.dob).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</span>
                       {donor.dob && calculateAge(donor.dob) !== null && (
                         <span
                           className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold ${
@@ -269,8 +268,8 @@ const DonorList = ({
                     {donor.bloodGroup} {donor.rh === "Positive" ? "+" : "-"}
                   </Table.Cell>
                   <Table.Cell>
-                    {donor.lastDonationDate 
-                      ? new Date(donor.lastDonationDate).toLocaleDateString() 
+                    {donor.recentDonationDate || donor.lastDonationDate
+                      ? new Date(donor.recentDonationDate || donor.lastDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
                       : "N/A"
                     }
                   </Table.Cell>
@@ -338,23 +337,17 @@ const DonorList = ({
         confirmVariant="danger"
       />
 
-      {/* Force delete confirmation modal */}
+      {/* Informational modal: donors with donation history cannot be deleted */}
       <CustomModal
         open={showForceModal && !!deleteTarget}
-        title="Force Delete Donor & Related Data"
-        description="This donor has donation history. Force deleting will remove the donor and all related blood bags, components, inventory entries, and discard logs. This action is permanent."
+        title="Cannot Delete Donor"
+        description="This donor has donation history and cannot be deleted. Donation records are clinical data and must be preserved for audit purposes."
         onCancel={() => {
           setShowForceModal(false);
           setDeleteTarget(null);
         }}
-        onConfirm={handleForceDeleteConfirm}
-        confirmText="Force Delete"
-        confirmVariant="danger"
-      >
-        <p className="text-sm text-red-700 font-medium mt-2">
-          Proceed only if you fully understand the impact.
-        </p>
-      </CustomModal>
+        hideFooter
+      />
     </div>
   );
 };

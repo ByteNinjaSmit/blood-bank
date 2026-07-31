@@ -30,7 +30,17 @@ export default function CustomModal({
       : "border bg-white hover:bg-slate-50";
 
   const maxWidthClass =
-    size === "lg" ? "max-w-3xl" : size === "sm" ? "max-w-sm" : "max-w-md";
+    size === "3xl"
+      ? "max-w-7xl"
+      : size === "2xl"
+      ? "max-w-6xl"
+      : size === "xl"
+      ? "max-w-5xl"
+      : size === "lg"
+      ? "max-w-3xl"
+      : size === "sm"
+      ? "max-w-sm"
+      : "max-w-md";
 
   return (
     <div

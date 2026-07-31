@@ -17,12 +17,15 @@ import {
 import { notificationService } from '@/modules/notification/notification.service';
 import { authRepo, type UserRecord } from './auth.repository';
 import { userRepo } from '@/modules/user/user.repository';
+import { projectClientPermissions, type LegacyPermissionEntry } from '@/shared/role-map';
 import {
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
   parseDuration,
 } from './auth.tokens';
+import { auditService } from '@/modules/audit/audit.service';
+import { UNAUTHENTICATED_ACTOR_ID } from '@/modules/audit/audit.model';
 
 const log = childLogger({ module: 'auth-service' });
 
@@ -36,7 +39,21 @@ export interface PublicUser {
   email: string;
   phone?: string;
   role: string;
+  // Unconditional full-access bypass, decoupled from the (now purely
+  // cosmetic) role label — see rbac.ts requirePermission().
+  isFullAccess: boolean;
   permissions: unknown[];
+  // The resolved flat permission-string set (this user's explicit grid
+  // grants — module-wide or page-scoped alike) used by the frontend's
+  // useAccess() as its page-visibility baseline. NOT identical to what
+  // requirePermission(...) checks server-side — see role-map.ts's
+  // projectClientPermissions() vs projectPermissions(): a handful of
+  // low-sensitivity lookup permissions (hospital:read, bag-stock:read)
+  // are granted to every user server-side so cross-module dropdowns keep
+  // working, but are deliberately omitted here so that alone doesn't make
+  // the Hospital/Bag Inventory pages themselves appear unlocked to
+  // someone who was never granted them.
+  effectivePermissions: string[];
 }
 
 export interface TokenPair {
@@ -47,6 +64,10 @@ export interface TokenPair {
 }
 
 function toPublic(u: UserRecord): PublicUser {
+  const effectivePermissions = projectClientPermissions(
+    u.isFullAccess,
+    (u.permissions ?? []) as LegacyPermissionEntry[],
+  );
   return {
     userId: u.id,
     publicId: u.publicId,
@@ -54,7 +75,9 @@ function toPublic(u: UserRecord): PublicUser {
     email: u.email,
     phone: u.phone,
     role: u.role,
+    isFullAccess: u.isFullAccess,
     permissions: u.permissions,
+    effectivePermissions: [...effectivePermissions],
   };
 }
 
@@ -71,81 +94,68 @@ function sixDigit(): string {
   return ('000000' + crypto.randomInt(0, 1_000_000)).slice(-6);
 }
 
+interface RequestMeta {
+  ip?: string;
+  userAgent?: string;
+}
+
+// Records a failed login attempt. The submitted email is stored only as
+// the (non-PII-heavy) entityId for correlation — the password is never
+// passed to this function, let alone stored.
+async function recordFailedLogin(
+  emailAttempted: string,
+  failureReason: string,
+  meta: RequestMeta,
+): Promise<void> {
+  await auditService.record({
+    actorId: UNAUTHENTICATED_ACTOR_ID,
+    module: 'auth',
+    action: 'LOGIN',
+    entityType: 'auth',
+    entityId: emailAttempted,
+    entityLabel: emailAttempted,
+    severity: 'warning',
+    reason: failureReason,
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+    after: { outcome: 'failed', failureReason },
+  });
+}
+
 export const authService = {
   // ---- Password login (single step) ----
-  async login(email: string, password: string, ip?: string): Promise<TokenPair> {
+  async login(email: string, password: string, meta: RequestMeta = {}): Promise<TokenPair> {
     const user = await authRepo.findUserByEmail(email);
-    if (!user) throw new UnauthorizedError('Invalid credentials');
+    if (!user) {
+      await recordFailedLogin(email, 'invalid_credentials', meta);
+      throw new UnauthorizedError('Invalid credentials');
+    }
     if (user.status !== 'active') {
+      await recordFailedLogin(email, 'account_locked', meta);
       throw new ForbiddenError('Account pending admin approval');
     }
     const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) throw new UnauthorizedError('Invalid credentials');
+    if (!ok) {
+      await recordFailedLogin(email, 'invalid_credentials', meta);
+      throw new UnauthorizedError('Invalid credentials');
+    }
     log.info({ userId: user.id }, 'password login');
-    return issuePair(user, ip);
-  },
-
-  // ---- OTP login: step 1 (verify password, email a code) ----
-  async startOtpLogin(email: string, password: string) {
-    const user = await authRepo.findUserByEmail(email);
-    if (!user) throw new UnauthorizedError('Invalid credentials');
-    if (user.status !== 'active') throw new ForbiddenError('Account pending admin approval');
-    const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) throw new UnauthorizedError('Invalid credentials');
-
-    const code = sixDigit();
-    const txnId = crypto.randomUUID();
-    await authRepo.upsertOtp({
-      email: user.email,
-      txnId,
-      codeHash: await bcrypt.hash(code, 10),
-      purpose: 'LOGIN',
-      expiresAt: new Date(Date.now() + OTP_TTL_SECONDS * 1000),
+    const pair = await issuePair(user, meta.ip);
+    await auditService.record({
+      actorId: user.id,
+      module: 'auth',
+      action: 'LOGIN',
+      entityType: 'User',
+      entityId: user.id,
+      entityLabel: user.email,
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      after: { outcome: 'success' },
     });
-    await notificationService.send({
-      type: 'LOGIN_OTP',
-      to: user.email,
-      payload: { code, expiresInSeconds: OTP_TTL_SECONDS },
-    });
-    return {
-      txnId,
-      email: user.email,
-      expiresInSeconds: OTP_TTL_SECONDS,
-      resendCooldownSeconds: RESEND_COOLDOWN_SECONDS,
-    };
+    return pair;
   },
 
-  // ---- OTP login: step 2 (verify code, issue tokens) ----
-  async verifyOtpLogin(
-    email: string,
-    txnId: string,
-    code: string,
-    ip?: string,
-  ): Promise<TokenPair> {
-    const otp = await authRepo.findOtp(email, txnId, 'LOGIN');
-    if (!otp) throw new NotFoundError('OTP session');
-    if (otp.expiresAt < new Date()) {
-      await authRepo.deleteOtp(email, txnId);
-      throw new ValidationError('OTP expired. Start again.');
-    }
-    if (otp.attempts >= otp.maxAttempts) {
-      await authRepo.deleteOtp(email, txnId);
-      throw new ValidationError('Too many attempts. Start again.');
-    }
-    const match = await bcrypt.compare(code, otp.codeHash);
-    if (!match) {
-      otp.attempts += 1;
-      await otp.save();
-      throw new UnauthorizedError('Invalid OTP');
-    }
-    await authRepo.deleteOtp(email, txnId);
-    const user = await authRepo.findUserByEmail(email);
-    if (!user) throw new UnauthorizedError('Invalid session');
-    log.info({ userId: user.id }, 'otp login');
-    return issuePair(user, ip);
-  },
-
-  async resendOtp(email: string, txnId: string, purpose: 'LOGIN' | 'REGISTER') {
+  async resendOtp(email: string, txnId: string, purpose: 'REGISTER') {
     const otp = await authRepo.findOtp(email, txnId, purpose);
     if (!otp) throw new NotFoundError('OTP session');
     if (otp.expiresAt < new Date()) throw new ValidationError('OTP expired. Start again.');
@@ -160,7 +170,7 @@ export const authService = {
     otp.lastSentAt = new Date();
     await otp.save();
     await notificationService.send({
-      type: purpose === 'LOGIN' ? 'LOGIN_OTP' : 'REGISTER_OTP',
+      type: 'REGISTER_OTP',
       to: email,
       payload: {
         code,
@@ -189,6 +199,13 @@ export const authService = {
     const publicId = await userRepo.nextPublicId();
     const code = sixDigit();
     const txnId = crypto.randomUUID();
+
+    // Log OTP to console in development so it can be retrieved without email SMTP
+    if (env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log(`\n[DEV] Registration OTP for ${input.email}: ${code}\n`);
+    }
+
     await authRepo.upsertOtp({
       email: input.email.toLowerCase(),
       txnId,
@@ -280,8 +297,24 @@ export const authService = {
   },
 
   // ---- Logout ----
-  async logout(token: string | undefined, ip?: string): Promise<void> {
-    if (token) await authRepo.revokeRefresh(token, ip);
+  async logout(token: string | undefined, meta: RequestMeta = {}): Promise<void> {
+    if (!token) return;
+    await authRepo.revokeRefresh(token, meta.ip);
+    try {
+      const claims = verifyRefreshToken(token);
+      await auditService.record({
+        actorId: claims.userID,
+        module: 'auth',
+        action: 'LOGIN',
+        entityType: 'User',
+        entityId: claims.userID,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+        after: { outcome: 'logout' },
+      });
+    } catch {
+      // Expired/malformed token at logout time — nothing to attribute.
+    }
   },
 
   // ---- Current user ----

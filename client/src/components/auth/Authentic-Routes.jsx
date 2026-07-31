@@ -4,7 +4,7 @@ import Loader from "../utils/Spinner";
 import MasterLoader from "../Loader";
 
 export const AuthenticatedRoute = ({ children }) => {
-  const { user, isLoading, isLoggedIn } = useAuth();
+  const { isLoading, isLoggedIn } = useAuth();
   const location = useLocation();
 
   if (isLoading && !isLoggedIn) {

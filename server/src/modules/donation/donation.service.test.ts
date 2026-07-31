@@ -12,8 +12,11 @@ function mockDeferrals(
   return {
     create: vi.fn(),
     findActiveByDonor: vi.fn().mockResolvedValue(active),
+    findLatestActiveByDonor: vi.fn().mockResolvedValue(null),
     listByDonor: vi.fn(),
+    list: vi.fn(),
     lift: vi.fn(),
+    findByRelatedDonation: vi.fn(),
   };
 }
 
@@ -56,6 +59,8 @@ function mockDonors(donor: DonorDto | null = donorMatchingMinimum): DonorRepo {
     findById: vi.fn().mockResolvedValue(donor),
     update: vi.fn(),
     list: vi.fn(),
+    softDelete: vi.fn(),
+    restore: vi.fn(),
     delete: vi.fn(),
     findActiveByPhone: vi.fn(),
   };
@@ -87,24 +92,29 @@ function mockDonations(): DonationRepo {
       }),
     ),
     findById: vi.fn(),
+    findByDonationId: vi.fn(),
+    findRawStatus: vi.fn(),
     list: vi.fn(),
     findLatestByDonor: vi.fn().mockResolvedValue(null),
+    softDelete: vi.fn(),
+    restore: vi.fn(),
+    delete: vi.fn(),
+    lookupByBagNo: vi.fn(),
+    bagNosByDonationIds: vi.fn().mockResolvedValue({}),
   };
 }
 
 describe('donation-service.register', () => {
-  it('registers a fit whole-blood donation and derives 3 units (PRBC+FFP+PC)', async () => {
+  it('registers a fit whole-blood donation and derives 1 WB unit', async () => {
     const svc = createDonationService({
       donations: mockDonations(),
       donors: mockDonors(),
       deferrals: mockDeferrals(),
     });
     const result = await svc.register(baseInput(), 'actor-id');
-    expect(result.units).toHaveLength(3);
+    expect(result.units).toHaveLength(1);
     expect(result.units.map((u) => u.componentType).sort()).toEqual([
-      'FFP',
-      'PLATELET_CONCENTRATE',
-      'PRBC',
+      'WB',
     ]);
     expect(result.ttiReleaseDecision).toBe('pending');
   });
@@ -134,29 +144,28 @@ describe('donation-service.register', () => {
     await expect(svc.register(baseInput(), 'actor-id')).rejects.toBeInstanceOf(NotFoundError);
   });
 
-  it('throws ConflictError when a fit donation fails eligibility (low Hb)', async () => {
+  it('registers a fit donation even when eligibility checks fail (low Hb)', async () => {
     const svc = createDonationService({
       donations: mockDonations(),
       donors: mockDonors(),
       deferrals: mockDeferrals(),
     });
-    await expect(
-      svc.register(
-        baseInput({
-          medicalExam: {
-            weightKg: 65,
-            hbGdl: 10,
-            pulseBpm: 72,
-            temperatureCelsius: 36.8,
-            bloodPressure: { systolic: 120, diastolic: 80 },
-          },
-        }),
-        'actor-id',
-      ),
-    ).rejects.toBeInstanceOf(ConflictError);
+    const result = await svc.register(
+      baseInput({
+        medicalExam: {
+          weightKg: 65,
+          hbGdl: 10,
+          pulseBpm: 72,
+          temperatureCelsius: 36.8,
+          bloodPressure: { systolic: 120, diastolic: 80 },
+        },
+      }),
+      'actor-id',
+    );
+    expect(result.units).toHaveLength(1);
   });
 
-  it('throws ConflictError on too-soon repeat WB donation', async () => {
+  it('rejects too-soon repeat WB donation (under 90 days for male)', async () => {
     const donations = mockDonations();
     donations.findLatestByDonor = vi.fn().mockResolvedValue({
       collectedAt: new Date('2026-04-01T00:00:00Z'),
@@ -167,15 +176,66 @@ describe('donation-service.register', () => {
       donors: mockDonors(),
       deferrals: mockDeferrals(),
     });
-    await expect(svc.register(baseInput(), 'actor-id')).rejects.toBeInstanceOf(ConflictError);
+    await expect(svc.register(baseInput(), 'actor-id')).rejects.toThrowError(
+      /Donor cannot donate yet/
+    );
   });
 
-  it('throws ConflictError when donor has active permanent deferral', async () => {
+  it('rejects too-soon repeat WB donation (under 120 days for female)', async () => {
+    const donations = mockDonations();
+    donations.findLatestByDonor = vi.fn().mockResolvedValue({
+      collectedAt: new Date('2026-04-01T00:00:00Z'),
+      donationType: 'WHOLE_BLOOD',
+    });
+    const femaleDonor = { ...donorMatchingMinimum, sex: 'F' as const };
+    const svc = createDonationService({
+      donations,
+      donors: mockDonors(femaleDonor),
+      deferrals: mockDeferrals(),
+    });
+    await expect(svc.register(baseInput(), 'actor-id')).rejects.toThrowError(
+      /Donor cannot donate yet/
+    );
+  });
+
+  it('accepts repeat WB donation after required interval (90 days for male)', async () => {
+    const donations = mockDonations();
+    donations.findLatestByDonor = vi.fn().mockResolvedValue({
+      collectedAt: new Date('2026-02-01T00:00:00Z'),
+      donationType: 'WHOLE_BLOOD',
+    });
+    const svc = createDonationService({
+      donations,
+      donors: mockDonors(),
+      deferrals: mockDeferrals(),
+    });
+    const result = await svc.register(baseInput(), 'actor-id');
+    expect(result.units).toHaveLength(1);
+  });
+
+  it('accepts repeat WB donation after required interval (120 days for female)', async () => {
+    const donations = mockDonations();
+    donations.findLatestByDonor = vi.fn().mockResolvedValue({
+      collectedAt: new Date('2026-01-01T00:00:00Z'),
+      donationType: 'WHOLE_BLOOD',
+    });
+    const femaleDonor = { ...donorMatchingMinimum, sex: 'F' as const };
+    const svc = createDonationService({
+      donations,
+      donors: mockDonors(femaleDonor),
+      deferrals: mockDeferrals(),
+    });
+    const result = await svc.register(baseInput(), 'actor-id');
+    expect(result.units).toHaveLength(1);
+  });
+
+  it('registers a fit donation even when donor has active permanent deferral', async () => {
     const svc = createDonationService({
       donations: mockDonations(),
       donors: mockDonors(),
       deferrals: mockDeferrals([{ type: 'PERMANENT', reason: 'Anti-HCV reactive' }]),
     });
-    await expect(svc.register(baseInput(), 'actor-id')).rejects.toBeInstanceOf(ConflictError);
+    const result = await svc.register(baseInput(), 'actor-id');
+    expect(result.units).toHaveLength(1);
   });
 });

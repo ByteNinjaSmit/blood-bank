@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { ValidateUser } from './user.validator';
 import { userService } from './user.service';
 import { UnauthorizedError } from '@/shared/errors';
+import { extractEditReason } from '@/shared/utils/edit-reason';
 
 const actor = (req: Request): string => {
   if (!req.user) throw new UnauthorizedError();
@@ -39,8 +40,9 @@ export const userController = {
   async update(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = ValidateUser.idParam(req);
+      const editReason = extractEditReason(req);
       const body = ValidateUser.updateBody(req);
-      const data = await userService.update(id, body, actor(req));
+      const data = await userService.update(id, body, actor(req), editReason);
       res.json({ success: true, data, requestId: req.id });
     } catch (e) {
       next(e);
@@ -49,7 +51,8 @@ export const userController = {
   async deactivate(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = ValidateUser.idParam(req);
-      await userService.deactivate(id, actor(req));
+      const { reason } = ValidateUser.deactivateBody(req);
+      await userService.deactivate(id, actor(req), reason);
       res.status(204).end();
     } catch (e) {
       next(e);

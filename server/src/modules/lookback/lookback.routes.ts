@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requirePermission, requireRole } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createLookbackRepo } from './lookback.repository';
 import { createUnitRepo } from '@/modules/unit/unit.repository';
 import { createLookbackService } from './lookback.service';
@@ -18,7 +18,6 @@ const router = Router();
 router.post(
   '/run',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'medical-officer', 'counsellor']),
   requirePermission('lookback:run'),
   controllers.run,
 );

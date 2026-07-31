@@ -24,6 +24,7 @@ export interface SelectionRequest {
   specialNeeds: ReadonlyArray<SpecialNeed>;
   unitsRequired: number;
   now?: Date;
+  plateletCompatibilityMode?: 'UNIVERSAL' | 'MAJOR' | 'MINOR';
 }
 
 export interface SelectedUnit {
@@ -41,7 +42,13 @@ export function selectUnits(
   req: SelectionRequest,
 ): SelectionResult {
   const now = req.now ?? new Date();
-  const acceptableAbo = new Set(compatibleAboGroups(req.recipient.aboGroup, req.component));
+  const acceptableAbo = new Set(
+    compatibleAboGroups(
+      req.recipient.aboGroup,
+      req.component,
+      req.plateletCompatibilityMode,
+    ),
+  );
 
   // 1. filter: matching component, not expired, ABO compatible, Rh acceptable,
   //    and satisfies every required special-need flag.

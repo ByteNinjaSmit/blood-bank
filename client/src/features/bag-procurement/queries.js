@@ -41,7 +41,7 @@ export function useCreateVendor() {
 export function useUpdateVendor() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }) => bagProcurementApi.vendor.update(id, data),
+    mutationFn: ({ id, data, editReason }) => bagProcurementApi.vendor.update(id, data, editReason),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['vendor', 'list'] }),
   });
 }
@@ -57,7 +57,23 @@ export function useUpdateVendorStatus() {
 export function useDeleteVendor() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id) => bagProcurementApi.vendor.remove(id),
+    mutationFn: ({ id, reason }) => bagProcurementApi.vendor.remove(id, reason),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['vendor', 'list'] }),
+  });
+}
+
+export function useRestoreVendor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => bagProcurementApi.vendor.restore(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['vendor', 'list'] }),
+  });
+}
+
+export function usePermanentDeleteVendor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }) => bagProcurementApi.vendor.permanentDelete(id, reason),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['vendor', 'list'] }),
   });
 }
@@ -91,34 +107,36 @@ export function useCreatePO() {
 export function useUpdatePO() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }) => bagProcurementApi.purchaseOrder.update(id, data),
+    mutationFn: ({ id, data, editReason }) => bagProcurementApi.purchaseOrder.update(id, data, editReason),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-order', 'list'] }),
   });
 }
 
-export function useSubmitPO() {
+export function useDeletePO() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id) => bagProcurementApi.purchaseOrder.submit(id),
+    mutationFn: ({ id, reason }) => bagProcurementApi.purchaseOrder.remove(id, reason),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-order', 'list'] }),
   });
 }
 
-export function useApprovePO() {
+export function useRestorePO() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id) => bagProcurementApi.purchaseOrder.approve(id),
+    mutationFn: (id) => bagProcurementApi.purchaseOrder.restore(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-order', 'list'] }),
   });
 }
 
-export function useRejectPO() {
+export function usePermanentDeletePO() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }) => bagProcurementApi.purchaseOrder.reject(id, data),
+    mutationFn: ({ id, reason }) => bagProcurementApi.purchaseOrder.permanentDelete(id, reason),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-order', 'list'] }),
   });
 }
+
+
 
 // ─── Goods Receipt ────────────────────────────────────────────────────────────
 export function useGRNList(filters) {
@@ -146,10 +164,10 @@ export function useCreateGRN() {
   });
 }
 
-export function useAcceptGRN() {
+export function useUpdateGRN() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id) => bagProcurementApi.goodsReceipt.accept(id),
+    mutationFn: ({ id, data }) => bagProcurementApi.goodsReceipt.update(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['goods-receipt', 'list'] }),
   });
 }
@@ -188,6 +206,17 @@ export function useUpdateStockStatus() {
   });
 }
 
+export function useOpenBagStockBox() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => bagProcurementApi.bagStock.openBox(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bag-stock', 'list'] });
+      qc.invalidateQueries({ queryKey: ['bag-stock', 'summary'] });
+    },
+  });
+}
+
 // ─── Bag Inspection ───────────────────────────────────────────────────────────
 export function useBagInspectionList(filters) {
   return useQuery({
@@ -211,6 +240,20 @@ export function useCreateBagInspection() {
   return useMutation({
     mutationFn: (data) => bagProcurementApi.bagInspection.create(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['bag-inspection', 'list'] }),
+  });
+}
+
+export function useUpdateBagInspectionReport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => bagProcurementApi.bagInspection.updateReport(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bag-inspection', 'list'] });
+      // An ACCEPTED/REJECTED decision change cascades to BagStock — keep
+      // the Inventory page's cache in sync instead of requiring a manual refresh.
+      qc.invalidateQueries({ queryKey: ['bag-stock', 'list'] });
+      qc.invalidateQueries({ queryKey: ['bag-stock', 'summary'] });
+    },
   });
 }
 

@@ -10,6 +10,7 @@ export interface HospitalDto {
   phone?: string;
   email?: string;
   licenseNo?: string;
+  isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -23,6 +24,7 @@ interface RawHospital {
   phone?: string;
   email?: string;
   licenseNo?: string;
+  isActive?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -37,6 +39,7 @@ function toDto(r: RawHospital): HospitalDto {
     phone: r.phone,
     email: r.email,
     licenseNo: r.licenseNo,
+    isActive: r.isActive,
     createdAt: r.createdAt?.toISOString(),
     updatedAt: r.updatedAt?.toISOString(),
   };
@@ -46,6 +49,10 @@ export interface ListHospitalsFilter {
   name?: string;
   contactPerson?: string;
   phone?: string;
+  isActive?: boolean;
+  from?: Date;
+  to?: Date;
+  deletedOnly?: boolean;
   page: number;
   limit: number;
   sortBy: string;
@@ -75,10 +82,17 @@ export const hospitalRepo = {
     return toDto(created.toObject() as unknown as RawHospital);
   },
   async list(f: ListHospitalsFilter): Promise<{ items: HospitalDto[]; total: number }> {
-    const filter: Record<string, unknown> = {};
+    const filter: Record<string, unknown> = { deletedAt: f.deletedOnly ? { $ne: null } : null };
     if (f.name) filter.name = { $regex: f.name, $options: 'i' };
     if (f.contactPerson) filter.contactPerson = { $regex: f.contactPerson, $options: 'i' };
     if (f.phone) filter.phone = { $regex: f.phone, $options: 'i' };
+    if (f.isActive !== undefined) filter.isActive = f.isActive;
+    if (f.from || f.to) {
+      const range: Record<string, Date> = {};
+      if (f.from) range.$gte = f.from;
+      if (f.to) range.$lte = f.to;
+      filter.createdAt = range;
+    }
     const sort: Record<string, 1 | -1> = { [f.sortBy]: f.sortOrder === 'desc' ? -1 : 1 };
     const skip = (f.page - 1) * f.limit;
     const [docs, total] = await Promise.all([
@@ -101,5 +115,29 @@ export const hospitalRepo = {
   async remove(id: string): Promise<boolean> {
     const r = await HospitalModel.findByIdAndDelete(id);
     return Boolean(r);
+  },
+
+  // Unlike findById (used by normal reads and excludes soft-deleted
+  // rows), this is used by restore/permanentDelete which expect to
+  // find an already soft-deleted hospital.
+  async findByIdIncludingDeleted(id: string): Promise<HospitalDto | null> {
+    const raw = (await HospitalModel.findById(id).lean()) as unknown as RawHospital | null;
+    return raw ? toDto(raw) : null;
+  },
+
+  async softDelete(id: string, actorId: string): Promise<boolean> {
+    const res = await HospitalModel.updateOne(
+      { _id: new Types.ObjectId(id), deletedAt: null },
+      { $set: { deletedAt: new Date(), deletedBy: new Types.ObjectId(actorId) } },
+    );
+    return res.modifiedCount > 0;
+  },
+
+  async restore(id: string, actorId: string): Promise<boolean> {
+    const res = await HospitalModel.updateOne(
+      { _id: new Types.ObjectId(id) },
+      { $set: { deletedAt: null, updatedBy: new Types.ObjectId(actorId) } },
+    );
+    return res.modifiedCount > 0;
   },
 };

@@ -1,9 +1,4 @@
-export const COMPONENT_TYPES = [
-  { value: 'RBC', label: 'RBC' },
-  { value: 'FFP', label: 'FFP' },
-  { value: 'Platelet', label: 'Platelet' },
-  { value: 'Cryo', label: 'Cryo' },
-];
+export { COMPONENT_TYPES } from '@/constants/component-types';
 
 export const BLOOD_GROUPS = ['A', 'B', 'AB', 'O'];
 
@@ -18,3 +13,9 @@ export const SEX_TYPES = [
   { value: 'F', label: 'Female' },
   { value: 'O', label: 'Other' },
 ];
+
+export const INDICATION_CATEGORY_LABELS = {
+  THALASSEMIA: 'Thalassemia',
+  SICKLE_CELL_ANAEMIA: 'Sickle Cell Anemia',
+  OTHER: 'Other',
+};

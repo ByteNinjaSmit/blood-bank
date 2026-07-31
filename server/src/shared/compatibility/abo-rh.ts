@@ -26,9 +26,16 @@ const ABO_RBC: Readonly<Record<AboGroup, ReadonlyArray<AboGroup>>> = {
   AB: ['A', 'B', 'AB', 'O'],
 };
 
-// Plasma is the inverse table. Anti-A and anti-B antibodies in the
-// donor plasma must be acceptable to the recipient's red cells.
+// Plasma is strict same-group matching.
 const ABO_PLASMA: Readonly<Record<AboGroup, ReadonlyArray<AboGroup>>> = {
+  O: ['O'],
+  A: ['A'],
+  B: ['B'],
+  AB: ['AB'],
+};
+
+// Original Plasma compatibility table (used for Platelet Minor Compatibility mode)
+const ABO_PLASMA_COMPAT: Readonly<Record<AboGroup, ReadonlyArray<AboGroup>>> = {
   O: ['O', 'A', 'B', 'AB'],
   A: ['A', 'AB'],
   B: ['B', 'AB'],
@@ -64,6 +71,7 @@ const ABO_CRYO_PREF: Readonly<Record<AboGroup, ReadonlyArray<AboGroup>>> = {
 export function compatibleAboGroups(
   recipient: AboGroup,
   component: ComponentType,
+  plateletCompatibilityMode?: 'UNIVERSAL' | 'MAJOR' | 'MINOR',
 ): ReadonlyArray<AboGroup> {
   switch (rbcFamily(component)) {
     case 'RBC':
@@ -71,10 +79,16 @@ export function compatibleAboGroups(
     case 'PLASMA':
       return ABO_PLASMA[recipient];
     case 'PLATELET':
-      return ABO_PLATELET_PREF[recipient];
+      if (plateletCompatibilityMode === 'MAJOR') {
+        return ABO_RBC[recipient];
+      } else if (plateletCompatibilityMode === 'MINOR') {
+        return ABO_PLASMA_COMPAT[recipient];
+      } else {
+        return ABO_PLATELET_PREF[recipient];
+      }
     case 'CRYO':
       return ABO_CRYO_PREF[recipient];
-    case 'WHOLE_BLOOD':
+    case 'WB':
       // Whole blood ABO must match recipient exactly (carries both RBC and plasma).
       return [recipient];
   }
@@ -97,7 +111,7 @@ export function isRhAcceptable(
 ): boolean {
   switch (rbcFamily(component)) {
     case 'RBC':
-    case 'WHOLE_BLOOD':
+    case 'WB':
       if (recipient === 'NEGATIVE') return donor === 'NEGATIVE';
       return true;
     case 'PLASMA':
@@ -109,11 +123,13 @@ export function isRhAcceptable(
 }
 
 /**
- * Crossmatch requirement per component. Only RBC-bearing components
- * need a serological crossmatch between donor unit and recipient sample.
+ * Crossmatch requirement per component. RBC-bearing components always
+ * need a serological crossmatch; FFP is also crossmatched (component-wise,
+ * one worksheet per matched bag) even though it carries no red cells.
  */
 export function requiresCrossmatch(component: ComponentType): boolean {
-  return rbcFamily(component) === 'RBC' || rbcFamily(component) === 'WHOLE_BLOOD';
+  const family = rbcFamily(component);
+  return family === 'RBC' || family === 'WB' || component === 'FFP';
 }
 
 /**
@@ -122,7 +138,7 @@ export function requiresCrossmatch(component: ComponentType): boolean {
 export function strictness(component: ComponentType): Strictness {
   switch (rbcFamily(component)) {
     case 'RBC':
-    case 'WHOLE_BLOOD':
+    case 'WB':
       return 'HIGH';
     case 'PLASMA':
       return 'MEDIUM';
@@ -164,23 +180,20 @@ export function classify(
 // Internal: group components into compatibility families.
 // ---------------------------------------------------------------------
 
-type Family = 'RBC' | 'PLASMA' | 'PLATELET' | 'CRYO' | 'WHOLE_BLOOD';
+type Family = 'RBC' | 'PLASMA' | 'PLATELET' | 'CRYO' | 'WB';
 
 function rbcFamily(component: ComponentType): Family {
   switch (component) {
     case 'PRBC':
-    case 'IRRADIATED_PRBC':
-    case 'WASHED_PRBC':
-    case 'LEUKOREDUCED_PRBC':
       return 'RBC';
     case 'FFP':
       return 'PLASMA';
-    case 'PLATELET_CONCENTRATE':
+    case 'RDP':
     case 'SDP':
       return 'PLATELET';
-    case 'CRYOPRECIPITATE':
+    case 'CRYO':
       return 'CRYO';
-    case 'WHOLE_BLOOD':
-      return 'WHOLE_BLOOD';
+    case 'WB':
+      return 'WB';
   }
 }

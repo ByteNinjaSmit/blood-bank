@@ -1,10 +1,15 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { ROLE } from '@/shared/enums';
 
 const PermissionSchema = new Schema(
   {
     moduleName: { type: String, required: true },
+    // Absent = a module-wide grant (cascades to every page under this
+    // module). Present = a page-scoped override — only meaningful to the
+    // frontend's access registry (client/src/config/access-registry); the
+    // backend still projects it into the same flat Permission[] set a
+    // module-wide entry would (see role-map.ts projectPermissions()).
+    pageId: { type: String, default: null },
     view: { type: Boolean, default: false },
     create: { type: Boolean, default: false },
     update: { type: Boolean, default: false },
@@ -22,7 +27,18 @@ const UserSchema = new Schema(
     },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     phone: { type: String, trim: true, index: true },
-    role: { type: String, enum: ROLE, required: true, index: true },
+    // Free-text display label only — carries no authorization weight.
+    // What a user can do is governed entirely by isFullAccess + permissions
+    // below (see server/src/shared/role-map.ts).
+    role: { type: String, required: true, trim: true, index: true },
+    // Unconditional bypass of every requirePermission(...) check,
+    // decoupled from the (cosmetic) role label above.
+    isFullAccess: { type: Boolean, default: false },
+    // Which Role template was last applied to prefill `role`/`permissions`
+    // below (see server/src/modules/role). Display/prefill metadata only —
+    // applying a role COPIES its grid onto this user; roleId is not read by
+    // role-map.ts and later edits to the Role do not cascade here.
+    roleId: { type: Schema.Types.ObjectId, ref: 'Role', default: null },
     password: { type: String, required: true, select: false },
     status: {
       type: String,

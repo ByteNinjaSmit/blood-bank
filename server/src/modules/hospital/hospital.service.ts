@@ -2,6 +2,13 @@ import { childLogger } from '@/core/logger';
 import { cached, invalidate } from '@/core/cache';
 import { ConflictError, NotFoundError } from '@/shared/errors';
 import { auditService } from '@/modules/audit/audit.service';
+import {
+  cascadeSoftDelete,
+  cascadeRestore,
+  runInCascadeTransaction,
+  newDeleteBatchId,
+} from '@/shared/utils/cascade-delete';
+import { hospitalCascadeNode } from '@/shared/cascade-registry';
 import { hospitalRepo, type HospitalDto, type ListHospitalsFilter } from './hospital.repository';
 
 export interface CreateHospitalInput {
@@ -37,10 +44,12 @@ export const hospitalService = {
     });
     await auditService.record({
       actorId,
+      module: 'hospital',
       action: 'CREATE',
       entityType: 'Hospital',
       entityId: created.id,
-      after: { name: created.name },
+      entityLabel: created.name,
+      after: { hospitalId: created.hospitalId, name: created.name, phone: created.phone },
     });
     await invalidate('hospital:*');
     log.info({ hospitalId: created.id, actorId }, 'hospital created');
@@ -78,10 +87,12 @@ export const hospitalService = {
     return h;
   },
 
-  async update(id: string, input: UpdateHospitalInput, actorId: string): Promise<HospitalDto> {
+  async update(id: string, input: UpdateHospitalInput, actorId: string, editReason?: string): Promise<HospitalDto> {
     if (input.phone && (await hospitalRepo.findOnePhone(input.phone, id))) {
       throw new ConflictError('Hospital with this phone number already exists');
     }
+    const before = await hospitalRepo.findById(id);
+    if (!before) throw new NotFoundError('Hospital', id);
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     if (input.name) patch.name = input.name.trim();
     if (input.address) patch.address = input.address.trim();
@@ -91,16 +102,80 @@ export const hospitalService = {
     if (input.licenseNo) patch.licenseNo = input.licenseNo.trim();
     const updated = await hospitalRepo.update(id, patch);
     if (!updated) throw new NotFoundError('Hospital', id);
-    await auditService.record({ actorId, action: 'UPDATE', entityType: 'Hospital', entityId: id });
+    await auditService.record({
+      actorId,
+      module: 'hospital',
+      action: 'UPDATE',
+      entityType: 'Hospital',
+      entityId: id,
+      entityLabel: updated.name,
+      before,
+      after: updated,
+      reason: editReason,
+    });
     await invalidate('hospital:*');
     return updated;
   },
 
-  async remove(id: string, actorId: string): Promise<void> {
+  async remove(id: string, actorId: string, reason: string): Promise<void> {
+    const before = await hospitalRepo.findById(id);
+    if (!before) throw new NotFoundError('Hospital', id);
+    const deleteBatchId = newDeleteBatchId();
+    await runInCascadeTransaction((session) =>
+      cascadeSoftDelete(hospitalCascadeNode, id, actorId, reason, deleteBatchId, session),
+    );
+    await auditService.record({
+      actorId,
+      module: 'hospital',
+      action: 'DELETE',
+      entityType: 'Hospital',
+      entityId: id,
+      entityLabel: before.name,
+      severity: 'warning',
+      before,
+      after: { deletedAt: new Date() },
+      reason,
+    });
+    await invalidate('hospital:*');
+    log.warn({ hospitalId: id, actorId, deleteBatchId }, 'hospital cascade soft-deleted');
+  },
+
+  async restore(id: string, actorId: string): Promise<{ restored: boolean }> {
+    const before = await hospitalRepo.findByIdIncludingDeleted(id);
+    if (!before) throw new NotFoundError('Hospital', id);
+    await runInCascadeTransaction((session) => cascadeRestore(hospitalCascadeNode, id, actorId, session));
+    await auditService.record({
+      actorId,
+      module: 'hospital',
+      action: 'UPDATE',
+      entityType: 'Hospital',
+      entityId: id,
+      entityLabel: before.name,
+      before: { deletedAt: (before as any).deletedAt },
+      after: { deletedAt: null },
+    });
+    await invalidate('hospital:*');
+    log.warn({ hospitalId: id, actorId }, 'hospital cascade restored');
+    return { restored: true };
+  },
+
+  async permanentDelete(id: string, actorId: string, reason: string): Promise<void> {
+    const before = await hospitalRepo.findByIdIncludingDeleted(id);
+    if (!before) throw new NotFoundError('Hospital', id);
     const ok = await hospitalRepo.remove(id);
     if (!ok) throw new NotFoundError('Hospital', id);
-    await auditService.record({ actorId, action: 'DELETE', entityType: 'Hospital', entityId: id });
+    await auditService.record({
+      actorId,
+      module: 'hospital',
+      action: 'DELETE',
+      entityType: 'Hospital',
+      entityId: id,
+      entityLabel: before.name,
+      severity: 'critical',
+      before,
+      reason,
+    });
     await invalidate('hospital:*');
-    log.warn({ hospitalId: id, actorId }, 'hospital deleted');
+    log.warn({ hospitalId: id, actorId }, 'hospital permanently deleted');
   },
 };

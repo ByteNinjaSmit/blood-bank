@@ -1,6 +1,7 @@
 import React from "react"
 import { useState } from "react"
 import { ArrowLeft, User, Save, Loader2 } from "lucide-react"
+import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav"
 
 const CreateDonationCamp = ({ onBack }) => {
   const [loading, setLoading] = useState(false)
@@ -94,35 +95,6 @@ const CreateDonationCamp = ({ onBack }) => {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
-      const donorData = {
-        donorId: formData.donorId,
-        name: {
-          firstName: formData.firstName,
-          middleName: formData.middleName || undefined,
-          lastName: formData.lastName,
-        },
-        uid: formData.uid,
-        dob: formData.dob,
-        sex: formData.sex,
-        phone: formData.phone,
-        email: formData.email || undefined,
-        address: {
-          line1: formData.addressLine1 || undefined,
-          line2: formData.addressLine2 || undefined,
-          city: formData.city,
-          district: formData.district,
-          state: formData.state,
-          pincode: formData.pincode,
-        },
-        occupation: formData.occupation || undefined,
-        weightKg: Number(formData.weightKg),
-        bloodGroup: formData.bloodGroup,
-        rh: formData.rh,
-        eligibilityStatus: formData.eligibilityStatus,
-        lastDonationDate: formData.lastDonationDate || undefined,
-      }
-
-      console.log("Donor data to be sent:", donorData)
       setSuccess(true)
       setTimeout(() => {
         setSuccess(false)
@@ -157,6 +129,8 @@ const CreateDonationCamp = ({ onBack }) => {
     }
   }
 
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers()
+
   return (
     <div className="min-h-screen bg-white">
       <PageHeader
@@ -180,7 +154,7 @@ const CreateDonationCamp = ({ onBack }) => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="space-y-8">
           {/* Basic Information */}
           <div className="bg-white rounded-lg border border-orange-200 p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Basic Information</h2>

@@ -1,4 +1,5 @@
 import React from 'react';
+import ClinicalIndicationField from './ClinicalIndicationField';
 
 export default function PatientForm({ patient, onChange, readOnly = false }) {
   return (
@@ -9,6 +10,15 @@ export default function PatientForm({ patient, onChange, readOnly = false }) {
           className={`w-full px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
           value={patient.name}
           onChange={(e) => !readOnly && onChange({ name: e.target.value })}
+          disabled={readOnly}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <label className="block text-sm text-gray-700 mb-1">Recipient's Address</label>
+        <input
+          className={`w-full px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+          value={patient.address || ''}
+          onChange={(e) => !readOnly && onChange({ address: e.target.value })}
           disabled={readOnly}
         />
       </div>
@@ -74,6 +84,7 @@ export default function PatientForm({ patient, onChange, readOnly = false }) {
           disabled={readOnly}
         />
       </div>
+      <ClinicalIndicationField patient={patient} onChange={onChange} readOnly={readOnly} />
     </div>
   );
 }

@@ -46,7 +46,23 @@ export function useUpdateHospital() {
 export function useDeleteHospital() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: hospitalApi.remove,
+    mutationFn: ({ id, reason }) => hospitalApi.remove(id, reason),
+    onSuccess: () => qc.invalidateQueries({ queryKey: hospitalKeys.all }),
+  });
+}
+
+export function useRestoreHospital() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => hospitalApi.restore(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: hospitalKeys.all }),
+  });
+}
+
+export function usePermanentDeleteHospital() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }) => hospitalApi.permanentDelete(id, reason),
     onSuccess: () => qc.invalidateQueries({ queryKey: hospitalKeys.all }),
   });
 }

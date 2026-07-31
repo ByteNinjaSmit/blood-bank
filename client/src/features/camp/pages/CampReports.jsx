@@ -1,44 +1,21 @@
-import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/store/auth";
+import { useCampMis } from "@/features/mis/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from "recharts";
-import { PieChart as PieIcon, Tent, RefreshCw } from "lucide-react";
+import { BarChart3, Tent, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const number = (v) => (typeof v === "number" ? v : 0);
 
 export default function CampReports() {
-  const { API } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [camps, setCamps] = useState([]);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const res = await axios.get(`${API}/api/mis/camps`, { withCredentials: true });
-        if (!mounted) return;
-        setCamps(res.data?.data || []);
-      } catch (e) {
-        if (!mounted) return;
-        setError(e?.response?.data?.message || e.message || "Failed to load camp reports");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [API]);
+  const { data, isLoading: loading, isFetching, error: queryError, refetch } = useCampMis();
+  const camps = useMemo(() => data ?? [], [data]);
+  const error = queryError?.message;
 
   const summary = useMemo(() => {
     const totalCamps = camps.length;
@@ -104,17 +81,27 @@ export default function CampReports() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-orange-100 text-orange-700">
-              <PieIcon className="w-5 h-5" />
+            <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
+              <BarChart3 className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
             </div>
             <div>
-              <CardTitle>Camp Reports</CardTitle>
-              <p className="text-sm text-slate-600">
-                Overall camp performance with drill-down to individual camp details
+              <CardTitle className="text-2xl font-bold text-gray-900">Camp Reports</CardTitle>
+              <p className="text-gray-500 text-sm">
+                Camp performance & reporting
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
             <Button
               variant="outline"
               size="sm"

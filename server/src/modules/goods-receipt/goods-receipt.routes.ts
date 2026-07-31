@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requireRole, requirePermission } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createGRNRepo } from '@/modules/goods-receipt/goods-receipt.repository';
 import { createGRNService } from '@/modules/goods-receipt/goods-receipt.service';
 import { createGRNControllers } from '@/modules/goods-receipt/goods-receipt.controller';
@@ -19,7 +19,6 @@ const router = Router();
 router.get(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper']),
   requirePermission('grn:read'),
   controllers.list,
 );
@@ -27,7 +26,6 @@ router.get(
 router.get(
   '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper']),
   requirePermission('grn:read'),
   controllers.get,
 );
@@ -35,17 +33,15 @@ router.get(
 router.post(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper']),
   requirePermission('grn:create'),
   controllers.create,
 );
 
 router.patch(
-  '/:id/accept',
+  '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo']),
   requirePermission('grn:create'),
-  controllers.accept,
+  controllers.update,
 );
 
 export default router;

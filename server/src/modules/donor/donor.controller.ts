@@ -5,8 +5,10 @@ import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { Validate } from '@/modules/donor/donor.validator';
 import type { DonorService } from '@/modules/donor/donor.service';
-import { UnauthorizedError, ValidationError } from '@/shared/errors';
+import { NotFoundError, UnauthorizedError, ValidationError } from '@/shared/errors';
 import { searchDonors, searchDonorsByVector } from '@/core/search/vector-search';
+import { toDto, populateLastDonationId } from './donor.repository';
+import { createDeferralRepo } from '@/modules/deferral/deferral.repository';
 
 export interface DonorControllers {
   create: (req: Request, res: Response, next: NextFunction) => Promise<void>;
@@ -14,6 +16,8 @@ export interface DonorControllers {
   get: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   list: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   remove: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  restore: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  permanentDelete: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   search: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   vectorSearch: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
@@ -36,6 +40,7 @@ const VectorSearchBody = z.object({
 });
 
 export function createDonorControllers(service: DonorService): DonorControllers {
+  const deferrals = createDeferralRepo();
   const actorIdOrThrow = (req: Request): string => {
     if (!req.user) throw new UnauthorizedError();
     return req.user.id;
@@ -67,15 +72,7 @@ export function createDonorControllers(service: DonorService): DonorControllers 
       try {
         const { id } = Validate.idParam(req);
         const donor = await service.get(id);
-        if (!donor) {
-          res.status(404).json({
-            success: false,
-            code: 'NOT_FOUND',
-            message: 'Donor not found',
-            requestId: req.id,
-          });
-          return;
-        }
+        if (!donor) throw new NotFoundError('Donor', id);
         res.json({ success: true, data: donor, requestId: req.id });
       } catch (e) {
         next(e);
@@ -95,8 +92,32 @@ export function createDonorControllers(service: DonorService): DonorControllers 
     async remove(req, res, next) {
       try {
         const { id } = Validate.idParam(req);
-        actorIdOrThrow(req);
-        await service.remove(id);
+        const { reason } = Validate.deleteReasonBody(req);
+        const actorId = actorIdOrThrow(req);
+        const result = await service.remove(id, actorId, reason);
+        res.status(200).json({ success: true, data: result, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async restore(req, res, next) {
+      try {
+        const { id } = Validate.idParam(req);
+        const actorId = actorIdOrThrow(req);
+        const result = await service.restore(id, actorId);
+        res.status(200).json({ success: true, data: result, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async permanentDelete(req, res, next) {
+      try {
+        const { id } = Validate.idParam(req);
+        const { reason } = Validate.deleteReasonBody(req);
+        const actorId = actorIdOrThrow(req);
+        await service.permanentDelete(id, actorId, reason);
         res.status(204).end();
       } catch (e) {
         next(e);
@@ -117,9 +138,26 @@ export function createDonorControllers(service: DonorService): DonorControllers 
           limit,
           skip,
         });
+        // Enrich with each donor's *actual* last donation date + active
+        // deferrals so isAvailableToDonate / eligibilityStatus reflect the
+        // 90-day (male) / 120-day (female) interval — the stored
+        // Donor.lastDonationDate is not updated on donation, so toDto alone
+        // would wrongly mark a recent donor as available.
+        const enriched = await populateLastDonationId((result.items || []).map(toDto));
+        const mappedItems = [];
+        for (const dto of enriched) {
+          if (dto.eligibilityStatus === 'deferred' || dto.eligibilityStatus === 'temp-deferred') {
+            const activeDeferral = await deferrals.findLatestActiveByDonor(dto.id);
+            if (activeDeferral) {
+              dto.deferralReason = activeDeferral.reason;
+              dto.deferralUntil = activeDeferral.untilDate ? activeDeferral.untilDate.toISOString() : null;
+            }
+          }
+          mappedItems.push(dto);
+        }
         res.json({
           success: true,
-          data: { items: result.items, total: result.total, source: result.source },
+          data: { items: mappedItems, total: result.total, source: result.source },
           requestId: req.id,
         });
       } catch (e) {
@@ -138,7 +176,8 @@ export function createDonorControllers(service: DonorService): DonorControllers 
           eligibilityStatus,
           limit,
         });
-        res.json({ success: true, data: { items, total: items.length }, requestId: req.id });
+        const mappedItems = (items || []).map((item) => toDto(item));
+        res.json({ success: true, data: { items: mappedItems, total: items.length }, requestId: req.id });
       } catch (e) {
         next(e);
       }

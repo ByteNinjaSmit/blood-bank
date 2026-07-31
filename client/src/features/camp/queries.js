@@ -25,6 +25,7 @@ export function useCampDetail(id) {
     queryFn: () => campApi.detail(id),
     enabled: Boolean(id),
     staleTime: 60_000,
+    refetchOnMount: 'always',
   });
 }
 
@@ -60,6 +61,14 @@ export function useVoluntaryDonations(params) {
   });
 }
 
+export function useUpdateVoluntaryStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }) => campApi.updateVoluntaryStatus(id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: campKeys.all }),
+  });
+}
+
 export function useCreateCamp() {
   const qc = useQueryClient();
   return useMutation({
@@ -71,7 +80,7 @@ export function useCreateCamp() {
 export function useUpdateCamp() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }) => campApi.update(id, data),
+    mutationFn: ({ id, data, editReason }) => campApi.update(id, data, editReason),
     onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: campKeys.all });
       qc.invalidateQueries({ queryKey: campKeys.detail(id) });
@@ -82,7 +91,27 @@ export function useUpdateCamp() {
 export function useDeleteCamp() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: campApi.remove,
+    mutationFn: ({ id, reason }) => campApi.remove(id, reason),
+    onSuccess: () => qc.invalidateQueries({ queryKey: campKeys.all }),
+  });
+}
+
+export function useRestoreCamp() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: campApi.restore,
+    onSuccess: () => qc.invalidateQueries({ queryKey: campKeys.all }),
+  });
+}
+
+// Camp has no dedicated /permanent route — remove() is a toggle: called
+// once on an active camp it soft-deletes, called again on an already
+// soft-deleted one it permanently deletes. This hook is that second call,
+// used from the Recycle Bin.
+export function usePermanentDeleteCamp() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }) => campApi.remove(id, reason),
     onSuccess: () => qc.invalidateQueries({ queryKey: campKeys.all }),
   });
 }

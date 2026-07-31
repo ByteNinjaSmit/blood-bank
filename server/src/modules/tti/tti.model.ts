@@ -5,6 +5,7 @@
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import { TTI_RESULT, TTI_TEST } from '@/shared/enums';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const TestEntry = new Schema(
   {
@@ -44,8 +45,18 @@ const TtiResultSchema = new Schema(
     decidedAt: Date,
     decisionNotes: String,
 
+    // Set when a already-finalized result is corrected via the Serology
+    // Results edit screen (never on the first entry from the worklist).
+    editReason: { type: String, trim: true },
+    lastEditedAt: { type: Date },
+    lastEditedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+
+    deletedAt: { type: Date, default: null, index: true },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
   },
   { timestamps: true },
 );

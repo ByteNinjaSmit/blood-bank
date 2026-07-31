@@ -44,6 +44,7 @@ export default function ActionMenu({...props}) {
     };
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   return (
@@ -123,8 +124,9 @@ export default function ActionMenu({...props}) {
                 <button
                   onClick={() => { onDelete(row); setOpenMenuId(null); }}
                   className="w-full text-left px-3 py-2 text-red-700 hover:bg-slate-50 inline-flex items-center gap-2"
+                  title="Deactivates the account — this system does not support permanently deleting users"
                 >
-                  <Trash2 className="w-4 h-4" /> Delete
+                  <Trash2 className="w-4 h-4" /> Deactivate
                 </button>
               )}
             </div>

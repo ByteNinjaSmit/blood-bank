@@ -1,5 +1,6 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import { BAG_TYPE, ANTICOAGULANT, BAG_STOCK_STATUS } from '@/shared/enums';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const BagStockSchema = new Schema(
   {
@@ -16,9 +17,15 @@ const BagStockSchema = new Schema(
     issuedQty: { type: Number, default: 0, min: 0 },
     damagedQty: { type: Number, default: 0, min: 0 },
     discardedQty: { type: Number, default: 0, min: 0 },
+    unopenedBoxes: { type: Number, default: 0, min: 0 },
     status: { type: String, enum: BAG_STOCK_STATUS, default: 'AVAILABLE', index: true },
     lastUpdatedAt: { type: Date },
     deletedAt: { type: Date, default: null, index: true },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    // Snapshot of receivedQty reversed on cascade soft-delete of the
+    // owning GoodsReceipt, so cascadeRestore can add it back exactly.
+    reversedReceivedQty: { type: Number, default: 0 },
+    ...cascadeFields,
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
@@ -26,8 +33,6 @@ const BagStockSchema = new Schema(
 );
 
 BagStockSchema.index({ batchNumber: 1, bagType: 1 }, { unique: true });
-BagStockSchema.index({ expiryDate: 1 });
-BagStockSchema.index({ status: 1 });
 
 export type BagStock = InferSchemaType<typeof BagStockSchema>;
 export type BagStockModel = Model<BagStock>;

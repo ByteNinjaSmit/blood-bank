@@ -2,6 +2,8 @@ import { Types } from 'mongoose';
 import { CampModel } from './camp.model';
 import { CampDonationModel } from './camp-donation.model';
 import { UserModel } from '@/modules/user/user.model';
+import { DonationModel } from '@/modules/donation/donation.model';
+import { NotFoundError } from '@/shared/errors';
 
 export interface VoluntaryFilter {
   search?: string;
@@ -25,6 +27,24 @@ export const campRepo = {
     return CampModel.findById(id);
   },
 
+  async softDelete(id: string, actorId: string) {
+    const result = await CampModel.updateOne(
+      { _id: id },
+      { deletedAt: new Date(), lastUpdatedBy: actorId },
+    );
+    if (result.matchedCount === 0) throw new NotFoundError('Camp', id);
+  },
+
+  async restore(id: string, actorId: string) {
+    const result = await CampModel.updateOne(
+      { _id: id },
+      { deletedAt: null, lastUpdatedBy: actorId },
+    );
+    if (result.matchedCount === 0) throw new NotFoundError('Camp', id);
+  },
+
+  // Permanent, irreversible removal — only reached once a camp has already
+  // been soft-deleted (see camp.service.ts remove()).
   async deleteById(id: string) {
     await CampModel.findByIdAndDelete(id);
   },
@@ -32,7 +52,7 @@ export const campRepo = {
   async detail(id: string) {
     return CampModel.findById(id)
       .select(
-        'campId name description address contactInfo dateFrom dateTo createdBy lastUpdatedBy staff createdAt donorData unitData',
+        'campId name description address contactInfo dateFrom dateTo createdBy lastUpdatedBy staff createdAt donorData unitData deletedAt',
       )
       .populate('createdBy', 'name phone email')
       .populate('lastUpdatedBy', 'name phone email')
@@ -40,15 +60,35 @@ export const campRepo = {
       .lean();
   },
 
-  async campList() {
-    return CampModel.find()
+  async campList(deletedOnly = false) {
+    // donorData/unitData are ObjectId-only ref arrays (cheap to select, unlike
+    // populating full Donor/BloodUnit docs) — selected only to derive counts
+    // for the listing/export, then stripped before returning.
+    const camps = await CampModel.find(
+      deletedOnly ? { deletedAt: { $ne: null } } : { deletedAt: null },
+    )
       .select(
-        'campId name description address contactInfo dateFrom dateTo createdAt createdBy staff',
+        'campId name description address contactInfo dateFrom dateTo createdAt createdBy staff deletedAt donorData unitData',
       )
       .populate('createdBy', 'name')
       .populate('staff', 'name')
       .sort({ createdAt: -1 })
       .lean();
+
+    const campIds = camps.map((c) => c._id);
+    const donationCounts = await DonationModel.aggregate([
+      { $match: { campId: { $in: campIds }, deletedAt: null } },
+      { $group: { _id: '$campId', count: { $sum: 1 } } },
+    ]);
+    const donationCountMap = new Map(donationCounts.map((d) => [d._id.toString(), d.count as number]));
+
+    return camps.map((c) => {
+      const donorCount = c.donorData?.length ?? 0;
+      const unitCount = c.unitData?.length ?? 0;
+      const donationCount = donationCountMap.get(c._id.toString()) ?? 0;
+      const { donorData, unitData, ...rest } = c;
+      return { ...rest, donorCount, unitCount, donationCount };
+    });
   },
 
   async all() {
@@ -115,5 +155,11 @@ export const campRepo = {
       CampDonationModel.countDocuments(filter),
     ]);
     return { items, total };
+  },
+
+  async updateVoluntaryStatus(id: string, status: string) {
+    const updated = await CampDonationModel.findByIdAndUpdate(id, { status }, { new: true }).lean();
+    if (!updated) throw new NotFoundError('Voluntary camp donation not found');
+    return updated;
   },
 };

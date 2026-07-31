@@ -1,40 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { 
-  Building2, 
-  Plus, 
-  Search, 
-  Filter, 
-  Eye, 
-  Edit, 
-  Trash2, 
-  Phone, 
-  Mail, 
+  Building2,
+  Plus,
+  Eye,
+  Edit,
+  Trash2,
+  Phone,
   MapPin,
   ChevronLeft,
   ChevronRight,
@@ -42,23 +26,22 @@ import {
   ChevronsRight,
   Loader2,
   RefreshCw,
-  Download,
   SortAsc,
   SortDesc
 } from 'lucide-react';
 import { useAuth } from '@/store/auth';
 import hospitalApi from '@/services/hospitalApi';
-import { Textarea } from '@/components/ui/textarea';
-import CustomModal from '@/components/CustomModal';
+import { useEditWithReason } from '@/hooks/useEditWithReason';
+import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
+import HospitalFilterBar from '../components/HospitalFilterBar';
+import HospitalViewModal from '../components/HospitalViewModal';
+import HospitalEditModal from '../components/HospitalEditModal';
 
 const ListHospital = () => {
   const navigate = useNavigate();
   const { authorizationToken } = useAuth();
   const [hospitals, setHospitals] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [hospitalToDelete, setHospitalToDelete] = useState(null);
   const [selectedHospital, setSelectedHospital] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -83,7 +66,10 @@ const ListHospital = () => {
   const [filters, setFilters] = useState({
     name: '',
     contactPerson: '',
-    phone: ''
+    phone: '',
+    isActive: '',
+    from: '',
+    to: ''
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,7 +138,10 @@ const ListHospital = () => {
     setFilters({
       name: '',
       contactPerson: '',
-      phone: ''
+      phone: '',
+      isActive: '',
+      from: '',
+      to: ''
     });
     setSearchQuery('');
     setCurrentPage(1);
@@ -179,39 +168,23 @@ const ListHospital = () => {
     setCurrentPage(1);
   };
 
-  // Handle delete
-  const handleDeleteClick = (hospital) => {
-    setHospitalToDelete(hospital);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!hospitalToDelete) return;
-
-    setDeleteLoading(true);
-    try {
-      // Initialize API service with auth token
+  // Handle delete — mandatory reason, cascades to this hospital's
+  // requisitions (issued ones are preserved and marked affected).
+  const { requestDelete, DeleteReasonDialog } = useDeleteWithReason({
+    onDelete: async (hospital, reason) => {
       hospitalApi.initialize(authorizationToken);
-
-      // Delete hospital using Axios API service
-      const result = await hospitalApi.deleteHospital(hospitalToDelete._id);
-
+      const result = await hospitalApi.deleteHospital(hospital._id, reason);
       if (!result.success) {
         toast.error(result.error || 'Failed to delete hospital');
-      } else {
-        const successMessage = result.data?.message || 'Hospital deleted successfully';
-        toast.success(successMessage);
-        fetchHospitals(); // Refresh the list
+        throw new Error(result.error || 'Failed to delete hospital');
       }
-    } catch (error) {
-      console.error('Error deleting hospital:', error);
-      toast.error('Network error. Please check your connection and try again.');
-    } finally {
-      setDeleteLoading(false);
-      setDeleteDialogOpen(false);
-      setHospitalToDelete(null);
-    }
-  };
+      toast.success('Hospital deleted successfully');
+      fetchHospitals();
+    },
+    title: 'Delete Hospital',
+    message: 'This hospital and its pending requisitions will be moved to the Recycle Bin. Requisitions already issued are preserved and marked affected, not deleted.',
+  });
+  const handleDeleteClick = (hospital) => requestDelete(hospital);
 
   const handleViewClick = (hospital) => {
     setSelectedHospital(hospital);
@@ -262,13 +235,37 @@ const ListHospital = () => {
 
     if (!editFormData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^[+]?[\d\s\-\(\)]{10,15}$/.test(editFormData.phone)) {
+    } else if (!/^[+]?[\d\s\-()]{10,15}$/.test(editFormData.phone)) {
       newErrors.phone = 'Please enter a valid phone number';
     }
 
     setEditErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  const { wrappedSave: wrappedSaveHospital, EditReasonDialog } = useEditWithReason({
+    onSave: async (data, editReason) => {
+      setEditSubmitting(true);
+      try {
+        hospitalApi.initialize(authorizationToken);
+        const result = await hospitalApi.updateHospital(selectedHospital._id, data, editReason);
+        if (!result.success) {
+          toast.error(result.error || 'Failed to update hospital');
+          return;
+        }
+        toast.success('Hospital updated successfully!');
+        setEditModalOpen(false);
+        setSelectedHospital(null);
+        fetchHospitals();
+      } catch (error) {
+        console.error('Error updating hospital:', error);
+        toast.error('Network error. Please check your connection and try again.');
+      } finally {
+        setEditSubmitting(false);
+      }
+    },
+    title: 'Confirm Hospital Changes',
+  });
 
   const handleEditSave = async () => {
     if (!selectedHospital || !validateEditForm()) {
@@ -279,29 +276,7 @@ const ListHospital = () => {
       }
       return;
     }
-
-    setEditSubmitting(true);
-
-    try {
-      hospitalApi.initialize(authorizationToken);
-
-      const result = await hospitalApi.updateHospital(selectedHospital._id, editFormData);
-
-      if (!result.success) {
-        toast.error(result.error || 'Failed to update hospital');
-      } else {
-        const successMessage = result.data?.message || 'Hospital updated successfully!';
-        toast.success(successMessage);
-        setEditModalOpen(false);
-        setSelectedHospital(null);
-        fetchHospitals();
-      }
-    } catch (error) {
-      console.error('Error updating hospital:', error);
-      toast.error('Network error. Please check your connection and try again.');
-    } finally {
-      setEditSubmitting(false);
-    }
+    wrappedSaveHospital(editFormData);
   };
 
   const handleCloseModals = () => {
@@ -345,115 +320,47 @@ const ListHospital = () => {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Building2 className="w-6 h-6 text-blue-600" />
+            <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
+              <Building2 className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Hospital Management</h1>
-              <p className="text-gray-600">Manage and view all registered hospitals</p>
+              <h1 className="text-2xl font-bold text-gray-900">Hospital Management</h1>
+              <p className="text-gray-500 text-sm">Hospital & consignee registry</p>
             </div>
           </div>
-          <Button
-            onClick={() => navigate('/hospital/add')}
-            className="flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add Hospital
-          </Button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fetchHospitals()}
+              disabled={loading}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <Button
+              onClick={() => navigate('/hospital/add')}
+              className="flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Hospital
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Filters and Search */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            Filters & Search
-          </CardTitle>
-          <CardDescription>
-            Use the filters below to find specific hospitals
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-            {/* Search */}
-            <div className="space-y-2">
-              <Label htmlFor="search">Search by Name</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="search"
-                  placeholder="Enter hospital name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                />
-                <Button onClick={handleSearch} size="sm">
-                  <Search className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Contact Person Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="contactPerson">Contact Person</Label>
-              <Input
-                id="contactPerson"
-                placeholder="Filter by contact person..."
-                value={filters.contactPerson}
-                onChange={(e) => handleFilterChange('contactPerson', e.target.value)}
-              />
-            </div>
-
-            {/* Phone Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                placeholder="Filter by phone..."
-                value={filters.phone}
-                onChange={(e) => handleFilterChange('phone', e.target.value)}
-              />
-            </div>
-
-          </div>
-
-          <div className="flex justify-between items-center">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={handleClearFilters}
-                size="sm"
-              >
-                Clear Filters
-              </Button>
-              <Button
-                variant="outline"
-                onClick={fetchHospitals}
-                size="sm"
-                disabled={loading}
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Label htmlFor="pageSize">Rows per page:</Label>
-              <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <HospitalFilterBar
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        handleSearch={handleSearch}
+        filters={filters}
+        handleFilterChange={handleFilterChange}
+        handleClearFilters={handleClearFilters}
+        pageSize={pageSize}
+        handlePageSizeChange={handlePageSizeChange}
+      />
 
       {/* Results */}
       <Card>
@@ -645,164 +552,25 @@ const ListHospital = () => {
         </CardContent>
       </Card>
 
-      <CustomModal
-        open={viewModalOpen && !!selectedHospital}
-        title={selectedHospital ? `Hospital Details - ${selectedHospital.name}` : 'Hospital Details'}
-        description="Review the full information for this hospital."
-        onCancel={handleCloseModals}
-        hideFooter
-        size="lg"
-      >
-        {selectedHospital && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Building2 className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-sm text-gray-500">{selectedHospital.hospitalId}</div>
-                <div className="text-xl font-semibold text-gray-900">{selectedHospital.name}</div>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label className="text-xs font-medium text-gray-500">Contact Person</Label>
-                <div className="text-sm text-gray-900">{selectedHospital.contactPerson}</div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-medium text-gray-500">Phone</Label>
-                <div className="flex items-center text-sm text-gray-900">
-                  <Phone className="w-3 h-3 mr-1" />
-                  {selectedHospital.phone}
-                </div>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-medium text-gray-500">Address</Label>
-              <div className="flex items-start text-sm text-gray-900">
-                <MapPin className="w-3 h-3 mr-1 mt-0.5" />
-                <span>{selectedHospital.address}</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-500">
-              <div>
-                <span className="font-medium">Created:</span>{' '}
-                {selectedHospital.createdAt ? new Date(selectedHospital.createdAt).toLocaleString() : '-'}
-              </div>
-              <div>
-                <span className="font-medium">Last Updated:</span>{' '}
-                {selectedHospital.updatedAt ? new Date(selectedHospital.updatedAt).toLocaleString() : '-'}
-              </div>
-            </div>
-          </div>
-        )}
-      </CustomModal>
+      <HospitalViewModal
+        open={viewModalOpen}
+        selectedHospital={selectedHospital}
+        onClose={handleCloseModals}
+      />
 
-      <CustomModal
-        open={editModalOpen && !!selectedHospital}
-        title={selectedHospital ? `Edit Hospital - ${selectedHospital.name}` : 'Edit Hospital'}
-        description="Update the hospital details. Fields marked with * are required."
-        onCancel={handleCloseModals}
-        onConfirm={handleEditSave}
-        confirmText={editSubmitting ? 'Saving...' : 'Save Changes'}
-        cancelText="Cancel"
-        confirmVariant="primary"
-        size="lg"
-      >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Hospital Name *</Label>
-              <Input
-                id="edit-name"
-                name="name"
-                value={editFormData.name}
-                onChange={handleEditInputChange}
-                placeholder="Enter hospital name"
-                className={editErrors.name ? 'border-red-500' : ''}
-              />
-              {editErrors.name && (
-                <p className="text-xs text-red-500">{editErrors.name}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-contactPerson">Contact Person *</Label>
-              <Input
-                id="edit-contactPerson"
-                name="contactPerson"
-                value={editFormData.contactPerson}
-                onChange={handleEditInputChange}
-                placeholder="Enter contact person name"
-                className={editErrors.contactPerson ? 'border-red-500' : ''}
-              />
-              {editErrors.contactPerson && (
-                <p className="text-xs text-red-500">{editErrors.contactPerson}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-phone">Phone Number *</Label>
-              <Input
-                id="edit-phone"
-                name="phone"
-                value={editFormData.phone}
-                onChange={handleEditInputChange}
-                placeholder="Enter phone number"
-                className={editErrors.phone ? 'border-red-500' : ''}
-              />
-              {editErrors.phone && (
-                <p className="text-xs text-red-500">{editErrors.phone}</p>
-              )}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-address">Address *</Label>
-            <Textarea
-              id="edit-address"
-              name="address"
-              value={editFormData.address}
-              onChange={handleEditInputChange}
-              placeholder="Enter complete hospital address"
-              rows={3}
-              className={editErrors.address ? 'border-red-500' : ''}
-            />
-            {editErrors.address && (
-              <p className="text-xs text-red-500">{editErrors.address}</p>
-            )}
-          </div>
-        </div>
-      </CustomModal>
+      <HospitalEditModal
+        open={editModalOpen}
+        selectedHospital={selectedHospital}
+        editFormData={editFormData}
+        editErrors={editErrors}
+        editSubmitting={editSubmitting}
+        handleEditInputChange={handleEditInputChange}
+        handleEditSave={handleEditSave}
+        onClose={handleCloseModals}
+      />
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Hospital</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{hospitalToDelete?.name}"? 
-              This action cannot be undone and will permanently remove the hospital from the system.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteLoading}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              disabled={deleteLoading}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {deleteLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete Hospital'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {DeleteReasonDialog}
+      {EditReasonDialog}
     </div>
   );
 };

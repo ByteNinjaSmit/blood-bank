@@ -7,7 +7,7 @@ export interface GRNControllers {
   list(req: Request, res: Response, next: NextFunction): Promise<void>;
   get(req: Request, res: Response, next: NextFunction): Promise<void>;
   create(req: Request, res: Response, next: NextFunction): Promise<void>;
-  accept(req: Request, res: Response, next: NextFunction): Promise<void>;
+  update(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export function createGRNControllers(service: GRNService): GRNControllers {
@@ -41,10 +41,11 @@ export function createGRNControllers(service: GRNService): GRNControllers {
       } catch (e) { next(e); }
     },
 
-    async accept(req, res, next) {
+    async update(req, res, next) {
       try {
         const { id } = ValidateGRN.idParam(req);
-        const data = await service.accept(id, actorId(req));
+        const body = ValidateGRN.updateBody(req);
+        const data = await service.update(id, body, actorId(req));
         res.json({ success: true, data, requestId: req.id });
       } catch (e) { next(e); }
     },

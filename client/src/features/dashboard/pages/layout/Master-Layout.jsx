@@ -1,8 +1,6 @@
 import React from "react"
 import { useState, useEffect, useCallback } from "react"
 import {
-    useNavigate,
-    useSearchParams,
     useLocation,
     Outlet,
     Link,
@@ -13,11 +11,12 @@ import {
     Menu,
     PanelLeftDashed,
 } from "lucide-react"
-import { useAuth } from "@/store/auth";
 import Sidebar from "@/components/layout/Sidebar";
+import NotificationBell from "@/features/notification/components/NotificationBell";
+import { useNotificationToastWatcher } from "@/features/notification/hooks/useNotificationToastWatcher";
 
 function MasterLayout() {
-    const { user } = useAuth();
+    useNotificationToastWatcher();
     const pathname = useLocation().pathname
     const [sidebarOpen, setSidebarOpen] = useState(true)
     const [isMobile, setIsMobile] = useState(false)
@@ -56,18 +55,20 @@ function MasterLayout() {
     }, [pathname, isMobile, showMobileOverlay, closeMobileOverlay]);
 
     return (
-        <div className="h-screen bg-slate-50 flex overflow-hidden">
-            <Sidebar
-                isOpen={sidebarOpen}
-                onToggle={toggleSidebar}
-                isMobile={isMobile}
-                showMobileOverlay={showMobileOverlay}
-                onCloseMobile={closeMobileOverlay}
-            />
+        <div className="h-screen bg-slate-50 flex overflow-hidden print:h-auto print:block print:overflow-visible">
+            <div className="print:hidden">
+                <Sidebar
+                    isOpen={sidebarOpen}
+                    onToggle={toggleSidebar}
+                    isMobile={isMobile}
+                    showMobileOverlay={showMobileOverlay}
+                    onCloseMobile={closeMobileOverlay}
+                />
+            </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                <header className="flex-shrink-0 bg-white border-b border-slate-200 p-4 shadow-sm sticky top-0 z-30">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:block print:overflow-visible">
+                <header className="flex-shrink-0 bg-white border-b border-slate-200 p-4 shadow-sm sticky top-0 z-30 print:hidden">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             {isMobile && (
@@ -87,23 +88,24 @@ function MasterLayout() {
                                 </button>
                             )}
                             <div className="flex items-center gap-2">
-                                <Link 
-                                    to={'/'} 
+                                <Link
+                                    to={'/'}
                                     className="cursor-pointer text-red-800 hover:text-red-800 transition-colors flex items-center gap-2"
                                 >
                                     <FaHome className="w-5 h-5" />
                                 </Link>
                                 <ChevronRight className="text-slate-400 w-4 h-4" />
                                 <h1 className="text-lg md:text-xl font-semibold text-slate-800">
-                                    Blood Bank - Sanjivani, Kopargaon
+                                    Sanjivani Blood Bank, Kopargaon
                                 </h1>
                             </div>
                         </div>
+                        <NotificationBell />
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto">
-                    <div className="h-full">
+                <main className="flex-1 overflow-y-auto print:overflow-visible print:block">
+                    <div className="h-full print:h-auto">
                         <Outlet />
                     </div>
                 </main>

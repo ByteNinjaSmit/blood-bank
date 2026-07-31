@@ -23,12 +23,10 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      const response = await axios.get(`${API}/api/component/${componentId}`, {
+      const response = await axios.get(`${API}/api/v2/component/${componentId}`, {
         headers: { Authorization: authorizationToken },
         withCredentials: true,
       });
-
-      console.log("Component details response:", response.data);
 
       if (response.data?.component) {
         setState(prev => ({
@@ -58,6 +56,7 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
     if (isOpen && componentId) {
       fetchComponentDetails();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, componentId]);
 
   // Reset state when modal closes
@@ -181,7 +180,7 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black bg-opacity-50" 
@@ -244,6 +243,10 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
                       <div>
                         <span className="block font-medium text-gray-500">Bag Number</span>
                         <span className="text-sm font-semibold text-gray-900">{state.component.bloodBag.bagNo}</span>
+                      </div>
+                      <div>
+                        <span className="block font-medium text-gray-500">Segment Number</span>
+                        <span className="text-sm font-semibold text-gray-900">{state.component.bloodBag.segmentNo || "-"}</span>
                       </div>
                       <div>
                         <span className="block font-medium text-gray-500">Blood Group</span>
@@ -351,22 +354,31 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
                 </Card>
               )}
 
-              {/* Bottom Section: 4 Components Breakdown Grid */}
+              {/* Bottom Section: Components Breakdown Grid */}
               <div className="space-y-3">
                 <h3 className="text-xs font-bold text-gray-950 uppercase tracking-widest flex items-center gap-2">
                   <Package className="w-4 h-4 text-red-600" />
                   Components Breakdown
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* RBC Component Card */}
-                  {renderComponentCard("Red Blood Cells (RBC)", state.component.rbc)}
-                  {/* FFP Component Card */}
-                  {renderComponentCard("Fresh Frozen Plasma (FFP)", state.component.ffp)}
-                  {/* Platelets Component Card */}
-                  {renderComponentCard("Platelets", state.component.platelet)}
-                  {/* Cryo Component Card */}
-                  {renderComponentCard("Cryoprecipitate", state.component.cryo)}
-                </div>
+                {state.component.sdp && state.component.sdp.status !== "unprepared" ? (
+                  // This bag donated SDP directly (apheresis, single-donor
+                  // platelet) — it never yields PRBC/FFP/RDP/CRYO, so only
+                  // the SDP card is relevant here.
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderComponentCard("Single Donor Platelet (SDP)", state.component.sdp)}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* PRBC Component Card */}
+                    {renderComponentCard("Packed Red Blood Cells (PRBC)", state.component.prbc)}
+                    {/* FFP Component Card */}
+                    {renderComponentCard("Fresh Frozen Plasma (FFP)", state.component.ffp)}
+                    {/* RDP Component Card */}
+                    {renderComponentCard("Random Donor Platelets (RDP)", state.component.rdp)}
+                    {/* Cryo Component Card */}
+                    {renderComponentCard("Cryoprecipitate", state.component.cryo)}
+                  </div>
+                )}
               </div>
             </div>
           )}

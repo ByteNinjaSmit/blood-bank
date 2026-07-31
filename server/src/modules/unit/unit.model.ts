@@ -6,12 +6,14 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import {
   ABO_GROUP,
+  CLINICAL_DISEASE,
   COMPONENT_TYPE,
   DISCARD_REASON,
   RH_FACTOR,
   SPECIAL_NEED,
   UNIT_STATUS,
 } from '@/shared/enums';
+import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const StatusHistoryEntry = new Schema(
   {
@@ -51,6 +53,7 @@ const BloodUnitSchema = new Schema(
 
     quarantineReason: { type: String, trim: true },
     discardReason: { type: String, enum: DISCARD_REASON },
+    discardNotes: { type: String, trim: true },
 
     reservedFor: { type: Schema.Types.ObjectId, ref: 'Requisition' },
     reservedAt: Date,
@@ -58,12 +61,28 @@ const BloodUnitSchema = new Schema(
 
     issuedTo: { type: Schema.Types.ObjectId, ref: 'Issue' },
     issuedAt: Date,
+    storageLocation: { type: String, default: null },
+    // A unit issued directly to a named patient for a clinical indication
+    // (Thalassemia / Sickle Cell Anaemia / Other), as opposed to being
+    // sent to storage or matched against a hospital requisition.
+    clinicalIndicationPatient: {
+      firstName: String,
+      middleName: String,
+      lastName: String,
+      address: String,
+      age: Number,
+      sex: String,
+      bloodGroup: String,
+      disease: { type: String, enum: CLINICAL_DISEASE },
+      otherDiseaseName: { type: String, trim: true },
+    },
 
     transfusedTo: { type: Schema.Types.ObjectId, ref: 'Transfusion' },
     transfusedAt: Date,
 
     deletedAt: { type: Date, default: null, index: true },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    ...cascadeFields,
 
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },

@@ -21,7 +21,7 @@ export function registerEmailProcessor(): void {
       html: rendered.html,
       text: rendered.text,
     });
-    log.info({ jobId: job.id, type, to }, 'email delivered');
+    log.info({ jobId: job.id, type, to, code: (payload as any)?.code }, 'email delivered');
   });
   log.info('email processor registered (concurrency 5)');
 }

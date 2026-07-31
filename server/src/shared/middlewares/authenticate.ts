@@ -2,12 +2,9 @@ import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UnauthorizedError } from '@/shared/errors';
 import { env } from '@/core/config/env';
-import { ROLE } from '@/shared/enums';
-import { mapLegacyRole, projectPermissions } from '@/shared/role-map';
+import { projectPermissions } from '@/shared/role-map';
 import type { AuthenticatedUser } from './rbac';
 import { UserModel } from '@/modules/user/user.model';
-
-const NEW_ROLES = new Set<string>(ROLE);
 
 interface JwtPayload {
   userID: string;
@@ -46,8 +43,10 @@ export async function authenticate(
   const rawUser = userDoc as {
     _id: { toString(): string };
     role: string;
+    isFullAccess?: boolean;
     permissions?: Array<{
       moduleName: string;
+      pageId?: string | null;
       view?: boolean;
       create?: boolean;
       update?: boolean;
@@ -61,14 +60,14 @@ export async function authenticate(
     return next(new UnauthorizedError('Account is not active'));
   }
 
-  // If role in DB is already a new-vocabulary role, use it directly.
-  // Only run the legacy→new mapping for old 6-role values ('admin', 'staff', etc.).
-  const resolvedRole = NEW_ROLES.has(rawUser.role)
-    ? (rawUser.role as import('@/shared/enums').Role)
-    : mapLegacyRole(rawUser.role);
+  const isFullAccess = !!rawUser.isFullAccess;
+  const permissions = projectPermissions(isFullAccess, rawUser.permissions ?? []);
 
-  const permissions = projectPermissions(resolvedRole, rawUser.permissions ?? []);
-
-  req.user = { id: rawUser._id.toString(), role: resolvedRole, permissions } as AuthenticatedUser;
+  req.user = {
+    id: rawUser._id.toString(),
+    role: rawUser.role,
+    isFullAccess,
+    permissions,
+  } as AuthenticatedUser;
   next();
 }

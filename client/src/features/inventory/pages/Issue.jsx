@@ -1,41 +1,87 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { useAuth } from "@/store/auth";
-import { Button } from "@/components/ui/button";
-import { Loader2, PackageCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { apiClient } from "@/core/api-client";
+import { PackageCheck, Warehouse, MapPin, ArrowLeftRight, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import CustomModal from "@/components/CustomModal";
+import RegisterExportDropdown from "@/components/shared/RegisterExportDropdown";
+import StorageTab from "./issue-tabs/StorageTab";
+import DiseaseTab from "./issue-tabs/DiseaseTab";
+import BulkTransferTab from "./issue-tabs/BulkTransferTab";
+import IssueStockTab from "./issue-tabs/IssueStockTab";
+import SendToStorageModal from "./issue-tabs/SendToStorageModal";
+import BulkTransferFormModal from "./issue-tabs/BulkTransferFormModal";
+import IssueViewModals from "./issue-tabs/IssueViewModals";
+import IssuePrintPrompts from "./issue-tabs/IssuePrintPrompts";
+import { useBulkTransfer } from "./hooks/useBulkTransfer";
+import { useStorageTransfer } from "./hooks/useStorageTransfer";
+import { useIssueExport } from "./hooks/useIssueExport";
+import { requisitionApi } from "@/features/requisition/api";
+import { INDICATION_CATEGORY_LABELS } from "@/features/requisition/pages/constants";
+import { formatDate as formatDateBase, formatDateTime as formatDateTimeBase } from "@/lib/format-date";
+
+// Day/month/year with month as a number (e.g. 19/07/2026), used across
+// every tab on this page and their view modals — not the shared helper's
+// default abbreviated month.
+const formatDate = (v) => formatDateBase(v, { day: "2-digit", month: "2-digit", year: "numeric" });
+const formatDateTime = (v) => formatDateTimeBase(v, { day: "2-digit", month: "2-digit", year: "numeric" });
+
+const ISSUE_REGISTERS = [
+  { key: 'issue', label: 'Issue Stock Register' },
+  { key: 'storage', label: 'Storage Register', filteredLabel: 'Current Page', allLabel: 'All Records' },
+  { key: 'disease', label: 'Clinical Indication / Disease Register' },
+  { key: 'bulkTransfer', label: 'Bulk Transfer Register', filteredLabel: 'Current Page', allLabel: 'All Records' },
+];
 
 const Issue = () => {
-  const { API, authorizationToken, user } = useAuth();
+  const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
   const [rows, setRows] = useState([]);
+  const [availableUnits, setAvailableUnits] = useState([]);
+  const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
-
   // filters
   const [componentType, setComponentType] = useState("");
   const [search, setSearch] = useState("");
+  // Draft value bound to the search box; only committed into `search`
+  // (the fetch-effect dependency) on Enter/button click — see SearchBox.
+  const [searchInput, setSearchInput] = useState("");
+  const [bloodGroup, setBloodGroup] = useState("");
+  const [expiryFrom, setExpiryFrom] = useState("");
+  const [expiryTo, setExpiryTo] = useState("");
   const [order, setOrder] = useState("desc");
-  const [sortBy, setSortBy] = useState("createdAt");
 
-  const [selected, setSelected] = useState({});
   const [status, setStatus] = useState('issued');
+  // Sort by actual issue recency when viewing issued stock (most recently
+  // issued first); reserved stock has no issuedAt yet, so fall back to
+  // createdAt there. No UI control changes this.
+  const sortBy = status === 'issued' ? 'issuedAt' : 'createdAt';
   const [viewOpen, setViewOpen] = useState(false);
   const [viewItem, setViewItem] = useState(null);
+
+  // ── Main tab bar ─────────────────────────────────────
+  const [mainTab, setMainTab] = useState('issue'); // 'issue' | 'storage' | 'disease' | 'bulkTransfer'
+
+  // ── Thalassemia (Clinical Indication) tab state ──────
+  const [thalRows, setThalRows] = useState([]);
+  const [thalLoading, setThalLoading] = useState(false);
+  const [thalViewOpen, setThalViewOpen] = useState(false);
+  const [thalViewItem, setThalViewItem] = useState(null);
+  const [thalPagination, setThalPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
 
   const fetchRows = async (page = 1, limit = pagination.limit) => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`${API}/api/inventory`, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
+      const res = await apiClient.get(`/api/inventory`, {
         params: {
           page,
           limit,
           status,
           componentType: componentType || undefined,
           search: search || undefined,
+          bloodGroup: bloodGroup || undefined,
+          expiryFrom: expiryFrom || undefined,
+          expiryTo: expiryTo || undefined,
           sortBy,
           order,
         },
@@ -43,249 +89,285 @@ const Issue = () => {
       setRows(Array.isArray(res.data?.data) ? res.data.data : []);
       setPagination((p) => ({ ...p, ...(res.data?.pagination || {}) }));
     } catch (e) {
-      toast.error(e?.response?.data?.message || "Failed to fetch inventory");
+      toast.error(e?.message || "Failed to fetch inventory");
       setRows([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const toggle = (id) => setSelected((s) => ({ ...s, [id]: !s[id] }));
-  const allSelectedIds = Object.keys(selected).filter((id) => selected[id]);
-
-  const issue = async () => {
-    if (allSelectedIds.length === 0) return toast.warning("Select items to issue");
+  const fetchAvailableUnits = async () => {
+    setLoadingAvailable(true);
     try {
-      setIsLoading(true);
-      await axios.post(`${API}/api/inventory/issue`, {
-        inventoryIds: allSelectedIds,
-        userId: user?._id || user?.id,
-      }, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
+      const res = await apiClient.get(`/api/inventory`, {
+        params: {
+          page: 1,
+          limit: 5000,
+          status: 'in-stock', // gets RELEASED units
+        },
       });
-      toast.success("Issued selected items");
-      setSelected({});
-      fetchRows(pagination.page);
-    } catch (e) {
-      toast.error(e?.response?.data?.message || "Failed to issue");
+      setAvailableUnits(Array.isArray(res.data?.data) ? res.data.data : []);
+    } catch {
+      toast.error("Failed to fetch available blood units for storage");
     } finally {
-      setIsLoading(false);
+      setLoadingAvailable(false);
     }
   };
 
   useEffect(() => {
     fetchRows(1, pagination.limit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, componentType, search, order, sortBy]);
+  }, [status, componentType, search, bloodGroup, expiryFrom, expiryTo, order, sortBy]);
+
+  const commitSearch = () => {
+    setSearch(searchInput);
+    setPagination((p) => ({ ...p, page: 1 }));
+  };
 
   const openView = (item) => { setViewItem(item); setViewOpen(true); };
   const closeView = () => { setViewOpen(false); setViewItem(null); };
-  const fmt = (d) => (d ? new Date(d).toLocaleString() : '—');
+
+  // Clinical Indication / Disease Patients tab: a read view over real
+  // Requisitions whose patient.indicationCategory is set (Thalassemia /
+  // Sickle Cell Anaemia / Other) — created via the normal Requisition flow,
+  // not a bespoke form. Issuing is done from the requisition itself so
+  // crossmatch/TTI/issue-gate enforcement applies exactly as it does for
+  // any other requisition (no more direct-dispatch bypass).
+  const fetchThalassemia = async (page = thalPagination.page, limit = thalPagination.limit) => {
+    setThalLoading(true);
+    try {
+      const { items, pagination: pg } = await requisitionApi.listPaged({
+        page,
+        limit,
+        hasClinicalIndication: true,
+        excludeStatus: 'REJECTED',
+        sortBy: 'updatedAt',
+        order: 'desc',
+      });
+      setThalRows(items);
+      setThalPagination((p) => ({ ...p, ...pg, page }));
+    } catch {
+      toast.error('Failed to fetch clinical indication / disease records');
+      setThalRows([]);
+    } finally {
+      setThalLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (mainTab === 'disease') fetchThalassemia(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mainTab]);
+
+  const diseaseLabel = (patient) => {
+    if (!patient) return '—';
+    if (patient.indicationCategory === 'OTHER') return patient.otherDiseaseName || 'Other';
+    return INDICATION_CATEGORY_LABELS[patient.indicationCategory] || '—';
+  };
+
+  // Storage register (Send to Storage batches — list/create/edit/delete)
+  const storage = useStorageTransfer({ mainTab, availableUnits, fetchAvailableUnits });
+
+  // Bulk Transfer register (list/create/edit/delete + cover-letter/certificate/invoice prints)
+  const bulk = useBulkTransfer({ mainTab, availableUnits, fetchAvailableUnits });
+
+  // Per-register Excel export
+  const { excelLoading, handleExportRegister } = useIssueExport({
+    thalPagination, bulkPagination: bulk.bulkPagination, pagination,
+    status, componentType, search, bloodGroup, expiryFrom, expiryTo, sortBy, order,
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 bg-gradient-to-br from-red-800 to-red-900 rounded-xl">
-            <PackageCheck className="w-8 h-8 text-white" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
+              <PackageCheck className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Issue Stock</h1>
+              <p className="text-gray-500 text-sm">Issue previously reserved components</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Issue Stock</h1>
-            <p className="text-gray-600 mt-1">Issue previously reserved components</p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (mainTab === 'storage') storage.fetchStorageTransfers(storage.storagePagination.page);
+                else if (mainTab === 'disease') fetchThalassemia(thalPagination.page);
+                else if (mainTab === 'bulkTransfer') bulk.fetchBulkTransfers(bulk.bulkPagination.page);
+                else fetchRows(pagination.page);
+              }}
+              disabled={mainTab === 'storage' ? storage.storageLoading : mainTab === 'disease' ? thalLoading : mainTab === 'bulkTransfer' ? bulk.bulkLoading : isLoading}
+              title="Refresh"
+              aria-label="Refresh"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${(mainTab === 'storage' ? storage.storageLoading : mainTab === 'disease' ? thalLoading : mainTab === 'bulkTransfer' ? bulk.bulkLoading : isLoading) ? 'animate-spin' : ''}`} />
+            </button>
+            <RegisterExportDropdown onExport={handleExportRegister} isLoading={excelLoading} registers={ISSUE_REGISTERS} />
           </div>
         </div>
 
-        <div className="bg-white shadow-md rounded-xl overflow-hidden">
-          <div className="p-4 border-b">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm text-gray-600">Total: {pagination.total || 0}</div>
-              <div className="text-xs text-gray-500">Selected: <span className="font-medium">{allSelectedIds.length}</span></div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-600 mb-1">Status</label>
-                <select value={status} onChange={(e)=>{setStatus(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
-                  <option value="issued">Issued</option>
-                  <option value="reserved">Reserved</option>
-                </select>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-600 mb-1">Component</label>
-                <select value={componentType} onChange={(e)=>{setComponentType(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
-                  <option value="">All</option>
-                  <option value="RBC">RBC</option>
-                  <option value="FFP">FFP</option>
-                  <option value="Platelet">Platelet</option>
-                  <option value="Cryo">Cryo</option>
-                </select>
-              </div>
-              <div className="flex flex-col md:col-span-2">
-                <label className="text-xs text-gray-600 mb-1">Search Bag No</label>
-                <input value={search} onChange={(e)=>{setSearch(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm" placeholder="Bag ID" />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-600 mb-1">Order</label>
-                <select value={order} onChange={(e)=>{setOrder(e.target.value); setPagination(p=>({...p,page:1}));}} className="h-10 px-3 border rounded-md text-sm">
-                  <option value="desc">Newest First</option>
-                  <option value="asc">Oldest First</option>
-                </select>
-              </div>
-              <div className="flex items-end gap-2">
-                <Button onClick={()=>fetchRows(pagination.page)} variant="outline" size="sm" className="h-10" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
-                </Button>
-                <Button onClick={issue} size="sm" className="h-10" disabled={isLoading || allSelectedIds.length===0 || status!== 'reserved'}>
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Issue (${allSelectedIds.length})`}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3"></th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag No</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Component</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {isLoading ? (
-                  <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
-                ) : rows.length === 0 ? (
-                  <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-500">No items found.</td></tr>
-                ) : (
-                  rows.map((r) => (
-                    <tr key={r._id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <input type="checkbox" checked={!!selected[r._id]} onChange={() => toggle(r._id)} disabled={status!== 'reserved'} />
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{r?.bag?.bagNo || r.bagNo}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.volumeMl} mL</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.expiryDate ? new Date(r.component.expiryDate).toLocaleDateString() : '-'}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <button onClick={() => openView(r)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">View</button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t text-sm">
-            <div className="flex items-center gap-2">
-              <span>Rows per page:</span>
-              <select
-                value={pagination.limit}
-                onChange={(e) => {
-                  const newLimit = Number(e.target.value);
-                  setPagination(p => ({ ...p, limit: newLimit, page: 1 }));
-                  fetchRows(1, newLimit);
-                }}
-                className="border rounded-md px-2 py-1"
-              >
-                {[5,10,20,50].map(n => <option key={n} value={n}>{n}</option>)}
-              </select>
-            </div>
-            <div className="flex items-center gap-3 mt-3 sm:mt-0">
+        {/* ── Main tab bar ─────────────────────────────────── */}
+        <div className="mb-6 border-b border-gray-200">
+          <nav className="-mb-px flex gap-6">
+            {[
+              { key: 'issue', label: 'Issue Stock', icon: <PackageCheck className="w-4 h-4" /> },
+              { key: 'storage', label: 'Storage', icon: <Warehouse className="w-4 h-4" /> },
+              { key: 'disease', label: 'Clinical Indication / Disease Patients', icon: <MapPin className="w-4 h-4" /> },
+              { key: 'bulkTransfer', label: 'Bulk Transfer', icon: <ArrowLeftRight className="w-4 h-4" /> },
+            ].map(tab => (
               <button
-                onClick={() => {
-                  const page = Math.max(1, (pagination.page || 1) - 1);
-                  setPagination(p => ({ ...p, page }));
-                  fetchRows(page);
-                }}
-                disabled={(pagination.page || 1) === 1}
-                className={`px-3 py-1 rounded-md ${((pagination.page || 1) === 1) ? "text-gray-400 cursor-not-allowed" : "text-red-600 hover:bg-red-50"}`}
+                key={tab.key}
+                onClick={() => setMainTab(tab.key)}
+                className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+                  mainTab === tab.key
+                    ? 'border-red-700 text-red-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
               >
-                Previous
+                {tab.icon}
+                {tab.label}
               </button>
-              <span className="text-slate-700">Page {pagination.page || 1} of {pagination.totalPages || 1}</span>
-              <button
-                onClick={() => {
-                  const page = Math.min(pagination.totalPages || 1, (pagination.page || 1) + 1);
-                  setPagination(p => ({ ...p, page }));
-                  fetchRows(page);
-                }}
-                disabled={(pagination.page || 1) >= (pagination.totalPages || 1)}
-                className={`px-3 py-1 rounded-md ${((pagination.page || 1) >= (pagination.totalPages || 1)) ? "text-gray-400 cursor-not-allowed" : "text-red-600 hover:bg-red-50"}`}
-              >
-                Next
-              </button>
-            </div>
-          </div>
+            ))}
+          </nav>
         </div>
-      </div>
-      <CustomModal open={viewOpen} onCancel={closeView} title={status === 'issued' ? 'Issued Component Details' : 'Reserved Component Details'} size="lg" hideFooter>
-        {viewItem && (
-          <div className="space-y-4 text-sm">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <div className="text-gray-600">Bag No</div>
-                <div className="font-medium">{viewItem?.bag?.bagNo || viewItem?.bagNo}</div>
-              </div>
-              <div>
-                <div className="text-gray-600">Component</div>
-                <div className="font-medium">{viewItem?.component?.componentType} • {viewItem?.component?.volumeMl} mL</div>
-              </div>
-              <div>
-                <div className="text-gray-600">Blood Group</div>
-                <div className="font-medium">{viewItem?.bag ? `${viewItem.bag.bloodGroup} ${viewItem.bag.rh}` : '—'}</div>
-              </div>
-              <div>
-                <div className="text-gray-600">Expiry</div>
-                <div className="font-medium">{viewItem?.component?.expiryDate ? new Date(viewItem.component.expiryDate).toLocaleDateString() : '—'}</div>
-              </div>
-              <div>
-                <div className="text-gray-600">Status</div>
-                <div className="font-medium capitalize">{viewItem?.status}</div>
-              </div>
-              {viewItem?.hospital && (
-                <div>
-                  <div className="text-gray-600">Hospital</div>
-                  <div className="font-medium">{viewItem.hospital?.name}</div>
-                </div>
-              )}
-              {((viewItem?.request && viewItem.request.patient) || viewItem?.reservedPatientName) && (
-                <div className="md:col-span-2">
-                  <div className="text-gray-600">Patient</div>
-                  <div className="font-medium">
-                    {viewItem?.request?.patient
-                      ? `${viewItem.request.patient.name} • ${viewItem.request.patient.age}/${viewItem.request.patient.sex}`
-                      : `${viewItem.reservedPatientName} • ${viewItem.reservedPatientAge}/${viewItem.reservedPatientSex}`}
-                  </div>
-                </div>
-              )}
-              {viewItem?.reservedAt && (
-                <div>
-                  <div className="text-gray-600">Reserved At</div>
-                  <div className="font-medium">{fmt(viewItem.reservedAt)}</div>
-                </div>
-              )}
-              {viewItem?.issuedAt && (
-                <div>
-                  <div className="text-gray-600">Issued At</div>
-                  <div className="font-medium">{fmt(viewItem.issuedAt)}</div>
-                </div>
-              )}
-              {viewItem?.issuedBy && (
-                <div>
-                  <div className="text-gray-600">Issued By</div>
-                  <div className="font-medium">{String(viewItem.issuedBy)}</div>
-                </div>
-              )}
-            </div>
-          </div>
+
+        {/* ── Storage tab ──────────────────────────────────── */}
+        {mainTab === 'storage' && (
+          <StorageTab
+            storageRows={storage.storageRows}
+            storageLoading={storage.storageLoading}
+            storagePagination={storage.storagePagination}
+            fetchStorageTransfers={storage.fetchStorageTransfers}
+            storageLocationTab={storage.storageLocationTab}
+            changeStorageLocationTab={storage.changeStorageLocationTab}
+            onSendToStorage={storage.openCreateStorage}
+            onViewTransfer={(r) => { storage.setStorageViewItem(r); storage.setStorageViewOpen(true); }}
+            onEditTransfer={storage.openEditStorage}
+            onDeleteTransfer={storage.requestDeleteStorage}
+          />
         )}
-      </CustomModal>
+
+        {/* ── Clinical Indication / Disease Patients tab ──── */}
+        {mainTab === 'disease' && (
+          <DiseaseTab
+            thalRows={thalRows}
+            thalLoading={thalLoading}
+            thalPagination={thalPagination}
+            fetchThalassemia={fetchThalassemia}
+            diseaseLabel={diseaseLabel}
+            onViewRequisition={(r) => { setThalViewItem(r); setThalViewOpen(true); }}
+            onIssueRequisition={(r) => navigate(`/requisition/${r._id}`)}
+          />
+        )}
+
+        {/* ── Bulk Transfer tab ────────────────────────────── */}
+        {mainTab === 'bulkTransfer' && (
+          <BulkTransferTab
+            bulkRows={bulk.bulkRows}
+            bulkLoading={bulk.bulkLoading}
+            bulkPagination={bulk.bulkPagination}
+            fetchBulkTransfers={bulk.fetchBulkTransfers}
+            onSendBulk={() => { bulk.setBulkEditTarget(null); bulk.setBulkEditExtraUnits([]); bulk.resetBulkForm(); bulk.setBulkFormOpen(true); fetchAvailableUnits(); }}
+            onViewTransfer={(r) => { bulk.setBulkViewItem(r); bulk.setBulkViewOpen(true); }}
+            onEditTransfer={bulk.openEditBulkTransfer}
+            onDeleteTransfer={bulk.openDeleteBulkTransferConfirm}
+          />
+        )}
+
+        {/* ── Issue Stock tab ──────────────────────────────── */}
+        {mainTab === 'issue' && (
+          <IssueStockTab
+            status={status} setStatus={setStatus}
+            componentType={componentType} setComponentType={setComponentType}
+            bloodGroup={bloodGroup} setBloodGroup={setBloodGroup}
+            searchInput={searchInput} setSearchInput={setSearchInput} onSearch={commitSearch}
+            expiryFrom={expiryFrom} setExpiryFrom={setExpiryFrom}
+            expiryTo={expiryTo} setExpiryTo={setExpiryTo}
+            order={order} setOrder={setOrder}
+            pagination={pagination} setPagination={setPagination}
+            rows={rows}
+            isLoading={isLoading}
+            fetchRows={fetchRows}
+            onView={openView}
+          />
+        )}
+      </div>
+
+      {/* ── Send to Storage / Edit Storage Batch ──────────── */}
+      <SendToStorageModal
+        open={storage.storageFormOpen}
+        onClose={storage.closeStorageForm}
+        isEdit={Boolean(storage.storageEditTarget)}
+        storageLocation={storage.storageLocation}
+        setStorageLocation={storage.setStorageLocation}
+        otherLocationName={storage.otherLocationName}
+        setOtherLocationName={storage.setOtherLocationName}
+        sentDate={storage.sentDate}
+        setSentDate={storage.setSentDate}
+        storageBags={storage.storageBags}
+        setStorageBags={storage.setStorageBags}
+        availableUnits={availableUnits}
+        handleSendToStorage={storage.handleStorageSubmit}
+        isLoading={storage.storageSubmitting}
+        loadingAvailable={loadingAvailable}
+      />
+
+      {/* ── Send Bulk (Give/Take Loan) Form Modal ─────────── */}
+      <BulkTransferFormModal
+        open={bulk.bulkFormOpen}
+        onClose={() => { bulk.setBulkFormOpen(false); bulk.setBulkEditTarget(null); bulk.setBulkEditExtraUnits([]); }}
+        mode={bulk.bulkEditTarget ? 'edit' : 'create'}
+        bulkTransferType={bulk.bulkTransferType}
+        setBulkTransferType={bulk.setBulkTransferType}
+        bulkBloodBankName={bulk.bulkBloodBankName}
+        setBulkBloodBankName={bulk.setBulkBloodBankName}
+        bulkBloodBankAddress={bulk.bulkBloodBankAddress}
+        setBulkBloodBankAddress={bulk.setBulkBloodBankAddress}
+        bulkTransferDate={bulk.bulkTransferDate}
+        setBulkTransferDate={bulk.setBulkTransferDate}
+        bulkGiveBags={bulk.bulkGiveBags}
+        setBulkGiveBags={bulk.setBulkGiveBags}
+        bulkTakeGroups={bulk.bulkTakeGroups}
+        setBulkTakeGroups={bulk.setBulkTakeGroups}
+        availableUnits={bulk.bulkEditTarget ? [...availableUnits, ...bulk.bulkEditExtraUnits] : availableUnits}
+        handleBulkTransferSubmit={bulk.handleBulkTransferSubmit}
+        bulkSubmitting={bulk.bulkSubmitting}
+        loadingAvailable={loadingAvailable}
+      />
+
+      {/* ── View modals (issue / storage / disease / bulk) + delete confirm ── */}
+      <IssueViewModals
+        viewOpen={viewOpen}
+        closeView={closeView}
+        viewItem={viewItem}
+        status={status}
+        storageViewOpen={storage.storageViewOpen}
+        setStorageViewOpen={storage.setStorageViewOpen}
+        storageViewItem={storage.storageViewItem}
+        setStorageViewItem={storage.setStorageViewItem}
+        thalViewOpen={thalViewOpen}
+        setThalViewOpen={setThalViewOpen}
+        thalViewItem={thalViewItem}
+        setThalViewItem={setThalViewItem}
+        diseaseLabel={diseaseLabel}
+        formatDate={formatDate}
+        formatDateTime={formatDateTime}
+        bulk={bulk}
+      />
+
+      {/* ── Bulk transfer print prompts (cover letter / testing cert / invoice) ── */}
+      <IssuePrintPrompts bulk={bulk} />
+
+      {/* ── Storage batch edit / delete reason dialogs ────── */}
+      {storage.StorageEditReasonDialog}
+      {storage.StorageDeleteReasonDialog}
+
+      {/* ── Bulk transfer edit reason dialog ──────────────── */}
+      {bulk.BulkEditReasonDialog}
     </div>
   );
 };

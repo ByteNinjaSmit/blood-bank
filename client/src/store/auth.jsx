@@ -13,7 +13,10 @@ export const AuthProvider = ({ children }) => {
   const isLoggingOutRef = useRef(false);
 
   const isLoggedIn = Boolean(token);
-  const isAdmin = user?.role === 'system-admin' || user?.role === 'bbo';
+  // role is a free-text display label with no authorization meaning —
+  // isFullAccess is the sole source of "this account can do everything"
+  // (see server/src/shared/role-map.ts).
+  const isAdmin = !!user?.isFullAccess;
   const authorizationToken = token ? `Bearer ${token}` : '';
   const API = import.meta.env.VITE_APP_URI_API;
   const storeTokenInCookies = (t) => setToken(t); // deprecated alias
@@ -151,15 +154,6 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const loginStartOtp = (email, password) => authApi.startOtpLogin(email, password);
-  const verifyOtpLogin = async (email, txnId, code) => {
-    const data = await authApi.verifyOtpLogin(email, txnId, code);
-    setToken(data.accessToken);
-    setUser(data.user);
-    return data;
-  };
-  const resendOtpLogin = (email, txnId) => authApi.resendOtpLogin(email, txnId);
-
   // ── Registration ──────────────────────────────────────────────────────────
   const registerStartOtp = (payload) => authApi.startRegister(payload);
   const verifyRegisterOtp = (email, txnId, code) => authApi.verifyRegister(email, txnId, code);
@@ -177,9 +171,6 @@ export const AuthProvider = ({ children }) => {
         API,
         storeTokenInCookies,
         login,
-        loginStartOtp,
-        verifyOtpLogin,
-        resendOtpLogin,
         registerStartOtp,
         verifyRegisterOtp,
         resendRegisterOtp,

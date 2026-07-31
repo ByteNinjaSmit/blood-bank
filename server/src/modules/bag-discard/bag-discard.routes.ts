@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
-import { requireRole, requirePermission } from '@/shared/middlewares/rbac';
+import { requirePermission } from '@/shared/middlewares/rbac';
 import { createBagDiscardRepo } from '@/modules/bag-discard/bag-discard.repository';
 import { createBagDiscardService } from '@/modules/bag-discard/bag-discard.service';
 import { createBagDiscardControllers } from '@/modules/bag-discard/bag-discard.controller';
@@ -17,7 +17,6 @@ const router = Router();
 router.get(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'qa-manager']),
   requirePermission('bag-discard:read'),
   controllers.list,
 );
@@ -25,7 +24,6 @@ router.get(
 router.get(
   '/:id',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'qa-manager']),
   requirePermission('bag-discard:read'),
   controllers.get,
 );
@@ -33,7 +31,6 @@ router.get(
 router.post(
   '/',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'store-keeper', 'qa-manager']),
   requirePermission('bag-discard:create'),
   controllers.create,
 );
@@ -41,7 +38,6 @@ router.post(
 router.patch(
   '/:id/approve',
   authenticate,
-  requireRole(['system-admin', 'bbo', 'qa-manager']),
   requirePermission('bag-discard:approve'),
   controllers.approve,
 );

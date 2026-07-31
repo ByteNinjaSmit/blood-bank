@@ -9,11 +9,11 @@ const blank = <T extends z.ZodTypeAny>(s: T) =>
 export const CreateCampBody = z.object({
   campId: z.string().trim().min(1).max(60),
   name: z.string().trim().min(1).max(200),
-  description: z.string().trim().min(1).max(2000),
+  description: blank(z.string().trim().max(2000).optional()),
   address: z.string().trim().min(1).max(500),
   phone: z.string().trim().min(6).max(20),
   email: z.string().email(),
-  staff: z.array(z.string().regex(OBJECT_ID)).min(1, 'Staff list cannot be empty'),
+  staff: z.array(z.string().regex(OBJECT_ID)).default([]),
   dateFrom: z.coerce.date(),
   dateTo: z.coerce.date(),
 });
@@ -43,6 +43,14 @@ export const VoluntaryQuery = z.object({
 
 export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid camp id') });
 export const CampIdParam = z.object({ campId: z.string().regex(OBJECT_ID, 'Invalid camp id') });
+export const VoluntaryIdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid donation id') });
+export const UpdateVoluntaryStatusBody = z.object({
+  status: z.enum(['PENDING', 'DONATED', 'REJECTED']),
+});
+
+export const DeleteReasonBody = z.object({
+  reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
+});
 
 function parseOrThrow<T>(s: z.ZodType<T>, v: unknown, where: string): T {
   const r = s.safeParse(v);
@@ -54,6 +62,10 @@ export const ValidateCamp = {
   createBody: (req: Request) => parseOrThrow(CreateCampBody, req.body, 'request body'),
   updateBody: (req: Request) => parseOrThrow(UpdateCampBody, req.body, 'request body'),
   voluntaryQuery: (req: Request) => parseOrThrow(VoluntaryQuery, req.query, 'query string'),
+  voluntaryIdParam: (req: Request) => parseOrThrow(VoluntaryIdParam, req.params, 'path params'),
+  updateVoluntaryStatusBody: (req: Request) =>
+    parseOrThrow(UpdateVoluntaryStatusBody, req.body, 'request body'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
   campIdParam: (req: Request) => parseOrThrow(CampIdParam, req.params, 'path params'),
+  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };
