@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Modal from '@/components/shared/Modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertTriangle, AlertCircle } from 'lucide-react';
 
 // Reject a single component of a requisition (the rest continues). Shows the
@@ -27,7 +27,11 @@ export default function ComponentRejectModal({ isOpen, onClose, onConfirm, compo
   const rhSign = component?.rh === 'Positive' ? '+' : component?.rh === 'Negative' ? '−' : '';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Reject Component" size="sm">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Reject Component</DialogTitle>
+        </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex gap-3 text-red-950 text-xs">
           <div className="text-red-600 flex-shrink-0 mt-0.5">
@@ -86,6 +90,7 @@ export default function ComponentRejectModal({ isOpen, onClose, onConfirm, compo
           </button>
         </div>
       </form>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 }

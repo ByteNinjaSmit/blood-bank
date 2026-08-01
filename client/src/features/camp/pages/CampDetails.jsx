@@ -5,7 +5,7 @@ import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { useCampDetail } from '@/hooks/useCamp';
 import EnhancedLoader from '@/components/utils/Spinner';
-import Modal from '@/components/shared/Modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { donorApi } from '@/features/donor/api';
 import { donationApi } from '@/features/donation/api';
@@ -469,12 +469,11 @@ const CampDetails = () => {
       </div>
 
       {/* Drafts Modal */}
-      <Modal
-        isOpen={showDraftsModal}
-        onClose={() => setShowDraftsModal(false)}
-        title="Draft Donation Forms"
-        size="lg"
-      >
+      <Dialog open={showDraftsModal} onOpenChange={(open) => { if (!open) setShowDraftsModal(false); }}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Draft Donation Forms</DialogTitle>
+          </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-gray-500">
             Select a draft form to resume filling or delete it.
@@ -518,7 +517,8 @@ const CampDetails = () => {
             </div>
           )}
         </div>
-      </Modal>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

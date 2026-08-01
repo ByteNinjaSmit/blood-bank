@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import CustomModal from "@/components/CustomModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowRight, ArrowLeft, Save, Loader2, UserPlus, CheckCircle, AlertTriangle } from "lucide-react";
 import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
 import { validateDate, validateMonthYear, getUnhealthyQuestionReason } from "./donor-creation/donor-creation-utils";
@@ -200,16 +200,19 @@ export default function DonorCreation() {
           {currentStep === 3 && <ExamFitnessStep form={form} />}
 
           {/* Deferral Reason Picker Modal (always mounted; opened from Step 3) */}
-          <CustomModal
+          <Dialog
             open={form.dropdownOpen && !form.isFitnessForcedUnfit}
-            onCancel={() => {
-              form.setDropdownOpen(false);
-              form.setReasonSearch("");
+            onOpenChange={(o) => {
+              if (!o) {
+                form.setDropdownOpen(false);
+                form.setReasonSearch("");
+              }
             }}
-            title="Select Deferral Reason"
-            size="md"
-            hideFooter
           >
+            <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Select Deferral Reason</DialogTitle>
+            </DialogHeader>
             <div className="space-y-3">
               <input
                 type="text"
@@ -247,7 +250,8 @@ export default function DonorCreation() {
                 )}
               </div>
             </div>
-          </CustomModal>
+            </DialogContent>
+          </Dialog>
 
           {currentStep === 4 && <BagInfoStep form={form} />}
 
@@ -315,16 +319,19 @@ export default function DonorCreation() {
         </div>
       </div>
       {/* Deferral Warning Modal */}
-      <CustomModal
+      <Dialog
         open={form.deferralModalOpen}
-        onCancel={() => {
-          form.setDeferralModalOpen(false);
-          form.setDeferralModalData(null);
+        onOpenChange={(o) => {
+          if (!o) {
+            form.setDeferralModalOpen(false);
+            form.setDeferralModalData(null);
+          }
         }}
-        title="Donor Deferral Warning"
-        size="md"
-        hideFooter
       >
+        <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Donor Deferral Warning</DialogTitle>
+        </DialogHeader>
         {form.deferralModalData && (
           <div className="space-y-4 p-2 text-sm">
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
@@ -380,7 +387,8 @@ export default function DonorCreation() {
             </div>
           </div>
         )}
-      </CustomModal>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

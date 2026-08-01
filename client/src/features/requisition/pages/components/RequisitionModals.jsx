@@ -1,7 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import requisitionApi from '@/services/requisitionApi';
-import CustomModal from '@/components/CustomModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { INDICATION_CATEGORY_LABELS } from '@/features/requisition/pages/constants';
 
 function clinicalIndicationLabel(patient) {
@@ -23,7 +23,11 @@ export default function RequisitionModals({
 }) {
   return (
     <>
-      <CustomModal open={viewOpen} onCancel={closeView} title="Requisition Details" size="3xl" hideFooter>
+      <Dialog open={viewOpen} onOpenChange={(o) => { if (!o) closeView(); }}>
+        <DialogContent className="sm:max-w-7xl">
+        <DialogHeader>
+          <DialogTitle>Requisition Details</DialogTitle>
+        </DialogHeader>
         {!viewDoc || viewLoading ? (
           <div className="text-gray-600">Loading…</div>
         ) : (
@@ -250,15 +254,14 @@ export default function RequisitionModals({
             </div>
           </div>
         )}
-      </CustomModal>
+        </DialogContent>
+      </Dialog>
 
-      <CustomModal
-        open={issueModalOpen}
-        onCancel={() => { setIssueModalOpen(false); setIssueDoc(null); }}
-        title="Issue Components separately"
-        size="2xl"
-        hideFooter
-      >
+      <Dialog open={issueModalOpen} onOpenChange={(o) => { if (!o) { setIssueModalOpen(false); setIssueDoc(null); } }}>
+        <DialogContent className="sm:max-w-6xl">
+        <DialogHeader>
+          <DialogTitle>Issue Components separately</DialogTitle>
+        </DialogHeader>
         {!issueDoc || issueLoading ? (
           <div className="flex items-center justify-center p-8">
             <Loader2 className="w-8 h-8 animate-spin text-green-700" />
@@ -407,15 +410,14 @@ export default function RequisitionModals({
             </div>
           </div>
         )}
-      </CustomModal>
+        </DialogContent>
+      </Dialog>
 
-      <CustomModal 
-        open={multiLabelModalOpen} 
-        onCancel={() => { setMultiLabelModalOpen(false); setMultiLabelDoc(null); }} 
-        title="Select Issue Label to Generate" 
-        size="lg" 
-        hideFooter
-      >
+      <Dialog open={multiLabelModalOpen} onOpenChange={(o) => { if (!o) { setMultiLabelModalOpen(false); setMultiLabelDoc(null); } }}>
+        <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Select Issue Label to Generate</DialogTitle>
+        </DialogHeader>
         {!multiLabelDoc ? (
           <div className="text-gray-600">Loading…</div>
         ) : (
@@ -516,7 +518,8 @@ export default function RequisitionModals({
             </div>
           </div>
         )}
-      </CustomModal>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

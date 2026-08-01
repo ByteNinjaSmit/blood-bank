@@ -1,7 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import CustomModal from '@/components/CustomModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 export default function HospitalEditModal({
   open,
@@ -14,17 +14,12 @@ export default function HospitalEditModal({
   onClose,
 }) {
   return (
-    <CustomModal
-      open={open && !!selectedHospital}
-      title={selectedHospital ? `Edit Hospital - ${selectedHospital.name}` : 'Edit Hospital'}
-      description="Update the hospital details. Fields marked with * are required."
-      onCancel={onClose}
-      onConfirm={handleEditSave}
-      confirmText={editSubmitting ? 'Saving...' : 'Save Changes'}
-      cancelText="Cancel"
-      confirmVariant="primary"
-      size="lg"
-    >
+    <Dialog open={open && !!selectedHospital} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-3xl">
+      <DialogHeader>
+        <DialogTitle>{selectedHospital ? `Edit Hospital - ${selectedHospital.name}` : 'Edit Hospital'}</DialogTitle>
+        <DialogDescription>Update the hospital details. Fields marked with * are required.</DialogDescription>
+      </DialogHeader>
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -86,6 +81,13 @@ export default function HospitalEditModal({
           )}
         </div>
       </div>
-    </CustomModal>
+      <DialogFooter>
+        <button type="button" onClick={onClose} className="px-3 py-2 rounded-md border bg-white text-sm hover:bg-slate-50">Cancel</button>
+        <button type="button" onClick={handleEditSave} className="px-3 py-2 rounded-md shadow-sm text-sm bg-slate-900 hover:bg-black text-white">
+          {editSubmitting ? 'Saving...' : 'Save Changes'}
+        </button>
+      </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

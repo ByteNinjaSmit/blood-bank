@@ -1,6 +1,6 @@
 import { Loader2, Warehouse, MapPin, ArrowLeftRight, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import CustomModal from "@/components/CustomModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function IssueViewModals({
   viewOpen, closeView, viewItem, status,
@@ -17,7 +17,11 @@ export default function IssueViewModals({
   } = bulk;
   return (
     <>
-      <CustomModal open={viewOpen} onCancel={closeView} title={status === 'issued' ? 'Issued Component Details' : 'Reserved Component Details'} size="lg" hideFooter>
+      <Dialog open={viewOpen} onOpenChange={(o) => { if (!o) closeView(); }}>
+        <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{status === 'issued' ? 'Issued Component Details' : 'Reserved Component Details'}</DialogTitle>
+        </DialogHeader>
         {viewItem && (
           <div className="space-y-5 text-sm">
             {/* Donor & Collection Section */}
@@ -147,9 +151,14 @@ export default function IssueViewModals({
             </div>
           </div>
         )}
-      </CustomModal>
+        </DialogContent>
+      </Dialog>
       {/* ── Storage Transfer (batch) View Modal ───────────── */}
-      <CustomModal open={storageViewOpen} onCancel={() => { setStorageViewOpen(false); setStorageViewItem(null); }} title="Storage Batch Details" size="lg" hideFooter>
+      <Dialog open={storageViewOpen} onOpenChange={(o) => { if (!o) { setStorageViewOpen(false); setStorageViewItem(null); } }}>
+        <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Storage Batch Details</DialogTitle>
+        </DialogHeader>
         {storageViewItem && (() => {
           const t = storageViewItem;
           return (
@@ -206,10 +215,15 @@ export default function IssueViewModals({
             </div>
           );
         })()}
-      </CustomModal>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Clinical Indication / Disease Requisition View Modal ──────────── */}
-      <CustomModal open={thalViewOpen} onCancel={() => { setThalViewOpen(false); setThalViewItem(null); }} title="Clinical Indication / Disease Patient Details" size="lg" hideFooter>
+      <Dialog open={thalViewOpen} onOpenChange={(o) => { if (!o) { setThalViewOpen(false); setThalViewItem(null); } }}>
+        <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Clinical Indication / Disease Patient Details</DialogTitle>
+        </DialogHeader>
         {thalViewItem && (() => {
           const r = thalViewItem;
           const p = r.patient || {};
@@ -306,16 +320,15 @@ export default function IssueViewModals({
             </div>
           );
         })()}
-      </CustomModal>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Delete Bulk Transfer Confirmation ─────────────── */}
-      <CustomModal
-        open={deleteBulkConfirmOpen}
-        onCancel={() => { setDeleteBulkConfirmOpen(false); setDeleteBulkTarget(null); }}
-        title="Delete Bulk Transfer"
-        size="sm"
-        hideFooter
-      >
+      <Dialog open={deleteBulkConfirmOpen} onOpenChange={(o) => { if (!o) { setDeleteBulkConfirmOpen(false); setDeleteBulkTarget(null); } }}>
+        <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Delete Bulk Transfer</DialogTitle>
+        </DialogHeader>
         <div className="space-y-4 text-sm p-1">
           <p className="text-gray-700">
             Delete transfer <strong className="font-mono">{deleteBulkTarget?.transferId}</strong>
@@ -357,10 +370,15 @@ export default function IssueViewModals({
             </Button>
           </div>
         </div>
-      </CustomModal>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Bulk Transfer View Modal ──────────────────────── */}
-      <CustomModal open={bulkViewOpen} onCancel={() => { setBulkViewOpen(false); setBulkViewItem(null); }} title="Bulk Transfer Details" size="lg" hideFooter>
+      <Dialog open={bulkViewOpen} onOpenChange={(o) => { if (!o) { setBulkViewOpen(false); setBulkViewItem(null); } }}>
+        <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Bulk Transfer Details</DialogTitle>
+        </DialogHeader>
         {bulkViewItem && (() => {
           const { byComponent, totalLitres } = bulkTransferComponentTotals(bulkViewItem.items);
           const componentEntries = Object.entries(byComponent);
@@ -435,7 +453,7 @@ export default function IssueViewModals({
             {/* Component totals in litres */}
             <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
               <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider mb-3">Component Totals (Litres)</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                 {componentEntries.length === 0 ? (
                   <div className="col-span-full text-gray-500 text-xs">No volume data recorded for these bags.</div>
                 ) : componentEntries.map(([comp, ml]) => (
@@ -478,7 +496,8 @@ export default function IssueViewModals({
           </div>
           );
         })()}
-      </CustomModal>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -14,27 +14,20 @@ import {
 import Sidebar from "@/components/layout/Sidebar";
 import NotificationBell from "@/features/notification/components/NotificationBell";
 import { useNotificationToastWatcher } from "@/features/notification/hooks/useNotificationToastWatcher";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 function MasterLayout() {
     useNotificationToastWatcher();
     const pathname = useLocation().pathname
     const [sidebarOpen, setSidebarOpen] = useState(true)
-    const [isMobile, setIsMobile] = useState(false)
+    const isMobile = useIsMobile()
     const [showMobileOverlay, setShowMobileOverlay] = useState(false)
 
-    const checkMobile = useCallback(() => {
-        const mobile = window.innerWidth < 768;
-        setIsMobile(mobile);
-        if (mobile) {
+    useEffect(() => {
+        if (isMobile) {
             setSidebarOpen(false);
         }
-    }, []);
-
-    useEffect(() => {
-        checkMobile();
-        window.addEventListener("resize", checkMobile);
-        return () => window.removeEventListener("resize", checkMobile);
-    }, [checkMobile]);
+    }, [isMobile]);
 
     const toggleSidebar = useCallback(() => {
         if (isMobile) {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import CustomModal from "@/components/CustomModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { apiClient, unwrap } from "@/core/api-client";
 import { toast } from "sonner";
@@ -91,7 +91,11 @@ export default function MonthlyReportInputsModal({ open, onClose, month, year, d
   const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
   return (
-    <CustomModal open={open} onCancel={onClose} title="Monthly Report — Manual Inputs" hideFooter size="lg">
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-3xl">
+      <DialogHeader>
+        <DialogTitle>Monthly Report — Manual Inputs</DialogTitle>
+      </DialogHeader>
       <div className="space-y-5 text-sm" onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
         {loading && (
           <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -146,6 +150,7 @@ export default function MonthlyReportInputsModal({ open, onClose, month, year, d
           </Button>
         </div>
       </div>
-    </CustomModal>
+      </DialogContent>
+    </Dialog>
   );
 }

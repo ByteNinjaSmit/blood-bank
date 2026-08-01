@@ -1,7 +1,7 @@
 import { Loader2, Pencil, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import CustomModal from "@/components/CustomModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/format-date";
 import { RESULT_OPTIONS, statusBadge, formatBlood } from "./serology-helpers";
 
@@ -22,14 +22,12 @@ export default function SerologyDetailModal({
   if (!selectedBag) return null;
 
   return (
-    <CustomModal
-      open
-      title={`Bag ${selectedBag.bagNo} – Serology details${isEditing ? " (Editing)" : ""}`}
-      description={selectedBag.status ? `Status: ${selectedBag.status}` : ""}
-      onCancel={onClose}
-      size="lg"
-      hideFooter
-    >
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-3xl">
+      <DialogHeader>
+        <DialogTitle>{`Bag ${selectedBag.bagNo} – Serology details${isEditing ? " (Editing)" : ""}`}</DialogTitle>
+        {selectedBag.status && <DialogDescription>{`Status: ${selectedBag.status}`}</DialogDescription>}
+      </DialogHeader>
       <div className="space-y-4 text-sm text-slate-800">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1.5">
@@ -182,6 +180,7 @@ export default function SerologyDetailModal({
           )}
         </div>
       </div>
-    </CustomModal>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,17 +1,15 @@
 import { Label } from '@/components/ui/label';
 import { Building2, Phone, MapPin } from 'lucide-react';
-import CustomModal from '@/components/CustomModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 export default function HospitalViewModal({ open, selectedHospital, onClose }) {
   return (
-    <CustomModal
-      open={open && !!selectedHospital}
-      title={selectedHospital ? `Hospital Details - ${selectedHospital.name}` : 'Hospital Details'}
-      description="Review the full information for this hospital."
-      onCancel={onClose}
-      hideFooter
-      size="lg"
-    >
+    <Dialog open={open && !!selectedHospital} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-3xl">
+      <DialogHeader>
+        <DialogTitle>{selectedHospital ? `Hospital Details - ${selectedHospital.name}` : 'Hospital Details'}</DialogTitle>
+        <DialogDescription>Review the full information for this hospital.</DialogDescription>
+      </DialogHeader>
       {selectedHospital && (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
@@ -55,6 +53,7 @@ export default function HospitalViewModal({ open, selectedHospital, onClose }) {
           </div>
         </div>
       )}
-    </CustomModal>
+      </DialogContent>
+    </Dialog>
   );
 }

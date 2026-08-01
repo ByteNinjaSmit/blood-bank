@@ -10,7 +10,7 @@ export default function CollectionSection({ collection }) {
 
   return (
     <Section title="1. Voluntary & Replacement Blood Collection">
-      <div className="grid grid-cols-3 gap-3 text-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm">
         <Stat label="Number of Camps" value={collection.campsCount} />
         <Stat label="Voluntary Collection (est.)" value={collection.voluntary} />
         <Stat label="Replacement Collection" value={collection.replacement} />

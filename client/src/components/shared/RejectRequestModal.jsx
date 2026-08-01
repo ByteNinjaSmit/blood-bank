@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Modal from './Modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertTriangle, AlertCircle } from 'lucide-react';
 
 const RejectRequestModal = ({
@@ -29,7 +29,11 @@ const RejectRequestModal = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Reject Requisition Request" size="sm">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Reject Requisition Request</DialogTitle>
+        </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex gap-3 text-red-950 text-xs">
           <div className="text-red-600 flex-shrink-0 mt-0.5">
@@ -88,7 +92,8 @@ const RejectRequestModal = ({
           </button>
         </div>
       </form>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 };
 

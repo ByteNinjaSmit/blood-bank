@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import CustomModal from '@/components/CustomModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import MultiBagSelect from './MultiBagSelect';
 import { COMPONENT_TYPES } from '@/constants/component-types';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
@@ -34,7 +34,11 @@ export default function BulkTransferFormModal({
   const isEdit = mode === 'edit';
   const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
   return (
-    <CustomModal open={open} onCancel={onClose} title={isEdit ? 'Edit Bulk Transfer' : 'Bulk Transfer — Give / Take Loan'} size="xl" hideFooter>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-5xl">
+      <DialogHeader>
+        <DialogTitle>{isEdit ? 'Edit Bulk Transfer' : 'Bulk Transfer — Give / Take Loan'}</DialogTitle>
+      </DialogHeader>
       <div className="space-y-6 text-sm p-2" onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
         {/* Give Loan / Take Loan selector — locked once created, since
             changing the transfer type after bags are already claimed/logged
@@ -516,6 +520,7 @@ export default function BulkTransferFormModal({
           </Button>
         </div>
       </div>
-    </CustomModal>
+      </DialogContent>
+    </Dialog>
   );
 }

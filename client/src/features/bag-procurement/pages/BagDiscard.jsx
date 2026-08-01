@@ -99,7 +99,7 @@ function DiscardDrawer({ onClose, stockItems }) {
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Quantity to Discard *</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
               <div>
                 <label className="block text-[10px] text-gray-500 mb-0.5">Boxes</label>
                 <input type="number" min="0" value={boxes} onChange={(e) => setBoxes(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded px-2 py-1 text-xs text-center" />

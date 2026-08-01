@@ -3,6 +3,7 @@ import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
 import PermissionsEditor from "../../components/permissions-editor/PermissionsEditor";
 import { draftFromGrid } from "../../components/permissions-editor/grid-conversion";
 import { useRoleList } from "@/features/role/queries";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function CreateUserForm({
   form,
@@ -48,13 +49,12 @@ export default function CreateUserForm({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
-      <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden" onClick={(e)=>e.stopPropagation()}>
-        <div className="p-4 border-b flex justify-between items-center bg-slate-50/60">
-          <div className="font-semibold text-slate-800">{editingId ? 'Edit User' : 'Create User'}</div>
-          <button onClick={onCancel} className="px-2 py-1 rounded-md border hover:bg-slate-50">Close</button>
-        </div>
-        <form onSubmit={onSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="p-4 md:p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+    <Dialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
+      <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+        <DialogHeader className="p-4 border-b bg-slate-50/60">
+          <DialogTitle className="font-semibold text-slate-800">{editingId ? 'Edit User' : 'Create User'}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={onSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="p-4 md:p-5 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-xs text-slate-600">Public ID</label>
@@ -135,7 +135,7 @@ export default function CreateUserForm({
             <button disabled={loading} type="submit" className="px-3 py-2 rounded-md bg-red-700 text-white hover:bg-red-800 disabled:opacity-50 shadow-sm">{editingId ? 'Update' : 'Create'}</button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

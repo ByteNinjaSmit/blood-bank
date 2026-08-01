@@ -1,6 +1,7 @@
-import { X, Image as ImageIcon } from "lucide-react";
+import { Image as ImageIcon } from "lucide-react";
 import DecisionBadge from "./DecisionBadge";
 import { TESTING_TYPE_LABELS, PHYSICAL_CHECKS } from "./discard-constants";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function ViewInspectionModal({ onClose, inspection, onViewReportImage }) {
   if (!inspection) return null;
@@ -8,22 +9,15 @@ export default function ViewInspectionModal({ onClose, inspection, onViewReportI
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/40 z-40 animate-in fade-in duration-200" onClick={onClose} />
-      <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b bg-red-800 text-white">
-            <div>
-              <h2 className="text-base font-semibold text-white">Inspection & QC Report Details</h2>
-              <p className="text-[10px] text-red-200 font-medium uppercase tracking-wider mt-0.5">
-                Batch No: {inspection.batchNumber}
-              </p>
-            </div>
-            <button onClick={onClose} className="text-red-200 hover:text-white">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+        {/* Header */}
+        <DialogHeader className="px-6 py-4 border-b bg-red-800">
+          <DialogTitle className="text-base font-semibold text-white">Inspection & QC Report Details</DialogTitle>
+          <p className="text-[10px] text-red-200 font-medium uppercase tracking-wider mt-0.5">
+            Batch No: {inspection.batchNumber}
+          </p>
+        </DialogHeader>
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -187,8 +181,7 @@ export default function ViewInspectionModal({ onClose, inspection, onViewReportI
               Close
             </button>
           </div>
-        </div>
-      </div>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, ShieldCheck } from 'lucide-react';
-import Modal from '@/components/shared/Modal';
-import CustomModal from '@/components/CustomModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useRoleList, useDeleteRole } from '../queries';
 import RoleEditor from './RoleEditor';
 
@@ -32,15 +31,26 @@ export default function ManageRolesModal({ onClose }) {
 
   if (editorState) {
     return (
-      <Modal isOpen title={editorState.role ? 'Edit Role' : 'New Role'} onClose={closeEditor} size="lg">
-        <RoleEditor role={editorState.role} onDone={closeEditor} onCancel={closeEditor} />
-      </Modal>
+      <Dialog open onOpenChange={(open) => { if (!open) closeEditor(); }}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editorState.role ? 'Edit Role' : 'New Role'}</DialogTitle>
+          </DialogHeader>
+          <div className="pt-2">
+            <RoleEditor role={editorState.role} onDone={closeEditor} onCancel={closeEditor} />
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
-    <Modal isOpen title="Manage Roles" onClose={onClose} size="lg">
-      <div className="space-y-4">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Manage Roles</DialogTitle>
+        </DialogHeader>
+        <div className="pt-2 space-y-4">
         <div className="flex justify-end">
           <button
             onClick={openCreate}
@@ -93,17 +103,33 @@ export default function ManageRolesModal({ onClose }) {
             ))}
           </div>
         )}
-      </div>
+        </div>
 
-      <CustomModal
-        open={!!deleteTarget}
-        title="Delete Role"
-        description={deleteTarget ? `Delete role "${deleteTarget.name}"? This cannot be undone.` : ''}
-        confirmText="Delete"
-        confirmVariant="danger"
-        onCancel={() => setDeleteTarget(null)}
-        onConfirm={confirmDelete}
-      />
-    </Modal>
+        <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete Role</DialogTitle>
+            </DialogHeader>
+            <p className="text-slate-600 text-sm">
+              {deleteTarget ? `Delete role "${deleteTarget.name}"? This cannot be undone.` : ''}
+            </p>
+            <DialogFooter>
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-3 py-2 rounded-md border bg-white text-sm hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-3 py-2 rounded-md shadow-sm text-sm bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </DialogContent>
+    </Dialog>
   );
 }

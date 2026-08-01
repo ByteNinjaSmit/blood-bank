@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, AlertTriangle, Pencil, Trash2, X, RefreshCw } from 'lucide-react';
+import { Plus, AlertTriangle, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLotList, useDamageList, useCreateDamage, useUpdateDamage, useDeleteDamage } from '../queries';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportDamagedChemicalStock } from '@/utils/excelExportHelper';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 function lotLabel(lot) {
   const name = lot.chemicalId?.name || 'Unknown chemical';
@@ -14,8 +15,6 @@ function RegisterDamageModal({ isOpen, onClose, lots, onSubmit, isPending }) {
   const [lotId, setLotId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [reason, setReason] = useState('');
-
-  if (!isOpen) return null;
 
   const selectedLot = lots.find((l) => l._id === lotId);
   const maxQty = selectedLot?.qtyAvailable ?? 0;
@@ -47,18 +46,12 @@ function RegisterDamageModal({ isOpen, onClose, lots, onSubmit, isPending }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={onClose}>
-      <form
-        onSubmit={handleSubmit}
-        onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-md w-full p-6 space-y-4"
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold text-gray-900">Register Damaged Chemical</h3>
-          <button type="button" onClick={onClose} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Register Damaged Chemical</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
 
         <div>
           <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Chemical *</label>
@@ -102,7 +95,7 @@ function RegisterDamageModal({ isOpen, onClose, lots, onSubmit, isPending }) {
           />
         </div>
 
-        <div className="flex gap-3 justify-end pt-2">
+        <DialogFooter className="pt-2">
           <button
             type="button"
             onClick={onClose}
@@ -117,9 +110,10 @@ function RegisterDamageModal({ isOpen, onClose, lots, onSubmit, isPending }) {
           >
             {isPending ? 'Saving...' : 'Register Damage'}
           </button>
-        </div>
-      </form>
-    </div>
+        </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -150,19 +144,13 @@ function EditDamageModal({ damage, onClose, onSubmit, isPending }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={onClose}>
-      <form
-        onSubmit={handleSubmit}
-        onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-md w-full p-6 space-y-4"
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold text-gray-900">Edit Damage Record</h3>
-          <button type="button" onClick={onClose} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <p className="text-xs text-gray-500">{damage.chemicalId?.name} — Lot {damage.lotId?.lotNumber}</p>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Damage Record</DialogTitle>
+          <p className="text-xs text-gray-500">{damage.chemicalId?.name} — Lot {damage.lotId?.lotNumber}</p>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
 
         <div>
           <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Quantity Damaged * (max {maxQty})</label>
@@ -188,7 +176,7 @@ function EditDamageModal({ damage, onClose, onSubmit, isPending }) {
           />
         </div>
 
-        <div className="flex gap-3 justify-end pt-2">
+        <DialogFooter className="pt-2">
           <button
             type="button"
             onClick={onClose}
@@ -203,9 +191,10 @@ function EditDamageModal({ damage, onClose, onSubmit, isPending }) {
           >
             {isPending ? 'Saving...' : 'Save Changes'}
           </button>
-        </div>
-      </form>
-    </div>
+        </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
