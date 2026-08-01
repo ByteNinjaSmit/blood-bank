@@ -41,11 +41,15 @@ function MasterLayout() {
         setShowMobileOverlay(false);
     }, []);
 
+    // Close the mobile overlay on navigation only — must NOT depend on
+    // showMobileOverlay itself, or opening the drawer (which flips that
+    // value to true) immediately re-triggers this effect and closes it
+    // right back before the user ever sees it.
     useEffect(() => {
-        if (isMobile && showMobileOverlay) {
+        if (isMobile) {
             closeMobileOverlay();
         }
-    }, [pathname, isMobile, showMobileOverlay, closeMobileOverlay]);
+    }, [pathname, isMobile, closeMobileOverlay]);
 
     return (
         <div className="h-screen bg-slate-50 flex overflow-hidden print:h-auto print:block print:overflow-visible">
@@ -61,39 +65,32 @@ function MasterLayout() {
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:block print:overflow-visible">
-                <header className="flex-shrink-0 bg-white border-b border-slate-200 p-4 shadow-sm sticky top-0 z-30 print:hidden">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            {isMobile && (
-                                <button
-                                    onClick={toggleSidebar}
-                                    className="text-red-800 hover:bg-red-50 p-2 rounded-md transition-colors md:hidden"
-                                >
-                                    <PanelLeftDashed className="w-5 h-5 cursor-pointer" />
-                                </button>
-                            )}
-                            {!isMobile && (
-                                <button
-                                    onClick={toggleSidebar}
-                                    className="text-red-800 hover:bg-red-50 p-2 rounded-md transition-colors hidden md:block"
-                                >
-                                    <PanelLeftDashed className="w-5 h-5 cursor-pointer" />
-                                </button>
-                            )}
-                            <div className="flex items-center gap-2">
+                <header className="flex-shrink-0 bg-white border-b border-slate-200 p-3 sm:p-4 shadow-sm sticky top-0 z-30 print:hidden">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                            <button
+                                onClick={toggleSidebar}
+                                className="flex-shrink-0 text-red-800 hover:bg-red-50 p-2 rounded-md transition-colors"
+                            >
+                                <PanelLeftDashed className="w-5 h-5 cursor-pointer" />
+                            </button>
+                            <div className="flex items-center gap-2 min-w-0">
                                 <Link
                                     to={'/'}
-                                    className="cursor-pointer text-red-800 hover:text-red-800 transition-colors flex items-center gap-2"
+                                    className="flex-shrink-0 cursor-pointer text-red-800 hover:text-red-800 transition-colors flex items-center gap-2"
                                 >
                                     <FaHome className="w-5 h-5" />
                                 </Link>
-                                <ChevronRight className="text-slate-400 w-4 h-4" />
-                                <h1 className="text-lg md:text-xl font-semibold text-slate-800">
-                                    Sanjivani Blood Bank, Kopargaon
+                                <ChevronRight className="flex-shrink-0 text-slate-400 w-4 h-4" />
+                                <h1 className="truncate text-base sm:text-lg md:text-xl font-semibold text-slate-800">
+                                    <span className="sm:hidden">Sanjivani Blood Bank</span>
+                                    <span className="hidden sm:inline">Sanjivani Blood Bank, Kopargaon</span>
                                 </h1>
                             </div>
                         </div>
-                        <NotificationBell />
+                        <div className="flex-shrink-0">
+                            <NotificationBell />
+                        </div>
                     </div>
                 </header>
 

@@ -202,7 +202,7 @@ export default function PurchaseEntryForm({
                           className={`${tableInputClass} bg-white`}
                         >
                           <option value="ML">mL (Liquid)</option>
-                          <option value="VIALS">Vials</option>
+                          <option value="VIALS">Wells</option>
                           <option value="BOX">Box</option>
                           <option value="TUBE">Tube</option>
                         </select>
@@ -222,8 +222,8 @@ export default function PurchaseEntryForm({
                             value={item.unitsPerPack}
                             onChange={(e) => handleItemChange(idx, 'unitsPerPack', e.target.value)}
                             className={tableInputClass}
-                            placeholder="Vials/pack"
-                            title="Number of vials in this box (editable)"
+                            placeholder="Wells/pack"
+                            title="Number of wells in this box (editable)"
                           />
                         ) : null}
                       </div>

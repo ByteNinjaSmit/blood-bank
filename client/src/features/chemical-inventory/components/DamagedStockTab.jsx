@@ -90,7 +90,7 @@ function RegisterDamageModal({ isOpen, onClose, lots, onSubmit, isPending }) {
             rows="3"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="e.g. Broken vial, cold-chain excursion, expired during storage..."
+            placeholder="e.g. Broken well, cold-chain excursion, expired during storage..."
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
           />
         </div>

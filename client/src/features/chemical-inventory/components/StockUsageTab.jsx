@@ -25,11 +25,11 @@ function FinishBoxModal({ isOpen, lot, onClose, onConfirm, isPending }) {
         <DialogHeader>
           <DialogTitle>Finish Box — {lot.chemicalId?.name}</DialogTitle>
           <p className="text-xs text-gray-500 mt-1">
-            This box has {maxUnits} vials per pack. Enter how many vials are left over. Enter 0 if the box is fully used up.
+            This box has {maxUnits} wells per pack. Enter how many wells are left over. Enter 0 if the box is fully used up.
           </p>
         </DialogHeader>
         <div>
-          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Vials Remaining</label>
+          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Wells Remaining</label>
           <input
             type="number"
             min="0"
@@ -99,7 +99,7 @@ export default function StockUsageTab() {
       .then(() => {
         toast.success(
           vialsRemaining > 0
-            ? `Box set aside with ${vialsRemaining} vials remaining — resumes on next Open`
+            ? `Box set aside with ${vialsRemaining} wells remaining — resumes on next Open`
             : 'Box fully consumed'
         );
         setFinishModalLot(null);
@@ -310,9 +310,9 @@ export default function StockUsageTab() {
                         {isVialTracked(lot) && (
                           <div className="text-[9px] font-semibold">
                             {lot.openBoxUnitsRemaining != null ? (
-                              <span className="text-amber-700">Open box: {lot.openBoxUnitsRemaining}/{lot.unitsPerPack || 96} vials left</span>
+                              <span className="text-amber-700">Open box: {lot.openBoxUnitsRemaining}/{lot.unitsPerPack || 96} wells left</span>
                             ) : (
-                              <span className="text-gray-400">{lot.unitsPerPack || 96} vials/box</span>
+                              <span className="text-gray-400">{lot.unitsPerPack || 96} wells/box</span>
                             )}
                           </div>
                         )}
