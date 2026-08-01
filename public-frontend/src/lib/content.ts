@@ -8,7 +8,6 @@ export type ContentData = {
         trustedBy: string;
     };
     nav: {
-        topLinks: { label: string; href: string }[];
         mainLinks: {
             label: string;
             href: string;
@@ -40,6 +39,14 @@ export type ContentData = {
         campsLabel: string;
         lives: string;
         livesLabel: string;
+    };
+    campDonation: {
+        badge: string;
+        title: string;
+        titleHighlight: string;
+        description: string;
+        points: { title: string; desc: string }[];
+        cta: string;
     };
     features: {
         title: string;
@@ -192,6 +199,8 @@ export type ContentData = {
         noOngoing: string;
         noUpcoming: string;
         loadingCamps: string;
+        totalDonors: string;
+        totalDonations: string;
     };
     onsiteRegistrationForm: {
         steps: {
@@ -316,12 +325,6 @@ export const content: Record<'en' | 'mr', ContentData> = {
             trustedBy: "Trusted by 100,000+ lives served"
         },
         nav: {
-            topLinks: [
-                { label: "Hospital Services", href: "/" },
-                { label: "Research", href: "/" },
-                { label: "Careers", href: "/" },
-                { label: "Shop", href: "/" }
-            ],
             bookNow: "BOOK NOW",
             mainLinks: [
                 {
@@ -332,7 +335,6 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             title: "Am I eligible to donate blood?",
                             links: [
                                 { label: "Explore eligibility criteria", href: "/eligibility-criteria" },
-                                { label: "Take our eligibility quiz", href: "/" },
                                 { label: "Recent changes to donation criteria", href: "/donation-criteria-changes" }
                             ]
                         },
@@ -342,13 +344,10 @@ export const content: Record<'en' | 'mr', ContentData> = {
                                 { label: "First-time donor", href: "/donate" },
                                 { label: "What is my blood type?", href: "/blood-type" },
                                 { label: "Donation process", href: "/donation-process" },
-                                { label: "Donor questionnaire", href: "/" },
                                 { label: "Donor wellness and safety", href: "/donor-wellness" }
                             ]
                         }
-                    ],
-                    viewAllLabel: "View all Blood info",
-                    viewAllHref: "/"
+                    ]
                 },
 
                 {
@@ -358,14 +357,10 @@ export const content: Record<'en' | 'mr', ContentData> = {
                         {
                             title: "Donation options",
                             links: [
-                                { label: "Book an appointment", href: "/donate" },
-                                { label: "Donor centres hours & locations", href: "/" },
-                                { label: "Recognition programs", href: "/" }
+                                { label: "Book an appointment", href: "/donate" }
                             ]
                         }
-                    ],
-                    viewAllLabel: "View all Ways to Donate",
-                    viewAllHref: "/donate"
+                    ]
                 },
                 {
                     label: "About Us",
@@ -375,18 +370,14 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             title: "Our organization",
                             links: [
                                 { label: "Our mission", href: "/about" },
-                                { label: "Our history", href: "/about" },
-                                { label: "Contact us", href: "/" },
-                                { label: "Accessibility in donor centres", href: "/" }
+                                { label: "Our history", href: "/about" }
                             ]
                         }
-                    ],
-                    viewAllLabel: "View all About Us",
-                    viewAllHref: "/about"
+                    ]
                 },
                 {
                     label: "Donation",
-                    href: "#",
+                    href: "/onsite-donor",
                     columns: [
                         {
                             title: "Donation Services",
@@ -423,6 +414,19 @@ export const content: Record<'en' | 'mr', ContentData> = {
             lives: "1,00,000+",
             livesLabel: "Lives Served"
         },
+        campDonation: {
+            badge: "Voluntary Camp Donation",
+            title: "Bring a Blood Donation",
+            titleHighlight: "Camp to Your Community",
+            description: "We organize voluntary blood donation camps at colleges, workplaces, and community events across Kopargaon and nearby talukas — complete with certified medical staff, free screening, and refreshments for every donor.",
+            points: [
+                { title: "On-site Medical Team", desc: "Qualified doctors and technicians handle screening and collection safely." },
+                { title: "Free Health Check-up", desc: "Every donor gets a basic health screening at no cost." },
+                { title: "For Groups & Institutions", desc: "Ideal for colleges, companies, and community organizations." },
+                { title: "Easy Online Registration", desc: "Check ongoing and upcoming camps and register in minutes." }
+            ],
+            cta: "Check & Register for Camp Donation"
+        },
         features: {
             title: "Why Trust Sanjivani Blood Bank?",
             items: [
@@ -447,7 +451,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
             title: "Celebrate Your Birthday by Saving Lives",
             subtitle: "Instead of cutting a cake, give someone a second chance at life.",
             occasions: ["Birthday", "Anniversary", "Special Occasions"],
-            cta: "Register Your Pledge"
+            cta: "Donate Now!"
         },
         education: {
             shortageTitle: "Seasonal Blood Shortage Awareness",
@@ -684,7 +688,9 @@ export const content: Record<'en' | 'mr', ContentData> = {
             completed: "Completed",
             noOngoing: "No ongoing camps at the moment.",
             noUpcoming: "No upcoming camps scheduled.",
-            loadingCamps: "Loading Camps..."
+            loadingCamps: "Loading Camps...",
+            totalDonors: "Total Donors",
+            totalDonations: "Total Donations"
         },
         onsiteRegistrationForm: {
             steps: {
@@ -807,12 +813,6 @@ export const content: Record<'en' | 'mr', ContentData> = {
             trustedBy: "१,००,०००+ रुग्णांचा विश्वास"
         },
         nav: {
-            topLinks: [
-                { label: "रुग्णालय सेवा", href: "/" },
-                { label: "संशोधन", href: "/" },
-                { label: "करिअर", href: "/" },
-                { label: "शॉप", href: "/" }
-            ],
             bookNow: "बुक करा",
             mainLinks: [
                 {
@@ -823,7 +823,6 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             title: "मी रक्तदान करू शकतो का?",
                             links: [
                                 { label: "पात्रता निकष जाणून घ्या", href: "/eligibility-criteria" },
-                                { label: "पात्रता चाचणी घ्या", href: "/" },
                                 { label: "दान निकषातील अलीकडील बदल", href: "/donation-criteria-changes" }
                             ]
                         },
@@ -833,13 +832,10 @@ export const content: Record<'en' | 'mr', ContentData> = {
                                 { label: "प्रथमच रक्तदाता", href: "/donate" },
                                 { label: "माझा रक्तगट कोणता?", href: "/blood-type" },
                                 { label: "दान प्रक्रिया", href: "/donation-process" },
-                                { label: "दाता प्रश्नावली", href: "/" },
                                 { label: "दाता कल्याण आणि सुरक्षा", href: "/donor-wellness" }
                             ]
                         }
-                    ],
-                    viewAllLabel: "सर्व रक्त माहिती पहा",
-                    viewAllHref: "/"
+                    ]
                 },
 
                 {
@@ -849,14 +845,10 @@ export const content: Record<'en' | 'mr', ContentData> = {
                         {
                             title: "दान पर्याय",
                             links: [
-                                { label: "अपॉइंटमेंट बुक करा", href: "/donate" },
-                                { label: "दाता केंद्रे तास आणि स्थाने", href: "/" },
-                                { label: "ओळख कार्यक्रम", href: "/" }
+                                { label: "अपॉइंटमेंट बुक करा", href: "/donate" }
                             ]
                         }
-                    ],
-                    viewAllLabel: "सर्व दान मार्ग पहा",
-                    viewAllHref: "/donate"
+                    ]
                 },
                 {
                     label: "आमच्याबद्दल",
@@ -866,18 +858,14 @@ export const content: Record<'en' | 'mr', ContentData> = {
                             title: "आमची संस्था",
                             links: [
                                 { label: "आमचे ध्येय", href: "/about" },
-                                { label: "आमचा इतिहास", href: "/about" },
-                                { label: "संपर्क करा", href: "/" },
-                                { label: "दाता केंद्रांमध्ये सुलभता", href: "/" }
+                                { label: "आमचा इतिहास", href: "/about" }
                             ]
                         }
-                    ],
-                    viewAllLabel: "सर्व आमच्याबद्दल पहा",
-                    viewAllHref: "/about"
+                    ]
                 },
                 {
                     label: "रक्तदान",
-                    href: "#",
+                    href: "/onsite-donor",
                     columns: [
                         {
                             title: "रक्तदान सेवा",
@@ -914,6 +902,19 @@ export const content: Record<'en' | 'mr', ContentData> = {
             lives: "१,००,०००+",
             livesLabel: "रुग्ण सेवा"
         },
+        campDonation: {
+            badge: "स्वैच्छिक शिबिर रक्तदान",
+            title: "आपल्या परिसरात रक्तदान",
+            titleHighlight: "शिबिर आयोजित करा",
+            description: "आम्ही कोपरगाव आणि आसपासच्या तालुक्यांमध्ये महाविद्यालये, कार्यालये आणि सामुदायिक कार्यक्रमांमध्ये स्वैच्छिक रक्तदान शिबिरे आयोजित करतो — प्रमाणित वैद्यकीय कर्मचारी, मोफत तपासणी आणि प्रत्येक दात्यासाठी अल्पोपाहारासह.",
+            points: [
+                { title: "वैद्यकीय पथक उपलब्ध", desc: "पात्र डॉक्टर आणि तंत्रज्ञ तपासणी व संकलन सुरक्षितपणे करतात." },
+                { title: "मोफत आरोग्य तपासणी", desc: "प्रत्येक दात्याला विनामूल्य मूलभूत आरोग्य तपासणी मिळते." },
+                { title: "संस्था व गटांसाठी योग्य", desc: "महाविद्यालये, कंपन्या आणि सामुदायिक संस्थांसाठी आदर्श." },
+                { title: "सोपी ऑनलाइन नोंदणी", desc: "सुरू असलेली व आगामी शिबिरे पहा आणि काही मिनिटांत नोंदणी करा." }
+            ],
+            cta: "शिबिर रक्तदानासाठी तपासा व नोंदणी करा"
+        },
         features: {
             title: "संजीवनी ब्लड बँक का निवडाल?",
             items: [
@@ -938,7 +939,7 @@ export const content: Record<'en' | 'mr', ContentData> = {
             title: "वाढदिवस साजरा करा जीवदान देऊन",
             subtitle: "केक कापण्याऐवजी, कोणालातरी जीवनाची दुसरी संधी द्या.",
             occasions: ["वाढदिवस", "लग्नाचा वाढदिवस", "विशेष प्रसंग"],
-            cta: "रक्तदानाची शपथ घ्या"
+            cta: "आता रक्तदान करा!"
         },
         education: {
             shortageTitle: "रक्त तुटवड्याची जागरूकता",
@@ -1175,7 +1176,9 @@ export const content: Record<'en' | 'mr', ContentData> = {
             completed: "पूर्ण झाले",
             noOngoing: "सध्या कोणतेही शिबिर सुरू नाही.",
             noUpcoming: "पुढील कोणतेही शिबिर नियोजित नाही.",
-            loadingCamps: "शिबिरे लोड होत आहेत..."
+            loadingCamps: "शिबिरे लोड होत आहेत...",
+            totalDonors: "एकूण दाते",
+            totalDonations: "एकूण रक्तदान"
         },
         onsiteRegistrationForm: {
             steps: {

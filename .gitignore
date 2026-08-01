@@ -1,15 +1,38 @@
+# OS / IDE
 .vscode
-app.log
-server/logs/app.log
-node_modules
-# /server/.env
-*.log
-*.jpeg
-*.csv
 .idea
 .idea/
-*.pdf
-.env
+.DS_Store
+
+# Node
+node_modules
 .next
+dist
+build
+coverage
+
+# Logs (server writes to server/logs/)
+*.log
+server/logs/
+logs/
+
+# Generated artifacts
+*.jpeg
+*.csv
+*.pdf
+
+# Env files - NEVER commit. Use .env.example as template.
+.env
+.env.*
 *.env
-.claude
+!*.env.example
+
+# Claude Code — keep project config (skills/agents/settings.json),
+# ignore local session state and per-machine caches.
+.claude/jobs/
+.claude/projects/
+.claude/cache/
+.claude/sessions/
+.claude/transcripts/
+.claude/logs/
+.claude/settings.local.json

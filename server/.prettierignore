@@ -1,0 +1,9 @@
+node_modules
+dist
+logs
+uploads
+reports
+backups
+package-lock.json
+*.log
+*.pdf

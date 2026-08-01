@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function Stepper({
     children,
     initialStep = 1,
+    activeStep,
     onStepChange = () => { },
     onFinalStepCompleted = () => { },
     stepCircleContainerClassName = "",
@@ -22,15 +23,32 @@ export default function Stepper({
 }) {
     const [currentStep, setCurrentStep] = useState(initialStep)
     const [direction, setDirection] = useState(0)
+
+    React.useEffect(() => {
+        if (activeStep !== undefined && activeStep !== currentStep) {
+            setDirection(activeStep > currentStep ? 1 : -1)
+            setCurrentStep(activeStep)
+        }
+    }, [activeStep, currentStep])
     const stepsArray = Children.toArray(children)
     const totalSteps = stepsArray.length
     const isCompleted = currentStep > totalSteps
     const isLastStep = currentStep === totalSteps
 
     const updateStep = (newStep) => {
+        // onStepChange can return `false` to veto a forward transition (e.g.
+        // failed per-step validation) — only onFinalStepCompleted has no such
+        // gate since Complete is a terminal action, not a navigation step.
+        // Backward moves are never blocked; the consumer gets the previous
+        // step as a second argument so it can tell direction apart.
+        if (newStep > totalSteps) {
+            setCurrentStep(newStep)
+            onFinalStepCompleted()
+            return
+        }
+        if (newStep > currentStep && onStepChange(newStep, currentStep) === false) return
+        if (newStep <= currentStep) onStepChange(newStep, currentStep)
         setCurrentStep(newStep)
-        if (newStep > totalSteps) onFinalStepCompleted()
-        else onStepChange(newStep)
     }
 
     const handleBack = () => {
@@ -155,7 +173,20 @@ function SlideTransition({ children, direction, onHeightReady }) {
     const containerRef = useRef(null)
 
     useLayoutEffect(() => {
-        if (containerRef.current) onHeightReady(containerRef.current.offsetHeight)
+        if (!containerRef.current) return;
+        
+        onHeightReady(containerRef.current.offsetHeight)
+
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                onHeightReady(entry.target.offsetHeight)
+            }
+        })
+        observer.observe(containerRef.current)
+
+        return () => {
+            observer.disconnect()
+        }
     }, [children, onHeightReady])
 
     return (

@@ -1,27 +1,40 @@
-FROM node:20-bookworm-slim
+FROM node:20-bookworm-slim AS deps
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/* && \
+    npm ci --quiet
 
+# Compile the TypeScript src/ tree into dist/. dist/server.js is the
+# only entrypoint — the legacy JS monolith was removed.
+FROM deps AS build
+COPY . .
+RUN npm run build
+
+FROM node:20-bookworm-slim AS runtime
 WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
 ENV NODE_OPTIONS=--max-old-space-size=2048
 
-# Install curl for healthchecks, then install dependencies
-COPY package*.json ./
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
-    rm -rf /var/lib/apt/lists/* && \
-    npm ci --omit=dev --quiet
+    rm -rf /var/lib/apt/lists/*
 
-# Copy project files
+# Production deps only (build deps stay in the build stage).
+COPY package*.json ./
+RUN npm ci --omit=dev --quiet
+
+# App source + compiled TS output.
+COPY --from=build /usr/src/app/dist ./dist
 COPY . .
 
-# Create logs directory and set permission for node user
 RUN mkdir -p /usr/src/app/logs && \
     chown -R node:node /usr/src/app
 
-# Switch to non-root
 USER node
 
 EXPOSE 5000
 
-CMD ["node", "server.js"]
+CMD ["node", "dist/server.js"]

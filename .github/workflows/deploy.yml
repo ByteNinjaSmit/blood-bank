@@ -3,10 +3,56 @@ name: Advanced CI/CD - BloodBank Backend
 on:
   push:
     branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
 
+  # ---------------------------------------------------------------------
+  # Quality gate. Runs on every push + PR. Must pass before any image is
+  # built or pushed.
+  #
+  # Server only. This pipeline builds and deploys the API image; the
+  # client is built and hosted by Vercel from its own project, so its
+  # lint/build gate lives there and is not duplicated here.
+  # ---------------------------------------------------------------------
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: |
+            server/package-lock.json
+
+      - name: Install server deps
+        working-directory: server
+        run: npm ci
+
+      - name: Server lint
+        working-directory: server
+        run: npm run lint
+
+      - name: Server typecheck
+        working-directory: server
+        run: npm run typecheck
+
+      - name: Server build (tsc + tsc-alias)
+        working-directory: server
+        run: npm run build
+
+      - name: Server tests (vitest)
+        working-directory: server
+        run: npm test
+
   build-test-push:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
@@ -14,7 +60,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -24,12 +70,14 @@ jobs:
           IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/blood-bank-api
           docker build --no-cache -t $IMAGE:latest -t $IMAGE:${{ github.sha }} ./server
 
-      - name: Security Scan (Trivy)
+      - name: Security Scan (Trivy) - block on HIGH/CRITICAL
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/blood-bank-api:latest
           format: table
-          exit-code: 0
+          exit-code: 1
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
 
       - name: Push Docker Image
         run: |
@@ -40,71 +88,115 @@ jobs:
 
   deploy:
     needs: build-test-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.1.0
+        env:
+          # All secrets come from GitHub Repository Secrets. Nothing
+          # sensitive is allowed in this file. Update via the GitHub UI:
+          #   Settings → Secrets and variables → Actions.
+          IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/blood-bank-api
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          ACCESS_TOKEN_EXPIRY: ${{ secrets.ACCESS_TOKEN_EXPIRY }}
+          REFRESH_TOKEN_EXPIRY: ${{ secrets.REFRESH_TOKEN_EXPIRY }}
+          CORS_SERVER: ${{ secrets.CORS_SERVER }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+          EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+          EMAIL_SECURE: ${{ secrets.EMAIL_SECURE }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          EMAIL_FROM_NAME: ${{ secrets.EMAIL_FROM_NAME }}
+          BANK_NAME: ${{ secrets.BANK_NAME }}
+          BANK_ADDRESS: ${{ secrets.BANK_ADDRESS }}
+          BANK_PHONE: ${{ secrets.BANK_PHONE }}
+          BANK_LICENSE: ${{ secrets.BANK_LICENSE }}
+          BANK_WEBSITE: ${{ secrets.BANK_WEBSITE }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_REGION: ${{ secrets.S3_REGION }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_PUBLIC_URL: ${{ secrets.S3_PUBLIC_URL }}
+          NEAR_EXPIRY_DAYS: ${{ secrets.NEAR_EXPIRY_DAYS }}
+          REPORTS_DIR: ${{ secrets.REPORTS_DIR }}
+          SYSTEM_USER_ID: ${{ secrets.SYSTEM_USER_ID }}
+          LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script_stop: true
+          envs: IMAGE_NAME,MONGODB_URI,JWT_SECRET,JWT_SECRET_KEY,ACCESS_TOKEN_EXPIRY,REFRESH_TOKEN_EXPIRY,CORS_SERVER,EMAIL_USER,EMAIL_PASS,EMAIL_FROM_NAME,EMAIL_HOST,EMAIL_PORT,EMAIL_SECURE,ADMIN_EMAIL,BANK_NAME,BANK_ADDRESS,BANK_PHONE,BANK_LICENSE,BANK_WEBSITE,S3_ENDPOINT,S3_REGION,S3_ACCESS_KEY,S3_SECRET_KEY,S3_BUCKET,S3_PUBLIC_URL,NEAR_EXPIRY_DAYS,REPORTS_DIR,SYSTEM_USER_ID,LOG_LEVEL
 
           script: |
-            IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/blood-bank-api
+            set -euo pipefail
             APP_DIR=/root/blood-bank
-
             cd $APP_DIR
+
+            echo "------ Refreshing host .env from CI-provided secrets ------"
+            umask 077
+            cat > .env <<EOF
+            NODE_ENV=production
+            PORT=5000
+            LOG_LEVEL=${LOG_LEVEL:-info}
+            MONGODB_URI=${MONGODB_URI}
+            REDIS_URL=redis://redis:6379
+            CORS_SERVER=${CORS_SERVER}
+            JWT_SECRET=${JWT_SECRET}
+            JWT_SECRET_KEY=${JWT_SECRET_KEY}
+            ACCESS_TOKEN_EXPIRY=${ACCESS_TOKEN_EXPIRY:-15m}
+            REFRESH_TOKEN_EXPIRY=${REFRESH_TOKEN_EXPIRY:-7d}
+            EMAIL_USER=${EMAIL_USER}
+            EMAIL_PASS=${EMAIL_PASS}
+            EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-Sanjivani Blood Bank}
+            EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
+            EMAIL_PORT=${EMAIL_PORT:-465}
+            EMAIL_SECURE=${EMAIL_SECURE:-true}
+            ADMIN_EMAIL=${ADMIN_EMAIL}
+            BANK_NAME=${BANK_NAME}
+            BANK_ADDRESS=${BANK_ADDRESS}
+            BANK_PHONE=${BANK_PHONE}
+            BANK_LICENSE=${BANK_LICENSE}
+            BANK_WEBSITE=${BANK_WEBSITE:-https://sanjivanibloodbank.org}
+            S3_ENDPOINT=${S3_ENDPOINT}
+            S3_REGION=${S3_REGION:-us-east-1}
+            S3_ACCESS_KEY=${S3_ACCESS_KEY}
+            S3_SECRET_KEY=${S3_SECRET_KEY}
+            S3_BUCKET=${S3_BUCKET:-blood-bank}
+            S3_PUBLIC_URL=${S3_PUBLIC_URL}
+            NEAR_EXPIRY_DAYS=${NEAR_EXPIRY_DAYS:-2}
+            REPORTS_DIR=${REPORTS_DIR:-./reports}
+            SYSTEM_USER_ID=${SYSTEM_USER_ID}
+            EOF
+            chmod 600 .env
 
             echo "------ Pulling latest code from GitHub ------"
             git pull origin main
 
             echo "------ Pulling latest docker image ------"
-            sudo docker pull $IMAGE:latest
+            sudo docker pull "$IMAGE_NAME":latest
 
-            echo "------ Starting temporary Redis for testing ------"
-            sudo docker rm -f redis_test || true
-            sudo docker run -d --name redis_test -p 6381:6379 redis:7-alpine
+            echo "------ Pre-flight: start a throwaway api+redis on isolated network ------"
+            sudo docker network create bb_preflight || true
+            sudo docker rm -f bb_redis_test bb_api_test || true
+            sudo docker run -d --name bb_redis_test --network bb_preflight redis:7-alpine
+            sudo docker run -d --name bb_api_test --network bb_preflight \
+              --env-file .env \
+              -e REDIS_URL=redis://bb_redis_test:6379 \
+              -p 5050:5000 \
+              "$IMAGE_NAME":latest
 
-            echo "------ Starting temporary API test container ------"
-            sudo docker rm -f api_test || true
-
-            sudo docker run -d --name api_test \
-              --network host \
-              -e MONGODB_URI="mongodb://smitrajbankar:Amruta%401969%23Smitraj@212.85.24.35:27017/?authSource=admin/" \
-              -e PORT=5000 \
-              -e JWT_SECRET="SMITRAJMERN2024" \
-              -e CORS_SERVER="http://localhost:5173" \
-              -e ACCESS_TOKEN_EXPIRY="15m" \
-              -e REFRESH_TOKEN_EXPIRY="7d" \
-              -e JWT_SECRET_KEY="BLOODBANK2025" \
-              -e EMAIL_USER="smitrajbankar.test@gmail.com" \
-              -e EMAIL_PASS="lehjvdcbvdfllcav" \
-              -e NEAR_EXPIRY_DAYS="2" \
-              -e REPORTS_DIR="./reports" \
-              -e ADMIN_EMAIL="smitrajbankar.subscription@gmail.com" \
-              -e EMAIL_HOST="smtp.gmail.com" \
-              -e EMAIL_PORT="465" \
-              -e EMAIL_SECURE="true" \
-              -e TIMEZONE="Asia/Kolkata" \
-              -e AWS_ACCESS_KEY_ID="AKIAVDY2B2AHD3Z4SWZQ" \
-              -e AWS_SECRET_ACCESS_KEY="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" \
-              -e AWS_REGION="ap-south-1" \
-              -e SNS_PHONE="7057991669" \
-              -e TWILIO_ACCOUNT_SID="AC4ee0a2e4d0ce07a8eb831190ed7d6772" \
-              -e TWILIO_AUTH_TOKEN="38cf552d1bb78b2594e1becb32ded85e" \
-              -e TWILIO_PHONE_NUMBER="+19104690618" \
-              -e SYSTEM_USER_ID="68acce6acb0096e64764d7d6" \
-              -e NODE_ENV=production \
-              -e REDIS_URL="redis://localhost:6381" \
-              $IMAGE:latest
-
-            echo "Waiting for API to boot..."
+            HEALTH_OK=false
             for i in {1..10}; do
-              if curl -fs http://localhost:5000/health; then
-                echo "Health check PASSED ✅"
+              if curl -fs http://localhost:5050/health; then
+                echo "Health check PASSED"
                 HEALTH_OK=true
                 break
               fi
@@ -112,12 +204,12 @@ jobs:
               sleep 5
             done
 
-            echo "Stopping test containers..."
-            sudo docker rm -f api_test || true
-            sudo docker rm -f redis_test || true
+            echo "------ Tearing down preflight ------"
+            sudo docker rm -f bb_api_test bb_redis_test || true
+            sudo docker network rm bb_preflight || true
 
             if [ "$HEALTH_OK" != true ]; then
-              echo "❌ Deployment cancelled — health check failed"
+              echo "Deployment cancelled - health check failed"
               exit 1
             fi
 
@@ -131,8 +223,8 @@ jobs:
 
       - name: Deployment Success
         if: success()
-        run: echo "🎉 Deployment Successful!"
+        run: echo "Deployment Successful"
 
       - name: Deployment Failed
         if: failure()
-        run: echo "❌ Deployment Failed"
+        run: echo "Deployment Failed"

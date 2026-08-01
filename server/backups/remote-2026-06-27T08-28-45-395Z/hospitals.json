@@ -1,0 +1,70 @@
+[
+  {
+    "_id": {
+      "$oid": "6a3a90e03dadaee20fdf1602"
+    },
+    "hospitalId": "HSP-2026-0001",
+    "name": "Kote Hospital",
+    "address": "Kote Complex, Kopargaon",
+    "contactPerson": "Atharva Kote",
+    "phone": "7738474837",
+    "isActive": true,
+    "createdAt": {
+      "$date": "2026-06-23T13:57:52.305Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T13:57:52.305Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99cb040507df5353d45c"
+    },
+    "hospitalId": "HSP-2026-001",
+    "name": "Sanjivani Super Specialty Hospital",
+    "address": "Kopargaon-Ahmednagar Highway",
+    "contactPerson": "Dr. Anand",
+    "phone": "9922110033",
+    "email": "sanjivani.hsp@gmail.com",
+    "isActive": true,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:35:55.269Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:35:55.269Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a99cb040507df5353d466"
+    },
+    "hospitalId": "HSP-2026-002",
+    "name": "Sai Baba Memorial Trust Hospital",
+    "address": "Sai Nagar, Shirdi",
+    "contactPerson": "Dr. Joshi",
+    "phone": "9922110044",
+    "email": "saibaba.hsp@gmail.com",
+    "isActive": true,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:35:55.606Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:35:55.606Z"
+    },
+    "__v": 0
+  }
+]

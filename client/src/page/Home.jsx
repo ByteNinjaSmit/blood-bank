@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import TestAPI from "@/components/TestAPI"
-import { useAuth } from "@/store/auth"
-import { checkAccess } from "@/atoms/static"
+import useAccess from "@/features/access/useAccess"
 // import SidebarDemo from "@/components/SidebarDemo"
 import {
   Users,
@@ -41,11 +40,30 @@ export default function BloodBankWelcome() {
     setMounted(true)
   }, [])
 
-  const { user } = useAuth()
+  const { canViewModule: canViewRegistryModule } = useAccess()
+
+  // This capabilities list predates the canonical access-registry module
+  // ids and keys tiles by display name — map onto the registry rather than
+  // rewriting every tile below.
+  const DISPLAY_NAME_TO_REGISTRY_MODULE = {
+    Dashboard: 'dashboard',
+    Requisition: 'requisition',
+    Hospital: 'hospital',
+    Camp: 'camp',
+    Component: 'component',
+    Labs: 'labs',
+    Inventory: 'inventory',
+    'Master Register': 'donor',
+    Appointment: 'appointment',
+    Discard: 'discard',
+    Admin: 'admin',
+    MIS: 'mis',
+  }
 
   const canViewModule = (moduleName) => {
     if (!moduleName) return true
-    return checkAccess(user, moduleName, 'view')
+    const registryId = DISPLAY_NAME_TO_REGISTRY_MODULE[moduleName]
+    return registryId ? canViewRegistryModule(registryId) : false
   }
 
   const rawBloodBankCapabilities = [
@@ -57,38 +75,31 @@ export default function BloodBankWelcome() {
       features: [
         {
           icon: Users,
-          title: "Donor List",
-          desc: "Search, filter, and manage all registered donors.",
-          moduleName: "Donor",
-          link: "/donor/view-donor",
-        },
-        {
-          icon: Plus,
-          title: "Create Donor",
-          desc: "Register new donors with complete medical and contact details.",
-          moduleName: "Donor",
-          link: "/donor/create-donor",
+          title: "All Donors",
+          desc: "Unified master register of all in-house and camp donors.",
+          moduleName: "Master Register",
+          link: "/master-register/donors",
         },
         {
           icon: Heart,
-          title: "Donation List",
-          desc: "Review all recorded donations from in-house and camps.",
-          moduleName: "Donations",
-          link: "/donations/view-donation",
+          title: "All Donations",
+          desc: "Combined master register of all in-house and camp donations.",
+          moduleName: "Master Register",
+          link: "/master-register/donations",
         },
         {
           icon: Plus,
-          title: "Create Donation",
-          desc: "Capture new donation events for eligible donors.",
-          moduleName: "Donations",
-          link: "/donations/create-donation",
+          title: "Donor Creation",
+          desc: "Unified donor registration and donation fitness checks.",
+          moduleName: "Master Register",
+          link: "/master-register/donor-creation",
         },
         {
           icon: Calendar,
-          title: "Volunteer List",
-          desc: "Monitor and manage upcoming donation volunteers.",
-          moduleName: "Volunteer",
-          link: "/appointments",
+          title: "Donor Appointment",
+          desc: "Review public site appointment form submissions.",
+          moduleName: "Appointment",
+          link: "/appointments/donors",
         },
         {
           icon: Users,
@@ -348,13 +359,6 @@ export default function BloodBankWelcome() {
       features: capability.features.filter((feature) => canViewModule(feature.moduleName)),
     }))
     .filter((capability) => capability.features.length > 0)
-
-  const quickAccessLinks = [
-    { icon: Users, label: "Donor Management", link: "/donors", color: "orange" },
-    { icon: Droplets, label: "Blood Inventory", link: "/inventory", color: "red" },
-    { icon: Heart, label: "Medical Records", link: "/medical", color: "blue" },
-    { icon: BarChart3, label: "Analytics", link: "/analytics", color: "green" },
-  ]
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden rounded-2xl">

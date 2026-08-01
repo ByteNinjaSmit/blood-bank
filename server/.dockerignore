@@ -1,0 +1,17 @@
+node_modules
+dist
+logs
+uploads
+reports
+*.log
+.env
+.env.*
+*.env
+!*.env.example
+.vscode
+.idea
+.git
+*.md
+!CLAUDE.md
+coverage
+.eslintcache

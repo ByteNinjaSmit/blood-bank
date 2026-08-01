@@ -1,462 +1,38 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import {
-  Search,
-  ChevronRight,
-  ChevronDown,
-  ChevronLeft,
-  Activity,
-  Calendar,
-  TestTube,
-  BarChart3,
-  Package,
-  Users,
-  Heart,
-  Microscope,
-  Menu,
-  X,
-  Lock,
-  Shield,
-  Edit,
-  PieChart,
-  Home,
-  List,
-  Plus,
-  User,
-  LogOut,
-  Settings,
-  Bell,
-  FlaskConical,
-  Delete,
-  Trash,
-} from 'lucide-react';
+import { Search, ChevronRight, ChevronDown, Shield, User, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/store/auth';
-import { checkAccess } from '@/atoms/static';
-import { FiUserPlus } from "react-icons/fi";
-import { FaBoxOpen, FaChartPie, FaEye, FaHeart, FaListUl, FaMicroscope, FaTrash, FaUser, FaHospital } from "react-icons/fa";
-import { SiPytest } from "react-icons/si";
-import { GiCardDiscard, GiDrop, GiChemicalDrop, GiCampingTent } from "react-icons/gi";
-import { IoIosSend } from "react-icons/io";
-import { PiTestTubeFill } from "react-icons/pi";
-import { MdDelete } from "react-icons/md";
-import { FaUsersCog } from "react-icons/fa";
+import useAccess from '@/features/access/useAccess';
+import { findPageByRoute } from '@/config/access-registry';
+import { GiDrop } from 'react-icons/gi';
+import { MODULES } from './nav-modules';
 
-const MODULES = [
-  {
-    id: "dashboard",
-    name: "Dashboard",
-    icon: <BarChart3 className="w-5 h-5" />,
-    href: "/dashboard",
-    permissions: ["read"],
-    description: "Operational analytics overview",
-    always: true,
-  },
-  {
-    id: "admin",
-    name: "Admin",
-    icon: <Shield className="w-5 h-5" />,
-    permissions: ["admin"],
-    subModules: [
-      {
-        name: "User Manage",
-        href: "/admin/user-manage",
-        permissions: ["admin"],
-        description: "Manage users, roles, and permissions",
-        icon: <Users className="w-5 h-5" />,
-      }
-    ],
-    description: "Administration",
-  },
-  {
-    id: "requisition",
-    name: "Requisition",
-    icon: <IoIosSend className="w-5 h-5" />,
-    permissions: ["read", "write"],
-    subModules: [
-      {
-        name: "Manage",
-        icon: <Plus className="w-5 h-5" />,
-        href: "/requisition",
-        permissions: ["write", "read"],
-        description: "Create and manage requisitions",
-      },
-      {
-        name: "List",
-        icon: <List className="w-5 h-5" />,
-        href: "/requisition/list",
-        permissions: ["read"],
-        description: "View and act on requisitions",
-      },
-    ],
-    description: "Manage blood requests and orders",
-  },
-  {
-    id: "hospital",
-    name: "Hospital",
-    icon: <FaHospital className="w-5 h-5" />,
-    permissions: ["read", "write"],
-    subModules: [
-      {
-        name: "Add Hospital",
-        icon: <Plus className="w-5 h-5" />,
-        href: "/hospital/add",
-        permissions: ["write", "read"],
-        description: "Register new hospital",
-      },
-      {
-        name: "List Hospital",
-        icon: <List className="w-5 h-5" />,
-        href: "/hospital/list",
-        permissions: ["read"],
-        description: "View all registered hospitals",
-      },
-    ],
-    description: "Hospital management system",
-  },
-  {
-    id: "camp",
-    name: "Camp",
-    icon: <GiCampingTent className="w-6 h-6" />,
-    permissions: ["read", "write"],
-    subModules: [
-      {
-        name: "Camp Registration",
-        icon: <Plus className="w-5 h-5" />,
-        href: "/camp-registration",
-        permissions: ["write", "read"],
-        description: "Register new blood donation camps",
-      },
-      {
-        name: "Camp List",
-        icon: <List className="w-5 h-5" />,
-        href: "/camp-listing",
-        permissions: ["read"],
-        description: "View all registered blood donation camps",
-      },
-      {
-        name: "Camp Reports",
-        icon: <PieChart className="w-5 h-5" />,
-        href: "/camp-reports",
-        permissions: ["read"],
-        description: "Generate reports for blood donation camps",
-      },
-    ],
-    description: "Blood donation camp management",
-  },
-  {
-    id: "donor",
-    name: "Donor",
-    icon: <FaUser className="w-5 h-5" />,
-    href: "/donor",
-    permissions: ["read", "write"],
-    subModules: [
-      {
-        name: "Create Donor",
-        icon: <FiUserPlus className="w-5 h-5" />,
-        href: "/donor/create-donor",
-        permissions: ["read", "write"],
-        description: "Create Donor",
-      },
-      {
-        name: "View Donor",
-        icon: <FaEye className="w-5 h-5" />,
-        href: "/donor/view-donor",
-        permissions: ["read", "write"],
-        description: "View Donor",
-      },
-    ],
-    description: "Manage donor records",
-  },
-  {
-    id: "donations",
-    name: "Donations",
-    icon: <FaHeart className="w-5 h-5" />,
-    href: "/donations",
-    permissions: ["read", "write"],
-    subModules: [
-      {
-        name: "Create Donation",
-        href: "/donations/create-donation",
-        icon: <Plus className="w-5 h-5" />,
-        permissions: ["read", "write"],
-        description: "Create Donation",
-      },
-      {
-        name: "View Donation",
-        icon: <FaEye className="w-5 h-5" />,
-        href: "/donations/view-donation",
-        permissions: ["read", "write"],
-        description: "View Donation",
-      },
-    ],
-    description: "Track donation records",
-  },
-  {
-    id: "component",
-    name: "Component",
-    icon: <SiPytest className="w-5 h-5" />,
-    permissions: ["read", "write"],
-    subModules: [
-      {
-        name: "Components List",
-        href: "/component/list",
-        icon: <FaListUl className="w-5 h-5" />,
-        permissions: ["read"],
-        description: "View all blood components",
-      },
-      {
-        name: "Separate",
-        href: "/component/separate",
-        icon: <PiTestTubeFill className="w-5 h-5" />,
-        permissions: ["write"],
-        description: "Separate blood components",
-      },
-      {
-        name: "Near-Expiry",
-        href: "/component/near-expiry",
-        icon: <MdDelete className="w-5 h-5" />,
-        permissions: ["read"],
-        description: "View near-expiry components",
-      },
-    ],
-    description: "Blood component processing",
-  },
-  {
-    id: "labs",
-    name: "Labs",
-    icon: <FaMicroscope className="w-5 h-5" />,
-    href: "/labs",
-    permissions: ["read", "admin"],
-    subModules: [
-      {
-        name: "Serology Results",
-        href: "/labs/serology-results",
-        permissions: ["read"],
-        description: "View serology testing results",
-        icon: <FaEye className="w-5 h-5" />,
-      },
-      {
-        name: "Serology",
-        href: "/labs/serology",
-        permissions: ["write", "read"],
-        description: "Enter serology results",
-        icon: <FaMicroscope className="w-5 h-5" />,
-      },
-    ],
-    description: "Laboratory testing",
-  },
-  {
-    id: "inventory",
-    name: "Inventory",
-    icon: <FaBoxOpen className="w-5 h-5" />,
-    permissions: ["read", "write"],
-    subModules: [
-      {
-        name: "Stock",
-        href: "/inventory/stock",
-        permissions: ["read", "write"],
-        description: "Display current stock",
-      },
-      {
-        name: "Reserve",
-        href: "/inventory/reserve",
-        permissions: ["write"],
-        description: "Reserve blood units",
-      },
-      {
-        name: "Issue",
-        href: "/inventory/issue",
-        permissions: ["write"],
-        description: "Issue blood units",
-      },
-    ],
-    description: "Blood stock management",
-  },
-  {
-    id: "discard",
-    name: "Discard",
-    icon: <FaTrash className="w-5 h-5" />,
-    permissions: ["read", "write"],
-    subModules: [
-      {
-        name: "Discard List",
-        href: "/discard",
-        permissions: ["read", "write"],
-        description: "View discarded blood units",
-      },
-    ],
-    description: "Manage discarded blood units",
-  },
-  // {
-  //   id: "queue",
-  //   name: "Queue",
-  //   icon: <FaUsersCog className="w-6 h-6" />,
-  //   permissions: ["read", "write"],
-  //   subModules: [
-  //     {
-  //       name: "Book",
-  //       href: "/queue/book",
-  //       permissions: ["write"],
-  //       description: "Book donor appointments",
-  //     },
-  //     {
-  //       name: "Queue List",
-  //       href: "/queue/list",
-  //       permissions: ["read"],
-  //       description: "View donor queue",
-  //     },
-  //   ],
-  //   description: "Donor queue management",
-  // },
-  {
-    id: "appointments",
-    name: "Volunteer",
-    icon: <Calendar className="w-5 h-5" />,
-    permissions: ["read"],
-    subModules: [
-      {
-        name: "Volunteer List",
-        icon: <List className="w-5 h-5" />,
-        href: "/appointments",
-        permissions: ["read"],
-        description: "View public donation volunteers",
-      },
-      {
-        name: "Camp Volunteer List",
-        icon: <GiCampingTent className="w-5 h-5" />,
-        href: "/camp-volunteers",
-        permissions: ["read"],
-        description: "View onsite camp donation volunteers",
-      },
-    ],
-    description: "Manage donor volunteers",
-  },
-  {
-    id: "mis",
-    name: "MIS",
-    icon: <FaChartPie className="w-5 h-5" />,
-    permissions: ["read"],
-    subModules: [
-      {
-        name: "Donor MIS",
-        href: "/mis/donors",
-        permissions: ["read"],
-        description: "Donor master & monthly analytics",
-        icon: <FaUser className="w-5 h-5" />,
-      },
-      {
-        name: "Donation MIS",
-        href: "/mis/donations",
-        permissions: ["read"],
-        description: "In-house vs camp donation analytics",
-        icon: <FaHeart className="w-5 h-5" />,
-      },
-      {
-        name: "Camp MIS",
-        href: "/mis/camps",
-        permissions: ["read"],
-        description: "Camp-wise KPIs and rankings",
-        icon: <GiCampingTent className="w-5 h-5" />,
-      },
-      {
-        name: "Blood Bag MIS",
-        href: "/mis/bags",
-        permissions: ["read"],
-        description: "Bag lifecycle & testing overview",
-        icon: <GiDrop className="w-5 h-5" />,
-      },
-      {
-        name: "Component MIS",
-        href: "/mis/components",
-        permissions: ["read"],
-        description: "Component stock & near-expiry analytics",
-        icon: <SiPytest className="w-5 h-5" />,
-      },
-      {
-        name: "Inventory MIS",
-        href: "/mis/inventory",
-        permissions: ["read"],
-        description: "Inventory status and hospital reservations",
-        icon: <FaBoxOpen className="w-5 h-5" />,
-      },
-      {
-        name: "Discard MIS",
-        href: "/mis/discards",
-        permissions: ["read"],
-        description: "Discard reasons and wastage overview",
-        icon: <GiCardDiscard className="w-5 h-5" />,
-      },
-      {
-        name: "Testing MIS",
-        href: "/mis/testing",
-        permissions: ["read"],
-        description: "Testing load & positivity",
-        icon: <FaMicroscope className="w-5 h-5" />,
-      },
-      {
-        name: "Exception MIS",
-        href: "/mis/exceptions",
-        permissions: ["read"],
-        description: "Exception & audit trail analytics",
-        icon: <Shield className="w-5 h-5" />,
-      },
-      {
-        name: "Regulatory MIS",
-        href: "/mis/regulatory",
-        permissions: ["read"],
-        description: "Mandatory testing & compliance",
-        icon: <GiChemicalDrop className="w-5 h-5" />,
-      },
-      {
-        name: "Executive Dashboard",
-        href: "/mis/executive",
-        permissions: ["read"],
-        description: "Top-level MIS KPIs",
-        icon: <BarChart3 className="w-5 h-5" />,
-      },
-    ],
-    description: "Management Information System",
-  },
-  // {
-  //   id: "report",
-  //   name: "Report",
-  //   icon: <FaChartPie className="w-5 h-5" />,
-  //   permissions: ["read", "admin"],
-  //   subModules: [
-  //     {
-  //       name: "Daily",
-  //       href: "/report/daily",
-  //       permissions: ["read"],
-  //       description: "Daily reports",
-  //     },
-  //     {
-  //       name: "Expiry",
-  //       href: "/report/expiry",
-  //       permissions: ["read"],
-  //       description: "Expiry reports",
-  //     },
-  //     {
-  //       name: "Audit",
-  //       href: "/report/audit",
-  //       permissions: ["admin"],
-  //       description: "Audit reports",
-  //     },
-  //   ],
-  //   description: "Analytics and reporting",
-  // },
-
-];
-
-// Access helper wrappers around user.permissions
-const canViewModule = (user, moduleName) => checkAccess(user, moduleName, 'view');
-const canCreateInModule = (user, moduleName) => checkAccess(user, moduleName, 'create');
-const canUpdateInModule = (user, moduleName) => checkAccess(user, moduleName, 'update');
-const canDeleteInModule = (user, moduleName) => checkAccess(user, moduleName, 'delete');
+// nav-modules.jsx's ids predate the canonical access-registry module ids —
+// this maps the (cosmetic) sidebar structure onto the real registry so the
+// sidebar's view-gating uses the same module/page permission resolution as
+// everywhere else, instead of the old flat ModuleArray-keyed checkAccess().
+const NAV_ID_TO_REGISTRY_MODULE = {
+  dashboard: 'dashboard',
+  requisition: 'requisition',
+  hospital: 'hospital',
+  camp: 'camp',
+  component: 'component',
+  labs: 'labs',
+  inventory: 'inventory',
+  'master-register': 'donor',
+  procurement: 'bag-procurement',
+  'chemical-inventory': 'chemical-inventory',
+  appointments: 'appointment',
+  discard: 'discard',
+  'audit-trail': 'audit',
+  admin: 'admin',
+  mis: 'mis',
+  'recycle-bin': 'mis',
+};
 
 const Sidebar = ({
   isOpen,
-  onToggle,
   isMobile,
   showMobileOverlay,
   onCloseMobile
@@ -464,22 +40,62 @@ const Sidebar = ({
   const { user, LogoutUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { canViewModule: canViewRegistryModule, canViewPage } = useAccess();
+
+  const canViewModule = useCallback(
+    (_user, moduleId) => {
+      const registryId = NAV_ID_TO_REGISTRY_MODULE[moduleId];
+      return registryId ? canViewRegistryModule(registryId) : false;
+    },
+    [canViewRegistryModule],
+  );
+
+  // Per-item gate: resolves a nav href to its actual registry page (via
+  // route match) and checks that page's own view permission, instead of
+  // the module-wide `canViewModule` above — a module having *some* visible
+  // page must not make every one of its sibling submodules render too.
+  // Falls back to visible for hrefs with no registry entry (nothing to
+  // gate on) rather than hiding something we haven't audited.
+  const canViewHref = useCallback(
+    (href) => {
+      if (!href) return true;
+      const match = findPageByRoute(href);
+      if (!match) return true;
+      return canViewPage(match.moduleId, match.pageId);
+    },
+    [canViewPage],
+  );
+
+  // Which of a module's subModules the current user can actually open —
+  // the module header itself is only shown once this is non-empty (see
+  // filteredModules below), so a module never renders as an empty,
+  // all-locked expandable group.
+  const visibleSubModules = useCallback(
+    (module) => (module.subModules ? module.subModules.filter((sub) => canViewHref(sub.href)) : null),
+    [canViewHref],
+  );
 
   // State declarations with proper initialization
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedModules, setExpandedModules] = useState(() => new Set());
-  const [selectedModule, setSelectedModule] = useState(null);
-  const [selectedSubModule, setSelectedSubModule] = useState(null);
+  const [, setSelectedModule] = useState(null);
+  const [, setSelectedSubModule] = useState(null);
   const [tempOpenForSubmodule, setTempOpenForSubmodule] = useState(false);
 
-  // Memoize filtered modules to prevent unnecessary re-renders
+  // Memoize filtered modules to prevent unnecessary re-renders. A grouped
+  // module (has subModules) is shown only if at least one of its actual
+  // nav items is visible; a standalone module (no subModules, just its own
+  // href) is gated directly on that href's page permission.
   const filteredModules = useMemo(() =>
-    MODULES.filter(
-      (module) =>
-        module.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        (module.always || canViewModule(user, module.name))
-    ),
-    [searchQuery, user]
+    MODULES.filter((module) => {
+      if (!module.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (module.always) return true;
+      if (module.subModules && module.subModules.length > 0) {
+        return visibleSubModules(module).length > 0;
+      }
+      return canViewHref(module.href);
+    }),
+    [searchQuery, canViewHref, visibleSubModules]
   );
 
   // Set current module and submodule based on location
@@ -506,7 +122,7 @@ const Sidebar = ({
 
   // Handle module click with sidebar auto-open for submodules
   const handleModuleClick = useCallback((module) => {
-    if (!module.always && !canViewModule(user, module.name)) {
+    if (!module.always && !canViewModule(user, module.id)) {
       toast.error("ACCESS DENIED!!", {
         description: "You don't have permission to access this section"
       });
@@ -544,11 +160,11 @@ const Sidebar = ({
       // Close temporary sidebar if it was opened for submodules
       setTempOpenForSubmodule(false);
     }
-  }, [user, navigate, isMobile, onCloseMobile, isOpen]);
+  }, [user, navigate, isMobile, onCloseMobile, isOpen, canViewModule]);
 
   const handleSubModuleClick = useCallback((module, subModule) => {
     // Default to requiring view access for submodules unless always allowed
-    if (!module.always && !canViewModule(user, module.name)) {
+    if (!module.always && !canViewModule(user, module.id)) {
       toast.error("ACCESS DENIED!!", {
         description: "You don't have permission to access this section"
       });
@@ -561,7 +177,7 @@ const Sidebar = ({
     }
     // Close temporary sidebar after submodule selection
     setTempOpenForSubmodule(false);
-  }, [user, navigate, isMobile, onCloseMobile]);
+  }, [user, navigate, isMobile, onCloseMobile, canViewModule]);
 
   // Close temporary sidebar when clicking outside or when main sidebar is toggled open
   useEffect(() => {
@@ -623,8 +239,8 @@ const Sidebar = ({
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h1 className="text-xl font-bold text-white">Blood Bank</h1>
-                    <p className="text-red-100 text-sm font-medium">Sanjivani, Kopargoan</p>
+                    <h1 className="text-xl font-bold text-white">Sanjivani Blood Bank</h1>
+                    <p className="text-red-100 text-sm font-medium">Kopargoan</p>
                     <div className="flex items-center gap-2 mt-2">
                       <div className="flex items-center gap-1">
                         <User className="w-3 h-3 text-red-200" />
@@ -699,9 +315,6 @@ const Sidebar = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm">{module.name}</span>
-                          {!canViewModule(user, module.name) && (
-                            <Lock className="w-3 h-3 text-red-300" />
-                          )}
                         </div>
                         {module.subModules && module.subModules.length > 0 && (
                           <div className="transition-transform duration-200">
@@ -716,24 +329,21 @@ const Sidebar = ({
                       <div className="text-xs opacity-80 truncate">{module.description}</div>
                     </div>
                   )}
-                  {!shouldDisplayOpen && !canViewModule(user, module.name) && (
-                    <Lock className="w-2 h-2 absolute top-1 right-1 text-red-300" />
-                  )}
                 </div>
 
                 {/* Sub Modules */}
                 {module.subModules && module.subModules.length > 0 && shouldDisplayOpen && (
                   <div
                     className={`
-                      overflow-hidden transition-all duration-300 ease-in-out
+                      transition-all duration-300 ease-in-out
                       ${expandedModules.has(module.id)
-                        ? "max-h-96 opacity-100"
-                        : "max-h-0 opacity-0"
+                        ? `max-h-[28rem] opacity-100 overflow-y-auto ${module.id === "mis" ? "scrollbar-sleek-red" : "scrollbar-none"}`
+                        : "max-h-0 opacity-0 overflow-hidden"
                       }
                     `}
                   >
                     <div className="ml-6 mr-2 space-y-1">
-                      {module.subModules.map((subModule, index) => (
+                      {visibleSubModules(module).map((subModule, index) => (
                         <div
                           key={`${module.id}-${index}`}
                           onClick={(e) => {
@@ -755,9 +365,6 @@ const Sidebar = ({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">{subModule.name}</span>
-                              {!canViewModule(user, module.name) && (
-                                <Lock className="w-3 h-3 text-red-300" />
-                              )}
                             </div>
                             <div className="text-xs opacity-75 truncate">{subModule.description}</div>
                           </div>
@@ -795,4 +402,4 @@ const Sidebar = ({
   );
 };
 
-export default React.memo(Sidebar);
+export default memo(Sidebar);

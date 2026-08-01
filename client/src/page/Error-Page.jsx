@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Home, ArrowLeft, Heart, Shield, Search } from "lucide-react"
-import { useIsMobile } from "@/hooks/use-mobile"
 
 export default function NotFound() {
   const [mounted, setMounted] = useState(false)
-  const isMobile = useIsMobile()
   const navigate = useNavigate()
 
   useEffect(() => {

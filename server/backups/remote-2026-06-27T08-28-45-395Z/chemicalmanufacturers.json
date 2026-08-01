@@ -1,0 +1,102 @@
+[
+  {
+    "_id": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "name": "Tulip Diagnostics",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:39.762Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:39.762Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a941c0659acdc26ab227e"
+    },
+    "name": "Bio-Rad",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:40.095Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:40.095Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a941c0659acdc26ab2281"
+    },
+    "name": "Cluett",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:40.582Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:40.582Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "name": "J. Mitra",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:41.003Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:41.003Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a941d0659acdc26ab2287"
+    },
+    "name": "OM Surgical & Pharma",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:41.328Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:41.328Z"
+    },
+    "__v": 0
+  }
+]

@@ -20,12 +20,18 @@ const Modal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className={cn(
-        "bg-white rounded-xl shadow-xl w-full max-h-[90vh] overflow-y-auto",
-        sizes[size],
-        className
-      )}>
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[110]"
+      onClick={onClose}
+    >
+      <div
+        className={cn(
+          "bg-white rounded-xl shadow-xl w-full max-h-[90vh] overflow-y-auto",
+          sizes[size],
+          className
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
           <button

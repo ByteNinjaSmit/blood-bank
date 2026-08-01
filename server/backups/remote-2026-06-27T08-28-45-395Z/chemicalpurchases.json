@@ -1,0 +1,162 @@
+[
+  {
+    "_id": {
+      "$oid": "6a3a942b0659acdc26ab22ea"
+    },
+    "invoiceNumber": "INV-TULIP-2026-001",
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228a"
+    },
+    "totalAmount": 87500,
+    "paidAmount": 87500,
+    "paymentStatus": "Fully Paid",
+    "remarks": "Bulk chemical seeding purchase log",
+    "invoiceImage": null,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "installments": [],
+    "createdAt": {
+      "$date": "2026-06-23T14:11:55.969Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:01.660Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94310659acdc26ab2320"
+    },
+    "invoiceNumber": "INV-UNIVERSALCHEMICALS-2026-001",
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228d"
+    },
+    "totalAmount": 87500,
+    "paidAmount": 87500,
+    "paymentStatus": "Fully Paid",
+    "remarks": "Bulk chemical seeding purchase log",
+    "invoiceImage": null,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "installments": [],
+    "createdAt": {
+      "$date": "2026-06-23T14:12:01.979Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:07.660Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94380659acdc26ab2356"
+    },
+    "invoiceNumber": "INV-BIORAD-2026-001",
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "supplierId": {
+      "$oid": "6a3a94200659acdc26ab2290"
+    },
+    "totalAmount": 16750,
+    "paidAmount": 16750,
+    "paymentStatus": "Fully Paid",
+    "remarks": "Bulk chemical seeding purchase log",
+    "invoiceImage": null,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "installments": [],
+    "createdAt": {
+      "$date": "2026-06-23T14:12:08.053Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:09.381Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94390659acdc26ab2364"
+    },
+    "invoiceNumber": "INV-CLUETT-2026-001",
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "supplierId": {
+      "$oid": "6a3a94200659acdc26ab2293"
+    },
+    "totalAmount": 26250,
+    "paidAmount": 26250,
+    "paymentStatus": "Fully Paid",
+    "remarks": "Bulk chemical seeding purchase log",
+    "invoiceImage": null,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "installments": [],
+    "createdAt": {
+      "$date": "2026-06-23T14:12:09.731Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:11.663Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a943c0659acdc26ab2377"
+    },
+    "invoiceNumber": "INV-OMSURGICALPHARMA-2026-001",
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "supplierId": {
+      "$oid": "6a3a94210659acdc26ab2296"
+    },
+    "totalAmount": 48000,
+    "paidAmount": 48000,
+    "paymentStatus": "Fully Paid",
+    "remarks": "Bulk chemical seeding purchase log",
+    "invoiceImage": null,
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "installments": [],
+    "createdAt": {
+      "$date": "2026-06-23T14:12:12.148Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:13.467Z"
+    },
+    "__v": 0
+  }
+]

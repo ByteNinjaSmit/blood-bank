@@ -1,4 +1,14 @@
-version: "3.8"
+# -----------------------------------------------------------------------------
+# Blood Bank — production stack (api ×N, redis, nginx).
+#
+# Secrets MUST NOT be committed. This file references variables only.
+# On the prod host, supply them via:
+#   - a `.env` file in this directory (read automatically by Compose), OR
+#   - the calling shell's environment, OR
+#   - `docker compose --env-file /path/to/secrets.env up -d`.
+#
+# A reference list of expected variables lives in `server/.env.example`.
+# -----------------------------------------------------------------------------
 
 services:
   api:
@@ -7,30 +17,49 @@ services:
     restart: unless-stopped
 
     environment:
-      MONGODB_URI: "mongodb://smitrajbankar:Amruta%401969%23Smitraj@212.85.24.35:27017/?authSource=admin"
-      PORT: "5000"
-      JWT_SECRET: "SMITRAJMERN2024"
-      CORS_SERVER: "http://localhost:5173"
-      ACCESS_TOKEN_EXPIRY: "15m"
-      REFRESH_TOKEN_EXPIRY: "7d"
-      JWT_SECRET_KEY: "BLOODBANK2025"
-      EMAIL_USER: "smitrajbankar.test@gmail.com"
-      EMAIL_PASS: "lehjvdcbvdfllcav"
-      NEAR_EXPIRY_DAYS: "2"
-      REPORTS_DIR: "./reports"
-      ADMIN_EMAIL: "smitrajbankar.subscription@gmail.com"
-      EMAIL_HOST: "smtp.gmail.com"
-      EMAIL_PORT: "465"
-      EMAIL_SECURE: "true"
-      TIMEZONE: "Asia/Kolkata"
-      AWS_REGION: "ap-south-1"
-      SNS_PHONE: "7057991669"
-      TWILIO_ACCOUNT_SID: "AC4ee0a2e4d0ce07a8eb831190ed7d6772"
-      TWILIO_AUTH_TOKEN: "38cf552d1bb78b2594e1becb32ded85e"
-      TWILIO_PHONE_NUMBER: "+19104690618"
-      SYSTEM_USER_ID: "68acce6acb0096e64764d7d6"
-      NODE_ENV: "production"
-      REDIS_URL: "redis://redis:6379"
+      NODE_ENV: "${NODE_ENV:-production}"
+      PORT: "${PORT:-5000}"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+
+      MONGODB_URI: "${MONGODB_URI:?MONGODB_URI is required}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379}"
+
+      CORS_SERVER: "${CORS_SERVER:?CORS_SERVER is required}"
+
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}"
+      ACCESS_TOKEN_EXPIRY: "${ACCESS_TOKEN_EXPIRY:-15m}"
+      REFRESH_TOKEN_EXPIRY: "${REFRESH_TOKEN_EXPIRY:-7d}"
+
+      EMAIL_USER: "${EMAIL_USER:?EMAIL_USER is required}"
+      EMAIL_PASS: "${EMAIL_PASS:?EMAIL_PASS is required}"
+      EMAIL_FROM_NAME: "${EMAIL_FROM_NAME:-Sanjivani Blood Bank}"
+      EMAIL_HOST: "${EMAIL_HOST:-smtp.gmail.com}"
+      EMAIL_PORT: "${EMAIL_PORT:-465}"
+      EMAIL_SECURE: "${EMAIL_SECURE:-true}"
+      ADMIN_EMAIL: "${ADMIN_EMAIL:?ADMIN_EMAIL is required}"
+
+      # Printed on PDF reports and email footers — wrong values here are a
+      # compliance problem, so they are required rather than defaulted.
+      BANK_NAME: "${BANK_NAME:?BANK_NAME is required}"
+      BANK_ADDRESS: "${BANK_ADDRESS:?BANK_ADDRESS is required}"
+      BANK_PHONE: "${BANK_PHONE:?BANK_PHONE is required}"
+      BANK_LICENSE: "${BANK_LICENSE:?BANK_LICENSE is required}"
+      BANK_WEBSITE: "${BANK_WEBSITE:-https://sanjivanibloodbank.org}"
+
+      NEAR_EXPIRY_DAYS: "${NEAR_EXPIRY_DAYS:-2}"
+      REPORTS_DIR: "${REPORTS_DIR:-./reports}"
+
+      # S3-compatible object store (MinIO). modules/upload fails at runtime
+      # without these.
+      S3_ENDPOINT: "${S3_ENDPOINT:?S3_ENDPOINT is required}"
+      S3_REGION: "${S3_REGION:-us-east-1}"
+      S3_ACCESS_KEY: "${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}"
+      S3_SECRET_KEY: "${S3_SECRET_KEY:?S3_SECRET_KEY is required}"
+      S3_BUCKET: "${S3_BUCKET:-blood-bank}"
+      S3_PUBLIC_URL: "${S3_PUBLIC_URL:?S3_PUBLIC_URL is required}"
+
+      SYSTEM_USER_ID: "${SYSTEM_USER_ID:?SYSTEM_USER_ID is required}"
 
     depends_on:
       redis:

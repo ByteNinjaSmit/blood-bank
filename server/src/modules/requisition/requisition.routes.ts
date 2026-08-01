@@ -1,0 +1,177 @@
+import { Router } from 'express';
+import { authenticate } from '@/shared/middlewares/authenticate';
+import { requirePermission } from '@/shared/middlewares/rbac';
+import { createRequisitionRepo } from '@/modules/requisition/requisition.repository';
+import { createPatientRepo } from '@/modules/patient/patient.repository';
+import { createUnitRepo } from '@/modules/unit/unit.repository';
+import { createCrossmatchRepo } from '@/modules/crossmatch/crossmatch.repository';
+import { createIssueRepo } from '@/modules/issue/issue.repository';
+import { createTtiRepo } from '@/modules/tti/tti.repository';
+import { createRequisitionService } from '@/modules/requisition/requisition.service';
+import { createCrossmatchService } from '@/modules/crossmatch/crossmatch.service';
+import { createIssueService } from '@/modules/issue/issue.service';
+import { createRequisitionControllers } from '@/modules/requisition/requisition.controller';
+
+const requisitions = createRequisitionRepo();
+const patients = createPatientRepo();
+const units = createUnitRepo();
+const crossmatches = createCrossmatchRepo();
+const issues = createIssueRepo();
+const tti = createTtiRepo();
+
+const crossmatchService = createCrossmatchService({ crossmatches, requisitions, units });
+const issueService = createIssueService({
+  issues,
+  requisitions,
+  units,
+  patients,
+  crossmatches,
+  tti,
+});
+const requisitionService = createRequisitionService({
+  requisitions,
+  units,
+  patients,
+  crossmatch: crossmatchService,
+  issue: issueService,
+});
+
+const controllers = createRequisitionControllers({
+  requisitions: requisitionService,
+  crossmatch: crossmatchService,
+  issue: issueService,
+  patients,
+});
+
+const router = Router();
+
+const CLINICAL_READ = [
+  'system-admin',
+  'bbo',
+  'medical-officer',
+  'lab-tech-serology',
+  'store-keeper',
+  'issue-counter',
+  'auditor',
+  'hospital-user',
+] as const;
+
+router.get('/', authenticate, requirePermission('requisition:read'), controllers.list);
+router.post(
+  '/patient',
+  authenticate,
+  requirePermission('requisition:create'),
+  controllers.createPatient,
+);
+router.post('/', authenticate, requirePermission('requisition:create'), controllers.create);
+
+router.put('/:id', authenticate, requirePermission('requisition:create'), controllers.update);
+
+router.get('/:id', authenticate, requirePermission('requisition:read'), controllers.get);
+
+router.post('/:id/match', authenticate, requirePermission('unit:reserve'), controllers.match);
+router.post(
+  '/:id/approve',
+  authenticate,
+  requirePermission('requisition:approve'),
+  controllers.approve,
+);
+router.patch(
+  '/:id/approve',
+  authenticate,
+  requirePermission('requisition:approve'),
+  controllers.approve,
+);
+router.post(
+  '/:id/complete',
+  authenticate,
+  requirePermission('requisition:approve'),
+  controllers.complete,
+);
+router.patch(
+  '/:id/complete',
+  authenticate,
+  requirePermission('requisition:approve'),
+  controllers.complete,
+);
+router.post(
+  '/:id/reject',
+  authenticate,
+  requirePermission('requisition:reject'),
+  controllers.reject,
+);
+router.patch(
+  '/:id/reject',
+  authenticate,
+  requirePermission('requisition:reject'),
+  controllers.reject,
+);
+
+// Static paths before /:id-dependent sub-paths to avoid Express shadowing.
+router.post(
+  '/crossmatch',
+  authenticate,
+  requirePermission('crossmatch:perform'),
+  controllers.crossmatch,
+);
+router.post('/issue', authenticate, requirePermission('unit:issue'), controllers.issue);
+router.post('/:id/issue', authenticate, requirePermission('unit:issue'), controllers.issueAll);
+router.patch('/:id/issue', authenticate, requirePermission('unit:issue'), controllers.issueAll);
+
+// Update crossmatch status for a matched unit
+router.patch(
+  '/:id/crossmatch',
+  authenticate,
+  requirePermission('crossmatch:perform'),
+  controllers.updateCrossmatchLegacy,
+);
+
+// Match Review: available bags an operator may pick for a component.
+router.get(
+  '/:id/available-units',
+  authenticate,
+  requirePermission('unit:reserve'),
+  controllers.availableUnits,
+);
+
+// Match Review: swap the proposed bag (no reservation until approval).
+router.patch(
+  '/:id/matched-unit',
+  authenticate,
+  requirePermission('unit:reserve'),
+  controllers.swapMatchedUnit,
+);
+
+// Recipient (patient-side) blood-grouping worksheet.
+router.patch(
+  '/:id/grouping',
+  authenticate,
+  requirePermission('crossmatch:perform'),
+  controllers.setRecipientGrouping,
+);
+
+// Per-bag (donor-side) blood-grouping worksheet.
+router.patch(
+  '/:id/matched-unit/grouping',
+  authenticate,
+  requirePermission('crossmatch:perform'),
+  controllers.setMatchedUnitGrouping,
+);
+
+// Match Review: operator's substitute-group compatibility sign-off toggle.
+router.patch(
+  '/:id/matched-unit/confirm-compatibility',
+  authenticate,
+  requirePermission('crossmatch:perform'),
+  controllers.confirmCompatibility,
+);
+
+// Match Review: reject one component while continuing the requisition.
+router.patch(
+  '/:id/component/reject',
+  authenticate,
+  requirePermission('requisition:reject'),
+  controllers.rejectComponent,
+);
+
+export default router;

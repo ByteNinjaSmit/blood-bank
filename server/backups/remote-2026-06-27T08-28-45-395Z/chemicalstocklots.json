@@ -1,0 +1,1514 @@
+[
+  {
+    "_id": {
+      "$oid": "6a3a942c0659acdc26ab22ed"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94210659acdc26ab2299"
+    },
+    "purchaseId": {
+      "$oid": "6a3a942b0659acdc26ab22ea"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-TULIP-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "lotNumber": "LOT-ANTIA-001",
+    "batchNumber": "BAT-ANTIA-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:56.306Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:56.306Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a942c0659acdc26ab22f2"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94220659acdc26ab229c"
+    },
+    "purchaseId": {
+      "$oid": "6a3a942b0659acdc26ab22ea"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-TULIP-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "lotNumber": "LOT-ANTIB-001",
+    "batchNumber": "BAT-ANTIB-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:56.845Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:56.845Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a942d0659acdc26ab22f7"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94220659acdc26ab229f"
+    },
+    "purchaseId": {
+      "$oid": "6a3a942b0659acdc26ab22ea"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-TULIP-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "lotNumber": "LOT-ANTIAB-001",
+    "batchNumber": "BAT-ANTIAB-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:57.367Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:57.367Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a942d0659acdc26ab22fc"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94220659acdc26ab22a2"
+    },
+    "purchaseId": {
+      "$oid": "6a3a942b0659acdc26ab22ea"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-TULIP-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "lotNumber": "LOT-ANTIDRH-001",
+    "batchNumber": "BAT-ANTIDRH-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:57.902Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:57.902Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a942e0659acdc26ab2301"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94230659acdc26ab22a5"
+    },
+    "purchaseId": {
+      "$oid": "6a3a942b0659acdc26ab22ea"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-TULIP-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "lotNumber": "LOT-ANTIHLECTIN-001",
+    "batchNumber": "BAT-ANTIHLECTIN-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:58.486Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:58.486Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a942f0659acdc26ab2306"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94230659acdc26ab22ab"
+    },
+    "purchaseId": {
+      "$oid": "6a3a942b0659acdc26ab22ea"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-TULIP-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "lotNumber": "LOT-ALBUMIN-001",
+    "batchNumber": "BAT-ALBUMIN-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:59.101Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:59.101Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a942f0659acdc26ab230b"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94240659acdc26ab22ae"
+    },
+    "purchaseId": {
+      "$oid": "6a3a942b0659acdc26ab22ea"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-TULIP-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "lotNumber": "LOT-ANTIHUMANGLOBULINAHG-001",
+    "batchNumber": "BAT-ANTIHUMANGLOBULINAHG-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:11:59.724Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:11:59.724Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94300659acdc26ab2310"
+    },
+    "chemicalId": {
+      "$oid": "6a3a942a0659acdc26ab22e1"
+    },
+    "purchaseId": {
+      "$oid": "6a3a942b0659acdc26ab22ea"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-TULIP-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "lotNumber": "LOT-HPYLORIKIT-001",
+    "batchNumber": "BAT-HPYLORIKIT-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:00.269Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:00.269Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94300659acdc26ab2315"
+    },
+    "chemicalId": {
+      "$oid": "6a3a942b0659acdc26ab22e4"
+    },
+    "purchaseId": {
+      "$oid": "6a3a942b0659acdc26ab22ea"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-TULIP-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "lotNumber": "LOT-DEXAZYMEANTIADDREAGENT-001",
+    "batchNumber": "BAT-DEXAZYMEANTIADDREAGENT-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:00.780Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:00.780Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94310659acdc26ab231a"
+    },
+    "chemicalId": {
+      "$oid": "6a3a942b0659acdc26ab22e7"
+    },
+    "purchaseId": {
+      "$oid": "6a3a942b0659acdc26ab22ea"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-TULIP-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228a"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "lotNumber": "LOT-ANTIDLECTINREAGENTVARIANT-001",
+    "batchNumber": "BAT-ANTIDLECTINREAGENTVARIANT-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:01.301Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:01.301Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94320659acdc26ab2323"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94230659acdc26ab22a8"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94310659acdc26ab2320"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-UNIVERSALCHEMICALS-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228d"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941b0659acdc26ab227b"
+    },
+    "lotNumber": "LOT-ANTIA1LECTIN-001",
+    "batchNumber": "BAT-ANTIA1LECTIN-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:02.354Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:02.354Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94320659acdc26ab2328"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94260659acdc26ab22c0"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94310659acdc26ab2320"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-UNIVERSALCHEMICALS-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228d"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "lotNumber": "LOT-HCVMICROLISA-001",
+    "batchNumber": "BAT-HCVMICROLISA-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:02.880Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:02.880Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94330659acdc26ab232d"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94260659acdc26ab22c3"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94310659acdc26ab2320"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-UNIVERSALCHEMICALS-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228d"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "lotNumber": "LOT-HIVMICROLISA-001",
+    "batchNumber": "BAT-HIVMICROLISA-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:03.360Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:03.360Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94330659acdc26ab2332"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94270659acdc26ab22c6"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94310659acdc26ab2320"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-UNIVERSALCHEMICALS-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228d"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "lotNumber": "LOT-HBSAGMICROLISA-001",
+    "batchNumber": "BAT-HBSAGMICROLISA-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:03.940Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:03.940Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94340659acdc26ab2337"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94270659acdc26ab22c9"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94310659acdc26ab2320"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-UNIVERSALCHEMICALS-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228d"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "lotNumber": "LOT-SYPHILISMICROLISA-001",
+    "batchNumber": "BAT-SYPHILISMICROLISA-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:04.471Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:04.471Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94350659acdc26ab233c"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94270659acdc26ab22cc"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94310659acdc26ab2320"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-UNIVERSALCHEMICALS-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228d"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "lotNumber": "LOT-MALARIAMICROLISA-001",
+    "batchNumber": "BAT-MALARIAMICROLISA-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:05.043Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:05.043Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94350659acdc26ab2341"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94280659acdc26ab22cf"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94310659acdc26ab2320"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-UNIVERSALCHEMICALS-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228d"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "lotNumber": "LOT-HEPALISA-001",
+    "batchNumber": "BAT-HEPALISA-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:05.661Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:05.661Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94360659acdc26ab2346"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94280659acdc26ab22d2"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94310659acdc26ab2320"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-UNIVERSALCHEMICALS-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228d"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "lotNumber": "LOT-HIVELISAAG-001",
+    "batchNumber": "BAT-HIVELISAAG-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:06.299Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:06.299Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94360659acdc26ab234b"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94290659acdc26ab22d5"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94310659acdc26ab2320"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-UNIVERSALCHEMICALS-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228d"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "lotNumber": "LOT-HCVELISAAG-001",
+    "batchNumber": "BAT-HCVELISAAG-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:06.842Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:06.842Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94370659acdc26ab2350"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94290659acdc26ab22d8"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94310659acdc26ab2320"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-UNIVERSALCHEMICALS-2026-001",
+    "supplierId": {
+      "$oid": "6a3a941f0659acdc26ab228d"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2284"
+    },
+    "lotNumber": "LOT-HBSAGELISA-001",
+    "batchNumber": "BAT-HBSAGELISA-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:07.349Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:07.349Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94380659acdc26ab2359"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94240659acdc26ab22b1"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94380659acdc26ab2356"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-BIORAD-2026-001",
+    "supplierId": {
+      "$oid": "6a3a94200659acdc26ab2290"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941c0659acdc26ab227e"
+    },
+    "lotNumber": "LOT-GELCARDS-001",
+    "batchNumber": "BAT-GELCARDS-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 100,
+    "qtyAvailable": 100,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 80,
+    "totalCost": 8000,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8000,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:08.386Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:08.386Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a94380659acdc26ab235e"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94240659acdc26ab22b4"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94380659acdc26ab2356"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-BIORAD-2026-001",
+    "supplierId": {
+      "$oid": "6a3a94200659acdc26ab2290"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941c0659acdc26ab227e"
+    },
+    "lotNumber": "LOT-CONTROLCELLS-001",
+    "batchNumber": "BAT-CONTROLCELLS-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:08.931Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:08.931Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a943a0659acdc26ab2367"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94250659acdc26ab22b7"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94390659acdc26ab2364"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-CLUETT-2026-001",
+    "supplierId": {
+      "$oid": "6a3a94200659acdc26ab2293"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941c0659acdc26ab2281"
+    },
+    "lotNumber": "LOT-MONOCELLI-001",
+    "batchNumber": "BAT-MONOCELLI-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:10.060Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:10.060Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a943a0659acdc26ab236c"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94250659acdc26ab22ba"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94390659acdc26ab2364"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-CLUETT-2026-001",
+    "supplierId": {
+      "$oid": "6a3a94200659acdc26ab2293"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941c0659acdc26ab2281"
+    },
+    "lotNumber": "LOT-MONOCELLII-001",
+    "batchNumber": "BAT-MONOCELLII-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:10.640Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:10.640Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a943b0659acdc26ab2371"
+    },
+    "chemicalId": {
+      "$oid": "6a3a94250659acdc26ab22bd"
+    },
+    "purchaseId": {
+      "$oid": "6a3a94390659acdc26ab2364"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-CLUETT-2026-001",
+    "supplierId": {
+      "$oid": "6a3a94200659acdc26ab2293"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941c0659acdc26ab2281"
+    },
+    "lotNumber": "LOT-MONOCELLIII-001",
+    "batchNumber": "BAT-MONOCELLIII-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 25,
+    "qtyAvailable": 25,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 350,
+    "totalCost": 8750,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 8750,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:11.181Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:11.181Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a943c0659acdc26ab237a"
+    },
+    "chemicalId": {
+      "$oid": "6a3a942a0659acdc26ab22db"
+    },
+    "purchaseId": {
+      "$oid": "6a3a943c0659acdc26ab2377"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-OMSURGICALPHARMA-2026-001",
+    "supplierId": {
+      "$oid": "6a3a94210659acdc26ab2296"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2287"
+    },
+    "lotNumber": "LOT-BLOODBAGDOUBLEBAG-001",
+    "batchNumber": "BAT-BLOODBAGDOUBLEBAG-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 200,
+    "qtyAvailable": 200,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 120,
+    "totalCost": 24000,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 24000,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:12.459Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:12.459Z"
+    },
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "6a3a943d0659acdc26ab237f"
+    },
+    "chemicalId": {
+      "$oid": "6a3a942a0659acdc26ab22de"
+    },
+    "purchaseId": {
+      "$oid": "6a3a943c0659acdc26ab2377"
+    },
+    "purchaseDate": {
+      "$date": "2026-05-10T10:00:00Z"
+    },
+    "invoiceNumber": "INV-OMSURGICALPHARMA-2026-001",
+    "supplierId": {
+      "$oid": "6a3a94210659acdc26ab2296"
+    },
+    "manufacturerId": {
+      "$oid": "6a3a941d0659acdc26ab2287"
+    },
+    "lotNumber": "LOT-BLOODBAGTRIPLEBAG-001",
+    "batchNumber": "BAT-BLOODBAGTRIPLEBAG-001",
+    "mfgDate": {
+      "$date": "2026-01-15T00:00:00Z"
+    },
+    "expiryDate": {
+      "$date": "2027-08-30T00:00:00Z"
+    },
+    "qtyPurchased": 200,
+    "qtyAvailable": 200,
+    "qtyInUse": 0,
+    "qtyConsumed": 0,
+    "costPerUnit": 120,
+    "totalCost": 24000,
+    "packSizeMl": null,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "cgstPercent": 0,
+    "sgstPercent": 0,
+    "totalAmount": 24000,
+    "remarks": "Lot automatically seeded via list",
+    "deletedAt": null,
+    "createdBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "updatedBy": {
+      "$oid": "6a345c1b3edb622c1163d48f"
+    },
+    "createdAt": {
+      "$date": "2026-06-23T14:12:13.110Z"
+    },
+    "updatedAt": {
+      "$date": "2026-06-23T14:12:13.110Z"
+    },
+    "__v": 0
+  }
+]

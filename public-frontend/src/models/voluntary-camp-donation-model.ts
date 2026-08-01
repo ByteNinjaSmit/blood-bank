@@ -1,10 +1,14 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Model } from "mongoose";
 
-export interface IVoluntaryCampDonation extends Document {
+// Mirrors server/src/modules/camp/camp-donation.model.ts exactly — same
+// "campdonations" collection, same shape, same model name ("CampDonation").
+// The admin panel's Camp Donor Appointment view reads this collection
+// directly, so any field drift here silently breaks that view.
+export interface ICampDonation extends Document {
     firstName: string;
     middleName?: string;
     lastName: string;
-    sex: string;
+    sex: "M" | "F" | "OTHER";
     dob: Date;
     age: number;
     occupation?: string;
@@ -12,78 +16,76 @@ export interface IVoluntaryCampDonation extends Document {
     mobile: string;
     pincode: string;
     email?: string;
-    isFirstTime: string;
-    isRepeated: string;
+    isFirstTime: boolean;
+    isRepeated: boolean;
     lastDonationDate?: Date;
     totalDonations: number;
-    emergencyConsent: string;
-    weight: number;
-    hb: number;
-    temp: number;
-    pulse: number;
-    bp: string;
-    o2Level: number;
+    emergencyConsent: boolean;
     bloodGroup: string;
-    pedalOedema: string;
-    lymphadenopathy: string;
-    cyanosis: string;
-    cvs: string;
-    rs: string;
-    pa: string;
-    cns: string;
-    gis: string;
-    freeFromSkinDisease: string;
-    freeFromScars: string;
-    siteId: mongoose.Types.ObjectId;
+    clinicalFindings: {
+        pedalOedema: boolean;
+        lymphadenopathy: boolean;
+        cyanosis: boolean;
+        cvs: string;
+        rs: string;
+        pa: string;
+        cns: string;
+        gis: string;
+        freeFromSkinDisease: boolean;
+        freeFromScars: boolean;
+    };
+    campId: mongoose.Types.ObjectId;
     bagNo?: string;
     segmentNo?: string;
-    batchNo?: string;
+    lotNo?: string;
     typeOfBag?: string;
-    status: string;
+    status: "PENDING" | "DONATED" | "REJECTED";
     createdAt: Date;
+    updatedAt: Date;
 }
 
-const VoluntaryCampDonationSchema: Schema<IVoluntaryCampDonation> = new Schema({
-    firstName: { type: String, required: true },
-    middleName: { type: String },
-    lastName: { type: String, required: true },
-    sex: { type: String, required: true },
-    dob: { type: Date, required: true },
-    age: { type: Number, required: true },
-    occupation: { type: String },
-    address: { type: String, required: true },
-    mobile: { type: String, required: true },
-    pincode: { type: String, required: true },
-    email: { type: String },
-    isFirstTime: { type: String, default: "no" },
-    isRepeated: { type: String, default: "no" },
-    lastDonationDate: { type: Date },
-    totalDonations: { type: Number, default: 0 },
-    emergencyConsent: { type: String, default: "yes" },
-    weight: { type: Number, required: true },
-    hb: { type: Number, required: true },
-    temp: { type: Number, required: true },
-    pulse: { type: Number, required: true },
-    bp: { type: String, required: true },
-    o2Level: { type: Number, required: true },
-    bloodGroup: { type: String, required: true },
-    pedalOedema: { type: String, default: "no" },
-    lymphadenopathy: { type: String, default: "no" },
-    cyanosis: { type: String, default: "no" },
-    cvs: { type: String, default: "normal" },
-    rs: { type: String, default: "normal" },
-    pa: { type: String, default: "normal" },
-    cns: { type: String, default: "normal" },
-    gis: { type: String, default: "normal" },
-    freeFromSkinDisease: { type: String, default: "yes" },
-    freeFromScars: { type: String, default: "yes" },
-    siteId: { type: Schema.Types.ObjectId, ref: "Site", required: true },
-    bagNo: { type: String },
-    segmentNo: { type: String },
-    batchNo: { type: String },
-    typeOfBag: { type: String },
-    status: { type: String, default: "Pending" },
-    createdAt: { type: Date, default: Date.now },
-}, { timestamps: true });
+const CampDonationSchema: Schema<ICampDonation> = new Schema(
+    {
+        firstName: { type: String, required: true, trim: true },
+        middleName: { type: String, trim: true },
+        lastName: { type: String, required: true, trim: true },
+        sex: { type: String, enum: ["M", "F", "OTHER"], required: true },
+        dob: { type: Date, required: true },
+        age: { type: Number, required: true },
+        occupation: { type: String, trim: true },
+        address: { type: String, required: true, trim: true },
+        mobile: { type: String, required: true, trim: true, index: true },
+        pincode: { type: String, required: true, trim: true },
+        email: { type: String, trim: true, lowercase: true },
+        isFirstTime: { type: Boolean, default: false },
+        isRepeated: { type: Boolean, default: false },
+        lastDonationDate: { type: Date },
+        totalDonations: { type: Number, default: 0 },
+        emergencyConsent: { type: Boolean, default: true },
+        bloodGroup: { type: String, required: true, index: true },
+        clinicalFindings: {
+            pedalOedema: { type: Boolean, default: false },
+            lymphadenopathy: { type: Boolean, default: false },
+            cyanosis: { type: Boolean, default: false },
+            cvs: { type: String, default: "normal" },
+            rs: { type: String, default: "normal" },
+            pa: { type: String, default: "normal" },
+            cns: { type: String, default: "normal" },
+            gis: { type: String, default: "normal" },
+            freeFromSkinDisease: { type: Boolean, default: true },
+            freeFromScars: { type: Boolean, default: true },
+        },
+        campId: { type: Schema.Types.ObjectId, ref: "Camp", required: true, index: true },
+        bagNo: { type: String, trim: true },
+        segmentNo: { type: String, trim: true },
+        lotNo: { type: String, trim: true },
+        typeOfBag: { type: String, trim: true },
+        status: { type: String, enum: ["PENDING", "DONATED", "REJECTED"], default: "PENDING", index: true },
+    },
+    { timestamps: true, collection: "campdonations" }
+);
 
-export default mongoose.models.VoluntaryCampDonation || mongoose.model<IVoluntaryCampDonation>("VoluntaryCampDonation", VoluntaryCampDonationSchema);
+const CampDonation: Model<ICampDonation> =
+    mongoose.models.CampDonation || mongoose.model<ICampDonation>("CampDonation", CampDonationSchema);
+
+export default CampDonation;

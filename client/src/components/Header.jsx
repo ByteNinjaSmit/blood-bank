@@ -1,7 +1,4 @@
-import { ArrowLeft } from "lucide-react"
-
 export function PageHeader({
-  onBack,
   icon: Icon,
   title,
   description,
@@ -11,16 +8,6 @@ export function PageHeader({
   return (
     <div className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="flex items-center cursor-pointer gap-2 transition-transform  text-gray-600 hover:text-gray-900 mb-4 hover:scale-105 duration-500 text-sm font-medium"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </button>
-        )}
-
         <div className="flex items-start justify-between gap-4">
           {/* Left: Icon + Title + Description */}
           <div className="flex items-start gap-3 flex-1">
