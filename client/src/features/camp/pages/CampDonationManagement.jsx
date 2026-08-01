@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Droplets, Plus, Eye, Activity, Upload, X, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
-import Modal from '@/components/shared/Modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import DonationDetails from '@/features/donation/components/DonationDetails';
 import { useDonationDetail } from '@/features/donation/queries';
 import { useDonation } from '@/hooks/useDonation';
@@ -416,21 +416,22 @@ const CampDonationManagement = () => {
       </div>
 
       {/* Details Modal */}
-      <Modal
-        isOpen={!!viewDonationId}
-        onClose={() => setViewDonationId(null)}
-        title="Donation Details"
-        size="lg"
-        className="bg-gradient-to-b from-orange-50 to-white"
-      >
-        {viewDetailLoading ? (
-          <div className="py-16 text-center text-gray-400 text-sm">Loading details…</div>
-        ) : viewDetail ? (
-          <DonationDetails donation={viewDetail} />
-        ) : (
-          <div className="py-16 text-center text-gray-400 text-sm">Donation not found.</div>
-        )}
-      </Modal>
+      <Dialog open={!!viewDonationId} onOpenChange={(open) => { if (!open) setViewDonationId(null); }}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-b from-orange-50 to-white">
+          <DialogHeader>
+            <DialogTitle>Donation Details</DialogTitle>
+          </DialogHeader>
+          <div className="pt-2">
+            {viewDetailLoading ? (
+              <div className="py-16 text-center text-gray-400 text-sm">Loading details…</div>
+            ) : viewDetail ? (
+              <DonationDetails donation={viewDetail} />
+            ) : (
+              <div className="py-16 text-center text-gray-400 text-sm">Donation not found.</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

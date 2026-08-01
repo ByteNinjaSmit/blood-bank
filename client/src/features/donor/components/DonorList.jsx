@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Eye, Edit, Trash2, Download } from 'lucide-react';
 import Table from '@/components/shared/Table';
 import Button from '@/components/shared/Button';
-import CustomModal from '@/components/CustomModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { useDonor } from '@/hooks/useDonor';
 import useAccess from '@/features/access/useAccess';
@@ -324,30 +324,59 @@ const DonorList = ({
       </div>
 
       {/* Delete confirmation modal */}
-      <CustomModal
+      <Dialog
         open={showDeleteModal && !!deleteTarget}
-        title="Delete Donor"
-        description={`Are you sure you want to delete donor ${(deleteTarget && (`${deleteTarget?.name?.firstName || ''} ${deleteTarget?.name?.lastName || ''}`.trim() || deleteTarget?.donorId)) || ''}? This action cannot be undone.`}
-        onCancel={() => {
-          setShowDeleteModal(false);
-          setDeleteTarget(null);
+        onOpenChange={(o) => {
+          if (!o) {
+            setShowDeleteModal(false);
+            setDeleteTarget(null);
+          }
         }}
-        onConfirm={handleDeleteConfirm}
-        confirmText="Delete"
-        confirmVariant="danger"
-      />
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Donor</DialogTitle>
+            <DialogDescription>
+              {`Are you sure you want to delete donor ${(deleteTarget && (`${deleteTarget?.name?.firstName || ''} ${deleteTarget?.name?.lastName || ''}`.trim() || deleteTarget?.donorId)) || ''}? This action cannot be undone.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => {
+                setShowDeleteModal(false);
+                setDeleteTarget(null);
+              }}
+              className="px-3 py-2 rounded-md border bg-white text-sm hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button type="button" onClick={handleDeleteConfirm} className="px-3 py-2 rounded-md shadow-sm text-sm bg-red-600 hover:bg-red-700 text-white">
+              Delete
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Informational modal: donors with donation history cannot be deleted */}
-      <CustomModal
+      <Dialog
         open={showForceModal && !!deleteTarget}
-        title="Cannot Delete Donor"
-        description="This donor has donation history and cannot be deleted. Donation records are clinical data and must be preserved for audit purposes."
-        onCancel={() => {
-          setShowForceModal(false);
-          setDeleteTarget(null);
+        onOpenChange={(o) => {
+          if (!o) {
+            setShowForceModal(false);
+            setDeleteTarget(null);
+          }
         }}
-        hideFooter
-      />
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cannot Delete Donor</DialogTitle>
+            <DialogDescription>
+              This donor has donation history and cannot be deleted. Donation records are clinical data and must be preserved for audit purposes.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

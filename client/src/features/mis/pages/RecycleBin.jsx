@@ -12,7 +12,7 @@ import { useAffectedRecords } from '@/features/affected-records/queries';
 import { useBulkTransferList, useRestoreBulkTransfer } from '@/features/bulk-transfer/queries';
 import { useStorageTransferList, useRestoreStorageTransfer } from '@/features/storage-transfer/queries';
 import useAccess from '@/features/access/useAccess';
-import CustomModal from '@/components/CustomModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
 
 const TABS = [
@@ -541,15 +541,18 @@ export default function RecycleBin() {
       </div>
 
       {/* Recover confirmation modal */}
-      <CustomModal
-        open={showRestoreModal && !!restoreTarget}
-        title="Recover Record"
-        description="This record (and everything cascade-deleted with it) will reappear in its normal module."
-        onCancel={closeRestoreModal}
-        onConfirm={handleRestoreConfirm}
-        confirmText="Recover"
-        confirmVariant="primary"
-      />
+      <Dialog open={showRestoreModal && !!restoreTarget} onOpenChange={(o) => { if (!o) closeRestoreModal(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Recover Record</DialogTitle>
+            <DialogDescription>This record (and everything cascade-deleted with it) will reappear in its normal module.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button type="button" onClick={closeRestoreModal} className="px-3 py-2 rounded-md border bg-white text-sm hover:bg-slate-50">Cancel</button>
+            <button type="button" onClick={handleRestoreConfirm} className="px-3 py-2 rounded-md shadow-sm text-sm bg-slate-900 hover:bg-black text-white">Recover</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {PermanentDeleteDialog}
 

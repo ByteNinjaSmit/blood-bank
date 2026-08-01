@@ -1,20 +1,15 @@
-import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function StockViewModal({ item, onClose, formatDate }) {
   if (!item) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 normal-case" onClick={onClose}>
-      <div className="bg-white rounded-2xl p-6 max-w-4xl w-full shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <h3 className="text-base font-bold text-gray-800 mb-4">Blood Bag Details</h3>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto normal-case">
+        <DialogHeader>
+          <DialogTitle>Blood Bag Details</DialogTitle>
+        </DialogHeader>
 
         {item?.source === 'LOAN' && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl text-sm">
@@ -40,7 +35,7 @@ export default function StockViewModal({ item, onClose, formatDate }) {
 
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Bag Information</p>
-            <div className="grid grid-cols-4 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
               <div>
                 <p className="text-[10px] text-gray-500">Bag No</p>
                 <p className="font-semibold text-gray-800">{item?.bag?.bagNo || item?.bagNo || '—'}</p>
@@ -62,7 +57,7 @@ export default function StockViewModal({ item, onClose, formatDate }) {
 
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Component</p>
-            <div className="grid grid-cols-6 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
               <div>
                 <p className="text-[10px] text-gray-500">Component Name</p>
                 <p className="font-semibold text-gray-800">{item?.component?.componentType || '—'}</p>
@@ -105,7 +100,7 @@ export default function StockViewModal({ item, onClose, formatDate }) {
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
                 {item?.status === 'reserved' ? 'Reservation Details' : 'Issue Details'}
               </p>
-              <div className="grid grid-cols-3 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
                 <div>
                   <p className="text-[10px] text-gray-500">Destination / Hospital</p>
                   <p className="font-semibold text-gray-800">{item?.hospital?.name || '—'}</p>
@@ -144,7 +139,7 @@ export default function StockViewModal({ item, onClose, formatDate }) {
           {item?.source === 'LOAN' ? (
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Loan Source</p>
-              <div className="grid grid-cols-3 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
                 <div>
                   <p className="text-[10px] text-gray-500">Company Name</p>
                   <p className="font-semibold text-gray-800">{item?.loanTransfer?.bloodBankName || '—'}</p>
@@ -166,7 +161,7 @@ export default function StockViewModal({ item, onClose, formatDate }) {
           ) : (
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Donor Information</p>
-              <div className="grid grid-cols-5 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
                 <div>
                   <p className="text-[10px] text-gray-500">Donor Name</p>
                   <p className="font-semibold text-gray-800">{item?.bag?.donorName || '—'}</p>
@@ -197,7 +192,7 @@ export default function StockViewModal({ item, onClose, formatDate }) {
             Close
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import Modal from '@/components/shared/Modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { User, Clock, Globe, Monitor, Hash } from 'lucide-react';
 
 // Internal/technical DTO fields that duplicate what's already shown in
@@ -172,8 +172,12 @@ export default function AuditDetailDrawer({ isOpen, onClose, entry }) {
   const rows = diffRows(entry.before, entry.after, entry.changedFields);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Audit Entry Detail" size="lg">
-      <div className="space-y-5">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Audit Entry Detail</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-5">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
           <div className="flex items-center gap-1.5 text-gray-600">
             <Clock className="w-3.5 h-3.5" />
@@ -239,7 +243,8 @@ export default function AuditDetailDrawer({ isOpen, onClose, entry }) {
             </div>
           )}
         </div>
-      </div>
-    </Modal>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

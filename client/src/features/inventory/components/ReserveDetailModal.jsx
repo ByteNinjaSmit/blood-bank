@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { CreditCard, X } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { donorCardApi } from "@/features/donor-card/api";
 
 export default function ReserveDetailModal({ reserve, onClose, formatDateDMY, formatDateTimeDMY }) {
@@ -23,25 +24,14 @@ export default function ReserveDetailModal({ reserve, onClose, formatDateDMY, fo
   if (!reserve) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fadeIn" onClick={onClose}>
-      <div
-        className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between p-6 border-b border-orange-100 bg-orange-50/20">
-          <div>
-            <h3 className="text-xl font-bold text-slate-800">Reservation & Requisition Details</h3>
-            <p className="text-xs text-orange-850 font-semibold uppercase tracking-wider mt-0.5">
-              Requisition ID: {reserve.requisition?.requisitionId || 'N/A'}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg border border-gray-200 text-slate-500 hover:bg-gray-50 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogHeader className="p-6 pb-4 border-b border-orange-100 bg-orange-50/20">
+          <DialogTitle className="text-xl font-bold text-slate-800">Reservation & Requisition Details</DialogTitle>
+          <p className="text-xs text-orange-850 font-semibold uppercase tracking-wider mt-0.5">
+            Requisition ID: {reserve.requisition?.requisitionId || 'N/A'}
+          </p>
+        </DialogHeader>
 
         <div className="p-6 space-y-6">
 
@@ -250,7 +240,7 @@ export default function ReserveDetailModal({ reserve, onClose, formatDateDMY, fo
             Close
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

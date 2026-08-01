@@ -1,5 +1,5 @@
 import React from 'react';
-import Modal from '@/components/shared/Modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useDonorDetail } from '@/hooks/useDonor';
 
 const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
@@ -52,13 +52,11 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
   const age = donor.dob ? calculateAge(donor.dob) : null;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Donor Details"
-      size="lg"
-      className="bg-gradient-to-b from-orange-50 to-white"
-    >
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-b from-orange-50 to-white">
+        <DialogHeader>
+          <DialogTitle>Donor Details</DialogTitle>
+        </DialogHeader>
       <div className="space-y-6 text-sm text-slate-800">
         {/* Summary */}
         <div className="rounded-lg bg-white/70 border border-slate-100 p-4 space-y-3">
@@ -331,7 +329,8 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
           </div>
         )}
       </div>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 };
 

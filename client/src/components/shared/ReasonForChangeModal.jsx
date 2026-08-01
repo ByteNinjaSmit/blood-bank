@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Modal from './Modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertTriangle, AlertCircle } from 'lucide-react';
 
 /**
@@ -41,7 +41,11 @@ const ReasonForChangeModal = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4">
         {message && (
           <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl flex gap-3 text-amber-950 text-xs">
@@ -99,7 +103,8 @@ const ReasonForChangeModal = ({
           </button>
         </div>
       </form>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -1,22 +1,16 @@
-import React, { useEffect } from "react";
+import React from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function ViewUserModal({ user, onClose }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   if (!user) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden" onClick={(e)=>e.stopPropagation()}>
-        <div className="p-4 border-b flex justify-between items-center bg-slate-50/60">
-          <div className="font-semibold text-slate-800">User Details</div>
-          <button onClick={onClose} className="px-2 py-1 rounded-md border hover:bg-slate-50">Close</button>
-        </div>
-        <div className="p-4 md:p-5 space-y-3">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>User Details</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <div><span className="text-slate-500">Public ID:</span> <span className="font-medium">{user.publicId}</span></div>
             <div><span className="text-slate-500">Name:</span> <span className="font-medium">{user?.name?.first} {user?.name?.last}</span></div>
@@ -56,7 +50,7 @@ export default function ViewUserModal({ user, onClose }) {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

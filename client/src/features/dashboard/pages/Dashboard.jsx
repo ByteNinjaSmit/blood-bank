@@ -2,7 +2,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import CustomModal from "@/components/CustomModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiClient } from "@/core/api-client";
 import { downloadExcelReport, formatDate, buildExportMeta } from "@/utils/excelExportHelper";
 import { toast } from "sonner";
@@ -407,13 +407,11 @@ export default function Dashboard() {
         <BagStockSection data={payload?.bagStock} />
       </div>
 
-      <CustomModal
-        open={Boolean(openChemicalsWarning)}
-        title="Open Chemicals Must Be Closed First"
-        onCancel={() => setOpenChemicalsWarning(null)}
-        hideFooter
-        size="lg"
-      >
+      <Dialog open={Boolean(openChemicalsWarning)} onOpenChange={(o) => { if (!o) setOpenChemicalsWarning(null); }}>
+        <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Open Chemicals Must Be Closed First</DialogTitle>
+        </DialogHeader>
         <div className="space-y-3 text-sm text-slate-700">
           <p>
             The chemicals below are currently <strong>open / in-use</strong> and have not been fully consumed.
@@ -438,7 +436,8 @@ export default function Dashboard() {
             </Button>
           </div>
         </div>
-      </CustomModal>
+        </DialogContent>
+      </Dialog>
 
       {reportPeriod && (
         <MonthlyReportInputsModal

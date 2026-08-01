@@ -221,7 +221,7 @@ export default function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
           {/* GST Financials */}
           <div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">GST Financials</div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { label: 'Taxable Amount', val: taxableAmount, set: setTaxableAmount },
                 { label: 'CGST (₹)',       val: cgst,          set: setCgst },
@@ -257,7 +257,7 @@ export default function GRNDrawer({ onClose, pos, vendors, grnToEdit }) {
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Bag Type</label>
                       <select value={b.bagType} onChange={(e) => updateBatch(i, 'bagType', e.target.value)}

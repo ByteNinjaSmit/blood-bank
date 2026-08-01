@@ -1,5 +1,5 @@
 import React from 'react';
-import Modal from '@/components/shared/Modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Package } from 'lucide-react';
 
 const formatDate = (value) =>
@@ -24,7 +24,11 @@ export default function DeletedStockTransferModal({ record, module, onClose }) {
   const isBulkTransfer = module === 'bulk-transfer';
 
   return (
-    <Modal isOpen={Boolean(record)} onClose={onClose} title="Deleted Stock Transfer" size="lg">
+    <Dialog open={Boolean(record)} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Deleted Stock Transfer</DialogTitle>
+        </DialogHeader>
       {!record ? null : (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 text-xs bg-gray-50 border border-gray-100 rounded-lg p-3">
@@ -95,6 +99,7 @@ export default function DeletedStockTransferModal({ record, module, onClose }) {
           </div>
         </div>
       )}
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,4 +1,5 @@
-import { X, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function InstallmentModal({
   selectedPurchase,
@@ -15,29 +16,18 @@ export default function InstallmentModal({
   onClose,
 }) {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm transition-opacity duration-300" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-          <div>
-            <h3 className="text-base font-bold text-gray-900">Manage Installment Payments</h3>
-            <p className="text-[11px] text-gray-500 font-semibold mt-0.5">
-              Invoice: <span className="font-bold text-gray-700">{selectedPurchase.invoiceNumber}</span> | Supplier: <span className="font-bold text-gray-700">{selectedPurchase.supplierId?.name || '—'}</span>
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-4.5 h-4.5" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden p-0 gap-0 flex flex-col">
+        <DialogHeader className="p-5 border-b border-gray-100 bg-gray-50/50">
+          <DialogTitle className="text-base font-bold text-gray-900">Manage Installment Payments</DialogTitle>
+          <p className="text-[11px] text-gray-500 font-semibold mt-0.5">
+            Invoice: <span className="font-bold text-gray-700">{selectedPurchase.invoiceNumber}</span> | Supplier: <span className="font-bold text-gray-700">{selectedPurchase.supplierId?.name || '—'}</span>
+          </p>
+        </DialogHeader>
 
         <div className="p-5 space-y-5 overflow-y-auto flex-1">
           {/* Payment Summary Metrics */}
-          <div className="grid grid-cols-3 gap-2 p-3.5 bg-gray-50 rounded-xl border border-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 p-3.5 bg-gray-50 rounded-xl border border-gray-100">
             <div className="text-center space-y-0.5">
               <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Total Bill</span>
               <div className="text-sm font-bold text-gray-900">₹{selectedPurchase.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
@@ -148,7 +138,7 @@ export default function InstallmentModal({
             {isSaving ? 'Saving...' : 'Save Payments'}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

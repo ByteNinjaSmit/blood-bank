@@ -5,7 +5,7 @@ import UsersTable from "./components/UsersTable";
 import CreateUserForm from "./components/CreateUserForm";
 import ViewUserModal from "./components/ViewUserModal";
 import Pagination from "./components/Pagination";
-import CustomModal from "@/components/CustomModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import ReasonForChangeModal from "@/components/shared/ReasonForChangeModal";
 import { useEditWithReason } from "@/hooks/useEditWithReason";
 import useAccess from "@/features/access/useAccess";
@@ -409,16 +409,30 @@ export default function UserManage() {
         <ViewUserModal user={viewUser} onClose={() => setViewUser(null)} />
       )}
 
-      <CustomModal
-        open={!!confirmModal.open}
-        title={confirmModal.title}
-        description={confirmModal.description}
-        confirmText={confirmModal.confirmText}
-        cancelText={confirmModal.cancelText}
-        confirmVariant={confirmModal.variant}
-        onCancel={closeConfirm}
-        onConfirm={confirmModal.onConfirm}
-      />
+      <Dialog open={!!confirmModal.open} onOpenChange={(o) => { if (!o) closeConfirm(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{confirmModal.title}</DialogTitle>
+            {confirmModal.description && <DialogDescription>{confirmModal.description}</DialogDescription>}
+          </DialogHeader>
+          <DialogFooter>
+            <button type="button" onClick={closeConfirm} className="px-3 py-2 rounded-md border bg-white text-sm hover:bg-slate-50">{confirmModal.cancelText || "Cancel"}</button>
+            <button
+              type="button"
+              onClick={confirmModal.onConfirm}
+              className={`px-3 py-2 rounded-md shadow-sm text-sm ${
+                confirmModal.variant === "danger"
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : confirmModal.variant === "primary"
+                  ? "bg-slate-900 hover:bg-black text-white"
+                  : "border bg-white hover:bg-slate-50"
+              }`}
+            >
+              {confirmModal.confirmText || "Confirm"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ReasonForChangeModal
         isOpen={Boolean(deactivateTarget)}
