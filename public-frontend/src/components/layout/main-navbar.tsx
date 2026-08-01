@@ -76,10 +76,10 @@ export default function Navbar() {
                         </div>
                         <div className="flex flex-col">
                             <span className="text-xl md:text-2xl font-poppins font-bold text-gray-900 tracking-tight leading-none">
-                                Blood<span className="text-[#8B0000]">Bank</span>
+                                {t.brandPrefix}<span className="text-[#8B0000]">{t.brandSuffix}</span>
                             </span>
                             <span className="text-[10px] text-gray-400 font-medium tracking-[0.2em] uppercase leading-none mt-1">
-                                Kopargaon
+                                {t.brandTagline}
                             </span>
                         </div>
                     </Link>

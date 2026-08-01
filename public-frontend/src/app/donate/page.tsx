@@ -10,7 +10,7 @@ export default function DonatePage() {
     const t = content[language].donatePage;
 
     return (
-        <div className="min-h-screen bg-background pt-32 lg:pt-40 pb-12 px-4 sm:px-6">
+        <div className="min-h-screen bg-background pt-28 pb-12 px-4 sm:px-6">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-start">
 
                 {/* Left Side: Awareness & Impact (Sticky) */}

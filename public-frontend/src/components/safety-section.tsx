@@ -60,10 +60,7 @@ export default function SafetySection() {
                                 {t.title}
                             </h2>
                             <p className="text-lg text-muted-foreground mb-8 text-balance">
-                                {language === 'en'
-                                    ? "We adhere to strict international medical protocols to ensure every drop of blood is safe for transfusion. From collection to storage, quality is our priority."
-                                    : "आम्ही रक्तदात्याची आणि रुग्णाची काळजी घेण्यासाठी आंतरराष्ट्रीय वैद्यकीय नियमांचे पालन करतो. रक्त संकलन ते साठवणूक, गुणवत्ता हीच आमची प्राथमिकता आहे."
-                                }
+                                {t.intro}
                             </p>
 
                             <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
@@ -72,8 +69,8 @@ export default function SafetySection() {
                                         <span className="text-xl font-bold">4°C</span>
                                     </div>
                                     <div>
-                                        <p className="font-bold">Temperature Controlled</p>
-                                        <p className="text-sm text-muted-foreground">Maintained continuously between +4°C to -15°C</p>
+                                        <p className="font-bold">{t.tempControlledTitle}</p>
+                                        <p className="text-sm text-muted-foreground">{t.tempControlledDesc}</p>
                                     </div>
                                 </div>
                             </div>

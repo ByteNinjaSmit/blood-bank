@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { FaArrowUp } from "react-icons/fa"
+import { useLanguage } from '@/context/language-context'
+import { content } from '@/lib/content'
 
 export default function BackToTop() {
   const [show, setShow] = useState(false)
+  const { language } = useLanguage()
+  const t = content[language].misc
 
   useEffect(() => {
     const onScroll = () => {
@@ -30,7 +34,7 @@ export default function BackToTop() {
       `}
     >
       <FaArrowUp className="text-md" />
-      <span>Back to Top</span>
+      <span>{t.backToTop}</span>
     </button>
   )
 }

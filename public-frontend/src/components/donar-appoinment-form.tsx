@@ -135,7 +135,7 @@ export default function BloodDonationForm() {
         <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4 text-green-600">
           <CheckCircle className="w-8 h-8" />
         </div>
-        <h2 className="text-2xl font-bold mb-2">Registration Successful!</h2>
+        <h2 className="text-2xl font-bold mb-2">{t.registrationSuccessTitle}</h2>
         <p className="text-muted-foreground">{language === 'en' ? 'We will contact you shortly.' : 'आम्ही लवकरच आपल्याशी संपर्क साधू.'}</p>
       </div>
     )
@@ -248,11 +248,11 @@ export default function BloodDonationForm() {
           <div className="flex gap-4">
             <label className="flex items-center gap-2 cursor-pointer bg-muted/30 px-4 py-2 rounded-lg hover:bg-muted/50 transition-colors">
               <input type="radio" name="hasMedicalHistory" value="no" checked={formData.hasMedicalHistory === 'no'} onChange={handleChange} className="accent-primary w-4 h-4" />
-              <span className="font-medium text-sm">No, I'm healthy</span>
+              <span className="font-medium text-sm">{t.noHealthy}</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer bg-muted/30 px-4 py-2 rounded-lg hover:bg-muted/50 transition-colors">
               <input type="radio" name="hasMedicalHistory" value="yes" checked={formData.hasMedicalHistory === 'yes'} onChange={handleChange} className="accent-primary w-4 h-4" />
-              <span className="font-medium text-sm">Yes</span>
+              <span className="font-medium text-sm">{t.yes}</span>
             </label>
           </div>
 

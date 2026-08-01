@@ -39,7 +39,7 @@ const CampCard = ({ camp, t }: { camp: any, t: any }) => (
             </div>
 
             <p className="text-gray-500 leading-relaxed mb-8">
-                {camp.description || "Upcoming blood donation camp."}
+                {camp.description || t.incomingCampsPage.defaultDescription}
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
@@ -66,14 +66,14 @@ const CampCard = ({ camp, t }: { camp: any, t: any }) => (
                         <Phone className="w-5 h-5 text-[#8B0000] shrink-0 mt-1" />
                         <div>
                             <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">{t.incomingCampsPage.contact}</p>
-                            <p className="text-base font-bold text-gray-700">{camp.contactInfo?.phone || "+91 94222 23117"}</p>
+                            <p className="text-base font-bold text-gray-700">{camp.contactInfo?.phone || t.incomingCampsPage.defaultPhone}</p>
                         </div>
                     </div>
                     <div className="flex items-start gap-4">
                         <Mail className="w-5 h-5 text-[#8B0000] shrink-0 mt-1" />
                         <div>
                             <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">{t.incomingCampsPage.email}</p>
-                            <p className="text-base font-bold text-gray-700 truncate">{camp.contactInfo?.email || "camps@sanjivanibloodbank.org"}</p>
+                            <p className="text-base font-bold text-gray-700 truncate">{camp.contactInfo?.email || t.incomingCampsPage.defaultEmail}</p>
                         </div>
                     </div>
                 </div>
@@ -109,7 +109,7 @@ export default function IncomingCampsPage() {
     }, [])
 
     return (
-        <main className="min-h-screen bg-gray-50 pb-20 font-inter pt-20 lg:pt-28">
+        <main className="min-h-screen bg-gray-50 pb-20 font-inter pt-28">
             <div className="max-w-7xl mx-auto px-4 md:px-12 py-12">
                 <div className="mb-12">
                     <h1 className="text-4xl font-bold text-gray-900 mb-4">{t.incomingCampsPage.title}</h1>

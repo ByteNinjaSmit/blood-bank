@@ -26,7 +26,7 @@ export default function AboutSection() {
                                 {t.title}
                             </Badge>
                             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground leading-tight">
-                                {language === 'en' ? 'Serving humanity through' : 'माणुसकीची सेवा'} <span className="text-primary">{language === 'en' ? 'safe blood' : 'सुरक्षित रक्त'}</span> {language === 'en' ? 'for 32 years.' : '३२ वर्षांपासून.'}
+                                {t.titleLine1Start}<span className="text-primary">{t.titleLine1Highlight}</span>{t.titleLine1End}
                             </h2>
                             <p className="text-lg text-muted-foreground leading-relaxed">
                                 {t.description}
@@ -77,7 +77,7 @@ export default function AboutSection() {
                                     <Shield className="w-6 h-6 text-red-600 dark:text-red-400" />
                                 </div>
                                 <h3 className="text-4xl font-extrabold text-foreground mb-1">32+</h3>
-                                <p className="text-muted-foreground font-medium">Years of Service</p>
+                                <p className="text-muted-foreground font-medium">{t.statLabels.years}</p>
                             </motion.div>
 
                             {/* Card 2: Lives Saved (Estimate) */}
@@ -92,7 +92,7 @@ export default function AboutSection() {
                                     <CheckCircle className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <h3 className="text-4xl font-extrabold text-foreground mb-1">1L+</h3>
-                                <p className="text-muted-foreground font-medium">Lives Impacted</p>
+                                <p className="text-muted-foreground font-medium">{t.statLabels.lives}</p>
                             </motion.div>
 
                             {/* Card 3: 24/7 Availability */}
@@ -107,7 +107,7 @@ export default function AboutSection() {
                                     <Target className="w-6 h-6 text-green-600 dark:text-green-400" />
                                 </div>
                                 <h3 className="text-3xl font-bold text-foreground mb-1">24/7</h3>
-                                <p className="text-muted-foreground font-medium">Emergency Support</p>
+                                <p className="text-muted-foreground font-medium">{t.statLabels.emergency}</p>
                             </motion.div>
 
                             {/* Card 4: Rural Reach */}
@@ -122,7 +122,7 @@ export default function AboutSection() {
                                     <MapPin className="w-6 h-6 text-white" />
                                 </div>
                                 <h3 className="text-3xl font-bold text-white mb-1">100%</h3>
-                                <p className="text-white/90 font-medium">Rural Dedication</p>
+                                <p className="text-white/90 font-medium">{t.statLabels.rural}</p>
                             </motion.div>
                         </div>
                     </div>

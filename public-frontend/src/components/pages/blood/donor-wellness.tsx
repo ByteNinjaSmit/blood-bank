@@ -4,140 +4,25 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
     ArrowRight, ShieldCheck, Heart, Phone, Mail,
-    Droplet, AlertTriangle, ThermometerSun, Activity,
-    Clock, CheckCircle2, HelpCircle, ChevronDown,
-    Stethoscope, Syringe, Cookie, Dumbbell,
-    HeartPulse, ShieldAlert, Sparkles, BandageIcon
+    AlertTriangle, ThermometerSun, Activity,
+    Clock, CheckCircle2, ChevronDown,
+    Stethoscope, Syringe,
+    HeartPulse, ShieldAlert, BandageIcon
 } from 'lucide-react'
 import { useState } from 'react'
+import { useLanguage } from '@/context/language-context'
+import { content } from '@/lib/content'
 
-/* ─── FAQ data ─── */
-const faqs = [
-    {
-        q: 'What should I do if I don\'t feel well after donating?',
-        a: 'It is normal to feel slightly lightheaded or dizzy after donating. If this happens, sit or lie down immediately and elevate your legs. Apply a cold compress to your forehead and drink fluids. Most symptoms resolve within a few minutes. If you continue to feel unwell after 15–20 minutes, contact our donor helpline or visit our nearest centre for assistance. Do not drive or operate heavy machinery until you feel completely normal.'
-    },
-    {
-        q: 'Is donating blood safe?',
-        a: 'Yes, donating blood is extremely safe. All equipment used — including needles, bags, and tubing — is sterile, single-use, and disposed of after each donation. There is absolutely no risk of contracting any infection from donating blood. Our staff are trained medical professionals who follow strict safety protocols at every step.'
-    },
-    {
-        q: 'How much blood is taken during a donation?',
-        a: 'During a standard whole blood donation, approximately 350–450 ml of blood is collected, which is less than 10% of the total blood volume in an average adult. Your body begins to replenish the lost volume within hours and fully restores it within 24–48 hours. Red blood cells are completely replaced within 4–6 weeks.'
-    },
-    {
-        q: 'Will I feel tired or weak after donating?',
-        a: 'Most donors feel perfectly normal after donating. Some may experience mild fatigue or tiredness for the rest of the day. This is normal and can be managed by staying hydrated, eating well, and avoiding strenuous activity for 12–24 hours. If you feel persistently tired beyond 24 hours, please contact our helpline.'
-    },
-    {
-        q: 'Can I exercise after donating blood?',
-        a: 'We recommend avoiding strenuous physical activity, heavy lifting, and intense exercise for at least 12 hours after your donation. Light activities like walking are fine. After 24 hours, most donors can resume their normal exercise routine. Listen to your body — if you feel any dizziness or weakness during exercise, stop and rest.'
-    },
-    {
-        q: 'What should I eat and drink before and after donating?',
-        a: 'Before donating, eat a healthy, iron-rich meal (such as spinach, lentils, or lean meat) and drink plenty of water. Avoid fatty or fried foods as they can affect blood testing. After donating, eat a nutritious snack and drink extra fluids — water, juice, or milk — for the next 24–48 hours. Avoid alcohol for at least 24 hours after donating.'
-    },
-    {
-        q: 'What if I have a bruise at the needle site?',
-        a: 'Occasional bruising at the needle insertion site is normal and harmless. It occurs when a small amount of blood leaks under the skin. Apply a cold pack to the area for the first 24 hours to reduce swelling, then switch to a warm compress. The bruise will typically fade within 1–2 weeks. If the bruise is unusually large, painful, or doesn\'t improve, please contact us.'
-    },
-    {
-        q: 'Can I donate blood if I am on medication?',
-        a: 'It depends on the medication. Many common medications — including vitamins, antihistamines (e.g., cetirizine), paracetamol, and most birth control pills — do not prevent you from donating. However, some medications like blood thinners (warfarin, heparin), certain antibiotics, and acne medications (e.g., isotretinoin) require a temporary deferral. Always inform our screening staff about all medications you are taking.'
-    },
-    {
-        q: 'How often can I donate blood?',
-        a: 'In India, males can donate whole blood every 90 days (3 months), and females every 120 days (4 months). Platelet donors can donate every 14 days, up to 24 times per year. These intervals allow your body sufficient time to fully replenish the donated components.'
-    },
-    {
-        q: 'Is there an age limit for blood donation?',
-        a: 'In India, healthy individuals aged 18 to 65 can donate blood. First-time donors must be between 18 and 60 years old. Repeat donors in good health may be eligible up to age 65 (extendable up to 68 with medical certification). Individuals under 18 years of age are not eligible to donate.'
-    }
-]
-
-/* ─── Safety protocols ─── */
-const safetyProtocols = [
-    {
-        icon: Syringe,
-        title: 'Sterile, single-use equipment',
-        desc: 'Every needle, bag, and tube used in the donation process is brand new, sterile, and used only once. After your donation, all equipment is safely disposed of. There is zero risk of infection from donating blood.'
-    },
-    {
-        icon: Stethoscope,
-        title: 'Thorough health screening',
-        desc: 'Before every donation, a trained healthcare professional checks your blood pressure, pulse, temperature, hemoglobin level, and reviews your health history to ensure you are fit to donate safely.'
-    },
-    {
-        icon: ShieldAlert,
-        title: 'Strict testing of all donations',
-        desc: 'Every unit of donated blood is tested for HIV, Hepatitis B, Hepatitis C, syphilis, and malaria. Any unit that does not pass these tests is safely discarded and the donor is confidentially notified.'
-    },
-    {
-        icon: HeartPulse,
-        title: 'Continuous donor monitoring',
-        desc: 'During and after your donation, our staff continuously monitor your wellbeing. If you feel any discomfort at any point, our team will immediately assist you and provide appropriate care.'
-    },
-    {
-        icon: Activity,
-        title: 'Adverse reaction management',
-        desc: 'Although rare, our centres are fully equipped to handle any adverse reactions. All staff are trained in first aid and emergency response. You will never be left unattended during or after your donation.'
-    },
-    {
-        icon: ShieldCheck,
-        title: 'Confidential health information',
-        desc: 'All personal and medical information you provide during the screening process is kept strictly confidential and is used only for determining your eligibility and ensuring the safety of the blood supply.'
-    }
-]
-
-/* ─── Common side effects ─── */
-const sideEffects = [
-    {
-        effect: 'Lightheadedness or dizziness',
-        likelihood: 'Occasional',
-        what: 'Sit or lie down. Elevate your legs. Drink water or juice. Symptoms usually pass within a few minutes.',
-        icon: ThermometerSun
-    },
-    {
-        effect: 'Bruising at needle site',
-        likelihood: 'Occasional',
-        what: 'Apply cold compress for 24 hours, then warm compress. The bruise fades within 1–2 weeks.',
-        icon: BandageIcon
-    },
-    {
-        effect: 'Mild fatigue',
-        likelihood: 'Common',
-        what: 'Rest, stay hydrated, and eat well. Avoid heavy exercise for 12 hours. Usually resolves within a day.',
-        icon: Clock
-    },
-    {
-        effect: 'Soreness at needle site',
-        likelihood: 'Common',
-        what: 'This is normal and temporary. Avoid heavy lifting with the arm used for donation for a few hours.',
-        icon: AlertTriangle
-    },
-    {
-        effect: 'Fainting',
-        likelihood: 'Rare',
-        what: 'Lie down immediately. Our staff will assist you. Do not leave the centre until you feel fully recovered.',
-        icon: HeartPulse
-    }
-]
-
-/* ─── Iron & nutrition tips ─── */
-const ironTips = [
-    'Include iron-rich foods in your diet: spinach, lentils (dal), chickpeas (chana), kidney beans (rajma), jaggery (gur), dates, and lean meats.',
-    'Pair iron-rich foods with vitamin C sources (citrus fruits, tomatoes, bell peppers) to enhance absorption.',
-    'Avoid tea and coffee with meals, as tannins can reduce iron absorption.',
-    'If you donate regularly (3+ times/year), consider an iron supplement — consult your doctor or ask our staff.',
-    'Calcium and dairy products can inhibit iron absorption when consumed with iron-rich foods. Space them apart.',
-    'Cooking in cast-iron vessels can increase the iron content of your food.'
-]
+const protocolIcons = [Syringe, Stethoscope, ShieldAlert, HeartPulse, Activity, ShieldCheck]
+const sideEffectIcons = [ThermometerSun, BandageIcon, Clock, AlertTriangle, HeartPulse]
 
 /* ═══════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════ */
 export default function DonorWellness() {
     const [openFaq, setOpenFaq] = useState<number | null>(0)
+    const { language } = useLanguage()
+    const t = content[language].donorWellnessPage
 
     return (
         <div className="bg-background">
@@ -155,24 +40,23 @@ export default function DonorWellness() {
                     >
                         <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold">
                             <ShieldCheck className="w-4 h-4" />
-                            Your Safety Matters
+                            {t.heroBadge}
                         </span>
                         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1]">
-                            Donor wellness{' '}
+                            {t.heroTitleStart}
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-rose-600">
-                                and safety
+                                {t.heroTitleHighlight}
                             </span>
                         </h1>
                         <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl">
-                            Your health and safety are our top priority — before, during, and after every donation. We follow the highest medical standards and safety protocols to ensure that donating blood is a safe, comfortable, and positive experience for every donor.
+                            {t.heroDescription}
                         </p>
                         <div className="space-y-2 text-muted-foreground text-sm">
-                            <p>On this page, you&apos;ll find:</p>
+                            <p>{t.onPageIntro}</p>
                             <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                                <li>Answers to frequently asked questions about the donation process</li>
-                                <li>Our safety protocols and what we do to protect you</li>
-                                <li>Common side effects and how to manage them</li>
-                                <li>Iron and nutrition guidance for regular donors</li>
+                                {t.onPageList.map((item, i) => (
+                                    <li key={i}>{item}</li>
+                                ))}
                             </ul>
                         </div>
                     </motion.div>
@@ -189,16 +73,16 @@ export default function DonorWellness() {
                         className="mb-10"
                     >
                         <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-3 leading-tight">
-                            Frequently asked questions about the{' '}
-                            <span className="text-primary">blood donation process</span>
+                            {t.faqSectionTitleStart}
+                            <span className="text-primary">{t.faqSectionTitleHighlight}</span>
                         </h2>
                         <p className="text-muted-foreground">
-                            Click any question below to see the full answer.
+                            {t.faqSectionSubtitle}
                         </p>
                     </motion.div>
 
                     <div className="space-y-2">
-                        {faqs.map((faq, i) => (
+                        {t.faqs.map((faq, i) => (
                             <motion.div
                                 key={i}
                                 initial={{ opacity: 0, y: 10 }}
@@ -238,10 +122,10 @@ export default function DonorWellness() {
                         </div>
                         <div>
                             <h2 className="text-xl sm:text-2xl font-bold text-white">
-                                Your safety is our highest priority.
+                                {t.redBannerTitle}
                             </h2>
                             <p className="text-white/80 text-sm mt-1">
-                                Every step of the donation process is designed to protect you.
+                                {t.redBannerText}
                             </p>
                         </div>
                     </div>
@@ -249,7 +133,7 @@ export default function DonorWellness() {
                         href="/donation-process"
                         className="inline-flex items-center gap-2 bg-white text-primary px-7 py-3.5 rounded-full font-bold text-sm hover:bg-white/90 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 shrink-0"
                     >
-                        View Donation Process
+                        {t.viewProcessBtn}
                         <ArrowRight className="w-4 h-4" />
                     </Link>
                 </div>
@@ -265,30 +149,33 @@ export default function DonorWellness() {
                         className="mb-10"
                     >
                         <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">
-                            Our safety protocols
+                            {t.protocolsTitle}
                         </h2>
                         <p className="text-muted-foreground leading-relaxed max-w-2xl">
-                            We adhere to the strictest national and international safety standards to ensure every donation is safe for both the donor and the recipient.
+                            {t.protocolsDescription}
                         </p>
                     </motion.div>
 
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {safetyProtocols.map((protocol, i) => (
-                            <motion.div
-                                key={protocol.title}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: i * 0.08 }}
-                                className="p-5 rounded-2xl bg-card border border-border/50 hover:border-primary/20 hover:shadow-md transition-all"
-                            >
-                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
-                                    <protocol.icon className="w-5 h-5 text-primary" />
-                                </div>
-                                <h3 className="font-bold text-foreground text-sm mb-2">{protocol.title}</h3>
-                                <p className="text-xs text-muted-foreground leading-relaxed">{protocol.desc}</p>
-                            </motion.div>
-                        ))}
+                        {t.safetyProtocols.map((protocol, i) => {
+                            const Icon = protocolIcons[i]
+                            return (
+                                <motion.div
+                                    key={protocol.title}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ delay: i * 0.08 }}
+                                    className="p-5 rounded-2xl bg-card border border-border/50 hover:border-primary/20 hover:shadow-md transition-all"
+                                >
+                                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
+                                        <Icon className="w-5 h-5 text-primary" />
+                                    </div>
+                                    <h3 className="font-bold text-foreground text-sm mb-2">{protocol.title}</h3>
+                                    <p className="text-xs text-muted-foreground leading-relaxed">{protocol.desc}</p>
+                                </motion.div>
+                            )
+                        })}
                     </div>
                 </div>
             </section>
@@ -303,10 +190,10 @@ export default function DonorWellness() {
                         className="mb-10"
                     >
                         <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
-                            Common side effects &amp; how to manage them
+                            {t.sideEffectsTitle}
                         </h2>
                         <p className="text-muted-foreground leading-relaxed">
-                            Most donors feel perfectly fine after donating. In rare cases, some mild side effects may occur. Here&apos;s what to expect and how to handle them.
+                            {t.sideEffectsDescription}
                         </p>
                     </motion.div>
 
@@ -315,35 +202,40 @@ export default function DonorWellness() {
                         <table className="w-full min-w-[550px] border-collapse">
                             <thead>
                                 <tr>
-                                    <th className="p-4 text-left text-sm font-bold text-foreground bg-card border border-border rounded-tl-xl">Side Effect</th>
-                                    <th className="p-4 text-left text-sm font-bold text-foreground bg-card border border-border">Likelihood</th>
-                                    <th className="p-4 text-left text-sm font-bold text-foreground bg-card border border-border rounded-tr-xl">What to Do</th>
+                                    <th className="p-4 text-left text-sm font-bold text-foreground bg-card border border-border rounded-tl-xl">{t.sideEffectsTableHeaders.effect}</th>
+                                    <th className="p-4 text-left text-sm font-bold text-foreground bg-card border border-border">{t.sideEffectsTableHeaders.likelihood}</th>
+                                    <th className="p-4 text-left text-sm font-bold text-foreground bg-card border border-border rounded-tr-xl">{t.sideEffectsTableHeaders.whatToDo}</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {sideEffects.map((se, i) => (
-                                    <tr key={i} className="hover:bg-muted/30 transition-colors">
-                                        <td className={`p-4 border border-border ${i === sideEffects.length - 1 ? 'rounded-bl-xl' : ''}`}>
-                                            <div className="flex items-center gap-2">
-                                                <se.icon className="w-4 h-4 text-primary shrink-0" />
-                                                <span className="text-sm font-semibold text-foreground">{se.effect}</span>
-                                            </div>
-                                        </td>
-                                        <td className="p-4 border border-border">
-                                            <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${se.likelihood === 'Rare'
-                                                ? 'bg-green-100 text-green-700'
-                                                : se.likelihood === 'Occasional'
-                                                    ? 'bg-amber-100 text-amber-700'
-                                                    : 'bg-blue-100 text-blue-700'
-                                                }`}>
-                                                {se.likelihood}
-                                            </span>
-                                        </td>
-                                        <td className={`p-4 border border-border text-sm text-muted-foreground leading-relaxed ${i === sideEffects.length - 1 ? 'rounded-br-xl' : ''}`}>
-                                            {se.what}
-                                        </td>
-                                    </tr>
-                                ))}
+                                {t.sideEffects.map((se, i) => {
+                                    const Icon = sideEffectIcons[i]
+                                    const isRare = i === t.sideEffects.length - 1
+                                    const isOccasional = i === 0 || i === 1
+                                    return (
+                                        <tr key={i} className="hover:bg-muted/30 transition-colors">
+                                            <td className={`p-4 border border-border ${i === t.sideEffects.length - 1 ? 'rounded-bl-xl' : ''}`}>
+                                                <div className="flex items-center gap-2">
+                                                    <Icon className="w-4 h-4 text-primary shrink-0" />
+                                                    <span className="text-sm font-semibold text-foreground">{se.effect}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 border border-border">
+                                                <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${isRare
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : isOccasional
+                                                        ? 'bg-amber-100 text-amber-700'
+                                                        : 'bg-blue-100 text-blue-700'
+                                                    }`}>
+                                                    {se.likelihood}
+                                                </span>
+                                            </td>
+                                            <td className={`p-4 border border-border text-sm text-muted-foreground leading-relaxed ${i === t.sideEffects.length - 1 ? 'rounded-br-xl' : ''}`}>
+                                                {se.what}
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
                             </tbody>
                         </table>
                     </div>
@@ -360,15 +252,15 @@ export default function DonorWellness() {
                         className="mb-8"
                     >
                         <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
-                            Iron &amp; nutrition guidance for donors
+                            {t.ironTitle}
                         </h2>
                         <p className="text-muted-foreground leading-relaxed">
-                            Iron is essential for producing healthy red blood cells. Regular donors should pay special attention to maintaining healthy iron levels. Here are practical tips:
+                            {t.ironDescription}
                         </p>
                     </motion.div>
 
                     <div className="space-y-3">
-                        {ironTips.map((tip, i) => (
+                        {t.ironTips.map((tip, i) => (
                             <motion.div
                                 key={i}
                                 initial={{ opacity: 0, x: -10 }}
@@ -395,20 +287,13 @@ export default function DonorWellness() {
                         className="space-y-5"
                     >
                         <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-                            When to seek medical attention
+                            {t.whenToSeekTitle}
                         </h2>
                         <p className="text-muted-foreground leading-relaxed">
-                            While serious complications from blood donation are extremely rare, please contact us or seek medical attention if you experience any of the following after your donation:
+                            {t.whenToSeekText}
                         </p>
                         <div className="grid sm:grid-cols-2 gap-3 mt-4">
-                            {[
-                                'Prolonged bleeding from the needle site that doesn\'t stop after applying pressure for 10+ minutes',
-                                'Persistent dizziness or fainting more than 30 minutes after donation',
-                                'Signs of infection at the needle site — redness, swelling, warmth, or pus',
-                                'Tingling or numbness in the arm that persists beyond a few hours',
-                                'Fever or chills developing within 24 hours of donation',
-                                'Severe or worsening pain at the needle site'
-                            ].map((item, i) => (
+                            {t.whenToSeekItems.map((item, i) => (
                                 <div key={i} className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-100">
                                     <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                                     <p className="text-sm text-red-800 leading-relaxed">{item}</p>
@@ -416,7 +301,9 @@ export default function DonorWellness() {
                             ))}
                         </div>
                         <p className="text-muted-foreground text-sm pt-2">
-                            If you experience any of the above, call our donor helpline at <a href="tel:+919422223117" className="text-primary font-semibold hover:underline">+91 94222 23117</a> or visit the nearest medical facility.
+                            {t.helplineText.split('{phone}')[0]}
+                            <a href="tel:+919422223117" className="text-primary font-semibold hover:underline">+91 94222 23117</a>
+                            {t.helplineText.split('{phone}')[1]}
                         </p>
                     </motion.div>
                 </div>
@@ -432,24 +319,24 @@ export default function DonorWellness() {
                         className="text-center space-y-5"
                     >
                         <h2 className="text-2xl sm:text-3xl font-bold text-white">
-                            Ready to donate? Your safety is guaranteed.
+                            {t.ctaTitle}
                         </h2>
                         <p className="text-white/85 max-w-xl mx-auto leading-relaxed">
-                            Book your appointment today and experience a safe, comfortable, and life-saving donation.
+                            {t.ctaText}
                         </p>
                         <div className="flex flex-wrap justify-center gap-4 pt-2">
                             <Link
                                 href="/donate"
                                 className="inline-flex items-center gap-2 bg-white text-primary px-7 py-3.5 rounded-full font-bold text-sm hover:bg-white/90 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
                             >
-                                Book Appointment
+                                {t.bookBtn}
                                 <ArrowRight className="w-4 h-4" />
                             </Link>
                             <Link
                                 href="/eligibility-criteria"
                                 className="inline-flex items-center gap-2 bg-white/15 text-white px-7 py-3.5 rounded-full font-semibold text-sm hover:bg-white/25 transition-colors backdrop-blur-sm border border-white/20"
                             >
-                                Check Eligibility
+                                {t.checkEligibilityBtn}
                             </Link>
                         </div>
                     </motion.div>
@@ -461,7 +348,7 @@ export default function DonorWellness() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center space-y-5">
                         <h2 className="text-xl sm:text-2xl font-bold text-foreground">
-                            Have concerns? Contact our donor support team.
+                            {t.contactTitle}
                         </h2>
                         <div className="flex flex-wrap justify-center gap-4">
                             <a

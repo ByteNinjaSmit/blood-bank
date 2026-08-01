@@ -29,7 +29,7 @@ export default function Footer() {
                             <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
                                 <span className="font-bold text-lg">S</span>
                             </div>
-                            <span className="text-xl font-bold tracking-tight text-foreground">Sanjivani Blood Bank</span>
+                            <span className="text-xl font-bold tracking-tight text-foreground">{t.wordmark}</span>
                         </div>
                         <p className="text-muted-foreground leading-relaxed text-sm max-w-xs">
                             {t.about}
@@ -86,11 +86,11 @@ export default function Footer() {
                 </div>
 
                 <div className="pt-8 border-t border-border/40 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Sanjivani Blood Bank. Designed & Developed by ByteNinjaTeam</p>
+                    <p className="text-xs text-muted-foreground">{t.copyright.replace('{year}', String(new Date().getFullYear()))}</p>
                     <div className="flex gap-6 text-xs text-muted-foreground font-medium">
-                        <Link href="#" className="hover:text-foreground transition-colors">Privacy</Link>
-                        <Link href="#" className="hover:text-foreground transition-colors">Terms</Link>
-                        <Link href="#" className="hover:text-foreground transition-colors">Cookies</Link>
+                        <Link href="#" className="hover:text-foreground transition-colors">{t.privacy}</Link>
+                        <Link href="#" className="hover:text-foreground transition-colors">{t.terms}</Link>
+                        <Link href="#" className="hover:text-foreground transition-colors">{t.cookies}</Link>
                     </div>
                 </div>
             </div>

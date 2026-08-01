@@ -4,7 +4,7 @@ import ContactSection from "@/components/contact-section";
 
 export default function FeedbackPage() {
     return (
-        <main className="min-h-screen pt-20"> {/* pt-20 to clear fixed navbar if needed */}
+        <main className="min-h-screen pt-28">
             <FeedbackSection />
             <ContactSection />
             <Footer />

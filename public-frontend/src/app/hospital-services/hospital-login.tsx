@@ -153,7 +153,7 @@ export default function HospitalLogin({ onLoginSuccess }: HospitalLoginProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="relative min-h-screen flex items-center justify-center bg-slate-950 px-4 pt-36 md:pt-40 pb-16"
+      className="relative min-h-screen flex items-center justify-center bg-slate-950 px-4 pt-28 pb-16"
     >
       {/* Sleek minimalist ambient background grid */}
       <div className="absolute inset-0 bg-[radial-gradient(#1e1b4b_1px,transparent_1px)] [background-size:24px_24px] opacity-20 pointer-events-none" />
@@ -311,7 +311,7 @@ export default function HospitalLogin({ onLoginSuccess }: HospitalLoginProps) {
                     className="inline-flex items-center gap-1 text-slate-400 hover:text-white disabled:opacity-40 transition-colors cursor-pointer"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    {resendCooldown > 0 ? (language === 'mr' ? `पुन्हा पाठवा (${resendCooldown}से)` : `Resend (${resendCooldown}s)`) : t.resendBtn}
+                    {resendCooldown > 0 ? t.resendCooldownText.replace('{s}', String(resendCooldown)) : t.resendBtn}
                   </button>
 
                   <button
