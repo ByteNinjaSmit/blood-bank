@@ -6,8 +6,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     npm ci --quiet
 
-# Build the TypeScript src/ tree into dist/ so the legacy server.js
-# can mount /api/v2 via `require('./dist/routes')`.
+# Compile the TypeScript src/ tree into dist/. dist/server.js is the
+# only entrypoint — the legacy JS monolith was removed.
 FROM deps AS build
 COPY . .
 RUN npm run build
@@ -37,4 +37,4 @@ USER node
 
 EXPOSE 5000
 
-CMD ["node", "server.js"]
+CMD ["node", "dist/server.js"]

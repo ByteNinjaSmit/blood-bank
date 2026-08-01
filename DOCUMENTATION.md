@@ -235,23 +235,25 @@ blood-bank/
 | Connection | Initiated in | Config |
 |------------|--------------|--------|
 | Client → API | Axios, base URL `VITE_APP_URI_API` | `client/.env` |
-| API → MongoDB | `config/db.js` (`connectToDatabase`) | `MONGODB_URI`, `maxPoolSize: 200` |
-| API → Redis (rate limit / adapter) | `server.js` `new Redis(REDIS_URL)` | `REDIS_URL` |
-| API → Redis (queues) | `config/redis.js` (`createQueue`) | `REDIS_URL` parsed to host/port |
-| API → SMTP | `config/mailConfig.js` (nodemailer) | `EMAIL_*` |
-| API → Twilio | `config/twilio.js` (lazy init) | `TWILIO_*` |
-| Browser ↔ API realtime | Socket.IO server in `server.js` | `allowedOrigins` array |
+| API → MongoDB | `src/core/db` (`connectToDatabase`) | `MONGODB_URI`, `maxPoolSize: 200` |
+| API → Redis (rate limit / adapter) | `src/core/redis` (`getRedis`) | `REDIS_URL` |
+| API → Redis (queues) | `src/core/queue` (Bull) | `REDIS_URL` |
+| API → SMTP | `src/core/mail` (nodemailer) | `EMAIL_*` |
+| API → S3 / MinIO | `src/modules/upload` (`@aws-sdk/client-s3`) | `S3_*` |
+| Browser ↔ API realtime | Socket.IO server in `src/server.ts` | `corsOptions` |
 | Nginx → API | `upstream api_cluster { server api:5000; }` | `nginx.conf` |
 
 **Important wiring facts:**
 
-- `config/db.js` forces `dbName: 'BloodBank'` — the path in `MONGODB_URI` is
+- `src/core/db` forces `dbName: 'BloodBank'` — the path in `MONGODB_URI` is
   ignored for the database name.
-- `server.js` defines a hard-coded `allowedOrigins` array for CORS **and**
-  Socket.IO. `CORS_SERVER` in `.env` exists but the array is authoritative.
-  Add new production domains to that array in `server.js`.
+- CORS is configured in `src/core/config/cors.ts`. The allow-list is the
+  `STATIC_ORIGINS` array **merged with** the comma-separated `CORS_SERVER`
+  env var, so a new production domain can be added via env alone.
 - Inside Docker, Redis is reached as `redis://redis:6379` (service name),
   **not** `localhost`. On a dev host it is `redis://localhost:6379`.
+  `REDIS_URL` is required — `src/core/config/env.ts` refuses to boot without
+  it; there is no localhost fallback.
 - `app.set("trust proxy", 1)` — required so rate limiting sees the real client
   IP behind Nginx.
 
@@ -270,28 +272,43 @@ Full templates: [`server/.env.example`](./server/.env.example) and
 | `REDIS_URL` | yes | Redis connection | `redis://localhost:6379` | `redis://redis:6379` (Docker service) |
 | `PORT` | yes | API listen port | `5000` | `5000` |
 | `NODE_ENV` | yes | Runtime mode | `development` | `production` |
-| `CORS_SERVER` | — | Frontend origin (array in `server.js` is authoritative) | `http://localhost:5173` | prod domain |
+| `CORS_SERVER` | — | Extra allowed origins, comma-separated; merged with `STATIC_ORIGINS` in `src/core/config/cors.ts` | `http://localhost:5173` | prod domain |
 | `JWT_SECRET` | yes | JWT signing secret | dev placeholder | strong random ≥32 chars |
 | `JWT_SECRET_KEY` | yes | Second JWT secret | dev placeholder | strong random ≥32 chars |
 | `ACCESS_TOKEN_EXPIRY` | yes | Access token TTL | `15m` | `15m` |
 | `REFRESH_TOKEN_EXPIRY` | yes | Refresh token TTL | `7d` | `7d` |
 | `EMAIL_USER` | for email | Gmail SMTP user | test inbox | prod sender |
 | `EMAIL_PASS` | for email | Gmail **App Password** | app password | app password |
+| `EMAIL_FROM_NAME` | for email | Display name on outgoing mail | `Sanjivani Blood Bank` | `Sanjivani Blood Bank` |
 | `EMAIL_HOST` | for email | SMTP host | `smtp.gmail.com` | `smtp.gmail.com` |
 | `EMAIL_PORT` | for email | SMTP port | `465` (or `587`) | `465` |
 | `EMAIL_SECURE` | for email | SSL on/off | `true` for 465, `false` for 587 | `true` |
 | `ADMIN_EMAIL` | for email | Report recipient | dev inbox | admin inbox |
+| `BANK_NAME` | yes | Bank name on PDFs / email footers | real name | real name |
+| `BANK_ADDRESS` | yes | Bank address on PDFs | real address | real address |
+| `BANK_PHONE` | yes | Bank phone on PDFs | real phone | real phone |
+| `BANK_LICENSE` | yes | Blood bank / drug licence no. printed on reports | real licence | real licence |
+| `BANK_WEBSITE` | — | Website on PDFs | `https://sanjivanibloodbank.org` | same |
+| `S3_ENDPOINT` | for uploads | S3-compatible endpoint (MinIO) | MinIO URL | MinIO URL |
+| `S3_REGION` | for uploads | Bucket region | `us-east-1` | `us-east-1` |
+| `S3_ACCESS_KEY` | for uploads | Object store access key | dev key | prod key |
+| `S3_SECRET_KEY` | for uploads | Object store secret key | dev secret | prod secret |
+| `S3_BUCKET` | for uploads | Bucket name | `blood-bank` | `blood-bank` |
+| `S3_PUBLIC_URL` | for uploads | Public base URL for stored objects | MinIO public URL | MinIO public URL |
 | `REPORTS_DIR` | yes | PDF output dir | `./reports` | `./reports` |
 | `NEAR_EXPIRY_DAYS` | yes | Near-expiry window (days) | `2` | `2` |
-| `TIMEZONE` | yes | Cron / report timezone | `Asia/Kolkata` | `Asia/Kolkata` |
-| `AWS_ACCESS_KEY_ID` | optional | AWS SNS | — | set if SMS used |
-| `AWS_SECRET_ACCESS_KEY` | optional | AWS SNS | — | set if SMS used |
-| `AWS_REGION` | optional | AWS region | `ap-south-1` | `ap-south-1` |
-| `SNS_PHONE` | optional | SNS destination | — | set if SMS used |
-| `TWILIO_ACCOUNT_SID` | optional | Twilio SMS/OTP | — | set if SMS used |
-| `TWILIO_AUTH_TOKEN` | optional | Twilio auth token | — | set if SMS used |
-| `TWILIO_PHONE_NUMBER` | optional | Twilio sender number | — | set if SMS used |
 | `SYSTEM_USER_ID` | yes | Mongo ObjectId for system audit actor | valid ObjectId | valid ObjectId |
+
+`BANK_*` and `S3_*` have permissive defaults in `src/core/config/env.ts`, so a
+missing value does **not** stop the server booting — it silently produces PDFs
+with placeholder licence details, or uploads that fail at request time.
+`docker-compose.yml` marks them `:?required` for exactly that reason.
+
+**Removed — do not re-add without wiring a consumer first:**
+`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `SNS_PHONE`,
+`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` (no SMS
+provider is wired), and `TIMEZONE` (the client formats in `Asia/Kolkata` via
+`client/src/lib/format-date.js`; the server stores UTC).
 
 ### 5.2 Client (`client/.env`)
 
@@ -310,35 +327,28 @@ secrets in a `VITE_` variable; they ship to the browser.
 The current `.env` files keep multiple options as commented lines. Activate the
 correct line per environment and comment the others.
 
-### 6.0 Current repo state — DEVELOPMENT
+### 6.0 How configuration is supplied
 
-The repository is currently configured to **run in development** (not via
-Docker). The active configuration is:
+`docker-compose.yml` hard-codes **no** values. Every setting is a variable
+reference, and the required ones use the `${VAR:?message}` form so Compose
+aborts with a named error rather than starting a half-configured container.
 
-| File | Line | State | Meaning |
-|------|------|-------|---------|
-| `server/.env` | `REDIS_URL=redis://localhost:6379` | **active** (uncommented) | API connects to Redis on the local host |
-| `docker-compose.yml` | `# MONGODB_URI: "..."` | **commented out** | Docker is not used for dev; the prod DB URI is disabled there |
-| `docker-compose.yml` | `# REDIS_URL: "redis://redis:6379"` | **commented out** | Docker Redis service URL disabled — only the host `REDIS_URL` applies |
+Values reach Compose from one of:
 
-**How to run in this development state:**
+- a `.env` file sitting next to `docker-compose.yml` on the host (this is what
+  the CI/CD deploy job writes — see §9.2),
+- the calling shell's environment, or
+- `docker compose --env-file /path/to/secrets.env up -d`.
+
+`server/.env` is for **local development only** — it is read by `dotenv` when
+running `npm run dev` outside Docker, and is never baked into the image
+(`server/.dockerignore` excludes it).
 
 ```bash
-# Redis must be running locally on :6379
+# Local dev: Redis must be running on :6379
 cd server
-npm start            # reads server/.env -> REDIS_URL=redis://localhost:6379
+npm run dev          # tsx watch src/server.ts, reads server/.env
 ```
-
-**Before switching back to production / Docker, revert these:**
-
-1. `docker-compose.yml` — **uncomment** `MONGODB_URI` and `REDIS_URL`
-   (`redis://redis:6379`).
-2. `server/.env` — `REDIS_URL` may stay as the local value; inside Docker the
-   `docker-compose.yml` `REDIS_URL` (`redis://redis:6379`) overrides it.
-
-> If `docker-compose.yml` is run while `MONGODB_URI` / `REDIS_URL` are
-> commented, the API container has no database or Redis URL and will fail.
-> Those comments are correct **only** for local development without Docker.
 
 ### 6.1 `server/.env`
 
@@ -396,35 +406,41 @@ VITE_APP_URI_API=https://system.sanjivanibloodbank.org
 
 ### 6.3 `docker-compose.yml`
 
-Production runs from `docker-compose.yml`. These values are environment
-sensitive. **Currently `MONGODB_URI` and `REDIS_URL` are both commented out**
-because the repo is in development mode (see §6.0):
+Variables split into two groups.
 
-| Line | Current state (DEV) | Prod |
-|------|---------------------|------|
-| `MONGODB_URI` | commented out | **uncomment** with prod URI, or inject via secret |
-| `REDIS_URL` | commented out | **uncomment** `REDIS_URL: "redis://redis:6379"` so the API reaches the Redis container |
-| `CORS_SERVER` | `http://localhost:5173` | prod domain |
-| `NODE_ENV` | `production` (set) | `production` |
+**Required — Compose aborts if unset** (`${VAR:?...}`):
 
-> With `MONGODB_URI` and `REDIS_URL` commented, the API container has no
-> database or Redis URL — ioredis falls back to `127.0.0.1:6379` inside the
-> container and the DB connection has no URI, so the stack fails. This state is
-> intentional for local development without Docker. **Uncomment both lines
-> before running the production Docker stack.**
+`MONGODB_URI`, `CORS_SERVER`, `JWT_SECRET`, `JWT_SECRET_KEY`, `EMAIL_USER`,
+`EMAIL_PASS`, `ADMIN_EMAIL`, `BANK_NAME`, `BANK_ADDRESS`, `BANK_PHONE`,
+`BANK_LICENSE`, `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`,
+`S3_PUBLIC_URL`, `SYSTEM_USER_ID`.
+
+**Defaulted — safe to omit** (`${VAR:-default}`):
+
+`NODE_ENV` (`production`), `PORT` (`5000`), `LOG_LEVEL` (`info`), `REDIS_URL`
+(`redis://redis:6379`), `ACCESS_TOKEN_EXPIRY` (`15m`), `REFRESH_TOKEN_EXPIRY`
+(`7d`), `EMAIL_FROM_NAME`, `EMAIL_HOST`, `EMAIL_PORT` (`465`), `EMAIL_SECURE`
+(`true`), `BANK_WEBSITE`, `S3_REGION` (`us-east-1`), `S3_BUCKET`
+(`blood-bank`), `NEAR_EXPIRY_DAYS` (`2`), `REPORTS_DIR` (`./reports`).
+
+> `REDIS_URL` defaults to the Compose service name `redis://redis:6379`. Never
+> point it at `localhost` inside a container — that resolves to the container
+> itself, not the Redis service.
 
 ### 6.4 Code that differs by environment
 
 | Item | Development | Production |
 |------|-------------|------------|
-| Server entrypoint | `node server.js` (single process) | `node start.js` (cluster, forks per CPU) |
-| Expiry cron (`queues/expiry-queue.js`) | frequent test schedule (`*/2 * * * *`) | daily `0 8 * * *` — see `EMAIL_QUEUE_SETUP.md` |
-| Logging | console, colored, verbose | file logs, level `info`/`warn` |
-| `npm start` (`package.json`) | `nodemon server.js` (auto-reload) | use Docker image / `node start.js` |
-| Source maps / debug logs | keep | disable / `LOG_LEVEL` not `debug` |
+| Entrypoint | `npm run dev` → `tsx watch src/server.ts` | `node dist/server.js` (the image's `CMD`) |
+| Horizontal scaling | single process | `docker compose up -d --scale api=2`, load-balanced by Nginx via Docker DNS |
+| Logging | `pino-pretty`, colored, `LOG_LEVEL=debug` | raw JSON to stdout, `LOG_LEVEL=info`, captured by the Docker json-file driver |
+| Rate limiting | on (`buildApp({ rateLimit: false })` disables it in tests only) | on |
+| Cookies | `secure: false`, `sameSite: lax` | `secure: true`, `sameSite: none` (see `src/modules/auth/auth.cookies.ts`) |
 
-> Before deploying, verify the expiry queue cron in `queues/expiry-queue.js` is
-> the daily production schedule, not a test interval.
+> There is no `server.js` and no `start.js`. The legacy CommonJS monolith was
+> deleted; `src/server.ts` compiled to `dist/server.js` is the only entrypoint.
+> Process-level redundancy comes from running two `api` containers, not from
+> Node's `cluster` module.
 
 ---
 
@@ -440,7 +456,7 @@ because the repo is in development mode (see §6.0):
   the password: `@`→`%40`, `#`→`%23`, `:`→`%3A`. Append `?authSource=admin`
   when the auth user lives in the `admin` database.
 - Connection pool, timeouts, and the forced `BloodBank` db name are set in
-  `config/db.js` (`maxPoolSize: 200`, `serverSelectionTimeoutMS: 5000`,
+  `src/core/db` (`maxPoolSize: 200`, `serverSelectionTimeoutMS: 5000`,
   `socketTimeoutMS: 10000`).
 
 ### 7.2 Redis
@@ -459,16 +475,27 @@ because the repo is in development mode (see §6.0):
 3. Put it in `EMAIL_PASS` (never the account password).
 4. Port `465` + `EMAIL_SECURE=true` (SSL) — current production setting.
    Alternatively `587` + `EMAIL_SECURE=false` (STARTTLS).
-5. `config/mailConfig.js` verifies the transporter on boot and logs the result.
+5. `src/core/mail` verifies the transporter on boot and logs the result.
    If `EMAIL_USER`/`EMAIL_PASS` are unset, verification is skipped (no crash).
 
-### 7.4 SMS (Twilio / AWS SNS) — optional
+### 7.4 File storage (S3 / MinIO)
 
-- Twilio: set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`.
-  `config/twilio.js` initializes lazily; if any var is missing it logs a
-  warning and disables SMS — the server still boots.
-- AWS SNS: set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`,
-  `SNS_PHONE`.
+`src/modules/upload` talks to any S3-compatible object store through
+`@aws-sdk/client-s3`. Production uses a self-hosted MinIO instance.
+
+- `S3_ENDPOINT` — full base URL of the store. Leave empty only when using real
+  AWS S3, in which case `S3_REGION` selects the endpoint.
+- `S3_ACCESS_KEY` / `S3_SECRET_KEY` — credentials.
+- `S3_BUCKET` — bucket name; must already exist.
+- `S3_PUBLIC_URL` — public base URL prepended to stored object keys to build
+  the URL handed back to the client. Usually `<S3_ENDPOINT>/<S3_BUCKET>`.
+
+These have blank defaults, so an unset value produces a runtime upload failure
+rather than a boot failure. `docker-compose.yml` marks them required.
+
+> **SMS is not wired.** No Twilio or AWS SNS provider exists in the codebase.
+> The corresponding env vars were removed; do not add them back without an
+> actual consumer.
 
 ---
 
@@ -485,10 +512,14 @@ because the repo is in development mode (see §6.0):
 
 ```bash
 cd server
-npm install
+npm ci                        # use ci, not install — respects the lockfile
 cp .env.example .env          # then edit .env with dev values
-npm start                     # nodemon server.js — auto-reload
+npm run dev                   # tsx watch src/server.ts — auto-reload
 ```
+
+Other useful scripts: `npm run typecheck`, `npm run lint`, `npm test`,
+`npm run build` (→ `dist/`). These four are exactly what CI runs, so a green
+local run means a green `verify` job.
 
 Dev `.env` essentials:
 
@@ -504,7 +535,6 @@ ACCESS_TOKEN_EXPIRY=15m
 REFRESH_TOKEN_EXPIRY=7d
 REPORTS_DIR=./reports
 NEAR_EXPIRY_DAYS=2
-TIMEZONE=Asia/Kolkata
 SYSTEM_USER_ID=<valid-mongo-objectid>
 ```
 
@@ -545,25 +575,36 @@ Production runs the API + Redis + Nginx via `docker-compose.yml`.
 ### 9.1 Prepare
 
 1. Provision the host (Docker + Docker Compose installed).
-2. Create production `server/.env` from `.env.example` with **production
-   values and freshly rotated secrets** (see [Security](#10-security)).
-3. In `docker-compose.yml`:
-   - **Uncomment** `REDIS_URL: "redis://redis:6379"`.
-   - Set `MONGODB_URI` to the production database (env block or a secret).
-   - Set `CORS_SERVER` to the production domain.
-   - Confirm `NODE_ENV: "production"`.
-4. In `client/.env` set `VITE_APP_URI_API` to the production API URL, then
-   build: `cd client && npm run build` (output in `client/dist/`).
-5. Confirm prod domains are in the `allowedOrigins` array in `server.js`.
-6. Confirm the expiry cron in `queues/expiry-queue.js` is the daily schedule.
+2. Put a `.env` next to `docker-compose.yml` on the host containing **production
+   values and freshly rotated secrets** (see [Security](#10-security)). The
+   CI/CD deploy job rewrites this file from GitHub Secrets on every deploy, so
+   editing it by hand is only for out-of-band runs.
+3. Confirm every required variable from §6.3 is present. Compose fails fast
+   with a named error if one is missing.
+4. Set `CORS_SERVER` to the production domain (it is merged into the CORS
+   allow-list, no code change needed).
+5. In the Vercel project for `client/`, set `VITE_APP_URI_API` to the
+   production API URL and redeploy. The client is **not** built or deployed by
+   this pipeline.
 
 ### 9.2 Deploy with Docker Compose
 
 ```bash
-docker-compose up -d           # start api + redis + nginx
-docker-compose ps              # check status
-docker-compose logs -f api     # follow API logs
+docker compose up -d --scale api=2   # start 2 api replicas + redis + nginx
+docker compose ps                    # check status
+docker compose logs -f api           # follow API logs
 ```
+
+In normal operation this is driven by the `deploy` job in
+`.github/workflows/deploy.yml`, which on every push to `main`:
+
+1. writes `/root/blood-bank/.env` (mode `600`) from GitHub Secrets,
+2. `git pull origin main` for the latest `docker-compose.yml` / `nginx.conf`,
+3. pulls the new image,
+4. runs a **throwaway api+redis pair on an isolated network** and polls
+   `/health` up to 10 times — if it never answers, the deploy aborts and the
+   running stack is left untouched,
+5. only then `docker compose down && pull && up -d --scale api=2`.
 
 Stack from `docker-compose.yml`:
 
@@ -587,9 +628,14 @@ The API container runs as non-root user `node` (see `Dockerfile`) with
 - `client_max_body_size 20M` — upload limit.
 
 > When the production domain changes, update the CORS origin in the `OPTIONS`
-> block of `nginx.conf` **and** the `allowedOrigins` array in `server.js`.
+> block of `nginx.conf` **and** set `CORS_SERVER` (or add the domain to
+> `STATIC_ORIGINS` in `src/core/config/cors.ts`).
 
 ### 9.4 Build / publish the API image
+
+CI does this automatically on push to `main` (`build-test-push` job: build →
+Trivy scan, failing on any fixable HIGH/CRITICAL → push `:latest` and
+`:<sha>`). Manual equivalent:
 
 ```bash
 cd server
@@ -597,32 +643,49 @@ docker build -t byteninjasmit/blood-bank-api:latest .
 docker push byteninjasmit/blood-bank-api:latest
 ```
 
-On the host: `docker-compose pull && docker-compose up -d` (the api service
+On the host: `docker compose pull && docker compose up -d` (the api service
 has `pull_policy: always`).
 
-### 9.5 Cluster mode (without Docker)
+The image entrypoint is `CMD ["node", "dist/server.js"]`. The build stage runs
+`npm run build` (tsc + tsc-alias); the runtime stage installs with
+`npm ci --omit=dev` and runs as the non-root `node` user.
 
-`start.js` forks one worker per CPU when `NODE_ENV=production` and restarts
-dead workers. Run `node start.js` instead of `node server.js` for bare-metal
-production.
+### 9.5 Scaling
 
-### 9.6 Client hosting
+Redundancy comes from replicas, not from Node's `cluster` module:
+`docker compose up -d --scale api=2`. Nginx load-balances them through Docker
+DNS (`upstream api_cluster { server api:5000; }`), and Redis-backed rate
+limiting plus the Socket.IO Redis adapter keep state consistent across
+replicas.
 
-`client/vercel.json` rewrites all routes to `/` (SPA fallback) — suitable for
-Vercel or any static host. Serve the built `client/dist/` behind HTTPS.
+### 9.6 Client hosting — separate pipeline
+
+**The CI/CD workflow in this repo builds and deploys the API only.** The React
+client is a separate Vercel project that builds from the same repo on its own
+triggers; `client/vercel.json` rewrites all routes to `/` for SPA fallback.
+
+Consequences worth knowing:
+
+- A client-only change does not go through `deploy.yml` at all. Its lint/build
+  gate is Vercel's.
+- `VITE_APP_URI_API` is baked in at **build** time, so changing the API URL
+  requires a Vercel redeploy, not just an env edit.
+- `public-frontend/` (Next.js marketing site) is likewise deployed separately
+  and is not covered by this pipeline.
 
 ### 9.7 Production checklist
 
-- [ ] All secrets rotated and unique (not the committed dev values)
-- [ ] `server/.env` filled with production values, not in git
+- [ ] All secrets rotated and unique (not the values in git history)
+- [ ] Host `.env` filled with production values, mode `600`, not in git
+- [ ] Every GitHub Secret consumed by `deploy.yml` exists and is non-empty
 - [ ] `NODE_ENV=production`
 - [ ] `MONGODB_URI` → production DB; password URL-encoded
-- [ ] `REDIS_URL` uncommented in `docker-compose.yml` → `redis://redis:6379`
-- [ ] `CORS_SERVER` + `allowedOrigins` (server.js) + `nginx.conf` OPTIONS block
-      all set to the production domain
-- [ ] `VITE_APP_URI_API` points to the production API; client rebuilt
-- [ ] Expiry cron is the daily schedule, not a test interval
-- [ ] Health checks passing (`/health`)
+- [ ] `REDIS_URL=redis://redis:6379` (never `localhost` inside a container)
+- [ ] `BANK_*` set to the real licence details — they print on reports
+- [ ] `S3_*` set and the bucket exists; test one upload after deploy
+- [ ] `CORS_SERVER` + `nginx.conf` OPTIONS block set to the production domain
+- [ ] `VITE_APP_URI_API` points to the production API; client redeployed on Vercel
+- [ ] Health checks passing (`/health`, `/health/queues`)
 - [ ] HTTPS/TLS terminated in front of Nginx
 - [ ] MongoDB auth + TLS enabled
 - [ ] Logs writing to `server/logs/`; rotation configured
@@ -632,44 +695,64 @@ Vercel or any static host. Serve the built `client/dist/` behind HTTPS.
 
 ## 10. Security
 
-### 10.1 ⚠️ Committed secrets — fix before production
+### 10.1 ⚠️ Secrets in git history — rotation still outstanding
 
-`server/.env` and `client/.env` are **tracked in git** even though `.gitignore`
-lists `.env`. Live credentials are exposed in repository history:
+`server/.env` and `client/.env` are **no longer tracked** — that was fixed in
+commit `038df44`, and `.gitignore` now covers them. The current working tree
+and every tracked file are clean; a scan for connection strings, AWS keys and
+private keys across tracked source returns nothing but placeholders in
+`.env.example`.
 
-- MongoDB username/password and host
-- `AWS_SECRET_ACCESS_KEY`
-- `TWILIO_AUTH_TOKEN`
-- Gmail `EMAIL_PASS`
+**The history is not clean.** `server/.env` was committed from `72093fe`
+onwards and `client/.env` from `d36ea34`, so live values remain readable in
+roughly a dozen reachable commits via `git show <sha>:server/.env`:
+
+- MongoDB username, password and host
 - `JWT_SECRET`, `JWT_SECRET_KEY`
+- Gmail `EMAIL_PASS` (app password)
+
+Untracking a file does not remove it from history. Anyone who has ever cloned
+this repository still holds those values.
 
 **Required actions:**
 
-1. **Rotate every exposed credential** — MongoDB password, AWS key, Twilio
-   token, Gmail app password, and generate new JWT secrets. Anyone who has
-   cloned the repo already holds the old values; rotation is the only fix.
-2. Stop tracking the files:
-   ```bash
-   git rm --cached server/.env client/.env
-   git commit -m "stop tracking .env files"
-   ```
-3. The `.env.example` templates (committed) replace them as the shared
-   reference.
-4. To purge secrets from existing history, rewrite it with `git filter-repo`
-   (or BFG) and force-push — coordinate with everyone who has a clone.
+1. **Rotate every exposed credential** — MongoDB password, both JWT secrets,
+   and the Gmail app password. Rotation is the only real fix; do this first.
+   Generate new JWT secrets with `openssl rand -base64 48`.
+2. Rotating `JWT_SECRET` / `JWT_SECRET_KEY` invalidates all live sessions —
+   every user is logged out and must sign in again. Schedule it accordingly.
+3. Optionally purge the blobs from history with `git filter-repo` (or BFG) and
+   force-push. This rewrites every commit hash, so coordinate with everyone
+   holding a clone. Rotation matters more than purging — do not let the purge
+   plan delay step 1.
+4. Audit the MinIO credentials in the current `server/.env` as well: if they
+   reuse a password pattern shared with the leaked Mongo credential, rotate
+   them too.
 
 ### 10.2 Built-in protections (already in code)
 
-- **helmet** — HTTP security headers (`server.js`).
-- **CORS** — origin allow-list in `server.js`; credentials enabled.
-- **Rate limiting** — global `rate-limiter-flexible` (100 req / 30s per IP,
-  15s block) backed by Redis; stricter `express-rate-limit` (10 req / 30s) for
-  sensitive endpoints.
+- **helmet** — HTTP security headers (`src/app.ts`).
+- **CORS** — origin allow-list in `src/core/config/cors.ts`; no wildcard;
+  credentials enabled so the httpOnly refresh cookie flows.
+- **Rate limiting** — Redis-backed `rate-limiter-flexible`, so limits hold
+  across all `api` replicas: global 100 req / 30s per IP (15s block), and
+  10 req / 60s (60s block) on `/api/v2/auth`.
 - **trust proxy** — `app.set("trust proxy", 1)` so limits use the real client
   IP behind Nginx.
-- **JWT auth** — short-lived access token (`15m`) + refresh token (`7d`).
+- **JWT auth** — short-lived access token (`15m`, signed with
+  `JWT_SECRET_KEY`) + refresh token (`7d`, signed with `JWT_SECRET`) —
+  separate secrets, so leaking one does not forge the other.
+- **Cookies** — `httpOnly` always; `secure` + `sameSite: none` in production.
+- **RBAC** — every route under `src/modules/` declares `requirePermission(...)`
+  (`auth.routes.ts` is the only exception). Note that `role` is a free-text
+  display label with **no** authorization weight — the per-user permission
+  grid in `src/shared/role-map.ts` is the sole source of truth.
+- **Log redaction** — `src/core/logger` censors auth headers, cookies, and
+  password/token/OTP bodies, plus `JWT_SECRET`, `JWT_SECRET_KEY`,
+  `EMAIL_PASS`, `S3_SECRET_KEY`.
 - **bcrypt** — password hashing.
-- **Input validation** — Zod validators in `server/validators/`.
+- **Input validation** — Zod validators colocated as
+  `src/modules/<f>/<f>.validator.ts`.
 - **Non-root container** — Docker image runs as user `node`.
 
 ### 10.3 Hardening recommendations
@@ -680,23 +763,28 @@ lists `.env`. Live credentials are exposed in repository history:
   plain `:80` and sets `X-Forwarded-Proto http` — terminate TLS at a load
   balancer or add a TLS server block.
 - Enable MongoDB authentication and TLS; restrict network access to the DB
-  host (currently a public IP `212.85.24.35`).
-- Inject secrets via Docker secrets or an env vault, not inline in
-  `docker-compose.yml`.
-- Keep dependencies patched: `npm audit` on `client/` and `server/`.
+  host, which is reachable on a public IP.
+- Keep dependencies patched: `npm audit --omit=dev` on `client/` and
+  `server/`. The `build-test-push` job runs Trivy with `exit-code: 1` on
+  fixable HIGH/CRITICAL, so an unpatched dependency blocks the deploy rather
+  than shipping.
+- `client/` depends on `xlsx`, which has open prototype-pollution and ReDoS
+  advisories and **no upstream fix**. `exceljs` is already a server dependency
+  and is the intended replacement.
 
 ---
 
 ## 11. Health Checks & Monitoring
 
-- **Endpoint:** `GET /health` — returns status, uptime, environment, version,
-  and a `services` object (database, redis, email, pdf).
+- **`GET /health`** — status, uptime, and service name. Used by the Docker
+  healthcheck, by Nginx, and by the CI/CD pre-flight gate.
+- **`GET /health/queues`** — per-queue counts. Returns `200` when every queue
+  has zero failed and zero dead-lettered jobs, `207` (degraded) otherwise.
+  Worth wiring to an alert.
 - **Docker healthchecks:** defined for `api` (`curl /health`), `redis`
   (`redis-cli ping`), and `nginx` (`curl /health`).
-- **Logs:** `server/logs/` — `app.log`, `error.log`, `info.log`. Docker
-  json-file driver caps logs at `10m × 3` files.
-- **Queues:** Bull queue events (`error`, `failed`, `completed`) logged via the
-  shared logger (`config/redis.js`).
+- **Logs:** pino to stdout. In production the Docker json-file driver captures
+  them, capped at `10m × 3` files per container.
 
 ---
 
@@ -705,13 +793,17 @@ lists `.env`. Live credentials are exposed in repository history:
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | `MongoServerSelectionError` | Wrong `MONGODB_URI`, DB down, IP not whitelisted, unencoded password | Verify URI; encode `@`/`#`; check `mongod`/Atlas allow-list |
-| Redis `MaxRetriesPerRequestError` | `REDIS_URL` wrong, Redis down, or unset in container | `redis-cli ping`; uncomment `REDIS_URL` in compose |
-| Queues never run inside Docker | `REDIS_URL` commented in `docker-compose.yml` → ioredis hits `localhost` | Set `REDIS_URL=redis://redis:6379` |
-| CORS error in browser | Origin not in `allowedOrigins` | Add domain to the array in `server.js` (and `nginx.conf` OPTIONS) |
+| Redis `MaxRetriesPerRequestError` | `REDIS_URL` wrong, Redis down, or unset in container | `redis-cli ping`; inside Docker it must be `redis://redis:6379` |
+| Queues never run inside Docker | `REDIS_URL` points at `localhost`, which is the container itself | Set `REDIS_URL=redis://redis:6379` |
+| `Invalid environment variables: ...` on boot | A required var failed the zod schema in `src/core/config/env.ts` | The message names the offending keys; set them |
+| Compose exits with `X is required` | A `${VAR:?}` variable is missing from the host `.env` | See §6.3 for the required list |
+| CORS error in browser | Origin not allow-listed | Add it to `CORS_SERVER` (comma-separated) and to the `nginx.conf` OPTIONS block |
 | Email not sending | Bad app password, 2FA off, wrong port/secure pair | Use Gmail App Password; `465+true` or `587+false` |
+| Uploads fail, server otherwise healthy | `S3_*` unset or bucket missing | Blank S3 vars fail at request time, not boot — check §7.4 |
+| PDF has placeholder licence details | `BANK_*` unset, falling back to defaults | Set all `BANK_*` vars |
 | PDF generation fails | `REPORTS_DIR` missing/not writable | Ensure `./reports` exists and is writable |
-| 429 Too Many Requests | Rate limiter triggered | Expected under load; raise limits in `server.js` if needed |
-| SMS disabled | Missing Twilio/SNS vars | Set `TWILIO_*` / `AWS_*` (optional — server still boots) |
+| 429 Too Many Requests | Rate limiter triggered | Expected under load; tune in `src/core/security/rate-limit.ts` |
+| `npm ci` fails with `Missing: <pkg> from lock file` | `package.json` edited without refreshing the lockfile | Run `npm install` in that workspace and commit the lockfile — CI and the Docker build both use `npm ci` and will fail otherwise |
 
 Debug logging:
 

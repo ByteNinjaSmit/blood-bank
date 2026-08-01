@@ -34,32 +34,34 @@ licensing) see [`../DOCUMENTATION.md`](../DOCUMENTATION.md).
 - **Bull 4** — background job queues
 - **JWT** + **bcrypt** + **cookie-parser** — auth
 - **helmet**, **cors**, **express-rate-limit**, **rate-limiter-flexible** — security
-- **nodemailer** (Gmail SMTP), **Twilio**, **AWS SNS** — notifications
-- **pdfkit** — PDF reports; **Winston** / **Pino** — logging
+- **nodemailer** (Gmail SMTP) — notifications. No SMS provider is wired.
+- **@aws-sdk/client-s3** — uploads to an S3-compatible store (MinIO)
+- **pdfkit** — PDF reports; **Pino** — logging
 - **Zod** — input validation
 
 ## Project Structure
 
 ```
 server/
-├── server.js          app entrypoint (single process)
-├── start.js           cluster entrypoint (forks per CPU in production)
+├── src/               TypeScript source — the only backend tree
+│   ├── server.ts      entrypoint (compiles to dist/server.js)
+│   ├── app.ts         Express app factory
+│   ├── routes.ts      central router registry
+│   ├── core/          config, db, redis, queue, cache, mail, logger, security
+│   ├── modules/       one folder per feature (model/repo/service/controller/
+│   │                  validator/routes/tests colocated)
+│   └── shared/        middlewares, compatibility engine, enums, errors
+├── dist/              build output — what the Docker image runs
 ├── Dockerfile         node:20-bookworm-slim, runs as non-root `node`
-├── config/            db.js, redis.js, mailConfig.js, twilio.js
-├── controllers/       request handlers per domain
-├── routers/           route definitions (*-routes.js)
-├── models/            Mongoose models
-├── middlewares/        auth, admin, role, error, upload
-├── validators/        Zod schemas
-├── queues/            Bull queue definitions
-├── jobs/              background job processors
-├── services/          business logic (expiry, email, reports)
-├── lib/               pdfGenerator, smsClient, helpers
-├── utils/             logger and utilities
+├── scripts/           one-off maintenance + seed scripts (tsx)
 ├── reports/           generated PDF reports
 ├── uploads/           uploaded files
-└── logs/              app.log, error.log, info.log
+└── logs/              runtime logs
 ```
+
+> The legacy CommonJS tree (`server.js`, `start.js`, `config/`, `controllers/`,
+> `routers/`, `models/`, `services/`, …) was deleted. `src/` is canonical.
+> See [`CLAUDE.md`](./CLAUDE.md) for the per-module layering rules.
 
 ## Environment Variables
 
@@ -80,141 +82,157 @@ variables:
 | `NODE_ENV`                                                             | yes       | `development`                                     | `production`                  |
 | `JWT_SECRET`, `JWT_SECRET_KEY`                                         | yes       | dev placeholders                                  | strong random, unique         |
 | `ACCESS_TOKEN_EXPIRY` / `REFRESH_TOKEN_EXPIRY`                         | yes       | `15m` / `7d`                                      | `15m` / `7d`                  |
-| `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_SECURE` | for email | Gmail App Password; `465`+`true` or `587`+`false` | same                          |
+| `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_FROM_NAME`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_SECURE` | for email | Gmail App Password; `465`+`true` or `587`+`false` | same                          |
 | `ADMIN_EMAIL`                                                          | for email | test inbox                                        | admin inbox                   |
-| `REPORTS_DIR`, `NEAR_EXPIRY_DAYS`, `TIMEZONE`                          | yes       | `./reports`, `2`, `Asia/Kolkata`                  | same                          |
-| `AWS_*`, `SNS_PHONE`                                                   | optional  | —                                                 | set if SMS used               |
-| `TWILIO_*`                                                             | optional  | —                                                 | set if SMS used               |
+| `BANK_NAME`, `BANK_ADDRESS`, `BANK_PHONE`, `BANK_LICENSE`, `BANK_WEBSITE` | yes    | real details — they print on reports              | same                          |
+| `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`, `S3_PUBLIC_URL` | for uploads | MinIO dev instance             | MinIO prod instance           |
+| `REPORTS_DIR`, `NEAR_EXPIRY_DAYS`                                      | yes       | `./reports`, `2`                                  | same                          |
 | `SYSTEM_USER_ID`                                                       | yes       | valid Mongo ObjectId                              | valid Mongo ObjectId          |
 
-> Full table, dev-vs-prod comment matrix, and connection details:
+> `BANK_*` and `S3_*` have permissive defaults in `src/core/config/env.ts`, so
+> omitting them does not stop the server booting — it produces reports with
+> placeholder licence details, or uploads that fail per-request.
+>
+> `AWS_*`, `SNS_PHONE`, `TWILIO_*` and `TIMEZONE` were removed; nothing reads
+> them. Don't reintroduce them without a consumer.
+
+> Full table and connection details:
 > [`../DOCUMENTATION.md`](../DOCUMENTATION.md) §5–§7.
 
 ## Installation & Run
 
 ```bash
 cd server
-npm install
+npm ci                        # use ci, not install — respects the lockfile
 cp .env.example .env          # edit with your values
-npm start                     # nodemon server.js (auto-reload)
+npm run dev                   # tsx watch src/server.ts, auto-reload
 ```
 
-| Command                     | Use                                                   |
-| --------------------------- | ----------------------------------------------------- |
-| `npm start` / `npm run dev` | development — `nodemon server.js`, auto-reload        |
-| `node server.js`            | single-process run                                    |
-| `node start.js`             | production cluster — one worker per CPU, auto-restart |
+| Command                | Use                                              |
+| ---------------------- | ------------------------------------------------ |
+| `npm run dev`          | development — `tsx watch src/server.ts`          |
+| `npm run build`        | `tsc` + `tsc-alias` → `dist/`                    |
+| `npm start`            | build, then `node dist/server.js`                |
+| `npm run typecheck`    | `tsc --noEmit`                                    |
+| `npm run lint`         | eslint                                           |
+| `npm test`             | vitest (single run)                              |
+
+> `npm run lint`, `npm run typecheck`, `npm run build` and `npm test` are
+> exactly what the CI `verify` job runs. Green locally = green in CI.
+>
+> Editing `package.json` without re-running `npm install` desynchronises the
+> lockfile, and both CI and the Docker build use `npm ci` — which hard-fails
+> on a desynced lockfile. Always commit the updated `package-lock.json`.
 
 API: `http://localhost:5000` · Health: `http://localhost:5000/health`
 
 ## API Endpoints
 
-Base path `/api`. Route prefixes mounted in `server.js`:
+Base path `/api/v2`. Every module router is mounted in `src/routes.ts`:
 
-| Prefix              | Router               | Domain                                          |
-| ------------------- | -------------------- | ----------------------------------------------- |
-| `/api/auth`         | `auth-routes`        | login, OTP, register, logout, refresh           |
-| `/api/site`         | `site-routes`        | site / branch management                        |
-| `/api/donor`        | `donor-routes`       | donor registration & management                 |
-| `/api/donation`     | `donation-routes`    | blood bag collection                            |
-| `/api/hospitals`    | `hospital-routes`    | hospital master data                            |
-| `/api/inventory`    | `inventory-routes`   | component inventory                             |
-| `/api/requests`     | `request-routes`     | requisitions, matching, issue                   |
-| `/api/component`    | `component-routes`   | component separation                            |
-| `/api/users`        | `user-routes`        | users & roles                                   |
-| `/api/discard`      | `discard-routes`     | discard management                              |
-| `/api/sernology`    | `lab-routes`         | serology / lab results                          |
-| `/api/admin`        | `admin-routes`       | admin operations                                |
-| `/api/dashboard`    | `dashboard-routes`   | dashboard data                                  |
-| `/api/mis`          | `mis-routes`         | MIS reports & KPIs                              |
-| `/api/appointments` | `appointment-routes` | donor appointments                              |
-| `/api/test`         | `test-routes`        | dev/test utilities (e.g. trigger expiry report) |
+```
+adverse-reaction  affected-records  appointment  audit  auth
+bag-discard  bag-inspection  bag-issue  bag-stock  bulk-transfer
+camp  chemical-inventory  component  dashboard  deferral
+donation  donor  donor-card  export  feedback  goods-receipt
+hospital  inventory  lookback  mis  monthly-report
+monthly-report-input  notification  purchase-order  requisition
+role  storage-transfer  transfusion  tti  upload  user  vendor
+```
+
+A few pre-`/api/v2` paths are still mounted in `src/app.ts` for clients that
+have not migrated: `/api/requests`, `/api/component`, `/api/serology`,
+`/api/inventory`, `/api/discard`, `/api/donation`. Do not add new routes there.
 
 Non-API routes:
 
-| Route                 | Purpose                                           |
-| --------------------- | ------------------------------------------------- |
-| `GET /`               | API welcome message                               |
-| `GET /health`         | health check (status, uptime, env, service flags) |
-| `/socket.io/`         | Socket.IO realtime endpoint                       |
-| `/database/uploads/*` | static uploaded files                             |
+| Route            | Purpose                                                |
+| ---------------- | ------------------------------------------------------ |
+| `GET /health`    | health check — status, uptime, service name             |
+| `GET /health/queues` | per-queue counts; `200` healthy, `207` degraded    |
+| `/socket.io/`    | Socket.IO realtime endpoint                             |
 
-> Additional router files exist (`audit-routes`, `import-routes`,
-> `report-routes`, `transfusion-routes`). Mount them in `server.js` before use
-> and document them here when activated.
+Every route declares `requirePermission(...)`; `auth` is the only exception.
+`role` is a display label with no authorization weight — see
+`src/shared/middlewares/rbac.ts`.
 
 ## Connections
 
-| Connection                             | Configured in                        | Variable      |
-| -------------------------------------- | ------------------------------------ | ------------- |
-| MongoDB                                | `config/db.js` (`connectToDatabase`) | `MONGODB_URI` |
-| Redis (rate limit / Socket.IO adapter) | `server.js`                          | `REDIS_URL`   |
-| Redis (Bull queues)                    | `config/redis.js` (`createQueue`)    | `REDIS_URL`   |
-| SMTP                                   | `config/mailConfig.js`               | `EMAIL_*`     |
-| Twilio                                 | `config/twilio.js` (lazy init)       | `TWILIO_*`    |
+| Connection                             | Configured in            | Variable      |
+| -------------------------------------- | ------------------------ | ------------- |
+| MongoDB                                | `src/core/db`            | `MONGODB_URI` |
+| Redis (rate limit / Socket.IO adapter) | `src/core/redis`         | `REDIS_URL`   |
+| Redis (Bull queues)                    | `src/core/queue`         | `REDIS_URL`   |
+| SMTP                                   | `src/core/mail`          | `EMAIL_*`     |
+| S3 / MinIO                             | `src/modules/upload`     | `S3_*`        |
 
 Notes:
 
-- `config/db.js` forces `dbName: 'BloodBank'` — the path in `MONGODB_URI` is
+- `src/core/db` forces `dbName: 'BloodBank'` — the path in `MONGODB_URI` is
   ignored for the database name. Pool size `200`, server-selection timeout `5s`.
 - Inside Docker, Redis is reached as `redis://redis:6379` (service name), not
-  `localhost`. `REDIS_URL` must be set explicitly in containers — ioredis
-  otherwise falls back to `127.0.0.1:6379` and fails.
-- CORS / Socket.IO origins are the hard-coded `allowedOrigins` array in
-  `server.js`. Add production domains there.
+  `localhost`. `REDIS_URL` is required — `src/core/config/env.ts` refuses to
+  boot without it.
+- CORS lives in `src/core/config/cors.ts`: a `STATIC_ORIGINS` array merged with
+  the comma-separated `CORS_SERVER` env var, so new domains need no code change.
 - `app.set("trust proxy", 1)` — required for correct client IPs behind Nginx.
 
 ## Background Queues & Jobs
 
-Bull queues, initialized on boot in `server.js`:
+Bull queues are created through `src/core/queue` and wired up by
+`register-processors.ts` on boot. Each is colocated with its module as
+`<module>.jobs.ts`:
 
-| Queue         | File                        | Purpose                              |
-| ------------- | --------------------------- | ------------------------------------ |
-| Expiry report | `queues/expiry-queue.js`    | daily near-expiry PDF report + email |
-| Discard       | `queues/discard-queue.js`   | discard processing                   |
-| Email OTP     | `queues/email-otp-queue.js` | OTP email delivery                   |
-| Birthday SMS  | `queues/birthday-queue.js`  | birthday SMS notifications           |
+| Queue                     | Defined in                        |
+| ------------------------- | --------------------------------- |
+| `inventory-maintenance`   | `modules/inventory/inventory.jobs.ts` |
+| `inventory-reports`       | `modules/inventory/inventory.jobs.ts` |
+| `component-maintenance`   | `modules/component/component.jobs.ts` |
+| `donor-maintenance`       | `modules/donor/donor.jobs.ts`     |
+| `requisition-maintenance` | `modules/requisition/requisition.jobs.ts` |
+| `tti-maintenance`         | `modules/tti/tti.jobs.ts`         |
 
-Queue defaults (`config/redis.js`): 3 attempts, exponential backoff,
-`removeOnComplete`, lock duration 5 min.
-
-**Expiry report** — generates a near-expiry PDF (`lib/pdfGenerator.js`) via
-`services/blood-expiry-service.js` and emails it to `ADMIN_EMAIL`.
-
-> **Environment difference:** the expiry cron uses a frequent test schedule in
-> development. Set it to the daily production schedule (`0 8 * * *`) before
-> deploying — see [`EMAIL_QUEUE_SETUP.md`](./EMAIL_QUEUE_SETUP.md).
+Every queue gets a dead-letter queue automatically. `GET /health/queues`
+reports failed and DLQ-waiting counts per queue and returns `207` if any is
+non-zero — that endpoint is the one to alert on.
 
 Component-specific near-expiry thresholds: Platelets 1 day, RBC 7 days,
 FFP 30 days, Cryo 30 days.
 
 ## Security
 
-- **helmet** — HTTP security headers.
-- **CORS** — origin allow-list (`allowedOrigins` in `server.js`).
-- **Rate limiting** — global `rate-limiter-flexible` (100 req / 30s per IP,
-  15s block) backed by Redis; stricter `express-rate-limit` (10 req / 30s) for
-  sensitive endpoints.
-- **JWT auth** — short access token (`15m`) + refresh token (`7d`);
-  middleware in `middlewares/auth-middleware.js`, role checks in
-  `role-middleware.js` / `admin-middleware.js`.
+- **helmet** — HTTP security headers (`src/app.ts`).
+- **CORS** — allow-list in `src/core/config/cors.ts`; no wildcard, credentials
+  enabled for the httpOnly refresh cookie.
+- **Rate limiting** — Redis-backed `rate-limiter-flexible`, so limits hold
+  across replicas: 100 req / 30s per IP globally (15s block), 10 req / 60s on
+  `/api/v2/auth` (60s block).
+- **JWT auth** — access token `15m` signed with `JWT_SECRET_KEY`, refresh
+  token `7d` signed with `JWT_SECRET`; verified in
+  `src/shared/middlewares/authenticate.ts`.
+- **Authorization** — `requirePermission(...)` from
+  `src/shared/middlewares/rbac.ts` on every route.
+- **Cookies** — `httpOnly` always; `secure` + `sameSite: none` in production.
 - **bcrypt** — password hashing.
-- **Input validation** — Zod schemas in `validators/`.
+- **Input validation** — Zod schemas at `src/modules/<f>/<f>.validator.ts`.
 - **Non-root container** — Docker image runs as user `node`.
 
 > **Do not commit `.env`.** Use `.env.example` as the shared template. See
-> [`../DOCUMENTATION.md`](../DOCUMENTATION.md) §10 for the committed-secrets
-> warning and rotation steps.
+> [`../DOCUMENTATION.md`](../DOCUMENTATION.md) §10.1 — credentials remain in
+> git history and rotation is still outstanding.
 
 ## Logging & Monitoring
 
-- **Logger:** Winston/Pino (`utils/logger.js`). Logs HTTP requests, queue
-  events, job lifecycle, and errors.
-- **Files:** `logs/app.log`, `logs/error.log`, `logs/info.log`. Docker
-  json-file driver caps at `10m × 3`.
-- **Health:** `GET /health` returns status, uptime, environment, version, and a
-  `services` flag object (database, redis, email, pdf).
+- **Logger:** pino (`src/core/logger`), child loggers per module via
+  `childLogger({ module: 'x-service' })`. Redacts auth headers, cookies,
+  password/token/OTP bodies, and the secret env vars.
+- **Output:** stdout. `pino-pretty` outside production; raw JSON in production,
+  captured by the Docker json-file driver (`10m × 3`).
+- **Health:** `GET /health` and `GET /health/queues`.
 - **Debug logging:** `LOG_LEVEL=debug npm run dev`.
+
+> Never log a request body at INFO — it carries PHI/PII. Use the audit trail
+> (`modules/audit`) instead.
 
 ## Troubleshooting
 
@@ -222,11 +240,14 @@ FFP 30 days, Cryo 30 days.
 | --------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------- |
 | `MongoServerSelectionError`       | bad `MONGODB_URI`, DB down, IP not whitelisted, unencoded password | verify URI; encode `@`→`%40`, `#`→`%23`               |
 | Redis `MaxRetriesPerRequestError` | `REDIS_URL` wrong / unset / Redis down                             | `redis-cli ping`; set `REDIS_URL`                     |
-| Queues idle in Docker             | `REDIS_URL` not set in container → ioredis hits localhost          | set `REDIS_URL=redis://redis:6379`                    |
-| CORS error in browser             | origin missing from allow-list                                     | add domain to `allowedOrigins` in `server.js`         |
+| Queues idle in Docker             | `REDIS_URL` points at localhost, which is the container itself      | set `REDIS_URL=redis://redis:6379`                    |
+| `Invalid environment variables:`  | a required var failed the zod schema                               | the message names the keys; set them                  |
+| CORS error in browser             | origin missing from allow-list                                     | add it to `CORS_SERVER` (comma-separated)             |
 | Email not sending                 | bad app password, 2FA off, wrong port/secure pair                  | use Gmail App Password; `465`+`true` or `587`+`false` |
+| Uploads fail, server healthy      | `S3_*` unset or bucket missing                                     | blank S3 vars fail per-request, not at boot           |
 | PDF generation fails              | `REPORTS_DIR` missing / not writable                               | ensure `./reports` exists and is writable             |
-| `429 Too Many Requests`           | rate limiter triggered                                             | expected under load; tune limits in `server.js`       |
+| `429 Too Many Requests`           | rate limiter triggered                                             | expected under load; tune `src/core/security/rate-limit.ts` |
+| `npm ci`: `Missing: <pkg> from lock file` | `package.json` edited without refreshing the lockfile      | `npm install`, then commit `package-lock.json`        |
 
 More: [`PRODUCTION.md`](./PRODUCTION.md), [`EMAIL_QUEUE_SETUP.md`](./EMAIL_QUEUE_SETUP.md),
 [`../DOCUMENTATION.md`](../DOCUMENTATION.md).

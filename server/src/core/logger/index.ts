@@ -12,8 +12,7 @@ const redactPaths = [
   'JWT_SECRET',
   'JWT_SECRET_KEY',
   'EMAIL_PASS',
-  'AWS_SECRET_ACCESS_KEY',
-  'TWILIO_AUTH_TOKEN',
+  'S3_SECRET_KEY',
 ];
 
 export const logger = pino({

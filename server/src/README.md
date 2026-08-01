@@ -41,19 +41,21 @@ src/
 │   ├── result.ts
 │   └── role-map.ts         legacy 6-role → new 14-role projection
 ├── app.ts                 Express app factory (no listen)
-├── server.ts              standalone bootstrap (PORT+1, side-by-side dev)
+├── server.ts              canonical entrypoint — listens on env.PORT
 └── routes.ts              central registry — registerRoutes() mounts every module router
 ```
 
 Import alias `@/*` → `src/*`. Examples: `@/modules/donor/donor.service`, `@/shared/errors`, `@/core/logger`.
 
-Production: legacy `server.js` does `require('./dist/routes').registerRoutes()` and mounts it at `/api/v2` — same port, same nginx, same CORS.
+Production: `npm run build` emits `dist/`, and the Docker image runs
+`node dist/server.js`. There is no legacy `server.js` — it was deleted.
 
 ## Run
 
 ```bash
-npm run dev:src       # tsx watch on PORT+1
+npm run dev           # tsx watch src/server.ts
 npm run typecheck     # tsc --noEmit
+npm run lint          # eslint
 npm test              # vitest run
 npm run build         # tsc + tsc-alias → dist/
 ```

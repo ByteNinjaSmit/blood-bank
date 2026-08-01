@@ -59,10 +59,10 @@ ADMIN_EMAIL=admin@bloodbank.com
 # Report Configuration
 REPORTS_DIR=./reports
 NEAR_EXPIRY_DAYS=5
-
-# Timezone
-TIMEZONE=Asia/Kolkata
 ```
+
+> There is no `TIMEZONE` variable. Timestamps are stored in UTC and rendered
+> in `Asia/Kolkata` by the client (`client/src/lib/format-date.js`).
 
 ## Gmail Setup for Email
 
