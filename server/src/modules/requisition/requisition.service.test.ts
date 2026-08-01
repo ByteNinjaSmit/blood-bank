@@ -29,10 +29,16 @@ function patient(over: Partial<PatientDto> = {}): PatientDto {
   };
 }
 
+// FEFO drops any unit whose expiresAt is at or before `now`
+// (shared/compatibility/fefo.ts). A hard-coded date silently turns these
+// tests into a time bomb that starts failing on that date, so keep the
+// default relative to the run.
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
 function releasedUnit(
   id: string,
   abo: 'A' | 'O' = 'A',
-  expiresAt = new Date('2026-08-01'),
+  expiresAt = new Date(Date.now() + THIRTY_DAYS_MS),
 ): SelectableUnit {
   return {
     unitId: id,

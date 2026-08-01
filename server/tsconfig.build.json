@@ -1,4 +1,9 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Must stay ./src: with rootDir "." inherited from tsconfig.json the
+    // output would land at dist/src/server.js and break the Dockerfile CMD.
+    "rootDir": "./src"
+  },
   "exclude": ["node_modules", "dist", "**/*.test.ts", "test/**/*"]
 }
