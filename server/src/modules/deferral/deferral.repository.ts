@@ -201,7 +201,9 @@ export function createDeferralRepo(): DeferralRepo {
       const items: DeferralRegisterEntry[] = (docs as any[]).map((d) => {
         const donor = d.donor || {};
         const fullName = donor.name
-          ? [donor.name.firstName, donor.name.middleName, donor.name.lastName].filter(Boolean).join(' ')
+          ? [donor.name.firstName, donor.name.middleName, donor.name.lastName]
+              .filter(Boolean)
+              .join(' ')
           : undefined;
         return {
           id: d._id.toString(),
@@ -212,7 +214,7 @@ export function createDeferralRepo(): DeferralRepo {
           liftedAt: d.liftedAt ? new Date(d.liftedAt).toISOString() : undefined,
           createdAt: new Date(d.createdAt).toISOString(),
           donor: {
-            id: donor._id ? donor._id.toString() : d.donor?.toString?.() ?? '',
+            id: donor._id ? donor._id.toString() : (d.donor?.toString?.() ?? ''),
             donorId: donor.donorId,
             name: fullName,
             bloodGroup: donor.bloodGroup,
@@ -245,7 +247,9 @@ export function createDeferralRepo(): DeferralRepo {
         },
       );
       // Recompute the donor's eligibility now that this deferral is inactive.
-      const lifted = (await DeferralModel.findById(id).select('donor').lean()) as { donor?: { toString(): string } } | null;
+      const lifted = (await DeferralModel.findById(id).select('donor').lean()) as {
+        donor?: { toString(): string };
+      } | null;
       if (lifted?.donor) await syncDonorEligibility(lifted.donor.toString());
     },
   };

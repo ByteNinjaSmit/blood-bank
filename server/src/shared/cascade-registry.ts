@@ -33,7 +33,11 @@ import { HospitalModel } from '@/modules/hospital/hospital.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { transition } from '@/modules/unit/unit.state-machine';
 import type { UnitStatus } from '@/shared/enums';
-import type { CascadeContext, CascadeNode, CascadeRestoreContext } from '@/shared/utils/cascade-delete';
+import type {
+  CascadeContext,
+  CascadeNode,
+  CascadeRestoreContext,
+} from '@/shared/utils/cascade-delete';
 
 // A unit that has already left the bank (or is already in a terminal
 // state) must never be silently discarded by an upstream cascade — it
@@ -89,7 +93,11 @@ const bloodUnitNode: CascadeNode = {
     await BloodUnitModel.updateOne(
       { _id: doc._id },
       {
-        $set: { status: nextStatus, updatedBy: new Types.ObjectId(ctx.actorId), deleteBatchId: ctx.deleteBatchId },
+        $set: {
+          status: nextStatus,
+          updatedBy: new Types.ObjectId(ctx.actorId),
+          deleteBatchId: ctx.deleteBatchId,
+        },
         $push: {
           statusHistory: {
             from: doc.status,
@@ -211,7 +219,11 @@ const bagStockNode: CascadeNode = {
       { _id: doc._id },
       {
         $inc: { receivedQty: -doc.receivedQty },
-        $set: { reversedReceivedQty: doc.receivedQty, lastUpdatedAt: new Date(), updatedBy: new Types.ObjectId(ctx.actorId) },
+        $set: {
+          reversedReceivedQty: doc.receivedQty,
+          lastUpdatedAt: new Date(),
+          updatedBy: new Types.ObjectId(ctx.actorId),
+        },
       },
       { session: ctx.session ?? undefined },
     );
@@ -222,7 +234,11 @@ const bagStockNode: CascadeNode = {
       { _id: doc._id },
       {
         $inc: { receivedQty: doc.reversedReceivedQty },
-        $set: { reversedReceivedQty: 0, lastUpdatedAt: new Date(), updatedBy: new Types.ObjectId(ctx.actorId) },
+        $set: {
+          reversedReceivedQty: 0,
+          lastUpdatedAt: new Date(),
+          updatedBy: new Types.ObjectId(ctx.actorId),
+        },
       },
       { session: ctx.session ?? undefined },
     );

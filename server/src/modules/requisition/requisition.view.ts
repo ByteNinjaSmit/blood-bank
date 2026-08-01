@@ -33,7 +33,9 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
   const donationMap = new Map(donations.map((d) => [d.donationId, d]));
 
   const donorIds = donations.map((d) => d.donor).filter(Boolean);
-  const donors = (await DonorModel.find({ _id: { $in: donorIds } }).select('_id name donorId').lean()) as any[];
+  const donors = (await DonorModel.find({ _id: { $in: donorIds } })
+    .select('_id name donorId')
+    .lean()) as any[];
   const donorMap = new Map(
     donors.map((d) => {
       const fullName = d.name
@@ -111,7 +113,10 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
   }
 
   const patientData = reqDto.patient
-    ? { ...reqDto.patient, patientPublicId: reqDto.patient.patientPublicId || patientDoc?.patientPublicId }
+    ? {
+        ...reqDto.patient,
+        patientPublicId: reqDto.patient.patientPublicId || patientDoc?.patientPublicId,
+      }
     : patientDoc
       ? {
           name: patientDoc.name,
@@ -136,7 +141,9 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
 
   let rejectedByDoc = null;
   if (reqDto.rejectedBy && mongoose.Types.ObjectId.isValid(reqDto.rejectedBy)) {
-    rejectedByDoc = (await UserModel.findById(reqDto.rejectedBy).select('name username').lean()) as any;
+    rejectedByDoc = (await UserModel.findById(reqDto.rejectedBy)
+      .select('name username')
+      .lean()) as any;
   }
 
   // Single merged "Reserved Until" date: the real, unit-level reservedUntil
@@ -157,7 +164,9 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
     matchedInventory,
     reservedUntil,
     status: reqDto.status?.toLowerCase(),
-    hospitalId: hospitalDoc ? { _id: reqDto.hospitalId, name: hospitalDoc.name } : reqDto.hospitalId,
+    hospitalId: hospitalDoc
+      ? { _id: reqDto.hospitalId, name: hospitalDoc.name }
+      : reqDto.hospitalId,
     patient: patientData,
     rejectedBy: rejectedByDoc
       ? {

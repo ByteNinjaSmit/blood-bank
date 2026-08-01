@@ -44,11 +44,7 @@ const ENTITY_MASK_FIELDS: Readonly<Record<string, ReadonlyArray<string>>> = {
   TTIResult: ['rawValue', 'odValue', 'cutoffValue'],
 };
 
-function redactObject(
-  value: unknown,
-  entityType: string,
-  seen = new WeakSet<object>(),
-): unknown {
+function redactObject(value: unknown, entityType: string, seen = new WeakSet<object>()): unknown {
   if (!isPlainObject(value)) return value;
   if (seen.has(value)) return value;
   seen.add(value);

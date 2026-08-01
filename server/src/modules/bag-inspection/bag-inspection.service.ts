@@ -2,7 +2,10 @@ import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
 import { withAudit } from '@/shared/utils/with-audit';
 import { NotFoundError } from '@/shared/errors';
-import type { BagInspectionRepo, BagInspectionDto } from '@/modules/bag-inspection/bag-inspection.repository';
+import type {
+  BagInspectionRepo,
+  BagInspectionDto,
+} from '@/modules/bag-inspection/bag-inspection.repository';
 import type {
   CreateBagInspectionInput,
   UpdateBagInspectionReportInput,
@@ -12,10 +15,16 @@ import type { GRNRepo } from '@/modules/goods-receipt/goods-receipt.repository';
 import type { BagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
 
 export interface BagInspectionService {
-  list(q: ListBagInspectionInput): Promise<{ items: BagInspectionDto[]; total: number; page: number; pageSize: number }>;
+  list(
+    q: ListBagInspectionInput,
+  ): Promise<{ items: BagInspectionDto[]; total: number; page: number; pageSize: number }>;
   get(id: string): Promise<BagInspectionDto>;
   create(input: CreateBagInspectionInput, actorId: string): Promise<BagInspectionDto>;
-  updateReport(id: string, input: UpdateBagInspectionReportInput, actorId: string): Promise<BagInspectionDto>;
+  updateReport(
+    id: string,
+    input: UpdateBagInspectionReportInput,
+    actorId: string,
+  ): Promise<BagInspectionDto>;
 }
 
 function generateInspectionId(): string {
@@ -69,7 +78,10 @@ export function createBagInspectionService(deps: {
         bloodGroup: input.bloodGroup,
         actorId,
       });
-      log.info({ inspectionId, grnId: input.grnId, decision: input.decision, actorId }, 'bag inspection recorded');
+      log.info(
+        { inspectionId, grnId: input.grnId, decision: input.decision, actorId },
+        'bag inspection recorded',
+      );
       void withAudit(
         { actorId },
         {
@@ -92,39 +104,59 @@ export function createBagInspectionService(deps: {
 
       const mergedPhysicalChecks = {
         ...inspection.physicalChecks,
-        ...(input.physicalChecks || {})
+        ...(input.physicalChecks || {}),
       };
-      const mergedAnticoagulant = input.anticoagulantVolumeOk !== undefined ? input.anticoagulantVolumeOk : inspection.anticoagulantVolumeOk;
-      const mergedPatency = input.tubePatency !== undefined ? input.tubePatency : inspection.tubePatency;
+      const mergedAnticoagulant =
+        input.anticoagulantVolumeOk !== undefined
+          ? input.anticoagulantVolumeOk
+          : inspection.anticoagulantVolumeOk;
+      const mergedPatency =
+        input.tubePatency !== undefined ? input.tubePatency : inspection.tubePatency;
 
-      const hasFailedCheck = 
+      const hasFailedCheck =
         mergedAnticoagulant === false ||
         mergedPatency === false ||
-        (mergedPhysicalChecks && Object.values(mergedPhysicalChecks).some(v => v === false));
+        (mergedPhysicalChecks && Object.values(mergedPhysicalChecks).some((v) => v === false));
 
-      const testResultVal = input.testResult !== undefined ? input.testResult : inspection.testResult;
-      const hasFailedTestResult = testResultVal && /fail|contaminat|leak|broken|reject/i.test(testResultVal);
-      const isFailed = Boolean(hasFailedCheck || hasFailedTestResult || input.decision === 'REJECTED' || (input.decision === undefined && inspection.decision === 'REJECTED'));
+      const testResultVal =
+        input.testResult !== undefined ? input.testResult : inspection.testResult;
+      const hasFailedTestResult =
+        testResultVal && /fail|contaminat|leak|broken|reject/i.test(testResultVal);
+      const isFailed = Boolean(
+        hasFailedCheck ||
+        hasFailedTestResult ||
+        input.decision === 'REJECTED' ||
+        (input.decision === undefined && inspection.decision === 'REJECTED'),
+      );
       const decision = isFailed ? 'REJECTED' : 'ACCEPTED';
 
-      const updated = await deps.inspections.update(id, {
-        testingStatus: input.testingStatus || 'REPORT_RECEIVED',
-        reportDate: input.reportDate,
-        bagNo: input.bagNo,
-        segmentNo: input.segmentNo,
-        bloodGroup: input.bloodGroup,
-        testResult: input.testResult,
-        factorVIII: input.factorVIII,
-        fibrinogen: input.fibrinogen,
-        reportImage: input.reportImage,
-        physicalChecks: input.physicalChecks,
-        anticoagulantVolumeOk: input.anticoagulantVolumeOk,
-        tubePatency: input.tubePatency,
-        testingLab: input.testingLab,
-        sentDate: input.sentDate,
-        decision,
-        rejectionReason: isFailed ? (input.rejectionReason || (input.rejectionReason === '' ? '' : (inspection.rejectionReason || 'Quality check failed'))) : undefined,
-      }, actorId);
+      const updated = await deps.inspections.update(
+        id,
+        {
+          testingStatus: input.testingStatus || 'REPORT_RECEIVED',
+          reportDate: input.reportDate,
+          bagNo: input.bagNo,
+          segmentNo: input.segmentNo,
+          bloodGroup: input.bloodGroup,
+          testResult: input.testResult,
+          factorVIII: input.factorVIII,
+          fibrinogen: input.fibrinogen,
+          reportImage: input.reportImage,
+          physicalChecks: input.physicalChecks,
+          anticoagulantVolumeOk: input.anticoagulantVolumeOk,
+          tubePatency: input.tubePatency,
+          testingLab: input.testingLab,
+          sentDate: input.sentDate,
+          decision,
+          rejectionReason: isFailed
+            ? input.rejectionReason ||
+              (input.rejectionReason === ''
+                ? ''
+                : inspection.rejectionReason || 'Quality check failed')
+            : undefined,
+        },
+        actorId,
+      );
 
       if (!updated) throw new NotFoundError('BagInspection', id);
       log.info({ inspectionId: updated.inspectionId, actorId }, 'bag inspection report updated');
@@ -157,7 +189,8 @@ export function createBagInspectionService(deps: {
       // prior report was accepted. A first-time report filing (status
       // was still SENT) has never touched stock regardless of what the
       // pre-report physical-check decision happened to be.
-      const wasStocked = inspection.testingStatus === 'REPORT_RECEIVED' && inspection.decision === 'ACCEPTED';
+      const wasStocked =
+        inspection.testingStatus === 'REPORT_RECEIVED' && inspection.decision === 'ACCEPTED';
       const nowAccepted = decision === 'ACCEPTED';
 
       if (nowAccepted !== wasStocked) {
@@ -174,7 +207,12 @@ export function createBagInspectionService(deps: {
             actorId,
           );
           log.info(
-            { batchNumber: updated.batchNumber, bagType: line.bagType, quantityReceived, nowAccepted },
+            {
+              batchNumber: updated.batchNumber,
+              bagType: line.bagType,
+              quantityReceived,
+              nowAccepted,
+            },
             nowAccepted
               ? 'batch accepted: bag units added to inventory'
               : 'batch corrected to rejected: bag units removed from inventory',

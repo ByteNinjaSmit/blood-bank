@@ -15,11 +15,6 @@ const controllers = createLookbackControllers(service);
 const router = Router();
 
 // Lookback recall is a high-authority action — BBO / MO only.
-router.post(
-  '/run',
-  authenticate,
-  requirePermission('lookback:run'),
-  controllers.run,
-);
+router.post('/run', authenticate, requirePermission('lookback:run'), controllers.run);
 
 export default router;

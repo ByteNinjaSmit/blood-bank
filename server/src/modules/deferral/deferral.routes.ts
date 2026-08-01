@@ -9,12 +9,7 @@ const controllers = createDeferralControllers(repo);
 
 const router = Router();
 
-router.get(
-  '/',
-  authenticate,
-  requirePermission('donor:read'),
-  controllers.list,
-);
+router.get('/', authenticate, requirePermission('donor:read'), controllers.list);
 
 router.get(
   '/donor/:donorId',
@@ -23,19 +18,9 @@ router.get(
   controllers.listByDonor,
 );
 
-router.post(
-  '/',
-  authenticate,
-  requirePermission('donor:update'),
-  controllers.create,
-);
+router.post('/', authenticate, requirePermission('donor:update'), controllers.create);
 
 // Lifting a deferral is a clinical override — BBO / MO only.
-router.post(
-  '/:id/lift',
-  authenticate,
-  requirePermission('donor:update'),
-  controllers.lift,
-);
+router.post('/:id/lift', authenticate, requirePermission('donor:update'), controllers.lift);
 
 export default router;

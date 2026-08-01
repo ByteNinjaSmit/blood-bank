@@ -30,7 +30,7 @@ export async function runAutoUnreserveScan(): Promise<number> {
   const reservedUnits = await BloodUnitModel.find({
     status: 'RESERVED',
     reservedUntil: { $lt: now },
-    deletedAt: null
+    deletedAt: null,
   });
 
   let unreservedCount = 0;

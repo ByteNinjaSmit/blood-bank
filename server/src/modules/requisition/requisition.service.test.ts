@@ -134,9 +134,19 @@ describe('requisition-service.match', () => {
     // (the readiness gate blocks approve otherwise).
     const grouping = { cellGrouping: { antiA: 'POS_4' as const, antiB: 'NEG_0' as const } };
     const matchedUnits = [
-      { unitId: 'U1', componentType: 'PRBC' as const, compatibilityType: 'EXACT' as const, reserved: false, crossmatchRequired: true, crossmatchStatus: 'COMPATIBLE' as const, grouping },
+      {
+        unitId: 'U1',
+        componentType: 'PRBC' as const,
+        compatibilityType: 'EXACT' as const,
+        reserved: false,
+        crossmatchRequired: true,
+        crossmatchStatus: 'COMPATIBLE' as const,
+        grouping,
+      },
     ];
-    const d = deps({ req: reqDto({ status: 'MATCHED', matchedUnits, recipientGrouping: grouping }) });
+    const d = deps({
+      req: reqDto({ status: 'MATCHED', matchedUnits, recipientGrouping: grouping }),
+    });
     d.units.applyEvent = vi.fn().mockResolvedValue({ status: 'RESERVED' });
     d.requisitions.setStatus = vi.fn().mockResolvedValue(reqDto({ status: 'APPROVED' }));
     const svc = createRequisitionService(d);
@@ -150,11 +160,20 @@ describe('requisition-service.match', () => {
 
   it('refuses to approve until grouping + crossmatch worksheets are recorded', async () => {
     const matchedUnits = [
-      { unitId: 'U1', componentType: 'PRBC' as const, compatibilityType: 'EXACT' as const, reserved: false, crossmatchRequired: true, crossmatchStatus: 'PENDING' as const },
+      {
+        unitId: 'U1',
+        componentType: 'PRBC' as const,
+        compatibilityType: 'EXACT' as const,
+        reserved: false,
+        crossmatchRequired: true,
+        crossmatchStatus: 'PENDING' as const,
+      },
     ];
     const d = deps({ req: reqDto({ status: 'MATCHED', matchedUnits }) });
     const svc = createRequisitionService(d);
-    await expect(svc.approve(REQ_ID, 'actor')).rejects.toThrow(/complete the grouping and crossmatch/i);
+    await expect(svc.approve(REQ_ID, 'actor')).rejects.toThrow(
+      /complete the grouping and crossmatch/i,
+    );
     // Nothing reserved — the gate short-circuits before touching inventory.
     expect(d.units.applyEvent).not.toHaveBeenCalled();
   });
@@ -165,7 +184,15 @@ describe('requisition-service.match', () => {
     const { requisition, shortages } = await svc.match(REQ_ID, 'actor');
     expect(requisition.matchedUnits).toHaveLength(1);
     expect(shortages).toEqual([
-      { componentType: 'PRBC', bloodGroup: 'A', rh: 'Positive', required: 2, available: 1, compatibleGroupsSearched: ['A'], specialNeeds: [] },
+      {
+        componentType: 'PRBC',
+        bloodGroup: 'A',
+        rh: 'Positive',
+        required: 2,
+        available: 1,
+        compatibleGroupsSearched: ['A'],
+        specialNeeds: [],
+      },
     ]);
   });
 
@@ -189,8 +216,20 @@ describe('requisition-service.reject', () => {
       req: reqDto({
         status: 'APPROVED',
         matchedUnits: [
-          { unitId: 'U1', componentType: 'PRBC', compatibilityType: 'EXACT', crossmatchRequired: true, crossmatchStatus: 'COMPATIBLE' },
-          { unitId: 'U2', componentType: 'PRBC', compatibilityType: 'EXACT', crossmatchRequired: true, crossmatchStatus: 'COMPATIBLE' },
+          {
+            unitId: 'U1',
+            componentType: 'PRBC',
+            compatibilityType: 'EXACT',
+            crossmatchRequired: true,
+            crossmatchStatus: 'COMPATIBLE',
+          },
+          {
+            unitId: 'U2',
+            componentType: 'PRBC',
+            compatibilityType: 'EXACT',
+            crossmatchRequired: true,
+            crossmatchStatus: 'COMPATIBLE',
+          },
         ],
       }),
     });
@@ -219,7 +258,13 @@ describe('requisition-service.complete', () => {
       req: reqDto({
         status: 'APPROVED',
         matchedUnits: [
-          { unitId: 'U1', componentType: 'PRBC', compatibilityType: 'EXACT', crossmatchRequired: true, crossmatchStatus: 'COMPATIBLE' },
+          {
+            unitId: 'U1',
+            componentType: 'PRBC',
+            compatibilityType: 'EXACT',
+            crossmatchRequired: true,
+            crossmatchStatus: 'COMPATIBLE',
+          },
         ],
       }),
     });

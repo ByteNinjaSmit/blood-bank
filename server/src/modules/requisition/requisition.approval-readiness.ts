@@ -6,7 +6,10 @@
 // substitute-compatibility sign-off (for non-exact groups). The client gates
 // the Approve button on the same checks; this is the server-side guarantee so
 // the invariant holds regardless of which entry point calls approve.
-import type { GroupingWorksheetDto, MatchedUnitDto } from '@/modules/requisition/requisition.repository';
+import type {
+  GroupingWorksheetDto,
+  MatchedUnitDto,
+} from '@/modules/requisition/requisition.repository';
 
 // True when a grouping worksheet has at least one recorded reaction.
 function groupingHasValue(g?: GroupingWorksheetDto | null): boolean {

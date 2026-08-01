@@ -22,7 +22,9 @@ export function createBagDiscardControllers(service: BagDiscardService): BagDisc
         const q = ValidateBagDiscard.listQuery(req);
         const result = await service.list(q);
         res.json({ success: true, data: result, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async get(req, res, next) {
@@ -30,7 +32,9 @@ export function createBagDiscardControllers(service: BagDiscardService): BagDisc
         const { id } = ValidateBagDiscard.idParam(req);
         const data = await service.get(id);
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async create(req, res, next) {
@@ -38,7 +42,9 @@ export function createBagDiscardControllers(service: BagDiscardService): BagDisc
         const body = ValidateBagDiscard.createBody(req);
         const data = await service.create(body, actorId(req));
         res.status(201).json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async approve(req, res, next) {
@@ -47,7 +53,9 @@ export function createBagDiscardControllers(service: BagDiscardService): BagDisc
         const body = ValidateBagDiscard.approveBody(req);
         const data = await service.approve(id, body, actorId(req));
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
   };
 }

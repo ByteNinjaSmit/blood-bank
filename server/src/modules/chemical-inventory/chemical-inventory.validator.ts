@@ -103,7 +103,9 @@ export const ListQuery = z.object({
   categoryId: z.string().regex(OBJECT_ID).optional(),
   supplierId: z.string().regex(OBJECT_ID).optional(),
   manufacturerId: z.string().regex(OBJECT_ID).optional(),
-  status: z.enum(['Active', 'Near Expiry (90 Days)', 'Near Expiry (30 Days)', 'Expired', 'Low Stock']).optional(),
+  status: z
+    .enum(['Active', 'Near Expiry (90 Days)', 'Near Expiry (30 Days)', 'Expired', 'Low Stock'])
+    .optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(20),
 });
@@ -120,7 +122,7 @@ export const UpdatePurchasePaymentsBody = z.object({
       amount: z.number().positive(),
       paymentDate: z.coerce.date(),
       remarks: z.string().trim().max(500).optional(),
-    })
+    }),
   ),
 });
 
@@ -135,7 +137,8 @@ export const ValidateChemicalInventory = {
   createCategory: (req: Request) => parseOrThrow(CreateCategoryBody, req.body, 'request body'),
   createSupplier: (req: Request) => parseOrThrow(CreateSupplierBody, req.body, 'request body'),
   updateSupplier: (req: Request) => parseOrThrow(UpdateSupplierBody, req.body, 'request body'),
-  createManufacturer: (req: Request) => parseOrThrow(CreateManufacturerBody, req.body, 'request body'),
+  createManufacturer: (req: Request) =>
+    parseOrThrow(CreateManufacturerBody, req.body, 'request body'),
   createChemical: (req: Request) => parseOrThrow(CreateChemicalBody, req.body, 'request body'),
   updateChemical: (req: Request) => parseOrThrow(UpdateChemicalBody, req.body, 'request body'),
   createStockLot: (req: Request) => parseOrThrow(CreateStockLotBody, req.body, 'request body'),
@@ -143,8 +146,10 @@ export const ValidateChemicalInventory = {
   createDamage: (req: Request) => parseOrThrow(CreateDamageBody, req.body, 'request body'),
   updateDamage: (req: Request) => parseOrThrow(UpdateDamageBody, req.body, 'request body'),
   updatePurchase: (req: Request) => parseOrThrow(UpdatePurchaseBody, req.body, 'request body'),
-  updatePurchasePayments: (req: Request) => parseOrThrow(UpdatePurchasePaymentsBody, req.body, 'request body'),
+  updatePurchasePayments: (req: Request) =>
+    parseOrThrow(UpdatePurchasePaymentsBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListQuery, req.query, 'query string'),
-  supplierReportQuery: (req: Request) => parseOrThrow(SupplierReportQuery, req.query, 'query string'),
+  supplierReportQuery: (req: Request) =>
+    parseOrThrow(SupplierReportQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
 };

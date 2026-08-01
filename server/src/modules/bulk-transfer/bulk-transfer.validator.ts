@@ -44,7 +44,10 @@ export const DeleteReasonBody = z.object({
 });
 
 export const ListBulkTransferQuery = z.object({
-  transferType: z.preprocess((v) => (v === '' ? undefined : v), z.enum(['GIVE_LOAN', 'TAKE_LOAN']).optional()),
+  transferType: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.enum(['GIVE_LOAN', 'TAKE_LOAN']).optional(),
+  ),
   search: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
   page: z.coerce.number().int().min(1).default(1),
   // Capped at 5000 (not the usual 200) so the "All Records" Excel export can
@@ -66,5 +69,6 @@ export const ValidateBulkTransfer = {
   updateBody: (req: Request) => parseOrThrow(UpdateBulkTransferBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListBulkTransferQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
-  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
+  deleteReasonBody: (req: Request) =>
+    parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };

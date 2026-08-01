@@ -16,7 +16,10 @@ export const errorMiddleware: ErrorRequestHandler = (err, req, res, _next) => {
     if (err.statusCode >= 500) {
       logger.error({ err, requestId, details: err.details }, 'AppError 5xx');
     } else {
-      logger.warn({ code: err.code, requestId, msg: err.message, details: err.details }, 'AppError');
+      logger.warn(
+        { code: err.code, requestId, msg: err.message, details: err.details },
+        'AppError',
+      );
     }
     res.status(err.statusCode).json({
       success: false,

@@ -68,7 +68,10 @@ const PRBC_VARIANT_TO_SPECIAL_NEED = {
 // normalize known variants case-insensitively. Anything not recognized here is
 // left untouched and logged for manual review.
 const BULK_TRANSFER_VARIANTS = [
-  { canonical: 'PRBC', variants: ['rbc', 'packed cells', 'packed rbc', 'packed red cells', 'pcv', 'prbc'] },
+  {
+    canonical: 'PRBC',
+    variants: ['rbc', 'packed cells', 'packed rbc', 'packed red cells', 'pcv', 'prbc'],
+  },
   { canonical: 'RDP', variants: ['platelet', 'platelets', 'platelet concentrate', 'pc', 'rdp'] },
   { canonical: 'WB', variants: ['whole blood', 'wb'] },
   { canonical: 'CRYO', variants: ['cryo', 'cryoprecipitate'] },
@@ -107,7 +110,10 @@ async function main() {
     const count = await bloodUnits.countDocuments({ componentType: oldType });
     console.log(`[migration] BloodUnit.componentType ${oldType} -> ${newType}: ${count} doc(s)`);
     if (count > 0 && !DRY_RUN) {
-      const res = await bloodUnits.updateMany({ componentType: oldType }, { $set: { componentType: newType } });
+      const res = await bloodUnits.updateMany(
+        { componentType: oldType },
+        { $set: { componentType: newType } },
+      );
       unitCounts.renamed += res.modifiedCount;
     } else {
       unitCounts.renamed += count;
@@ -116,7 +122,9 @@ async function main() {
 
   for (const [variant, specialNeed] of Object.entries(PRBC_VARIANT_TO_SPECIAL_NEED)) {
     const count = await bloodUnits.countDocuments({ componentType: variant });
-    console.log(`[migration] BloodUnit.componentType ${variant} -> PRBC (+specialAttributes: ${specialNeed}): ${count} doc(s)`);
+    console.log(
+      `[migration] BloodUnit.componentType ${variant} -> PRBC (+specialAttributes: ${specialNeed}): ${count} doc(s)`,
+    );
     if (count > 0 && !DRY_RUN) {
       const res = await bloodUnits.updateMany(
         { componentType: variant },
@@ -134,13 +142,18 @@ async function main() {
   // ── 2. Requisition ───────────────────────────────────────────────────────────
   const requisitionCounts = { requestedComponents: 0, matchedUnits: 0 };
   const allOldValues = [...Object.keys(RENAME), ...Object.keys(PRBC_VARIANT_TO_SPECIAL_NEED)];
-  const toNewComponentType = (old) => RENAME[old] ?? (PRBC_VARIANT_TO_SPECIAL_NEED[old] ? 'PRBC' : old);
+  const toNewComponentType = (old) =>
+    RENAME[old] ?? (PRBC_VARIANT_TO_SPECIAL_NEED[old] ? 'PRBC' : old);
 
   for (const oldType of allOldValues) {
     const newType = toNewComponentType(oldType);
 
-    const reqCount = await requisitions.countDocuments({ 'requestedComponents.componentType': oldType });
-    console.log(`[migration] Requisition.requestedComponents[].componentType ${oldType} -> ${newType}: ${reqCount} doc(s)`);
+    const reqCount = await requisitions.countDocuments({
+      'requestedComponents.componentType': oldType,
+    });
+    console.log(
+      `[migration] Requisition.requestedComponents[].componentType ${oldType} -> ${newType}: ${reqCount} doc(s)`,
+    );
     if (reqCount > 0 && !DRY_RUN) {
       const res = await requisitions.updateMany(
         { 'requestedComponents.componentType': oldType },
@@ -152,8 +165,12 @@ async function main() {
       requisitionCounts.requestedComponents += reqCount;
     }
 
-    const matchedCount = await requisitions.countDocuments({ 'matchedUnits.componentType': oldType });
-    console.log(`[migration] Requisition.matchedUnits[].componentType ${oldType} -> ${newType}: ${matchedCount} doc(s)`);
+    const matchedCount = await requisitions.countDocuments({
+      'matchedUnits.componentType': oldType,
+    });
+    console.log(
+      `[migration] Requisition.matchedUnits[].componentType ${oldType} -> ${newType}: ${matchedCount} doc(s)`,
+    );
     if (matchedCount > 0 && !DRY_RUN) {
       const res = await requisitions.updateMany(
         { 'matchedUnits.componentType': oldType },
@@ -171,7 +188,10 @@ async function main() {
   console.log(`[migration] BagInspection.testingType PC -> RDP: ${pcCount} doc(s)`);
   let bagInspectionUpdated = pcCount;
   if (pcCount > 0 && !DRY_RUN) {
-    const res = await bagInspections.updateMany({ testingType: 'PC' }, { $set: { testingType: 'RDP' } });
+    const res = await bagInspections.updateMany(
+      { testingType: 'PC' },
+      { $set: { testingType: 'RDP' } },
+    );
     bagInspectionUpdated = res.modifiedCount;
   }
 
@@ -184,7 +204,9 @@ async function main() {
     let changed = false;
     const items = (doc.items || []).map((item) => {
       // Already canonical — leave untouched (covers FFP/SDP-as-is and idempotent re-runs).
-      const isAlreadyCanonical = ['WB', 'PRBC', 'FFP', 'RDP', 'SDP', 'CRYO'].includes(item.componentType);
+      const isAlreadyCanonical = ['WB', 'PRBC', 'FFP', 'RDP', 'SDP', 'CRYO'].includes(
+        item.componentType,
+      );
       if (isAlreadyCanonical) return item;
 
       const { canonical, recognized } = normalizeBulkTransferComponentType(item.componentType);
@@ -204,7 +226,9 @@ async function main() {
     }
   }
 
-  console.log(`[migration] BulkTransfer.items[].componentType normalized: ${bulkTransferItemsUpdated} item(s)`);
+  console.log(
+    `[migration] BulkTransfer.items[].componentType normalized: ${bulkTransferItemsUpdated} item(s)`,
+  );
   if (unrecognized.size > 0) {
     console.log(
       `[migration] BulkTransfer.items[].componentType UNRECOGNIZED values (left unchanged, needs manual review): ${[...unrecognized].join(', ')}`,

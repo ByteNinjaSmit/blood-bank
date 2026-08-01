@@ -14,11 +14,6 @@ const controllers = createTransfusionControllers(service);
 
 const router = Router();
 
-router.post(
-  '/',
-  authenticate,
-  requirePermission('transfusion:record'),
-  controllers.record,
-);
+router.post('/', authenticate, requirePermission('transfusion:record'), controllers.record);
 
 export default router;

@@ -21,7 +21,9 @@ export interface BagDiscardDto {
   updatedAt: string;
 }
 
-function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date }): BagDiscardDto {
+function toDto(
+  doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date },
+): BagDiscardDto {
   return {
     id: doc._id.toString(),
     discardId: doc.discardId as string,
@@ -56,13 +58,17 @@ export interface BagDiscardRepo {
     reasonDetail?: string;
     actorId: string;
   }): Promise<BagDiscardDto>;
-  approve(id: string, patch: {
-    approvedById: string;
-    approvedAt: Date;
-    disposalMethod?: string;
-    biomedicalWasteManifestNo?: string;
-    disposalDate?: Date;
-  }, actorId: string): Promise<BagDiscardDto | null>;
+  approve(
+    id: string,
+    patch: {
+      approvedById: string;
+      approvedAt: Date;
+      disposalMethod?: string;
+      biomedicalWasteManifestNo?: string;
+      disposalDate?: Date;
+    },
+    actorId: string,
+  ): Promise<BagDiscardDto | null>;
 }
 
 export function createBagDiscardRepo(): BagDiscardRepo {
@@ -84,13 +90,33 @@ export function createBagDiscardRepo(): BagDiscardRepo {
         BagDiscardModel.find(filter).sort({ discardDate: -1 }).skip(skip).limit(pageSize).lean(),
         BagDiscardModel.countDocuments(filter),
       ]);
-      return { items: docs.map((d) => toDto(d as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date })), total };
+      return {
+        items: docs.map((d) =>
+          toDto(
+            d as unknown as Record<string, unknown> & {
+              _id: Types.ObjectId;
+              createdAt?: Date;
+              updatedAt?: Date;
+            },
+          ),
+        ),
+        total,
+      };
     },
 
     async findById(id) {
-      const doc = await BagDiscardModel.findOne({ _id: new Types.ObjectId(id), deletedAt: null }).lean();
+      const doc = await BagDiscardModel.findOne({
+        _id: new Types.ObjectId(id),
+        deletedAt: null,
+      }).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async create(input) {
@@ -107,7 +133,13 @@ export function createBagDiscardRepo(): BagDiscardRepo {
         createdBy: actor,
         updatedBy: actor,
       });
-      return toDto(doc.toObject() as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc.toObject() as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async approve(id, patch, actorId) {
@@ -118,7 +150,8 @@ export function createBagDiscardRepo(): BagDiscardRepo {
         updatedBy: actor,
       };
       if (patch.disposalMethod) update.disposalMethod = patch.disposalMethod;
-      if (patch.biomedicalWasteManifestNo) update.biomedicalWasteManifestNo = patch.biomedicalWasteManifestNo;
+      if (patch.biomedicalWasteManifestNo)
+        update.biomedicalWasteManifestNo = patch.biomedicalWasteManifestNo;
       if (patch.disposalDate) update.disposalDate = patch.disposalDate;
       const doc = await BagDiscardModel.findOneAndUpdate(
         { _id: new Types.ObjectId(id), deletedAt: null },
@@ -126,7 +159,13 @@ export function createBagDiscardRepo(): BagDiscardRepo {
         { new: true },
       ).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
   };
 }

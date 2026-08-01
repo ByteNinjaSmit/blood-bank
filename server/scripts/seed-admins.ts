@@ -42,7 +42,7 @@ async function main() {
       status: { type: String, default: 'active' },
       permissions: { type: [mongoose.Schema.Types.Mixed], default: [] },
     },
-    { timestamps: true }
+    { timestamps: true },
   );
 
   const UserModel = mongoose.models.User || mongoose.model('User', UserSchema);
@@ -56,7 +56,9 @@ async function main() {
   // Check if exists
   const existing = await UserModel.findOne({ email });
   if (existing) {
-    console.log(`User with email ${email} already exists! Status: ${existing.status}. Updating password and role to system-admin...`);
+    console.log(
+      `User with email ${email} already exists! Status: ${existing.status}. Updating password and role to system-admin...`,
+    );
     existing.password = await bcrypt.hash(password, 10);
     existing.role = 'system-admin';
     existing.status = 'active';

@@ -10,7 +10,9 @@ export interface BagInspectionControllers {
   updateReport(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
-export function createBagInspectionControllers(service: BagInspectionService): BagInspectionControllers {
+export function createBagInspectionControllers(
+  service: BagInspectionService,
+): BagInspectionControllers {
   const actorId = (req: Request): string => {
     if (!req.user) throw new UnauthorizedError();
     return req.user.id;
@@ -22,7 +24,9 @@ export function createBagInspectionControllers(service: BagInspectionService): B
         const q = ValidateBagInspection.listQuery(req);
         const result = await service.list(q);
         res.json({ success: true, data: result, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async get(req, res, next) {
@@ -30,7 +34,9 @@ export function createBagInspectionControllers(service: BagInspectionService): B
         const { id } = ValidateBagInspection.idParam(req);
         const data = await service.get(id);
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async create(req, res, next) {
@@ -38,7 +44,9 @@ export function createBagInspectionControllers(service: BagInspectionService): B
         const body = ValidateBagInspection.createBody(req);
         const data = await service.create(body, actorId(req));
         res.status(201).json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async updateReport(req, res, next) {
@@ -47,7 +55,9 @@ export function createBagInspectionControllers(service: BagInspectionService): B
         const body = ValidateBagInspection.updateReportBody(req);
         const data = await service.updateReport(id, body, actorId(req));
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
   };
 }

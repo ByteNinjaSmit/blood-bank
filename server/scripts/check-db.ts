@@ -18,7 +18,10 @@ async function main() {
   const rejectedStocks = await db.collection('bagstocks').find({ status: 'REJECTED' }).toArray();
   console.log('--- REJECTED STOCKS ---', rejectedStocks);
 
-  const rejectedInspections = await db.collection('baginspections').find({ decision: 'REJECTED' }).toArray();
+  const rejectedInspections = await db
+    .collection('baginspections')
+    .find({ decision: 'REJECTED' })
+    .toArray();
   console.log('--- REJECTED INSPECTIONS ---', rejectedInspections);
 
   await mongoose.disconnect();

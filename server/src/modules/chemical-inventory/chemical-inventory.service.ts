@@ -38,7 +38,7 @@ export interface ChemicalInventoryService {
     action: 'OPEN' | 'CONSUME',
     quantity: number,
     actorId: string,
-    unitsRemaining?: number
+    unitsRemaining?: number,
   ): Promise<any>;
 
   // Purchases
@@ -48,8 +48,15 @@ export interface ChemicalInventoryService {
 
   // Damage Register
   listDamages(): Promise<any[]>;
-  createDamage(doc: { lotId: string; quantity: number; reason: string; damagedDate?: Date }, actorId: string): Promise<any>;
-  updateDamage(id: string, patch: { quantity?: number; reason?: string }, actorId: string): Promise<any>;
+  createDamage(
+    doc: { lotId: string; quantity: number; reason: string; damagedDate?: Date },
+    actorId: string,
+  ): Promise<any>;
+  updateDamage(
+    id: string,
+    patch: { quantity?: number; reason?: string },
+    actorId: string,
+  ): Promise<any>;
   deleteDamage(id: string, actorId: string): Promise<any>;
 
   // History
@@ -63,7 +70,9 @@ export interface ChemicalInventoryService {
   getConsumptionReport(): Promise<any[]>;
 }
 
-export function createChemicalInventoryService(deps: { inventory: ChemicalInventoryRepo }): ChemicalInventoryService {
+export function createChemicalInventoryService(deps: {
+  inventory: ChemicalInventoryRepo;
+}): ChemicalInventoryService {
   const log = childLogger({ module: 'chemical-inventory-service' });
 
   async function getOrCreateManufacturer(name: string, actorId: string): Promise<string> {
@@ -152,12 +161,19 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
     },
 
     async createStockLot(doc, actorId) {
-      const existingPurchase = await deps.inventory.findChemicalPurchaseByInvoice(doc.invoiceNumber);
+      const existingPurchase = await deps.inventory.findChemicalPurchaseByInvoice(
+        doc.invoiceNumber,
+      );
       if (existingPurchase) {
-        throw new ConflictError(`Purchase with invoice number '${doc.invoiceNumber}' already exists.`);
+        throw new ConflictError(
+          `Purchase with invoice number '${doc.invoiceNumber}' already exists.`,
+        );
       }
 
-      const totalAmount = doc.items.reduce((sum: number, item: any) => sum + (item.totalAmount || 0), 0);
+      const totalAmount = doc.items.reduce(
+        (sum: number, item: any) => sum + (item.totalAmount || 0),
+        0,
+      );
       const purchase = await deps.inventory.createChemicalPurchase({
         invoiceNumber: doc.invoiceNumber,
         purchaseDate: doc.purchaseDate,
@@ -185,7 +201,7 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
         const chemical = await deps.inventory.findChemicalById(item.chemicalId);
         const packType = item.packType ?? chemical?.defaultPackType ?? 'ML';
         const unitsPerPack =
-          packType === 'ML' ? null : item.unitsPerPack ?? chemical?.defaultUnitsPerPack ?? 96;
+          packType === 'ML' ? null : (item.unitsPerPack ?? chemical?.defaultUnitsPerPack ?? 96);
 
         const lot = await deps.inventory.createStockLot({
           chemicalId: item.chemicalId,
@@ -251,7 +267,10 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
       }
 
       // Calculate paidAmount and status
-      const paidAmount = installments.reduce((sum: number, inst: any) => sum + (inst.amount || 0), 0);
+      const paidAmount = installments.reduce(
+        (sum: number, inst: any) => sum + (inst.amount || 0),
+        0,
+      );
       let paymentStatus: 'Pending' | 'Partially Paid' | 'Fully Paid' = 'Pending';
       if (paidAmount >= purchase.totalAmount) {
         paymentStatus = 'Fully Paid';
@@ -259,11 +278,15 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
         paymentStatus = 'Partially Paid';
       }
 
-      const updated = await deps.inventory.updateChemicalPurchase(id, {
-        installments,
-        paidAmount,
-        paymentStatus,
-      }, actorId);
+      const updated = await deps.inventory.updateChemicalPurchase(
+        id,
+        {
+          installments,
+          paidAmount,
+          paymentStatus,
+        },
+        actorId,
+      );
 
       log.info({ purchaseId: id, paidAmount, paymentStatus, actorId }, 'Purchase payments updated');
       return updated;
@@ -293,7 +316,9 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
           });
         } else {
           if (lot.qtyAvailable < quantity) {
-            throw new ValidationError(`Insufficient available stock. Available: ${lot.qtyAvailable}, requested: ${quantity}`);
+            throw new ValidationError(
+              `Insufficient available stock. Available: ${lot.qtyAvailable}, requested: ${quantity}`,
+            );
           }
           updatePatch.qtyAvailable = lot.qtyAvailable - quantity;
           updatePatch.qtyInUse = lot.qtyInUse + quantity;
@@ -312,7 +337,9 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
         }
       } else if (action === 'CONSUME') {
         if (lot.qtyInUse < quantity) {
-          throw new ValidationError(`Insufficient stock currently in use. In use: ${lot.qtyInUse}, requested: ${quantity}`);
+          throw new ValidationError(
+            `Insufficient stock currently in use. In use: ${lot.qtyInUse}, requested: ${quantity}`,
+          );
         }
 
         if (isVialTracked) {
@@ -373,7 +400,7 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
       if (!lot) throw new NotFoundError('ChemicalStockLot', doc.lotId);
       if (lot.qtyAvailable < doc.quantity) {
         throw new ValidationError(
-          `Insufficient available stock to register damage. Available: ${lot.qtyAvailable}, requested: ${doc.quantity}`
+          `Insufficient available stock to register damage. Available: ${lot.qtyAvailable}, requested: ${doc.quantity}`,
         );
       }
 
@@ -412,7 +439,7 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
         const delta = patch.quantity - damage.quantity; // >0: damaging more, <0: restoring some
         if (delta > 0 && lot.qtyAvailable < delta) {
           throw new ValidationError(
-            `Insufficient available stock to increase damaged quantity. Available: ${lot.qtyAvailable}, additional requested: ${delta}`
+            `Insufficient available stock to increase damaged quantity. Available: ${lot.qtyAvailable}, additional requested: ${delta}`,
           );
         }
         await deps.inventory.adjustLotAvailable(damage.lotId.toString(), -delta);
@@ -433,7 +460,7 @@ export function createChemicalInventoryService(deps: { inventory: ChemicalInvent
           quantity: patch.quantity ?? damage.quantity,
           reason: patch.reason ?? damage.reason,
         },
-        actorId
+        actorId,
       );
 
       log.info({ damageId: id, patch, actorId }, 'Chemical damage record updated');

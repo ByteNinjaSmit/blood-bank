@@ -30,4 +30,3 @@ export function newRedisConnection(): RedisClient {
     enableReadyCheck: false,
   });
 }
-

@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import type { Request } from 'express';
-import { ABO_GROUP, CLINICAL_DISEASE, COMPONENT_TYPE, GRADING_REACTION, RH_FACTOR, SPECIAL_NEED } from '@/shared/enums';
+import {
+  ABO_GROUP,
+  CLINICAL_DISEASE,
+  COMPONENT_TYPE,
+  GRADING_REACTION,
+  RH_FACTOR,
+  SPECIAL_NEED,
+} from '@/shared/enums';
 import { ValidationError } from '@/shared/errors';
 
 const OBJECT_ID = /^[a-f0-9]{24}$/i;
@@ -84,13 +91,15 @@ export const UpdateRequisitionBody = z.object({
   editReason: z.string().trim().max(500).optional(),
 });
 
-export const RejectBody = z.object({
-  reason: z.string().trim().min(1).max(300).optional(),
-  rejectionReason: z.string().trim().min(1).max(300).optional(),
-}).refine(data => data.reason || data.rejectionReason, {
-  message: 'rejectionReason or reason is required',
-  path: ['rejectionReason']
-});
+export const RejectBody = z
+  .object({
+    reason: z.string().trim().min(1).max(300).optional(),
+    rejectionReason: z.string().trim().min(1).max(300).optional(),
+  })
+  .refine((data) => data.reason || data.rejectionReason, {
+    message: 'rejectionReason or reason is required',
+    path: ['rejectionReason'],
+  });
 
 export const RequisitionIdParam = z.object({
   id: z.string().regex(OBJECT_ID, 'Invalid requisition id'),
@@ -101,7 +110,10 @@ export const IssueAllBody = z.object({
 });
 
 export const UpdateCrossmatchLegacyBody = z.object({
-  inventoryId: z.string().trim().min(1, 'Provide inventoryId and crossmatchStatus (compatible | incompatible | pending)'),
+  inventoryId: z
+    .string()
+    .trim()
+    .min(1, 'Provide inventoryId and crossmatchStatus (compatible | incompatible | pending)'),
   crossmatchStatus: z.enum(['compatible', 'incompatible', 'pending']),
   compatibilityResult: z.enum(['MAJOR_COMPATIBLE', 'MINOR_COMPATIBLE', 'UNIVERSAL']).optional(),
   crossmatchDoneAt: z.coerce.date().optional(),
@@ -154,33 +166,59 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T
 }
 
 export const ListRequisitionsQuery = z.object({
-  status: z
-    .preprocess((val) => (val === '' ? undefined : val), z.enum(['PENDING', 'MATCHED', 'CROSSMATCHED', 'APPROVED', 'ISSUED', 'COMPLETED', 'REJECTED']).optional()),
+  status: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z
+      .enum(['PENDING', 'MATCHED', 'CROSSMATCHED', 'APPROVED', 'ISSUED', 'COMPLETED', 'REJECTED'])
+      .optional(),
+  ),
   // Disease/Clinical Indication tab: hide rejected requisitions without
   // pinning the list to one exact status (unlike `status` above).
-  excludeStatus: z
-    .preprocess((val) => (val === '' ? undefined : val), z.enum(['PENDING', 'MATCHED', 'CROSSMATCHED', 'APPROVED', 'ISSUED', 'COMPLETED', 'REJECTED']).optional()),
-  hospitalId: z
-    .preprocess((val) => (val === '' ? undefined : val), z.string().regex(OBJECT_ID).optional()),
-  patientId: z
-    .preprocess((val) => (val === '' ? undefined : val), z.string().regex(OBJECT_ID).optional()),
-  purpose: z
-    .preprocess((val) => (val === '' ? undefined : val), z.enum(['REQUISITION', 'RESERVATION']).optional()),
+  excludeStatus: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z
+      .enum(['PENDING', 'MATCHED', 'CROSSMATCHED', 'APPROVED', 'ISSUED', 'COMPLETED', 'REJECTED'])
+      .optional(),
+  ),
+  hospitalId: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z.string().regex(OBJECT_ID).optional(),
+  ),
+  patientId: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z.string().regex(OBJECT_ID).optional(),
+  ),
+  purpose: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z.enum(['REQUISITION', 'RESERVATION']).optional(),
+  ),
   // Disease/Clinical Indication tab: any requisition with a categorized
   // indication (Thalassemia/Sickle Cell Anaemia/Other), regardless of which.
-  hasClinicalIndication: z
-    .preprocess((val) => (val === '' ? undefined : val), z.coerce.boolean().optional()),
-  indicationCategory: z
-    .preprocess((val) => (val === '' ? undefined : val), z.enum(CLINICAL_DISEASE).optional()),
+  hasClinicalIndication: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z.coerce.boolean().optional(),
+  ),
+  indicationCategory: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z.enum(CLINICAL_DISEASE).optional(),
+  ),
   search: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
-  urgency: z
-    .preprocess((val) => (val === '' ? undefined : val), z.enum(['ROUTINE', 'URGENT', 'EMERGENCY']).optional()),
-  componentType: z
-    .preprocess((val) => (val === '' ? undefined : val), z.enum(COMPONENT_TYPE).optional()),
+  urgency: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z.enum(['ROUTINE', 'URGENT', 'EMERGENCY']).optional(),
+  ),
+  componentType: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z.enum(COMPONENT_TYPE).optional(),
+  ),
   from: z.preprocess((val) => (val === '' ? undefined : val), z.coerce.date().optional()),
   to: z.preprocess((val) => (val === '' ? undefined : val), z.coerce.date().optional()),
-  sortBy: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()).default('updatedAt'),
-  order: z.preprocess((val) => (val === '' ? undefined : val), z.enum(['asc', 'desc']).optional()).default('desc'),
+  sortBy: z
+    .preprocess((val) => (val === '' ? undefined : val), z.string().optional())
+    .default('updatedAt'),
+  order: z
+    .preprocess((val) => (val === '' ? undefined : val), z.enum(['asc', 'desc']).optional())
+    .default('desc'),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(1000).default(20),
 });

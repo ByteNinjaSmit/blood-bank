@@ -9,7 +9,7 @@ const ChemicalCategorySchema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export type ChemicalCategory = InferSchemaType<typeof ChemicalCategorySchema>;
@@ -31,7 +31,7 @@ const ChemicalSupplierSchema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export type ChemicalSupplier = InferSchemaType<typeof ChemicalSupplierSchema>;
@@ -48,7 +48,7 @@ const ChemicalManufacturerSchema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export type ChemicalManufacturer = InferSchemaType<typeof ChemicalManufacturerSchema>;
@@ -61,8 +61,18 @@ export const ChemicalManufacturerModel: ChemicalManufacturerModel =
 const ChemicalSchema = new Schema(
   {
     name: { type: String, required: true, unique: true, trim: true },
-    categoryId: { type: Schema.Types.ObjectId, ref: 'ChemicalCategory', required: true, index: true },
-    manufacturerId: { type: Schema.Types.ObjectId, ref: 'ChemicalManufacturer', required: true, index: true },
+    categoryId: {
+      type: Schema.Types.ObjectId,
+      ref: 'ChemicalCategory',
+      required: true,
+      index: true,
+    },
+    manufacturerId: {
+      type: Schema.Types.ObjectId,
+      ref: 'ChemicalManufacturer',
+      required: true,
+      index: true,
+    },
     unitType: { type: String, enum: ['Bottle', 'Kit', 'Card', 'Pack', 'Bag'], required: true },
     minStockLevel: { type: Number, required: true, min: 0 },
     reorderLevel: { type: Number, required: true, min: 0 },
@@ -73,7 +83,7 @@ const ChemicalSchema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export type Chemical = InferSchemaType<typeof ChemicalSchema>;
@@ -87,7 +97,12 @@ const ChemicalPurchaseSchema = new Schema(
   {
     invoiceNumber: { type: String, required: true, unique: true, trim: true },
     purchaseDate: { type: Date, required: true, index: true },
-    supplierId: { type: Schema.Types.ObjectId, ref: 'ChemicalSupplier', required: true, index: true },
+    supplierId: {
+      type: Schema.Types.ObjectId,
+      ref: 'ChemicalSupplier',
+      required: true,
+      index: true,
+    },
     totalAmount: { type: Number, required: true, default: 0 },
     paidAmount: { type: Number, required: true, default: 0 },
     paymentStatus: {
@@ -109,7 +124,7 @@ const ChemicalPurchaseSchema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export type ChemicalPurchase = InferSchemaType<typeof ChemicalPurchaseSchema>;
@@ -122,10 +137,20 @@ export const ChemicalPurchaseModel: ChemicalPurchaseModel =
 const ChemicalStockLotSchema = new Schema(
   {
     chemicalId: { type: Schema.Types.ObjectId, ref: 'Chemical', required: true, index: true },
-    purchaseId: { type: Schema.Types.ObjectId, ref: 'ChemicalPurchase', default: null, index: true },
+    purchaseId: {
+      type: Schema.Types.ObjectId,
+      ref: 'ChemicalPurchase',
+      default: null,
+      index: true,
+    },
     purchaseDate: { type: Date, required: true, index: true },
     invoiceNumber: { type: String, required: true, trim: true },
-    supplierId: { type: Schema.Types.ObjectId, ref: 'ChemicalSupplier', required: true, index: true },
+    supplierId: {
+      type: Schema.Types.ObjectId,
+      ref: 'ChemicalSupplier',
+      required: true,
+      index: true,
+    },
     manufacturerId: { type: Schema.Types.ObjectId, ref: 'ChemicalManufacturer', required: true },
     lotNumber: { type: String, required: true, trim: true, index: true },
     batchNumber: { type: String, required: true, trim: true },
@@ -151,7 +176,7 @@ const ChemicalStockLotSchema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export type ChemicalStockLot = InferSchemaType<typeof ChemicalStockLotSchema>;
@@ -175,7 +200,7 @@ const ChemicalStockHistorySchema = new Schema(
     remarks: { type: String, trim: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export type ChemicalStockHistory = InferSchemaType<typeof ChemicalStockHistorySchema>;
@@ -195,7 +220,7 @@ const ChemicalDamageSchema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export type ChemicalDamage = InferSchemaType<typeof ChemicalDamageSchema>;

@@ -10,8 +10,15 @@ export interface InventoryLegacyViewService {
   listStock(filters: StockListFilters): ReturnType<InventoryLegacyViewRepo['listStock']>;
   unreserve(inventoryIds: string[], actorId: string, reason: string): Promise<void>;
   sendToStorage(input: SendToStorageInput): ReturnType<InventoryLegacyViewRepo['sendToStorage']>;
-  updateStorage(input: UpdateStorageInput, reason: string): ReturnType<InventoryLegacyViewRepo['updateStorage']>;
-  returnFromStorage(id: string, actorId: string, reason: string): ReturnType<InventoryLegacyViewRepo['returnFromStorage']>;
+  updateStorage(
+    input: UpdateStorageInput,
+    reason: string,
+  ): ReturnType<InventoryLegacyViewRepo['updateStorage']>;
+  returnFromStorage(
+    id: string,
+    actorId: string,
+    reason: string,
+  ): ReturnType<InventoryLegacyViewRepo['returnFromStorage']>;
 }
 
 export function createInventoryLegacyViewService(deps: {

@@ -75,7 +75,9 @@ async function main() {
     .find({ componentType: 'SDP', deletedAt: null })
     .project({ _id: 1, unitId: 1 })
     .toArray();
-  console.log(`[migration] BloodUnit componentType=SDP, not yet deleted: ${sdpUnits.length} doc(s)`);
+  console.log(
+    `[migration] BloodUnit componentType=SDP, not yet deleted: ${sdpUnits.length} doc(s)`,
+  );
 
   if (sdpUnits.length > 0 && !DRY_RUN) {
     const res = await bloodUnits.updateMany(
@@ -102,12 +104,20 @@ async function main() {
     .find({ donationType: 'PLATELETPHERESIS', deletedAt: null })
     .project({ _id: 1, donationId: 1 })
     .toArray();
-  console.log(`[migration] Donation donationType=PLATELETPHERESIS, not yet deleted: ${pheresisDonations.length} doc(s)`);
+  console.log(
+    `[migration] Donation donationType=PLATELETPHERESIS, not yet deleted: ${pheresisDonations.length} doc(s)`,
+  );
 
   if (pheresisDonations.length > 0 && !DRY_RUN) {
     const res = await donations.updateMany(
       { _id: { $in: pheresisDonations.map((d) => d._id) } },
-      { $set: { deletedAt: now, deletedBy: ACTOR, deleteReason: 'PLATELETPHERESIS donation type retired (SDP-only output)' } },
+      {
+        $set: {
+          deletedAt: now,
+          deletedBy: ACTOR,
+          deleteReason: 'PLATELETPHERESIS donation type retired (SDP-only output)',
+        },
+      },
     );
     console.log(`[migration] soft-deleted ${res.modifiedCount} Donation doc(s)`);
 
@@ -117,7 +127,8 @@ async function main() {
       entityId: d._id,
       entityLabel: d.donationId,
       actorId: ACTOR,
-      reason: 'PLATELETPHERESIS donation type retired from system (its only output, SDP, was retired)',
+      reason:
+        'PLATELETPHERESIS donation type retired from system (its only output, SDP, was retired)',
       createdAt: now,
     }));
     await auditLogs.insertMany(auditDocs);
@@ -126,10 +137,7 @@ async function main() {
 
   // ── 3. Requisition — flag only, no write ────────────────────────────────────
   const reqCount = await requisitions.countDocuments({
-    $or: [
-      { 'requestedComponents.componentType': 'SDP' },
-      { 'matchedUnits.componentType': 'SDP' },
-    ],
+    $or: [{ 'requestedComponents.componentType': 'SDP' }, { 'matchedUnits.componentType': 'SDP' }],
   });
   if (reqCount > 0) {
     console.log(

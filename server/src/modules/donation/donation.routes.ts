@@ -20,33 +20,13 @@ const controllers = createDonationControllers(service);
 
 const router = Router();
 
-router.get(
-  '/',
-  authenticate,
-  requirePermission('donation:read'),
-  controllers.list,
-);
+router.get('/', authenticate, requirePermission('donation:read'), controllers.list);
 
-router.get(
-  '/:id',
-  authenticate,
-  requirePermission('donation:read'),
-  controllers.get,
-);
+router.get('/:id', authenticate, requirePermission('donation:read'), controllers.get);
 
-router.post(
-  '/',
-  authenticate,
-  requirePermission('donation:create'),
-  controllers.create,
-);
+router.post('/', authenticate, requirePermission('donation:create'), controllers.create);
 
-router.delete(
-  '/:id',
-  authenticate,
-  requirePermission('donation:delete'),
-  controllers.remove,
-);
+router.delete('/:id', authenticate, requirePermission('donation:delete'), controllers.remove);
 router.post(
   '/:id/restore',
   authenticate,

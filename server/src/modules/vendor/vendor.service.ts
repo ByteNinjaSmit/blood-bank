@@ -19,10 +19,17 @@ import type {
 } from '@/modules/vendor/vendor.validator';
 
 export interface VendorService {
-  list(q: ListVendorsInput): Promise<{ items: VendorDto[]; total: number; page: number; pageSize: number }>;
+  list(
+    q: ListVendorsInput,
+  ): Promise<{ items: VendorDto[]; total: number; page: number; pageSize: number }>;
   get(id: string): Promise<VendorDto>;
   create(input: CreateVendorInput, actorId: string): Promise<VendorDto>;
-  update(id: string, input: UpdateVendorInput, actorId: string, editReason?: string): Promise<VendorDto>;
+  update(
+    id: string,
+    input: UpdateVendorInput,
+    actorId: string,
+    editReason?: string,
+  ): Promise<VendorDto>;
   updateStatus(id: string, input: UpdateVendorStatusInput, actorId: string): Promise<VendorDto>;
   softDelete(id: string, actorId: string, reason: string): Promise<void>;
   restore(id: string, actorId: string): Promise<{ restored: boolean }>;
@@ -53,14 +60,21 @@ export function createVendorService(deps: { vendors: VendorRepo }): VendorServic
 
     async create(input, actorId) {
       const existing = await deps.vendors.findByDrugLicense(input.drugLicenseNo);
-      if (existing) throw new ConflictError(`Vendor with drug license '${input.drugLicenseNo}' already exists`);
+      if (existing)
+        throw new ConflictError(`Vendor with drug license '${input.drugLicenseNo}' already exists`);
 
       const vendorId = generateVendorId();
       const created = await deps.vendors.create({ ...input, vendorId, actorId });
       log.info({ vendorId: created.vendorId, actorId }, 'vendor created');
       void withAudit(
         { actorId },
-        { module: 'vendor', action: 'CREATE', entityType: 'Vendor', entityId: created.id, entityLabel: vendorId },
+        {
+          module: 'vendor',
+          action: 'CREATE',
+          entityType: 'Vendor',
+          entityId: created.id,
+          entityLabel: vendorId,
+        },
         undefined,
         { vendorId, drugLicenseNo: input.drugLicenseNo },
       );
@@ -95,7 +109,13 @@ export function createVendorService(deps: { vendors: VendorRepo }): VendorServic
       log.info({ vendorId: id, status: input.approvalStatus, actorId }, 'vendor status updated');
       void withAudit(
         { actorId },
-        { module: 'vendor', action: 'UPDATE', entityType: 'Vendor', entityId: id, entityLabel: before?.vendorId },
+        {
+          module: 'vendor',
+          action: 'UPDATE',
+          entityType: 'Vendor',
+          entityId: id,
+          entityLabel: before?.vendorId,
+        },
         { approvalStatus: before?.approvalStatus },
         { approvalStatus: input.approvalStatus },
       );
@@ -134,11 +154,19 @@ export function createVendorService(deps: { vendors: VendorRepo }): VendorServic
       // existence check, since we expect to find a deleted vendor here.
       const before = await VendorModel.findById(id).lean();
       if (!before) throw new NotFoundError('Vendor', id);
-      await runInCascadeTransaction((session) => cascadeRestore(vendorCascadeNode, id, actorId, session));
+      await runInCascadeTransaction((session) =>
+        cascadeRestore(vendorCascadeNode, id, actorId, session),
+      );
       log.warn({ vendorId: id, actorId }, 'vendor cascade restored');
       void withAudit(
         { actorId },
-        { module: 'vendor', action: 'UPDATE', entityType: 'Vendor', entityId: id, entityLabel: before.vendorId },
+        {
+          module: 'vendor',
+          action: 'UPDATE',
+          entityType: 'Vendor',
+          entityId: id,
+          entityLabel: before.vendorId,
+        },
         { deletedAt: before.deletedAt },
         { deletedAt: null },
       );

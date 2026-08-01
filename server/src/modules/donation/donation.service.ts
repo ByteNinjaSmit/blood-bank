@@ -68,25 +68,29 @@ export function createDonationService(deps: {
       ]);
 
       const dbLastDonation = latestDonation?.collectedAt;
-      const donorLastDonation = donor.lastDonationDate ? new Date(donor.lastDonationDate) : undefined;
+      const donorLastDonation = donor.lastDonationDate
+        ? new Date(donor.lastDonationDate)
+        : undefined;
       let effectiveLastDonationDate: Date | undefined = undefined;
 
       if (dbLastDonation && donorLastDonation) {
-        effectiveLastDonationDate = dbLastDonation > donorLastDonation ? dbLastDonation : donorLastDonation;
+        effectiveLastDonationDate =
+          dbLastDonation > donorLastDonation ? dbLastDonation : donorLastDonation;
       } else {
         effectiveLastDonationDate = dbLastDonation || donorLastDonation;
       }
 
       if (effectiveLastDonationDate) {
         const daysSince = Math.floor(
-          (new Date(input.collectedAt).getTime() - effectiveLastDonationDate.getTime()) / (1000 * 60 * 60 * 24)
+          (new Date(input.collectedAt).getTime() - effectiveLastDonationDate.getTime()) /
+            (1000 * 60 * 60 * 24),
         );
         const requiredInterval = donor.sex === 'F' ? 120 : 90;
         if (daysSince < requiredInterval) {
           throw new ConflictError(
             `Donor cannot donate yet. Last donation was on ${effectiveLastDonationDate.toISOString().slice(0, 10)}. ` +
-            `The waiting period is ${requiredInterval === 120 ? '120 days (4 months)' : '90 days (3 months)'}. ` +
-            `Only ${daysSince} day(s) have passed.`
+              `The waiting period is ${requiredInterval === 120 ? '120 days (4 months)' : '90 days (3 months)'}. ` +
+              `Only ${daysSince} day(s) have passed.`,
           );
         }
       }
@@ -150,13 +154,17 @@ export function createDonationService(deps: {
       );
 
       if (input.lotNo && input.typeOfBag) {
-        const mappedBagType = input.typeOfBag === 'DB' ? 'DOUBLE' : input.typeOfBag === 'TB' ? 'TRIPLE' : null;
+        const mappedBagType =
+          input.typeOfBag === 'DB' ? 'DOUBLE' : input.typeOfBag === 'TB' ? 'TRIPLE' : null;
         if (mappedBagType && deps.bagStock) {
           try {
             const bagStock = await deps.bagStock.findByBatchAndType(input.lotNo, mappedBagType);
             if (bagStock) {
               await deps.bagStock.incrementIssued(bagStock.id, 1, actorId);
-              log.info({ donationId: donationPublicId, batchNumber: input.lotNo, bagType: mappedBagType }, 'Bag stock issued count incremented due to donation');
+              log.info(
+                { donationId: donationPublicId, batchNumber: input.lotNo, bagType: mappedBagType },
+                'Bag stock issued count incremented due to donation',
+              );
             }
           } catch (err) {
             log.error({ err: (err as Error).message }, 'Failed to increment BagStock issued count');
@@ -168,13 +176,20 @@ export function createDonationService(deps: {
         try {
           const bagIssue = await deps.bagIssues.findBySerialNumber(input.bagNo);
           if (bagIssue) {
-            await deps.bagIssues.updateStatus(bagIssue.id, {
-              status: 'USED',
-              donorId: input.donor,
-              donationId: created.id,
-              usedAt: new Date(),
-            }, actorId);
-            log.info({ bagSerialNumber: input.bagNo, donationId: created.id }, 'BagIssue marked as USED');
+            await deps.bagIssues.updateStatus(
+              bagIssue.id,
+              {
+                status: 'USED',
+                donorId: input.donor,
+                donationId: created.id,
+                usedAt: new Date(),
+              },
+              actorId,
+            );
+            log.info(
+              { bagSerialNumber: input.bagNo, donationId: created.id },
+              'BagIssue marked as USED',
+            );
           }
         } catch (err) {
           log.error({ err: (err as Error).message }, 'Failed to mark BagIssue as USED');
@@ -183,7 +198,13 @@ export function createDonationService(deps: {
 
       void withAudit(
         { actorId },
-        { module: 'donation', action: 'CREATE', entityType: 'Donation', entityId: created.id, entityLabel: donationPublicId },
+        {
+          module: 'donation',
+          action: 'CREATE',
+          entityType: 'Donation',
+          entityId: created.id,
+          entityLabel: donationPublicId,
+        },
         undefined,
         {
           donationId: donationPublicId,
@@ -288,7 +309,9 @@ export function createDonationService(deps: {
       if (!status.deletedAt) {
         return { restored: false };
       }
-      await runInCascadeTransaction((session) => cascadeRestore(donationNode, id, actorId, session));
+      await runInCascadeTransaction((session) =>
+        cascadeRestore(donationNode, id, actorId, session),
+      );
       log.warn({ donationId: id, actorId }, 'donation cascade restored');
       void withAudit(
         { actorId },
@@ -303,7 +326,9 @@ export function createDonationService(deps: {
       const status = await deps.donations.findRawStatus(id);
       if (!status) throw new NotFoundError('Donation', id);
       if (!status.deletedAt) {
-        throw new ConflictError('Donation must be soft-deleted before it can be permanently deleted');
+        throw new ConflictError(
+          'Donation must be soft-deleted before it can be permanently deleted',
+        );
       }
       // Refuse if active (non-deleted) blood units still reference it —
       // hard-deleting would orphan those clinical records. The

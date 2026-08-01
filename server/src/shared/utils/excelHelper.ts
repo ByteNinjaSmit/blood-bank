@@ -38,7 +38,8 @@ export function formatDateTime(date: Date | string): string {
  * Creates a professional title header at the top of a worksheet.
  */
 export function createProfessionalHeader(sheet: ExcelJS.Worksheet, options: HeaderOptions): void {
-  const { title, subtitle, generatedBy, reportPeriod, numCols, reportType, filtersApplied } = options;
+  const { title, subtitle, generatedBy, reportPeriod, numCols, reportType, filtersApplied } =
+    options;
 
   // Title Row (Row 2)
   const titleRow = sheet.getRow(2);
@@ -132,7 +133,7 @@ export function createSummaryTable(
 
   const headerRow = sheet.getRow(startRow + 1);
   headerRow.height = 24;
-  
+
   const borderThin = { style: 'thin' as const, color: { argb: 'FFCBD5E1' } };
   const fillHeader = {
     type: 'pattern' as const,
@@ -183,7 +184,7 @@ export function formatTable(
   headerRow.height = 28;
 
   const borderThin = { style: 'thin' as const, color: { argb: 'FFCBD5E1' } };
-  
+
   // Grey background for table headers (Slate 200)
   const fillHeader = {
     type: 'pattern' as const,

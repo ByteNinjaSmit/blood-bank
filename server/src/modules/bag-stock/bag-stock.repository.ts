@@ -35,7 +35,9 @@ export interface BagStockSummaryItem {
   totalDiscarded: number;
 }
 
-function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date }): BagStockDto {
+function toDto(
+  doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date },
+): BagStockDto {
   const opening = (doc.openingStock as number) ?? 0;
   const received = (doc.receivedQty as number) ?? 0;
   const issued = (doc.issuedQty as number) ?? 0;
@@ -58,7 +60,7 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     damagedQty: damaged,
     discardedQty: discarded,
     closingStock: opening + received - issued - damaged - discarded,
-    unopenedBoxes: doc.unopenedBoxes as number ?? 0,
+    unopenedBoxes: (doc.unopenedBoxes as number) ?? 0,
     status: doc.status as string,
     lastUpdatedAt: doc.lastUpdatedAt ? (doc.lastUpdatedAt as Date).toISOString() : undefined,
     createdAt: doc.createdAt ? doc.createdAt.toISOString() : '',
@@ -140,19 +142,45 @@ export function createBagStockRepo(): BagStockRepo {
         BagStockModel.find(filter).sort({ expiryDate: 1 }).skip(skip).limit(pageSize).lean(),
         BagStockModel.countDocuments(filter),
       ]);
-      return { items: docs.map((d) => toDto(d as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date })), total };
+      return {
+        items: docs.map((d) =>
+          toDto(
+            d as unknown as Record<string, unknown> & {
+              _id: Types.ObjectId;
+              createdAt?: Date;
+              updatedAt?: Date;
+            },
+          ),
+        ),
+        total,
+      };
     },
 
     async findById(id) {
-      const doc = await BagStockModel.findOne({ _id: new Types.ObjectId(id), deletedAt: null }).lean();
+      const doc = await BagStockModel.findOne({
+        _id: new Types.ObjectId(id),
+        deletedAt: null,
+      }).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async findByBatchAndType(batchNumber, bagType) {
       const doc = await BagStockModel.findOne({ batchNumber, bagType, deletedAt: null }).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async summary() {
@@ -178,7 +206,8 @@ export function createBagStockRepo(): BagStockRepo {
       ]);
       return result.map((r) => ({
         bagType: r._id,
-        totalClosingStock: (r.totalOpening + r.totalReceived) - r.totalIssued - r.totalDamaged - r.totalDiscarded,
+        totalClosingStock:
+          r.totalOpening + r.totalReceived - r.totalIssued - r.totalDamaged - r.totalDiscarded,
         totalReceived: r.totalReceived,
         totalIssued: r.totalIssued,
         totalDamaged: r.totalDamaged,
@@ -233,7 +262,13 @@ export function createBagStockRepo(): BagStockRepo {
         },
         { upsert: true, new: true },
       ).lean();
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async incrementIssued(id, qty, actorId) {
@@ -244,7 +279,13 @@ export function createBagStockRepo(): BagStockRepo {
         { new: true },
       ).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async decrementIssued(id, qty, actorId) {
@@ -255,7 +296,13 @@ export function createBagStockRepo(): BagStockRepo {
         { new: true },
       ).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async incrementDamaged(id, qty, actorId) {
@@ -266,7 +313,13 @@ export function createBagStockRepo(): BagStockRepo {
         { new: true },
       ).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async incrementDiscarded(id, qty, actorId) {
@@ -277,7 +330,13 @@ export function createBagStockRepo(): BagStockRepo {
         { new: true },
       ).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async decrementDiscarded(id, qty, actorId) {
@@ -288,7 +347,13 @@ export function createBagStockRepo(): BagStockRepo {
         { new: true },
       ).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async updateStatus(id, status, actorId) {
@@ -299,7 +364,13 @@ export function createBagStockRepo(): BagStockRepo {
         { new: true },
       ).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async setReceivedQtyAndBoxes(batchNumber, bagType, receivedQty, unopenedBoxes, actorId) {
@@ -310,7 +381,13 @@ export function createBagStockRepo(): BagStockRepo {
         { new: true },
       ).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async openBox(id, actorId) {
@@ -321,7 +398,13 @@ export function createBagStockRepo(): BagStockRepo {
         { new: true },
       ).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
   };
 }

@@ -66,7 +66,9 @@ export interface StorageUnitSummary {
 }
 
 export interface InventoryLegacyViewRepo {
-  listStock(filters: StockListFilters): Promise<{ data: any[]; total: number; totalPages: number; page: number; limit: number }>;
+  listStock(
+    filters: StockListFilters,
+  ): Promise<{ data: any[]; total: number; totalPages: number; page: number; limit: number }>;
   unreserve(
     inventoryIds: string[],
     actorId: string,
@@ -81,8 +83,22 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
   return {
     async listStock(filters) {
       const {
-        page, limit, status, componentType, siteId, search, sortBy, order,
-        storageLocation, dispatchType, bloodGroup, rh, expiryFrom, expiryTo, source, purpose,
+        page,
+        limit,
+        status,
+        componentType,
+        siteId,
+        search,
+        sortBy,
+        order,
+        storageLocation,
+        dispatchType,
+        bloodGroup,
+        rh,
+        expiryFrom,
+        expiryTo,
+        source,
+        purpose,
       } = filters;
 
       const wantsOwn = status !== 'in-stock' || source !== 'loan';
@@ -115,7 +131,8 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
 
       if (siteId) unitFilter.campId = new Types.ObjectId(siteId);
       if (bloodGroup) unitFilter.aboGroup = bloodGroup;
-      if (rh) unitFilter.rhFactor = rh === 'Positive' || rh === 'POSITIVE' ? 'POSITIVE' : 'NEGATIVE';
+      if (rh)
+        unitFilter.rhFactor = rh === 'Positive' || rh === 'POSITIVE' ? 'POSITIVE' : 'NEGATIVE';
       if (expiryFrom || expiryTo) {
         unitFilter.expiresAt = {};
         if (expiryFrom) unitFilter.expiresAt.$gte = new Date(expiryFrom);
@@ -364,7 +381,10 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
 
       let loanRows: any[] = [];
       if (wantsLoan) {
-        const loanTransfers = await BulkTransferModel.find({ transferType: 'TAKE_LOAN', deletedAt: null }).lean();
+        const loanTransfers = await BulkTransferModel.find({
+          transferType: 'TAKE_LOAN',
+          deletedAt: null,
+        }).lean();
         const searchRegex = search ? new RegExp(search, 'i') : null;
 
         loanTransfers.forEach((t: any) => {
@@ -378,7 +398,12 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
             }
             if (expiryFrom && it.expiresAt && new Date(it.expiresAt) < new Date(expiryFrom)) return;
             if (expiryTo && it.expiresAt && new Date(it.expiresAt) > new Date(expiryTo)) return;
-            if (searchRegex && !searchRegex.test(it.bagNo || '') && !searchRegex.test(t.transferId || '')) return;
+            if (
+              searchRegex &&
+              !searchRegex.test(it.bagNo || '') &&
+              !searchRegex.test(t.transferId || '')
+            )
+              return;
 
             const rhLabel = it.bloodGroup?.endsWith('-') ? 'Negative' : 'Positive';
             const bloodGroupLetter = (it.bloodGroup || '').replace(/[+-]/, '');
@@ -432,12 +457,19 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         combinedTotal = total;
       }
 
-      const pageData = source === 'loan' || needsMerge ? combined.slice(skipNum, skipNum + limitNum) : combined;
+      const pageData =
+        source === 'loan' || needsMerge ? combined.slice(skipNum, skipNum + limitNum) : combined;
       pageData.forEach((row: any) => {
         delete row._sortDate;
       });
 
-      return { data: pageData, total: combinedTotal, totalPages: Math.ceil(combinedTotal / limitNum), page: pageNum, limit: limitNum };
+      return {
+        data: pageData,
+        total: combinedTotal,
+        totalPages: Math.ceil(combinedTotal / limitNum),
+        page: pageNum,
+        limit: limitNum,
+      };
     },
 
     async unreserve(inventoryIds, actorId, reason) {
@@ -455,7 +487,9 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
           set: { reservedFor: null, reservedUntil: null, reservedAt: null } as any,
         });
 
-        const donation = await DonationModel.findOne({ donationId: unit.donationId }).select('bagNo').lean();
+        const donation = await DonationModel.findOne({ donationId: unit.donationId })
+          .select('bagNo')
+          .lean();
         affected.push({
           unitId: unit.unitId,
           componentType: unit.componentType,
@@ -487,7 +521,11 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
 
         const claimed = await BloodUnitModel.findOneAndUpdate(
           { _id: lookup._id, status: 'RELEASED' },
-          { status: 'ISSUED', issuedAt: sentDate ? new Date(sentDate) : new Date(), updatedBy: actorObjId },
+          {
+            status: 'ISSUED',
+            issuedAt: sentDate ? new Date(sentDate) : new Date(),
+            updatedBy: actorObjId,
+          },
           { new: true },
         );
         if (!claimed) {
@@ -545,8 +583,14 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       await unit.save();
       await invalidate('inventory:*');
 
-      const donation = await DonationModel.findOne({ donationId: unit.donationId }).select('bagNo').lean();
-      return { id: unit._id.toString(), bagNo: donation?.bagNo || unit.donationId, storageLocation: finalLocation };
+      const donation = await DonationModel.findOne({ donationId: unit.donationId })
+        .select('bagNo')
+        .lean();
+      return {
+        id: unit._id.toString(),
+        bagNo: donation?.bagNo || unit.donationId,
+        storageLocation: finalLocation,
+      };
     },
 
     async returnFromStorage(id, actorId) {
@@ -573,7 +617,9 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       await unit.save();
       await invalidate('inventory:*');
 
-      const donation = await DonationModel.findOne({ donationId: unit.donationId }).select('bagNo segmentNo').lean();
+      const donation = await DonationModel.findOne({ donationId: unit.donationId })
+        .select('bagNo segmentNo')
+        .lean();
       return {
         id: unit._id.toString(),
         bagNo: donation?.bagNo || unit.donationId,

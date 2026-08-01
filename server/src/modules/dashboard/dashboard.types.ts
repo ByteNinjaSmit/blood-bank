@@ -127,11 +127,21 @@ export interface LegacyOverviewDto {
     expiredUnits: number;
   };
   bloodGroups: {
-    Opos: number; Oneg: number; Apos: number; Aneg: number;
-    Bpos: number; Bneg: number; ABpos: number; ABneg: number;
+    Opos: number;
+    Oneg: number;
+    Apos: number;
+    Aneg: number;
+    Bpos: number;
+    Bneg: number;
+    ABpos: number;
+    ABneg: number;
   };
   componentAvailability: {
-    rbcStock: number; pltStock: number; ffpStock: number; cryoStock: number; sdpStock: number;
+    rbcStock: number;
+    pltStock: number;
+    ffpStock: number;
+    cryoStock: number;
+    sdpStock: number;
   };
   hospitalRequests: {
     totalRequests: number;
@@ -205,4 +215,3 @@ export function campToDto(raw: any): CampSummaryDto {
     staffCount: Array.isArray(raw.staff) ? raw.staff.length : 0,
   };
 }
-

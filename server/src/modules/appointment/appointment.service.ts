@@ -4,7 +4,9 @@ import { notificationCenterService } from '@/modules/notification/notification-c
 import type { NotificationCategory, NotificationSeverity } from '@/shared/enums';
 
 export interface AppointmentService {
-  list(q: ListAppointmentsInput): Promise<{ items: any[]; total: number; page: number; pageSize: number }>;
+  list(
+    q: ListAppointmentsInput,
+  ): Promise<{ items: any[]; total: number; page: number; pageSize: number }>;
   updateStatus(id: string, status: string): Promise<any>;
   summary(): Promise<{ pending: number; confirmed: number; cancelled: number; total: number }>;
 }
@@ -12,8 +14,16 @@ export interface AppointmentService {
 const STATUS_NOTIFICATION: Partial<
   Record<string, { title: string; category: NotificationCategory; severity: NotificationSeverity }>
 > = {
-  confirmed: { title: 'Appointment approved', category: 'APPOINTMENT_APPROVED', severity: 'INFORMATION' },
-  cancelled: { title: 'Appointment cancelled', category: 'APPOINTMENT_CANCELLED', severity: 'WARNING' },
+  confirmed: {
+    title: 'Appointment approved',
+    category: 'APPOINTMENT_APPROVED',
+    severity: 'INFORMATION',
+  },
+  cancelled: {
+    title: 'Appointment cancelled',
+    category: 'APPOINTMENT_CANCELLED',
+    severity: 'WARNING',
+  },
 };
 
 export function createAppointmentService(repo: AppointmentRepo): AppointmentService {

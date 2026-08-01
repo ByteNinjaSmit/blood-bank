@@ -38,7 +38,12 @@ export const hospitalController = {
     try {
       const { id } = ValidateHospital.idParam(req);
       const editReason = extractEditReason(req);
-      const data = await hospitalService.update(id, ValidateHospital.updateBody(req), actor(req), editReason);
+      const data = await hospitalService.update(
+        id,
+        ValidateHospital.updateBody(req),
+        actor(req),
+        editReason,
+      );
       res.json({ success: true, data, requestId: req.id });
     } catch (e) {
       next(e);

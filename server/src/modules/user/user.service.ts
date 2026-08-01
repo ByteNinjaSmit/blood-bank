@@ -100,7 +100,12 @@ export const userService = {
     return user;
   },
 
-  async update(id: string, input: UpdateUserInput, actorId: string, editReason?: string): Promise<UserDto> {
+  async update(
+    id: string,
+    input: UpdateUserInput,
+    actorId: string,
+    editReason?: string,
+  ): Promise<UserDto> {
     const existing = await userRepo.findByIdOrPublicId(id);
     if (!existing) throw new NotFoundError('User', id);
 
@@ -148,16 +153,46 @@ export const userService = {
     // there's no risk of a hash leaking through here.
     const before: Record<string, unknown> = {};
     const after: Record<string, unknown> = {};
-    if (input.firstName) { before.firstName = existing.name.first; after.firstName = input.firstName; }
-    if (input.lastName) { before.lastName = existing.name.last; after.lastName = input.lastName; }
-    if (input.email) { before.email = existing.email; after.email = input.email.toLowerCase(); }
-    if (input.phone) { before.phone = existing.phone; after.phone = input.phone; }
-    if (input.role) { before.role = existing.role; after.role = input.role; }
-    if (input.roleId !== undefined) { before.roleId = existing.roleId; after.roleId = input.roleId; }
-    if (input.isFullAccess !== undefined) { before.isFullAccess = existing.isFullAccess; after.isFullAccess = input.isFullAccess; }
-    if (input.permissions) { before.permissions = existing.permissions; after.permissions = input.permissions; }
-    if (input.campId) { before.campId = existing.campId; after.campId = input.campId; }
-    if (input.status) { before.status = existing.status; after.status = input.status; }
+    if (input.firstName) {
+      before.firstName = existing.name.first;
+      after.firstName = input.firstName;
+    }
+    if (input.lastName) {
+      before.lastName = existing.name.last;
+      after.lastName = input.lastName;
+    }
+    if (input.email) {
+      before.email = existing.email;
+      after.email = input.email.toLowerCase();
+    }
+    if (input.phone) {
+      before.phone = existing.phone;
+      after.phone = input.phone;
+    }
+    if (input.role) {
+      before.role = existing.role;
+      after.role = input.role;
+    }
+    if (input.roleId !== undefined) {
+      before.roleId = existing.roleId;
+      after.roleId = input.roleId;
+    }
+    if (input.isFullAccess !== undefined) {
+      before.isFullAccess = existing.isFullAccess;
+      after.isFullAccess = input.isFullAccess;
+    }
+    if (input.permissions) {
+      before.permissions = existing.permissions;
+      after.permissions = input.permissions;
+    }
+    if (input.campId) {
+      before.campId = existing.campId;
+      after.campId = input.campId;
+    }
+    if (input.status) {
+      before.status = existing.status;
+      after.status = input.status;
+    }
     if (Object.keys(after).length > 0) {
       await auditService.record({
         actorId,

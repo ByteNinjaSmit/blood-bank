@@ -29,7 +29,12 @@ export async function getDetailedDonationHistory(donorId: string): Promise<any[]
 
   const componentUnitIds = components.map((c) => c.unitId);
   const reservedForIds = [
-    ...new Set(components.map((c) => c.reservedFor).filter(Boolean).map((id) => id!.toString())),
+    ...new Set(
+      components
+        .map((c) => c.reservedFor)
+        .filter(Boolean)
+        .map((id) => id!.toString()),
+    ),
   ].map((id) => new Types.ObjectId(id));
 
   const [reqsById, reqsByUnitId] = await Promise.all([
@@ -52,7 +57,9 @@ export async function getDetailedDonationHistory(donorId: string): Promise<any[]
 
   const hospitalIds = [
     ...new Set(
-      [...reqByIdMap.values(), ...reqByUnitIdMap.values()].map((r) => r.hospitalId?.toString()).filter(Boolean),
+      [...reqByIdMap.values(), ...reqByUnitIdMap.values()]
+        .map((r) => r.hospitalId?.toString())
+        .filter(Boolean),
     ),
   ].map((id) => new Types.ObjectId(id as string));
   const hospitals = hospitalIds.length
@@ -78,8 +85,8 @@ export async function getDetailedDonationHistory(donorId: string): Promise<any[]
       hospitalName: hospital ? hospital.name : 'Unknown Hospital',
       patientName: reqDoc.patient?.name || 'N/A',
       urgency:
-        reqDoc.requestedComponents?.find((rc) => rc.componentType === comp.componentType)?.urgency ||
-        'ROUTINE',
+        reqDoc.requestedComponents?.find((rc) => rc.componentType === comp.componentType)
+          ?.urgency || 'ROUTINE',
       status: reqDoc.status,
       requiredAt: reqDoc.requiredAt ? reqDoc.requiredAt.toISOString() : null,
     };
@@ -89,16 +96,18 @@ export async function getDetailedDonationHistory(donorId: string): Promise<any[]
     const camp = donation.campId ? campById.get(donation.campId.toString()) : null;
     const donationPlace = camp ? `Camp: ${camp.name}` : 'Inhouse';
 
-    const componentsWithReqs = (componentsByDonationId.get(donation.donationId) ?? []).map((comp) => ({
-      unitId: comp.unitId,
-      componentType: comp.componentType,
-      aboGroup: comp.aboGroup,
-      rhFactor: comp.rhFactor,
-      volumeMl: comp.volumeMl,
-      status: comp.status,
-      expiresAt: comp.expiresAt ? comp.expiresAt.toISOString() : null,
-      requisition: buildRequisitionDetails(comp),
-    }));
+    const componentsWithReqs = (componentsByDonationId.get(donation.donationId) ?? []).map(
+      (comp) => ({
+        unitId: comp.unitId,
+        componentType: comp.componentType,
+        aboGroup: comp.aboGroup,
+        rhFactor: comp.rhFactor,
+        volumeMl: comp.volumeMl,
+        status: comp.status,
+        expiresAt: comp.expiresAt ? comp.expiresAt.toISOString() : null,
+        requisition: buildRequisitionDetails(comp),
+      }),
+    );
 
     return {
       donationId: donation.donationId,

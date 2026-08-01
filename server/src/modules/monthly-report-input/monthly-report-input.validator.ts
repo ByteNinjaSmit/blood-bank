@@ -29,6 +29,8 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T
 }
 
 export const ValidateMonthlyReportInput = {
-  upsertBody: (req: Request) => parseOrThrow(UpsertMonthlyReportInputBody, req.body, 'request body'),
-  periodQuery: (req: Request) => parseOrThrow(MonthlyReportInputPeriodQuery, req.query, 'query string'),
+  upsertBody: (req: Request) =>
+    parseOrThrow(UpsertMonthlyReportInputBody, req.body, 'request body'),
+  periodQuery: (req: Request) =>
+    parseOrThrow(MonthlyReportInputPeriodQuery, req.query, 'query string'),
 };

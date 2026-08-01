@@ -43,7 +43,9 @@ export const VoluntaryQuery = z.object({
 
 export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid camp id') });
 export const CampIdParam = z.object({ campId: z.string().regex(OBJECT_ID, 'Invalid camp id') });
-export const VoluntaryIdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid donation id') });
+export const VoluntaryIdParam = z.object({
+  id: z.string().regex(OBJECT_ID, 'Invalid donation id'),
+});
 export const UpdateVoluntaryStatusBody = z.object({
   status: z.enum(['PENDING', 'DONATED', 'REJECTED']),
 });
@@ -67,5 +69,6 @@ export const ValidateCamp = {
     parseOrThrow(UpdateVoluntaryStatusBody, req.body, 'request body'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
   campIdParam: (req: Request) => parseOrThrow(CampIdParam, req.params, 'path params'),
-  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
+  deleteReasonBody: (req: Request) =>
+    parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };

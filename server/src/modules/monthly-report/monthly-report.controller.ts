@@ -6,7 +6,9 @@ export interface MonthlyReportControllers {
   getReport(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
-export function createMonthlyReportControllers(service: MonthlyReportService): MonthlyReportControllers {
+export function createMonthlyReportControllers(
+  service: MonthlyReportService,
+): MonthlyReportControllers {
   return {
     async getReport(req, res, next) {
       try {

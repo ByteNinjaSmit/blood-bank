@@ -80,7 +80,9 @@ export const campRepo = {
       { $match: { campId: { $in: campIds }, deletedAt: null } },
       { $group: { _id: '$campId', count: { $sum: 1 } } },
     ]);
-    const donationCountMap = new Map(donationCounts.map((d) => [d._id.toString(), d.count as number]));
+    const donationCountMap = new Map(
+      donationCounts.map((d) => [d._id.toString(), d.count as number]),
+    );
 
     return camps.map((c) => {
       const donorCount = c.donorData?.length ?? 0;

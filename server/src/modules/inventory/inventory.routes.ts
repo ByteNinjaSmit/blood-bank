@@ -30,22 +30,7 @@ const READ_ROLES = [
   'phlebotomist',
 ] as const;
 
-router.get(
-  '/summary',
-  authenticate,
-  requirePermission('unit:read'),
-  controllers.summary,
-);
-router.get(
-  '/near-expiry',
-  authenticate,
-  requirePermission('unit:read'),
-  controllers.nearExpiry,
-);
-router.get(
-  '/select',
-  authenticate,
-  requirePermission('unit:read'),
-  controllers.select,
-);
+router.get('/summary', authenticate, requirePermission('unit:read'), controllers.summary);
+router.get('/near-expiry', authenticate, requirePermission('unit:read'), controllers.nearExpiry);
+router.get('/select', authenticate, requirePermission('unit:read'), controllers.select);
 export default router;

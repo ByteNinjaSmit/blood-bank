@@ -49,12 +49,7 @@ router.post(
   controllers.separationCompleted,
 );
 
-router.get(
-  '/near-expiry',
-  authenticate,
-  requirePermission('unit:read'),
-  controllers.nearExpiry,
-);
+router.get('/near-expiry', authenticate, requirePermission('unit:read'), controllers.nearExpiry);
 
 router.get('/:id', authenticate, requirePermission('unit:read'), controllers.getGroupDetail);
 

@@ -73,7 +73,9 @@ function toLegacyResult(result?: string): SerologyTestResult['result'] {
  * columns even for bags not yet tested), for display against a single
  * bag's Serological Test Report.
  */
-export function mapSerologyTests(tti: { tests?: Array<{ testName: string; result: string }> } | null | undefined): SerologyTestResult[] {
+export function mapSerologyTests(
+  tti: { tests?: Array<{ testName: string; result: string }> } | null | undefined,
+): SerologyTestResult[] {
   const byName = new Map((tti?.tests ?? []).map((t) => [t.testName, t.result]));
   return SEROLOGY_TEST_ORDER.map(({ internal, label }) => ({
     test: label,
@@ -94,6 +96,8 @@ export function hasLeftBank(
   units: Array<{ status?: string; statusHistory?: Array<{ to?: string }> }>,
 ): boolean {
   return units.some(
-    (u) => (u.status && ISSUED_STATUSES.has(u.status)) || (u.statusHistory || []).some((h) => h.to === 'ISSUED'),
+    (u) =>
+      (u.status && ISSUED_STATUSES.has(u.status)) ||
+      (u.statusHistory || []).some((h) => h.to === 'ISSUED'),
   );
 }

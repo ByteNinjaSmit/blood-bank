@@ -9,7 +9,11 @@ import {
 } from '@/shared/utils/cascade-delete';
 import { purchaseOrderNode } from '@/shared/cascade-registry';
 import { ConflictError, NotFoundError, ValidationError } from '@/shared/errors';
-import type { PORepo, PODto, LineItemDto } from '@/modules/purchase-order/purchase-order.repository';
+import type {
+  PORepo,
+  PODto,
+  LineItemDto,
+} from '@/modules/purchase-order/purchase-order.repository';
 import type { VendorRepo } from '@/modules/vendor/vendor.repository';
 import type {
   CreatePOInput,
@@ -68,7 +72,13 @@ export function createPOService(deps: { pos: PORepo; vendors: VendorRepo }): POS
       log.info({ poNumber, actorId }, 'purchase order created');
       void withAudit(
         { actorId },
-        { module: 'purchase-order', action: 'CREATE', entityType: 'PurchaseOrder', entityId: created.id, entityLabel: poNumber },
+        {
+          module: 'purchase-order',
+          action: 'CREATE',
+          entityType: 'PurchaseOrder',
+          entityId: created.id,
+          entityLabel: poNumber,
+        },
         undefined,
         { poNumber, vendorId: input.vendorId },
       );
@@ -79,7 +89,13 @@ export function createPOService(deps: { pos: PORepo; vendors: VendorRepo }): POS
       const po = await deps.pos.findById(id);
       if (!po) throw new NotFoundError('PurchaseOrder', id);
 
-      const patch: Partial<{ lineItems: LineItemDto[]; expectedDelivery: Date; manufacturer: string; billDate: Date; notes: string }> = {};
+      const patch: Partial<{
+        lineItems: LineItemDto[];
+        expectedDelivery: Date;
+        manufacturer: string;
+        billDate: Date;
+        notes: string;
+      }> = {};
       if (input.lineItems) {
         patch.lineItems = input.lineItems;
       }
@@ -132,10 +148,18 @@ export function createPOService(deps: { pos: PORepo; vendors: VendorRepo }): POS
     async restore(id, actorId) {
       const po = await deps.pos.findByIdIncludingDeleted(id);
       if (!po) throw new NotFoundError('PurchaseOrder', id);
-      await runInCascadeTransaction((session) => cascadeRestore(purchaseOrderNode, id, actorId, session));
+      await runInCascadeTransaction((session) =>
+        cascadeRestore(purchaseOrderNode, id, actorId, session),
+      );
       void withAudit(
         { actorId },
-        { module: 'purchase-order', action: 'UPDATE', entityType: 'PurchaseOrder', entityId: id, entityLabel: po.poNumber },
+        {
+          module: 'purchase-order',
+          action: 'UPDATE',
+          entityType: 'PurchaseOrder',
+          entityId: id,
+          entityLabel: po.poNumber,
+        },
         { deletedAt: 'deleted' },
         { deletedAt: null },
       );

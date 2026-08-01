@@ -42,7 +42,11 @@ const DonorSchema = new Schema(
     // Where the last donation (as entered above) was performed — only
     // meaningful alongside lastDonationDate; defaults to in-house since
     // that's the common case (most donors last donated at this bank).
-    lastDonationPlace: { type: String, enum: DONOR_LAST_DONATION_PLACE, default: 'SANJIVANI_BLOOD_BANK' },
+    lastDonationPlace: {
+      type: String,
+      enum: DONOR_LAST_DONATION_PLACE,
+      default: 'SANJIVANI_BLOOD_BANK',
+    },
     // Donor's answer to "Will you donate if we call in emergency?" (Yes/No).
     emergencyDonationWillingness: { type: String, enum: ['Yes', 'No', ''], default: '' },
     // 768-dim dense vector for Atlas Vector Search (populated by embedding job).

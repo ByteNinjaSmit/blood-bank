@@ -17,21 +17,56 @@ import { DonorCardModel } from '@/modules/donor-card/donor-card.model';
 import { IssueModel } from '@/modules/issue/issue.model';
 import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 import type { ChemicalInventoryRepo } from '@/modules/chemical-inventory/chemical-inventory.repository';
-import type { BagStockRepo, BagStockSummaryItem, LowBoxBatchDto } from '@/modules/bag-stock/bag-stock.repository';
-import type { BulkTransferRepo, BulkTransferDto } from '@/modules/bulk-transfer/bulk-transfer.repository';
+import type {
+  BagStockRepo,
+  BagStockSummaryItem,
+  LowBoxBatchDto,
+} from '@/modules/bag-stock/bag-stock.repository';
+import type {
+  BulkTransferRepo,
+  BulkTransferDto,
+} from '@/modules/bulk-transfer/bulk-transfer.repository';
 import { buildDateQuery, campToDto } from './dashboard.types';
 import { legacyOverview } from './dashboard.legacy-overview';
 import type {
-  CampSummaryDto, CampOverviewDto, BagStockSectionDto, BulkTransferSectionDto, DiseaseBucketDto,
-  DiseaseSectionDto, StorageBreakdownItemDto, DiscardSectionDto, DeferralReasonDto, StockOverviewDto,
-  OngoingCampDto, LegacyOverviewDto, DonorCardSectionDto, HospitalRequisitionDto, AlertType, AlertSeverity, AlertDto,
+  CampSummaryDto,
+  CampOverviewDto,
+  BagStockSectionDto,
+  BulkTransferSectionDto,
+  DiseaseBucketDto,
+  DiseaseSectionDto,
+  StorageBreakdownItemDto,
+  DiscardSectionDto,
+  DeferralReasonDto,
+  StockOverviewDto,
+  OngoingCampDto,
+  LegacyOverviewDto,
+  DonorCardSectionDto,
+  HospitalRequisitionDto,
+  AlertType,
+  AlertSeverity,
+  AlertDto,
 } from './dashboard.types';
 
 // Re-exported so existing consumers (dashboard.service) keep their imports.
 export type {
-  CampSummaryDto, CampOverviewDto, BagStockSectionDto, BulkTransferSectionDto, DiseaseBucketDto,
-  DiseaseSectionDto, StorageBreakdownItemDto, DiscardSectionDto, DeferralReasonDto, StockOverviewDto,
-  OngoingCampDto, LegacyOverviewDto, DonorCardSectionDto, HospitalRequisitionDto, AlertType, AlertSeverity, AlertDto,
+  CampSummaryDto,
+  CampOverviewDto,
+  BagStockSectionDto,
+  BulkTransferSectionDto,
+  DiseaseBucketDto,
+  DiseaseSectionDto,
+  StorageBreakdownItemDto,
+  DiscardSectionDto,
+  DeferralReasonDto,
+  StockOverviewDto,
+  OngoingCampDto,
+  LegacyOverviewDto,
+  DonorCardSectionDto,
+  HospitalRequisitionDto,
+  AlertType,
+  AlertSeverity,
+  AlertDto,
 } from './dashboard.types';
 
 const LOW_BOX_THRESHOLD = 3;
@@ -66,19 +101,55 @@ export function createDashboardRepo(deps: {
         if (toDate) matrixMatch.collectedAt.$lte = toDate;
       }
 
-      const [donors, donations, inStock, reserved, issued, discarded, transfusions, matrixAgg, loanTransfers] = await Promise.all([
-        DonorModel.countDocuments({ deletedAt: null, ...buildDateQuery('createdAt', fromDate, toDate) }),
-        DonationModel.countDocuments({ deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
-        BloodUnitModel.countDocuments({ status: 'RELEASED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
-        BloodUnitModel.countDocuments({ status: 'RESERVED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
-        BloodUnitModel.countDocuments({ status: 'ISSUED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
-        BloodUnitModel.countDocuments({ status: 'DISCARDED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) }),
+      const [
+        donors,
+        donations,
+        inStock,
+        reserved,
+        issued,
+        discarded,
+        transfusions,
+        matrixAgg,
+        loanTransfers,
+      ] = await Promise.all([
+        DonorModel.countDocuments({
+          deletedAt: null,
+          ...buildDateQuery('createdAt', fromDate, toDate),
+        }),
+        DonationModel.countDocuments({
+          deletedAt: null,
+          ...buildDateQuery('collectedAt', fromDate, toDate),
+        }),
+        BloodUnitModel.countDocuments({
+          status: 'RELEASED',
+          deletedAt: null,
+          ...buildDateQuery('collectedAt', fromDate, toDate),
+        }),
+        BloodUnitModel.countDocuments({
+          status: 'RESERVED',
+          deletedAt: null,
+          ...buildDateQuery('collectedAt', fromDate, toDate),
+        }),
+        BloodUnitModel.countDocuments({
+          status: 'ISSUED',
+          deletedAt: null,
+          ...buildDateQuery('collectedAt', fromDate, toDate),
+        }),
+        BloodUnitModel.countDocuments({
+          status: 'DISCARDED',
+          deletedAt: null,
+          ...buildDateQuery('collectedAt', fromDate, toDate),
+        }),
         TransfusionModel.countDocuments({ ...buildDateQuery('createdAt', fromDate, toDate) }),
         BloodUnitModel.aggregate([
           { $match: matrixMatch },
           {
             $group: {
-              _id: { componentType: '$componentType', bloodGroup: '$aboGroup', rhFactor: '$rhFactor' },
+              _id: {
+                componentType: '$componentType',
+                bloodGroup: '$aboGroup',
+                rhFactor: '$rhFactor',
+              },
               count: { $sum: 1 },
             },
           },
@@ -106,7 +177,8 @@ export function createDashboardRepo(deps: {
           const rh = it.bloodGroup?.endsWith('-') ? 'Negative' : 'Positive';
           const bloodGroup = (it.bloodGroup || '').replace(/[+-]/, '');
           const existing = stockMatrix.find(
-            (m) => m.componentType === it.componentType && m.bloodGroup === bloodGroup && m.rh === rh,
+            (m) =>
+              m.componentType === it.componentType && m.bloodGroup === bloodGroup && m.rh === rh,
           );
           if (existing) existing.count += 1;
           else stockMatrix.push({ componentType: it.componentType, bloodGroup, rh, count: 1 });
@@ -114,7 +186,15 @@ export function createDashboardRepo(deps: {
       });
 
       return {
-        totals: { donors, donations, inStock: inStock + loanTotal, reserved, issued, discarded, transfusions },
+        totals: {
+          donors,
+          donations,
+          inStock: inStock + loanTotal,
+          reserved,
+          issued,
+          discarded,
+          transfusions,
+        },
         stockMatrix,
       };
     },
@@ -156,20 +236,30 @@ export function createDashboardRepo(deps: {
     },
 
     async donorCardSummary(fromDate?: Date, toDate?: Date) {
-      const cards = await DonorCardModel.find(buildDateQuery('createdAt', fromDate, toDate)).select('requisitionId').lean();
+      const cards = await DonorCardModel.find(buildDateQuery('createdAt', fromDate, toDate))
+        .select('requisitionId')
+        .lean();
       const totalCount = cards.length;
       if (totalCount === 0) return { totalCount: 0, breakdown: [] };
 
       const requisitionIds = cards.map((c) => c.requisitionId);
-      const issues = await IssueModel.find({ requisitionId: { $in: requisitionIds } }).select('unitId').lean();
+      const issues = await IssueModel.find({ requisitionId: { $in: requisitionIds } })
+        .select('unitId')
+        .lean();
       const unitIds = issues.map((i) => i.unitId);
       if (unitIds.length === 0) return { totalCount, breakdown: [] };
 
       const rows = await BloodUnitModel.aggregate([
-        { $match: { unitId: { $in: unitIds }, ...buildDateQuery('collectedAt', fromDate, toDate) } },
+        {
+          $match: { unitId: { $in: unitIds }, ...buildDateQuery('collectedAt', fromDate, toDate) },
+        },
         {
           $group: {
-            _id: { componentType: '$componentType', bloodGroup: '$aboGroup', rhFactor: '$rhFactor' },
+            _id: {
+              componentType: '$componentType',
+              bloodGroup: '$aboGroup',
+              rhFactor: '$rhFactor',
+            },
             count: { $sum: 1 },
           },
         },
@@ -207,7 +297,9 @@ export function createDashboardRepo(deps: {
       }
 
       upcoming.sort((a, b) => new Date(a.dateFrom).getTime() - new Date(b.dateFrom).getTime());
-      completedLast30Days.sort((a, b) => new Date(b.dateTo).getTime() - new Date(a.dateTo).getTime());
+      completedLast30Days.sort(
+        (a, b) => new Date(b.dateTo).getTime() - new Date(a.dateTo).getTime(),
+      );
 
       return { upcoming, ongoing, completedLast30Days };
     },
@@ -226,8 +318,20 @@ export function createDashboardRepo(deps: {
 
     async bulkTransferSummary(fromDate?: Date, toDate?: Date) {
       const [given, taken] = await Promise.all([
-        deps.bulkTransfer.list({ transferType: 'GIVE_LOAN', page: 1, limit: 10, fromDate, toDate } as any),
-        deps.bulkTransfer.list({ transferType: 'TAKE_LOAN', page: 1, limit: 10, fromDate, toDate } as any),
+        deps.bulkTransfer.list({
+          transferType: 'GIVE_LOAN',
+          page: 1,
+          limit: 10,
+          fromDate,
+          toDate,
+        } as any),
+        deps.bulkTransfer.list({
+          transferType: 'TAKE_LOAN',
+          page: 1,
+          limit: 10,
+          fromDate,
+          toDate,
+        } as any),
       ]);
       return {
         given: { total: given.total, recent: given.items },
@@ -265,7 +369,11 @@ export function createDashboardRepo(deps: {
         },
       ]);
 
-      type Bucket = { count: number; byBloodGroup: Map<string, number>; patients: Map<string, number> };
+      type Bucket = {
+        count: number;
+        byBloodGroup: Map<string, number>;
+        patients: Map<string, number>;
+      };
       const buckets: Record<'THALASSEMIA' | 'SICKLE_CELL_ANAEMIA' | 'OTHER', Bucket> = {
         THALASSEMIA: { count: 0, byBloodGroup: new Map(), patients: new Map() },
         SICKLE_CELL_ANAEMIA: { count: 0, byBloodGroup: new Map(), patients: new Map() },
@@ -273,7 +381,8 @@ export function createDashboardRepo(deps: {
       };
 
       for (const r of rows as any[]) {
-        const key: keyof typeof buckets = r.disease === 'THALASSEMIA' || r.disease === 'SICKLE_CELL_ANAEMIA' ? r.disease : 'OTHER';
+        const key: keyof typeof buckets =
+          r.disease === 'THALASSEMIA' || r.disease === 'SICKLE_CELL_ANAEMIA' ? r.disease : 'OTHER';
         const bucket = buckets[key];
         bucket.count += 1;
         bucket.byBloodGroup.set(r.bloodGroup, (bucket.byBloodGroup.get(r.bloodGroup) ?? 0) + 1);
@@ -282,7 +391,10 @@ export function createDashboardRepo(deps: {
 
       const toDto = (b: Bucket): DiseaseBucketDto => ({
         unitsIssuedCount: b.count,
-        byBloodGroup: [...b.byBloodGroup.entries()].map(([bloodGroup, count]) => ({ bloodGroup, count })),
+        byBloodGroup: [...b.byBloodGroup.entries()].map(([bloodGroup, count]) => ({
+          bloodGroup,
+          count,
+        })),
         patients: [...b.patients.entries()]
           .map(([name, unitsIssued]) => ({ name, unitsIssued }))
           .sort((a, b2) => b2.unitsIssued - a.unitsIssued),
@@ -297,7 +409,13 @@ export function createDashboardRepo(deps: {
 
     async storageBreakdown(fromDate?: Date, toDate?: Date) {
       const rows = await BloodUnitModel.aggregate([
-        { $match: { storageLocation: { $ne: null }, deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) } },
+        {
+          $match: {
+            storageLocation: { $ne: null },
+            deletedAt: null,
+            ...buildDateQuery('collectedAt', fromDate, toDate),
+          },
+        },
         { $group: { _id: '$storageLocation', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
       ]);
@@ -312,13 +430,23 @@ export function createDashboardRepo(deps: {
           { $sort: { quantity: -1 } },
         ]),
         BloodUnitModel.aggregate([
-          { $match: { status: 'DISCARDED', deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) } },
+          {
+            $match: {
+              status: 'DISCARDED',
+              deletedAt: null,
+              ...buildDateQuery('collectedAt', fromDate, toDate),
+            },
+          },
           { $group: { _id: '$discardReason', count: { $sum: 1 } } },
           { $sort: { count: -1 } },
         ]),
       ]);
       return {
-        bagLevel: bagLevel.map((r: any) => ({ reason: r._id ?? 'UNSPECIFIED', quantity: r.quantity, count: r.count })),
+        bagLevel: bagLevel.map((r: any) => ({
+          reason: r._id ?? 'UNSPECIFIED',
+          quantity: r.quantity,
+          count: r.count,
+        })),
         unitLevel: unitLevel.map((r: any) => ({ reason: r._id ?? 'UNSPECIFIED', count: r.count })),
       };
     },

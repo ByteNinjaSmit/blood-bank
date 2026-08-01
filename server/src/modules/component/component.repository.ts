@@ -28,7 +28,9 @@ import { componentList } from './component.read';
 export type { ComponentListFilters, NearExpiryFilters } from './component.helpers';
 
 export interface ComponentRepo {
-  list(filters: ComponentListFilters): Promise<{ components: any[]; total: number; totalPages: number }>;
+  list(
+    filters: ComponentListFilters,
+  ): Promise<{ components: any[]; total: number; totalPages: number }>;
   listBagsToSeparate(): Promise<any[]>;
   separate(input: {
     donationId: string;
@@ -147,7 +149,9 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
             volumeGmMl: d.medicalExam?.volumeMl || 350,
             rpmFirstSpin: separation?.rpmFirstSpin || '',
             rpmSecondSpin: separation?.rpmSecondSpin || '',
-            separationTime: separation?.separationTime ? separation.separationTime.toISOString() : '',
+            separationTime: separation?.separationTime
+              ? separation.separationTime.toISOString()
+              : '',
             components: units.map((u) => ({
               unitId: u.unitId,
               componentType: u.componentType,
@@ -158,7 +162,15 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         .filter(Boolean);
     },
 
-    async separate({ donationId, componentType, volumeMl, rpmFirstSpin, rpmSecondSpin, separationTime, actorId }) {
+    async separate({
+      donationId,
+      componentType,
+      volumeMl,
+      rpmFirstSpin,
+      rpmSecondSpin,
+      separationTime,
+      actorId,
+    }) {
       const donation = await resolveDonation(donationId);
       if (!donation) throw new NotFoundError('Donation', donationId);
       const resolvedDonationId = donation.donationId;
@@ -188,11 +200,16 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       // Centrifuge spin log — one physical separation event per bag, so
       // each separate() call for this donation overwrites with the latest
       // entered values.
-      if (rpmFirstSpin !== undefined || rpmSecondSpin !== undefined || separationTime !== undefined) {
+      if (
+        rpmFirstSpin !== undefined ||
+        rpmSecondSpin !== undefined ||
+        separationTime !== undefined
+      ) {
         const separationSet: Record<string, unknown> = {};
         if (rpmFirstSpin !== undefined) separationSet['separation.rpmFirstSpin'] = rpmFirstSpin;
         if (rpmSecondSpin !== undefined) separationSet['separation.rpmSecondSpin'] = rpmSecondSpin;
-        if (separationTime !== undefined) separationSet['separation.separationTime'] = separationTime;
+        if (separationTime !== undefined)
+          separationSet['separation.separationTime'] = separationTime;
         await DonationModel.updateOne({ donationId: resolvedDonationId }, { $set: separationSet });
       }
 
@@ -223,7 +240,12 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         expiresAt,
         status: 'COLLECTED',
         statusHistory: [
-          { to: 'COLLECTED', event: 'SEPARATE', actor: new Types.ObjectId(actorId), at: new Date() },
+          {
+            to: 'COLLECTED',
+            event: 'SEPARATE',
+            actor: new Types.ObjectId(actorId),
+            at: new Date(),
+          },
         ],
         campId: donation.campId,
         createdBy: new Types.ObjectId(actorId),
@@ -248,7 +270,9 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         await deps.units.applyEventToDonation(resolvedDonationId, 'AWAIT_TTI', actorId, [
           'IN_TESTING',
         ]);
-        await deps.units.applyEventToDonation(resolvedDonationId, 'RELEASE', actorId, ['QUARANTINE']);
+        await deps.units.applyEventToDonation(resolvedDonationId, 'RELEASE', actorId, [
+          'QUARANTINE',
+        ]);
       } else {
         await deps.units.applyEventToDonation(
           resolvedDonationId,
@@ -298,7 +322,10 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         .lean();
 
       const donationIds = units.map((u) => u.donationId).filter(Boolean);
-      const donations = await DonationModel.find({ donationId: { $in: donationIds }, deletedAt: null })
+      const donations = await DonationModel.find({
+        donationId: { $in: donationIds },
+        deletedAt: null,
+      })
         .select('donationId bagNo')
         .lean();
       const donationMap = new Map(donations.map((d) => [d.donationId, d]));
@@ -388,7 +415,9 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
           bloodGroup: `${abo}${rh === 'POSITIVE' ? '+' : '-'}`,
           collectionDate: donationDoc.collectedAt.toISOString(),
           status: donationDoc.donorFitness?.isFit ? 'collected' : 'rejected',
-          site: donationDoc.campId ? { name: (donationDoc.campId as any).name } : { name: 'Inhouse' },
+          site: donationDoc.campId
+            ? { name: (donationDoc.campId as any).name }
+            : { name: 'Inhouse' },
           donor: donor
             ? {
                 name: {
@@ -404,7 +433,11 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
           separationVerifiedSignature: completionHistory?.reason?.replace('Signature: ', '') || '',
           separationVerifiedAt: completionHistory?.at ? completionHistory.at.toISOString() : '',
           separationVerifiedBy: completionHistory?.actor
-            ? await mongoose.model('User').findById(completionHistory.actor as any).select('name').lean()
+            ? await mongoose
+                .model('User')
+                .findById(completionHistory.actor as any)
+                .select('name')
+                .lean()
             : null,
           rpmFirstSpin: separation?.rpmFirstSpin || '',
           rpmSecondSpin: separation?.rpmSecondSpin || '',
@@ -463,7 +496,11 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       return unit;
     },
 
-    async patchBag(donationId, { components, rpmFirstSpin, rpmSecondSpin, separationTime, editReason }, actorId) {
+    async patchBag(
+      donationId,
+      { components, rpmFirstSpin, rpmSecondSpin, separationTime, editReason },
+      actorId,
+    ) {
       const donation = await resolveDonation(donationId);
       if (!donation) throw new NotFoundError('Donation', donationId);
       const resolvedDonationId = donation.donationId;

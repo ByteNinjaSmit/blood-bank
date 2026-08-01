@@ -108,7 +108,12 @@ export const exportControllers = {
             labelRow.height = 22;
             const labelCell = labelRow.getCell(1);
             labelCell.value = t.subtitle;
-            labelCell.font = { name: 'Segoe UI', size: 11.5, bold: true, color: { argb: 'FF1E293B' } };
+            labelCell.font = {
+              name: 'Segoe UI',
+              size: 11.5,
+              bold: true,
+              color: { argb: 'FF1E293B' },
+            };
             labelCell.alignment = { horizontal: 'left', vertical: 'middle' };
             currentRow += 1;
 

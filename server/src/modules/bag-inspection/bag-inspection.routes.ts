@@ -16,26 +16,11 @@ const controllers = createBagInspectionControllers(service);
 
 const router = Router();
 
-router.get(
-  '/',
-  authenticate,
-  requirePermission('bag-inspection:read'),
-  controllers.list,
-);
+router.get('/', authenticate, requirePermission('bag-inspection:read'), controllers.list);
 
-router.get(
-  '/:id',
-  authenticate,
-  requirePermission('bag-inspection:read'),
-  controllers.get,
-);
+router.get('/:id', authenticate, requirePermission('bag-inspection:read'), controllers.get);
 
-router.post(
-  '/',
-  authenticate,
-  requirePermission('bag-inspection:create'),
-  controllers.create,
-);
+router.post('/', authenticate, requirePermission('bag-inspection:create'), controllers.create);
 
 router.patch(
   '/:id/report',

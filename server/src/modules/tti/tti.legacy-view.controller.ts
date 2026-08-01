@@ -67,7 +67,8 @@ export function createTtiLegacyViewControllers(deps: {
     async recordAndFinalize(req, res, next) {
       try {
         const { id } = ValidateTtiLegacyView.resultIdParam(req);
-        const { testResults, technicianId, editReason } = ValidateTtiLegacyView.recordResultsBody(req);
+        const { testResults, technicianId, editReason } =
+          ValidateTtiLegacyView.recordResultsBody(req);
         const actorId = actor(req);
 
         const tti = await deps.tti.resolveByIdOrDonation(id);

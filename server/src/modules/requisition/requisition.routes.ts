@@ -56,45 +56,20 @@ const CLINICAL_READ = [
   'hospital-user',
 ] as const;
 
-router.get(
-  '/',
-  authenticate,
-  requirePermission('requisition:read'),
-  controllers.list,
-);
+router.get('/', authenticate, requirePermission('requisition:read'), controllers.list);
 router.post(
   '/patient',
   authenticate,
   requirePermission('requisition:create'),
   controllers.createPatient,
 );
-router.post(
-  '/',
-  authenticate,
-  requirePermission('requisition:create'),
-  controllers.create,
-);
+router.post('/', authenticate, requirePermission('requisition:create'), controllers.create);
 
-router.put(
-  '/:id',
-  authenticate,
-  requirePermission('requisition:create'),
-  controllers.update,
-);
+router.put('/:id', authenticate, requirePermission('requisition:create'), controllers.update);
 
-router.get(
-  '/:id',
-  authenticate,
-  requirePermission('requisition:read'),
-  controllers.get,
-);
+router.get('/:id', authenticate, requirePermission('requisition:read'), controllers.get);
 
-router.post(
-  '/:id/match',
-  authenticate,
-  requirePermission('unit:reserve'),
-  controllers.match,
-);
+router.post('/:id/match', authenticate, requirePermission('unit:reserve'), controllers.match);
 router.post(
   '/:id/approve',
   authenticate,
@@ -139,24 +114,9 @@ router.post(
   requirePermission('crossmatch:perform'),
   controllers.crossmatch,
 );
-router.post(
-  '/issue',
-  authenticate,
-  requirePermission('unit:issue'),
-  controllers.issue,
-);
-router.post(
-  '/:id/issue',
-  authenticate,
-  requirePermission('unit:issue'),
-  controllers.issueAll,
-);
-router.patch(
-  '/:id/issue',
-  authenticate,
-  requirePermission('unit:issue'),
-  controllers.issueAll,
-);
+router.post('/issue', authenticate, requirePermission('unit:issue'), controllers.issue);
+router.post('/:id/issue', authenticate, requirePermission('unit:issue'), controllers.issueAll);
+router.patch('/:id/issue', authenticate, requirePermission('unit:issue'), controllers.issueAll);
 
 // Update crossmatch status for a matched unit
 router.patch(

@@ -24,7 +24,9 @@ export function createBagIssueControllers(service: BagIssueService): BagIssueCon
         const q = ValidateBagIssue.listQuery(req);
         const result = await service.list(q);
         res.json({ success: true, data: result, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async get(req, res, next) {
@@ -32,7 +34,9 @@ export function createBagIssueControllers(service: BagIssueService): BagIssueCon
         const { id } = ValidateBagIssue.idParam(req);
         const data = await service.get(id);
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async issue(req, res, next) {
@@ -40,7 +44,9 @@ export function createBagIssueControllers(service: BagIssueService): BagIssueCon
         const body = ValidateBagIssue.createBody(req);
         const data = await service.issue(body, actorId(req));
         res.status(201).json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async markUsed(req, res, next) {
@@ -49,7 +55,9 @@ export function createBagIssueControllers(service: BagIssueService): BagIssueCon
         const body = ValidateBagIssue.markUsedBody(req);
         const data = await service.markUsed(id, body, actorId(req));
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async markReturned(req, res, next) {
@@ -57,7 +65,9 @@ export function createBagIssueControllers(service: BagIssueService): BagIssueCon
         const { id } = ValidateBagIssue.idParam(req);
         const data = await service.markReturned(id, actorId(req));
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async markDamaged(req, res, next) {
@@ -65,7 +75,9 @@ export function createBagIssueControllers(service: BagIssueService): BagIssueCon
         const { id } = ValidateBagIssue.idParam(req);
         const data = await service.markDamaged(id, actorId(req));
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
   };
 }

@@ -102,5 +102,6 @@ export const ValidateDonation = {
   createBody: (req: Request) => parseOrThrow(CreateDonationBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListDonationsQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(DonationIdParam, req.params, 'path params'),
-  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
+  deleteReasonBody: (req: Request) =>
+    parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };

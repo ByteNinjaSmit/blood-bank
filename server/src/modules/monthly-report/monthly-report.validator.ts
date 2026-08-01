@@ -6,7 +6,11 @@ const CURRENT_YEAR = new Date().getFullYear();
 
 export const MonthlyReportQuery = z.object({
   month: z.coerce.number().int().min(1).max(12),
-  year: z.coerce.number().int().min(2000).max(CURRENT_YEAR + 1),
+  year: z.coerce
+    .number()
+    .int()
+    .min(2000)
+    .max(CURRENT_YEAR + 1),
 });
 
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {

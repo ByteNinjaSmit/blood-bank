@@ -41,8 +41,8 @@ describe('user-service.update — password change auditing', () => {
   it('records a dedicated password-changed event with no before/after snapshot', async () => {
     await userService.update('u1', { password: 'new-plaintext-password' }, 'actor-1');
 
-    const passwordEvent = auditRecord.mock.calls.find(
-      (call) => (call[0] as { changedFields?: string[] }).changedFields?.includes('password'),
+    const passwordEvent = auditRecord.mock.calls.find((call) =>
+      (call[0] as { changedFields?: string[] }).changedFields?.includes('password'),
     );
     expect(passwordEvent).toBeDefined();
     const entry = passwordEvent![0] as Record<string, unknown>;
@@ -64,8 +64,8 @@ describe('user-service.update — password change auditing', () => {
 
   it('does not emit a password-changed event when password is not part of the patch', async () => {
     await userService.update('u1', { firstName: 'New' }, 'actor-1');
-    const passwordEvent = auditRecord.mock.calls.find(
-      (call) => (call[0] as { changedFields?: string[] }).changedFields?.includes('password'),
+    const passwordEvent = auditRecord.mock.calls.find((call) =>
+      (call[0] as { changedFields?: string[] }).changedFields?.includes('password'),
     );
     expect(passwordEvent).toBeUndefined();
   });

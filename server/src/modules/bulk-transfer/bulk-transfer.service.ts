@@ -1,14 +1,28 @@
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
 import { withAudit } from '@/shared/utils/with-audit';
-import type { BulkTransferRepo, BulkTransferDto } from '@/modules/bulk-transfer/bulk-transfer.repository';
-import type { CreateBulkTransferInput, ListBulkTransferInput, UpdateBulkTransferInput } from '@/modules/bulk-transfer/bulk-transfer.validator';
+import type {
+  BulkTransferRepo,
+  BulkTransferDto,
+} from '@/modules/bulk-transfer/bulk-transfer.repository';
+import type {
+  CreateBulkTransferInput,
+  ListBulkTransferInput,
+  UpdateBulkTransferInput,
+} from '@/modules/bulk-transfer/bulk-transfer.validator';
 
 export interface BulkTransferService {
-  list(f: ListBulkTransferInput): Promise<{ items: BulkTransferDto[]; total: number; page: number; limit: number }>;
+  list(
+    f: ListBulkTransferInput,
+  ): Promise<{ items: BulkTransferDto[]; total: number; page: number; limit: number }>;
   get(id: string): Promise<BulkTransferDto>;
   create(input: CreateBulkTransferInput, actorId: string): Promise<BulkTransferDto>;
-  update(id: string, input: UpdateBulkTransferInput, actorId: string, reason?: string): Promise<BulkTransferDto>;
+  update(
+    id: string,
+    input: UpdateBulkTransferInput,
+    actorId: string,
+    reason?: string,
+  ): Promise<BulkTransferDto>;
   remove(id: string, actorId: string, reason?: string): Promise<BulkTransferDto>;
   restore(id: string, actorId: string): Promise<BulkTransferDto>;
 }
@@ -20,7 +34,9 @@ function generateTransferId(): string {
   return `BT-${yyyymmdd}-${rand}`;
 }
 
-export function createBulkTransferService(deps: { bulkTransfers: BulkTransferRepo }): BulkTransferService {
+export function createBulkTransferService(deps: {
+  bulkTransfers: BulkTransferRepo;
+}): BulkTransferService {
   const log = childLogger({ module: 'bulk-transfer-service' });
 
   return {
@@ -42,7 +58,13 @@ export function createBulkTransferService(deps: { bulkTransfers: BulkTransferRep
       );
       void withAudit(
         { actorId },
-        { module: 'bulk-transfer', action: 'CREATE', entityType: 'BulkTransfer', entityId: created.id, entityLabel: transferId },
+        {
+          module: 'bulk-transfer',
+          action: 'CREATE',
+          entityType: 'BulkTransfer',
+          entityId: created.id,
+          entityLabel: transferId,
+        },
         undefined,
         {
           transferId,
@@ -110,7 +132,13 @@ export function createBulkTransferService(deps: { bulkTransfers: BulkTransferRep
       log.info({ transferId: restored.transferId, actorId }, 'bulk transfer restored');
       void withAudit(
         { actorId },
-        { module: 'bulk-transfer', action: 'UPDATE', entityType: 'BulkTransfer', entityId: id, entityLabel: restored.transferId },
+        {
+          module: 'bulk-transfer',
+          action: 'UPDATE',
+          entityType: 'BulkTransfer',
+          entityId: id,
+          entityLabel: restored.transferId,
+        },
         { deletedAt: true },
         { deletedAt: null },
       );

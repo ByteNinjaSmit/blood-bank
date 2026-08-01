@@ -31,12 +31,7 @@ const READ_ROLES = [
 const router = Router();
 
 // Static paths must come before /:id to avoid route shadowing.
-router.get(
-  '/search',
-  authenticate,
-  requirePermission('donor:read'),
-  controllers.search,
-);
+router.get('/search', authenticate, requirePermission('donor:read'), controllers.search);
 router.post(
   '/search/vector',
   authenticate,
@@ -44,12 +39,7 @@ router.post(
   controllers.vectorSearch,
 );
 
-router.get(
-  '/',
-  authenticate,
-  requirePermission('donor:read'),
-  controllers.list,
-);
+router.get('/', authenticate, requirePermission('donor:read'), controllers.list);
 
 // Register export — one row per donor, enriched with their most recent
 // donation's clinical vitals, TTI serology results, and prepared
@@ -60,7 +50,8 @@ router.get(
   requirePermission('donor:read'),
   async (req, res, next) => {
     try {
-      const { source, search, bloodGroup, rh, eligibilityStatus, from, to, sortBy, order, campId } = req.query as any;
+      const { source, search, bloodGroup, rh, eligibilityStatus, from, to, sortBy, order, campId } =
+        req.query as any;
       const { items } = await repo.list({
         deletedOnly: false,
         source: source || undefined,
@@ -135,14 +126,23 @@ router.get(
         });
 
         const address = donor.address
-          ? [donor.address.line1, donor.address.line2, donor.address.city, donor.address.district, donor.address.state, donor.address.pincode]
+          ? [
+              donor.address.line1,
+              donor.address.line2,
+              donor.address.city,
+              donor.address.district,
+              donor.address.state,
+              donor.address.pincode,
+            ]
               .filter(Boolean)
               .join(', ')
           : '';
 
         return {
           donorId: donor.donorId,
-          name: [donor.name?.firstName, donor.name?.middleName, donor.name?.lastName].filter(Boolean).join(' '),
+          name: [donor.name?.firstName, donor.name?.middleName, donor.name?.lastName]
+            .filter(Boolean)
+            .join(' '),
           address,
           sex: donor.sex,
           phone: donor.phone,
@@ -187,37 +187,12 @@ router.get(
   },
 );
 
-router.get(
-  '/:id',
-  authenticate,
-  requirePermission('donor:read'),
-  controllers.get,
-);
+router.get('/:id', authenticate, requirePermission('donor:read'), controllers.get);
 
-router.post(
-  '/',
-  authenticate,
-  requirePermission('donor:create'),
-  controllers.create,
-);
-router.put(
-  '/:id',
-  authenticate,
-  requirePermission('donor:update'),
-  controllers.update,
-);
-router.delete(
-  '/:id',
-  authenticate,
-  requirePermission('donor:delete'),
-  controllers.remove,
-);
-router.post(
-  '/:id/restore',
-  authenticate,
-  requirePermission('donor:delete'),
-  controllers.restore,
-);
+router.post('/', authenticate, requirePermission('donor:create'), controllers.create);
+router.put('/:id', authenticate, requirePermission('donor:update'), controllers.update);
+router.delete('/:id', authenticate, requirePermission('donor:delete'), controllers.remove);
+router.post('/:id/restore', authenticate, requirePermission('donor:delete'), controllers.restore);
 // Permanent delete — only reachable from the Recycle Bin, narrower role
 // grant than soft-delete/restore.
 router.delete(

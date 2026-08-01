@@ -85,7 +85,8 @@ export function createRequisitionControllers(deps: {
         // Auto-create a patient if details were sent inline as body.patient.
         if (!req.body.patientId && req.body.patient) {
           const p = req.body.patient;
-          const patientPublicId = 'PAT-' + new Types.ObjectId().toHexString().slice(-6).toUpperCase();
+          const patientPublicId =
+            'PAT-' + new Types.ObjectId().toHexString().slice(-6).toUpperCase();
 
           let dob: Date | undefined;
           if (p.age) {
@@ -164,7 +165,11 @@ export function createRequisitionControllers(deps: {
         }
 
         const enrichedReq = await enrichRequisition(result.requisition);
-        res.json({ success: true, data: { requisition: enrichedReq, shortages: [] }, requestId: req.id });
+        res.json({
+          success: true,
+          data: { requisition: enrichedReq, shortages: [] },
+          requestId: req.id,
+        });
       } catch (e) {
         next(e);
       }
@@ -281,7 +286,12 @@ export function createRequisitionControllers(deps: {
       try {
         const { id } = ValidateRequisition.idParam(req);
         const { fromUnitId, toUnitId } = ValidateRequisition.swapMatchedUnitBody(req);
-        const updated = await deps.requisitions.swapMatchedUnit(id, fromUnitId, toUnitId, actor(req));
+        const updated = await deps.requisitions.swapMatchedUnit(
+          id,
+          fromUnitId,
+          toUnitId,
+          actor(req),
+        );
         const enriched = await enrichRequisition(updated);
         res.json({ success: true, data: enriched, requestId: req.id });
       } catch (e) {
@@ -305,7 +315,12 @@ export function createRequisitionControllers(deps: {
       try {
         const { id } = ValidateRequisition.idParam(req);
         const { unitId, grouping } = ValidateRequisition.matchedUnitGroupingBody(req);
-        const updated = await deps.requisitions.setMatchedUnitGrouping(id, unitId, grouping, actor(req));
+        const updated = await deps.requisitions.setMatchedUnitGrouping(
+          id,
+          unitId,
+          grouping,
+          actor(req),
+        );
         const enriched = await enrichRequisition(updated);
         res.json({ success: true, data: enriched, requestId: req.id });
       } catch (e) {
@@ -317,7 +332,12 @@ export function createRequisitionControllers(deps: {
       try {
         const { id } = ValidateRequisition.idParam(req);
         const { unitId, confirmed } = ValidateRequisition.confirmCompatibilityBody(req);
-        const updated = await deps.requisitions.confirmCompatibility(id, unitId, confirmed, actor(req));
+        const updated = await deps.requisitions.confirmCompatibility(
+          id,
+          unitId,
+          confirmed,
+          actor(req),
+        );
         const enriched = await enrichRequisition(updated);
         res.json({ success: true, data: enriched, requestId: req.id });
       } catch (e) {
@@ -329,7 +349,12 @@ export function createRequisitionControllers(deps: {
       try {
         const { id } = ValidateRequisition.idParam(req);
         const { componentType, reason } = ValidateRequisition.rejectComponentBody(req);
-        const updated = await deps.requisitions.rejectComponent(id, componentType, reason, actor(req));
+        const updated = await deps.requisitions.rejectComponent(
+          id,
+          componentType,
+          reason,
+          actor(req),
+        );
         const enriched = await enrichRequisition(updated);
         res.json({ success: true, data: enriched, requestId: req.id });
       } catch (e) {

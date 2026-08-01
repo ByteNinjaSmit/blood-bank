@@ -28,7 +28,10 @@ async function invalidateInventoryCache(): Promise<void> {
 /** Every id must currently be RELEASED, or the whole claim is rejected. */
 export async function assertUnitsAvailable(unitIds: string[]): Promise<void> {
   if (!unitIds.length) return;
-  const releasedCount = await BloodUnitModel.countDocuments({ _id: { $in: unitIds }, status: 'RELEASED' });
+  const releasedCount = await BloodUnitModel.countDocuments({
+    _id: { $in: unitIds },
+    status: 'RELEASED',
+  });
   if (releasedCount !== unitIds.length) {
     throw new ConflictError(UNAVAILABLE_MESSAGE);
   }

@@ -47,9 +47,9 @@ export function createIssueService(deps: {
 
       const patient = await deps.patients.findById(req.patientId);
       const tti = await deps.tti.findByDonation(unit.donationId);
-      const ttiDecision = tti?.releaseDecision ?? (
-        ['RELEASED', 'RESERVED', 'CROSSMATCHED'].includes(unit.status) ? 'released' : 'pending'
-      );
+      const ttiDecision =
+        tti?.releaseDecision ??
+        (['RELEASED', 'RESERVED', 'CROSSMATCHED'].includes(unit.status) ? 'released' : 'pending');
       const xm = await deps.crossmatches.findLatestForUnit(req.id, input.unitId);
 
       const gate = checkIssueGate({

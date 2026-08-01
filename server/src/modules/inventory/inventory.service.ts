@@ -30,9 +30,9 @@ export interface NearExpiryUnit {
 
 export interface InventoryService {
   selectFefo(req: SelectRequest): Promise<SelectionResult>;
-  stockSummary(includeLoan?: boolean): Promise<
-    Array<{ componentType: string; aboGroup: string; rhFactor: string; count: number }>
-  >;
+  stockSummary(
+    includeLoan?: boolean,
+  ): Promise<Array<{ componentType: string; aboGroup: string; rhFactor: string; count: number }>>;
   nearExpiry(days: number): Promise<NearExpiryUnit[]>;
 }
 
@@ -73,7 +73,10 @@ export function createInventoryService(deps: {
           deps.units.inStockSummary(),
           deps.bulkTransfer.loanStockSummary(),
         ]);
-        const merged = new Map<string, { componentType: string; aboGroup: string; rhFactor: string; count: number }>();
+        const merged = new Map<
+          string,
+          { componentType: string; aboGroup: string; rhFactor: string; count: number }
+        >();
         [...ownSummary, ...loanSummary].forEach((row) => {
           const key = `${row.componentType}|${row.aboGroup}|${row.rhFactor}`;
           const existing = merged.get(key);

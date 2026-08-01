@@ -2,7 +2,14 @@
 // patient. Drives the match → crossmatch → issue flow.
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
-import { ABO_GROUP, CLINICAL_DISEASE, COMPONENT_TYPE, GRADING_REACTION, RH_FACTOR, SPECIAL_NEED } from '@/shared/enums';
+import {
+  ABO_GROUP,
+  CLINICAL_DISEASE,
+  COMPONENT_TYPE,
+  GRADING_REACTION,
+  RH_FACTOR,
+  SPECIAL_NEED,
+} from '@/shared/enums';
 import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 // One agglutination-grading cell. Every worksheet reagent is stored as
@@ -18,10 +25,7 @@ const GroupingWorksheet = new Schema(
       { antiA: grade(), antiA1: grade(), antiB: grade(), antiAB: grade(), antiH: grade() },
       { _id: false },
     ),
-    serumGrouping: new Schema(
-      { aCell: grade(), bCell: grade(), oCell: grade() },
-      { _id: false },
-    ),
+    serumGrouping: new Schema({ aCell: grade(), bCell: grade(), oCell: grade() }, { _id: false }),
     rhTyping: new Schema(
       { antiD: grade(), antiDBovine: grade(), indirectCoombs: grade() },
       { _id: false },
@@ -159,7 +163,12 @@ const RequisitionSchema = new Schema(
     // approve, then stop) from a normal requisition (which continues to
     // issue/complete) — same document shape and pipeline either way, only
     // the origin/intent differs.
-    purpose: { type: String, enum: ['REQUISITION', 'RESERVATION'], default: 'REQUISITION', index: true },
+    purpose: {
+      type: String,
+      enum: ['REQUISITION', 'RESERVATION'],
+      default: 'REQUISITION',
+      index: true,
+    },
     patient: { type: RequisitionPatientSchema },
     // Recipient (patient-side) blood-grouping worksheet, entered once in
     // Match Review.

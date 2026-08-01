@@ -8,20 +8,40 @@ import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { IssueModel } from '@/modules/issue/issue.model';
 import { DonorCardModel } from '@/modules/donor-card/donor-card.model';
 import { BagStockModel } from '@/modules/bag-stock/bag-stock.model';
-import { ChemicalModel, ChemicalStockLotModel } from '@/modules/chemical-inventory/chemical-inventory.model';
+import {
+  ChemicalModel,
+  ChemicalStockLotModel,
+} from '@/modules/chemical-inventory/chemical-inventory.model';
 import type { ChemicalInventoryRepo } from '@/modules/chemical-inventory/chemical-inventory.repository';
 import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 import {
-  PRODUCTS, DISCARD_LABEL, TTI_DISCARD_LABEL, DISEASE_KEYWORDS, REAGENT_CANONICAL, ELISA_CANONICAL,
-  GROUP_LABELS, STORAGE_CENTRE_PATTERN, toProductLabel, toGroupLabel, emptyGroupTally,
-  buildEntityBreakdown, ageAt, matchIndication,
+  PRODUCTS,
+  DISCARD_LABEL,
+  TTI_DISCARD_LABEL,
+  DISEASE_KEYWORDS,
+  REAGENT_CANONICAL,
+  ELISA_CANONICAL,
+  GROUP_LABELS,
+  STORAGE_CENTRE_PATTERN,
+  toProductLabel,
+  toGroupLabel,
+  emptyGroupTally,
+  buildEntityBreakdown,
+  ageAt,
+  matchIndication,
 } from './monthly-report.mappers';
 
-export function createMonthlyReportMethods2({ chemicalRepo }: { chemicalRepo: ChemicalInventoryRepo }) {
+export function createMonthlyReportMethods2({
+  chemicalRepo,
+}: {
+  chemicalRepo: ChemicalInventoryRepo;
+}) {
   return {
     async getChemicalStock(month: number, year: number) {
       const monthly = await chemicalRepo.getMonthlyStockReport(month, year);
-      const chemicals = await ChemicalModel.find({ deletedAt: null }).select('name unitType createdAt').lean();
+      const chemicals = await ChemicalModel.find({ deletedAt: null })
+        .select('name unitType createdAt')
+        .lean();
 
       const findMonthly = (name: string) =>
         monthly.find((m: any) => m.chemicalName.toLowerCase() === name.toLowerCase());
@@ -34,12 +54,15 @@ export function createMonthlyReportMethods2({ chemicalRepo }: { chemicalRepo: Ch
       // matches prefer the most recently created record.
       const findChemical = (terms: string[], label: string) => {
         const candidates = (chemicals as any[]).filter((c) =>
-          terms.some((t) => c.name.toLowerCase().includes(t.toLowerCase()))
+          terms.some((t) => c.name.toLowerCase().includes(t.toLowerCase())),
         );
         if (candidates.length === 0) return undefined;
         const exact = candidates.find((c) => c.name.toLowerCase() === label.toLowerCase());
         if (exact) return exact;
-        return candidates.reduce((best, c) => (c.createdAt > best.createdAt ? c : best), candidates[0]);
+        return candidates.reduce(
+          (best, c) => (c.createdAt > best.createdAt ? c : best),
+          candidates[0],
+        );
       };
 
       async function buildRow(label: string, terms: string[]) {
@@ -47,7 +70,9 @@ export function createMonthlyReportMethods2({ chemicalRepo }: { chemicalRepo: Ch
         if (!chem) return { label, configured: false };
         const stats = findMonthly(chem.name);
         const lots = await ChemicalStockLotModel.find({ chemicalId: chem._id, deletedAt: null })
-          .select('lotNumber batchNumber qtyAvailable qtyInUse qtyConsumed expiryDate packType unitsPerPack openBoxUnitsRemaining')
+          .select(
+            'lotNumber batchNumber qtyAvailable qtyInUse qtyConsumed expiryDate packType unitsPerPack openBoxUnitsRemaining',
+          )
           .lean();
         const batches = (lots as any[]).map((l) => ({
           lotNumber: l.lotNumber,
@@ -59,8 +84,13 @@ export function createMonthlyReportMethods2({ chemicalRepo }: { chemicalRepo: Ch
           unitsPerPack: l.unitsPerPack,
           openBoxUnitsRemaining: l.openBoxUnitsRemaining,
         }));
-        const isVialTracked = (lots as any[]).some((l) => l.packType === 'VIALS' || l.packType === 'BOX');
-        const openBoxVialsRemaining = (lots as any[]).reduce((sum, l) => sum + (l.openBoxUnitsRemaining ?? 0), 0);
+        const isVialTracked = (lots as any[]).some(
+          (l) => l.packType === 'VIALS' || l.packType === 'BOX',
+        );
+        const openBoxVialsRemaining = (lots as any[]).reduce(
+          (sum, l) => sum + (l.openBoxUnitsRemaining ?? 0),
+          0,
+        );
         const unitsPerPack = (lots as any[]).find((l) => l.unitsPerPack)?.unitsPerPack ?? null;
         return {
           label,
@@ -79,7 +109,9 @@ export function createMonthlyReportMethods2({ chemicalRepo }: { chemicalRepo: Ch
         };
       }
 
-      const reagentRows = await Promise.all(REAGENT_CANONICAL.map((name) => buildRow(name, [name])));
+      const reagentRows = await Promise.all(
+        REAGENT_CANONICAL.map((name) => buildRow(name, [name])),
+      );
       const elisaRows = await Promise.all(ELISA_CANONICAL.map((k) => buildRow(k.label, k.terms)));
 
       return { reagentRows, elisaRows };
@@ -93,7 +125,8 @@ export function createMonthlyReportMethods2({ chemicalRepo }: { chemicalRepo: Ch
       const byType: Record<string, any[]> = {};
       for (const b of bags as any[]) {
         byType[b.bagType] ??= [];
-        const closing = b.openingStock + b.receivedQty - b.issuedQty - b.damagedQty - b.discardedQty;
+        const closing =
+          b.openingStock + b.receivedQty - b.issuedQty - b.damagedQty - b.discardedQty;
         byType[b.bagType]!.push({
           batchNumber: b.batchNumber,
           opening: b.openingStock,
@@ -148,8 +181,10 @@ export function createMonthlyReportMethods2({ chemicalRepo }: { chemicalRepo: Ch
       ]);
 
       const blankGender = () => ({ male: 0, female: 0, other: 0, total: 0 });
-      const blankGroups = () => Object.fromEntries(GROUP_LABELS.map((g) => [g, 0])) as Record<string, number>;
-      const blankProducts = () => Object.fromEntries(PRODUCTS.map((p) => [p, 0])) as Record<string, number>;
+      const blankGroups = () =>
+        Object.fromEntries(GROUP_LABELS.map((g) => [g, 0])) as Record<string, number>;
+      const blankProducts = () =>
+        Object.fromEntries(PRODUCTS.map((p) => [p, 0])) as Record<string, number>;
 
       const donorSetByCamp = new Map<string, Set<string>>();
       const genderByCamp = new Map<string, ReturnType<typeof blankGender>>();

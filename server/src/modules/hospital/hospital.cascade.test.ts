@@ -94,7 +94,8 @@ async function seedHospitalWithFullChain() {
 
 describe('hospital cascade soft-delete / restore', () => {
   it('cascades delete: pending requisition soft-deleted, issued requisition + its crossmatch/issue marked affected', async () => {
-    const { hospital, pendingReq, issuedReq, crossmatch, issue } = await seedHospitalWithFullChain();
+    const { hospital, pendingReq, issuedReq, crossmatch, issue } =
+      await seedHospitalWithFullChain();
 
     await hospitalService.remove(hospital._id.toString(), actorId, 'Test hospital cascade delete');
 
@@ -117,7 +118,8 @@ describe('hospital cascade soft-delete / restore', () => {
   });
 
   it('cascades restore: everything reverts to its prior state', async () => {
-    const { hospital, pendingReq, issuedReq, crossmatch, issue } = await seedHospitalWithFullChain();
+    const { hospital, pendingReq, issuedReq, crossmatch, issue } =
+      await seedHospitalWithFullChain();
 
     await hospitalService.remove(hospital._id.toString(), actorId, 'Test delete');
     await hospitalService.restore(hospital._id.toString(), actorId);

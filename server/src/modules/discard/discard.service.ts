@@ -1,4 +1,8 @@
-import type { DiscardCreateInput, DiscardListFilters, DiscardRepo } from '@/modules/discard/discard.repository';
+import type {
+  DiscardCreateInput,
+  DiscardListFilters,
+  DiscardRepo,
+} from '@/modules/discard/discard.repository';
 
 export interface DiscardService {
   list(filters: DiscardListFilters): ReturnType<DiscardRepo['list']>;

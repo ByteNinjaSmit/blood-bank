@@ -14,26 +14,11 @@ const controllers = createBagDiscardControllers(service);
 
 const router = Router();
 
-router.get(
-  '/',
-  authenticate,
-  requirePermission('bag-discard:read'),
-  controllers.list,
-);
+router.get('/', authenticate, requirePermission('bag-discard:read'), controllers.list);
 
-router.get(
-  '/:id',
-  authenticate,
-  requirePermission('bag-discard:read'),
-  controllers.get,
-);
+router.get('/:id', authenticate, requirePermission('bag-discard:read'), controllers.get);
 
-router.post(
-  '/',
-  authenticate,
-  requirePermission('bag-discard:create'),
-  controllers.create,
-);
+router.post('/', authenticate, requirePermission('bag-discard:create'), controllers.create);
 
 router.patch(
   '/:id/approve',

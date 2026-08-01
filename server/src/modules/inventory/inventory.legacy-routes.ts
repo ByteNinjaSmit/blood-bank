@@ -44,8 +44,23 @@ const WRITE_ROLES: Role[] = [
 // permission is common to all WRITE_ROLES).
 router.get('/', authenticate, requirePermission('unit:read'), controllers.listStock);
 router.post('/unreserve', authenticate, requirePermission('unit:read'), controllers.unreserve);
-router.post('/send-to-storage', authenticate, requirePermission('unit:read'), controllers.sendToStorage);
-router.patch('/:id/storage', authenticate, requirePermission('unit:read'), controllers.updateStorage);
-router.post('/return-from-storage', authenticate, requirePermission('unit:read'), controllers.returnFromStorage);
+router.post(
+  '/send-to-storage',
+  authenticate,
+  requirePermission('unit:read'),
+  controllers.sendToStorage,
+);
+router.patch(
+  '/:id/storage',
+  authenticate,
+  requirePermission('unit:read'),
+  controllers.updateStorage,
+);
+router.post(
+  '/return-from-storage',
+  authenticate,
+  requirePermission('unit:read'),
+  controllers.returnFromStorage,
+);
 
 export default router;

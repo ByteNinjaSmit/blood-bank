@@ -19,10 +19,17 @@ const EMAIL = (process.argv[2] ?? 'smitrajbankar11@gmail.com').toLowerCase();
 const modules = Array.from(new Set(PERMISSION.map((p) => p.split(':')[0])));
 
 async function main() {
-  await mongoose.connect(process.env.MONGODB_URI!, { dbName: 'BloodBank', serverSelectionTimeoutMS: 8000 });
+  await mongoose.connect(process.env.MONGODB_URI!, {
+    dbName: 'BloodBank',
+    serverSelectionTimeoutMS: 8000,
+  });
 
   const permissions = modules.map((moduleName) => ({
-    moduleName, view: true, create: true, update: true, delete: true,
+    moduleName,
+    view: true,
+    create: true,
+    update: true,
+    delete: true,
   }));
 
   const res = await UserModel.updateOne(
@@ -39,4 +46,7 @@ async function main() {
   await mongoose.disconnect();
 }
 
-main().catch((e) => { console.error('FAILED:', e); process.exit(1); });
+main().catch((e) => {
+  console.error('FAILED:', e);
+  process.exit(1);
+});

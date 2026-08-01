@@ -21,14 +21,16 @@ const BatchLineSchema = z.object({
   quantityReceived: z.number().int().positive(),
 });
 
-const FinancialsSchema = z.object({
-  basicAmountRs: z.number().min(0).optional(),
-  cgstRs: z.number().min(0).optional(),
-  sgstRs: z.number().min(0).optional(),
-  igstRs: z.number().min(0).optional(),
-  discountRs: z.number().min(0).optional(),
-  netAmountRs: z.number().min(0).optional(),
-}).optional();
+const FinancialsSchema = z
+  .object({
+    basicAmountRs: z.number().min(0).optional(),
+    cgstRs: z.number().min(0).optional(),
+    sgstRs: z.number().min(0).optional(),
+    igstRs: z.number().min(0).optional(),
+    discountRs: z.number().min(0).optional(),
+    netAmountRs: z.number().min(0).optional(),
+  })
+  .optional();
 
 export const CreateGRNBody = z.object({
   poId: z.string().regex(OBJECT_ID, 'Invalid poId'),

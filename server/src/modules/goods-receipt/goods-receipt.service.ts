@@ -2,13 +2,23 @@ import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
 import { withAudit } from '@/shared/utils/with-audit';
 import { ConflictError, NotFoundError } from '@/shared/errors';
-import type { GRNRepo, GRNDto, BatchLineDto } from '@/modules/goods-receipt/goods-receipt.repository';
+import type {
+  GRNRepo,
+  GRNDto,
+  BatchLineDto,
+} from '@/modules/goods-receipt/goods-receipt.repository';
 import type { PORepo } from '@/modules/purchase-order/purchase-order.repository';
 import type { BagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
-import type { CreateGRNInput, UpdateGRNInput, ListGRNInput } from '@/modules/goods-receipt/goods-receipt.validator';
+import type {
+  CreateGRNInput,
+  UpdateGRNInput,
+  ListGRNInput,
+} from '@/modules/goods-receipt/goods-receipt.validator';
 
 export interface GRNService {
-  list(q: ListGRNInput): Promise<{ items: GRNDto[]; total: number; page: number; pageSize: number }>;
+  list(
+    q: ListGRNInput,
+  ): Promise<{ items: GRNDto[]; total: number; page: number; pageSize: number }>;
   get(id: string): Promise<GRNDto>;
   create(input: CreateGRNInput, actorId: string): Promise<GRNDto>;
   update(id: string, input: UpdateGRNInput, actorId: string): Promise<GRNDto>;
@@ -100,7 +110,13 @@ export function createGRNService(deps: {
       log.info({ grnNumber, poId: input.poId, actorId }, 'GRN created and stock updated');
       void withAudit(
         { actorId },
-        { module: 'goods-receipt', action: 'CREATE', entityType: 'GoodsReceipt', entityId: created.id, entityLabel: grnNumber },
+        {
+          module: 'goods-receipt',
+          action: 'CREATE',
+          entityType: 'GoodsReceipt',
+          entityId: created.id,
+          entityLabel: grnNumber,
+        },
         undefined,
         { grnNumber, poId: input.poId, batchLines: created.batchLines.length },
       );
@@ -136,7 +152,9 @@ export function createGRNService(deps: {
           capacityMl: b.capacityMl,
           anticoagulant: b.anticoagulant,
           batchNumber: b.batchNumber,
-          manufacturingDate: b.manufacturingDate ? new Date(b.manufacturingDate).toISOString() : undefined,
+          manufacturingDate: b.manufacturingDate
+            ? new Date(b.manufacturingDate).toISOString()
+            : undefined,
           expiryDate: new Date(b.expiryDate).toISOString(),
           quantityReceived: b.quantityReceived,
         }));
@@ -170,7 +188,13 @@ export function createGRNService(deps: {
       log.info({ grnId: id, actorId }, 'GRN updated, bag stock updated');
       void withAudit(
         { actorId },
-        { module: 'goods-receipt', action: 'UPDATE', entityType: 'GoodsReceipt', entityId: id, entityLabel: grn.grnNumber },
+        {
+          module: 'goods-receipt',
+          action: 'UPDATE',
+          entityType: 'GoodsReceipt',
+          entityId: id,
+          entityLabel: grn.grnNumber,
+        },
         grn,
         updated,
       );

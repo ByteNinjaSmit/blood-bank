@@ -14,47 +14,17 @@ const controllers = createPOControllers(service);
 
 const router = Router();
 
-router.get(
-  '/',
-  authenticate,
-  requirePermission('po:read'),
-  controllers.list,
-);
+router.get('/', authenticate, requirePermission('po:read'), controllers.list);
 
-router.get(
-  '/:id',
-  authenticate,
-  requirePermission('po:read'),
-  controllers.get,
-);
+router.get('/:id', authenticate, requirePermission('po:read'), controllers.get);
 
-router.post(
-  '/',
-  authenticate,
-  requirePermission('po:create'),
-  controllers.create,
-);
+router.post('/', authenticate, requirePermission('po:create'), controllers.create);
 
-router.patch(
-  '/:id',
-  authenticate,
-  requirePermission('po:create'),
-  controllers.update,
-);
+router.patch('/:id', authenticate, requirePermission('po:create'), controllers.update);
 
-router.delete(
-  '/:id',
-  authenticate,
-  requirePermission('po:create'),
-  controllers.remove,
-);
+router.delete('/:id', authenticate, requirePermission('po:create'), controllers.remove);
 
-router.post(
-  '/:id/restore',
-  authenticate,
-  requirePermission('po:create'),
-  controllers.restore,
-);
+router.post('/:id/restore', authenticate, requirePermission('po:create'), controllers.restore);
 
 router.delete(
   '/:id/permanent',

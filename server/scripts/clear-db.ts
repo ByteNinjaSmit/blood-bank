@@ -51,7 +51,7 @@ async function main() {
       status: { type: String, default: 'active' },
       permissions: { type: [mongoose.Schema.Types.Mixed], default: [] },
     },
-    { timestamps: true }
+    { timestamps: true },
   );
 
   const UserModel = mongoose.models.User || mongoose.model('User', UserSchema);
@@ -84,10 +84,11 @@ async function main() {
       createdBy: { type: mongoose.Schema.Types.ObjectId, required: true },
       updatedBy: { type: mongoose.Schema.Types.ObjectId, required: true },
     },
-    { timestamps: true }
+    { timestamps: true },
   );
-  const CategoryModel = mongoose.models.ChemicalCategory || mongoose.model('ChemicalCategory', CategorySchema);
-  
+  const CategoryModel =
+    mongoose.models.ChemicalCategory || mongoose.model('ChemicalCategory', CategorySchema);
+
   const defaultCats = [
     { name: 'Blood Grouping Reagents', description: 'Anti-A, Anti-B, Anti-D, AHG etc.' },
     { name: 'ELISA / Microlisa Kits', description: 'HIV, HBsAg, HCV, Syphilis testing kits' },
@@ -111,9 +112,11 @@ async function main() {
       createdBy: { type: mongoose.Schema.Types.ObjectId, required: true },
       updatedBy: { type: mongoose.Schema.Types.ObjectId, required: true },
     },
-    { timestamps: true }
+    { timestamps: true },
   );
-  const ManufacturerModel = mongoose.models.ChemicalManufacturer || mongoose.model('ChemicalManufacturer', ManufacturerSchema);
+  const ManufacturerModel =
+    mongoose.models.ChemicalManufacturer ||
+    mongoose.model('ChemicalManufacturer', ManufacturerSchema);
 
   const defaultMfgs = [
     { name: 'Tulip Diagnostics' },

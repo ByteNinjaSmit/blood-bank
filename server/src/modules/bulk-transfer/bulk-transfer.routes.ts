@@ -17,6 +17,11 @@ router.get('/:id', authenticate, requirePermission('bulk-transfer:read'), contro
 router.post('/', authenticate, requirePermission('bulk-transfer:create'), controllers.create);
 router.patch('/:id', authenticate, requirePermission('bulk-transfer:update'), controllers.update);
 router.delete('/:id', authenticate, requirePermission('bulk-transfer:delete'), controllers.remove);
-router.post('/:id/restore', authenticate, requirePermission('bulk-transfer:update'), controllers.restore);
+router.post(
+  '/:id/restore',
+  authenticate,
+  requirePermission('bulk-transfer:update'),
+  controllers.restore,
+);
 
 export default router;

@@ -17,22 +17,12 @@ const PRINT_ROLES = [
 ] as const;
 
 // List-all with filters — the central Audit Trail viewer's primary feed.
-router.get(
-  '/',
-  authenticate,
-  requirePermission('audit:read'),
-  auditController.search,
-);
+router.get('/', authenticate, requirePermission('audit:read'), auditController.search);
 
 // Bulk export — narrower role grant than plain read, gated by a
 // dedicated permission since export is a higher-risk data-exfiltration
 // surface than paginated viewing.
-router.get(
-  '/export',
-  authenticate,
-  requirePermission('audit:export'),
-  auditController.export,
-);
+router.get('/export', authenticate, requirePermission('audit:export'), auditController.export);
 
 // Fire a PRINT audit entry for a client-side print (label/report/sticker) —
 // the print itself happens locally via window.print(), so this is the only

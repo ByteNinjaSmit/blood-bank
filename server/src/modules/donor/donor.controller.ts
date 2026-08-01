@@ -150,7 +150,9 @@ export function createDonorControllers(service: DonorService): DonorControllers 
             const activeDeferral = await deferrals.findLatestActiveByDonor(dto.id);
             if (activeDeferral) {
               dto.deferralReason = activeDeferral.reason;
-              dto.deferralUntil = activeDeferral.untilDate ? activeDeferral.untilDate.toISOString() : null;
+              dto.deferralUntil = activeDeferral.untilDate
+                ? activeDeferral.untilDate.toISOString()
+                : null;
             }
           }
           mappedItems.push(dto);
@@ -177,7 +179,11 @@ export function createDonorControllers(service: DonorService): DonorControllers 
           limit,
         });
         const mappedItems = (items || []).map((item) => toDto(item));
-        res.json({ success: true, data: { items: mappedItems, total: items.length }, requestId: req.id });
+        res.json({
+          success: true,
+          data: { items: mappedItems, total: items.length },
+          requestId: req.id,
+        });
       } catch (e) {
         next(e);
       }

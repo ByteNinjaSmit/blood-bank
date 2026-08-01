@@ -8,12 +8,7 @@ const controllers = createTtiControllers(ttiService);
 
 const router = Router();
 
-router.get(
-  '/:donationId',
-  authenticate,
-  requirePermission('tti:read'),
-  controllers.get,
-);
+router.get('/:donationId', authenticate, requirePermission('tti:read'), controllers.get);
 
 router.post(
   '/:donationId/tests',

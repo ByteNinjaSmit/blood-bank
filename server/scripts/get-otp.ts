@@ -14,7 +14,10 @@ async function main() {
   const jobs = await emailQueue.getJobs([...jobTypes]);
 
   const otpJobs = jobs
-    .filter(job => job && job.data && (job.data.type === 'LOGIN_OTP' || job.data.type === 'REGISTER_OTP'))
+    .filter(
+      (job) =>
+        job && job.data && (job.data.type === 'LOGIN_OTP' || job.data.type === 'REGISTER_OTP'),
+    )
     .sort((a, b) => b.timestamp - a.timestamp); // newest first
 
   if (otpJobs.length === 0) {
@@ -28,7 +31,9 @@ async function main() {
   console.log('========================================');
   for (const job of otpJobs.slice(0, 5)) {
     const time = new Date(job.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-    console.log(`[${time}] ${job.data.to} -> OTP Code: ${job.data.payload?.code} (${job.data.type})`);
+    console.log(
+      `[${time}] ${job.data.to} -> OTP Code: ${job.data.payload?.code} (${job.data.type})`,
+    );
   }
   console.log('========================================\n');
 

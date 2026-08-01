@@ -26,20 +26,104 @@ import {
 const MONGODB_URI = process.env.MONGODB_URI;
 
 // name -> { unitType, packType, unitsPerPack }
-const CHEMICALS: Array<{ name: string; category: string; unitType: string; packType: 'ML' | 'BOX'; unitsPerPack: number | null }> = [
-  { name: 'Anti-A', category: 'Blood Grouping Reagents', unitType: 'Bottle', packType: 'ML', unitsPerPack: null },
-  { name: 'Anti-B', category: 'Blood Grouping Reagents', unitType: 'Bottle', packType: 'ML', unitsPerPack: null },
-  { name: 'Anti-D', category: 'Blood Grouping Reagents', unitType: 'Bottle', packType: 'ML', unitsPerPack: null },
-  { name: 'Anti-AB', category: 'Blood Grouping Reagents', unitType: 'Bottle', packType: 'ML', unitsPerPack: null },
-  { name: 'Anti-A1', category: 'Blood Grouping Reagents', unitType: 'Bottle', packType: 'ML', unitsPerPack: null },
-  { name: 'Anti-H', category: 'Blood Grouping Reagents', unitType: 'Bottle', packType: 'ML', unitsPerPack: null },
-  { name: 'Anti-AHG', category: 'Blood Grouping Reagents', unitType: 'Bottle', packType: 'ML', unitsPerPack: null },
-  { name: 'Bovine', category: 'Blood Grouping Reagents', unitType: 'Bottle', packType: 'ML', unitsPerPack: null },
-  { name: 'HIV ELISA', category: 'ELISA / Microlisa Kits', unitType: 'Kit', packType: 'BOX', unitsPerPack: 96 },
-  { name: 'HBsAg ELISA', category: 'ELISA / Microlisa Kits', unitType: 'Kit', packType: 'BOX', unitsPerPack: 96 },
-  { name: 'HCV ELISA', category: 'ELISA / Microlisa Kits', unitType: 'Kit', packType: 'BOX', unitsPerPack: 96 },
-  { name: 'MP ELISA', category: 'ELISA / Microlisa Kits', unitType: 'Kit', packType: 'BOX', unitsPerPack: 96 },
-  { name: 'VDRL ELISA', category: 'ELISA / Microlisa Kits', unitType: 'Kit', packType: 'BOX', unitsPerPack: 96 },
+const CHEMICALS: Array<{
+  name: string;
+  category: string;
+  unitType: string;
+  packType: 'ML' | 'BOX';
+  unitsPerPack: number | null;
+}> = [
+  {
+    name: 'Anti-A',
+    category: 'Blood Grouping Reagents',
+    unitType: 'Bottle',
+    packType: 'ML',
+    unitsPerPack: null,
+  },
+  {
+    name: 'Anti-B',
+    category: 'Blood Grouping Reagents',
+    unitType: 'Bottle',
+    packType: 'ML',
+    unitsPerPack: null,
+  },
+  {
+    name: 'Anti-D',
+    category: 'Blood Grouping Reagents',
+    unitType: 'Bottle',
+    packType: 'ML',
+    unitsPerPack: null,
+  },
+  {
+    name: 'Anti-AB',
+    category: 'Blood Grouping Reagents',
+    unitType: 'Bottle',
+    packType: 'ML',
+    unitsPerPack: null,
+  },
+  {
+    name: 'Anti-A1',
+    category: 'Blood Grouping Reagents',
+    unitType: 'Bottle',
+    packType: 'ML',
+    unitsPerPack: null,
+  },
+  {
+    name: 'Anti-H',
+    category: 'Blood Grouping Reagents',
+    unitType: 'Bottle',
+    packType: 'ML',
+    unitsPerPack: null,
+  },
+  {
+    name: 'Anti-AHG',
+    category: 'Blood Grouping Reagents',
+    unitType: 'Bottle',
+    packType: 'ML',
+    unitsPerPack: null,
+  },
+  {
+    name: 'Bovine',
+    category: 'Blood Grouping Reagents',
+    unitType: 'Bottle',
+    packType: 'ML',
+    unitsPerPack: null,
+  },
+  {
+    name: 'HIV ELISA',
+    category: 'ELISA / Microlisa Kits',
+    unitType: 'Kit',
+    packType: 'BOX',
+    unitsPerPack: 96,
+  },
+  {
+    name: 'HBsAg ELISA',
+    category: 'ELISA / Microlisa Kits',
+    unitType: 'Kit',
+    packType: 'BOX',
+    unitsPerPack: 96,
+  },
+  {
+    name: 'HCV ELISA',
+    category: 'ELISA / Microlisa Kits',
+    unitType: 'Kit',
+    packType: 'BOX',
+    unitsPerPack: 96,
+  },
+  {
+    name: 'MP ELISA',
+    category: 'ELISA / Microlisa Kits',
+    unitType: 'Kit',
+    packType: 'BOX',
+    unitsPerPack: 96,
+  },
+  {
+    name: 'VDRL ELISA',
+    category: 'ELISA / Microlisa Kits',
+    unitType: 'Kit',
+    packType: 'BOX',
+    unitsPerPack: 96,
+  },
 ];
 
 async function main() {
@@ -53,7 +137,8 @@ async function main() {
   console.log('Connected.');
 
   const actor =
-    (await UserModel.findOne({ role: 'system-admin' }).lean()) ?? (await UserModel.findOne().lean());
+    (await UserModel.findOne({ role: 'system-admin' }).lean()) ??
+    (await UserModel.findOne().lean());
   if (!actor) {
     console.error('No user found in the database to attribute seeded records to. Aborting.');
     process.exit(1);
@@ -68,7 +153,7 @@ async function main() {
     ChemicalStockHistoryModel.deleteMany({}),
   ]);
   console.log(
-    `Deleted ${lotsDeleted.deletedCount} lots, ${purchasesDeleted.deletedCount} purchases, ${historyDeleted.deletedCount} history entries.`
+    `Deleted ${lotsDeleted.deletedCount} lots, ${purchasesDeleted.deletedCount} purchases, ${historyDeleted.deletedCount} history entries.`,
   );
 
   // 2. Ensure categories exist (find-or-create, don't duplicate).

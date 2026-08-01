@@ -149,13 +149,15 @@ export async function textSearch(
   // Tier 3: Regex fallback
   const fields = opts.searchFields ?? ['name', 'email', 'phone'];
   const terms = query.trim().split(/\s+/).filter(Boolean);
-  
+
   let rxClause;
   if (terms.length > 1) {
     rxClause = mergeFilters({
-      $and: terms.map(term => ({
-        $or: fields.map(f => ({ [f]: new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }))
-      }))
+      $and: terms.map((term) => ({
+        $or: fields.map((f) => ({
+          [f]: new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'),
+        })),
+      })),
     });
   } else if (terms.length === 1) {
     const rx = new RegExp(terms[0]!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');

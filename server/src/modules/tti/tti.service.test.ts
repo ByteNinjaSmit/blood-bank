@@ -7,7 +7,10 @@ import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { DeferralRepo } from '@/modules/deferral/deferral.repository';
 import type { DonationRepo } from '@/modules/donation/donation.repository';
 
-function ttiWith(tests: TtiResultDto['tests'], releaseDecision: TtiResultDto['releaseDecision'] = 'pending'): TtiResultDto {
+function ttiWith(
+  tests: TtiResultDto['tests'],
+  releaseDecision: TtiResultDto['releaseDecision'] = 'pending',
+): TtiResultDto {
   return {
     id: 'tti-1',
     donationId: 'DN-1',

@@ -129,7 +129,11 @@ export function createNotificationRepo(): NotificationRepo {
 
       const skip = (page - 1) * pageSize;
       const [docs, total] = await Promise.all([
-        InAppNotificationModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(pageSize).lean(),
+        InAppNotificationModel.find(query)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(pageSize)
+          .lean(),
         InAppNotificationModel.countDocuments(query),
       ]);
       return { items: (docs as unknown as RawNotification[]).map(toDto), total };
@@ -176,9 +180,7 @@ export function createNotificationRepo(): NotificationRepo {
     },
 
     async lastByCategory(category) {
-      const doc = await InAppNotificationModel.findOne({ category })
-        .sort({ createdAt: -1 })
-        .lean();
+      const doc = await InAppNotificationModel.findOne({ category }).sort({ createdAt: -1 }).lean();
       return doc ? toDto(doc as unknown as RawNotification) : null;
     },
 

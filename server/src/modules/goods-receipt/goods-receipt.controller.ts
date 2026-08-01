@@ -22,7 +22,9 @@ export function createGRNControllers(service: GRNService): GRNControllers {
         const q = ValidateGRN.listQuery(req);
         const result = await service.list(q);
         res.json({ success: true, data: result, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async get(req, res, next) {
@@ -30,7 +32,9 @@ export function createGRNControllers(service: GRNService): GRNControllers {
         const { id } = ValidateGRN.idParam(req);
         const data = await service.get(id);
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async create(req, res, next) {
@@ -38,7 +42,9 @@ export function createGRNControllers(service: GRNService): GRNControllers {
         const body = ValidateGRN.createBody(req);
         const data = await service.create(body, actorId(req));
         res.status(201).json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async update(req, res, next) {
@@ -47,7 +53,9 @@ export function createGRNControllers(service: GRNService): GRNControllers {
         const body = ValidateGRN.updateBody(req);
         const data = await service.update(id, body, actorId(req));
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
   };
 }

@@ -25,7 +25,11 @@ export const campController = {
     try {
       const { id } = ValidateCamp.idParam(req);
       const editReason = extractEditReason(req);
-      ok(req, res, await campService.update(id, ValidateCamp.updateBody(req), actor(req), editReason));
+      ok(
+        req,
+        res,
+        await campService.update(id, ValidateCamp.updateBody(req), actor(req), editReason),
+      );
     } catch (e) {
       next(e);
     }

@@ -104,7 +104,7 @@ export function createChemicalReports() {
       // Logic: compute opening stock, purchased, opened, consumed, closing stock, in use during a month.
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 1);
-      
+
       const chemicals = await ChemicalModel.find({ deletedAt: null }).lean();
       const report = [];
 

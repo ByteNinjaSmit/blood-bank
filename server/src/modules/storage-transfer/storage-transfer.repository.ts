@@ -2,8 +2,15 @@ import { Types } from 'mongoose';
 import { StorageTransferModel } from '@/modules/storage-transfer/storage-transfer.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { NotFoundError } from '@/shared/errors';
-import { assertUnitsAvailable, claimUnitsForStorage, releaseUnitsFromStorage } from '@/modules/storage-transfer/storage-transfer.units';
-import type { ListStorageTransferInput, UpdateStorageTransferInput } from '@/modules/storage-transfer/storage-transfer.validator';
+import {
+  assertUnitsAvailable,
+  claimUnitsForStorage,
+  releaseUnitsFromStorage,
+} from '@/modules/storage-transfer/storage-transfer.units';
+import type {
+  ListStorageTransferInput,
+  UpdateStorageTransferInput,
+} from '@/modules/storage-transfer/storage-transfer.validator';
 
 export interface StorageTransferItemDto {
   unitId: string;
@@ -74,7 +81,11 @@ export interface StorageTransferRepo {
   list(f: ListStorageTransferInput): Promise<{ items: StorageTransferDto[]; total: number }>;
   findById(id: string): Promise<StorageTransferDto>;
   create(input: CreateStorageTransferInput, actorId: string): Promise<StorageTransferDto>;
-  update(id: string, input: UpdateStorageTransferInput, actorId: string): Promise<StorageTransferDto>;
+  update(
+    id: string,
+    input: UpdateStorageTransferInput,
+    actorId: string,
+  ): Promise<StorageTransferDto>;
   remove(id: string, actorId: string): Promise<StorageTransferDto>;
   restore(id: string, actorId: string): Promise<StorageTransferDto>;
 }
@@ -96,7 +107,11 @@ export function createStorageTransferRepo(): StorageTransferRepo {
       }
       const skip = (f.page - 1) * f.limit;
       const [docs, total] = await Promise.all([
-        StorageTransferModel.find(filter).sort({ sentDate: -1, createdAt: -1 }).skip(skip).limit(f.limit).lean(),
+        StorageTransferModel.find(filter)
+          .sort({ sentDate: -1, createdAt: -1 })
+          .skip(skip)
+          .limit(f.limit)
+          .lean(),
         StorageTransferModel.countDocuments(filter),
       ]);
       return { items: docs.map(toDto), total };
@@ -130,7 +145,10 @@ export function createStorageTransferRepo(): StorageTransferRepo {
       const raw = await StorageTransferModel.findOne({ _id: id, deletedAt: null });
       if (!raw) throw new NotFoundError('StorageTransfer', id);
 
-      const newLocation = input.location !== undefined ? finalLocation(input.location, input.otherLocationName) : finalLocation(raw.location, raw.otherLocationName);
+      const newLocation =
+        input.location !== undefined
+          ? finalLocation(input.location, input.otherLocationName)
+          : finalLocation(raw.location, raw.otherLocationName);
 
       if (input.items) {
         const oldUnitIds = new Set((raw.items || []).map((it: any) => it.unitId.toString()));
@@ -141,12 +159,21 @@ export function createStorageTransferRepo(): StorageTransferRepo {
 
         // Claim newly-added bags first (fails fast, nothing committed) —
         // same claim-before-write order as bulk-transfer's update().
-        await claimUnitsForStorage(addedUnitIds, newLocation, input.sentDate ?? raw.sentDate, actorId, 'SEND_TO_STORAGE');
+        await claimUnitsForStorage(
+          addedUnitIds,
+          newLocation,
+          input.sentDate ?? raw.sentDate,
+          actorId,
+          'SEND_TO_STORAGE',
+        );
         await releaseUnitsFromStorage(removedUnitIds, actorId, 'STORAGE_TRANSFER_UPDATED');
 
         // Bags that stayed in the batch: re-point their storageLocation if
         // the location changed.
-        if (newLocation !== finalLocation(raw.location, raw.otherLocationName) && keptUnitIds.length > 0) {
+        if (
+          newLocation !== finalLocation(raw.location, raw.otherLocationName) &&
+          keptUnitIds.length > 0
+        ) {
           await BloodUnitModel.updateMany(
             { _id: { $in: keptUnitIds }, status: 'ISSUED' },
             { storageLocation: newLocation, updatedBy: new Types.ObjectId(actorId) },
@@ -193,7 +220,13 @@ export function createStorageTransferRepo(): StorageTransferRepo {
       // was deleted, the whole restore is refused rather than silently
       // dropping bags from the recovered batch.
       await assertUnitsAvailable(unitIds);
-      await claimUnitsForStorage(unitIds, finalLocation(raw.location, raw.otherLocationName), raw.sentDate, actorId, 'STORAGE_TRANSFER_RESTORED');
+      await claimUnitsForStorage(
+        unitIds,
+        finalLocation(raw.location, raw.otherLocationName),
+        raw.sentDate,
+        actorId,
+        'STORAGE_TRANSFER_RESTORED',
+      );
 
       (raw as any).deletedAt = null;
       raw.updatedBy = new Types.ObjectId(actorId);

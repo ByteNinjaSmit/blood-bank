@@ -94,9 +94,18 @@ export function createMisRepo(): MisRepo {
         DonorModel.countDocuments(dateFilter),
         DonorModel.countDocuments({ deletedAt: null, createdAt: { $gte: startOfMonth } }),
         DonorModel.countDocuments({ deletedAt: null, lastDonationDate: { $gte: ninetyDaysAgo } }),
-        DonorModel.aggregate([{ $match: dateFilter }, { $group: { _id: '$sex', count: { $sum: 1 } } }]),
-        DonorModel.aggregate([{ $match: dateFilter }, { $group: { _id: '$bloodGroup', count: { $sum: 1 } } }]),
-        DonorModel.aggregate([{ $match: dateFilter }, { $group: { _id: '$rh', count: { $sum: 1 } } }]),
+        DonorModel.aggregate([
+          { $match: dateFilter },
+          { $group: { _id: '$sex', count: { $sum: 1 } } },
+        ]),
+        DonorModel.aggregate([
+          { $match: dateFilter },
+          { $group: { _id: '$bloodGroup', count: { $sum: 1 } } },
+        ]),
+        DonorModel.aggregate([
+          { $match: dateFilter },
+          { $group: { _id: '$rh', count: { $sum: 1 } } },
+        ]),
         DonorModel.aggregate([
           { $match: dateFilter },
           { $group: { _id: '$address.city', count: { $sum: 1 } } },
@@ -158,7 +167,12 @@ export function createMisRepo(): MisRepo {
         DonationModel.countDocuments(filter),
         DonationModel.aggregate([
           { $match: filter },
-          { $group: { _id: { $cond: [{ $ifNull: ['$campId', false] }, 'Camp', 'In-house'] }, count: { $sum: 1 } } },
+          {
+            $group: {
+              _id: { $cond: [{ $ifNull: ['$campId', false] }, 'Camp', 'In-house'] },
+              count: { $sum: 1 },
+            },
+          },
         ]),
         DonationModel.aggregate([
           { $match: filter },
@@ -166,7 +180,10 @@ export function createMisRepo(): MisRepo {
           { $unwind: '$d' },
           { $group: { _id: '$d.bloodGroup', count: { $sum: 1 } } },
         ]),
-        DonationModel.aggregate([{ $match: filter }, { $group: { _id: '$donationType', count: { $sum: 1 } } }]),
+        DonationModel.aggregate([
+          { $match: filter },
+          { $group: { _id: '$donationType', count: { $sum: 1 } } },
+        ]),
         DonationModel.aggregate([
           { $match: filter },
           {
@@ -207,7 +224,9 @@ export function createMisRepo(): MisRepo {
         filter.dateFrom = range;
       }
 
-      const camps = await CampModel.find(filter).select('name campId address dateFrom dateTo').lean();
+      const camps = await CampModel.find(filter)
+        .select('name campId address dateFrom dateTo')
+        .lean();
       if (camps.length === 0) return [];
 
       const campIds = camps.map((c: any) => c._id);
@@ -222,7 +241,14 @@ export function createMisRepo(): MisRepo {
         ]),
         TtiResultModel.aggregate([
           { $match: { releaseDecision: 'quarantined' } },
-          { $lookup: { from: 'donations', localField: 'donationId', foreignField: 'donationId', as: 'don' } },
+          {
+            $lookup: {
+              from: 'donations',
+              localField: 'donationId',
+              foreignField: 'donationId',
+              as: 'don',
+            },
+          },
           { $unwind: '$don' },
           { $match: { 'don.campId': { $in: campIds } } },
           { $group: { _id: '$don.campId', count: { $sum: 1 } } },
@@ -265,7 +291,10 @@ export function createMisRepo(): MisRepo {
           .sort({ collectedAt: -1 })
           .limit(100)
           .lean(),
-        BloodUnitModel.aggregate([{ $match: filter }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
+        BloodUnitModel.aggregate([
+          { $match: filter },
+          { $group: { _id: '$status', count: { $sum: 1 } } },
+        ]),
         BloodUnitModel.aggregate([
           { $match: filter },
           { $group: { _id: '$componentType', count: { $sum: 1 } } },
@@ -313,19 +342,44 @@ export function createMisRepo(): MisRepo {
       const [productionAgg, statusAgg, units] = await Promise.all([
         BloodUnitModel.aggregate([
           { $match: filter },
-          { $group: { _id: '$componentType', count: { $sum: 1 }, avgVolume: { $avg: '$volumeMl' } } },
+          {
+            $group: { _id: '$componentType', count: { $sum: 1 }, avgVolume: { $avg: '$volumeMl' } },
+          },
         ]),
-        BloodUnitModel.aggregate([{ $match: filter }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
-        BloodUnitModel.find({ ...filter, status: { $in: ['RELEASED', 'RESERVED', 'CROSSMATCHED'] } })
+        BloodUnitModel.aggregate([
+          { $match: filter },
+          { $group: { _id: '$status', count: { $sum: 1 } } },
+        ]),
+        BloodUnitModel.find({
+          ...filter,
+          status: { $in: ['RELEASED', 'RESERVED', 'CROSSMATCHED'] },
+        })
           .select('expiresAt bloodGroup aboGroup rhFactor')
           .lean(),
       ]);
 
       const now = new Date();
-      const ageingBuckets: Record<string, number> = { '0-7': 0, '8-14': 0, '15-21': 0, '22+': 0, Expired: 0 };
+      const ageingBuckets: Record<string, number> = {
+        '0-7': 0,
+        '8-14': 0,
+        '15-21': 0,
+        '22+': 0,
+        Expired: 0,
+      };
       for (const u of units as any[]) {
-        const daysLeft = Math.ceil((new Date(u.expiresAt).getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
-        const bucket = daysLeft < 0 ? 'Expired' : daysLeft <= 7 ? '0-7' : daysLeft <= 14 ? '8-14' : daysLeft <= 21 ? '15-21' : '22+';
+        const daysLeft = Math.ceil(
+          (new Date(u.expiresAt).getTime() - now.getTime()) / (24 * 60 * 60 * 1000),
+        );
+        const bucket =
+          daysLeft < 0
+            ? 'Expired'
+            : daysLeft <= 7
+              ? '0-7'
+              : daysLeft <= 14
+                ? '8-14'
+                : daysLeft <= 21
+                  ? '15-21'
+                  : '22+';
         ageingBuckets[bucket] = (ageingBuckets[bucket] ?? 0) + 1;
       }
 
@@ -335,7 +389,11 @@ export function createMisRepo(): MisRepo {
       ]);
 
       return {
-        production: productionAgg.map((p: any) => ({ _id: toProductLabel(p._id), count: p.count, avgVolume: p.avgVolume })),
+        production: productionAgg.map((p: any) => ({
+          _id: toProductLabel(p._id),
+          count: p.count,
+          avgVolume: p.avgVolume,
+        })),
         ageing: Object.entries(ageingBuckets).map(([_id, count]) => ({ _id, count })),
         status: statusAgg,
         bloodGroup: bloodGroupAgg.map((b: any) => ({
@@ -379,19 +437,23 @@ export function createMisRepo(): MisRepo {
         RequisitionModel.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
         RequisitionModel.aggregate([
           { $match: { status: { $in: ['ISSUED', 'COMPLETED'] } } },
-          { $lookup: { from: 'hospitals', localField: 'hospitalId', foreignField: '_id', as: 'h' } },
+          {
+            $lookup: { from: 'hospitals', localField: 'hospitalId', foreignField: '_id', as: 'h' },
+          },
           { $unwind: '$h' },
           { $unwind: '$matchedUnits' },
           { $group: { _id: '$h.name', count: { $sum: 1 } } },
           { $sort: { count: -1 } },
           { $limit: 10 },
         ]),
-        IssueModel.aggregate([
-          { $group: { _id: null, total: { $sum: 1 } } },
-        ]),
+        IssueModel.aggregate([{ $group: { _id: null, total: { $sum: 1 } } }]),
       ]);
 
-      return { issues: issuesAgg, hospitalWise: hospitalAgg, totalIssued: (componentAgg as any[])[0]?.total ?? 0 };
+      return {
+        issues: issuesAgg,
+        hospitalWise: hospitalAgg,
+        totalIssued: (componentAgg as any[])[0]?.total ?? 0,
+      };
     },
 
     async getDiscardStats() {
@@ -430,7 +492,12 @@ export function createMisRepo(): MisRepo {
       const donationTypeMap = new Map(donations.map((d: any) => [d.donationId, d.donationType]));
 
       for (const r of results as any[]) {
-        const bucket = r.releaseDecision === 'released' ? 'Released' : r.releaseDecision === 'quarantined' ? 'Quarantined' : 'Pending';
+        const bucket =
+          r.releaseDecision === 'released'
+            ? 'Released'
+            : r.releaseDecision === 'quarantined'
+              ? 'Quarantined'
+              : 'Pending';
         overallCounts[bucket] = (overallCounts[bucket] ?? 0) + 1;
 
         // SDP donations skip component separation and are released as a
@@ -451,7 +518,10 @@ export function createMisRepo(): MisRepo {
       return {
         failures: Object.entries(failureCounts).map(([_id, count]) => ({ _id, count })),
         overall: Object.entries(overallCounts).map(([_id, count]) => ({ _id, count })),
-        byDonationType: Object.entries(byDonationTypeCounts).map(([_id, count]) => ({ _id, count })),
+        byDonationType: Object.entries(byDonationTypeCounts).map(([_id, count]) => ({
+          _id,
+          count,
+        })),
         reactiveRate: totalTests > 0 ? Math.round((reactiveTests / totalTests) * 1000) / 10 : 0,
         totalTests,
       };
@@ -464,9 +534,18 @@ export function createMisRepo(): MisRepo {
 
       const [stuckInTesting, nearExpiry, longQuarantine, expiredNotDiscarded] = await Promise.all([
         BloodUnitModel.countDocuments({ status: 'IN_TESTING', collectedAt: { $lte: oneDayAgo } }),
-        BloodUnitModel.countDocuments({ status: 'RELEASED', expiresAt: { $lte: threeDaysOut, $gte: new Date() } }),
-        BloodUnitModel.countDocuments({ status: 'QUARANTINE', collectedAt: { $lte: sevenDaysAgo } }),
-        BloodUnitModel.countDocuments({ status: { $nin: ['DISCARDED', 'EXPIRED'] }, expiresAt: { $lt: new Date() } }),
+        BloodUnitModel.countDocuments({
+          status: 'RELEASED',
+          expiresAt: { $lte: threeDaysOut, $gte: new Date() },
+        }),
+        BloodUnitModel.countDocuments({
+          status: 'QUARANTINE',
+          collectedAt: { $lte: sevenDaysAgo },
+        }),
+        BloodUnitModel.countDocuments({
+          status: { $nin: ['DISCARDED', 'EXPIRED'] },
+          expiresAt: { $lt: new Date() },
+        }),
       ]);
 
       return { stuckInTesting, nearExpiry, longQuarantine, expiredNotDiscarded };
@@ -538,16 +617,31 @@ export function createMisRepo(): MisRepo {
         BloodUnitModel.countDocuments({ status: 'DISCARDED', updatedAt: { $gte: startOfMonth } }),
         DonationModel.aggregate([
           { $match: { collectedAt: { $gte: trendFrom }, deletedAt: null } },
-          { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$collectedAt' } }, count: { $sum: 1 } } },
+          {
+            $group: {
+              _id: { $dateToString: { format: '%Y-%m-%d', date: '$collectedAt' } },
+              count: { $sum: 1 },
+            },
+          },
           { $sort: { _id: 1 } },
         ]),
       ]);
 
-      const issuePerDonation = donationsMonth > 0 ? Math.round((issuedMonth / donationsMonth) * 100) / 100 : 0;
-      const discardRate = donationsMonth > 0 ? Math.round((discardsMonth / donationsMonth) * 1000) / 10 : 0;
+      const issuePerDonation =
+        donationsMonth > 0 ? Math.round((issuedMonth / donationsMonth) * 100) / 100 : 0;
+      const discardRate =
+        donationsMonth > 0 ? Math.round((discardsMonth / donationsMonth) * 1000) / 10 : 0;
 
       return {
-        kpis: { donationsToday, donationsMonth, donorsMonth, issuedMonth, stock, campsMonth, discardsMonth },
+        kpis: {
+          donationsToday,
+          donationsMonth,
+          donorsMonth,
+          issuedMonth,
+          stock,
+          campsMonth,
+          discardsMonth,
+        },
         ratios: { issuePerDonation, discardRate },
         trends: (trendAgg as any[]).map((d) => ({ date: d._id, value: d.count })),
       };
@@ -559,19 +653,38 @@ export function createMisRepo(): MisRepo {
       const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const startOfMonthBefore = new Date(now.getFullYear(), now.getMonth() - 2, 1);
 
-      const [lastMonthDonations, lastMonthIssues, priorMonthDonations, priorMonthIssues, stock] = await Promise.all([
-        DonationModel.countDocuments({ collectedAt: { $gte: startOfLastMonth, $lt: startOfThisMonth }, deletedAt: null }),
-        BloodUnitModel.countDocuments({ issuedAt: { $gte: startOfLastMonth, $lt: startOfThisMonth } }),
-        DonationModel.countDocuments({ collectedAt: { $gte: startOfMonthBefore, $lt: startOfLastMonth }, deletedAt: null }),
-        BloodUnitModel.countDocuments({ issuedAt: { $gte: startOfMonthBefore, $lt: startOfLastMonth } }),
-        BloodUnitModel.countDocuments({ status: 'RELEASED' }),
-      ]);
+      const [lastMonthDonations, lastMonthIssues, priorMonthDonations, priorMonthIssues, stock] =
+        await Promise.all([
+          DonationModel.countDocuments({
+            collectedAt: { $gte: startOfLastMonth, $lt: startOfThisMonth },
+            deletedAt: null,
+          }),
+          BloodUnitModel.countDocuments({
+            issuedAt: { $gte: startOfLastMonth, $lt: startOfThisMonth },
+          }),
+          DonationModel.countDocuments({
+            collectedAt: { $gte: startOfMonthBefore, $lt: startOfLastMonth },
+            deletedAt: null,
+          }),
+          BloodUnitModel.countDocuments({
+            issuedAt: { $gte: startOfMonthBefore, $lt: startOfLastMonth },
+          }),
+          BloodUnitModel.countDocuments({ status: 'RELEASED' }),
+        ]);
 
       // Naive linear forecast: extrapolate month-over-month growth rate.
-      const donationGrowth = priorMonthDonations > 0 ? (lastMonthDonations - priorMonthDonations) / priorMonthDonations : 0;
-      const demandGrowth = priorMonthIssues > 0 ? (lastMonthIssues - priorMonthIssues) / priorMonthIssues : 0;
-      const forecastDonations = Math.round(lastMonthDonations * (1 + Math.max(-0.5, Math.min(0.5, donationGrowth))));
-      const forecastDemand = Math.round(lastMonthIssues * (1 + Math.max(-0.5, Math.min(0.5, demandGrowth))));
+      const donationGrowth =
+        priorMonthDonations > 0
+          ? (lastMonthDonations - priorMonthDonations) / priorMonthDonations
+          : 0;
+      const demandGrowth =
+        priorMonthIssues > 0 ? (lastMonthIssues - priorMonthIssues) / priorMonthIssues : 0;
+      const forecastDonations = Math.round(
+        lastMonthDonations * (1 + Math.max(-0.5, Math.min(0.5, donationGrowth))),
+      );
+      const forecastDemand = Math.round(
+        lastMonthIssues * (1 + Math.max(-0.5, Math.min(0.5, demandGrowth))),
+      );
 
       const shortageRisk = forecastDemand > forecastDonations + stock ? 'High' : 'Low';
 

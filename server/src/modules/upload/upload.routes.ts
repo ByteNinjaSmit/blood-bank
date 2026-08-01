@@ -77,7 +77,7 @@ router.post(
           Key: key,
           Body: file.buffer,
           ContentType: file.mimetype,
-        })
+        }),
       );
 
       const fileUrl = `${env.S3_PUBLIC_URL}/${key}`;
@@ -91,7 +91,7 @@ router.post(
     } catch (e: any) {
       next(e);
     }
-  }
+  },
 );
 
 router.delete(
@@ -114,7 +114,7 @@ router.delete(
         new DeleteObjectCommand({
           Bucket: bucketName,
           Key: key,
-        })
+        }),
       );
 
       res.json({
@@ -124,7 +124,7 @@ router.delete(
     } catch (e: any) {
       next(e);
     }
-  }
+  },
 );
 
 export default router;

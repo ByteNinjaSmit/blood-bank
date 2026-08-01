@@ -22,7 +22,9 @@ export interface VendorDto {
   updatedAt: string;
 }
 
-function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date }): VendorDto {
+function toDto(
+  doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date },
+): VendorDto {
   return {
     id: doc._id.toString(),
     _id: doc._id.toString(),
@@ -63,18 +65,22 @@ export interface VendorRepo {
     notes?: string;
     actorId: string;
   }): Promise<VendorDto>;
-  update(id: string, patch: Partial<{
-    name: string;
-    manufacturer: string;
-    contactPerson: string;
-    contactPhone: string;
-    email: string;
-    address: string;
-    gstNo: string;
-    notes: string;
-    contractStart: Date;
-    contractEnd: Date;
-  }>, actorId: string): Promise<VendorDto | null>;
+  update(
+    id: string,
+    patch: Partial<{
+      name: string;
+      manufacturer: string;
+      contactPerson: string;
+      contactPhone: string;
+      email: string;
+      address: string;
+      gstNo: string;
+      notes: string;
+      contractStart: Date;
+      contractEnd: Date;
+    }>,
+    actorId: string,
+  ): Promise<VendorDto | null>;
   updateStatus(id: string, approvalStatus: string, actorId: string): Promise<VendorDto | null>;
   softDelete(id: string, actorId: string): Promise<boolean>;
   delete(id: string): Promise<boolean>;
@@ -96,19 +102,45 @@ export function createVendorRepo(): VendorRepo {
         VendorModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(pageSize).lean(),
         VendorModel.countDocuments(filter),
       ]);
-      return { items: docs.map((d) => toDto(d as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date })), total };
+      return {
+        items: docs.map((d) =>
+          toDto(
+            d as unknown as Record<string, unknown> & {
+              _id: Types.ObjectId;
+              createdAt?: Date;
+              updatedAt?: Date;
+            },
+          ),
+        ),
+        total,
+      };
     },
 
     async findById(id) {
-      const doc = await VendorModel.findOne({ _id: new Types.ObjectId(id), deletedAt: null }).lean();
+      const doc = await VendorModel.findOne({
+        _id: new Types.ObjectId(id),
+        deletedAt: null,
+      }).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async findByDrugLicense(license) {
       const doc = await VendorModel.findOne({ drugLicenseNo: license, deletedAt: null }).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async create(input) {
@@ -129,7 +161,13 @@ export function createVendorRepo(): VendorRepo {
         createdBy: actor,
         updatedBy: actor,
       });
-      return toDto(doc.toObject() as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc.toObject() as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async update(id, patch, actorId) {
@@ -140,7 +178,13 @@ export function createVendorRepo(): VendorRepo {
         { new: true },
       ).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async updateStatus(id, approvalStatus, actorId) {
@@ -151,7 +195,13 @@ export function createVendorRepo(): VendorRepo {
         { new: true },
       ).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async softDelete(id, actorId) {

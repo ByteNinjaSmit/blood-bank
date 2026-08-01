@@ -40,7 +40,9 @@ describe('ABO compatibility — Plasma (strict group-identical matching)', () =>
 
 describe('ABO compatibility — Platelets with modes', () => {
   it('Universal mode (default) accepts all groups', () => {
-    expect(new Set(compatibleAboGroups('A', 'RDP', 'UNIVERSAL'))).toEqual(new Set(['A', 'AB', 'O', 'B']));
+    expect(new Set(compatibleAboGroups('A', 'RDP', 'UNIVERSAL'))).toEqual(
+      new Set(['A', 'AB', 'O', 'B']),
+    );
   });
   it('Major compatibility mode follows RBC rules', () => {
     expect(new Set(compatibleAboGroups('A', 'RDP', 'MAJOR'))).toEqual(new Set(['A', 'O']));

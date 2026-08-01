@@ -43,9 +43,13 @@ export interface TtiBagViewDto {
 
 const ISSUED_STATUSES = new Set(['ISSUED', 'TRANSFUSED', 'RETURNED_UNUSED']);
 
-function hasLeftBank(units: Array<{ status?: string; statusHistory?: Array<{ to?: string }> }>): boolean {
+function hasLeftBank(
+  units: Array<{ status?: string; statusHistory?: Array<{ to?: string }> }>,
+): boolean {
   return units.some(
-    (u) => (u.status && ISSUED_STATUSES.has(u.status)) || (u.statusHistory || []).some((h) => h.to === 'ISSUED'),
+    (u) =>
+      (u.status && ISSUED_STATUSES.has(u.status)) ||
+      (u.statusHistory || []).some((h) => h.to === 'ISSUED'),
   );
 }
 
@@ -69,12 +73,16 @@ async function mapTtiBags(ttis: any[]): Promise<TtiBagViewDto[]> {
   const donationMap = new Map(donations.map((d) => [d.donationId, d]));
 
   const donorIds = donations.map((d) => d.donor).filter(Boolean);
-  const donors = await DonorModel.find({ _id: { $in: donorIds } }).select('_id name').lean();
+  const donors = await DonorModel.find({ _id: { $in: donorIds } })
+    .select('_id name')
+    .lean();
   const donorNameMap = new Map(
     donors.map((donor: any) => [
       donor._id.toString(),
       donor.name
-        ? [donor.name.firstName, donor.name.middleName, donor.name.lastName].filter(Boolean).join(' ')
+        ? [donor.name.firstName, donor.name.middleName, donor.name.lastName]
+            .filter(Boolean)
+            .join(' ')
         : 'Unknown',
     ]),
   );
@@ -220,7 +228,13 @@ export function createTtiLegacyViewRepo(): TtiLegacyViewRepo {
 
       const data = await mapTtiBags(ttis);
 
-      return { data, total, totalPages: Math.ceil(total / limitNum), page: pageNum, limit: limitNum };
+      return {
+        data,
+        total,
+        totalPages: Math.ceil(total / limitNum),
+        page: pageNum,
+        limit: limitNum,
+      };
     },
 
     async listDecided(filters) {
@@ -281,7 +295,13 @@ export function createTtiLegacyViewRepo(): TtiLegacyViewRepo {
 
       const data = await mapTtiBags(ttis);
 
-      return { data, total, totalPages: Math.ceil(total / limitNum), page: pageNum, limit: limitNum };
+      return {
+        data,
+        total,
+        totalPages: Math.ceil(total / limitNum),
+        page: pageNum,
+        limit: limitNum,
+      };
     },
   };
 }

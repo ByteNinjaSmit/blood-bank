@@ -11,7 +11,7 @@ import type { DonorDto } from './donor.dto';
 // the donor search so they agree on who can donate right now.
 export async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto[]> {
   if (dtos.length === 0) return dtos;
-  const donorIds = dtos.map(d => new Types.ObjectId(d.id));
+  const donorIds = dtos.map((d) => new Types.ObjectId(d.id));
   const donations = await DonationModel.aggregate([
     {
       $match: {
@@ -60,9 +60,13 @@ export async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto
     },
   ]);
   const donationMap = new Map(
-    donations.map(d => [
+    donations.map((d) => [
       d._id.toString(),
-      { id: d.lastDonationId.toString(), date: d.lastDonationDate, ttiReactive: Boolean(d.ttiReactive) },
+      {
+        id: d.lastDonationId.toString(),
+        date: d.lastDonationDate,
+        ttiReactive: Boolean(d.ttiReactive),
+      },
     ]),
   );
 
@@ -84,7 +88,7 @@ export async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto
     else if (deferralStatusMap.get(key) !== 'deferred') deferralStatusMap.set(key, 'temp-deferred');
   });
 
-  return dtos.map(dto => {
+  return dtos.map((dto) => {
     const dbDonation = donationMap.get(dto.id);
     let effectiveDate = dto.lastDonationDate;
     if (dbDonation?.date) {
@@ -118,7 +122,7 @@ export async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto
     // A TTI-reactive donor is permanently deferred; otherwise fall back to any
     // active deferral, then the stored status. Never show eligible when the
     // donor is reactive or under an active deferral.
-    const effectiveEligibility = ttiReactive ? 'deferred' : (deferStatus || dto.eligibilityStatus);
+    const effectiveEligibility = ttiReactive ? 'deferred' : deferStatus || dto.eligibilityStatus;
 
     return {
       ...dto,
@@ -130,7 +134,7 @@ export async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto
       // instead; effectiveDate (the max of the two) is used only for the
       // eligibility computation below, never returned as a date field.
       recentDonationDate: dbDonation?.date ? new Date(dbDonation.date).toISOString() : undefined,
-      isAvailableToDonate: (ttiReactive || deferStatus) ? false : isAvailableToDonate,
+      isAvailableToDonate: ttiReactive || deferStatus ? false : isAvailableToDonate,
       daysUntilEligible,
       ttiReactive,
       eligibilityStatus: effectiveEligibility,

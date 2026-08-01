@@ -48,7 +48,8 @@ export function createAdverseReactionService(deps: {
           unitId: input.unitId,
           transfusionId: input.transfusionId,
         },
-        severity: input.severity === 'GRADE_3' || input.severity === 'GRADE_4' ? 'critical' : 'warning',
+        severity:
+          input.severity === 'GRADE_3' || input.severity === 'GRADE_4' ? 'critical' : 'warning',
       });
 
       if (input.notifyEmail) {

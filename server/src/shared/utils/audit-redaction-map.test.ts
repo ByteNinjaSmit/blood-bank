@@ -17,7 +17,12 @@ describe('audit redaction — global secret denylist', () => {
   });
 
   it('strips OTP and token fields regardless of entityType', () => {
-    const payload = { otp: '123456', token: 'jwt.token.here', refreshToken: 'rt', accessToken: 'at' };
+    const payload = {
+      otp: '123456',
+      token: 'jwt.token.here',
+      refreshToken: 'rt',
+      accessToken: 'at',
+    };
     const redacted = redactSnapshot(payload, 'auth') as Record<string, unknown>;
     expect(redacted.otp).toBeUndefined();
     expect(redacted.token).toBeUndefined();

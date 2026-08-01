@@ -42,21 +42,45 @@ export function createDonationControllers(service: DonationService): DonationCon
             return undefined;
           };
 
-          const medicalExam = legacy.medicalExamination ? {
-            weightKg: legacy.medicalExamination.weightKg !== undefined ? Number(legacy.medicalExamination.weightKg) : undefined,
-            hbGdl: legacy.medicalExamination.hb !== undefined ? Number(legacy.medicalExamination.hb) : undefined,
-            temperatureCelsius: legacy.medicalExamination.tempC !== undefined ? Number(legacy.medicalExamination.tempC) : undefined,
-            pulseBpm: legacy.medicalExamination.pulse !== undefined ? Number(legacy.medicalExamination.pulse) : undefined,
-            bloodPressure,
-            hasPedalOedema: mapYesNo(legacy.medicalExamination.pedalOedema),
-            oxygenSaturationPercent: legacy.medicalExamination.o2Level !== undefined ? Number(legacy.medicalExamination.o2Level) : undefined,
-            hasLymphadenopathy: mapYesNo(legacy.medicalExamination.lymphadenopathy),
-            hasCyanosis: mapYesNo(legacy.medicalExamination.cyanosis),
-            systemicExamNotes: legacy.medicalExamination.systematicExam,
-            skinClearAtPhlebotomy: mapYesNo(legacy.medicalExamination.skinDiseaseFreeAtPhlebotomy),
-            armsFreeOfPunctureScars: mapYesNo(legacy.medicalExamination.armsFreeFromPunctureScars),
-            volumeMl: legacy.medicalExamination.volumeGmMl !== undefined ? Number(legacy.medicalExamination.volumeGmMl) : undefined,
-          } : undefined;
+          const medicalExam = legacy.medicalExamination
+            ? {
+                weightKg:
+                  legacy.medicalExamination.weightKg !== undefined
+                    ? Number(legacy.medicalExamination.weightKg)
+                    : undefined,
+                hbGdl:
+                  legacy.medicalExamination.hb !== undefined
+                    ? Number(legacy.medicalExamination.hb)
+                    : undefined,
+                temperatureCelsius:
+                  legacy.medicalExamination.tempC !== undefined
+                    ? Number(legacy.medicalExamination.tempC)
+                    : undefined,
+                pulseBpm:
+                  legacy.medicalExamination.pulse !== undefined
+                    ? Number(legacy.medicalExamination.pulse)
+                    : undefined,
+                bloodPressure,
+                hasPedalOedema: mapYesNo(legacy.medicalExamination.pedalOedema),
+                oxygenSaturationPercent:
+                  legacy.medicalExamination.o2Level !== undefined
+                    ? Number(legacy.medicalExamination.o2Level)
+                    : undefined,
+                hasLymphadenopathy: mapYesNo(legacy.medicalExamination.lymphadenopathy),
+                hasCyanosis: mapYesNo(legacy.medicalExamination.cyanosis),
+                systemicExamNotes: legacy.medicalExamination.systematicExam,
+                skinClearAtPhlebotomy: mapYesNo(
+                  legacy.medicalExamination.skinDiseaseFreeAtPhlebotomy,
+                ),
+                armsFreeOfPunctureScars: mapYesNo(
+                  legacy.medicalExamination.armsFreeFromPunctureScars,
+                ),
+                volumeMl:
+                  legacy.medicalExamination.volumeGmMl !== undefined
+                    ? Number(legacy.medicalExamination.volumeGmMl)
+                    : undefined,
+              }
+            : undefined;
 
           const questionnaireFlags: Record<string, boolean> = {};
           if (legacy.medicalQuestions) {
@@ -65,15 +89,29 @@ export function createDonationControllers(service: DonationService): DonationCon
             }
           }
 
-          const rhFactor = legacy.rh === 'Positive' || legacy.rh === 'POSITIVE' ? 'POSITIVE' : 'NEGATIVE';
-          const VALID_DONATION_TYPES = ['WHOLE_BLOOD', 'PLASMAPHERESIS', 'DOUBLE_RED_CELL', 'AUTOLOGOUS', 'DIRECTED', 'REPLACEMENT'];
-          const donationType = VALID_DONATION_TYPES.includes(legacy.donationType) ? legacy.donationType : 'WHOLE_BLOOD';
+          const rhFactor =
+            legacy.rh === 'Positive' || legacy.rh === 'POSITIVE' ? 'POSITIVE' : 'NEGATIVE';
+          const VALID_DONATION_TYPES = [
+            'WHOLE_BLOOD',
+            'PLASMAPHERESIS',
+            'DOUBLE_RED_CELL',
+            'AUTOLOGOUS',
+            'DIRECTED',
+            'REPLACEMENT',
+          ];
+          const donationType = VALID_DONATION_TYPES.includes(legacy.donationType)
+            ? legacy.donationType
+            : 'WHOLE_BLOOD';
 
           const typeOfBag = legacy.typeOfBag || 'SB';
-          const volume = legacy.medicalExamination?.volumeGmMl ? Number(legacy.medicalExamination.volumeGmMl) : (typeOfBag === 'SB' ? 350 : 450);
+          const volume = legacy.medicalExamination?.volumeGmMl
+            ? Number(legacy.medicalExamination.volumeGmMl)
+            : typeOfBag === 'SB'
+              ? 350
+              : 450;
           const unitTemplates = [{ componentType: 'WB', volumeMl: volume }];
 
-          const campId = (legacy.siteId && legacy.siteId !== 'null') ? legacy.siteId : undefined;
+          const campId = legacy.siteId && legacy.siteId !== 'null' ? legacy.siteId : undefined;
 
           req.body = {
             donor: legacy.donor,
@@ -81,10 +119,12 @@ export function createDonationControllers(service: DonationService): DonationCon
             collectedAt: legacy.collectionDate ? new Date(legacy.collectionDate) : new Date(),
             campId,
             medicalExam,
-            donorFitness: legacy.donorFitness ? {
-              isFit: Boolean(legacy.donorFitness.isFit),
-              rejectionReason: legacy.donorFitness.rejectionReason || undefined,
-            } : { isFit: true },
+            donorFitness: legacy.donorFitness
+              ? {
+                  isFit: Boolean(legacy.donorFitness.isFit),
+                  rejectionReason: legacy.donorFitness.rejectionReason || undefined,
+                }
+              : { isFit: true },
             questionnaireFlags,
             bloodGroup: legacy.bloodGroup,
             rhFactor,

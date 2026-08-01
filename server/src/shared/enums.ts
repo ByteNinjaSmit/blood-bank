@@ -142,7 +142,12 @@ export const VENDOR_STATUS = ['PENDING', 'APPROVED', 'SUSPENDED', 'BLACKLISTED']
 export type VendorStatus = (typeof VENDOR_STATUS)[number];
 
 export const PO_STATUS = [
-  'DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'FULFILLED', 'CANCELLED',
+  'DRAFT',
+  'PENDING_APPROVAL',
+  'APPROVED',
+  'REJECTED',
+  'FULFILLED',
+  'CANCELLED',
 ] as const;
 export type PoStatus = (typeof PO_STATUS)[number];
 
@@ -159,9 +164,15 @@ export const BAG_ISSUE_STATUS = ['ISSUED', 'USED', 'RETURNED', 'DAMAGED'] as con
 export type BagIssueStatus = (typeof BAG_ISSUE_STATUS)[number];
 
 export const BAG_DISCARD_REASON = [
-  'EXPIRED', 'LEAKAGE', 'STERILITY_FAILURE', 'DAMAGED_NEEDLE',
-  'BROKEN_SEAL', 'MANUFACTURING_DEFECT', 'PHYSICAL_DAMAGE',
-  'TEMPERATURE_EXCURSION', 'QC_FAILURE',
+  'EXPIRED',
+  'LEAKAGE',
+  'STERILITY_FAILURE',
+  'DAMAGED_NEEDLE',
+  'BROKEN_SEAL',
+  'MANUFACTURING_DEFECT',
+  'PHYSICAL_DAMAGE',
+  'TEMPERATURE_EXCURSION',
+  'QC_FAILURE',
 ] as const;
 export type BagDiscardReason = (typeof BAG_DISCARD_REASON)[number];
 

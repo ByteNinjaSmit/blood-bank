@@ -9,7 +9,9 @@ export interface MonthlyReportInputControllers {
   get: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
-export function createMonthlyReportInputControllers(repo: MonthlyReportInputRepo): MonthlyReportInputControllers {
+export function createMonthlyReportInputControllers(
+  repo: MonthlyReportInputRepo,
+): MonthlyReportInputControllers {
   const actor = (req: Request): string => {
     if (!req.user) throw new UnauthorizedError();
     return req.user.id;
@@ -23,7 +25,12 @@ export function createMonthlyReportInputControllers(repo: MonthlyReportInputRepo
         const data = await repo.upsert(body, actorId);
         void withAudit(
           { actorId, requestId: req.id },
-          { module: 'monthly-report-input', action: 'UPDATE', entityType: 'MonthlyReportInput', entityId: `${body.month}-${body.year}` },
+          {
+            module: 'monthly-report-input',
+            action: 'UPDATE',
+            entityType: 'MonthlyReportInput',
+            entityId: `${body.month}-${body.year}`,
+          },
           undefined,
           body,
         );

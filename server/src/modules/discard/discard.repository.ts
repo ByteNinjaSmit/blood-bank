@@ -36,9 +36,7 @@ export interface DiscardCreateInput {
 }
 
 export interface DiscardRepo {
-  list(
-    filters: DiscardListFilters,
-  ): Promise<{ data: any[]; total: number; totalPages: number }>;
+  list(filters: DiscardListFilters): Promise<{ data: any[]; total: number; totalPages: number }>;
   create(input: DiscardCreateInput): Promise<{ unitsDiscarded: number; bagNo: string }>;
 }
 
@@ -196,7 +194,8 @@ export function createDiscardRepo(deps: { units: UnitRepo; ttiService: TtiServic
       if (!donation) throw new NotFoundError('Donation matching bag number', bagNo);
 
       const units = await BloodUnitModel.find({ donationId: donation.donationId, deletedAt: null });
-      if (units.length === 0) throw new NotFoundError('Blood units for donation', donation.donationId);
+      if (units.length === 0)
+        throw new NotFoundError('Blood units for donation', donation.donationId);
 
       const manualDiscardReason = `Manually discarded via procurement portal. Description: ${description || 'N/A'}. Segment: ${segmentNo || donation.segmentNo || 'N/A'}, Batch: ${batchNo || donation.lotNo || 'N/A'}`;
 
@@ -236,7 +235,10 @@ export function createDiscardRepo(deps: { units: UnitRepo; ttiService: TtiServic
         const reqs = await RequisitionModel.find({ 'matchedUnits.unitId': unit.unitId });
         for (const r of reqs) {
           r.matchedUnits = r.matchedUnits.filter((mu: any) => mu.unitId !== unit.unitId) as any;
-          if (r.matchedUnits.length === 0 && ['MATCHED', 'CROSSMATCHED', 'APPROVED'].includes(r.status)) {
+          if (
+            r.matchedUnits.length === 0 &&
+            ['MATCHED', 'CROSSMATCHED', 'APPROVED'].includes(r.status)
+          ) {
             r.status = 'PENDING';
           }
           await r.save();

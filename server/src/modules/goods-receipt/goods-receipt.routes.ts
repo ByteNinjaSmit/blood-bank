@@ -16,32 +16,12 @@ const controllers = createGRNControllers(service);
 
 const router = Router();
 
-router.get(
-  '/',
-  authenticate,
-  requirePermission('grn:read'),
-  controllers.list,
-);
+router.get('/', authenticate, requirePermission('grn:read'), controllers.list);
 
-router.get(
-  '/:id',
-  authenticate,
-  requirePermission('grn:read'),
-  controllers.get,
-);
+router.get('/:id', authenticate, requirePermission('grn:read'), controllers.get);
 
-router.post(
-  '/',
-  authenticate,
-  requirePermission('grn:create'),
-  controllers.create,
-);
+router.post('/', authenticate, requirePermission('grn:create'), controllers.create);
 
-router.patch(
-  '/:id',
-  authenticate,
-  requirePermission('grn:create'),
-  controllers.update,
-);
+router.patch('/:id', authenticate, requirePermission('grn:create'), controllers.update);
 
 export default router;

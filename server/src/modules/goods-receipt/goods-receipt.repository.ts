@@ -41,13 +41,17 @@ export interface GRNDto {
   updatedAt: string;
 }
 
-function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date }): GRNDto {
+function toDto(
+  doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date },
+): GRNDto {
   const batchLines = ((doc.batchLines as Array<Record<string, unknown>>) ?? []).map((b) => ({
     bagType: b.bagType as string,
     capacityMl: b.capacityMl as number,
     anticoagulant: b.anticoagulant as string | undefined,
     batchNumber: b.batchNumber as string,
-    manufacturingDate: b.manufacturingDate ? (b.manufacturingDate as Date).toISOString() : undefined,
+    manufacturingDate: b.manufacturingDate
+      ? (b.manufacturingDate as Date).toISOString()
+      : undefined,
     expiryDate: (b.expiryDate as Date).toISOString(),
     quantityReceived: b.quantityReceived as number,
   }));
@@ -64,14 +68,16 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     receivedDate: doc.receivedDate ? (doc.receivedDate as Date).toISOString() : undefined,
     receivedById: doc.receivedById ? (doc.receivedById as Types.ObjectId).toString() : undefined,
     batchLines,
-    financials: fin ? {
-      basicAmountRs: fin.basicAmountRs as number | undefined,
-      cgstRs: fin.cgstRs as number | undefined,
-      sgstRs: fin.sgstRs as number | undefined,
-      igstRs: fin.igstRs as number | undefined,
-      discountRs: fin.discountRs as number | undefined,
-      netAmountRs: fin.netAmountRs as number | undefined,
-    } : undefined,
+    financials: fin
+      ? {
+          basicAmountRs: fin.basicAmountRs as number | undefined,
+          cgstRs: fin.cgstRs as number | undefined,
+          sgstRs: fin.sgstRs as number | undefined,
+          igstRs: fin.igstRs as number | undefined,
+          discountRs: fin.discountRs as number | undefined,
+          netAmountRs: fin.netAmountRs as number | undefined,
+        }
+      : undefined,
     status: doc.status as string,
     notes: doc.notes as string | undefined,
     invoiceImage: (doc.invoiceImage as string) || undefined,
@@ -98,16 +104,20 @@ export interface GRNRepo {
     invoiceImage?: string | null;
     actorId: string;
   }): Promise<GRNDto>;
-  update(id: string, patch: Partial<{
-    invoiceNo: string;
-    billDate: Date;
-    transportDetails: string;
-    receivedDate: Date;
-    batchLines: BatchLineDto[];
-    financials: FinancialsDto;
-    notes: string;
-    invoiceImage: string | null;
-  }>, actorId: string): Promise<GRNDto | null>;
+  update(
+    id: string,
+    patch: Partial<{
+      invoiceNo: string;
+      billDate: Date;
+      transportDetails: string;
+      receivedDate: Date;
+      batchLines: BatchLineDto[];
+      financials: FinancialsDto;
+      notes: string;
+      invoiceImage: string | null;
+    }>,
+    actorId: string,
+  ): Promise<GRNDto | null>;
 }
 
 export function createGRNRepo(): GRNRepo {
@@ -130,13 +140,33 @@ export function createGRNRepo(): GRNRepo {
         GoodsReceiptModel.find(filter).sort({ receivedDate: -1 }).skip(skip).limit(pageSize).lean(),
         GoodsReceiptModel.countDocuments(filter),
       ]);
-      return { items: docs.map((d) => toDto(d as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date })), total };
+      return {
+        items: docs.map((d) =>
+          toDto(
+            d as unknown as Record<string, unknown> & {
+              _id: Types.ObjectId;
+              createdAt?: Date;
+              updatedAt?: Date;
+            },
+          ),
+        ),
+        total,
+      };
     },
 
     async findById(id) {
-      const doc = await GoodsReceiptModel.findOne({ _id: new Types.ObjectId(id), deletedAt: null }).lean();
+      const doc = await GoodsReceiptModel.findOne({
+        _id: new Types.ObjectId(id),
+        deletedAt: null,
+      }).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async create(input) {
@@ -162,7 +192,13 @@ export function createGRNRepo(): GRNRepo {
         createdBy: actor,
         updatedBy: actor,
       });
-      return toDto(doc.toObject() as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc.toObject() as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async update(id, patch, actorId) {
@@ -173,7 +209,13 @@ export function createGRNRepo(): GRNRepo {
         { new: true },
       ).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
   };
 }

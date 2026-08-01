@@ -7,7 +7,8 @@ function buildFilter(filters: AuditSearchFilters): FilterQuery<AuditLog> {
   if (filters.module) q.module = filters.module;
   if (filters.entityType) q.entityType = filters.entityType;
   if (filters.entityId) q.entityId = filters.entityId;
-  if (filters.actor && Types.ObjectId.isValid(filters.actor)) q.actor = new Types.ObjectId(filters.actor);
+  if (filters.actor && Types.ObjectId.isValid(filters.actor))
+    q.actor = new Types.ObjectId(filters.actor);
   if (filters.action) q.action = filters.action;
   if (filters.role) q.role = filters.role;
   if (filters.severity) q.severity = filters.severity;

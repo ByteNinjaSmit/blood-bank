@@ -87,7 +87,12 @@ export const hospitalService = {
     return h;
   },
 
-  async update(id: string, input: UpdateHospitalInput, actorId: string, editReason?: string): Promise<HospitalDto> {
+  async update(
+    id: string,
+    input: UpdateHospitalInput,
+    actorId: string,
+    editReason?: string,
+  ): Promise<HospitalDto> {
     if (input.phone && (await hospitalRepo.findOnePhone(input.phone, id))) {
       throw new ConflictError('Hospital with this phone number already exists');
     }
@@ -143,7 +148,9 @@ export const hospitalService = {
   async restore(id: string, actorId: string): Promise<{ restored: boolean }> {
     const before = await hospitalRepo.findByIdIncludingDeleted(id);
     if (!before) throw new NotFoundError('Hospital', id);
-    await runInCascadeTransaction((session) => cascadeRestore(hospitalCascadeNode, id, actorId, session));
+    await runInCascadeTransaction((session) =>
+      cascadeRestore(hospitalCascadeNode, id, actorId, session),
+    );
     await auditService.record({
       actorId,
       module: 'hospital',

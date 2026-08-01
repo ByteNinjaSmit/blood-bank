@@ -27,7 +27,9 @@ export function createVendorControllers(service: VendorService): VendorControlle
         const q = ValidateVendor.listQuery(req);
         const result = await service.list(q);
         res.json({ success: true, data: result, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async get(req, res, next) {
@@ -35,7 +37,9 @@ export function createVendorControllers(service: VendorService): VendorControlle
         const { id } = ValidateVendor.idParam(req);
         const data = await service.get(id);
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async create(req, res, next) {
@@ -43,7 +47,9 @@ export function createVendorControllers(service: VendorService): VendorControlle
         const body = ValidateVendor.createBody(req);
         const data = await service.create(body, actorId(req));
         res.status(201).json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async update(req, res, next) {
@@ -53,7 +59,9 @@ export function createVendorControllers(service: VendorService): VendorControlle
         const body = ValidateVendor.updateBody(req);
         const data = await service.update(id, body, actorId(req), editReason);
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async updateStatus(req, res, next) {
@@ -62,7 +70,9 @@ export function createVendorControllers(service: VendorService): VendorControlle
         const body = ValidateVendor.updateStatusBody(req);
         const data = await service.updateStatus(id, body, actorId(req));
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async remove(req, res, next) {
@@ -71,7 +81,9 @@ export function createVendorControllers(service: VendorService): VendorControlle
         const { reason } = ValidateVendor.deleteReasonBody(req);
         await service.softDelete(id, actorId(req), reason);
         res.status(204).end();
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async restore(req, res, next) {
@@ -79,7 +91,9 @@ export function createVendorControllers(service: VendorService): VendorControlle
         const { id } = ValidateVendor.idParam(req);
         const data = await service.restore(id, actorId(req));
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async permanentDelete(req, res, next) {
@@ -88,7 +102,9 @@ export function createVendorControllers(service: VendorService): VendorControlle
         const { reason } = ValidateVendor.deleteReasonBody(req);
         await service.permanentDelete(id, actorId(req), reason);
         res.status(204).end();
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
   };
 }

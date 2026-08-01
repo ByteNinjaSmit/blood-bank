@@ -4,7 +4,11 @@
 
 import { childLogger } from '@/core/logger';
 import { COMPONENT_TYPE } from '@/shared/enums';
-import type { NotificationModule, NotificationCategory, NotificationSeverity } from '@/shared/enums';
+import type {
+  NotificationModule,
+  NotificationCategory,
+  NotificationSeverity,
+} from '@/shared/enums';
 import { createNotificationRepo } from './notification.repository';
 import type {
   NotificationRepo,
@@ -131,6 +135,8 @@ export function createNotificationCenterService(deps: {
 // Singleton instance — other modules import this directly to fire
 // notify() calls at their own event points, mirroring the existing
 // `notificationService` (email) export in notification.service.ts.
-export const notificationCenterService: NotificationCenterService = createNotificationCenterService({
-  repo: createNotificationRepo(),
-});
+export const notificationCenterService: NotificationCenterService = createNotificationCenterService(
+  {
+    repo: createNotificationRepo(),
+  },
+);

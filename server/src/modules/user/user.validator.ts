@@ -85,5 +85,6 @@ export const ValidateUser = {
   updateBody: (req: Request) => parseOrThrow(UpdateUserBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListUsersQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
-  deactivateBody: (req: Request) => parseOrThrow(DeactivateUserBody, req.body ?? {}, 'request body'),
+  deactivateBody: (req: Request) =>
+    parseOrThrow(DeactivateUserBody, req.body ?? {}, 'request body'),
 };

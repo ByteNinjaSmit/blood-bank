@@ -70,7 +70,7 @@ export interface ChemicalInventoryRepo {
     actorId: string;
   }): Promise<any>;
   listHistory(chemicalId?: string, lotId?: string): Promise<any[]>;
-  
+
   // Dashboard & Reports
   getDashboardStats(): Promise<any>;
   getMonthlyStockReport(month: number, year: number): Promise<any[]>;
@@ -99,7 +99,7 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
       return ChemicalCategoryModel.findByIdAndUpdate(
         new Types.ObjectId(id),
         { deletedAt: new Date() },
-        { new: true }
+        { new: true },
       );
     },
 
@@ -120,7 +120,7 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
       return ChemicalSupplierModel.findByIdAndUpdate(
         new Types.ObjectId(id),
         { $set: { ...patch, updatedBy: new Types.ObjectId(actorId) } },
-        { new: true }
+        { new: true },
       );
     },
 
@@ -128,7 +128,7 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
       return ChemicalSupplierModel.findByIdAndUpdate(
         new Types.ObjectId(id),
         { deletedAt: new Date() },
-        { new: true }
+        { new: true },
       );
     },
 
@@ -156,7 +156,7 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
       return ChemicalManufacturerModel.findByIdAndUpdate(
         new Types.ObjectId(id),
         { deletedAt: new Date() },
-        { new: true }
+        { new: true },
       );
     },
 
@@ -169,7 +169,9 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
     },
 
     async listChemicalsWithStock() {
-      const chemicalIdsWithStock = await ChemicalStockLotModel.distinct('chemicalId', { deletedAt: null });
+      const chemicalIdsWithStock = await ChemicalStockLotModel.distinct('chemicalId', {
+        deletedAt: null,
+      });
       return ChemicalModel.find({ deletedAt: null, _id: { $in: chemicalIdsWithStock } })
         .populate('categoryId', 'name')
         .populate('manufacturerId', 'name')
@@ -204,11 +206,12 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
       const actor = new Types.ObjectId(actorId);
       const updateData: any = { ...patch, updatedBy: actor };
       if (patch.categoryId) updateData.categoryId = new Types.ObjectId(patch.categoryId);
-      if (patch.manufacturerId) updateData.manufacturerId = new Types.ObjectId(patch.manufacturerId);
+      if (patch.manufacturerId)
+        updateData.manufacturerId = new Types.ObjectId(patch.manufacturerId);
       return ChemicalModel.findByIdAndUpdate(
         new Types.ObjectId(id),
         { $set: updateData },
-        { new: true }
+        { new: true },
       );
     },
 
@@ -216,7 +219,7 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
       return ChemicalModel.findByIdAndUpdate(
         new Types.ObjectId(id),
         { deletedAt: new Date() },
-        { new: true }
+        { new: true },
       );
     },
 
@@ -262,7 +265,7 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
       return ChemicalStockLotModel.findByIdAndUpdate(
         new Types.ObjectId(id),
         { $set: { ...patch, updatedBy: new Types.ObjectId(actorId) } },
-        { new: true }
+        { new: true },
       );
     },
 
@@ -270,7 +273,7 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
       return ChemicalStockLotModel.findByIdAndUpdate(
         new Types.ObjectId(id),
         { $inc: { qtyAvailable: delta } },
-        { new: true }
+        { new: true },
       );
     },
 
@@ -279,7 +282,10 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
       const today = new Date();
 
       if (q.categoryId) {
-        const chemIds = await ChemicalModel.find({ categoryId: new Types.ObjectId(q.categoryId), deletedAt: null }).distinct('_id');
+        const chemIds = await ChemicalModel.find({
+          categoryId: new Types.ObjectId(q.categoryId),
+          deletedAt: null,
+        }).distinct('_id');
         filter.chemicalId = { $in: chemIds };
       }
       if (q.supplierId) {
@@ -314,7 +320,7 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
           name: { $regex: q.search, $options: 'i' },
           deletedAt: null,
         }).distinct('_id');
-        
+
         filter.$or = [
           { lotNumber: { $regex: q.search, $options: 'i' } },
           { batchNumber: { $regex: q.search, $options: 'i' } },
@@ -374,7 +380,7 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
       return ChemicalPurchaseModel.findByIdAndUpdate(
         new Types.ObjectId(id),
         { $set: { ...patch, updatedBy: new Types.ObjectId(actorId) } },
-        { new: true }
+        { new: true },
       );
     },
 
@@ -464,7 +470,7 @@ export function createChemicalInventoryRepo(): ChemicalInventoryRepo {
       return ChemicalDamageModel.findByIdAndUpdate(
         new Types.ObjectId(id),
         { $set: { ...patch, updatedBy: new Types.ObjectId(actorId) } },
-        { new: true }
+        { new: true },
       );
     },
 

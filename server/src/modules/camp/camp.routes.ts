@@ -32,12 +32,7 @@ router.get('/details/:id', authenticate, READ_PERM, campController.detail);
 router.get('/details', authenticate, READ_PERM, campController.all);
 router.get('/staff-list', authenticate, READ_PERM, campController.staffList);
 router.get('/list', authenticate, READ_PERM, campController.campList);
-router.get(
-  '/donations/:campId',
-  authenticate,
-  READ_PERM,
-  campController.campDonations,
-);
+router.get('/donations/:campId', authenticate, READ_PERM, campController.campDonations);
 router.get('/donors/:campId', authenticate, READ_PERM, campController.campDonors);
 router.get('/voluntary-donations', authenticate, READ_PERM, campController.voluntary);
 router.patch(

@@ -89,7 +89,11 @@ const UNIVERSAL_PERMISSIONS: readonly Permission[] = [
 // lookup API calls succeed — e.g. the Camp filter dropdown on Component
 // List) but omitted from the permission list sent to the client for
 // page-visibility purposes — see projectClientPermissions() below.
-const DEPENDENCY_ONLY_PERMISSIONS: readonly Permission[] = ['hospital:read', 'bag-stock:read', 'camp:read'];
+const DEPENDENCY_ONLY_PERMISSIONS: readonly Permission[] = [
+  'hospital:read',
+  'bag-stock:read',
+  'camp:read',
+];
 
 // Converts the raw per-user grid into real backend Permission strings.
 // This is the ENTIRE source of a non-full-access user's authorization —

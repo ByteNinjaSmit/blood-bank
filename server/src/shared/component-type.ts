@@ -52,7 +52,10 @@ const FLAT_SHELF_DAYS: Readonly<Record<Exclude<ComponentType, 'PRBC'>, number>> 
  *
  * Every other component type keeps its existing flat shelf life.
  */
-export function getShelfDays(componentType: ComponentType, specialNeeds?: ReadonlyArray<SpecialNeed | string>): number {
+export function getShelfDays(
+  componentType: ComponentType,
+  specialNeeds?: ReadonlyArray<SpecialNeed | string>,
+): number {
   if (componentType === 'PRBC') {
     const needs = new Set(specialNeeds ?? []);
     if (needs.has('WASHED')) return 1;

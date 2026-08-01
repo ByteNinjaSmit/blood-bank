@@ -280,7 +280,10 @@ export function createRequisitionService(deps: {
         if (selection.shortage > 0) {
           shortages[`${rc.componentType}-${rc.aboGroup}${rc.rhFactor}`] = selection.shortage;
         }
-        componentOutcome.push({ componentType: rc.componentType, available: selection.selected.length });
+        componentOutcome.push({
+          componentType: rc.componentType,
+          available: selection.selected.length,
+        });
 
         const needsXm = requiresCrossmatch(rc.componentType);
         for (const sel of selection.selected) {
@@ -328,7 +331,11 @@ export function createRequisitionService(deps: {
         entityType: 'Requisition',
         entityId: req.requisitionId,
         before: { status: req.status },
-        after: { status: updated.status, matchedCount: matched.length, shortageCount: shortageKeys.length },
+        after: {
+          status: updated.status,
+          matchedCount: matched.length,
+          shortageCount: shortageKeys.length,
+        },
       });
       if (shortageKeys.length === 0) {
         return { requisition: updated, shortages: [], partial: false };
@@ -484,7 +491,6 @@ export function createRequisitionService(deps: {
         throw new ConflictError(`Cannot complete requisition in status ${req.status}.`);
       }
 
-
       const updated = await deps.requisitions.setStatus(id, 'COMPLETED', actorId);
       await audit.record({
         actorId,
@@ -577,7 +583,14 @@ export function createRequisitionService(deps: {
     },
 
     async updateCrossmatchLegacy(id, input, actorId) {
-      const { inventoryId, crossmatchStatus, compatibilityResult, crossmatchDoneAt, crossmatchSeenAt, cardNumber } = input;
+      const {
+        inventoryId,
+        crossmatchStatus,
+        compatibilityResult,
+        crossmatchDoneAt,
+        crossmatchSeenAt,
+        cardNumber,
+      } = input;
 
       const request = await deps.requisitions.findById(id);
       if (!['MATCHED', 'APPROVED'].includes(request.status)) {
@@ -592,7 +605,12 @@ export function createRequisitionService(deps: {
         throw new ValidationError('Crossmatch is not required for this component type');
       }
 
-      const crossmatchDetails = { compatibilityResult, crossmatchDoneAt, crossmatchSeenAt, cardNumber };
+      const crossmatchDetails = {
+        compatibilityResult,
+        crossmatchDoneAt,
+        crossmatchSeenAt,
+        cardNumber,
+      };
 
       // Before approval the unit is only *proposed* (still RELEASED, not
       // RESERVED), so we cannot run the crossmatch state transition — record
@@ -622,7 +640,13 @@ export function createRequisitionService(deps: {
 
       if (crossmatchStatus === 'compatible') {
         await deps.crossmatch.perform(
-          { requisitionId: request.id, unitId: inventoryId, method: 'IS', result: 'COMPATIBLE', ...crossmatchDetails },
+          {
+            requisitionId: request.id,
+            unitId: inventoryId,
+            method: 'IS',
+            result: 'COMPATIBLE',
+            ...crossmatchDetails,
+          },
           actorId,
         );
         return deps.requisitions.findById(id);
@@ -633,7 +657,13 @@ export function createRequisitionService(deps: {
       // from matchedUnits and try to auto-reserve a same-priority
       // replacement so the request doesn't stall.
       await deps.crossmatch.perform(
-        { requisitionId: request.id, unitId: inventoryId, method: 'IS', result: 'INCOMPATIBLE', ...crossmatchDetails },
+        {
+          requisitionId: request.id,
+          unitId: inventoryId,
+          method: 'IS',
+          result: 'INCOMPATIBLE',
+          ...crossmatchDetails,
+        },
         actorId,
       );
 
@@ -719,7 +749,7 @@ export function createRequisitionService(deps: {
       }
       const current = req.matchedUnits.find((mu) => mu.unitId === fromUnitId);
       if (!current) {
-        throw new NotFoundError("Matched unit in this requisition", fromUnitId);
+        throw new NotFoundError('Matched unit in this requisition', fromUnitId);
       }
       if (current.reserved) {
         throw new ConflictError('This bag is already reserved and cannot be swapped.');
@@ -738,7 +768,9 @@ export function createRequisitionService(deps: {
         throw new ConflictError(`Bag ${toUnitId} is not available (status ${target.status}).`);
       }
       if (target.componentType !== compType) {
-        throw new ValidationError(`Bag ${toUnitId} is a ${target.componentType}, not a ${compType}.`);
+        throw new ValidationError(
+          `Bag ${toUnitId} is a ${target.componentType}, not a ${compType}.`,
+        );
       }
       const allowedGroups = compatibleAboGroups(rc.aboGroup, compType);
       if (!allowedGroups.includes(target.aboGroup)) {

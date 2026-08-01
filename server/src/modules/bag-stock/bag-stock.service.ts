@@ -1,14 +1,20 @@
 import { childLogger } from '@/core/logger';
 import { withAudit } from '@/shared/utils/with-audit';
 import { NotFoundError, ConflictError } from '@/shared/errors';
-import type { BagStockRepo, BagStockDto, BagStockSummaryItem } from '@/modules/bag-stock/bag-stock.repository';
+import type {
+  BagStockRepo,
+  BagStockDto,
+  BagStockSummaryItem,
+} from '@/modules/bag-stock/bag-stock.repository';
 import type {
   ListBagStockInput,
   UpdateBagStockStatusInput,
 } from '@/modules/bag-stock/bag-stock.validator';
 
 export interface BagStockService {
-  list(q: ListBagStockInput): Promise<{ items: BagStockDto[]; total: number; page: number; pageSize: number }>;
+  list(
+    q: ListBagStockInput,
+  ): Promise<{ items: BagStockDto[]; total: number; page: number; pageSize: number }>;
   get(id: string): Promise<BagStockDto>;
   summary(): Promise<BagStockSummaryItem[]>;
   updateStatus(id: string, input: UpdateBagStockStatusInput, actorId: string): Promise<BagStockDto>;
@@ -56,7 +62,13 @@ export function createBagStockService(deps: { bagStock: BagStockRepo }): BagStoc
       log.info({ stockId: id, actorId }, 'bag stock box opened');
       void withAudit(
         { actorId },
-        { module: 'bag-stock', action: 'UPDATE', entityType: 'BagStock', entityId: id, reason: 'box opened' },
+        {
+          module: 'bag-stock',
+          action: 'UPDATE',
+          entityType: 'BagStock',
+          entityId: id,
+          reason: 'box opened',
+        },
         undefined,
         undefined,
       );

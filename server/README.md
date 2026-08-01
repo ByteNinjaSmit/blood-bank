@@ -74,20 +74,20 @@ cp .env.example .env
 `.env.example` documents every variable with `[DEV]` / `[PROD]` markers. Key
 variables:
 
-| Variable                                                               | Required  | Dev                                               | Prod                          |
-| ---------------------------------------------------------------------- | --------- | ------------------------------------------------- | ----------------------------- |
-| `MONGODB_URI`                                                          | yes       | `mongodb://localhost:27017/`                      | authenticated remote URI      |
-| `REDIS_URL`                                                            | yes       | `redis://localhost:6379`                          | `redis://redis:6379` (Docker) |
-| `PORT`                                                                 | yes       | `5000`                                            | `5000`                        |
-| `NODE_ENV`                                                             | yes       | `development`                                     | `production`                  |
-| `JWT_SECRET`, `JWT_SECRET_KEY`                                         | yes       | dev placeholders                                  | strong random, unique         |
-| `ACCESS_TOKEN_EXPIRY` / `REFRESH_TOKEN_EXPIRY`                         | yes       | `15m` / `7d`                                      | `15m` / `7d`                  |
-| `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_FROM_NAME`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_SECURE` | for email | Gmail App Password; `465`+`true` or `587`+`false` | same                          |
-| `ADMIN_EMAIL`                                                          | for email | test inbox                                        | admin inbox                   |
-| `BANK_NAME`, `BANK_ADDRESS`, `BANK_PHONE`, `BANK_LICENSE`, `BANK_WEBSITE` | yes    | real details — they print on reports              | same                          |
-| `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`, `S3_PUBLIC_URL` | for uploads | MinIO dev instance             | MinIO prod instance           |
-| `REPORTS_DIR`, `NEAR_EXPIRY_DAYS`                                      | yes       | `./reports`, `2`                                  | same                          |
-| `SYSTEM_USER_ID`                                                       | yes       | valid Mongo ObjectId                              | valid Mongo ObjectId          |
+| Variable                                                                                   | Required    | Dev                                               | Prod                          |
+| ------------------------------------------------------------------------------------------ | ----------- | ------------------------------------------------- | ----------------------------- |
+| `MONGODB_URI`                                                                              | yes         | `mongodb://localhost:27017/`                      | authenticated remote URI      |
+| `REDIS_URL`                                                                                | yes         | `redis://localhost:6379`                          | `redis://redis:6379` (Docker) |
+| `PORT`                                                                                     | yes         | `5000`                                            | `5000`                        |
+| `NODE_ENV`                                                                                 | yes         | `development`                                     | `production`                  |
+| `JWT_SECRET`, `JWT_SECRET_KEY`                                                             | yes         | dev placeholders                                  | strong random, unique         |
+| `ACCESS_TOKEN_EXPIRY` / `REFRESH_TOKEN_EXPIRY`                                             | yes         | `15m` / `7d`                                      | `15m` / `7d`                  |
+| `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_FROM_NAME`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_SECURE`  | for email   | Gmail App Password; `465`+`true` or `587`+`false` | same                          |
+| `ADMIN_EMAIL`                                                                              | for email   | test inbox                                        | admin inbox                   |
+| `BANK_NAME`, `BANK_ADDRESS`, `BANK_PHONE`, `BANK_LICENSE`, `BANK_WEBSITE`                  | yes         | real details — they print on reports              | same                          |
+| `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`, `S3_PUBLIC_URL` | for uploads | MinIO dev instance                                | MinIO prod instance           |
+| `REPORTS_DIR`, `NEAR_EXPIRY_DAYS`                                                          | yes         | `./reports`, `2`                                  | same                          |
+| `SYSTEM_USER_ID`                                                                           | yes         | valid Mongo ObjectId                              | valid Mongo ObjectId          |
 
 > `BANK_*` and `S3_*` have permissive defaults in `src/core/config/env.ts`, so
 > omitting them does not stop the server booting — it produces reports with
@@ -108,14 +108,14 @@ cp .env.example .env          # edit with your values
 npm run dev                   # tsx watch src/server.ts, auto-reload
 ```
 
-| Command                | Use                                              |
-| ---------------------- | ------------------------------------------------ |
-| `npm run dev`          | development — `tsx watch src/server.ts`          |
-| `npm run build`        | `tsc` + `tsc-alias` → `dist/`                    |
-| `npm start`            | build, then `node dist/server.js`                |
-| `npm run typecheck`    | `tsc --noEmit`                                    |
-| `npm run lint`         | eslint                                           |
-| `npm test`             | vitest (single run)                              |
+| Command             | Use                                     |
+| ------------------- | --------------------------------------- |
+| `npm run dev`       | development — `tsx watch src/server.ts` |
+| `npm run build`     | `tsc` + `tsc-alias` → `dist/`           |
+| `npm start`         | build, then `node dist/server.js`       |
+| `npm run typecheck` | `tsc --noEmit`                          |
+| `npm run lint`      | eslint                                  |
+| `npm test`          | vitest (single run)                     |
 
 > `npm run lint`, `npm run typecheck`, `npm run build` and `npm test` are
 > exactly what the CI `verify` job runs. Green locally = green in CI.
@@ -146,11 +146,11 @@ have not migrated: `/api/requests`, `/api/component`, `/api/serology`,
 
 Non-API routes:
 
-| Route            | Purpose                                                |
-| ---------------- | ------------------------------------------------------ |
-| `GET /health`    | health check — status, uptime, service name             |
-| `GET /health/queues` | per-queue counts; `200` healthy, `207` degraded    |
-| `/socket.io/`    | Socket.IO realtime endpoint                             |
+| Route                | Purpose                                         |
+| -------------------- | ----------------------------------------------- |
+| `GET /health`        | health check — status, uptime, service name     |
+| `GET /health/queues` | per-queue counts; `200` healthy, `207` degraded |
+| `/socket.io/`        | Socket.IO realtime endpoint                     |
 
 Every route declares `requirePermission(...)`; `auth` is the only exception.
 `role` is a display label with no authorization weight — see
@@ -158,13 +158,13 @@ Every route declares `requirePermission(...)`; `auth` is the only exception.
 
 ## Connections
 
-| Connection                             | Configured in            | Variable      |
-| -------------------------------------- | ------------------------ | ------------- |
-| MongoDB                                | `src/core/db`            | `MONGODB_URI` |
-| Redis (rate limit / Socket.IO adapter) | `src/core/redis`         | `REDIS_URL`   |
-| Redis (Bull queues)                    | `src/core/queue`         | `REDIS_URL`   |
-| SMTP                                   | `src/core/mail`          | `EMAIL_*`     |
-| S3 / MinIO                             | `src/modules/upload`     | `S3_*`        |
+| Connection                             | Configured in        | Variable      |
+| -------------------------------------- | -------------------- | ------------- |
+| MongoDB                                | `src/core/db`        | `MONGODB_URI` |
+| Redis (rate limit / Socket.IO adapter) | `src/core/redis`     | `REDIS_URL`   |
+| Redis (Bull queues)                    | `src/core/queue`     | `REDIS_URL`   |
+| SMTP                                   | `src/core/mail`      | `EMAIL_*`     |
+| S3 / MinIO                             | `src/modules/upload` | `S3_*`        |
 
 Notes:
 
@@ -183,14 +183,14 @@ Bull queues are created through `src/core/queue` and wired up by
 `register-processors.ts` on boot. Each is colocated with its module as
 `<module>.jobs.ts`:
 
-| Queue                     | Defined in                        |
-| ------------------------- | --------------------------------- |
-| `inventory-maintenance`   | `modules/inventory/inventory.jobs.ts` |
-| `inventory-reports`       | `modules/inventory/inventory.jobs.ts` |
-| `component-maintenance`   | `modules/component/component.jobs.ts` |
-| `donor-maintenance`       | `modules/donor/donor.jobs.ts`     |
+| Queue                     | Defined in                                |
+| ------------------------- | ----------------------------------------- |
+| `inventory-maintenance`   | `modules/inventory/inventory.jobs.ts`     |
+| `inventory-reports`       | `modules/inventory/inventory.jobs.ts`     |
+| `component-maintenance`   | `modules/component/component.jobs.ts`     |
+| `donor-maintenance`       | `modules/donor/donor.jobs.ts`             |
 | `requisition-maintenance` | `modules/requisition/requisition.jobs.ts` |
-| `tti-maintenance`         | `modules/tti/tti.jobs.ts`         |
+| `tti-maintenance`         | `modules/tti/tti.jobs.ts`                 |
 
 Every queue gets a dead-letter queue automatically. `GET /health/queues`
 reports failed and DLQ-waiting counts per queue and returns `207` if any is
@@ -236,18 +236,18 @@ FFP 30 days, Cryo 30 days.
 
 ## Troubleshooting
 
-| Symptom                           | Cause                                                              | Fix                                                   |
-| --------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------- |
-| `MongoServerSelectionError`       | bad `MONGODB_URI`, DB down, IP not whitelisted, unencoded password | verify URI; encode `@`→`%40`, `#`→`%23`               |
-| Redis `MaxRetriesPerRequestError` | `REDIS_URL` wrong / unset / Redis down                             | `redis-cli ping`; set `REDIS_URL`                     |
-| Queues idle in Docker             | `REDIS_URL` points at localhost, which is the container itself      | set `REDIS_URL=redis://redis:6379`                    |
-| `Invalid environment variables:`  | a required var failed the zod schema                               | the message names the keys; set them                  |
-| CORS error in browser             | origin missing from allow-list                                     | add it to `CORS_SERVER` (comma-separated)             |
-| Email not sending                 | bad app password, 2FA off, wrong port/secure pair                  | use Gmail App Password; `465`+`true` or `587`+`false` |
-| Uploads fail, server healthy      | `S3_*` unset or bucket missing                                     | blank S3 vars fail per-request, not at boot           |
-| PDF generation fails              | `REPORTS_DIR` missing / not writable                               | ensure `./reports` exists and is writable             |
-| `429 Too Many Requests`           | rate limiter triggered                                             | expected under load; tune `src/core/security/rate-limit.ts` |
-| `npm ci`: `Missing: <pkg> from lock file` | `package.json` edited without refreshing the lockfile      | `npm install`, then commit `package-lock.json`        |
+| Symptom                                   | Cause                                                              | Fix                                                         |
+| ----------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `MongoServerSelectionError`               | bad `MONGODB_URI`, DB down, IP not whitelisted, unencoded password | verify URI; encode `@`→`%40`, `#`→`%23`                     |
+| Redis `MaxRetriesPerRequestError`         | `REDIS_URL` wrong / unset / Redis down                             | `redis-cli ping`; set `REDIS_URL`                           |
+| Queues idle in Docker                     | `REDIS_URL` points at localhost, which is the container itself     | set `REDIS_URL=redis://redis:6379`                          |
+| `Invalid environment variables:`          | a required var failed the zod schema                               | the message names the keys; set them                        |
+| CORS error in browser                     | origin missing from allow-list                                     | add it to `CORS_SERVER` (comma-separated)                   |
+| Email not sending                         | bad app password, 2FA off, wrong port/secure pair                  | use Gmail App Password; `465`+`true` or `587`+`false`       |
+| Uploads fail, server healthy              | `S3_*` unset or bucket missing                                     | blank S3 vars fail per-request, not at boot                 |
+| PDF generation fails                      | `REPORTS_DIR` missing / not writable                               | ensure `./reports` exists and is writable                   |
+| `429 Too Many Requests`                   | rate limiter triggered                                             | expected under load; tune `src/core/security/rate-limit.ts` |
+| `npm ci`: `Missing: <pkg> from lock file` | `package.json` edited without refreshing the lockfile              | `npm install`, then commit `package-lock.json`              |
 
 More: [`PRODUCTION.md`](./PRODUCTION.md), [`EMAIL_QUEUE_SETUP.md`](./EMAIL_QUEUE_SETUP.md),
 [`../DOCUMENTATION.md`](../DOCUMENTATION.md).

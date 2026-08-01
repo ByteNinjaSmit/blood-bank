@@ -30,6 +30,7 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T
 
 export const ValidateAppointment = {
   listQuery: (req: Request) => parseOrThrow(ListAppointmentsQuery, req.query, 'query string'),
-  updateStatusBody: (req: Request) => parseOrThrow(UpdateAppointmentStatusBody, req.body, 'request body'),
+  updateStatusBody: (req: Request) =>
+    parseOrThrow(UpdateAppointmentStatusBody, req.body, 'request body'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
 };

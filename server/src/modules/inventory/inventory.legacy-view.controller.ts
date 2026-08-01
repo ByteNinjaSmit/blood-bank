@@ -45,7 +45,10 @@ export function createInventoryLegacyViewControllers(
       try {
         const body = ValidateInventoryLegacyView.sendToStorageBody(req);
         const actorId = req.user?.id || body.userId;
-        const { message, skipped } = await service.sendToStorage({ ...body, actorId: actorId as string });
+        const { message, skipped } = await service.sendToStorage({
+          ...body,
+          actorId: actorId as string,
+        });
         res.json({ success: true, message, skipped });
       } catch (e) {
         next(e);
@@ -55,8 +58,12 @@ export function createInventoryLegacyViewControllers(
     async updateStorage(req, res, next) {
       try {
         const { id } = ValidateInventoryLegacyView.idParam(req);
-        const { location, otherLocationName, reason } = ValidateInventoryLegacyView.updateStorageBody(req);
-        const data = await service.updateStorage({ id, location, otherLocationName, actorId: actorId(req) }, reason);
+        const { location, otherLocationName, reason } =
+          ValidateInventoryLegacyView.updateStorageBody(req);
+        const data = await service.updateStorage(
+          { id, location, otherLocationName, actorId: actorId(req) },
+          reason,
+        );
         res.json({ success: true, data });
       } catch (e) {
         next(e);

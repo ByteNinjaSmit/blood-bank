@@ -25,7 +25,9 @@ export interface PODto {
   updatedAt: string;
 }
 
-function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date }): PODto {
+function toDto(
+  doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date },
+): PODto {
   return {
     id: doc._id.toString(),
     _id: doc._id.toString(),
@@ -33,7 +35,9 @@ function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId; createdAt?:
     poDate: (doc.poDate as Date).toISOString(),
     vendorId: (doc.vendorId as Types.ObjectId).toString(),
     lineItems: (doc.lineItems as LineItemDto[]) ?? [],
-    expectedDelivery: doc.expectedDelivery ? (doc.expectedDelivery as Date).toISOString() : undefined,
+    expectedDelivery: doc.expectedDelivery
+      ? (doc.expectedDelivery as Date).toISOString()
+      : undefined,
     manufacturer: doc.manufacturer as string | undefined,
     billDate: doc.billDate ? (doc.billDate as Date).toISOString() : undefined,
     notes: doc.notes as string | undefined,
@@ -56,13 +60,17 @@ export interface PORepo {
     notes?: string;
     actorId: string;
   }): Promise<PODto>;
-  update(id: string, patch: Partial<{
-    lineItems: LineItemDto[];
-    expectedDelivery: Date;
-    manufacturer: string;
-    billDate: Date;
-    notes: string;
-  }>, actorId: string): Promise<PODto | null>;
+  update(
+    id: string,
+    patch: Partial<{
+      lineItems: LineItemDto[];
+      expectedDelivery: Date;
+      manufacturer: string;
+      billDate: Date;
+      notes: string;
+    }>,
+    actorId: string,
+  ): Promise<PODto | null>;
   delete(id: string, actorId: string): Promise<boolean>;
   restore(id: string, actorId: string): Promise<boolean>;
   hardDelete(id: string): Promise<boolean>;
@@ -88,13 +96,33 @@ export function createPORepo(): PORepo {
         PurchaseOrderModel.find(filter).sort({ poDate: -1 }).skip(skip).limit(pageSize).lean(),
         PurchaseOrderModel.countDocuments(filter),
       ]);
-      return { items: docs.map((d) => toDto(d as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date })), total };
+      return {
+        items: docs.map((d) =>
+          toDto(
+            d as unknown as Record<string, unknown> & {
+              _id: Types.ObjectId;
+              createdAt?: Date;
+              updatedAt?: Date;
+            },
+          ),
+        ),
+        total,
+      };
     },
 
     async findById(id) {
-      const doc = await PurchaseOrderModel.findOne({ _id: new Types.ObjectId(id), deletedAt: null }).lean();
+      const doc = await PurchaseOrderModel.findOne({
+        _id: new Types.ObjectId(id),
+        deletedAt: null,
+      }).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async create(input) {
@@ -111,7 +139,13 @@ export function createPORepo(): PORepo {
         createdBy: actor,
         updatedBy: actor,
       });
-      return toDto(doc.toObject() as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc.toObject() as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async update(id, patch, actorId) {
@@ -122,14 +156,20 @@ export function createPORepo(): PORepo {
         { new: true },
       ).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
 
     async delete(id, actorId) {
       const actor = new Types.ObjectId(actorId);
       const res = await PurchaseOrderModel.updateOne(
         { _id: new Types.ObjectId(id), deletedAt: null },
-        { $set: { deletedAt: new Date(), updatedBy: actor } }
+        { $set: { deletedAt: new Date(), updatedBy: actor } },
       );
       return res.modifiedCount > 0;
     },
@@ -151,7 +191,13 @@ export function createPORepo(): PORepo {
     async findByIdIncludingDeleted(id) {
       const doc = await PurchaseOrderModel.findById(id).lean();
       if (!doc) return null;
-      return toDto(doc as unknown as Record<string, unknown> & { _id: Types.ObjectId; createdAt?: Date; updatedAt?: Date });
+      return toDto(
+        doc as unknown as Record<string, unknown> & {
+          _id: Types.ObjectId;
+          createdAt?: Date;
+          updatedAt?: Date;
+        },
+      );
     },
   };
 }

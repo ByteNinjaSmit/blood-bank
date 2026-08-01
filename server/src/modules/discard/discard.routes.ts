@@ -11,7 +11,9 @@ import { createUnitRepo } from '@/modules/unit/unit.repository';
 import { ttiService } from '@/modules/tti/tti.instance';
 import type { Role } from '@/shared/enums';
 
-const service = createDiscardService({ repo: createDiscardRepo({ units: createUnitRepo(), ttiService }) });
+const service = createDiscardService({
+  repo: createDiscardRepo({ units: createUnitRepo(), ttiService }),
+});
 const controllers = createDiscardControllers(service);
 
 const router = Router();

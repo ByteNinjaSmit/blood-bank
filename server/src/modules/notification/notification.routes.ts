@@ -9,12 +9,7 @@ const controllers = createNotificationControllers(notificationCenterService);
 
 const router = Router();
 
-router.get(
-  '/',
-  authenticate,
-  requirePermission('notification:read'),
-  controllers.list,
-);
+router.get('/', authenticate, requirePermission('notification:read'), controllers.list);
 
 router.get(
   '/unread-count',
@@ -51,11 +46,6 @@ router.patch(
   controllers.markUnread,
 );
 
-router.delete(
-  '/:id',
-  authenticate,
-  requirePermission('notification:manage'),
-  controllers.remove,
-);
+router.delete('/:id', authenticate, requirePermission('notification:manage'), controllers.remove);
 
 export default router;

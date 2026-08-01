@@ -56,7 +56,9 @@ async function seedVendorWithFullChain() {
     poNumber: 'PO-TEST-0001',
     poDate: new Date(),
     vendorId: vendor._id,
-    lineItems: [{ bagType: 'SINGLE', capacityMl: 350, anticoagulant: 'CPDA_1', quantityOrdered: 100 }],
+    lineItems: [
+      { bagType: 'SINGLE', capacityMl: 350, anticoagulant: 'CPDA_1', quantityOrdered: 100 },
+    ],
     createdBy: actorId,
     updatedBy: actorId,
   });
@@ -65,7 +67,15 @@ async function seedVendorWithFullChain() {
     grnNumber: 'GRN-TEST-0001',
     poId: po._id,
     invoiceNo: 'INV-TEST-0001',
-    batchLines: [{ bagType: 'SINGLE', capacityMl: 350, batchNumber: 'BATCH-0001', expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), quantityReceived: 100 }],
+    batchLines: [
+      {
+        bagType: 'SINGLE',
+        capacityMl: 350,
+        batchNumber: 'BATCH-0001',
+        expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        quantityReceived: 100,
+      },
+    ],
     createdBy: actorId,
     updatedBy: actorId,
   });
@@ -117,7 +127,8 @@ async function seedVendorWithFullChain() {
 
 describe('vendor cascade soft-delete / restore', () => {
   it('cascades delete: PO+GRN soft-deleted, inspection marked affected, unused BagStock receivedQty reversed, issued BagStock preserved+affected', async () => {
-    const { vendor, po, grn, inspection, unusedStock, issuedStock } = await seedVendorWithFullChain();
+    const { vendor, po, grn, inspection, unusedStock, issuedStock } =
+      await seedVendorWithFullChain();
 
     const service = createVendorService({ vendors: createVendorRepo() });
     await service.softDelete(vendor._id.toString(), actorId, 'Test vendor cascade delete');
@@ -151,7 +162,8 @@ describe('vendor cascade soft-delete / restore', () => {
   });
 
   it('cascades restore: PO+GRN restored, inspection un-affected, unused BagStock receivedQty restored exactly, issued BagStock un-affected', async () => {
-    const { vendor, po, grn, inspection, unusedStock, issuedStock } = await seedVendorWithFullChain();
+    const { vendor, po, grn, inspection, unusedStock, issuedStock } =
+      await seedVendorWithFullChain();
 
     const service = createVendorService({ vendors: createVendorRepo() });
     await service.softDelete(vendor._id.toString(), actorId, 'Test delete');

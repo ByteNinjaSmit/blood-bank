@@ -74,11 +74,41 @@ async function seed(donationId: string, unitStatus: string = 'QUARANTINE') {
   await TtiResultModel.create({
     donationId,
     tests: [
-      { testName: 'HIV', method: 'ELISA', result: 'INDETERMINATE', technicianId: actorId, performedAt: new Date() },
-      { testName: 'HBSAG', method: 'ELISA', result: 'NEGATIVE', technicianId: actorId, performedAt: new Date() },
-      { testName: 'HCV', method: 'ELISA', result: 'NEGATIVE', technicianId: actorId, performedAt: new Date() },
-      { testName: 'SYPHILIS', method: 'ELISA', result: 'NEGATIVE', technicianId: actorId, performedAt: new Date() },
-      { testName: 'MALARIA', method: 'ELISA', result: 'NEGATIVE', technicianId: actorId, performedAt: new Date() },
+      {
+        testName: 'HIV',
+        method: 'ELISA',
+        result: 'INDETERMINATE',
+        technicianId: actorId,
+        performedAt: new Date(),
+      },
+      {
+        testName: 'HBSAG',
+        method: 'ELISA',
+        result: 'NEGATIVE',
+        technicianId: actorId,
+        performedAt: new Date(),
+      },
+      {
+        testName: 'HCV',
+        method: 'ELISA',
+        result: 'NEGATIVE',
+        technicianId: actorId,
+        performedAt: new Date(),
+      },
+      {
+        testName: 'SYPHILIS',
+        method: 'ELISA',
+        result: 'NEGATIVE',
+        technicianId: actorId,
+        performedAt: new Date(),
+      },
+      {
+        testName: 'MALARIA',
+        method: 'ELISA',
+        result: 'NEGATIVE',
+        technicianId: actorId,
+        performedAt: new Date(),
+      },
     ],
     releaseDecision: 'indeterminate',
     createdBy: actorId,
@@ -127,11 +157,41 @@ async function seedReactive(donationId: string) {
   await TtiResultModel.create({
     donationId,
     tests: [
-      { testName: 'HIV', method: 'ELISA', result: 'REACTIVE', technicianId: actorId, performedAt: new Date() },
-      { testName: 'HBSAG', method: 'ELISA', result: 'NEGATIVE', technicianId: actorId, performedAt: new Date() },
-      { testName: 'HCV', method: 'ELISA', result: 'NEGATIVE', technicianId: actorId, performedAt: new Date() },
-      { testName: 'SYPHILIS', method: 'ELISA', result: 'NEGATIVE', technicianId: actorId, performedAt: new Date() },
-      { testName: 'MALARIA', method: 'ELISA', result: 'NEGATIVE', technicianId: actorId, performedAt: new Date() },
+      {
+        testName: 'HIV',
+        method: 'ELISA',
+        result: 'REACTIVE',
+        technicianId: actorId,
+        performedAt: new Date(),
+      },
+      {
+        testName: 'HBSAG',
+        method: 'ELISA',
+        result: 'NEGATIVE',
+        technicianId: actorId,
+        performedAt: new Date(),
+      },
+      {
+        testName: 'HCV',
+        method: 'ELISA',
+        result: 'NEGATIVE',
+        technicianId: actorId,
+        performedAt: new Date(),
+      },
+      {
+        testName: 'SYPHILIS',
+        method: 'ELISA',
+        result: 'NEGATIVE',
+        technicianId: actorId,
+        performedAt: new Date(),
+      },
+      {
+        testName: 'MALARIA',
+        method: 'ELISA',
+        result: 'NEGATIVE',
+        technicianId: actorId,
+        performedAt: new Date(),
+      },
     ],
     releaseDecision: 'reactive',
     createdBy: actorId,
@@ -204,7 +264,10 @@ describe('correcting a reactive (discarded) result down to indeterminate', () =>
     const deferrals = createDeferralRepo();
     const reactiveDeferral = await deferrals.findByRelatedDonation(donationId, 'TTI_REACTIVE');
     expect(reactiveDeferral).toBeNull();
-    const indeterminateDeferral = await deferrals.findByRelatedDonation(donationId, 'TTI_INDETERMINATE');
+    const indeterminateDeferral = await deferrals.findByRelatedDonation(
+      donationId,
+      'TTI_INDETERMINATE',
+    );
     expect(indeterminateDeferral).not.toBeNull();
   });
 

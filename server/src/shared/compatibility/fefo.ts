@@ -43,11 +43,7 @@ export function selectUnits(
 ): SelectionResult {
   const now = req.now ?? new Date();
   const acceptableAbo = new Set(
-    compatibleAboGroups(
-      req.recipient.aboGroup,
-      req.component,
-      req.plateletCompatibilityMode,
-    ),
+    compatibleAboGroups(req.recipient.aboGroup, req.component, req.plateletCompatibilityMode),
   );
 
   // 1. filter: matching component, not expired, ABO compatible, Rh acceptable,

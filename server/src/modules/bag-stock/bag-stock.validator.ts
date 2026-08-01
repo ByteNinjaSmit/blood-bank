@@ -30,6 +30,7 @@ export type UpdateBagStockStatusInput = z.infer<typeof UpdateBagStockStatusBody>
 
 export const ValidateBagStock = {
   listQuery: (req: Request) => parseOrThrow(ListBagStockQuery, req.query, 'query string'),
-  updateStatusBody: (req: Request) => parseOrThrow(UpdateBagStockStatusBody, req.body, 'request body'),
+  updateStatusBody: (req: Request) =>
+    parseOrThrow(UpdateBagStockStatusBody, req.body, 'request body'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
 };

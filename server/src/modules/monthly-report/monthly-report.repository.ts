@@ -12,16 +12,29 @@ import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { IssueModel } from '@/modules/issue/issue.model';
 import { DonorCardModel } from '@/modules/donor-card/donor-card.model';
 import { BagStockModel } from '@/modules/bag-stock/bag-stock.model';
-import { ChemicalModel, ChemicalStockLotModel } from '@/modules/chemical-inventory/chemical-inventory.model';
+import {
+  ChemicalModel,
+  ChemicalStockLotModel,
+} from '@/modules/chemical-inventory/chemical-inventory.model';
 import { createChemicalInventoryRepo } from '@/modules/chemical-inventory/chemical-inventory.repository';
 import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 import {
-  PRODUCTS, DISCARD_LABEL, TTI_DISCARD_LABEL, DISEASE_KEYWORDS, REAGENT_CANONICAL, ELISA_CANONICAL,
-  GROUP_LABELS, STORAGE_CENTRE_PATTERN, toProductLabel, toGroupLabel, emptyGroupTally,
-  buildEntityBreakdown, ageAt, matchIndication,
+  PRODUCTS,
+  DISCARD_LABEL,
+  TTI_DISCARD_LABEL,
+  DISEASE_KEYWORDS,
+  REAGENT_CANONICAL,
+  ELISA_CANONICAL,
+  GROUP_LABELS,
+  STORAGE_CENTRE_PATTERN,
+  toProductLabel,
+  toGroupLabel,
+  emptyGroupTally,
+  buildEntityBreakdown,
+  ageAt,
+  matchIndication,
 } from './monthly-report.mappers';
 import { createMonthlyReportMethods2 } from './monthly-report.methods2';
-
 
 export interface MonthlyReportRepo {
   getCampsCount(from: Date, to: Date): Promise<number>;
@@ -106,7 +119,9 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
       if (requisitions.length === 0) return { hospitals: [], storageCentres: [] };
 
       const unitIdSet = [
-        ...new Set((requisitions as any[]).flatMap((r) => (r.matchedUnits || []).map((m: any) => m.unitId))),
+        ...new Set(
+          (requisitions as any[]).flatMap((r) => (r.matchedUnits || []).map((m: any) => m.unitId)),
+        ),
       ];
       const units = unitIdSet.length
         ? await BloodUnitModel.find({ unitId: { $in: unitIdSet } })
@@ -114,7 +129,8 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
             .lean()
         : [];
       const groupByUnit = new Map<string, string>();
-      for (const u of units as any[]) groupByUnit.set(u.unitId, toGroupLabel(u.aboGroup, u.rhFactor));
+      for (const u of units as any[])
+        groupByUnit.set(u.unitId, toGroupLabel(u.aboGroup, u.rhFactor));
 
       const hospitalEntries: Array<{ entity: string; product: string; group: string }> = [];
       const storageEntries: Array<{ entity: string; product: string; group: string }> = [];
@@ -216,13 +232,14 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
             donor: { $in: donorIds },
             collectedAt: { $lt: from },
             deletedAt: null,
-          })
-            .distinct('donor')
+          }).distinct('donor')
         ).map(String),
       );
 
       const repeatedInPeriod = new Set(
-        (donations as any[]).filter((d) => priorDonorIds.has(String(d.donor))).map((d) => String(d.donor)),
+        (donations as any[])
+          .filter((d) => priorDonorIds.has(String(d.donor)))
+          .map((d) => String(d.donor)),
       );
       if (repeatedInPeriod.size === 0) return { male: 0, female: 0, total: 0 };
 
@@ -308,9 +325,11 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
         const age = d.donor?.dob ? ageAt(new Date(d.donor.dob), new Date(d.createdAt)) : null;
 
         let bucket = 'Other';
-        if (text.includes('hb') || text.includes('haemoglobin') || text.includes('hemoglobin')) bucket = 'Low Hb';
+        if (text.includes('hb') || text.includes('haemoglobin') || text.includes('hemoglobin'))
+          bucket = 'Low Hb';
         else if (text.includes('underweight') || text.includes('weight')) bucket = 'Underweight';
-        else if (text.includes('underage') || text.includes('minor') || text.includes('age')) bucket = 'Underage';
+        else if (text.includes('underage') || text.includes('minor') || text.includes('age'))
+          bucket = 'Underage';
         else if (age !== null && age < 18) bucket = 'Underage';
         else if (d.source === 'TTI_REACTIVE') bucket = 'TTI Reactive';
         else if (d.source === 'QUESTIONNAIRE' || d.source === 'VITALS') bucket = 'Medical';
@@ -333,22 +352,23 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
       for (const product of PRODUCTS) {
         const filterBase = { componentType: product, deletedAt: null };
 
-        const [createdBefore, issuedBefore, discardedBefore, collection, issued, discard] = await Promise.all([
-          BloodUnitModel.countDocuments({ ...filterBase, collectedAt: { $lt: from } }),
-          BloodUnitModel.countDocuments({ ...filterBase, issuedAt: { $lt: from } }),
-          BloodUnitModel.countDocuments({
-            ...filterBase,
-            status: { $in: ['DISCARDED', 'EXPIRED'] },
-            updatedAt: { $lt: from },
-          }),
-          BloodUnitModel.countDocuments({ ...filterBase, collectedAt: { $gte: from, $lt: to } }),
-          BloodUnitModel.countDocuments({ ...filterBase, issuedAt: { $gte: from, $lt: to } }),
-          BloodUnitModel.countDocuments({
-            ...filterBase,
-            status: { $in: ['DISCARDED', 'EXPIRED'] },
-            updatedAt: { $gte: from, $lt: to },
-          }),
-        ]);
+        const [createdBefore, issuedBefore, discardedBefore, collection, issued, discard] =
+          await Promise.all([
+            BloodUnitModel.countDocuments({ ...filterBase, collectedAt: { $lt: from } }),
+            BloodUnitModel.countDocuments({ ...filterBase, issuedAt: { $lt: from } }),
+            BloodUnitModel.countDocuments({
+              ...filterBase,
+              status: { $in: ['DISCARDED', 'EXPIRED'] },
+              updatedAt: { $lt: from },
+            }),
+            BloodUnitModel.countDocuments({ ...filterBase, collectedAt: { $gte: from, $lt: to } }),
+            BloodUnitModel.countDocuments({ ...filterBase, issuedAt: { $gte: from, $lt: to } }),
+            BloodUnitModel.countDocuments({
+              ...filterBase,
+              status: { $in: ['DISCARDED', 'EXPIRED'] },
+              updatedAt: { $gte: from, $lt: to },
+            }),
+          ]);
 
         const opening = Math.max(0, createdBefore - issuedBefore - discardedBefore);
         const closing = Math.max(0, opening + collection - issued - discard);
@@ -400,7 +420,10 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
       for (const u of diseaseUnits as any[]) {
         const disease = u.clinicalIndicationPatient?.disease;
         if (disease !== 'THALASSEMIA' && disease !== 'SICKLE_CELL_ANAEMIA') continue;
-        const bucket = disease === 'THALASSEMIA' ? structuredDiseaseCounts.thalassemia : structuredDiseaseCounts.sickleCellAnaemia;
+        const bucket =
+          disease === 'THALASSEMIA'
+            ? structuredDiseaseCounts.thalassemia
+            : structuredDiseaseCounts.sickleCellAnaemia;
         bucket.count += 1;
         const bg = u.clinicalIndicationPatient?.bloodGroup || 'Unknown';
         bucket.byBloodGroup[bg] = (bucket.byBloodGroup[bg] ?? 0) + 1;
@@ -431,7 +454,8 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
         indicationByReq.set(String(r._id), text ? matchIndication(text) : 'Blood Supply Units');
       }
       const componentByUnit = new Map<string, string>();
-      for (const u of units as any[]) componentByUnit.set(u.unitId, toProductLabel(u.componentType));
+      for (const u of units as any[])
+        componentByUnit.set(u.unitId, toProductLabel(u.componentType));
 
       const grid: Record<string, Record<string, number>> = {};
       for (const issue of issues as any[]) {
@@ -441,7 +465,10 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
         grid[indication][product] = (grid[indication][product] ?? 0) + 1;
       }
 
-      const rows = Object.entries(grid).map(([indication, byProduct]) => ({ indication, byProduct }));
+      const rows = Object.entries(grid).map(([indication, byProduct]) => ({
+        indication,
+        byProduct,
+      }));
       return { rows, structuredDiseaseCounts };
     },
 
@@ -453,7 +480,9 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
       if (totalCount === 0) return { totalCount: 0, breakdown: [] };
 
       const reqIds = cards.map((c) => c.requisitionId);
-      const issues = await IssueModel.find({ requisitionId: { $in: reqIds } }).select('unitId').lean();
+      const issues = await IssueModel.find({ requisitionId: { $in: reqIds } })
+        .select('unitId')
+        .lean();
       const unitIds = [...new Set(issues.map((i) => i.unitId))];
       if (unitIds.length === 0) return { totalCount, breakdown: [] };
 

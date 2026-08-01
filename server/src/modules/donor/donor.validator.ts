@@ -67,7 +67,9 @@ export const ListDonorsQuery = z.object({
   source: z.enum(['inhouse', 'camp']).optional(),
   // 'recently-donated' is a derived status (eligible but still inside the
   // 90/120-day interval); resolved in the repository, not a stored value.
-  eligibilityStatus: z.enum(['eligible', 'deferred', 'temp-deferred', 'recently-donated']).optional(),
+  eligibilityStatus: z
+    .enum(['eligible', 'deferred', 'temp-deferred', 'recently-donated'])
+    .optional(),
   campId: z.string().regex(OBJECT_ID, 'Invalid camp id').optional(),
   from: blankToUndef(z.coerce.date().optional()),
   to: blankToUndef(z.coerce.date().optional()),
@@ -109,7 +111,8 @@ export const Validate = {
   updateBody: (req: Request) => parseOrThrow(UpdateDonorBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListDonorsQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(DonorIdParam, req.params, 'path params'),
-  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
+  deleteReasonBody: (req: Request) =>
+    parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };
 
 // Used internally by tests; not exported through Validate.

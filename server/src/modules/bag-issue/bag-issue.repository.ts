@@ -18,25 +18,29 @@ export interface BagIssueDto {
   batchNumber: string;
   issuedById: string;
   collectionRoom?: string;
-  donorId?: string | {
-    id: string;
-    name?: { firstName?: string; middleName?: string; lastName?: string };
-    dob?: string;
-    sex?: string;
-    phone?: string;
-    email?: string;
-    bloodGroup?: string;
-    rh?: string;
-  };
-  donationId?: string | {
-    id: string;
-    donationId: string;
-    donationType: string;
-    collectedAt: string;
-    segmentNo?: string | null;
-    typeOfBag?: string;
-    medicalExam?: any;
-  };
+  donorId?:
+    | string
+    | {
+        id: string;
+        name?: { firstName?: string; middleName?: string; lastName?: string };
+        dob?: string;
+        sex?: string;
+        phone?: string;
+        email?: string;
+        bloodGroup?: string;
+        rh?: string;
+      };
+  donationId?:
+    | string
+    | {
+        id: string;
+        donationId: string;
+        donationType: string;
+        collectedAt: string;
+        segmentNo?: string | null;
+        typeOfBag?: string;
+        medicalExam?: any;
+      };
   status: string;
   returnedAt?: string;
   usedAt?: string;
@@ -72,7 +76,7 @@ export interface BagIssueDto {
 
 function toDto(doc: any, unitStatuses: string[] = []): BagIssueDto {
   const donor = doc.donor;
-  
+
   // Status is DAMAGED if any unit of the donation is DISCARDED
   const isDiscarded = unitStatuses.includes('DISCARDED');
   const status = isDiscarded ? 'DAMAGED' : 'ISSUED';
@@ -84,20 +88,33 @@ function toDto(doc: any, unitStatuses: string[] = []): BagIssueDto {
     issueDate: doc.collectedAt ? doc.collectedAt.toISOString() : doc.createdAt?.toISOString() || '',
     stockId: doc._id.toString(),
     bagSerialNumber: doc.bagNo || '—',
-    bagType: doc.typeOfBag === 'SB' ? 'SINGLE' : doc.typeOfBag === 'DB' ? 'DOUBLE' : doc.typeOfBag === 'TB' ? 'TRIPLE' : doc.typeOfBag === 'QB' ? 'QUADRUPLE' : 'SINGLE',
+    bagType:
+      doc.typeOfBag === 'SB'
+        ? 'SINGLE'
+        : doc.typeOfBag === 'DB'
+          ? 'DOUBLE'
+          : doc.typeOfBag === 'TB'
+            ? 'TRIPLE'
+            : doc.typeOfBag === 'QB'
+              ? 'QUADRUPLE'
+              : 'SINGLE',
     batchNumber: doc.lotNo || '—',
     issuedById: doc.createdBy ? doc.createdBy.toString() : '',
     collectionRoom: doc.campId ? 'Camp' : 'Inhouse',
-    donorId: donor?._id ? {
-      id: donor._id.toString(),
-      name: donor.name,
-      dob: donor.dob ? new Date(donor.dob).toISOString() : undefined,
-      sex: donor.sex,
-      phone: donor.phone,
-      email: donor.email,
-      bloodGroup: donor.bloodGroup,
-      rh: donor.rh,
-    } : (doc.donor ? doc.donor.toString() : undefined),
+    donorId: donor?._id
+      ? {
+          id: donor._id.toString(),
+          name: donor.name,
+          dob: donor.dob ? new Date(donor.dob).toISOString() : undefined,
+          sex: donor.sex,
+          phone: donor.phone,
+          email: donor.email,
+          bloodGroup: donor.bloodGroup,
+          rh: donor.rh,
+        }
+      : doc.donor
+        ? doc.donor.toString()
+        : undefined,
     donationId: {
       id: doc._id.toString(),
       donationId: doc.donationId || '',
@@ -134,14 +151,18 @@ export interface BagIssueRepo {
     notes?: string;
     actorId: string;
   }): Promise<BagIssueDto>;
-  updateStatus(id: string, patch: {
-    status: string;
-    donorId?: string;
-    donationId?: string;
-    returnedAt?: Date;
-    usedAt?: Date;
-    damagedAt?: Date;
-  }, actorId: string): Promise<BagIssueDto | null>;
+  updateStatus(
+    id: string,
+    patch: {
+      status: string;
+      donorId?: string;
+      donationId?: string;
+      returnedAt?: Date;
+      usedAt?: Date;
+      damagedAt?: Date;
+    },
+    actorId: string,
+  ): Promise<BagIssueDto | null>;
 }
 
 export function createBagIssueRepo(): BagIssueRepo {
@@ -161,7 +182,7 @@ export function createBagIssueRepo(): BagIssueRepo {
       const page = q.page ?? 1;
       const pageSize = q.pageSize ?? 20;
       const skip = (page - 1) * pageSize;
-      
+
       const [docs, total] = await Promise.all([
         DonationModel.find(filter)
           .populate('donor')
@@ -172,11 +193,13 @@ export function createBagIssueRepo(): BagIssueRepo {
         DonationModel.countDocuments(filter),
       ]);
 
-      const donationIds = docs.map(d => d.donationId);
+      const donationIds = docs.map((d) => d.donationId);
       const units = await BloodUnitModel.find({
         donationId: { $in: donationIds },
-        deletedAt: null
-      }).select('donationId status').lean();
+        deletedAt: null,
+      })
+        .select('donationId status')
+        .lean();
 
       const unitMap = new Map<string, string[]>();
       for (const u of units) {
@@ -188,7 +211,7 @@ export function createBagIssueRepo(): BagIssueRepo {
 
       return {
         items: docs.map((d) => toDto(d, unitMap.get(d.donationId) || [])),
-        total
+        total,
       };
     },
 
@@ -197,29 +220,29 @@ export function createBagIssueRepo(): BagIssueRepo {
         .populate('donor')
         .lean();
       if (!doc) return null;
-      
+
       const units = await BloodUnitModel.find({
         donationId: doc.donationId,
-        deletedAt: null
+        deletedAt: null,
       }).lean();
 
-      const unitIds = units.map(u => u.unitId);
+      const unitIds = units.map((u) => u.unitId);
 
       const requisitions = await RequisitionModel.find({
         'matchedUnits.unitId': { $in: unitIds },
-        deletedAt: null
+        deletedAt: null,
       })
-      .populate('hospitalId')
-      .populate('patientId')
-      .lean();
+        .populate('hospitalId')
+        .populate('patientId')
+        .lean();
 
       const issues = await IssueModel.find({
-        unitId: { $in: unitIds }
+        unitId: { $in: unitIds },
       }).lean();
 
-      const requisitionsInfo = units.map(u => {
-        const req = requisitions.find(r => r.matchedUnits.some(mu => mu.unitId === u.unitId));
-        const issue = issues.find(i => i.unitId === u.unitId);
+      const requisitionsInfo = units.map((u) => {
+        const req = requisitions.find((r) => r.matchedUnits.some((mu) => mu.unitId === u.unitId));
+        const issue = issues.find((i) => i.unitId === u.unitId);
         const hospital = req?.hospitalId as any;
         const patient = req?.patientId as any;
 
@@ -237,48 +260,51 @@ export function createBagIssueRepo(): BagIssueRepo {
           clinicianName: req?.clinicianName || undefined,
           requiredAt: req?.requiredAt ? req.requiredAt.toISOString() : undefined,
           requisitionStatus: req?.status || undefined,
-          issue: issue ? {
-            issueId: issue.issueId,
-            issuedAt: issue.issuedAt.toISOString(),
-            collectedByName: issue.collectedByName || undefined,
-            transportTempCelsius: issue.transportTempCelsius || undefined,
-          } : null,
+          issue: issue
+            ? {
+                issueId: issue.issueId,
+                issuedAt: issue.issuedAt.toISOString(),
+                collectedByName: issue.collectedByName || undefined,
+                transportTempCelsius: issue.transportTempCelsius || undefined,
+              }
+            : null,
         };
       });
 
-      const dto = toDto(doc, units.map(u => u.status));
+      const dto = toDto(
+        doc,
+        units.map((u) => u.status),
+      );
       dto.requisitions = requisitionsInfo;
       return dto;
     },
 
     async findBySerialNumber(bagSerialNumber) {
-      const doc = await DonationModel.findOne({ bagNo: bagSerialNumber })
-        .populate('donor')
-        .lean();
+      const doc = await DonationModel.findOne({ bagNo: bagSerialNumber }).populate('donor').lean();
       if (!doc) return null;
-      
+
       const units = await BloodUnitModel.find({
         donationId: doc.donationId,
-        deletedAt: null
+        deletedAt: null,
       }).lean();
 
-      const unitIds = units.map(u => u.unitId);
+      const unitIds = units.map((u) => u.unitId);
 
       const requisitions = await RequisitionModel.find({
         'matchedUnits.unitId': { $in: unitIds },
-        deletedAt: null
+        deletedAt: null,
       })
-      .populate('hospitalId')
-      .populate('patientId')
-      .lean();
+        .populate('hospitalId')
+        .populate('patientId')
+        .lean();
 
       const issues = await IssueModel.find({
-        unitId: { $in: unitIds }
+        unitId: { $in: unitIds },
       }).lean();
 
-      const requisitionsInfo = units.map(u => {
-        const req = requisitions.find(r => r.matchedUnits.some(mu => mu.unitId === u.unitId));
-        const issue = issues.find(i => i.unitId === u.unitId);
+      const requisitionsInfo = units.map((u) => {
+        const req = requisitions.find((r) => r.matchedUnits.some((mu) => mu.unitId === u.unitId));
+        const issue = issues.find((i) => i.unitId === u.unitId);
         const hospital = req?.hospitalId as any;
         const patient = req?.patientId as any;
 
@@ -296,16 +322,21 @@ export function createBagIssueRepo(): BagIssueRepo {
           clinicianName: req?.clinicianName || undefined,
           requiredAt: req?.requiredAt ? req.requiredAt.toISOString() : undefined,
           requisitionStatus: req?.status || undefined,
-          issue: issue ? {
-            issueId: issue.issueId,
-            issuedAt: issue.issuedAt.toISOString(),
-            collectedByName: issue.collectedByName || undefined,
-            transportTempCelsius: issue.transportTempCelsius || undefined,
-          } : null,
+          issue: issue
+            ? {
+                issueId: issue.issueId,
+                issuedAt: issue.issuedAt.toISOString(),
+                collectedByName: issue.collectedByName || undefined,
+                transportTempCelsius: issue.transportTempCelsius || undefined,
+              }
+            : null,
         };
       });
 
-      const dto = toDto(doc, units.map(u => u.status));
+      const dto = toDto(
+        doc,
+        units.map((u) => u.status),
+      );
       dto.requisitions = requisitionsInfo;
       return dto;
     },

@@ -10,33 +10,13 @@ const controllers = createVendorControllers(service);
 
 const router = Router();
 
-router.get(
-  '/',
-  authenticate,
-  requirePermission('vendor:read'),
-  controllers.list,
-);
+router.get('/', authenticate, requirePermission('vendor:read'), controllers.list);
 
-router.get(
-  '/:id',
-  authenticate,
-  requirePermission('vendor:read'),
-  controllers.get,
-);
+router.get('/:id', authenticate, requirePermission('vendor:read'), controllers.get);
 
-router.post(
-  '/',
-  authenticate,
-  requirePermission('vendor:create'),
-  controllers.create,
-);
+router.post('/', authenticate, requirePermission('vendor:create'), controllers.create);
 
-router.patch(
-  '/:id',
-  authenticate,
-  requirePermission('vendor:update'),
-  controllers.update,
-);
+router.patch('/:id', authenticate, requirePermission('vendor:update'), controllers.update);
 
 router.patch(
   '/:id/status',
@@ -45,19 +25,9 @@ router.patch(
   controllers.updateStatus,
 );
 
-router.delete(
-  '/:id',
-  authenticate,
-  requirePermission('vendor:delete'),
-  controllers.remove,
-);
+router.delete('/:id', authenticate, requirePermission('vendor:delete'), controllers.remove);
 
-router.post(
-  '/:id/restore',
-  authenticate,
-  requirePermission('vendor:delete'),
-  controllers.restore,
-);
+router.post('/:id/restore', authenticate, requirePermission('vendor:delete'), controllers.restore);
 
 router.delete(
   '/:id/permanent',

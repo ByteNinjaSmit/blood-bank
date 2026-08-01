@@ -79,7 +79,8 @@ export function toDto(raw: any): any {
   let isAvailableToDonate = true;
   let daysUntilEligible = 0;
   if (raw.lastDonationDate) {
-    const lastDate = raw.lastDonationDate instanceof Date ? raw.lastDonationDate : new Date(raw.lastDonationDate);
+    const lastDate =
+      raw.lastDonationDate instanceof Date ? raw.lastDonationDate : new Date(raw.lastDonationDate);
     const now = new Date();
     lastDate.setHours(0, 0, 0, 0);
     now.setHours(0, 0, 0, 0);
@@ -111,13 +112,29 @@ export function toDto(raw: any): any {
     bloodGroup: raw.bloodGroup,
     rh: raw.rh === 'POSITIVE' ? 'Positive' : raw.rh === 'NEGATIVE' ? 'Negative' : raw.rh,
     eligibilityStatus: raw.eligibilityStatus,
-    lastDonationDate: raw.lastDonationDate ? (raw.lastDonationDate instanceof Date ? raw.lastDonationDate.toISOString() : new Date(raw.lastDonationDate).toISOString()) : undefined,
+    lastDonationDate: raw.lastDonationDate
+      ? raw.lastDonationDate instanceof Date
+        ? raw.lastDonationDate.toISOString()
+        : new Date(raw.lastDonationDate).toISOString()
+      : undefined,
     lastDonationPlace: raw.lastDonationPlace || undefined,
     emergencyDonationWillingness: raw.emergencyDonationWillingness || '',
     isAvailableToDonate,
     daysUntilEligible,
-    deletedAt: raw.deletedAt ? (raw.deletedAt instanceof Date ? raw.deletedAt.toISOString() : new Date(raw.deletedAt).toISOString()) : null,
-    createdAt: raw.createdAt ? (raw.createdAt instanceof Date ? raw.createdAt.toISOString() : new Date(raw.createdAt).toISOString()) : new Date().toISOString(),
-    updatedAt: raw.updatedAt ? (raw.updatedAt instanceof Date ? raw.updatedAt.toISOString() : new Date(raw.updatedAt).toISOString()) : new Date().toISOString(),
+    deletedAt: raw.deletedAt
+      ? raw.deletedAt instanceof Date
+        ? raw.deletedAt.toISOString()
+        : new Date(raw.deletedAt).toISOString()
+      : null,
+    createdAt: raw.createdAt
+      ? raw.createdAt instanceof Date
+        ? raw.createdAt.toISOString()
+        : new Date(raw.createdAt).toISOString()
+      : new Date().toISOString(),
+    updatedAt: raw.updatedAt
+      ? raw.updatedAt instanceof Date
+        ? raw.updatedAt.toISOString()
+        : new Date(raw.updatedAt).toISOString()
+      : new Date().toISOString(),
   };
 }

@@ -191,7 +191,11 @@ export const campService = {
   async detail(id: string) {
     const camp = await campRepo.detail(id);
     if (!camp) throw new NotFoundError('Camp', id);
-    const c = camp as Record<string, unknown> & { _id: unknown; donorData?: unknown[]; unitData?: unknown[] };
+    const c = camp as Record<string, unknown> & {
+      _id: unknown;
+      donorData?: unknown[];
+      unitData?: unknown[];
+    };
     const donorCount = c.donorData?.length ?? 0;
     const unitCount = c.unitData?.length ?? 0;
     const donationCount = await DonationModel.countDocuments({ campId: c._id, deletedAt: null });

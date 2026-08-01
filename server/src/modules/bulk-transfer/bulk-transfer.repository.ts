@@ -3,7 +3,10 @@ import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { ConflictError, NotFoundError } from '@/shared/errors';
 import { invalidate } from '@/core/cache';
-import type { ListBulkTransferInput, UpdateBulkTransferInput } from '@/modules/bulk-transfer/bulk-transfer.validator';
+import type {
+  ListBulkTransferInput,
+  UpdateBulkTransferInput,
+} from '@/modules/bulk-transfer/bulk-transfer.validator';
 
 export interface BulkTransferItemDto {
   componentType: string;
@@ -112,7 +115,9 @@ async function markUnitsIssuedForLoan(unitIds: string[], actorId: string): Promi
     status: 'RELEASED',
   });
   if (releasedCount !== unitIds.length) {
-    throw new ConflictError('One or more selected bags are no longer in stock (already reserved, issued, or on loan). Refresh and try again.');
+    throw new ConflictError(
+      'One or more selected bags are no longer in stock (already reserved, issued, or on loan). Refresh and try again.',
+    );
   }
 
   for (const id of unitIds) {
@@ -135,7 +140,9 @@ async function markUnitsIssuedForLoan(unitIds: string[], actorId: string): Promi
       },
     );
     if (!unit) {
-      throw new ConflictError('One or more selected bags are no longer in stock (already reserved, issued, or on loan). Refresh and try again.');
+      throw new ConflictError(
+        'One or more selected bags are no longer in stock (already reserved, issued, or on loan). Refresh and try again.',
+      );
     }
   }
   await invalidate('inventory:*');
@@ -191,7 +198,11 @@ export function createBulkTransferRepo(): BulkTransferRepo {
 
       const skip = (f.page - 1) * f.limit;
       const [docs, total] = await Promise.all([
-        BulkTransferModel.find(filter).sort({ transferDate: -1, createdAt: -1 }).skip(skip).limit(f.limit).lean(),
+        BulkTransferModel.find(filter)
+          .sort({ transferDate: -1, createdAt: -1 })
+          .skip(skip)
+          .limit(f.limit)
+          .lean(),
         BulkTransferModel.countDocuments(filter),
       ]);
       return { items: docs.map(toDto), total };
@@ -235,11 +246,12 @@ export function createBulkTransferRepo(): BulkTransferRepo {
       // never touch BloodUnit records, so they can simply be replaced.
       if (input.items && raw.transferType === 'GIVE_LOAN') {
         const oldUnitIds = new Set(
-          (raw.items || []).map((it: any) => it.unitId).filter(Boolean).map((u: any) => u.toString()),
+          (raw.items || [])
+            .map((it: any) => it.unitId)
+            .filter(Boolean)
+            .map((u: any) => u.toString()),
         );
-        const newUnitIds = new Set(
-          input.items.map((it) => it.unitId).filter(Boolean) as string[],
-        );
+        const newUnitIds = new Set(input.items.map((it) => it.unitId).filter(Boolean) as string[]);
         const addedUnitIds = [...newUnitIds].filter((u) => !oldUnitIds.has(u));
         const removedUnitIds = [...oldUnitIds].filter((u) => !newUnitIds.has(u));
 

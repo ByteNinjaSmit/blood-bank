@@ -59,5 +59,6 @@ export const ValidateStorageTransfer = {
   updateBody: (req: Request) => parseOrThrow(UpdateStorageTransferBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListStorageTransferQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
-  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
+  deleteReasonBody: (req: Request) =>
+    parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };

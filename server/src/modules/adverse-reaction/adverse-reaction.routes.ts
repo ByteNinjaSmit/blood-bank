@@ -14,18 +14,8 @@ const controllers = createAdverseReactionControllers(service);
 
 const router = Router();
 
-router.post(
-  '/',
-  authenticate,
-  requirePermission('adverse-reaction:record'),
-  controllers.report,
-);
+router.post('/', authenticate, requirePermission('adverse-reaction:record'), controllers.report);
 
-router.get(
-  '/',
-  authenticate,
-  requirePermission('report:read'),
-  controllers.list,
-);
+router.get('/', authenticate, requirePermission('report:read'), controllers.list);
 
 export default router;

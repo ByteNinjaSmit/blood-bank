@@ -105,10 +105,17 @@ export function createTtiService(deps: {
         const priorDonation = await deps.donations.findByDonationId(donationId).catch(() => null);
         if (priorDonation && priorDonation.lotNo && priorDonation.typeOfBag && deps.bagStock) {
           const mappedBagType =
-            priorDonation.typeOfBag === 'DB' ? 'DOUBLE' : priorDonation.typeOfBag === 'TB' ? 'TRIPLE' : null;
+            priorDonation.typeOfBag === 'DB'
+              ? 'DOUBLE'
+              : priorDonation.typeOfBag === 'TB'
+                ? 'TRIPLE'
+                : null;
           if (mappedBagType) {
             try {
-              const bagStock = await deps.bagStock.findByBatchAndType(priorDonation.lotNo, mappedBagType);
+              const bagStock = await deps.bagStock.findByBatchAndType(
+                priorDonation.lotNo,
+                mappedBagType,
+              );
               if (bagStock) {
                 await deps.bagStock.decrementDiscarded(bagStock.id, 1, actorId);
                 await deps.bagStock.incrementIssued(bagStock.id, 1, actorId);
@@ -118,7 +125,10 @@ export function createTtiService(deps: {
                 );
               }
             } catch (err) {
-              log.error({ err: (err as Error).message }, 'Failed to revert BagStock after TTI correction');
+              log.error(
+                { err: (err as Error).message },
+                'Failed to revert BagStock after TTI correction',
+              );
             }
           }
         }
@@ -141,7 +151,10 @@ export function createTtiService(deps: {
       // Retest cleared a prior shadeness hold — lift the temporary
       // deferral it raised and let the units below flow QUARANTINE -> RELEASED.
       if (tti.releaseDecision === 'indeterminate') {
-        const shadenessDeferral = await deps.deferrals.findByRelatedDonation(donationId, 'TTI_INDETERMINATE');
+        const shadenessDeferral = await deps.deferrals.findByRelatedDonation(
+          donationId,
+          'TTI_INDETERMINATE',
+        );
         if (shadenessDeferral) {
           await deps.deferrals.lift(
             shadenessDeferral.id,
@@ -155,8 +168,22 @@ export function createTtiService(deps: {
       // Move units COLLECTED/IN_TESTING -> QUARANTINE -> RELEASED. Units
       // already held in QUARANTINE by a prior shadeness hold flow
       // straight through this same RELEASE step.
-      await deps.units.applyEventToDonation(donationId, 'BEGIN_TESTING', actorId, ['COLLECTED'], undefined, { requestId });
-      await deps.units.applyEventToDonation(donationId, 'AWAIT_TTI', actorId, ['IN_TESTING'], undefined, { requestId });
+      await deps.units.applyEventToDonation(
+        donationId,
+        'BEGIN_TESTING',
+        actorId,
+        ['COLLECTED'],
+        undefined,
+        { requestId },
+      );
+      await deps.units.applyEventToDonation(
+        donationId,
+        'AWAIT_TTI',
+        actorId,
+        ['IN_TESTING'],
+        undefined,
+        { requestId },
+      );
       unitsAffected = await deps.units.applyEventToDonation(
         donationId,
         'RELEASE',
@@ -194,17 +221,24 @@ export function createTtiService(deps: {
       const donorId = donation?.donor;
 
       if (donation && donation.lotNo && donation.typeOfBag) {
-        const mappedBagType = donation.typeOfBag === 'DB' ? 'DOUBLE' : donation.typeOfBag === 'TB' ? 'TRIPLE' : null;
+        const mappedBagType =
+          donation.typeOfBag === 'DB' ? 'DOUBLE' : donation.typeOfBag === 'TB' ? 'TRIPLE' : null;
         if (mappedBagType && deps.bagStock) {
           try {
             const bagStock = await deps.bagStock.findByBatchAndType(donation.lotNo, mappedBagType);
             if (bagStock) {
               await deps.bagStock.decrementIssued(bagStock.id, 1, actorId);
               await deps.bagStock.incrementDiscarded(bagStock.id, 1, actorId);
-              log.info({ donationId, batchNumber: donation.lotNo, bagType: mappedBagType }, 'Bag stock updated: issued decremented, discarded incremented due to reactive TTI');
+              log.info(
+                { donationId, batchNumber: donation.lotNo, bagType: mappedBagType },
+                'Bag stock updated: issued decremented, discarded incremented due to reactive TTI',
+              );
             }
           } catch (err) {
-            log.error({ err: (err as Error).message }, 'Failed to update BagStock for reactive donation');
+            log.error(
+              { err: (err as Error).message },
+              'Failed to update BagStock for reactive donation',
+            );
           }
         }
       }
@@ -213,9 +247,16 @@ export function createTtiService(deps: {
       // raised below — lift it so the donor isn't carrying two active
       // deferrals for the same donation.
       if (tti.releaseDecision === 'indeterminate') {
-        const shadenessDeferral = await deps.deferrals.findByRelatedDonation(donationId, 'TTI_INDETERMINATE');
+        const shadenessDeferral = await deps.deferrals.findByRelatedDonation(
+          donationId,
+          'TTI_INDETERMINATE',
+        );
         if (shadenessDeferral) {
-          await deps.deferrals.lift(shadenessDeferral.id, actorId, 'Superseded by permanent TTI reactive deferral');
+          await deps.deferrals.lift(
+            shadenessDeferral.id,
+            actorId,
+            'Superseded by permanent TTI reactive deferral',
+          );
         }
       }
 
@@ -292,10 +333,17 @@ export function createTtiService(deps: {
         const priorDonation = await deps.donations.findByDonationId(donationId).catch(() => null);
         if (priorDonation && priorDonation.lotNo && priorDonation.typeOfBag && deps.bagStock) {
           const mappedBagType =
-            priorDonation.typeOfBag === 'DB' ? 'DOUBLE' : priorDonation.typeOfBag === 'TB' ? 'TRIPLE' : null;
+            priorDonation.typeOfBag === 'DB'
+              ? 'DOUBLE'
+              : priorDonation.typeOfBag === 'TB'
+                ? 'TRIPLE'
+                : null;
           if (mappedBagType) {
             try {
-              const bagStock = await deps.bagStock.findByBatchAndType(priorDonation.lotNo, mappedBagType);
+              const bagStock = await deps.bagStock.findByBatchAndType(
+                priorDonation.lotNo,
+                mappedBagType,
+              );
               if (bagStock) {
                 await deps.bagStock.decrementDiscarded(bagStock.id, 1, actorId);
                 await deps.bagStock.incrementIssued(bagStock.id, 1, actorId);
@@ -313,7 +361,10 @@ export function createTtiService(deps: {
           }
         }
 
-        const reactiveDeferral = await deps.deferrals.findByRelatedDonation(donationId, 'TTI_REACTIVE');
+        const reactiveDeferral = await deps.deferrals.findByRelatedDonation(
+          donationId,
+          'TTI_REACTIVE',
+        );
         if (reactiveDeferral) {
           await deps.deferrals.lift(
             reactiveDeferral.id,
@@ -351,7 +402,10 @@ export function createTtiService(deps: {
       // second finalize() call while still indeterminate (e.g. a second
       // test came back, panel still not clear) must not duplicate it.
       if (donorId) {
-        const existing = await deps.deferrals.findByRelatedDonation(donationId, 'TTI_INDETERMINATE');
+        const existing = await deps.deferrals.findByRelatedDonation(
+          donationId,
+          'TTI_INDETERMINATE',
+        );
         if (!existing) {
           const untilDate = new Date();
           untilDate.setDate(untilDate.getDate() + SHADENESS_DEFERRAL_DAYS);
@@ -366,7 +420,10 @@ export function createTtiService(deps: {
             },
             actorId,
           );
-          log.warn({ donationId, donorId, unitsAffected }, 'TTI shadeness — units quarantined, donor temporarily deferred');
+          log.warn(
+            { donationId, donorId, unitsAffected },
+            'TTI shadeness — units quarantined, donor temporarily deferred',
+          );
         }
       }
     } else {
@@ -422,7 +479,12 @@ export function createTtiService(deps: {
           entityType: 'TTIResult',
           entityId: donationId,
           entityLabel: donationId,
-          severity: evaluation.decision === 'reactive' ? 'critical' : evaluation.decision === 'indeterminate' ? 'warning' : 'info',
+          severity:
+            evaluation.decision === 'reactive'
+              ? 'critical'
+              : evaluation.decision === 'indeterminate'
+                ? 'warning'
+                : 'info',
           reason: evaluation.reasons.join('; '),
         },
         { releaseDecision: tti.releaseDecision },
@@ -465,7 +527,12 @@ export function createTtiService(deps: {
           entityType: 'TTIResult',
           entityId: donationId,
           entityLabel: donationId,
-          severity: evaluation.decision === 'reactive' ? 'critical' : evaluation.decision === 'indeterminate' ? 'warning' : 'info',
+          severity:
+            evaluation.decision === 'reactive'
+              ? 'critical'
+              : evaluation.decision === 'indeterminate'
+                ? 'warning'
+                : 'info',
           reason: evaluation.reasons.join('; '),
         },
         { tests: before.tests, releaseDecision: before.releaseDecision },

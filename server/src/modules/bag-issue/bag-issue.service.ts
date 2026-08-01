@@ -11,7 +11,9 @@ import type {
 } from '@/modules/bag-issue/bag-issue.validator';
 
 export interface BagIssueService {
-  list(q: ListBagIssueInput): Promise<{ items: BagIssueDto[]; total: number; page: number; pageSize: number }>;
+  list(
+    q: ListBagIssueInput,
+  ): Promise<{ items: BagIssueDto[]; total: number; page: number; pageSize: number }>;
   get(id: string): Promise<BagIssueDto>;
   issue(input: CreateBagIssueInput, actorId: string): Promise<BagIssueDto>;
   markUsed(id: string, input: MarkUsedInput, actorId: string): Promise<BagIssueDto>;
@@ -55,7 +57,9 @@ export function createBagIssueService(deps: {
       const stock = await deps.bagStock.findById(input.stockId);
       if (!stock) throw new NotFoundError('BagStock', input.stockId);
       if (stock.closingStock <= 0) {
-        throw new ConflictError(`No stock available for BagStock ${input.stockId} (closing stock: ${stock.closingStock})`);
+        throw new ConflictError(
+          `No stock available for BagStock ${input.stockId} (closing stock: ${stock.closingStock})`,
+        );
       }
       if (stock.status === 'OUT_OF_STOCK' || stock.status === 'EXPIRED') {
         throw new ConflictError(`BagStock has status ${stock.status} and cannot be issued`);
@@ -81,7 +85,13 @@ export function createBagIssueService(deps: {
       log.info({ issueNumber, bagSerialNumber, stockId: input.stockId, actorId }, 'bag issued');
       void withAudit(
         { actorId },
-        { module: 'bag-issue', action: 'CREATE', entityType: 'BagIssue', entityId: created.id, entityLabel: issueNumber },
+        {
+          module: 'bag-issue',
+          action: 'CREATE',
+          entityType: 'BagIssue',
+          entityId: created.id,
+          entityLabel: issueNumber,
+        },
         undefined,
         { issueNumber, bagSerialNumber, stockId: input.stockId },
       );
@@ -92,19 +102,31 @@ export function createBagIssueService(deps: {
       const issue = await deps.bagIssues.findById(id);
       if (!issue) throw new NotFoundError('BagIssue', id);
       if (issue.status !== 'ISSUED') {
-        throw new ConflictError(`Bag must be in ISSUED status to mark as used (current: ${issue.status})`);
+        throw new ConflictError(
+          `Bag must be in ISSUED status to mark as used (current: ${issue.status})`,
+        );
       }
-      const updated = await deps.bagIssues.updateStatus(id, {
-        status: 'USED',
-        donorId: input.donorId,
-        donationId: input.donationId,
-        usedAt: new Date(),
-      }, actorId);
+      const updated = await deps.bagIssues.updateStatus(
+        id,
+        {
+          status: 'USED',
+          donorId: input.donorId,
+          donationId: input.donationId,
+          usedAt: new Date(),
+        },
+        actorId,
+      );
       if (!updated) throw new NotFoundError('BagIssue', id);
       log.info({ issueId: id, actorId }, 'bag marked as used');
       void withAudit(
         { actorId },
-        { module: 'bag-issue', action: 'UPDATE', entityType: 'BagIssue', entityId: id, entityLabel: issue.issueNumber },
+        {
+          module: 'bag-issue',
+          action: 'UPDATE',
+          entityType: 'BagIssue',
+          entityId: id,
+          entityLabel: issue.issueNumber,
+        },
         { status: 'ISSUED' },
         { status: 'USED', donorId: input.donorId, donationId: input.donationId },
       );
@@ -115,19 +137,31 @@ export function createBagIssueService(deps: {
       const issue = await deps.bagIssues.findById(id);
       if (!issue) throw new NotFoundError('BagIssue', id);
       if (issue.status !== 'ISSUED') {
-        throw new ConflictError(`Bag must be in ISSUED status to return (current: ${issue.status})`);
+        throw new ConflictError(
+          `Bag must be in ISSUED status to return (current: ${issue.status})`,
+        );
       }
-      const updated = await deps.bagIssues.updateStatus(id, {
-        status: 'RETURNED',
-        returnedAt: new Date(),
-      }, actorId);
+      const updated = await deps.bagIssues.updateStatus(
+        id,
+        {
+          status: 'RETURNED',
+          returnedAt: new Date(),
+        },
+        actorId,
+      );
       if (!updated) throw new NotFoundError('BagIssue', id);
       // Return the bag to stock
       await deps.bagStock.decrementIssued(issue.stockId, 1, actorId);
       log.info({ issueId: id, stockId: issue.stockId, actorId }, 'bag returned to stock');
       void withAudit(
         { actorId },
-        { module: 'bag-issue', action: 'UPDATE', entityType: 'BagIssue', entityId: id, entityLabel: issue.issueNumber },
+        {
+          module: 'bag-issue',
+          action: 'UPDATE',
+          entityType: 'BagIssue',
+          entityId: id,
+          entityLabel: issue.issueNumber,
+        },
         { status: 'ISSUED' },
         { status: 'RETURNED' },
       );
@@ -138,12 +172,18 @@ export function createBagIssueService(deps: {
       const issue = await deps.bagIssues.findById(id);
       if (!issue) throw new NotFoundError('BagIssue', id);
       if (issue.status !== 'ISSUED') {
-        throw new ConflictError(`Bag must be in ISSUED status to mark as damaged (current: ${issue.status})`);
+        throw new ConflictError(
+          `Bag must be in ISSUED status to mark as damaged (current: ${issue.status})`,
+        );
       }
-      const updated = await deps.bagIssues.updateStatus(id, {
-        status: 'DAMAGED',
-        damagedAt: new Date(),
-      }, actorId);
+      const updated = await deps.bagIssues.updateStatus(
+        id,
+        {
+          status: 'DAMAGED',
+          damagedAt: new Date(),
+        },
+        actorId,
+      );
       if (!updated) throw new NotFoundError('BagIssue', id);
       // Move from issued to damaged
       await deps.bagStock.decrementIssued(issue.stockId, 1, actorId);
@@ -151,7 +191,14 @@ export function createBagIssueService(deps: {
       log.warn({ issueId: id, stockId: issue.stockId, actorId }, 'bag marked as damaged');
       void withAudit(
         { actorId },
-        { module: 'bag-issue', action: 'UPDATE', entityType: 'BagIssue', entityId: id, entityLabel: issue.issueNumber, severity: 'warning' },
+        {
+          module: 'bag-issue',
+          action: 'UPDATE',
+          entityType: 'BagIssue',
+          entityId: id,
+          entityLabel: issue.issueNumber,
+          severity: 'warning',
+        },
         { status: 'ISSUED' },
         { status: 'DAMAGED' },
       );

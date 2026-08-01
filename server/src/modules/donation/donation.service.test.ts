@@ -113,9 +113,7 @@ describe('donation-service.register', () => {
     });
     const result = await svc.register(baseInput(), 'actor-id');
     expect(result.units).toHaveLength(1);
-    expect(result.units.map((u) => u.componentType).sort()).toEqual([
-      'WB',
-    ]);
+    expect(result.units.map((u) => u.componentType).sort()).toEqual(['WB']);
     expect(result.ttiReleaseDecision).toBe('pending');
   });
 
@@ -177,7 +175,7 @@ describe('donation-service.register', () => {
       deferrals: mockDeferrals(),
     });
     await expect(svc.register(baseInput(), 'actor-id')).rejects.toThrowError(
-      /Donor cannot donate yet/
+      /Donor cannot donate yet/,
     );
   });
 
@@ -194,7 +192,7 @@ describe('donation-service.register', () => {
       deferrals: mockDeferrals(),
     });
     await expect(svc.register(baseInput(), 'actor-id')).rejects.toThrowError(
-      /Donor cannot donate yet/
+      /Donor cannot donate yet/,
     );
   });
 

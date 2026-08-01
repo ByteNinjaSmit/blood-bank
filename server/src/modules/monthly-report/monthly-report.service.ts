@@ -5,11 +5,22 @@ import type { MonthlyReportInputRepo } from '@/modules/monthly-report-input/mont
 const log = childLogger({ module: 'monthly-report-service' });
 
 const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
-const NOT_TRACKED = 'Not tracked in system — no matching field/module exists in the current data model.';
+const NOT_TRACKED =
+  'Not tracked in system — no matching field/module exists in the current data model.';
 const PARTIAL_NOTE =
   'Derived automatically from an existing free-text field, not a dedicated tracked category — verify before statutory submission.';
 
@@ -69,13 +80,25 @@ export function createMonthlyReportService(deps: MonthlyReportDeps) {
       const donorCardsWithTotal = { ...donorCards, totalCount: collection.grandTotal.total };
 
       const missingDataNotes: Array<{ item: string; note: string }> = [
-        { item: 'Voluntary vs. replacement collection split', note: 'Inferred from donation type (REPLACEMENT vs. all other donation types) — not a dedicated voluntary/replacement flag.' },
+        {
+          item: 'Voluntary vs. replacement collection split',
+          note: 'Inferred from donation type (REPLACEMENT vs. all other donation types) — not a dedicated voluntary/replacement flag.',
+        },
         ...(savedInput ? [] : [{ item: 'Donor counselling count', note: NOT_TRACKED }]),
-        { item: 'Blood bags given to blood storage centres', note: 'Identified by hospital records whose name contains "storage" (e.g. "SJS Storage") — there is no dedicated storage-centre entity type. Add a hospital record for each centre if none appear below.' },
+        {
+          item: 'Blood bags given to blood storage centres',
+          note: 'Identified by hospital records whose name contains "storage" (e.g. "SJS Storage") — there is no dedicated storage-centre entity type. Add a hospital record for each centre if none appear below.',
+        },
         { item: 'Blood bags issued by disease category', note: PARTIAL_NOTE },
-        { item: 'Rejected donors by reason', note: 'Sourced from Deferral records (the system\'s actual donor-rejection log) and bucketed by keyword match on the deferral reason text / deferral source — verify before statutory submission.' },
+        {
+          item: 'Rejected donors by reason',
+          note: "Sourced from Deferral records (the system's actual donor-rejection log) and bucketed by keyword match on the deferral reason text / deferral source — verify before statutory submission.",
+        },
         ...(savedInput ? [] : [{ item: 'ICTC referral counts', note: NOT_TRACKED }]),
-        { item: 'Component issue by clinical indication (free-text categories)', note: PARTIAL_NOTE },
+        {
+          item: 'Component issue by clinical indication (free-text categories)',
+          note: PARTIAL_NOTE,
+        },
         {
           item: 'Camp-wise deferral count',
           note: 'Deferral records have no direct camp link in the data model — approximated by matching deferrals raised in the period to donors who donated at that camp during the period.',
@@ -94,7 +117,13 @@ export function createMonthlyReportService(deps: MonthlyReportDeps) {
       log.info({ month, year }, 'monthly report generated');
 
       return {
-        period: { month, year, from: from.toISOString(), to: new Date(to.getTime() - 1).toISOString(), label },
+        period: {
+          month,
+          year,
+          from: from.toISOString(),
+          to: new Date(to.getTime() - 1).toISOString(),
+          label,
+        },
         collection: { ...collection, campsCount },
         componentsIssued: { hospitals: componentsIssued.hospitals },
         discards,

@@ -86,7 +86,13 @@ export function createCrossmatchService(deps: {
           reason: `Crossmatch ${crossmatchId} compatible`,
         });
         unitStatus = u.status;
-        await deps.requisitions.setCrossmatchStatus(req.id, input.unitId, 'COMPATIBLE', actorId, details);
+        await deps.requisitions.setCrossmatchStatus(
+          req.id,
+          input.unitId,
+          'COMPATIBLE',
+          actorId,
+          details,
+        );
       } else {
         const u = await deps.units.applyEvent({
           unitId: input.unitId,
@@ -95,7 +101,13 @@ export function createCrossmatchService(deps: {
           reason: `Crossmatch ${crossmatchId} incompatible`,
         });
         unitStatus = u.status;
-        await deps.requisitions.setCrossmatchStatus(req.id, input.unitId, 'INCOMPATIBLE', actorId, details);
+        await deps.requisitions.setCrossmatchStatus(
+          req.id,
+          input.unitId,
+          'INCOMPATIBLE',
+          actorId,
+          details,
+        );
       }
 
       void withAudit(
@@ -109,7 +121,13 @@ export function createCrossmatchService(deps: {
           severity: input.result === 'INCOMPATIBLE' ? 'warning' : 'info',
         },
         undefined,
-        { requisitionId: req.requisitionId, unitId: input.unitId, method: input.method, result: input.result, unitStatus },
+        {
+          requisitionId: req.requisitionId,
+          unitId: input.unitId,
+          method: input.method,
+          result: input.result,
+          unitStatus,
+        },
       );
 
       log.info(

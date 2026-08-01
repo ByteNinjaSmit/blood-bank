@@ -14,11 +14,6 @@ const controllers = createMonthlyReportControllers(service);
 
 const router = Router();
 
-router.get(
-  '/',
-  authenticate,
-  requirePermission('report:read'),
-  controllers.getReport,
-);
+router.get('/', authenticate, requirePermission('report:read'), controllers.getReport);
 
 export default router;

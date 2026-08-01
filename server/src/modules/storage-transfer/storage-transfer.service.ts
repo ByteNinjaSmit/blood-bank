@@ -1,7 +1,10 @@
 import { Types } from 'mongoose';
 import { childLogger } from '@/core/logger';
 import { withAudit } from '@/shared/utils/with-audit';
-import type { StorageTransferRepo, StorageTransferDto } from '@/modules/storage-transfer/storage-transfer.repository';
+import type {
+  StorageTransferRepo,
+  StorageTransferDto,
+} from '@/modules/storage-transfer/storage-transfer.repository';
 import type {
   CreateStorageTransferInput,
   ListStorageTransferInput,
@@ -9,10 +12,17 @@ import type {
 } from '@/modules/storage-transfer/storage-transfer.validator';
 
 export interface StorageTransferService {
-  list(f: ListStorageTransferInput): Promise<{ items: StorageTransferDto[]; total: number; page: number; limit: number }>;
+  list(
+    f: ListStorageTransferInput,
+  ): Promise<{ items: StorageTransferDto[]; total: number; page: number; limit: number }>;
   get(id: string): Promise<StorageTransferDto>;
   create(input: CreateStorageTransferInput, actorId: string): Promise<StorageTransferDto>;
-  update(id: string, input: UpdateStorageTransferInput, actorId: string, reason?: string): Promise<StorageTransferDto>;
+  update(
+    id: string,
+    input: UpdateStorageTransferInput,
+    actorId: string,
+    reason?: string,
+  ): Promise<StorageTransferDto>;
   remove(id: string, actorId: string, reason?: string): Promise<StorageTransferDto>;
   restore(id: string, actorId: string): Promise<StorageTransferDto>;
 }
@@ -24,7 +34,9 @@ function generateTransferId(): string {
   return `ST-${yyyymmdd}-${rand}`;
 }
 
-export function createStorageTransferService(deps: { storageTransfers: StorageTransferRepo }): StorageTransferService {
+export function createStorageTransferService(deps: {
+  storageTransfers: StorageTransferRepo;
+}): StorageTransferService {
   const log = childLogger({ module: 'storage-transfer-service' });
 
   return {
@@ -40,12 +52,26 @@ export function createStorageTransferService(deps: { storageTransfers: StorageTr
     async create(input, actorId) {
       const transferId = generateTransferId();
       const created = await deps.storageTransfers.create({ ...input, transferId }, actorId);
-      log.info({ transferId: created.transferId, items: input.items.length, actorId }, 'storage transfer created');
+      log.info(
+        { transferId: created.transferId, items: input.items.length, actorId },
+        'storage transfer created',
+      );
       void withAudit(
         { actorId },
-        { module: 'storage-transfer', action: 'CREATE', entityType: 'StorageTransfer', entityId: created.id, entityLabel: created.transferId },
+        {
+          module: 'storage-transfer',
+          action: 'CREATE',
+          entityType: 'StorageTransfer',
+          entityId: created.id,
+          entityLabel: created.transferId,
+        },
         undefined,
-        { location: created.location, sentDate: created.sentDate, itemCount: created.items.length, items: created.items },
+        {
+          location: created.location,
+          sentDate: created.sentDate,
+          itemCount: created.items.length,
+          items: created.items,
+        },
       );
       return created;
     },
@@ -56,7 +82,14 @@ export function createStorageTransferService(deps: { storageTransfers: StorageTr
       log.info({ transferId: updated.transferId, actorId }, 'storage transfer updated');
       void withAudit(
         { actorId },
-        { module: 'storage-transfer', action: 'UPDATE', entityType: 'StorageTransfer', entityId: id, entityLabel: before.transferId, reason },
+        {
+          module: 'storage-transfer',
+          action: 'UPDATE',
+          entityType: 'StorageTransfer',
+          entityId: id,
+          entityLabel: before.transferId,
+          reason,
+        },
         before,
         updated,
       );
@@ -88,7 +121,13 @@ export function createStorageTransferService(deps: { storageTransfers: StorageTr
       log.info({ transferId: restored.transferId, actorId }, 'storage transfer restored');
       void withAudit(
         { actorId },
-        { module: 'storage-transfer', action: 'UPDATE', entityType: 'StorageTransfer', entityId: id, entityLabel: restored.transferId },
+        {
+          module: 'storage-transfer',
+          action: 'UPDATE',
+          entityType: 'StorageTransfer',
+          entityId: id,
+          entityLabel: restored.transferId,
+        },
         { deletedAt: true },
         { deletedAt: null },
       );

@@ -3,7 +3,8 @@ import { ValidateMis } from '@/modules/mis/mis.validator';
 import type { MisService } from '@/modules/mis/mis.service';
 
 export function createMisControllers(service: MisService) {
-  const withDateRange = (fn: (from?: Date, to?: Date) => Promise<any>) =>
+  const withDateRange =
+    (fn: (from?: Date, to?: Date) => Promise<any>) =>
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { fromDate, toDate } = ValidateMis.dateRangeQuery(req);
@@ -14,8 +15,8 @@ export function createMisControllers(service: MisService) {
       }
     };
 
-  const withNoParams = (fn: () => Promise<any>) =>
-    async (req: Request, res: Response, next: NextFunction) => {
+  const withNoParams =
+    (fn: () => Promise<any>) => async (req: Request, res: Response, next: NextFunction) => {
       try {
         const data = await fn();
         res.json({ success: true, data, requestId: req.id });

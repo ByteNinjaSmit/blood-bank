@@ -13,10 +13,10 @@
     "husky": "^9.1.6",
     "lint-staged": "^15.2.10"
   },
+  "_lint-staged-note": "Commands must receive ONLY the staged paths lint-staged appends. Do not point these at `npm run format`/`lint:fix` — those are `prettier --write .` / `eslint . --fix`, which reformat the whole server tree on every commit. eslint is omitted here because server/eslint.config.js ignores src/**/*.ts (tsc + vitest cover that tree) and eslint cannot resolve its config from the repo root.",
   "lint-staged": {
     "server/src/**/*.ts": [
-      "npm --prefix server run lint:fix",
-      "npm --prefix server run format"
+      "npx --prefix server prettier --write"
     ]
   }
 }

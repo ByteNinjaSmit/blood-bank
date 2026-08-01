@@ -27,8 +27,14 @@ export const TTI_DISCARD_LABEL: Record<string, string> = {
 export const DISEASE_KEYWORDS: Array<{ label: string; terms: string[] }> = [
   { label: 'Thalassemia', terms: ['thalassemia', 'thalassaemia'] },
   { label: 'Sickle Cell Anaemia', terms: ['sickle'] },
-  { label: 'Pregnancy Related Complications', terms: ['pregnan', 'obstetric', 'antepartum', 'postpartum'] },
-  { label: 'Cancer', terms: ['cancer', 'malignan', 'oncolog', 'leukemia', 'leukaemia', 'lymphoma'] },
+  {
+    label: 'Pregnancy Related Complications',
+    terms: ['pregnan', 'obstetric', 'antepartum', 'postpartum'],
+  },
+  {
+    label: 'Cancer',
+    terms: ['cancer', 'malignan', 'oncolog', 'leukemia', 'leukaemia', 'lymphoma'],
+  },
   { label: 'Haemophilia', terms: ['haemophilia', 'hemophilia'] },
   { label: 'Accident', terms: ['accident', 'trauma', 'rta', 'injury'] },
   { label: 'Anaemia', terms: ['anaemia', 'anemia'] },
@@ -39,7 +45,16 @@ export const DISEASE_KEYWORDS: Array<{ label: string; terms: string[] }> = [
   { label: 'Dengue', terms: ['dengue'] },
 ];
 
-export const REAGENT_CANONICAL = ['Anti-A', 'Anti-B', 'Anti-D', 'Anti-AB', 'Anti-A1', 'Anti-H', 'Anti-AHG', 'Bovine'];
+export const REAGENT_CANONICAL = [
+  'Anti-A',
+  'Anti-B',
+  'Anti-D',
+  'Anti-AB',
+  'Anti-A1',
+  'Anti-H',
+  'Anti-AHG',
+  'Bovine',
+];
 export const ELISA_CANONICAL = [
   { label: 'HIV ELISA', terms: ['hiv'] },
   { label: 'HBsAg ELISA', terms: ['hbsag', 'hbv'] },
@@ -66,7 +81,11 @@ export function emptyGroupTally(): Record<string, number> {
 
 export function buildEntityBreakdown(
   entries: Array<{ entity: string; product: string; group: string }>,
-): Array<{ name: string; rows: Array<{ product: string; byGroup: Record<string, number>; total: number }>; total: number }> {
+): Array<{
+  name: string;
+  rows: Array<{ product: string; byGroup: Record<string, number>; total: number }>;
+  total: number;
+}> {
   const byEntity: Record<string, Record<string, Record<string, number>>> = {};
   for (const { entity, product, group } of entries) {
     byEntity[entity] ??= {};

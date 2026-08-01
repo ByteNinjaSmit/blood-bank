@@ -26,7 +26,9 @@ export function createPOControllers(service: POService): POControllers {
         const q = ValidatePO.listQuery(req);
         const result = await service.list(q);
         res.json({ success: true, data: result, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async get(req, res, next) {
@@ -34,7 +36,9 @@ export function createPOControllers(service: POService): POControllers {
         const { id } = ValidatePO.idParam(req);
         const data = await service.get(id);
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async create(req, res, next) {
@@ -42,7 +46,9 @@ export function createPOControllers(service: POService): POControllers {
         const body = ValidatePO.createBody(req);
         const data = await service.create(body, actorId(req));
         res.status(201).json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async update(req, res, next) {
@@ -52,7 +58,9 @@ export function createPOControllers(service: POService): POControllers {
         const body = ValidatePO.updateBody(req);
         const data = await service.update(id, body, actorId(req), editReason);
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async remove(req, res, next) {
@@ -60,8 +68,14 @@ export function createPOControllers(service: POService): POControllers {
         const { id } = ValidatePO.idParam(req);
         const { reason } = ValidatePO.deleteReasonBody(req);
         await service.delete(id, actorId(req), reason);
-        res.json({ success: true, message: 'Purchase order deleted successfully', requestId: req.id });
-      } catch (e) { next(e); }
+        res.json({
+          success: true,
+          message: 'Purchase order deleted successfully',
+          requestId: req.id,
+        });
+      } catch (e) {
+        next(e);
+      }
     },
 
     async restore(req, res, next) {
@@ -69,7 +83,9 @@ export function createPOControllers(service: POService): POControllers {
         const { id } = ValidatePO.idParam(req);
         const data = await service.restore(id, actorId(req));
         res.json({ success: true, data, requestId: req.id });
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
 
     async permanentDelete(req, res, next) {
@@ -78,7 +94,9 @@ export function createPOControllers(service: POService): POControllers {
         const { reason } = ValidatePO.deleteReasonBody(req);
         await service.permanentDelete(id, actorId(req), reason);
         res.status(204).end();
-      } catch (e) { next(e); }
+      } catch (e) {
+        next(e);
+      }
     },
   };
 }

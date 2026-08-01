@@ -145,35 +145,46 @@ function toDto(raw: RawReq): RequisitionDto {
     // Pre-migration documents lack this field entirely — default so they
     // display on the Requisition list rather than vanishing/misclassifying.
     purpose: raw.purpose || 'REQUISITION',
-    patient: raw.patient ? {
-      name: raw.patient.name,
-      address: raw.patient.address,
-      age: raw.patient.age,
-      sex: raw.patient.sex,
-      mrn: raw.patient.mrn,
-      diagnosis: raw.patient.diagnosis,
-      indication: raw.patient.indication,
-      indicationCategory: raw.patient.indicationCategory ?? null,
-      otherDiseaseName: raw.patient.otherDiseaseName,
-      hb: raw.patient.hb,
-      specialNeeds: Array.isArray(raw.patient.specialNeeds) ? raw.patient.specialNeeds : [],
-      history: raw.patient.history ? {
-        previousTransfusions: raw.patient.history.previousTransfusions ?? 0,
-        approximateDate: raw.patient.history.approximateDate || '',
-        presenceOfReaction: raw.patient.history.presenceOfReaction || 'None',
-      } : undefined,
-      pregnancy: raw.patient.pregnancy ? {
-        numPregnancies: raw.patient.pregnancy.numPregnancies ?? 0,
-        numMiscarriages: raw.patient.pregnancy.numMiscarriages ?? 0,
-        numChildrenWithHemolyticDisease: raw.patient.pregnancy.numChildrenWithHemolyticDisease ?? 0,
-      } : undefined,
-    } : undefined,
+    patient: raw.patient
+      ? {
+          name: raw.patient.name,
+          address: raw.patient.address,
+          age: raw.patient.age,
+          sex: raw.patient.sex,
+          mrn: raw.patient.mrn,
+          diagnosis: raw.patient.diagnosis,
+          indication: raw.patient.indication,
+          indicationCategory: raw.patient.indicationCategory ?? null,
+          otherDiseaseName: raw.patient.otherDiseaseName,
+          hb: raw.patient.hb,
+          specialNeeds: Array.isArray(raw.patient.specialNeeds) ? raw.patient.specialNeeds : [],
+          history: raw.patient.history
+            ? {
+                previousTransfusions: raw.patient.history.previousTransfusions ?? 0,
+                approximateDate: raw.patient.history.approximateDate || '',
+                presenceOfReaction: raw.patient.history.presenceOfReaction || 'None',
+              }
+            : undefined,
+          pregnancy: raw.patient.pregnancy
+            ? {
+                numPregnancies: raw.patient.pregnancy.numPregnancies ?? 0,
+                numMiscarriages: raw.patient.pregnancy.numMiscarriages ?? 0,
+                numChildrenWithHemolyticDisease:
+                  raw.patient.pregnancy.numChildrenWithHemolyticDisease ?? 0,
+              }
+            : undefined,
+        }
+      : undefined,
     recipientGrouping: raw.recipientGrouping ?? null,
     requestedComponents: raw.requestedComponents || [],
     matchedUnits: raw.matchedUnits || [],
     status: raw.status,
     requiredAt: raw.requiredAt ? new Date(raw.requiredAt).toISOString() : undefined,
-    requestedAt: raw.requestedAt ? new Date(raw.requestedAt).toISOString() : raw.createdAt ? new Date(raw.createdAt).toISOString() : '',
+    requestedAt: raw.requestedAt
+      ? new Date(raw.requestedAt).toISOString()
+      : raw.createdAt
+        ? new Date(raw.createdAt).toISOString()
+        : '',
     createdAt: raw.createdAt ? new Date(raw.createdAt).toISOString() : '',
     rejectionReason: raw.rejectionReason,
     rejectedBy: raw.rejectedBy ? raw.rejectedBy.toString() : undefined,
@@ -226,7 +237,11 @@ export interface RequisitionRepo {
   create(input: CreateRequisitionInput, actorId: string): Promise<RequisitionDto>;
   findById(id: string): Promise<RequisitionDto>;
   /** Returns null (never throws) when the requisition doesn't exist. */
-  updateDetails(id: string, input: UpdateRequisitionInput, actorId: string): Promise<RequisitionDto | null>;
+  updateDetails(
+    id: string,
+    input: UpdateRequisitionInput,
+    actorId: string,
+  ): Promise<RequisitionDto | null>;
   setMatched(id: string, matched: MatchedUnitDto[], actorId: string): Promise<RequisitionDto>;
   setCrossmatchStatus(
     id: string,
@@ -316,11 +331,9 @@ export function createRequisitionRepo(): RequisitionRepo {
 
       const skip = (f.page - 1) * f.limit;
       const [docs, total] = await Promise.all([
-        RequisitionModel.find(query)
-          .sort(sort)
-          .skip(skip)
-          .limit(f.limit)
-          .lean() as Promise<RawReq[]>,
+        RequisitionModel.find(query).sort(sort).skip(skip).limit(f.limit).lean() as Promise<
+          RawReq[]
+        >,
         RequisitionModel.countDocuments(query),
       ]);
       return { items: (docs as RawReq[]).map(toDto), total };

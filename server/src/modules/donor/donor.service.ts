@@ -53,20 +53,23 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
           'Donor registered with a phone number already used by another donor',
         );
       }
-      const created = await deps.repo.create(
-        { ...input, donorId: generateDonorId() },
-        actorId,
-      );
+      const created = await deps.repo.create({ ...input, donorId: generateDonorId() }, actorId);
       if (input.campId) {
         await CampModel.findByIdAndUpdate(input.campId, {
-          $addToSet: { donorData: created.id }
+          $addToSet: { donorData: created.id },
         });
       }
       await invalidate('donor:detail:*');
       log.info({ donorId: created.id, actorId, campId: input.campId }, 'donor registered');
       void withAudit(
         { actorId },
-        { module: 'donor', action: 'CREATE', entityType: 'Donor', entityId: created.id, entityLabel: created.donorId },
+        {
+          module: 'donor',
+          action: 'CREATE',
+          entityType: 'Donor',
+          entityId: created.id,
+          entityLabel: created.donorId,
+        },
         undefined,
         {
           donorId: created.donorId,
@@ -170,12 +173,20 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
       if (!donor.deletedAt) {
         return { restored: false };
       }
-      await runInCascadeTransaction((session) => cascadeRestore(donorCascadeNode, id, actorId, session));
+      await runInCascadeTransaction((session) =>
+        cascadeRestore(donorCascadeNode, id, actorId, session),
+      );
       await invalidate(`donor:detail:${id}`);
       log.warn({ donorId: id, actorId }, 'donor cascade restored');
       void withAudit(
         { actorId },
-        { module: 'donor', action: 'UPDATE', entityType: 'Donor', entityId: id, entityLabel: donor.donorId },
+        {
+          module: 'donor',
+          action: 'UPDATE',
+          entityType: 'Donor',
+          entityId: id,
+          entityLabel: donor.donorId,
+        },
         { deletedAt: donor.deletedAt },
         { deletedAt: null },
       );

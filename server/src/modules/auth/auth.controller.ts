@@ -13,7 +13,11 @@ import { UnauthorizedError, ExternalServiceError } from '@/shared/errors';
 function isDbConnectivityError(err: unknown): boolean {
   if (mongoose.connection.readyState !== 1) return true;
   const name = (err as { name?: string })?.name ?? '';
-  return name === 'MongoNetworkError' || name === 'MongooseServerSelectionError' || name === 'MongoServerSelectionError';
+  return (
+    name === 'MongoNetworkError' ||
+    name === 'MongooseServerSelectionError' ||
+    name === 'MongoServerSelectionError'
+  );
 }
 
 function ip(req: Request): string | undefined {

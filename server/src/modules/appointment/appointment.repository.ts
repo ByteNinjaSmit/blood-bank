@@ -87,7 +87,9 @@ export function createAppointmentRepo(): AppointmentRepo {
     },
 
     async summary() {
-      const rows = await AppointmentModel.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]);
+      const rows = await AppointmentModel.aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+      ]);
       const summary = { pending: 0, confirmed: 0, cancelled: 0, total: 0 };
       for (const r of rows as any[]) {
         if (r._id === 'pending') summary.pending = r.count;

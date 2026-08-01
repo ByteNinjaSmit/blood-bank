@@ -169,7 +169,12 @@ async function processNode(
       .session(ctx.session);
 
     for (const childDoc of matches) {
-      await processNode(child, childDoc, { ...ctx, currentParent: { name: node.name, doc } }, childrenForceAffected);
+      await processNode(
+        child,
+        childDoc,
+        { ...ctx, currentParent: { name: node.name, doc } },
+        childrenForceAffected,
+      );
     }
   }
 }
@@ -224,7 +229,13 @@ async function restoreBatch(node: CascadeNode, ctx: CascadeRestoreContext): Prom
         { _id: doc._id },
         {
           $set: { affected: false, canAutoRecover: true },
-          $unset: { affectedReason: '', affectedByModule: '', affectedByRecord: '', affectedDate: '', deleteBatchId: '' },
+          $unset: {
+            affectedReason: '',
+            affectedByModule: '',
+            affectedByRecord: '',
+            affectedDate: '',
+            deleteBatchId: '',
+          },
         },
         { session: ctx.session ?? undefined },
       );

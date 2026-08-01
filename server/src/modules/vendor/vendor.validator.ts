@@ -64,8 +64,10 @@ export type ListVendorsInput = z.infer<typeof ListVendorsQuery>;
 export const ValidateVendor = {
   createBody: (req: Request) => parseOrThrow(CreateVendorBody, req.body, 'request body'),
   updateBody: (req: Request) => parseOrThrow(UpdateVendorBody, req.body, 'request body'),
-  updateStatusBody: (req: Request) => parseOrThrow(UpdateVendorStatusBody, req.body, 'request body'),
+  updateStatusBody: (req: Request) =>
+    parseOrThrow(UpdateVendorStatusBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListVendorsQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
-  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
+  deleteReasonBody: (req: Request) =>
+    parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };

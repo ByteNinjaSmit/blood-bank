@@ -12,7 +12,14 @@ const controllers = createStorageTransferControllers(service);
 // Same role set as the legacy /api/inventory storage routes this module
 // replaces for STORAGE dispatches — requirePermission('unit:read') is the
 // shared gate held by every one of these roles (see inventory.legacy-routes.ts).
-const ROLES: Role[] = ['system-admin', 'bbo', 'medical-officer', 'lab-tech-serology', 'store-keeper', 'issue-counter'];
+const ROLES: Role[] = [
+  'system-admin',
+  'bbo',
+  'medical-officer',
+  'lab-tech-serology',
+  'store-keeper',
+  'issue-counter',
+];
 
 const router = Router();
 

@@ -11,7 +11,9 @@ import type {
 } from '@/modules/bag-discard/bag-discard.validator';
 
 export interface BagDiscardService {
-  list(q: ListBagDiscardInput): Promise<{ items: BagDiscardDto[]; total: number; page: number; pageSize: number }>;
+  list(
+    q: ListBagDiscardInput,
+  ): Promise<{ items: BagDiscardDto[]; total: number; page: number; pageSize: number }>;
   get(id: string): Promise<BagDiscardDto>;
   create(input: CreateBagDiscardInput, actorId: string): Promise<BagDiscardDto>;
   approve(id: string, input: ApproveBagDiscardInput, actorId: string): Promise<BagDiscardDto>;
@@ -67,7 +69,16 @@ export function createBagDiscardService(deps: {
       });
 
       await deps.bagStock.incrementDiscarded(input.stockId, input.quantity, actorId);
-      log.warn({ discardId, stockId: input.stockId, quantity: input.quantity, reason: input.reason, actorId }, 'bag discard recorded');
+      log.warn(
+        {
+          discardId,
+          stockId: input.stockId,
+          quantity: input.quantity,
+          reason: input.reason,
+          actorId,
+        },
+        'bag discard recorded',
+      );
       void withAudit(
         { actorId },
         {
@@ -91,13 +102,17 @@ export function createBagDiscardService(deps: {
       if (discard.approvedById) {
         throw new ConflictError(`BagDiscard ${id} has already been approved`);
       }
-      const updated = await deps.discards.approve(id, {
-        approvedById: actorId,
-        approvedAt: new Date(),
-        disposalMethod: input.disposalMethod,
-        biomedicalWasteManifestNo: input.biomedicalWasteManifestNo,
-        disposalDate: input.disposalDate,
-      }, actorId);
+      const updated = await deps.discards.approve(
+        id,
+        {
+          approvedById: actorId,
+          approvedAt: new Date(),
+          disposalMethod: input.disposalMethod,
+          biomedicalWasteManifestNo: input.biomedicalWasteManifestNo,
+          disposalDate: input.disposalDate,
+        },
+        actorId,
+      );
       if (!updated) throw new NotFoundError('BagDiscard', id);
       log.info({ discardId: id, actorId }, 'bag discard approved');
       void withAudit(

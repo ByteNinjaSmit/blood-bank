@@ -140,10 +140,7 @@ export interface UnitRepo {
    * one row per in-stock, non-expired unit of the given component and
    * ABO groups, FEFO-sorted.
    */
-  availableForSelection(filter: {
-    componentType: ComponentType;
-    aboGroups: AboGroup[];
-  }): Promise<
+  availableForSelection(filter: { componentType: ComponentType; aboGroups: AboGroup[] }): Promise<
     Array<{
       unitId: string;
       aboGroup: AboGroup;
@@ -287,11 +284,9 @@ export function createUnitRepo(): UnitRepo {
         const session = await BloodUnitModel.startSession();
         try {
           await session.withTransaction(async () => {
-            const units = (await BloodUnitModel.find(
-              findFilter,
-              null,
-              { session },
-            )) as Array<RawUnit & { status: UnitStatus }>;
+            const units = (await BloodUnitModel.find(findFilter, null, { session })) as Array<
+              RawUnit & { status: UnitStatus }
+            >;
 
             for (const u of units) {
               const next = transition(u.status, event, u.unitId);
@@ -302,7 +297,14 @@ export function createUnitRepo(): UnitRepo {
                   updatedBy: actor,
                   ...(extra?.set ?? {}),
                   $push: {
-                    statusHistory: { from: u.status, to: next, event, actor, at: new Date(), reason },
+                    statusHistory: {
+                      from: u.status,
+                      to: next,
+                      event,
+                      actor,
+                      at: new Date(),
+                      reason,
+                    },
                   },
                 },
                 { session },
@@ -315,7 +317,9 @@ export function createUnitRepo(): UnitRepo {
           await session.endSession();
         }
       } catch (err: any) {
-        const units = (await BloodUnitModel.find(findFilter)) as Array<RawUnit & { status: UnitStatus }>;
+        const units = (await BloodUnitModel.find(findFilter)) as Array<
+          RawUnit & { status: UnitStatus }
+        >;
 
         for (const u of units) {
           const next = transition(u.status, event, u.unitId);
@@ -441,7 +445,14 @@ export function createUnitRepo(): UnitRepo {
       }));
     },
 
-    async findBestReplacement({ componentType, excludeUnitIds, compatibleAboGroups, rhFilter, patientAbo, patientRh }) {
+    async findBestReplacement({
+      componentType,
+      excludeUnitIds,
+      compatibleAboGroups,
+      rhFilter,
+      patientAbo,
+      patientRh,
+    }) {
       const now = new Date();
       const matches = await BloodUnitModel.aggregate([
         {
@@ -450,7 +461,9 @@ export function createUnitRepo(): UnitRepo {
             unitId: { $nin: excludeUnitIds },
             componentType,
             aboGroup: { $in: compatibleAboGroups },
-            ...(rhFilter ? { rhFactor: rhFilter } : { rhFactor: { $in: ['POSITIVE', 'NEGATIVE'] } }),
+            ...(rhFilter
+              ? { rhFactor: rhFilter }
+              : { rhFactor: { $in: ['POSITIVE', 'NEGATIVE'] } }),
             expiresAt: { $gte: now },
             $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
           },
@@ -458,7 +471,11 @@ export function createUnitRepo(): UnitRepo {
         {
           $addFields: {
             _matchPriority: {
-              $cond: [{ $and: [{ $eq: ['$aboGroup', patientAbo] }, { $eq: ['$rhFactor', patientRh] }] }, 0, 1],
+              $cond: [
+                { $and: [{ $eq: ['$aboGroup', patientAbo] }, { $eq: ['$rhFactor', patientRh] }] },
+                0,
+                1,
+              ],
             },
           },
         },
@@ -471,7 +488,9 @@ export function createUnitRepo(): UnitRepo {
     },
 
     async allIssued(unitIds) {
-      const units = await BloodUnitModel.find({ unitId: { $in: unitIds } }).select('status').lean();
+      const units = await BloodUnitModel.find({ unitId: { $in: unitIds } })
+        .select('status')
+        .lean();
       return units.every((u) => u.status === 'ISSUED');
     },
 

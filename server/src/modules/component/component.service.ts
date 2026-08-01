@@ -1,4 +1,8 @@
-import type { ComponentListFilters, ComponentRepo, NearExpiryFilters } from '@/modules/component/component.repository';
+import type {
+  ComponentListFilters,
+  ComponentRepo,
+  NearExpiryFilters,
+} from '@/modules/component/component.repository';
 import { withAudit } from '@/shared/utils/with-audit';
 import { notificationCenterService } from '@/modules/notification/notification-center.service';
 
@@ -23,7 +27,12 @@ export interface ComponentService {
   getGroupDetail(id: string): ReturnType<ComponentRepo['getGroupDetail']>;
   patch(
     id: string,
-    fields: { volumeMl?: number; storageLocation?: string; expiryDate?: string; editReason?: string },
+    fields: {
+      volumeMl?: number;
+      storageLocation?: string;
+      expiryDate?: string;
+      editReason?: string;
+    },
     actorId: string,
   ): ReturnType<ComponentRepo['patch']>;
   patchBag(
@@ -50,9 +59,19 @@ export function createComponentService(deps: { repo: ComponentRepo }): Component
       const publicDonationId = result?.donationId ?? input.donationId;
       void withAudit(
         { actorId: input.actorId },
-        { module: 'component', action: 'CREATE', entityType: 'Component', entityId: publicDonationId, entityLabel: `${publicDonationId} (${input.componentType})` },
+        {
+          module: 'component',
+          action: 'CREATE',
+          entityType: 'Component',
+          entityId: publicDonationId,
+          entityLabel: `${publicDonationId} (${input.componentType})`,
+        },
         undefined,
-        { donationId: publicDonationId, componentType: input.componentType, volumeMl: input.volumeMl },
+        {
+          donationId: publicDonationId,
+          componentType: input.componentType,
+          volumeMl: input.volumeMl,
+        },
       );
       return result;
     },
@@ -63,7 +82,14 @@ export function createComponentService(deps: { repo: ComponentRepo }): Component
       const publicDonationId = result?.donationId ?? input.donationId;
       void withAudit(
         { actorId: input.actorId },
-        { module: 'component', action: 'UPDATE', entityType: 'Component', entityId: publicDonationId, entityLabel: publicDonationId, reason: 'separation completed' },
+        {
+          module: 'component',
+          action: 'UPDATE',
+          entityType: 'Component',
+          entityId: publicDonationId,
+          entityLabel: publicDonationId,
+          reason: 'separation completed',
+        },
         undefined,
         { donationId: publicDonationId, signature: input.signature },
       );
@@ -106,7 +132,13 @@ export function createComponentService(deps: { repo: ComponentRepo }): Component
       const result = await deps.repo.patchBag(donationId, fields, actorId);
       void withAudit(
         { actorId },
-        { module: 'component', action: 'UPDATE', entityType: 'ComponentBag', entityId: donationId, reason: fields.editReason },
+        {
+          module: 'component',
+          action: 'UPDATE',
+          entityType: 'ComponentBag',
+          entityId: donationId,
+          reason: fields.editReason,
+        },
         before,
         { components: fields.components },
       );

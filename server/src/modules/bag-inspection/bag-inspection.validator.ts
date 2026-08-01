@@ -11,15 +11,17 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T
   return result.data;
 }
 
-const PhysicalChecksSchema = z.object({
-  sealIntact: z.boolean().optional(),
-  noLeakage: z.boolean().optional(),
-  tubeIntegrity: z.boolean().optional(),
-  needleCondition: z.boolean().optional(),
-  labelPresence: z.boolean().optional(),
-  sterilityCheck: z.boolean().optional(),
-  packagingCondition: z.boolean().optional(),
-}).optional();
+const PhysicalChecksSchema = z
+  .object({
+    sealIntact: z.boolean().optional(),
+    noLeakage: z.boolean().optional(),
+    tubeIntegrity: z.boolean().optional(),
+    needleCondition: z.boolean().optional(),
+    labelPresence: z.boolean().optional(),
+    sterilityCheck: z.boolean().optional(),
+    packagingCondition: z.boolean().optional(),
+  })
+  .optional();
 
 export const CreateBagInspectionBody = z.object({
   grnId: z.string().regex(OBJECT_ID, 'Invalid grnId'),
@@ -80,7 +82,8 @@ export type ListBagInspectionInput = z.infer<typeof ListBagInspectionQuery>;
 
 export const ValidateBagInspection = {
   createBody: (req: Request) => parseOrThrow(CreateBagInspectionBody, req.body, 'request body'),
-  updateReportBody: (req: Request) => parseOrThrow(UpdateBagInspectionReportBody, req.body, 'request body'),
+  updateReportBody: (req: Request) =>
+    parseOrThrow(UpdateBagInspectionReportBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListBagInspectionQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
 };

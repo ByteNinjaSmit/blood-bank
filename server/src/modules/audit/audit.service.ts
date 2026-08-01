@@ -39,11 +39,7 @@ export const auditService: IAuditService = {
     return auditRepository.findForEntity(entityType, entityId);
   },
 
-  async search(
-    filters: AuditSearchFilters,
-    page = 1,
-    limit = 25,
-  ): Promise<AuditSearchResult> {
+  async search(filters: AuditSearchFilters, page = 1, limit = 25): Promise<AuditSearchResult> {
     const safePage = Math.max(1, page);
     const safeLimit = Math.min(200, Math.max(1, limit));
     const { data, total } = await auditRepository.findPaginated(filters, safePage, safeLimit);

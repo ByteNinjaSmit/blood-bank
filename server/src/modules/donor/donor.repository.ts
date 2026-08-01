@@ -32,7 +32,8 @@ export interface DonorRepo {
 export function createDonorRepo(): DonorRepo {
   return {
     async create(input, actorId) {
-      const dbRh = input.rh === 'Positive' ? 'POSITIVE' : input.rh === 'Negative' ? 'NEGATIVE' : input.rh;
+      const dbRh =
+        input.rh === 'Positive' ? 'POSITIVE' : input.rh === 'Negative' ? 'NEGATIVE' : input.rh;
       const doc = await DonorModel.create({
         ...input,
         rh: dbRh,
@@ -58,7 +59,8 @@ export function createDonorRepo(): DonorRepo {
     async update(id, patch, actorId) {
       const dbPatch = { ...patch } as any;
       if (patch.rh) {
-        dbPatch.rh = patch.rh === 'Positive' ? 'POSITIVE' : patch.rh === 'Negative' ? 'NEGATIVE' : patch.rh;
+        dbPatch.rh =
+          patch.rh === 'Positive' ? 'POSITIVE' : patch.rh === 'Negative' ? 'NEGATIVE' : patch.rh;
       }
       const updated = (await DonorModel.findByIdAndUpdate(
         id,
@@ -82,7 +84,9 @@ export function createDonorRepo(): DonorRepo {
         filter.deletedAt = null;
       }
       if (input.bloodGroup) filter.bloodGroup = input.bloodGroup;
-      if (input.rh) filter.rh = input.rh === 'Positive' ? 'POSITIVE' : input.rh === 'Negative' ? 'NEGATIVE' : input.rh;
+      if (input.rh)
+        filter.rh =
+          input.rh === 'Positive' ? 'POSITIVE' : input.rh === 'Negative' ? 'NEGATIVE' : input.rh;
       if (input.city) filter['address.city'] = input.city;
       // Filter by eligibility status.
       // - "deferred" matches both deferred types.
@@ -119,29 +123,34 @@ export function createDonorRepo(): DonorRepo {
           DonationModel.find({ campId: { $ne: null } }, { donor: 1 }).lean(),
           CampModel.find({}, { donorData: 1 }).lean(),
         ]);
-        const campDonorIds = campDonations.map(d => d.donor?.toString()).filter(Boolean) as string[];
-        const campDataDonorIds = camps.flatMap(c => c.donorData || []).map(id => id.toString());
+        const campDonorIds = campDonations
+          .map((d) => d.donor?.toString())
+          .filter(Boolean) as string[];
+        const campDataDonorIds = camps.flatMap((c) => c.donorData || []).map((id) => id.toString());
         allCampDonorIdsCache = Array.from(new Set([...campDonorIds, ...campDataDonorIds]));
         return allCampDonorIdsCache;
       };
 
       if (input.source === 'camp') {
         const allCampDonorIds = await getAllCampDonorIds();
-        filter._id = { $in: allCampDonorIds.map(id => new Types.ObjectId(id)) };
+        filter._id = { $in: allCampDonorIds.map((id) => new Types.ObjectId(id)) };
       } else if (input.source === 'inhouse') {
         const allCampDonorIds = await getAllCampDonorIds();
-        filter._id = { $nin: allCampDonorIds.map(id => new Types.ObjectId(id)) };
+        filter._id = { $nin: allCampDonorIds.map((id) => new Types.ObjectId(id)) };
       }
 
       if (input.campId) {
         const campIdObj = new Types.ObjectId(input.campId);
         const campDonations = await DonationModel.find({ campId: campIdObj }, { donor: 1 }).lean();
-        const campDonorIds = campDonations.map(d => d.donor?.toString()).filter(Boolean);
+        const campDonorIds = campDonations.map((d) => d.donor?.toString()).filter(Boolean);
         const camp = await CampModel.findById(campIdObj, { donorData: 1 }).lean();
-        const campDataDonorIds = (camp?.donorData || []).map(id => id.toString());
+        const campDataDonorIds = (camp?.donorData || []).map((id) => id.toString());
         const specificCampDonorIds = Array.from(new Set([...campDonorIds, ...campDataDonorIds]));
         const existingIdFilter = (filter._id as any) || {};
-        filter._id = { ...existingIdFilter, $in: specificCampDonorIds.map(id => new Types.ObjectId(id)) };
+        filter._id = {
+          ...existingIdFilter,
+          $in: specificCampDonorIds.map((id) => new Types.ObjectId(id)),
+        };
       }
 
       if (input.search) {
@@ -160,7 +169,9 @@ export function createDonorRepo(): DonorRepo {
         })
           .select('donor')
           .lean();
-        const donorIdsFromDonations = [...new Set(matchingDonations.map((d) => d.donor?.toString()).filter(Boolean))];
+        const donorIdsFromDonations = [
+          ...new Set(matchingDonations.map((d) => d.donor?.toString()).filter(Boolean)),
+        ];
 
         filter.$or = [
           { 'name.firstName': { $regex: term, $options: 'i' } },
@@ -204,7 +215,11 @@ export function createDonorRepo(): DonorRepo {
 
       const skip = (input.page - 1) * input.pageSize;
       const [docs, total] = await Promise.all([
-        DonorModel.find(filter).sort({ [sortField]: sortDir }).skip(skip).limit(input.pageSize).lean(),
+        DonorModel.find(filter)
+          .sort({ [sortField]: sortDir })
+          .skip(skip)
+          .limit(input.pageSize)
+          .lean(),
         DonorModel.countDocuments(filter),
       ]);
       const dtos = (docs as unknown as RawDonor[]).map(toDto);
@@ -214,14 +229,14 @@ export function createDonorRepo(): DonorRepo {
       // Re-use the camp lookup only when we don't already know (i.e. source filter not set).
       let campDonorIdSet: Set<string>;
       if (input.source === 'camp') {
-        campDonorIdSet = new Set(populatedDtos.map(d => d.id));
+        campDonorIdSet = new Set(populatedDtos.map((d) => d.id));
       } else if (input.source === 'inhouse') {
         campDonorIdSet = new Set();
       } else {
         campDonorIdSet = new Set(await getAllCampDonorIds());
       }
 
-      const taggedDtos = populatedDtos.map(dto => ({
+      const taggedDtos = populatedDtos.map((dto) => ({
         ...dto,
         source: campDonorIdSet.has(dto.id) ? ('camp' as const) : ('inhouse' as const),
       }));

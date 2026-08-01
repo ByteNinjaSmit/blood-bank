@@ -27,11 +27,6 @@ router.get(
   requirePermission('requisition:read'),
   controllers.getByRequisition,
 );
-router.post(
-  '/',
-  authenticate,
-  requirePermission('requisition:create'),
-  controllers.create,
-);
+router.post('/', authenticate, requirePermission('requisition:create'), controllers.create);
 
 export default router;

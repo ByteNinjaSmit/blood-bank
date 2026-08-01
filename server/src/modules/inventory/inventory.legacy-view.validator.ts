@@ -64,6 +64,7 @@ export const ValidateInventoryLegacyView = {
   unreserveBody: (req: Request) => parseOrThrow(UnreserveBody, req.body, 'request body'),
   sendToStorageBody: (req: Request) => parseOrThrow(SendToStorageBody, req.body, 'request body'),
   updateStorageBody: (req: Request) => parseOrThrow(UpdateStorageBody, req.body, 'request body'),
-  returnFromStorageBody: (req: Request) => parseOrThrow(ReturnFromStorageBody, req.body, 'request body'),
+  returnFromStorageBody: (req: Request) =>
+    parseOrThrow(ReturnFromStorageBody, req.body, 'request body'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
 };

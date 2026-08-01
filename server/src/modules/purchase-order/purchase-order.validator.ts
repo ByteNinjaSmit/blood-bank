@@ -13,7 +13,9 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T
 
 const LineItemSchema = z.object({
   bagType: z.enum(BAG_TYPE),
-  capacityMl: z.number().refine((v) => (BAG_CAPACITY_ML as readonly number[]).includes(v), 'Invalid capacity'),
+  capacityMl: z
+    .number()
+    .refine((v) => (BAG_CAPACITY_ML as readonly number[]).includes(v), 'Invalid capacity'),
   anticoagulant: z.enum(ANTICOAGULANT),
   productCode: z.string().trim().max(100).optional(),
   quantityOrdered: z.number().int().positive(),
@@ -62,5 +64,6 @@ export const ValidatePO = {
   updateBody: (req: Request) => parseOrThrow(UpdatePOBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListPOQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
-  deleteReasonBody: (req: Request) => parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
+  deleteReasonBody: (req: Request) =>
+    parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
 };

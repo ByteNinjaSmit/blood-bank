@@ -14,26 +14,11 @@ const controllers = createBagIssueControllers(service);
 
 const router = Router();
 
-router.get(
-  '/',
-  authenticate,
-  requirePermission('bag-issue:read'),
-  controllers.list,
-);
+router.get('/', authenticate, requirePermission('bag-issue:read'), controllers.list);
 
-router.get(
-  '/:id',
-  authenticate,
-  requirePermission('bag-issue:read'),
-  controllers.get,
-);
+router.get('/:id', authenticate, requirePermission('bag-issue:read'), controllers.get);
 
-router.post(
-  '/',
-  authenticate,
-  requirePermission('bag-issue:create'),
-  controllers.issue,
-);
+router.post('/', authenticate, requirePermission('bag-issue:create'), controllers.issue);
 
 router.patch(
   '/:id/mark-used',

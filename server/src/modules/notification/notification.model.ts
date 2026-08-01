@@ -2,11 +2,7 @@
 // Distinct from the outbound-email queue in notification.service.ts.
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
-import {
-  NOTIFICATION_SEVERITY,
-  NOTIFICATION_MODULE,
-  NOTIFICATION_CATEGORY,
-} from '@/shared/enums';
+import { NOTIFICATION_SEVERITY, NOTIFICATION_MODULE, NOTIFICATION_CATEGORY } from '@/shared/enums';
 
 const InAppNotificationSchema = new Schema(
   {

@@ -18,17 +18,13 @@ export interface UnitTemplate {
  * with a custom list when calling `deriveUnits`.
  */
 const DEFAULT_TEMPLATES: Readonly<Record<DonationType, ReadonlyArray<UnitTemplate>>> = {
-  WHOLE_BLOOD: [
-    { componentType: 'WB', volumeMl: 350, shelfLifeDays: getShelfDays('WB') },
-  ],
+  WHOLE_BLOOD: [{ componentType: 'WB', volumeMl: 350, shelfLifeDays: getShelfDays('WB') }],
   PLASMAPHERESIS: [{ componentType: 'FFP', volumeMl: 600, shelfLifeDays: getShelfDays('FFP') }],
   DOUBLE_RED_CELL: [
     { componentType: 'PRBC', volumeMl: 250, shelfLifeDays: getShelfDays('PRBC') },
     { componentType: 'PRBC', volumeMl: 250, shelfLifeDays: getShelfDays('PRBC') },
   ],
-  AUTOLOGOUS: [
-    { componentType: 'WB', volumeMl: 450, shelfLifeDays: getShelfDays('WB') },
-  ],
+  AUTOLOGOUS: [{ componentType: 'WB', volumeMl: 450, shelfLifeDays: getShelfDays('WB') }],
   DIRECTED: [
     {
       componentType: 'WB',
@@ -36,18 +32,14 @@ const DEFAULT_TEMPLATES: Readonly<Record<DonationType, ReadonlyArray<UnitTemplat
       shelfLifeDays: getShelfDays('WB'),
     },
   ],
-  REPLACEMENT: [
-    { componentType: 'WB', volumeMl: 350, shelfLifeDays: getShelfDays('WB') },
-  ],
+  REPLACEMENT: [{ componentType: 'WB', volumeMl: 350, shelfLifeDays: getShelfDays('WB') }],
   // SDP is collected by apheresis, but still passes through the
   // Component Separate page once (operator enters RPM + confirms the
   // single-donor platelet volume) before moving on to TTI — same
   // placeholder-unit pattern as Whole Blood (see component.repository.ts
   // separate(), which always clears the donation's 'WB' placeholder unit
   // on the first real separate() call, regardless of donation type).
-  SDP: [
-    { componentType: 'WB', volumeMl: 250, shelfLifeDays: getShelfDays('WB') },
-  ],
+  SDP: [{ componentType: 'WB', volumeMl: 250, shelfLifeDays: getShelfDays('WB') }],
 };
 
 export interface DerivedUnit {
@@ -88,7 +80,10 @@ export function deriveUnits(input: DeriveUnitsInput): DerivedUnit[] {
     const productCode = PRODUCT_CODE[t.componentType];
     const occurrence = (typeCounts.get(t.componentType) ?? 0) + 1;
     typeCounts.set(t.componentType, occurrence);
-    const unitId = occurrence > 1 ? `${idRoot}-${t.componentType}-${occurrence}` : `${idRoot}-${t.componentType}`;
+    const unitId =
+      occurrence > 1
+        ? `${idRoot}-${t.componentType}-${occurrence}`
+        : `${idRoot}-${t.componentType}`;
     return {
       unitId,
       productCode,

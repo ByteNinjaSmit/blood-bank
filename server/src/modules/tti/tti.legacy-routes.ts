@@ -30,19 +30,9 @@ const READ_ROLES = [
   'qa-manager',
 ] as const;
 
-router.get(
-  '/bags',
-  authenticate,
-  requirePermission('tti:read'),
-  controllers.listQuarantined,
-);
+router.get('/bags', authenticate, requirePermission('tti:read'), controllers.listQuarantined);
 
-router.get(
-  '/results',
-  authenticate,
-  requirePermission('tti:read'),
-  controllers.listDecided,
-);
+router.get('/results', authenticate, requirePermission('tti:read'), controllers.listDecided);
 
 router.post(
   '/results/:id',
