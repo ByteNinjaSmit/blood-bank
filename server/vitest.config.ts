@@ -6,6 +6,7 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
+    setupFiles: ['./test/setup-env.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

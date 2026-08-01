@@ -4,7 +4,10 @@
     "lib": ["ES2022"],
     "module": "commonjs",
     "moduleResolution": "node",
-    "rootDir": "./src",
+    // Typecheck-only config: it also covers test/, which sits outside src/.
+    // tsconfig.build.json pins rootDir back to ./src so emitted output stays
+    // at dist/server.js — the path the Dockerfile CMD runs.
+    "rootDir": ".",
     "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
