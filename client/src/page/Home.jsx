@@ -477,7 +477,7 @@ export default function BloodBankWelcome() {
               </div>
               <h2 className="text-3xl font-bold text-gray-800 mb-2">Built with Medical Excellence</h2>
               <p className="text-gray-600 text-lg">
-                HIPAA-compliant technology ensuring patient privacy and data security
+                Secure technology ensuring patient privacy and data security
               </p>
             </div>
 
@@ -540,7 +540,7 @@ export default function BloodBankWelcome() {
                 <ul className="text-gray-600 space-y-2 text-sm">
                   <li className="flex items-center justify-center gap-2">
                     <CheckCircle className="w-4 h-4 text-orange-800" />
-                    HIPAA Compliance
+                    Data Privacy Compliance
                   </li>
                   <li className="flex items-center justify-center gap-2">
                     <CheckCircle className="w-4 h-4 text-orange-800" />
