@@ -200,12 +200,6 @@ export const MODULES = [
         description: "View already-reserved units",
       },
       {
-        name: "New Reservation",
-        href: "/inventory/reserve/new",
-        permissions: ["write"],
-        description: "Reserve blood units for a patient",
-      },
-      {
         name: "Issue",
         href: "/inventory/issue",
         permissions: ["write"],
