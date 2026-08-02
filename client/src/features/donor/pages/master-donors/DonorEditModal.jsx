@@ -1,17 +1,15 @@
 import React from 'react';
-import Modal from '@/components/shared/Modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import DonorForm from '@/features/donor/components/DonorForm';
 import { mapDonorToEditForm } from './donorRegister.utils';
 
 export default function DonorEditModal({ isOpen, donor, onSubmit, onClose, loading }) {
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Edit Donor"
-      size="xl"
-      className="bg-gradient-to-b from-orange-50 to-white"
-    >
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-y-auto bg-gradient-to-b from-orange-50 to-white">
+        <DialogHeader>
+          <DialogTitle>Edit Donor</DialogTitle>
+        </DialogHeader>
       {donor && (
         <div className="mb-4 rounded-lg bg-white/70 border border-orange-100 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
@@ -41,6 +39,7 @@ export default function DonorEditModal({ isOpen, donor, onSubmit, onClose, loadi
         onCancel={onClose}
         loading={loading}
       />
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 }

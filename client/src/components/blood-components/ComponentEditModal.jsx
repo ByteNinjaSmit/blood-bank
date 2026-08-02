@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/core/api-client";
-import CustomModal from "@/components/CustomModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/lib/format-date";
@@ -133,13 +133,11 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
   };
 
   return (
-    <CustomModal
-      open={isOpen}
-      title={bagInfo ? `Edit Components – Bag ${bagInfo.bagNo}` : "Edit Components"}
-      onCancel={onClose}
-      size="lg"
-      hideFooter
-    >
+    <Dialog open={isOpen} onOpenChange={(o) => { if (!o) onClose?.(); }}>
+      <DialogContent className="sm:max-w-3xl">
+      <DialogHeader>
+        <DialogTitle>{bagInfo ? `Edit Components – Bag ${bagInfo.bagNo}` : "Edit Components"}</DialogTitle>
+      </DialogHeader>
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
           <div className="inline-flex items-center gap-2 text-gray-500">
@@ -288,7 +286,8 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
           Save Changes
         </Button>
       </div>
-    </CustomModal>
+      </DialogContent>
+    </Dialog>
   );
 };
 

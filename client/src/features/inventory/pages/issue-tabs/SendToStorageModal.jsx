@@ -1,7 +1,7 @@
 import React from 'react';
 import { Warehouse, MapPin, Plus, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import CustomModal from '@/components/CustomModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import MultiBagSelect from './MultiBagSelect';
 import { COMPONENT_TYPES } from '@/constants/component-types';
 
@@ -31,7 +31,11 @@ export default function SendToStorageModal({
   const title = isEdit ? "Edit Storage Batch" : "Send to Storage Form";
 
   return (
-    <CustomModal open={open} onCancel={onClose} title={title} size="xl" hideFooter>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-5xl">
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+      </DialogHeader>
       <div className="space-y-6 text-sm p-2">
 
         <div className="bg-red-50/50 p-4 rounded-xl border border-red-100 flex gap-3 items-start animate-fadeIn">
@@ -291,6 +295,7 @@ export default function SendToStorageModal({
           </Button>
         </div>
       </div>
-    </CustomModal>
+      </DialogContent>
+    </Dialog>
   );
 }

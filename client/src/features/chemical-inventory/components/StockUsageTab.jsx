@@ -6,6 +6,7 @@ import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportChemicalUsage } from '@/utils/excelExportHelper';
 import { chemicalInventoryApi } from '../api';
 import SearchBox from '@/components/shared/SearchBox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 function FinishBoxModal({ isOpen, lot, onClose, onConfirm, isPending }) {
   const [remaining, setRemaining] = useState('0');
@@ -14,24 +15,21 @@ function FinishBoxModal({ isOpen, lot, onClose, onConfirm, isPending }) {
     if (isOpen) setRemaining('0');
   }, [isOpen]);
 
-  if (!isOpen || !lot) return null;
+  if (!lot) return null;
 
   const maxUnits = lot.unitsPerPack || 96;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-sm w-full p-6 space-y-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div>
-          <h3 className="text-base font-bold text-gray-900">Finish Box — {lot.chemicalId?.name}</h3>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Finish Box — {lot.chemicalId?.name}</DialogTitle>
           <p className="text-xs text-gray-500 mt-1">
-            This box has {maxUnits} vials per pack. Enter how many vials are left over. Enter 0 if the box is fully used up.
+            This box has {maxUnits} wells per pack. Enter how many wells are left over. Enter 0 if the box is fully used up.
           </p>
-        </div>
+        </DialogHeader>
         <div>
-          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Vials Remaining</label>
+          <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Wells Remaining</label>
           <input
             type="number"
             min="0"
@@ -42,7 +40,7 @@ function FinishBoxModal({ isOpen, lot, onClose, onConfirm, isPending }) {
             autoFocus
           />
         </div>
-        <div className="flex gap-3 justify-end pt-2">
+        <DialogFooter>
           <button
             type="button"
             onClick={onClose}
@@ -58,9 +56,9 @@ function FinishBoxModal({ isOpen, lot, onClose, onConfirm, isPending }) {
           >
             {isPending ? 'Saving...' : 'Confirm'}
           </button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -101,7 +99,7 @@ export default function StockUsageTab() {
       .then(() => {
         toast.success(
           vialsRemaining > 0
-            ? `Box set aside with ${vialsRemaining} vials remaining — resumes on next Open`
+            ? `Box set aside with ${vialsRemaining} wells remaining — resumes on next Open`
             : 'Box fully consumed'
         );
         setFinishModalLot(null);
@@ -312,9 +310,9 @@ export default function StockUsageTab() {
                         {isVialTracked(lot) && (
                           <div className="text-[9px] font-semibold">
                             {lot.openBoxUnitsRemaining != null ? (
-                              <span className="text-amber-700">Open box: {lot.openBoxUnitsRemaining}/{lot.unitsPerPack || 96} vials left</span>
+                              <span className="text-amber-700">Open box: {lot.openBoxUnitsRemaining}/{lot.unitsPerPack || 96} wells left</span>
                             ) : (
-                              <span className="text-gray-400">{lot.unitsPerPack || 96} vials/box</span>
+                              <span className="text-gray-400">{lot.unitsPerPack || 96} wells/box</span>
                             )}
                           </div>
                         )}

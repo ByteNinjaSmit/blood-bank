@@ -129,8 +129,12 @@ const Sidebar = ({
       return;
     }
 
-    // If sidebar is closed and module has submodules, open sidebar temporarily
-    if (!isOpen && module.subModules && module.subModules.length > 0) {
+    // If sidebar is closed and module has submodules, open sidebar temporarily.
+    // Desktop-only: on mobile the drawer is either fully open or hidden (driven
+    // by showMobileOverlay, not isOpen), so this temp-open/icon-rail behavior
+    // doesn't apply — falling through lets the normal expand/collapse toggle
+    // below handle mobile submodule clicks instead.
+    if (!isMobile && !isOpen && module.subModules && module.subModules.length > 0) {
       setTempOpenForSubmodule(true);
       // Expand the module to show submodules
       setExpandedModules((prev) => {
@@ -198,8 +202,12 @@ const Sidebar = ({
     setSearchQuery(e.target.value);
   }, []);
 
-  // Determine if sidebar should be displayed as open
-  const shouldDisplayOpen = isOpen || tempOpenForSubmodule;
+  // Determine if sidebar should be displayed as open. On mobile the drawer's
+  // open/closed state is driven entirely by showMobileOverlay (isOpen stays
+  // false the whole time on mobile — see Master-Layout) — using isOpen here
+  // would leave the drawer stuck rendering its collapsed icon-rail content
+  // even while visually slid into view.
+  const shouldDisplayOpen = isMobile ? showMobileOverlay : (isOpen || tempOpenForSubmodule);
 
   return (
     <>

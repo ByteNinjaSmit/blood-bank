@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { ArrowUpDown, Undo2, Activity, Ban, Clock } from 'lucide-react';
 import useAccess from '@/features/access/useAccess';
 import { useDeferralList, useLiftDeferral } from '@/features/deferral/queries';
-import CustomModal from '@/components/CustomModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import SearchBox from '@/components/shared/SearchBox';
 
 const PAGE_SIZE = 20;
@@ -319,26 +319,32 @@ export default function DeferralRegister() {
       </div>
 
       {/* Lift Deferral Modal */}
-      <CustomModal
-        open={Boolean(liftTarget)}
-        title="Lift Donor Deferral"
-        description={`Confirm lifting the ${liftTarget?.type === 'PERMANENT' ? 'permanent' : 'temporary'} deferral for ${liftTarget?.donor?.name || 'this donor'}.`}
-        onCancel={() => setLiftTarget(null)}
-        onConfirm={handleLiftConfirm}
-        confirmText={liftMutation.isPending ? 'Lifting...' : 'Lift Deferral'}
-        confirmVariant="primary"
-      >
-        <div className="space-y-2">
-          <label className="block text-xs font-medium text-gray-500">Remarks (optional)</label>
-          <textarea
-            value={liftReason}
-            onChange={(e) => setLiftReason(e.target.value)}
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-            placeholder="Reason for lifting this deferral..."
-          />
-        </div>
-      </CustomModal>
+      <Dialog open={Boolean(liftTarget)} onOpenChange={(o) => { if (!o) setLiftTarget(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Lift Donor Deferral</DialogTitle>
+            <DialogDescription>
+              {`Confirm lifting the ${liftTarget?.type === 'PERMANENT' ? 'permanent' : 'temporary'} deferral for ${liftTarget?.donor?.name || 'this donor'}.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-gray-500">Remarks (optional)</label>
+            <textarea
+              value={liftReason}
+              onChange={(e) => setLiftReason(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder="Reason for lifting this deferral..."
+            />
+          </div>
+          <DialogFooter>
+            <button type="button" onClick={() => setLiftTarget(null)} className="px-3 py-2 rounded-md border bg-white text-sm hover:bg-slate-50">Cancel</button>
+            <button type="button" onClick={handleLiftConfirm} className="px-3 py-2 rounded-md shadow-sm text-sm bg-slate-900 hover:bg-black text-white">
+              {liftMutation.isPending ? 'Lifting...' : 'Lift Deferral'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

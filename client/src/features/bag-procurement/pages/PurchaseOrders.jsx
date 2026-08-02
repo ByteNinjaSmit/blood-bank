@@ -246,6 +246,7 @@ function PODrawer({ onClose, vendors, poToEdit }) {
               </button>
             </div>
             <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
               <table className="min-w-full text-xs">
                 <thead className="bg-gray-50">
                   <tr>
@@ -302,6 +303,7 @@ function PODrawer({ onClose, vendors, poToEdit }) {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
 
@@ -525,25 +527,27 @@ export default function PurchaseOrders() {
                             <div><span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Bill Date:</span> <span className="font-medium text-gray-800 ml-1">{fmtDate(o.billDate)}</span></div>
                           </div>
                           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Line Items</div>
-                          <table className="min-w-full text-xs border border-gray-100 rounded-lg overflow-hidden">
-                            <thead className="bg-gray-100">
-                              <tr>
-                                {['Bag Type', 'Capacity', 'Anticoagulant', 'Qty Ordered'].map((h) => (
-                                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 bg-white">
-                              {(o.lineItems ?? []).map((it, idx) => (
-                                <tr key={idx}>
-                                  <td className="px-3 py-2 font-medium">{it.bagType}</td>
-                                  <td className="px-3 py-2">{it.capacityMl} mL</td>
-                                  <td className="px-3 py-2">{it.anticoagulant}</td>
-                                  <td className="px-3 py-2 font-medium">{formatBloodBagQty((it.quantityOrdered))}</td>
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full text-xs border border-gray-100 rounded-lg overflow-hidden">
+                              <thead className="bg-gray-100">
+                                <tr>
+                                  {['Bag Type', 'Capacity', 'Anticoagulant', 'Qty Ordered'].map((h) => (
+                                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                                  ))}
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100 bg-white">
+                                {(o.lineItems ?? []).map((it, idx) => (
+                                  <tr key={idx}>
+                                    <td className="px-3 py-2 font-medium">{it.bagType}</td>
+                                    <td className="px-3 py-2">{it.capacityMl} mL</td>
+                                    <td className="px-3 py-2">{it.anticoagulant}</td>
+                                    <td className="px-3 py-2 font-medium">{formatBloodBagQty((it.quantityOrdered))}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </td>
                       </tr>
                     )}

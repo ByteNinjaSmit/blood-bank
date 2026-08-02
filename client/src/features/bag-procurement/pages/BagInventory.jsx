@@ -5,6 +5,7 @@ import { formatBloodBagQty } from '../utils/qtyHelper';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportProcurementInventory } from '@/utils/excelExportHelper';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const STATUS_BADGE = {
   AVAILABLE:    'bg-green-50 text-green-700 border-green-200',
@@ -289,45 +290,39 @@ export default function BagInventory() {
       </div>
 
       {/* Confirmation Modal */}
-      {confirmOpenBoxId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-fadeIn"
-          onClick={() => { setConfirmOpenBoxId(null); setConfirmOpenBoxBatch(''); }}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-gray-100 transform scale-100 transition-all"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="p-3 bg-green-55 rounded-full text-green-600 mb-4 border border-green-100">
-                <Warehouse className="w-8 h-8" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-950 mb-2">Open Blood Bag Box?</h3>
-              <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-                Are you sure you want to open one box from batch <span className="font-mono font-bold text-gray-800">{confirmOpenBoxBatch}</span>? This will make <span className="font-semibold text-green-700">45 bags</span> available for use.
-              </p>
-              <div className="flex items-center gap-3 w-full">
-                <button
-                  onClick={() => {
-                    setConfirmOpenBoxId(null);
-                    setConfirmOpenBoxBatch('');
-                  }}
-                  className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-55 active:bg-gray-100 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmOpenBox}
-                  disabled={openBoxMutation.isPending}
-                  className="flex-1 py-2 px-4 bg-green-700 text-white rounded-lg text-sm font-semibold hover:bg-green-800 active:bg-green-900 transition-colors shadow-sm disabled:opacity-50"
-                >
-                  {openBoxMutation.isPending ? 'Opening...' : 'Open Box'}
-                </button>
-              </div>
+      <Dialog open={!!confirmOpenBoxId} onOpenChange={(open) => { if (!open) { setConfirmOpenBoxId(null); setConfirmOpenBoxBatch(''); } }}>
+        <DialogContent className="sm:max-w-sm" showCloseButton={false}>
+          <div className="flex flex-col items-center text-center">
+            <div className="p-3 bg-green-55 rounded-full text-green-600 mb-4 border border-green-100">
+              <Warehouse className="w-8 h-8" />
+            </div>
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-gray-950 mb-2 text-center sm:text-center">Open Blood Bag Box?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+              Are you sure you want to open one box from batch <span className="font-mono font-bold text-gray-800">{confirmOpenBoxBatch}</span>? This will make <span className="font-semibold text-green-700">45 bags</span> available for use.
+            </p>
+            <div className="flex items-center gap-3 w-full">
+              <button
+                onClick={() => {
+                  setConfirmOpenBoxId(null);
+                  setConfirmOpenBoxBatch('');
+                }}
+                className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-55 active:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmOpenBox}
+                disabled={openBoxMutation.isPending}
+                className="flex-1 py-2 px-4 bg-green-700 text-white rounded-lg text-sm font-semibold hover:bg-green-800 active:bg-green-900 transition-colors shadow-sm disabled:opacity-50"
+              >
+                {openBoxMutation.isPending ? 'Opening...' : 'Open Box'}
+              </button>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

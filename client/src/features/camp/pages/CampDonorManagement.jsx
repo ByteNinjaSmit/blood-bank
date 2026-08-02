@@ -4,8 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import DonorForm from '@/features/donor/components/DonorForm';
 import DonorDetails from '@/features/donor/components/DonorDetails';
-import Modal from '@/components/shared/Modal';
-import CustomModal from '@/components/CustomModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useDonor } from '@/hooks/useDonor';
 import { useQueryClient } from '@tanstack/react-query';
 import { campKeys } from '@/features/camp/queries';
@@ -529,38 +528,47 @@ const CampDonorManagement = () => {
       </div>
 
       {/* Modals */}
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        title="Create New Donor"
-        size="xl"
-      >
-        <DonorForm
-          onSubmit={handleCreateDonor}
-          onCancel={() => setShowCreateModal(false)}
-          loading={actionLoading}
-        />
-      </Modal>
+      <Dialog open={showCreateModal} onOpenChange={(open) => { if (!open) setShowCreateModal(false); }}>
+        <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Donor</DialogTitle>
+          </DialogHeader>
+          <div className="pt-2">
+            <DonorForm
+              onSubmit={handleCreateDonor}
+              onCancel={() => setShowCreateModal(false)}
+              loading={actionLoading}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
-      <Modal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setSelectedDonor(null);
-        }}
-        title="Edit Donor"
-        size="xl"
-      >
-        <DonorForm
-          initialData={selectedDonor}
-          onSubmit={handleUpdateDonor}
-          onCancel={() => {
+      <Dialog
+        open={showEditModal}
+        onOpenChange={(open) => {
+          if (!open) {
             setShowEditModal(false);
             setSelectedDonor(null);
-          }}
-          loading={actionLoading}
-        />
-      </Modal>
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Donor</DialogTitle>
+          </DialogHeader>
+          <div className="pt-2">
+            <DonorForm
+              initialData={selectedDonor}
+              onSubmit={handleUpdateDonor}
+              onCancel={() => {
+                setShowEditModal(false);
+                setSelectedDonor(null);
+              }}
+              loading={actionLoading}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <DonorDetails
         donor={selectedDonor}
@@ -579,16 +587,24 @@ const CampDonorManagement = () => {
         onClose={() => setConfirmDelete({ isOpen: false, onConfirm: null, title: '', message: '' })}
       />
 
-      <CustomModal
+      <Dialog
         open={showForceModal && !!deleteTarget}
-        title="Cannot Delete Donor"
-        description="This donor has donation history and cannot be deleted. Donation records are clinical data and must be preserved for audit purposes."
-        onCancel={() => {
-          setShowForceModal(false);
-          setDeleteTarget(null);
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowForceModal(false);
+            setDeleteTarget(null);
+          }
         }}
-        hideFooter
-      />
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cannot Delete Donor</DialogTitle>
+          </DialogHeader>
+          <p className="text-slate-600 text-sm">
+            This donor has donation history and cannot be deleted. Donation records are clinical data and must be preserved for audit purposes.
+          </p>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

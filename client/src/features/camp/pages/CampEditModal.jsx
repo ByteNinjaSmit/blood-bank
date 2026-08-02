@@ -1,8 +1,9 @@
 "use client"
 
 import React from "react"
-import { Edit, X } from "lucide-react"
+import { Edit } from "lucide-react"
 import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 const CampEditModal = ({
   open,
@@ -21,32 +22,19 @@ const CampEditModal = ({
   const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers()
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div
-        className="bg-white w-full max-w-3xl mx-4 rounded-2xl shadow-2xl border border-slate-200 overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-800 flex items-center justify-center">
-              <Edit className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Edit Camp</h2>
-              <p className="text-xs text-slate-500">Update camp details and staff assignment</p>
-            </div>
+    <Dialog open={open && !!camp} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+        <DialogHeader className="flex-row items-center gap-3 px-6 py-4 border-b border-slate-200 bg-slate-50 space-y-0">
+          <div className="w-10 h-10 rounded-xl bg-orange-800 flex items-center justify-center shrink-0">
+            <Edit className="w-5 h-5 text-white" />
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
-            aria-label="Close edit"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+          <div>
+            <DialogTitle className="text-lg font-semibold text-slate-900">Edit Camp</DialogTitle>
+            <p className="text-xs text-slate-500">Update camp details and staff assignment</p>
+          </div>
+        </DialogHeader>
 
-        <form onSubmit={onSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="px-6 py-5 space-y-5 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={onSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="px-6 py-5 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-slate-700">Camp Name *</label>
@@ -200,8 +188,8 @@ const CampEditModal = ({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 

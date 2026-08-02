@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Droplets, Plus, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DonationDetails from '../components/DonationDetails';
-import Modal from '@/components/shared/Modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import RegisterExportDropdown from '@/components/shared/RegisterExportDropdown';
 import { DONATION_REGISTERS, TABS } from './master-donations/constants';
 import { tabEmptyText } from './master-donations/donationRegister.utils';
@@ -128,21 +128,22 @@ export default function MasterDonations() {
       )}
 
       {/* Details modal */}
-      <Modal
-        isOpen={!!reg.viewDonationId}
-        onClose={() => reg.setViewDonationId(null)}
-        title="Donation Details"
-        size="lg"
-        className="bg-gradient-to-b from-orange-50 to-white"
-      >
-        {reg.viewDetailLoading ? (
-          <div className="py-16 text-center text-gray-400 text-sm">Loading details…</div>
-        ) : reg.viewDetail ? (
-          <DonationDetails donation={reg.viewDetail} />
-        ) : (
-          <div className="py-16 text-center text-gray-400 text-sm">Donation not found.</div>
-        )}
-      </Modal>
+      <Dialog open={!!reg.viewDonationId} onOpenChange={(open) => { if (!open) reg.setViewDonationId(null); }}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-b from-orange-50 to-white">
+          <DialogHeader>
+            <DialogTitle>Donation Details</DialogTitle>
+          </DialogHeader>
+          <div className="pt-2">
+            {reg.viewDetailLoading ? (
+              <div className="py-16 text-center text-gray-400 text-sm">Loading details…</div>
+            ) : reg.viewDetail ? (
+              <DonationDetails donation={reg.viewDetail} />
+            ) : (
+              <div className="py-16 text-center text-gray-400 text-sm">Donation not found.</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation — mandatory reason, soft delete only, donation moves to Recycle Bin */}
       {reg.DeleteReasonDialog}

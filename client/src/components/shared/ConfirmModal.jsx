@@ -1,5 +1,5 @@
 import React from 'react';
-import Modal from './Modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertCircle } from 'lucide-react';
 
 const ConfirmModal = ({ 
@@ -25,7 +25,11 @@ const ConfirmModal = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
       <div className="space-y-4">
         <div className="flex items-start gap-3">
           <div className={`mt-0.5 ${iconStyles[type]}`}>
@@ -52,7 +56,8 @@ const ConfirmModal = ({
           </button>
         </div>
       </div>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 };
 

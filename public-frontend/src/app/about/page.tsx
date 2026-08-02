@@ -7,7 +7,7 @@ import TeamSection from '@/components/team-section'
 
 export default function AboutPage() {
     return (
-        <div className="pt-20">
+        <div className="pt-28">
             <AboutSection />
             <StatisticsSection />
             <EducationSection />

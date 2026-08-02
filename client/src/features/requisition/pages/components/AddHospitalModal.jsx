@@ -1,11 +1,15 @@
 import React from 'react';
-import Modal from '@/components/shared/Modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 
 export default function AddHospitalModal({ isOpen, onClose, form, onChange, saving, onSave }) {
   const { onKeyDown: handleFormKeyDown } = createFormEnterNavHandlers({ onComplete: onSave });
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Hospital" size="default">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add Hospital</DialogTitle>
+        </DialogHeader>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4" onKeyDown={handleFormKeyDown}>
         <div>
           <label className="block text-sm text-gray-700 mb-1">Name</label>
@@ -63,6 +67,7 @@ export default function AddHospitalModal({ isOpen, onClose, form, onChange, savi
           {saving ? 'Saving…' : 'Save Hospital'}
         </button>
       </div>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 }

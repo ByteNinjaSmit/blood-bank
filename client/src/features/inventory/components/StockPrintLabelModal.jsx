@@ -1,5 +1,5 @@
-import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { COMPONENT_PRINT_LABEL } from "@/constants/component-types";
 import { auditApi } from "@/features/audit/api";
 import Code39Barcode from "./Code39Barcode";
@@ -8,21 +8,11 @@ export default function StockPrintLabelModal({ item, onClose, formatDate }) {
   if (!item) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-xs no-print select-none py-8" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-2xl relative flex flex-col items-center my-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <h3 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
-          Blood Bag Label Print Preview
-        </h3>
+    <Dialog open={!!item} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl no-print flex flex-col items-center">
+        <DialogHeader>
+          <DialogTitle>Blood Bag Label Print Preview</DialogTitle>
+        </DialogHeader>
 
         {/* Wrapper to contain the CSS scaled label preview on screen */}
         <div
@@ -221,7 +211,7 @@ export default function StockPrintLabelModal({ item, onClose, formatDate }) {
             Print Label
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

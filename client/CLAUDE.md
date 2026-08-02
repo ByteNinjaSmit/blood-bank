@@ -44,7 +44,7 @@ Aliases: `@/core/*`, `@/features/*`, `@/shared/*` (all resolve via `@ → src`).
 2. **Every form has a zod schema** in `features/<x>/schemas.js`, fed to `react-hook-form` via `@hookform/resolvers/zod`.
 3. **No inline business logic in JSX.** Compute in hooks/selectors. The render tree describes UI, not workflows.
 4. **No new components > 250 LOC.** If you're adding to a god component (e.g., `Create-Donation.jsx`), split first.
-5. **One Modal component.** Use `<Modal>` from `components/ui/modal`; variant via props (`variant="confirm" | "alert" | "form"`). Do not create `CustomFooConfirmAlertModal`.
+5. **One Modal component.** Use `Dialog`/`DialogContent`/`DialogHeader`/`DialogTitle`/`DialogFooter` from `components/ui/dialog.jsx` (Radix-based). Control it with `open`/`onOpenChange`, size it via `className="sm:max-w-*"` on `DialogContent`. Do not create `CustomFooConfirmAlertModal` or hand-roll `fixed inset-0` markup.
 6. **Role gating** through `<Can module="x" action="y">` + `useAccess()`. Never copy-paste `checkAccess(...)`.
 7. **Dates rendered through `lib/format-date.js`** in `Asia/Kolkata`. Never `new Date(value).toString()`.
 8. **Routes declared in `src/app/routes.jsx`** as a config array, not inline JSX in `App.jsx`. Pull legacy routes out as you touch them.
@@ -89,3 +89,10 @@ Aliases: `@/core/*`, `@/features/*`, `@/shared/*` (all resolve via `@ → src`).
 
 - `vitest` + `@testing-library/react` for the rewritten components.
 - Test what the user can see/do; do not test implementation details.
+
+## Responsiveness conventions
+
+- **768px is the mobile breakpoint**, matching Tailwind's `md:`. Use the shared `useIsMobile()` hook from `hooks/use-mobile.js` for JS-side breakpoint checks — don't reimplement `window.innerWidth < 768` inline.
+- **`components/ui/dialog.jsx` is the one modal component.** See Hard rule 5 above.
+- **All tables must be wrapped in `overflow-x-auto`** (a direct wrapping `<div>` around the `<table>`) so wide tables scroll horizontally on narrow viewports instead of breaking the page layout.
+- **Grids with 3+ columns need responsive breakpoints.** Don't ship a bare `grid-cols-N` (N ≥ 3) with no prefix — step it up, e.g. `grid-cols-1 sm:grid-cols-2 md:grid-cols-N`, so it doesn't overflow on phones.

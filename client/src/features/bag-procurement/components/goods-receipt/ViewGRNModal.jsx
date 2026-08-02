@@ -1,7 +1,7 @@
-import { X } from 'lucide-react';
 import { formatBloodBagQty } from '../../utils/qtyHelper';
 import StatusBadge from './StatusBadge';
 import { ANTICOAGULANT_DISPLAY } from './grn-constants';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function ViewGRNModal({ onClose, grn, vendors, pos, onViewInvoice }) {
   if (!grn) return null;
@@ -13,23 +13,16 @@ export default function ViewGRNModal({ onClose, grn, vendors, pos, onViewInvoice
   const vendorName = grn.vendorName ?? vendors.find(v => (v._id ?? v.id) === po?.vendorId)?.name ?? '—';
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/40 z-40 animate-in fade-in duration-200" onClick={onClose} />
-      <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b bg-orange-850 text-white bg-orange-800">
-            <div>
-              <h2 className="text-base font-semibold text-white">Goods Receipt Details</h2>
-              <p className="text-[10px] text-orange-200 font-medium uppercase tracking-wider mt-0.5">Invoice: {grn.invoiceNo}</p>
-            </div>
-            <button onClick={onClose} className="text-orange-200 hover:text-white">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+        {/* Header */}
+        <DialogHeader className="px-6 py-4 border-b bg-orange-800">
+          <DialogTitle className="text-base font-semibold text-white">Goods Receipt Details</DialogTitle>
+          <p className="text-[10px] text-orange-200 font-medium uppercase tracking-wider mt-0.5">Invoice: {grn.invoiceNo}</p>
+        </DialogHeader>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* General Info */}
             <div className="grid grid-cols-2 gap-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
               <div>
@@ -74,7 +67,7 @@ export default function ViewGRNModal({ onClose, grn, vendors, pos, onViewInvoice
             {grn.financials && (
               <div>
                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">GST Financials</h3>
-                <div className="grid grid-cols-4 gap-3 border border-gray-100 rounded-lg p-3 bg-white">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 border border-gray-100 rounded-lg p-3 bg-white">
                   <div>
                     <span className="block text-[10px] text-gray-400">Taxable Amount</span>
                     <span className="text-xs font-semibold text-gray-700">{fmtMoney(grn.financials.basicAmountRs)}</span>
@@ -91,7 +84,7 @@ export default function ViewGRNModal({ onClose, grn, vendors, pos, onViewInvoice
                     <span className="block text-[10px] text-gray-400">IGST</span>
                     <span className="text-xs font-semibold text-gray-700">{fmtMoney(grn.financials.igstRs)}</span>
                   </div>
-                  <div className="col-span-4 border-t pt-2 mt-1 flex justify-between items-center">
+                  <div className="col-span-full border-t pt-2 mt-1 flex justify-between items-center">
                     <span className="text-xs font-bold text-gray-500 uppercase">Net Amount</span>
                     <span className="text-sm font-bold text-orange-800">{fmtMoney(grn.financials.netAmountRs)}</span>
                   </div>
@@ -137,14 +130,13 @@ export default function ViewGRNModal({ onClose, grn, vendors, pos, onViewInvoice
             )}
           </div>
 
-          {/* Footer */}
-          <div className="px-6 py-4 border-t bg-gray-50 flex justify-end">
-            <button onClick={onClose} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-              Close
-            </button>
-          </div>
+        {/* Footer */}
+        <div className="px-6 py-4 border-t bg-gray-50 flex justify-end">
+          <button onClick={onClose} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+            Close
+          </button>
         </div>
-      </div>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }

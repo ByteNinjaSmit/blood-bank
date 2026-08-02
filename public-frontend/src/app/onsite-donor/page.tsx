@@ -34,7 +34,7 @@ export default function VoluntaryCampDonationPage() {
     const upcomingCamps = camps.filter(c => new Date(c.dateFrom) > now)
 
     return (
-        <main className="min-h-screen bg-gray-50 pb-20 font-inter pt-20 lg:pt-28">
+        <main className="min-h-screen bg-gray-50 pb-20 font-inter pt-28">
             <div className="max-w-6xl mx-auto px-4 py-12">
                 <div className="mb-12 text-center">
                     <h1 className="text-4xl font-black text-gray-900 mb-4 tracking-tight">
@@ -74,7 +74,7 @@ export default function VoluntaryCampDonationPage() {
                                                             {camp.campId}
                                                         </span>
                                                         <span className="text-[10px] font-black text-green-600 bg-green-50 px-3 py-1 rounded-full uppercase tracking-widest border border-green-100">
-                                                            Live Now
+                                                            {t.onsiteDonorPage.liveNow}
                                                         </span>
                                                     </div>
                                                     <h3 className="text-3xl font-bold text-gray-900 mb-4 group-hover:text-[#8B0000] transition-colors">{camp.name}</h3>

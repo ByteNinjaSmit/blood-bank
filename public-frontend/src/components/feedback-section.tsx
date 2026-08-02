@@ -56,7 +56,7 @@ export default function FeedbackSection() {
                         className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4"
                     >
                         <MessageSquare className="w-4 h-4" />
-                        <span>Feedback</span>
+                        <span>{t.badge}</span>
                     </motion.div>
 
                     <motion.h2
@@ -106,7 +106,7 @@ export default function FeedbackSection() {
                                 {isSubmitting ? (
                                     <>
                                         <Loader2 className="w-5 h-5 animate-spin" />
-                                        <span>Saving...</span>
+                                        <span>{t.saving}</span>
                                     </>
                                 ) : (
                                     <>

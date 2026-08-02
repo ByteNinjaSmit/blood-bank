@@ -8,7 +8,6 @@ interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   toggleLanguage: () => void;
-  t: (key: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -33,18 +32,8 @@ export const LanguageProvider = ({ children }: { children: React.ReactNode }) =>
     setLanguage(prev => prev === 'en' ? 'mr' : 'en');
   };
 
-  // Simple translation helper placeholders
-  // In a real scenario, this would import from a large dictionary object
-  const t = (key: string) => {
-    // This will be replaced or augmented by the actual content hook/library usage in components
-    // For now, it just returns the key if no dictionary is connected here directly.
-    // We will use a separate 'useContent' or direct dictionary import in components usually,
-    // but having a 't' function here can be useful for global strings.
-    return key;
-  };
-
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, toggleLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, toggleLanguage }}>
       {children}
     </LanguageContext.Provider>
   );

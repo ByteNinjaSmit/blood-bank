@@ -1,5 +1,6 @@
 "use client"
 
+import Image from 'next/image'
 import { Phone, CheckCircle, Droplet, ArrowRight } from 'lucide-react'
 import { Badge } from "@/components/ui/badge"
 import { useLanguage } from '@/context/language-context'
@@ -113,10 +114,13 @@ export default function Hero() {
                                 whileHover={{ scale: 1.02, zIndex: 40 }}
                                 transition={{ duration: 0.3 }}
                             >
-                                <img
+                                <Image
                                     src="/blood-1.webp"
                                     alt="Blood donation"
-                                    className="w-[200px] sm:w-[340px] h-auto object-cover"
+                                    width={340}
+                                    height={340}
+                                    className="w-[200px] sm:w-[280px] md:w-[320px] lg:w-[340px] h-auto object-cover"
+                                    priority
                                 />
                             </motion.div>
 
@@ -126,10 +130,12 @@ export default function Hero() {
                                 whileHover={{ scale: 1.02, zIndex: 40 }}
                                 transition={{ duration: 0.3 }}
                             >
-                                <img
+                                <Image
                                     src="/blood-2.webp"
                                     alt="Laboratory"
-                                    className="w-[160px] sm:w-[260px] h-auto object-cover"
+                                    width={260}
+                                    height={260}
+                                    className="w-[160px] sm:w-[210px] md:w-[240px] lg:w-[260px] h-auto object-cover"
                                 />
                             </motion.div>
 
@@ -139,10 +145,12 @@ export default function Hero() {
                                 whileHover={{ scale: 1.02, zIndex: 40 }}
                                 transition={{ duration: 0.3 }}
                             >
-                                <img
+                                <Image
                                     src="/blood-3.webp"
                                     alt="Medical Care"
-                                    className="w-[130px] sm:w-[200px] h-auto object-cover brightness-90 contrast-125"
+                                    width={200}
+                                    height={200}
+                                    className="w-[130px] sm:w-[160px] md:w-[180px] lg:w-[200px] h-auto object-cover brightness-90 contrast-125"
                                 />
                             </motion.div>
 

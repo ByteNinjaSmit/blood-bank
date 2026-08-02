@@ -126,7 +126,7 @@ export default function StockDirectory({ onLogout }: StockDirectoryProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-slate-50 pt-36 md:pt-40 pb-16 px-4 sm:px-6"
+      className="min-h-screen bg-slate-50 pt-28 pb-16 px-4 sm:px-6"
     >
       <div className="max-w-6xl mx-auto space-y-6">
         

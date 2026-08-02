@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import CustomModal from "@/components/CustomModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import BulkTransferCoverLetter from "@/features/inventory/components/BulkTransferCoverLetter";
 import TestingCertificate from "@/features/inventory/components/TestingCertificate";
 import BulkTransferInvoice from "@/features/inventory/components/BulkTransferInvoice";
@@ -14,13 +14,11 @@ export default function IssuePrintPrompts({ bulk }) {
   return (
     <>
       {/* ── Cover Letter: Box Count Prompt ────────────────── */}
-      <CustomModal
-        open={coverLetterPromptOpen}
-        onCancel={() => setCoverLetterPromptOpen(false)}
-        title="Enter Box Count"
-        size="sm"
-        hideFooter
-      >
+      <Dialog open={coverLetterPromptOpen} onOpenChange={(o) => { if (!o) setCoverLetterPromptOpen(false); }}>
+        <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Enter Box Count</DialogTitle>
+        </DialogHeader>
         <div className="space-y-4 text-sm p-1">
           <div className="flex flex-col">
             <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Total No. of Boxes</label>
@@ -44,7 +42,8 @@ export default function IssuePrintPrompts({ bulk }) {
             </Button>
           </div>
         </div>
-      </CustomModal>
+        </DialogContent>
+      </Dialog>
 
       {/* Hidden print wrapper for the cover letter */}
       {coverLetterPrintDoc && createPortal(
@@ -55,13 +54,11 @@ export default function IssuePrintPrompts({ bulk }) {
       )}
 
       {/* ── Testing Certificate: Bleed Date & Box Count Prompt ──── */}
-      <CustomModal
-        open={testingCertPromptOpen}
-        onCancel={() => setTestingCertPromptOpen(false)}
-        title="Testing Certificate Details"
-        size="sm"
-        hideFooter
-      >
+      <Dialog open={testingCertPromptOpen} onOpenChange={(o) => { if (!o) setTestingCertPromptOpen(false); }}>
+        <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Testing Certificate Details</DialogTitle>
+        </DialogHeader>
         <div className="space-y-4 text-sm p-1">
           <div className="flex flex-col">
             <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Bleed Date</label>
@@ -94,7 +91,8 @@ export default function IssuePrintPrompts({ bulk }) {
             </Button>
           </div>
         </div>
-      </CustomModal>
+        </DialogContent>
+      </Dialog>
 
       {/* Hidden print wrapper for the testing certificate */}
       {testingCertPrintDoc && createPortal(
@@ -105,13 +103,11 @@ export default function IssuePrintPrompts({ bulk }) {
       )}
 
       {/* ── Invoice: Rate Per Litre Prompt ─────────────────── */}
-      <CustomModal
-        open={invoicePromptOpen}
-        onCancel={() => setInvoicePromptOpen(false)}
-        title="Invoice Details"
-        size="sm"
-        hideFooter
-      >
+      <Dialog open={invoicePromptOpen} onOpenChange={(o) => { if (!o) setInvoicePromptOpen(false); }}>
+        <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Invoice Details</DialogTitle>
+        </DialogHeader>
         <div className="space-y-4 text-sm p-1">
           <div className="flex flex-col">
             <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Rate per Litre (₹)</label>
@@ -135,7 +131,8 @@ export default function IssuePrintPrompts({ bulk }) {
             </Button>
           </div>
         </div>
-      </CustomModal>
+        </DialogContent>
+      </Dialog>
 
       {/* Hidden print wrapper for the invoice */}
       {invoicePrintDoc && createPortal(
