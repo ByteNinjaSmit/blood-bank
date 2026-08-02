@@ -415,7 +415,7 @@ export default function RegisterPage() {
                             </div>
                             <div>
                                 <p className="text-white font-medium text-xs sm:text-sm">Medical Grade Security</p>
-                                <p className="text-white/70 text-xs">HIPAA compliant registration process</p>
+                                <p className="text-white/70 text-xs">Secure and compliant registration process</p>
                             </div>
                         </div>
                     </div>

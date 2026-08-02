@@ -276,7 +276,7 @@ export default function BloodBankDoctorLoginPage() {
             </div>
             <div>
               <p className="text-slate-800 font-bold text-xs sm:text-sm">Medical Grade Security</p>
-              <p className="text-slate-500 text-[10px] sm:text-xs">HIPAA compliant and secure authentication protocol</p>
+              <p className="text-slate-500 text-[10px] sm:text-xs">Secure and compliant authentication protocol</p>
             </div>
           </div>
         </motion.div>
