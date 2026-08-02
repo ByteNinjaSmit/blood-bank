@@ -272,7 +272,7 @@ const Reserve = () => {
                   <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 </button>
                 <Button onClick={handleAdd} size="sm" className="h-10" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Add`}
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Add Reservation`}
                 </Button>
               </div>
             </div>
