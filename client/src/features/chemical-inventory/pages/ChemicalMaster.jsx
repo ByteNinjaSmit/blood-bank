@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, X, Search, Settings, FlaskConical, RefreshCw } from 'lucide-react';
 import {
-  useChemicalListWithStock,
+  useChemicalList,
   useCategoryList,
   useManufacturerList,
   useCreateChemical,
@@ -38,7 +38,7 @@ export default function ChemicalMaster() {
     reorderLevel: 0,
   });
 
-  const { data: chemicals, isLoading: loadingChems, isFetching: fetchingChems, refetch: refetchChems } = useChemicalListWithStock();
+  const { data: chemicals, isLoading: loadingChems, isFetching: fetchingChems, refetch: refetchChems } = useChemicalList();
   const { data: categories } = useCategoryList();
   const { data: manufacturers } = useManufacturerList();
   
