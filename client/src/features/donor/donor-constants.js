@@ -109,6 +109,15 @@ export const QUESTIONS = [
   { key: "q36", text: "36. If within 14 days after blood donation you develop symptoms of Corona or test positive, will you communicate to the blood center?" }
 ];
 
+// Blood bag numbers are prefixed with the collection center code + the
+// current year's last two digits (e.g. "SBCK26-"), rolling over
+// automatically at each new year. The operator types the remaining
+// digits after the prefix; the field stays fully editable.
+export function getBagNoPrefix() {
+  const yy = String(new Date().getFullYear()).slice(-2);
+  return `SBCK${yy}-`;
+}
+
 export const INITIAL_FORM_DATA = {
   // Step 1: Donor Profile
   firstName: "",
@@ -157,7 +166,7 @@ export const INITIAL_FORM_DATA = {
   deferralReasonObj: null,
 
   // Step 4: Bag Information
-  bagNo: "",
+  bagNo: getBagNoPrefix(),
   segmentNo: "",
   lotNo: "",
   typeOfBag: "", // Unselected

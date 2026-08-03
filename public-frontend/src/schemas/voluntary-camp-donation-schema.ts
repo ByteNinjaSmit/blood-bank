@@ -70,7 +70,7 @@ export function getCampDonationSchema(language: SchemaLanguage = 'en') {
         // 2. Contact
         address: z.string().min(5, m.addressTooShort),
         mobile: z.string().length(10, m.mobileLength).regex(/^\d+$/, m.digitsOnly),
-        pincode: z.string().length(6, m.pincodeLength).regex(/^\d+$/, m.digitsOnly),
+        pincode: z.string().length(6, m.pincodeLength).regex(/^\d+$/, m.digitsOnly).optional().or(z.literal('')),
         email: z.string().email(m.invalidEmail).optional().or(z.literal('')),
 
         // 3. History

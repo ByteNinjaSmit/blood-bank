@@ -672,6 +672,22 @@ Consequences worth knowing:
   requires a Vercel redeploy, not just an env edit.
 - `public-frontend/` (Next.js marketing site) is likewise deployed separately
   and is not covered by this pipeline.
+- The QR-code unit-verification page (`public-frontend/src/app/verify/[unitId]`)
+  needs two env vars set, one per project, both baked/read at their own
+  build or request time — see below.
+
+**Env vars added for the QR verification feature:**
+
+| Var | Where | Value | Why |
+|---|---|---|---|
+| `BACKEND_URL` | `public-frontend/` Vercel project | production API URL, e.g. `https://system.sanjivanibloodbank.org` (same value as `VITE_APP_URI_API`) | server-side `fetch` from the `/verify/[unitId]` page to `GET /api/v2/verify/:unitId` |
+| `VITE_PUBLIC_FRONTEND_URL` | `client/` Vercel project | production public-frontend URL, e.g. `https://www.sanjivanibloodbank.org` | baked into the QR-code payload printed on inventory stock and requisition issue labels — must point at the live public-frontend so scanned codes resolve |
+
+Neither var touches `docker-compose.yml`/`nginx.conf` — `/api/v2/verify/:unitId`
+is served by the existing `api` container through the same reverse proxy, no
+new route needed there. Set both Vercel vars and redeploy both projects;
+until `VITE_PUBLIC_FRONTEND_URL` is set in `client/`'s Vercel project, newly
+printed QR codes will encode a broken/relative URL.
 
 ### 9.7 Production checklist
 
@@ -685,6 +701,8 @@ Consequences worth knowing:
 - [ ] `S3_*` set and the bucket exists; test one upload after deploy
 - [ ] `CORS_SERVER` + `nginx.conf` OPTIONS block set to the production domain
 - [ ] `VITE_APP_URI_API` points to the production API; client redeployed on Vercel
+- [ ] `VITE_PUBLIC_FRONTEND_URL` (client) and `BACKEND_URL` (public-frontend) set on their
+      respective Vercel projects and both redeployed — QR-verification links depend on both
 - [ ] Health checks passing (`/health`, `/health/queues`)
 - [ ] HTTPS/TLS terminated in front of Nginx
 - [ ] MongoDB auth + TLS enabled

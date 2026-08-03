@@ -18,6 +18,7 @@ import type {
 import type { DonorDto, DonorRepo } from '@/modules/donor/donor.repository';
 import { CampModel } from '@/modules/camp/camp.model';
 import { DonationModel } from '@/modules/donation/donation.model';
+import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { notificationCenterService } from '@/modules/notification/notification-center.service';
 
 const MINIMUM_DONOR_WEIGHT_KG = 45;
@@ -150,6 +151,10 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
       );
       await invalidate(`donor:detail:${id}`);
       log.warn({ donorId: id, actorId, deleteBatchId }, 'donor cascade soft-deleted');
+      const [affectedDonations, affectedBloodUnits] = await Promise.all([
+        DonationModel.find({ deleteBatchId }, { donationId: 1 }).lean(),
+        BloodUnitModel.find({ deleteBatchId }, { unitId: 1 }).lean(),
+      ]);
       void withAudit(
         { actorId },
         {
@@ -162,7 +167,12 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
           reason,
         },
         { deletedAt: null },
-        { deletedAt: new Date(), deleteBatchId },
+        {
+          deletedAt: new Date(),
+          deleteBatchId,
+          affectedDonationIds: affectedDonations.map((d) => d.donationId),
+          affectedBloodUnitIds: affectedBloodUnits.map((u) => u.unitId),
+        },
       );
       return { permanentlyDeleted: false };
     },

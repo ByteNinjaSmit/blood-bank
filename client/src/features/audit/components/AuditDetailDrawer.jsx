@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { User, Clock, Globe, Monitor, Hash } from 'lucide-react';
+import { formatDateTime } from '@/lib/format-date';
 
 // Internal/technical DTO fields that duplicate what's already shown in
 // the entry header (entity type/label, timestamps) — noise in a
@@ -40,11 +41,24 @@ function formatUnitsList(units) {
   return units.map((u) => `${u.componentType},${u.bagNo}`).join('; ');
 }
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/;
+
+function isDateLike(v) {
+  if (v instanceof Date) return true;
+  return typeof v === 'string' && ISO_DATE_RE.test(v);
+}
+
+function isStringList(v) {
+  return Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === 'string');
+}
+
 function renderValue(v) {
   if (v === undefined) return <span className="text-gray-300 italic">—</span>;
   if (v === null) return <span className="text-gray-400 italic">null</span>;
+  if (isDateLike(v)) return formatDateTime(v);
   if (typeof v === 'string') return humanize(v);
   if (isUnitList(v)) return <span className="font-mono">{formatUnitsList(v)}</span>;
+  if (isStringList(v)) return <span className="font-mono">{v.join(', ')}</span>;
   if (typeof v === 'object') return <span className="font-mono">{JSON.stringify(v)}</span>;
   return String(v);
 }

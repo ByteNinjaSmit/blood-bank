@@ -316,7 +316,7 @@ function OnGoingCampRegistrationForm() {
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <FormInput className="md:col-span-2" label={t.onsiteRegistrationForm.fields.mobile} name="mobile" type="tel" value={formData.mobile} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.mobile} error={fieldErrors.mobile} />
-                                        <FormInput label={t.onsiteRegistrationForm.fields.pincode} name="pincode" value={formData.pincode} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.pincode} error={fieldErrors.pincode} />
+                                        <FormInput label={t.onsiteRegistrationForm.fields.pincode} name="pincode" value={formData.pincode} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.pincode} required={false} error={fieldErrors.pincode} />
                                     </div>
                                     <FormInput label={t.onsiteRegistrationForm.fields.email} name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder={t.onsiteRegistrationForm.placeholders.email} required={false} error={fieldErrors.email} />
                                 </motion.div>

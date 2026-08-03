@@ -105,7 +105,7 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                 {/* Left Side: QR Code scan area */}
                 <div className="w-[2.25cm] flex flex-col items-center justify-center border-r border-black pr-1 shrink-0 select-none">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=RequisitionID:${doc.requestId || 'N/A'};BagNo:${bag.bagNo || 'N/A'};Patient:${doc.patient?.name || 'N/A'}`}
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${import.meta.env.VITE_PUBLIC_FRONTEND_URL || ''}/verify/${inv._id || 'unknown'}`)}`}
                     alt="QR Code"
                     className="w-[1.6cm] h-[1.6cm]"
                   />
@@ -124,7 +124,7 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                     <span>Volume</span><span>: {comp.volumeMl || '—'} ml</span>
                     <span>Collected on</span><span>: {collnDateFormatted}</span>
                     <span>Expires on</span><span>: {expiryDateFormatted}</span>
-                    <span>Issued on</span><span>: {formatShortDateTime(doc.issuedAt || doc.completedAt || new Date())}</span>
+                    <span>Issued on</span><span>: {inv.issuedAt ? formatShortDateTime(inv.issuedAt) : 'Not Issued'}</span>
                   </div>
                 </div>
 
@@ -167,7 +167,7 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                       <span className="truncate">: {doc.hospitalId?.name || '—'}</span>
 
                       <span>X-Match</span>
-                      <span>: {formatShortDate(unit.crossmatchDoneAt || doc.issuedAt || doc.completedAt || new Date())} by {moSignatureName}</span>
+                      <span>: {unit.crossmatchDoneAt ? `${formatShortDate(unit.crossmatchDoneAt)} by ${moSignatureName}` : '—'}</span>
                     </div>
 
                     {/* Column 2 */}

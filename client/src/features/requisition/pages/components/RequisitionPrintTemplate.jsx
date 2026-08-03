@@ -1,4 +1,5 @@
 import React from 'react';
+import { COMPATIBILITY_RESULT_LABELS } from '@/features/requisition/pages/components/grading';
 
 // Print abbreviations (as used on the paper crossmatch form) keyed by the
 // canonical componentType short codes.
@@ -45,18 +46,20 @@ export default function RequisitionPrintTemplate({ doc, isPreview = false, print
   const patientComponent = doc.requestedComponents?.[0];
   const matchedUnits = doc.matchedInventory || [];
 
-  const COMPATIBILITY_LABELS = {
-    UNIVERSAL: 'Universal',
-    MAJOR: 'Major Compatible',
-    MINOR: 'Minor Compatible',
+  const COMPATIBILITY_TYPE_LABELS = {
+    exact: 'Exact Match',
+    compatible: 'Compatible',
   };
 
-  const compatibilityForComponent = (componentType) => {
-    const rc = doc.requestedComponents?.find((c) => c.componentType === componentType);
-    return COMPATIBILITY_LABELS[rc?.compatibilityMode] || COMPATIBILITY_LABELS.UNIVERSAL;
+  const compatibilityForUnit = (unit) => {
+    if (unit?.compatibilityResult) {
+      return COMPATIBILITY_RESULT_LABELS[unit.compatibilityResult] || unit.compatibilityResult;
+    }
+    if (unit?.compatibilityType) {
+      return COMPATIBILITY_TYPE_LABELS[unit.compatibilityType] || unit.compatibilityType;
+    }
+    return '—';
   };
-
-  const fallbackIssueAt = doc.completedAt || requestDate;
 
   return (
     <div id="requisition-receipt-print" className="bg-white text-black font-sans">
@@ -145,14 +148,14 @@ export default function RequisitionPrintTemplate({ doc, isPreview = false, print
               const comp = inv.componentId || {};
               const productLabel = COMPONENT_LABELS[comp.componentType] || comp.componentType || '';
               const bagGroup = bag.bloodGroup ? `"${bag.bloodGroup}" ${formatRh(bag.rh)}` : '';
-              const rowIssueAt = inv.issuedAt || fallbackIssueAt;
+              const rowIssueAt = inv.issuedAt || null;
               return (
                 <tr key={idx}>
                   <td className="border border-black px-2 py-2 text-center font-semibold h-8">{idx + 1}</td>
                   <td className="border border-black px-2 py-2 font-semibold">{bag.bagNo || ''}</td>
                   <td className="border border-black px-2 py-2 font-semibold">{productLabel ? `( ${productLabel} )` : ''}</td>
                   <td className="border border-black px-2 py-2 font-semibold">{bagGroup}</td>
-                  <td className="border border-black px-2 py-2 font-semibold uppercase">{comp.componentType ? compatibilityForComponent(comp.componentType) : ''}</td>
+                  <td className="border border-black px-2 py-2 font-semibold uppercase">{unit ? compatibilityForUnit(unit) : ''}</td>
                   <td className="border border-black px-2 py-2 font-semibold text-center">
                     <div className="flex flex-col items-center leading-tight">
                       <span>{formatShortDate(rowIssueAt)}</span>
