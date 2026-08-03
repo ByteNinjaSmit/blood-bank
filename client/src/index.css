@@ -263,4 +263,24 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+/* Radix Dialog/Popover content portals to document.body, outside #root —
+   so print stylesheets that hide #root during a print job (stock label,
+   requisition label/report) do NOT hide an open dialog's on-screen preview
+   copy on their own. Without this, the dialog's own preview prints
+   alongside the portaled printable area and visually overlaps it. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  /* DialogOverlay (the semi-transparent black backdrop) is rendered by
+     DialogContent internally as a sibling — it never carries the
+     no-print class callers put on DialogContent itself, so without this
+     it still prints as a dark tint over the whole page (the "greyed
+     out" sticker report). */
+  [data-slot="dialog-overlay"] {
+    display: none !important;
+  }
 }

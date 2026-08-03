@@ -49,6 +49,7 @@ import feedbackRouter from '@/modules/feedback/feedback.routes';
 import misRouter from '@/modules/mis/mis.routes';
 import affectedRecordsRouter from '@/modules/affected-records/affected-records.routes';
 import notificationRouter from '@/modules/notification/notification.routes';
+import verifyRouter from '@/modules/verify/verify.routes';
 import { errorMiddleware } from '@/shared/middlewares/error';
 
 interface ModuleRoute {
@@ -94,6 +95,7 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/mis', router: misRouter },
   { path: '/affected-records', router: affectedRecordsRouter },
   { path: '/notification', router: notificationRouter },
+  { path: '/verify', router: verifyRouter },
 ];
 
 export function registerRoutes(): Router {

@@ -111,7 +111,8 @@ export function createDonationControllers(service: DonationService): DonationCon
               : 450;
           const unitTemplates = [{ componentType: 'WB', volumeMl: volume }];
 
-          const campId = legacy.siteId && legacy.siteId !== 'null' ? legacy.siteId : undefined;
+          const rawCampId = legacy.campId ?? legacy.siteId;
+          const campId = rawCampId && rawCampId !== 'null' ? rawCampId : undefined;
 
           req.body = {
             donor: legacy.donor,

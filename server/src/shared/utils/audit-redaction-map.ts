@@ -36,8 +36,8 @@ function isSecretKey(key: string): boolean {
 // rather than stripped outright, so the viewer can still show "a phone
 // number was changed" without exposing the value.
 const ENTITY_MASK_FIELDS: Readonly<Record<string, ReadonlyArray<string>>> = {
-  donor: ['phone', 'mobile', 'address', 'email', 'aadhaar', 'idProofNumber'],
-  Donor: ['phone', 'mobile', 'address', 'email', 'aadhaar', 'idProofNumber'],
+  donor: ['address', 'email', 'aadhaar', 'idProofNumber'],
+  Donor: ['address', 'email', 'aadhaar', 'idProofNumber'],
   user: ['phone', 'address'],
   User: ['phone', 'address'],
   tti: ['rawValue', 'odValue', 'cutoffValue'],
