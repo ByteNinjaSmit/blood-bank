@@ -10,17 +10,24 @@ import { formatDateTime } from '@/lib/format-date';
 // a confusing bare ObjectId row (e.g. a bulk-transfer DELETE's "id: 68f2…").
 const NOISE_DIFF_KEYS = new Set(['id', '_id', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy']);
 
+// Fields that are masked to '[REDACTED]' at write time (see server
+// audit-redaction-map.ts). Nothing meaningful to show in a diff once
+// masked, so drop the row instead of rendering a "[REDACTED]" chip.
+const REDACTED_DIFF_KEYS = new Set(['phone']);
+
 function diffRows(before, after, changedFields) {
   const keys = changedFields?.length
     ? changedFields
     : Array.from(new Set([...Object.keys(before || {}), ...Object.keys(after || {})])).filter(
         (key) => !NOISE_DIFF_KEYS.has(key),
       );
-  return keys.map((key) => ({
-    key,
-    before: before && key in before ? before[key] : undefined,
-    after: after && key in after ? after[key] : undefined,
-  }));
+  return keys
+    .filter((key) => !REDACTED_DIFF_KEYS.has(key))
+    .map((key) => ({
+      key,
+      before: before && key in before ? before[key] : undefined,
+      after: after && key in after ? after[key] : undefined,
+    }));
 }
 
 // "indeterminate" is the internal TTI decision/result value — the lab
