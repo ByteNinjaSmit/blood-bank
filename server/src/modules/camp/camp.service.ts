@@ -12,7 +12,7 @@ export interface CreateCampInput {
   description?: string;
   address: string;
   phone: string;
-  email: string;
+  email?: string;
   staff: string[];
   dateFrom: Date;
   dateTo: Date;

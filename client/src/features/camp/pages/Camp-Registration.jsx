@@ -35,9 +35,7 @@ const CampRegistration = () => {
     if (!formData.name.trim()) newErrors.name = "Name is requiorange"
     if (!formData.address.trim()) newErrors.address = "Address is requiorange"
     if (!formData.contactInfo.phone.trim()) newErrors.phone = "Phone is requiorange"
-    if (!formData.contactInfo.email.trim()) {
-      newErrors.email = "Email is requiorange"
-    } else if (!/\S+@\S+\.\S+/.test(formData.contactInfo.email)) {
+    if (formData.contactInfo.email.trim() && !/\S+@\S+\.\S+/.test(formData.contactInfo.email)) {
       newErrors.email = "Email format is invalid"
     }
 
@@ -79,9 +77,7 @@ const CampRegistration = () => {
     } else if (step === 2) {
       if (!formData.address.trim()) newErrors.address = "Address is required"
       if (!formData.contactInfo.phone.trim()) newErrors.phone = "Phone is required"
-      if (!formData.contactInfo.email.trim()) {
-        newErrors.email = "Email is required"
-      } else if (!/\S+@\S+\.\S+/.test(formData.contactInfo.email)) {
+      if (formData.contactInfo.email.trim() && !/\S+@\S+\.\S+/.test(formData.contactInfo.email)) {
         newErrors.email = "Email format is invalid"
       }
       const phoneRegex = /^\d{10}$/
@@ -323,7 +319,7 @@ const CampRegistration = () => {
 
                 {/* Email */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 block">Email *</label>
+                  <label className="text-sm font-medium text-gray-700 block">Email</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
                       <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
