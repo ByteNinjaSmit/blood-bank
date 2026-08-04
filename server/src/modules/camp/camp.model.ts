@@ -8,7 +8,7 @@ const CampSchema = new Schema(
     address: { type: String, required: true, trim: true },
     contactInfo: {
       phone: { type: String, required: true, trim: true },
-      email: { type: String, required: true, trim: true, lowercase: true },
+      email: { type: String, trim: true, lowercase: true },
     },
     dateFrom: { type: Date, required: true, index: true },
     dateTo: {

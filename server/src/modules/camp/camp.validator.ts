@@ -12,7 +12,7 @@ export const CreateCampBody = z.object({
   description: blank(z.string().trim().max(2000).optional()),
   address: z.string().trim().min(1).max(500),
   phone: z.string().trim().min(6).max(20),
-  email: z.string().email(),
+  email: blank(z.string().email().optional()),
   staff: z.array(z.string().regex(OBJECT_ID)).default([]),
   dateFrom: z.coerce.date(),
   dateTo: z.coerce.date(),

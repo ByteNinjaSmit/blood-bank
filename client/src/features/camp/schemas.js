@@ -6,7 +6,7 @@ export const CreateCampSchema = z.object({
   description: z.string().trim().min(1).max(2000),
   address: z.string().trim().min(1, 'Address required').max(500),
   phone: z.string().trim().min(6).max(20),
-  email: z.string().email('Valid email required'),
+  email: z.string().email('Valid email required').optional().or(z.literal('')),
   staff: z.array(z.string()).min(1, 'Select at least one staff member'),
   dateFrom: z.coerce.date({ required_error: 'Start date required' }),
   dateTo: z.coerce.date({ required_error: 'End date required' }),
