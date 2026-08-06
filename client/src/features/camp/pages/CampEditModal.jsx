@@ -1,7 +1,5 @@
-"use client"
-
-import React from "react"
-import { Edit } from "lucide-react"
+import React, { useState } from "react"
+import { Edit, Plus, X, Users, UserPlus } from "lucide-react"
 import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
@@ -14,12 +12,28 @@ const CampEditModal = ({
   saving,
   onChange,
   onToggleStaff,
+  onAddVolunteer,
+  onRemoveVolunteer,
   onClose,
   onSubmit,
 }) => {
+  const [volInput, setVolInput] = useState("")
+
   if (!open || !camp) return null
 
+  const handleAddVol = (e) => {
+    if (e) e.preventDefault()
+    const trimmed = volInput.trim()
+    if (!trimmed) return
+    if (onAddVolunteer) {
+      onAddVolunteer(trimmed)
+    }
+    setVolInput("")
+  }
+
   const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers()
+
+  const volunteersList = form?.volunteers || []
 
   return (
     <Dialog open={open && !!camp} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -30,7 +44,7 @@ const CampEditModal = ({
           </div>
           <div>
             <DialogTitle className="text-lg font-semibold text-slate-900">Edit Camp</DialogTitle>
-            <p className="text-xs text-slate-500">Update camp details and staff assignment</p>
+            <p className="text-xs text-slate-500">Update camp details, staff assignment, and external volunteers</p>
           </div>
         </DialogHeader>
 
@@ -140,8 +154,12 @@ const CampEditModal = ({
             </div>
           </div>
 
+          {/* System Staff */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-700">Assign Staff</label>
+            <label className="block text-sm font-medium text-slate-700 flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-orange-800" />
+              Assign System Staff (from User Management)
+            </label>
             {staffList && staffList.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {staffList.map((staff) => {
@@ -169,6 +187,60 @@ const CampEditModal = ({
               <p className="text-xs text-slate-500">No staff members available to assign.</p>
             )}
             <p className="text-[11px] text-slate-400">Click on staff chips to toggle assignment for this camp.</p>
+          </div>
+
+          {/* External Volunteers */}
+          <div className="space-y-3 pt-3 border-t border-slate-200">
+            <label className="block text-sm font-medium text-slate-700 flex items-center gap-1.5">
+              <UserPlus className="w-4 h-4 text-orange-800" />
+              External Volunteers & Guest Helpers
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={volInput}
+                onChange={(e) => setVolInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    handleAddVol()
+                  }
+                }}
+                placeholder="Enter volunteer name (e.g. Priya Patel - NGO)"
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-700"
+              />
+              <button
+                type="button"
+                onClick={handleAddVol}
+                className="px-4 py-2 bg-orange-800 hover:bg-orange-900 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors shrink-0 shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Volunteer
+              </button>
+            </div>
+
+            {volunteersList.length > 0 ? (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {volunteersList.map((vol, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-orange-50 border border-orange-200 text-orange-900 text-xs font-medium"
+                  >
+                    <span>{vol}</span>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveVolunteer && onRemoveVolunteer(idx)}
+                      className="w-4 h-4 rounded-full flex items-center justify-center text-orange-700 hover:bg-orange-200 transition-colors"
+                      title="Remove volunteer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 italic">No external volunteers added yet.</p>
+            )}
           </div>
 
           <div className="flex items-center justify-between pt-4 border-t border-slate-200">

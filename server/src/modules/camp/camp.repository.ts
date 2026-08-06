@@ -52,7 +52,7 @@ export const campRepo = {
   async detail(id: string) {
     return CampModel.findById(id)
       .select(
-        'campId name description address contactInfo dateFrom dateTo createdBy lastUpdatedBy staff createdAt donorData unitData deletedAt',
+        'campId name description address contactInfo dateFrom dateTo createdBy lastUpdatedBy staff volunteers createdAt donorData unitData deletedAt',
       )
       .populate('createdBy', 'name phone email')
       .populate('lastUpdatedBy', 'name phone email')
@@ -68,7 +68,7 @@ export const campRepo = {
       deletedOnly ? { deletedAt: { $ne: null } } : { deletedAt: null },
     )
       .select(
-        'campId name description address contactInfo dateFrom dateTo createdAt createdBy staff deletedAt donorData unitData',
+        'campId name description address contactInfo dateFrom dateTo createdAt createdBy staff volunteers deletedAt donorData unitData',
       )
       .populate('createdBy', 'name')
       .populate('staff', 'name')

@@ -25,6 +25,8 @@ const CampSchema = new Schema(
     lastUpdatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     // Staff assigned to run this camp (refs validated to max 50 at app layer).
     staff: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    // External volunteers/guest helpers (free-text names)
+    volunteers: [{ type: String, trim: true }],
     // Donors registered at this camp.
     donorData: [{ type: Schema.Types.ObjectId, ref: 'Donor' }],
     // Blood units collected at this camp (refs BloodUnit, not legacy BloodBag).

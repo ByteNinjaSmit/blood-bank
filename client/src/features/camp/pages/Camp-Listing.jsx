@@ -160,6 +160,7 @@ const CampList = () => {
       dateFrom: camp.dateFrom ? new Date(new Date(camp.dateFrom).getTime() - new Date(camp.dateFrom).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
       dateTo: camp.dateTo ? new Date(new Date(camp.dateTo).getTime() - new Date(camp.dateTo).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
       staff: (camp.staff || []).map((member) => member._id),
+      volunteers: camp.volunteers || [],
     })
     setEditErrors({})
     setEditModalOpen(true)
@@ -186,6 +187,21 @@ const CampList = () => {
       staff: prev.staff.includes(staffId)
         ? prev.staff.filter((id) => id !== staffId)
         : [...prev.staff, staffId],
+    }))
+  }
+
+  const handleAddVolunteerInEdit = (name) => {
+    if (!name) return
+    setEditForm((prev) => ({
+      ...prev,
+      volunteers: prev.volunteers?.includes(name) ? prev.volunteers : [...(prev.volunteers || []), name],
+    }))
+  }
+
+  const handleRemoveVolunteerInEdit = (idxToRemove) => {
+    setEditForm((prev) => ({
+      ...prev,
+      volunteers: (prev.volunteers || []).filter((_, idx) => idx !== idxToRemove),
     }))
   }
 
@@ -244,6 +260,7 @@ const CampList = () => {
       phone: editForm.phone.trim(),
       email: editForm.email.trim(),
       staff: editForm.staff,
+      volunteers: editForm.volunteers,
       dateFrom: editForm.dateFrom,
       dateTo: editForm.dateTo,
     }
@@ -544,6 +561,8 @@ const CampList = () => {
         saving={editSaving}
         onChange={handleEditChange}
         onToggleStaff={toggleStaffInEdit}
+        onAddVolunteer={handleAddVolunteerInEdit}
+        onRemoveVolunteer={handleRemoveVolunteerInEdit}
         onClose={closeEdit}
         onSubmit={handleEditSubmit}
       />
