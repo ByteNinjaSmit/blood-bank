@@ -14,6 +14,7 @@ export interface CreateCampInput {
   phone: string;
   email?: string;
   staff: string[];
+  volunteers?: string[];
   dateFrom: Date;
   dateTo: Date;
 }
@@ -24,6 +25,7 @@ export interface UpdateCampInput {
   phone?: string;
   email?: string;
   staff?: string[];
+  volunteers?: string[];
   dateFrom?: Date;
   dateTo?: Date;
 }
@@ -49,6 +51,7 @@ export const campService = {
       createdBy: actorId,
       lastUpdatedBy: actorId,
       staff: input.staff,
+      volunteers: input.volunteers ?? [],
     });
     await auditService.record({
       actorId,
@@ -73,6 +76,7 @@ export const campService = {
       address: camp.address,
       contactInfo: camp.contactInfo ? { ...camp.contactInfo } : undefined,
       staff: camp.staff,
+      volunteers: camp.volunteers,
       dateFrom: camp.dateFrom,
       dateTo: camp.dateTo,
     };
@@ -82,6 +86,7 @@ export const campService = {
     if (input.phone && camp.contactInfo) camp.contactInfo.phone = input.phone;
     if (input.email && camp.contactInfo) camp.contactInfo.email = input.email;
     if (input.staff) camp.staff = input.staff as unknown as typeof camp.staff;
+    if (input.volunteers) camp.volunteers = input.volunteers;
     if (input.dateFrom) camp.dateFrom = input.dateFrom;
     if (input.dateTo) camp.dateTo = input.dateTo;
     if (camp.dateFrom && camp.dateTo && new Date(camp.dateTo) < new Date(camp.dateFrom)) {
@@ -103,6 +108,7 @@ export const campService = {
         address: saved.address,
         contactInfo: saved.contactInfo,
         staff: saved.staff,
+        volunteers: saved.volunteers,
         dateFrom: saved.dateFrom,
         dateTo: saved.dateTo,
       },

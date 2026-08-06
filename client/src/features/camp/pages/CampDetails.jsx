@@ -405,11 +405,11 @@ const CampDetails = () => {
             <div className="space-y-3">
               {camp.staff && camp.staff.length > 0 && (
                 <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs font-medium text-gray-500 mb-2">Staff ({camp.staff.length})</p>
+                  <p className="text-xs font-medium text-gray-500 mb-2">System Staff ({camp.staff.length})</p>
                   <div className="space-y-2">
-                    {camp.staff.slice(0, 3).map((member, index) => (
+                    {camp.staff.map((member, index) => (
                       <div key={member._id || index} className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-800 flex items-center justify-center text-xs font-semibold" title={`${member.name?.first || ''} ${member.name?.last || ''}`}>
+                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-800 flex items-center justify-center text-xs font-semibold shrink-0" title={`${member.name?.first || ''} ${member.name?.last || ''}`}>
                           {(member?.name?.first?.[0] || 'S')}{(member?.name?.last?.[0] || '')}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -420,9 +420,18 @@ const CampDetails = () => {
                         </div>
                       </div>
                     ))}
-                    {camp.staff.length > 3 && (
-                      <p className="text-xs text-gray-500">+{camp.staff.length - 3} more</p>
-                    )}
+                  </div>
+                </div>
+              )}
+              {camp.volunteers && camp.volunteers.length > 0 && (
+                <div className="p-3 bg-orange-50/60 border border-orange-100 rounded-lg">
+                  <p className="text-xs font-medium text-orange-900 mb-2">External Volunteers ({camp.volunteers.length})</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {camp.volunteers.map((volName, index) => (
+                      <span key={index} className="px-2 py-0.5 rounded bg-white text-orange-900 border border-orange-200 text-xs font-medium shadow-2xs">
+                        {volName}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}

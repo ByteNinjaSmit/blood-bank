@@ -14,6 +14,7 @@ export const CreateCampBody = z.object({
   phone: z.string().trim().min(6).max(20),
   email: blank(z.string().email().optional()),
   staff: z.array(z.string().regex(OBJECT_ID)).default([]),
+  volunteers: z.array(z.string().trim().min(1).max(100)).default([]),
   dateFrom: z.coerce.date(),
   dateTo: z.coerce.date(),
 });
@@ -25,6 +26,7 @@ export const UpdateCampBody = z.object({
   phone: blank(z.string().trim().min(6).max(20).optional()),
   email: blank(z.string().email().optional()),
   staff: z.array(z.string().regex(OBJECT_ID)).optional(),
+  volunteers: z.array(z.string().trim().min(1).max(100)).optional(),
   dateFrom: z.coerce.date().optional(),
   dateTo: z.coerce.date().optional(),
 });
