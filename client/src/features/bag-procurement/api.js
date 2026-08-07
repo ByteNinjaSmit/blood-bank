@@ -60,6 +60,7 @@ export const bagProcurementApi = {
     get:     (id)       => apiClient.get(`${V}/bag-discard/${id}`).then(unwrap),
     create:  (data)     => apiClient.post(`${V}/bag-discard`, data).then(unwrap),
     approve: (id, data) => apiClient.patch(`${V}/bag-discard/${id}/approve`, data).then(unwrap),
+    remove:  (id, reason) => apiClient.delete(`${V}/bag-discard/${id}`, { data: { reason } }).then(unwrap),
   },
 
   upload: {

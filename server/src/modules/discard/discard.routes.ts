@@ -31,5 +31,11 @@ const WRITE_ROLES: Role[] = ['system-admin', 'bbo', 'lab-tech-component', 'qa-ma
 
 router.get('/get-list', authenticate, requirePermission('discard:read'), controllers.list);
 router.post('/create', authenticate, requirePermission('discard:create'), controllers.create);
+router.post(
+  '/:unitId/restore',
+  authenticate,
+  requirePermission('discard:restore'),
+  controllers.restore,
+);
 
 export default router;

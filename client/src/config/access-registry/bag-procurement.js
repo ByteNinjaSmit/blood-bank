@@ -13,7 +13,7 @@ export default {
     // bag-stock:read (used for the closing-stock lookup on this page) is
     // a server-only DEPENDENCY_ONLY_PERMISSIONS grant — deliberately
     // excluded from the client set, so it's not listed as required here.
-    { id: 'procurement-discard', label: 'Bag Discard', route: '/procurement/discard', actions: { view: ['bag-discard:read'], create: ['bag-discard:create'], update: ['bag-discard:approve'] } },
+    { id: 'procurement-discard', label: 'Bag Discard', route: '/procurement/discard', actions: { view: ['bag-discard:read'], create: ['bag-discard:create'], update: ['bag-discard:approve'], delete: ['bag-discard:delete'] } },
     { id: 'procurement-inventory', label: 'Bag Inventory', route: '/procurement/inventory', actions: { view: ['bag-stock:read'], update: ['bag-stock:update'] } },
   ],
 };

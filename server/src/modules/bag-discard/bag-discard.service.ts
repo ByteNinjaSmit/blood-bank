@@ -17,6 +17,7 @@ export interface BagDiscardService {
   get(id: string): Promise<BagDiscardDto>;
   create(input: CreateBagDiscardInput, actorId: string): Promise<BagDiscardDto>;
   approve(id: string, input: ApproveBagDiscardInput, actorId: string): Promise<BagDiscardDto>;
+  remove(id: string, reason: string, actorId: string): Promise<void>;
 }
 
 function generateDiscardId(): string {
@@ -131,6 +132,36 @@ export function createBagDiscardService(deps: {
         { approvedById: actorId, disposalMethod: input.disposalMethod },
       );
       return updated;
+    },
+
+    async remove(id, reason, actorId) {
+      const discard = await deps.discards.findById(id);
+      if (!discard) throw new NotFoundError('BagDiscard', id);
+
+      // Reverse the discardedQty this record contributed so the bag
+      // returns to available closing stock in its batch, then remove the
+      // record entirely — a discard entry is a correctable data-entry
+      // event, not a clinical record with its own downstream references.
+      await deps.bagStock.decrementDiscarded(discard.stockId, discard.quantity, actorId);
+      await deps.discards.delete(id);
+      log.warn(
+        { discardId: id, stockId: discard.stockId, quantity: discard.quantity, actorId, reason },
+        'bag discard record removed and stock reversed',
+      );
+      void withAudit(
+        { actorId },
+        {
+          module: 'bag-discard',
+          action: 'DELETE',
+          entityType: 'BagDiscard',
+          entityId: id,
+          entityLabel: discard.discardId,
+          severity: 'critical',
+          reason,
+        },
+        discard,
+        undefined,
+      );
     },
   };
 }

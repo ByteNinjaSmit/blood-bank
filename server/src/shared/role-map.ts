@@ -50,6 +50,7 @@ const LEGACY_MODULE_PERMISSION_OVERRIDES: Partial<
   },
   po: { update: 'po:approve' },
   'bag-discard': { update: 'bag-discard:approve' },
+  discard: { update: 'discard:restore' },
   // Chemical/reagent inventory only has read + one combined manage
   // permission server-side — every mutation gates on chemical:manage.
   chemical: { create: 'chemical:manage', update: 'chemical:manage' },

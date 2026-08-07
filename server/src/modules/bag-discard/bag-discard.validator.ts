@@ -37,13 +37,19 @@ export const ListBagDiscardQuery = z.object({
 
 export const IdParam = z.object({ id: z.string().regex(OBJECT_ID, 'Invalid id') });
 
+export const RemoveBagDiscardBody = z.object({
+  reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
+});
+
 export type CreateBagDiscardInput = z.infer<typeof CreateBagDiscardBody>;
 export type ApproveBagDiscardInput = z.infer<typeof ApproveBagDiscardBody>;
 export type ListBagDiscardInput = z.infer<typeof ListBagDiscardQuery>;
+export type RemoveBagDiscardInput = z.infer<typeof RemoveBagDiscardBody>;
 
 export const ValidateBagDiscard = {
   createBody: (req: Request) => parseOrThrow(CreateBagDiscardBody, req.body, 'request body'),
   approveBody: (req: Request) => parseOrThrow(ApproveBagDiscardBody, req.body, 'request body'),
   listQuery: (req: Request) => parseOrThrow(ListBagDiscardQuery, req.query, 'query string'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
+  removeBody: (req: Request) => parseOrThrow(RemoveBagDiscardBody, req.body, 'request body'),
 };

@@ -1,8 +1,8 @@
-import { Eye, Loader2 } from "lucide-react";
+import { Eye, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@/lib/format-date";
 
-const DiscardTable = ({ items = [], isLoading, onView }) => {
+const DiscardTable = ({ items = [], isLoading, onView, onRestore, restoringId }) => {
   return (
     <div className="hidden md:block overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200">
@@ -52,14 +52,34 @@ const DiscardTable = ({ items = [], isLoading, onView }) => {
                   {formatDateTime(item.discardedAt)}
                 </td>
                 <td className="px-4 py-3 text-sm">
+                  <div className="flex items-center gap-1.5">
                     <Button
                       onClick={() => onView?.(item)}
                       variant="outline"
                       size="sm"
                       className="h-8 w-8 p-0"
+                      title="View details"
                     >
                       <Eye className="w-4 h-4 text-gray-500" />
                     </Button>
+                    {item.reason === "CASCADE_DELETED" && (
+                      <Button
+                        onClick={() => onRestore?.(item)}
+                        disabled={restoringId === item.itemId}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2 gap-1.5 border-green-200 text-green-700 hover:bg-green-50"
+                        title="Restore — reinstates the deleted donation/donor and returns this unit to normal status"
+                      >
+                        {restoringId === item.itemId ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        )}
+                        Restore
+                      </Button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))

@@ -22,6 +22,10 @@ const CreateBody = z.object({
   ttiResults: z.record(z.string(), z.string()).optional(),
 });
 
+const UnitIdParam = z.object({
+  unitId: z.string().trim().min(1, 'unitId is required'),
+});
+
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {
   const r = schema.safeParse(value);
   if (!r.success) throw new ValidationError(`Invalid ${where}`, r.error.issues);
@@ -31,4 +35,5 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T
 export const ValidateDiscard = {
   listQuery: (req: Request) => parseOrThrow(ListQuery, req.query, 'query string'),
   createBody: (req: Request) => parseOrThrow(CreateBody, req.body, 'request body'),
+  unitIdParam: (req: Request) => parseOrThrow(UnitIdParam, req.params, 'path params'),
 };

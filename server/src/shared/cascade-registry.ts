@@ -95,6 +95,10 @@ const bloodUnitNode: CascadeNode = {
       {
         $set: {
           status: nextStatus,
+          discardReason: 'CASCADE_DELETED',
+          discardNotes: ctx.reason
+            ? `Auto-discarded: upstream donation/donor deleted (${ctx.reason})`
+            : 'Auto-discarded: upstream donation/donor deleted',
           updatedBy: new Types.ObjectId(ctx.actorId),
           deleteBatchId: ctx.deleteBatchId,
         },
@@ -145,7 +149,7 @@ const bloodUnitNode: CascadeNode = {
       { _id: doc._id },
       {
         $set: { status: nextStatus, updatedBy: new Types.ObjectId(ctx.actorId) },
-        $unset: { deleteBatchId: '' },
+        $unset: { deleteBatchId: '', discardReason: '', discardNotes: '' },
         $push: {
           statusHistory: {
             from: 'DISCARDED',
@@ -170,6 +174,15 @@ const ttiNode: CascadeNode = {
   parentBusinessIdField: 'donationId',
 };
 
+// Mirrors the batch+type lookup donation.service.ts's register() uses to
+// consume a bag (BagStock.incrementIssued) when a donation records
+// lotNo+typeOfBag. Deleting the donation must reverse exactly that
+// increment so the bag count in that batch is restored — never sent to
+// discard, never left permanently "issued" once the donation is gone.
+function mapBagType(typeOfBag: string | undefined): 'DOUBLE' | 'TRIPLE' | null {
+  return typeOfBag === 'DB' ? 'DOUBLE' : typeOfBag === 'TB' ? 'TRIPLE' : null;
+}
+
 // Exported so donation.service.ts can reuse the exact same subtree
 // (BloodUnit/TTI) when a donation is deleted directly, not only when
 // cascading down from a deleted Donor.
@@ -179,6 +192,54 @@ export const donationNode: CascadeNode = {
   linkField: 'donor',
   linkType: 'objectId',
   children: [bloodUnitNode, ttiNode],
+  onSoftDelete: async (doc, ctx: CascadeContext) => {
+    if (doc.bagStockIssueReversed || !doc.lotNo || !doc.typeOfBag) return;
+    const bagType = mapBagType(doc.typeOfBag);
+    if (!bagType) return;
+    const bagStock = await BagStockModel.findOne({
+      batchNumber: doc.lotNo,
+      bagType,
+      deletedAt: null,
+    }).session(ctx.session);
+    if (!bagStock) return;
+    await BagStockModel.updateOne(
+      { _id: bagStock._id },
+      {
+        $inc: { issuedQty: -1 },
+        $set: { lastUpdatedAt: new Date(), updatedBy: new Types.ObjectId(ctx.actorId) },
+      },
+      { session: ctx.session ?? undefined },
+    );
+    await DonationModel.updateOne(
+      { _id: doc._id },
+      { $set: { bagStockIssueReversed: true } },
+      { session: ctx.session ?? undefined },
+    );
+  },
+  onRestore: async (doc, ctx: CascadeRestoreContext) => {
+    if (!doc.bagStockIssueReversed || !doc.lotNo || !doc.typeOfBag) return;
+    const bagType = mapBagType(doc.typeOfBag);
+    if (!bagType) return;
+    const bagStock = await BagStockModel.findOne({
+      batchNumber: doc.lotNo,
+      bagType,
+      deletedAt: null,
+    }).session(ctx.session);
+    if (!bagStock) return;
+    await BagStockModel.updateOne(
+      { _id: bagStock._id },
+      {
+        $inc: { issuedQty: 1 },
+        $set: { lastUpdatedAt: new Date(), updatedBy: new Types.ObjectId(ctx.actorId) },
+      },
+      { session: ctx.session ?? undefined },
+    );
+    await DonationModel.updateOne(
+      { _id: doc._id },
+      { $set: { bagStockIssueReversed: false } },
+      { session: ctx.session ?? undefined },
+    );
+  },
 };
 
 const deferralNode: CascadeNode = {

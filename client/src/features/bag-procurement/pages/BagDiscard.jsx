@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Trash2, Plus, X, CheckCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { useBagDiscardList, useCreateBagDiscard, useApproveBagDiscard } from '../queries';
+import { useBagDiscardList, useCreateBagDiscard, useApproveBagDiscard, useRemoveBagDiscard } from '../queries';
 import { useBagStockList } from '../queries';
 import { formatBloodBagQty, calcTotalBags } from '../utils/qtyHelper';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
@@ -227,9 +227,62 @@ function ApproveDrawer({ discard, onClose }) {
   );
 }
 
+function RemoveDrawer({ discard, onClose }) {
+  const [reason, setReason] = useState('');
+  const removeDiscard = useRemoveBagDiscard();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    removeDiscard.mutateAsync({ id: discard._id, reason })
+      .then(() => {
+        toast.success(`Discard entry ${discard.discardId ?? ''} removed — bag returned to stock`);
+        onClose();
+      })
+      .catch(() => { });
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-red-800">
+          <h2 className="text-base font-semibold text-white">Remove Discard Entry</h2>
+          <button onClick={onClose} className="text-red-200 hover:text-white"><X className="w-5 h-5" /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div className="rounded-lg border border-red-100 bg-red-50/50 p-3 text-sm space-y-1">
+            <p className="text-gray-700">
+              This removes the discard entry entirely and returns <strong>{formatBloodBagQty(discard.quantity)}</strong> {discard.bagType}
+              {' '}bag(s) in batch <strong>{discard.stock?.batchNo ?? discard.batchNo ?? '—'}</strong> back to available bag inventory.
+            </p>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Reason *</label>
+            <textarea required value={reason} onChange={(e) => setReason(e.target.value)} rows={3}
+              placeholder="Why is this discard entry being removed?"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none" />
+          </div>
+
+          <div className="pt-4 border-t flex gap-3 justify-end">
+            <button type="button" onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
+              Cancel
+            </button>
+            <button type="submit" disabled={removeDiscard.isPending || !reason.trim()}
+              className="px-5 py-2 text-sm font-semibold text-white bg-red-700 rounded-lg hover:bg-red-800 disabled:opacity-60">
+              {removeDiscard.isPending ? 'Removing…' : 'Remove & Return to Stock'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  );
+}
+
 export default function BagDiscard() {
   const [showDiscardDrawer, setShowDiscardDrawer] = useState(false);
   const [approveTarget, setApproveTarget] = useState(null);
+  const [removeTarget, setRemoveTarget] = useState(null);
   const [reasonFilter, setReasonFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -355,12 +408,19 @@ export default function BagDiscard() {
                     <td className="px-4 py-3 text-sm text-gray-600">{fmtDate(d.disposalDate)}</td>
                     <td className="px-4 py-3"><StatusBadge status={d.status} /></td>
                     <td className="px-4 py-3">
-                      {d.status === 'PENDING_APPROVAL' && (
-                        <button onClick={() => setApproveTarget(d)}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-green-700 border border-green-200 rounded-md hover:bg-green-50">
-                          <CheckCircle className="w-3.5 h-3.5" /> Approve
+                      <div className="flex items-center gap-2">
+                        {d.status === 'PENDING_APPROVAL' && (
+                          <button onClick={() => setApproveTarget(d)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-green-700 border border-green-200 rounded-md hover:bg-green-50">
+                            <CheckCircle className="w-3.5 h-3.5" /> Approve
+                          </button>
+                        )}
+                        <button onClick={() => setRemoveTarget(d)}
+                          title="Delete this discard entry and return the bag(s) to stock"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-red-700 border border-red-200 rounded-md hover:bg-red-50">
+                          <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -375,6 +435,9 @@ export default function BagDiscard() {
       )}
       {approveTarget && (
         <ApproveDrawer discard={approveTarget} onClose={() => setApproveTarget(null)} />
+      )}
+      {removeTarget && (
+        <RemoveDrawer discard={removeTarget} onClose={() => setRemoveTarget(null)} />
       )}
     </div>
   );

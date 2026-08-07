@@ -8,6 +8,7 @@ export interface BagDiscardControllers {
   get(req: Request, res: Response, next: NextFunction): Promise<void>;
   create(req: Request, res: Response, next: NextFunction): Promise<void>;
   approve(req: Request, res: Response, next: NextFunction): Promise<void>;
+  remove(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export function createBagDiscardControllers(service: BagDiscardService): BagDiscardControllers {
@@ -53,6 +54,17 @@ export function createBagDiscardControllers(service: BagDiscardService): BagDisc
         const body = ValidateBagDiscard.approveBody(req);
         const data = await service.approve(id, body, actorId(req));
         res.json({ success: true, data, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async remove(req, res, next) {
+      try {
+        const { id } = ValidateBagDiscard.idParam(req);
+        const { reason } = ValidateBagDiscard.removeBody(req);
+        await service.remove(id, reason, actorId(req));
+        res.json({ success: true, data: { removed: true }, requestId: req.id });
       } catch (e) {
         next(e);
       }

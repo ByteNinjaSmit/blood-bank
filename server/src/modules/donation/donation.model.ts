@@ -75,6 +75,11 @@ const DonationSchema = new Schema(
     lastEditedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     deletedAt: { type: Date, default: null, index: true },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    // Set once cascade-delete has reversed the BagStock.issuedQty this
+    // donation consumed (via lotNo/typeOfBag) so the bag is returned to
+    // inventory. Cleared on restore, which re-consumes the bag. Guards
+    // against double-reversal if the cascade is ever re-run.
+    bagStockIssueReversed: { type: Boolean, default: false },
     ...cascadeFields,
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },

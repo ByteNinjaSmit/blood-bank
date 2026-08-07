@@ -340,3 +340,14 @@ export function useApproveBagDiscard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['bag-discard', 'list'] }),
   });
 }
+
+export function useRemoveBagDiscard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }) => bagProcurementApi.bagDiscard.remove(id, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bag-discard', 'list'] });
+      qc.invalidateQueries({ queryKey: ['bag-stock', 'list'] });
+    },
+  });
+}
