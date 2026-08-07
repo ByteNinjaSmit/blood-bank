@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { apiClient } from "@/core/api-client";
 import { PackageCheck, Warehouse, MapPin, ArrowLeftRight, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -33,8 +32,6 @@ const ISSUE_REGISTERS = [
 ];
 
 const Issue = () => {
-  const navigate = useNavigate();
-
   const [isLoading, setIsLoading] = useState(false);
   const [rows, setRows] = useState([]);
   const [availableUnits, setAvailableUnits] = useState([]);
@@ -260,7 +257,6 @@ const Issue = () => {
             fetchThalassemia={fetchThalassemia}
             diseaseLabel={diseaseLabel}
             onViewRequisition={(r) => { setThalViewItem(r); setThalViewOpen(true); }}
-            onIssueRequisition={(r) => navigate(`/requisition/${r._id}`)}
           />
         )}
 
