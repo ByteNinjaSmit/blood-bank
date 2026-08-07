@@ -107,6 +107,11 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
         assertEligibilityBasics(merged);
       }
       const updated = await deps.repo.update(id, fields, actorId);
+      if (fields.campId) {
+        await CampModel.findByIdAndUpdate(fields.campId, {
+          $addToSet: { donorData: id },
+        });
+      }
       await invalidate(`donor:detail:${id}`);
       log.info({ donorId: id, actorId }, 'donor updated');
       void withAudit(

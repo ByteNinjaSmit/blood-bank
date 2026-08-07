@@ -13,6 +13,7 @@ const CampEditModal = ({
   onChange,
   onAddVolunteer,
   onRemoveVolunteer,
+  onToggleStaff,
   onClose,
   onSubmit,
 }) => {
@@ -208,25 +209,34 @@ const CampEditModal = ({
             )}
           </div>
 
-          {/* System users — reference only, not assignable here */}
+          {/* System users — select who from User Management is assigned to this camp */}
           <div className="space-y-2 pt-3 border-t border-slate-200">
             <label className="block text-sm font-medium text-slate-700 flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-slate-400" />
-              System Users (reference only)
+              <Users className="w-4 h-4 text-orange-800" />
+              Assign System Users
             </label>
-            <p className="text-[11px] text-slate-400 -mt-1">Registered accounts in User Management — type their names above if they're working this camp.</p>
+            <p className="text-[11px] text-slate-400 -mt-1">Click to toggle a registered staff account as assigned to this camp — shown on the camp listing's Staff column.</p>
             {staffList && staffList.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {staffList
                   .filter((staff) => staff && staff._id && staff.name)
-                  .map((staff) => (
-                    <span
-                      key={staff._id}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium"
-                    >
-                      {`${String(staff?.name?.first || "")} ${String(staff?.name?.last || "")}`.trim()}
-                    </span>
-                  ))}
+                  .map((staff) => {
+                    const selected = (form?.staff || []).includes(staff._id)
+                    return (
+                      <button
+                        key={staff._id}
+                        type="button"
+                        onClick={() => onToggleStaff && onToggleStaff(staff._id)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ${
+                          selected
+                            ? "bg-orange-800 border-orange-800 text-white"
+                            : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                        }`}
+                      >
+                        {`${String(staff?.name?.first || "")} ${String(staff?.name?.last || "")}`.trim()}
+                      </button>
+                    )
+                  })}
               </div>
             ) : (
               <p className="text-xs text-slate-400 italic">No system users found.</p>

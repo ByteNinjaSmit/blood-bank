@@ -65,6 +65,8 @@ const CampList = () => {
     email: "",
     dateFrom: "",
     dateTo: "",
+    volunteers: [],
+    staff: [],
   })
 
   React.useEffect(() => {
@@ -157,6 +159,7 @@ const CampList = () => {
       dateFrom: camp.dateFrom ? new Date(new Date(camp.dateFrom).getTime() - new Date(camp.dateFrom).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
       dateTo: camp.dateTo ? new Date(new Date(camp.dateTo).getTime() - new Date(camp.dateTo).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
       volunteers: camp.volunteers || [],
+      staff: (camp.staff || []).map((s) => s._id || s).filter(Boolean),
     })
     setEditErrors({})
     setEditModalOpen(true)
@@ -190,6 +193,18 @@ const CampList = () => {
       ...prev,
       volunteers: (prev.volunteers || []).filter((_, idx) => idx !== idxToRemove),
     }))
+  }
+
+  const handleToggleStaffInEdit = (userId) => {
+    setEditForm((prev) => {
+      const current = prev.staff || []
+      return {
+        ...prev,
+        staff: current.includes(userId)
+          ? current.filter((id) => id !== userId)
+          : [...current, userId],
+      }
+    })
   }
 
   const validateEditForm = () => {
@@ -246,6 +261,7 @@ const CampList = () => {
       phone: editForm.phone.trim(),
       email: editForm.email.trim(),
       volunteers: editForm.volunteers,
+      staff: editForm.staff || [],
       dateFrom: editForm.dateFrom,
       dateTo: editForm.dateTo,
     }
@@ -547,6 +563,7 @@ const CampList = () => {
         onChange={handleEditChange}
         onAddVolunteer={handleAddVolunteerInEdit}
         onRemoveVolunteer={handleRemoveVolunteerInEdit}
+        onToggleStaff={handleToggleStaffInEdit}
         onClose={closeEdit}
         onSubmit={handleEditSubmit}
       />
