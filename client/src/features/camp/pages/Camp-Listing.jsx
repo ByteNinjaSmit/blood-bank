@@ -3,12 +3,12 @@
 import React, { useEffect, useState, useMemo } from "react"
 import { Plus, Eye, Edit, Trash2, Filter, X, Search, ChevronDown, MapPin, Users, Phone, Calendar, ArrowUpDown, FileSpreadsheet, RefreshCw } from "lucide-react"
 import { useNavigate, useLocation, Link } from "react-router-dom"
-import { apiClient } from "@/core/api-client"
 import { toast } from "sonner"
 
 import Loader from "@/components/utils/Spinner"
 import { PageHeader } from "@/components/Header"
 import CampEditModal from "./CampEditModal"
+import { campApi } from "../api"
 import ReasonForChangeModal from "@/components/shared/ReasonForChangeModal"
 import { useCamp } from "@/hooks/useCamp"
 import { useAuth } from "@/store/auth"
@@ -65,7 +65,6 @@ const CampList = () => {
     email: "",
     dateFrom: "",
     dateTo: "",
-    staff: [],
   })
 
   React.useEffect(() => {
@@ -76,10 +75,8 @@ const CampList = () => {
 
   const getStaffNames = async () => {
     try {
-      const response = await apiClient.get('/api/v2/camp/staff-list')
-      if (response.status === 200) {
-        setStaffList(response.data.data || [])
-      }
+      const list = await campApi.staffList()
+      setStaffList(list || [])
     } catch (error) {
       console.error("Error fetching staff list:", error)
     }
@@ -159,7 +156,6 @@ const CampList = () => {
       email: camp.contactInfo?.email || "",
       dateFrom: camp.dateFrom ? new Date(new Date(camp.dateFrom).getTime() - new Date(camp.dateFrom).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
       dateTo: camp.dateTo ? new Date(new Date(camp.dateTo).getTime() - new Date(camp.dateTo).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
-      staff: (camp.staff || []).map((member) => member._id),
       volunteers: camp.volunteers || [],
     })
     setEditErrors({})
@@ -178,15 +174,6 @@ const CampList = () => {
     setEditForm((prev) => ({
       ...prev,
       [name]: value,
-    }))
-  }
-
-  const toggleStaffInEdit = (staffId) => {
-    setEditForm((prev) => ({
-      ...prev,
-      staff: prev.staff.includes(staffId)
-        ? prev.staff.filter((id) => id !== staffId)
-        : [...prev.staff, staffId],
     }))
   }
 
@@ -211,7 +198,6 @@ const CampList = () => {
     if (!editForm.name.trim()) errs.name = "Camp name is required"
     if (!editForm.address.trim()) errs.address = "Address is required"
     if (!editForm.phone.trim()) errs.phone = "Phone is required"
-    if (!editForm.email.trim()) errs.email = "Email is required"
     if (!editForm.dateFrom) errs.dateFrom = "Start date is required"
     if (!editForm.dateTo) errs.dateTo = "End date is required"
 
@@ -259,7 +245,6 @@ const CampList = () => {
       address: editForm.address.trim(),
       phone: editForm.phone.trim(),
       email: editForm.email.trim(),
-      staff: editForm.staff,
       volunteers: editForm.volunteers,
       dateFrom: editForm.dateFrom,
       dateTo: editForm.dateTo,
@@ -560,7 +545,6 @@ const CampList = () => {
         errors={editErrors}
         saving={editSaving}
         onChange={handleEditChange}
-        onToggleStaff={toggleStaffInEdit}
         onAddVolunteer={handleAddVolunteerInEdit}
         onRemoveVolunteer={handleRemoveVolunteerInEdit}
         onClose={closeEdit}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Search, Eye, Edit, Trash2, Download, Activity, AlertTriangle, X, ArrowUpDown, RefreshCw } from 'lucide-react';
+import { Users, Plus, Search, Eye, Edit, Trash2, Download, Activity, X, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import DonorForm from '@/features/donor/components/DonorForm';
@@ -13,50 +13,7 @@ import EnhancedLoader from '@/components/utils/Spinner';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportCampDonors } from '@/utils/excelExportHelper';
-
-const ConfirmDeleteModal = ({ isOpen, title, message, onConfirm, onClose }) => {
-  if (!isOpen) return null;
-  return (
-    <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-sm w-full p-6 animate-in fade-in zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-red-50 text-red-600 rounded-xl shrink-0 animate-bounce">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-gray-900">{title || 'Delete Confirmation'}</h3>
-            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">{message || 'Are you sure you want to delete this?'}</p>
-          </div>
-        </div>
-        <div className="flex gap-3 justify-end mt-6">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
-            className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+import ReasonForChangeModal from '@/components/shared/ReasonForChangeModal';
 
 const CampDonorManagement = () => {
   const navigate = useNavigate();
@@ -107,7 +64,7 @@ const CampDonorManagement = () => {
 
   // Delete dialogs state
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [showForceModal, setShowForceModal] = useState(false);
   const [excelLoading, setExcelLoading] = useState(false);
 
@@ -174,29 +131,33 @@ const CampDonorManagement = () => {
       return;
     }
     setDeleteTarget(donor);
-    setConfirmDelete({
-      isOpen: true,
-      title: 'Delete Donor?',
-      message: `Are you sure you want to delete donor ${donor.name?.firstName || ''} ${donor.name?.lastName || ''}? This action cannot be undone.`,
-      onConfirm: async () => {
-        const result = await deleteDonor(donor._id);
+  };
 
-        if (result.success) {
-          setDeleteTarget(null);
-          fetchCampDonors(campId);
-          queryClient.invalidateQueries({ queryKey: campKeys.detail(campId) });
-          queryClient.invalidateQueries({ queryKey: campKeys.list() });
-          return;
-        }
+  const closeDeleteModal = () => {
+    if (deleteSubmitting) return;
+    setDeleteTarget(null);
+  };
 
-        if (result.code === 'DONOR_HAS_DONATIONS') {
-          toast.error(result.message || 'Donor has donation history and cannot be deleted.');
-          setShowForceModal(true);
-        } else {
-          setDeleteTarget(null);
-        }
-      }
-    });
+  const handleConfirmDelete = async (reason) => {
+    if (!deleteTarget) return;
+    setDeleteSubmitting(true);
+    const result = await deleteDonor(deleteTarget._id, reason);
+    setDeleteSubmitting(false);
+
+    if (result.success) {
+      setDeleteTarget(null);
+      fetchCampDonors(campId);
+      queryClient.invalidateQueries({ queryKey: campKeys.detail(campId) });
+      queryClient.invalidateQueries({ queryKey: campKeys.list() });
+      return;
+    }
+
+    if (result.code === 'DONOR_HAS_DONATIONS') {
+      toast.error(result.message || 'Donor has donation history and cannot be deleted.');
+      setShowForceModal(true);
+    } else {
+      toast.error(result.message || 'Failed to delete donor');
+    }
   };
 
   // Filter computation
@@ -579,12 +540,19 @@ const CampDonorManagement = () => {
         }}
       />
 
-      <ConfirmDeleteModal
-        isOpen={confirmDelete.isOpen}
-        title={confirmDelete.title}
-        message={confirmDelete.message}
-        onConfirm={confirmDelete.onConfirm}
-        onClose={() => setConfirmDelete({ isOpen: false, onConfirm: null, title: '', message: '' })}
+      <ReasonForChangeModal
+        isOpen={Boolean(deleteTarget) && !showForceModal}
+        onClose={closeDeleteModal}
+        onConfirm={handleConfirmDelete}
+        title="Delete Donor?"
+        actionLabel="Delete"
+        message={
+          deleteTarget
+            ? `Deleting donor ${deleteTarget.name?.firstName || ''} ${deleteTarget.name?.lastName || ''} cannot be undone. Provide a reason — it is recorded in the audit trail.`
+            : undefined
+        }
+        fieldLabel="Reason for Deletion"
+        submitting={deleteSubmitting}
       />
 
       <Dialog

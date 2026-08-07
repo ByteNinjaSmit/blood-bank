@@ -11,7 +11,6 @@ const CampEditModal = ({
   errors,
   saving,
   onChange,
-  onToggleStaff,
   onAddVolunteer,
   onRemoveVolunteer,
   onClose,
@@ -31,9 +30,9 @@ const CampEditModal = ({
     setVolInput("")
   }
 
-  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers()
-
   const volunteersList = form?.volunteers || []
+
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers()
 
   return (
     <Dialog open={open && !!camp} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -44,7 +43,7 @@ const CampEditModal = ({
           </div>
           <div>
             <DialogTitle className="text-lg font-semibold text-slate-900">Edit Camp</DialogTitle>
-            <p className="text-xs text-slate-500">Update camp details, staff assignment, and external volunteers</p>
+            <p className="text-xs text-slate-500">Update camp details and assigned staff</p>
           </div>
         </DialogHeader>
 
@@ -109,7 +108,7 @@ const CampEditModal = ({
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">Email *</label>
+              <label className="block text-sm font-medium text-slate-700">Email</label>
               <input
                 type="email"
                 name="email"
@@ -154,47 +153,13 @@ const CampEditModal = ({
             </div>
           </div>
 
-          {/* System Staff */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-700 flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-orange-800" />
-              Assign System Staff (from User Management)
-            </label>
-            {staffList && staffList.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {staffList.map((staff) => {
-                  if (!staff || !staff._id || !staff.name) return null
-                  const staffName = `${String(staff?.name?.first || "")} ${String(staff?.name?.last || "")}`
-                  const isSelected = form.staff.includes(staff._id)
-
-                  return (
-                    <button
-                      key={staff._id}
-                      type="button"
-                      onClick={() => onToggleStaff(staff._id)}
-                      className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
-                        isSelected
-                          ? "bg-orange-100 text-orange-800 border-orange-400 shadow-sm"
-                          : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
-                      }`}
-                    >
-                      {staffName}
-                    </button>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-500">No staff members available to assign.</p>
-            )}
-            <p className="text-[11px] text-slate-400">Click on staff chips to toggle assignment for this camp.</p>
-          </div>
-
-          {/* External Volunteers */}
+          {/* Camp Staff — fully manual entry */}
           <div className="space-y-3 pt-3 border-t border-slate-200">
             <label className="block text-sm font-medium text-slate-700 flex items-center gap-1.5">
               <UserPlus className="w-4 h-4 text-orange-800" />
-              External Volunteers & Guest Helpers
+              Staff Names
             </label>
+            <p className="text-[11px] text-slate-400 -mt-2">Type in the names of everyone assigned to this camp.</p>
             <div className="flex items-center gap-2">
               <input
                 type="text"
@@ -206,7 +171,7 @@ const CampEditModal = ({
                     handleAddVol()
                   }
                 }}
-                placeholder="Enter volunteer name (e.g. Priya Patel - NGO)"
+                placeholder="Enter name (e.g. Priya Patel - NGO)"
                 className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-700"
               />
               <button
@@ -215,7 +180,7 @@ const CampEditModal = ({
                 className="px-4 py-2 bg-orange-800 hover:bg-orange-900 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors shrink-0 shadow-xs"
               >
                 <Plus className="w-3.5 h-3.5" />
-                Add Volunteer
+                Add
               </button>
             </div>
 
@@ -231,7 +196,7 @@ const CampEditModal = ({
                       type="button"
                       onClick={() => onRemoveVolunteer && onRemoveVolunteer(idx)}
                       className="w-4 h-4 rounded-full flex items-center justify-center text-orange-700 hover:bg-orange-200 transition-colors"
-                      title="Remove volunteer"
+                      title="Remove"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -239,7 +204,32 @@ const CampEditModal = ({
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-slate-400 italic">No external volunteers added yet.</p>
+              <p className="text-xs text-slate-400 italic">No staff added yet.</p>
+            )}
+          </div>
+
+          {/* System users — reference only, not assignable here */}
+          <div className="space-y-2 pt-3 border-t border-slate-200">
+            <label className="block text-sm font-medium text-slate-700 flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-slate-400" />
+              System Users (reference only)
+            </label>
+            <p className="text-[11px] text-slate-400 -mt-1">Registered accounts in User Management — type their names above if they're working this camp.</p>
+            {staffList && staffList.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {staffList
+                  .filter((staff) => staff && staff._id && staff.name)
+                  .map((staff) => (
+                    <span
+                      key={staff._id}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium"
+                    >
+                      {`${String(staff?.name?.first || "")} ${String(staff?.name?.last || "")}`.trim()}
+                    </span>
+                  ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 italic">No system users found.</p>
             )}
           </div>
 

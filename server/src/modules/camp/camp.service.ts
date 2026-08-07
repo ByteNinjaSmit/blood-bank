@@ -40,19 +40,27 @@ export const campService = {
     if (input.dateTo < input.dateFrom) {
       throw new ConflictError('End date cannot be earlier than start date');
     }
-    const camp = await campRepo.create({
-      campId: input.campId,
-      name: input.name,
-      description: input.description,
-      address: input.address,
-      contactInfo: { phone: input.phone, email: input.email },
-      dateFrom: input.dateFrom,
-      dateTo: input.dateTo,
-      createdBy: actorId,
-      lastUpdatedBy: actorId,
-      staff: input.staff,
-      volunteers: input.volunteers ?? [],
-    });
+    let camp;
+    try {
+      camp = await campRepo.create({
+        campId: input.campId,
+        name: input.name,
+        description: input.description,
+        address: input.address,
+        contactInfo: { phone: input.phone, email: input.email },
+        dateFrom: input.dateFrom,
+        dateTo: input.dateTo,
+        createdBy: actorId,
+        lastUpdatedBy: actorId,
+        staff: input.staff,
+        volunteers: input.volunteers ?? [],
+      });
+    } catch (err) {
+      if (err && typeof err === 'object' && 'code' in err && (err as { code?: number }).code === 11000) {
+        throw new ConflictError(`Site ID "${input.campId}" is already in use by another camp`);
+      }
+      throw err;
+    }
     await auditService.record({
       actorId,
       module: 'camp',
@@ -202,9 +210,12 @@ export const campService = {
       donorData?: unknown[];
       unitData?: unknown[];
     };
-    const donorCount = c.donorData?.length ?? 0;
     const unitCount = c.unitData?.length ?? 0;
     const donationCount = await DonationModel.countDocuments({ campId: c._id, deletedAt: null });
+    // Live count of distinct donors who actually donated at this camp — the
+    // embedded donorData ref array is populated only through one donor
+    // registration path and goes stale, so it undercounts (often to 0).
+    const donorCount = (await DonationModel.distinct('donor', { campId: c._id, deletedAt: null })).length;
     delete c.donorData;
     delete c.unitData;
     return { ...c, donorCount, unitCount, donationCount };
