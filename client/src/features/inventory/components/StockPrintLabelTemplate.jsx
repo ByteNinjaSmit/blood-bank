@@ -77,7 +77,7 @@ export default function StockPrintLabelTemplate({ item, formatDate }) {
         {/* Right Side: QR Code Scan Area & Dates below it */}
         <div className="w-[2.3cm] flex flex-col items-center justify-center border-l border-black pl-0.5 shrink-0 select-none">
           <img
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${import.meta.env.VITE_PUBLIC_FRONTEND_URL || ''}/verify/${item?.unitId || item?.bag?.bagNo || item?.bagNo || 'unknown'}`)}`}
+            src={`https://api.qrserver.com/v1/create-qr-code/?format=svg&size=400x400&qzone=2&data=${encodeURIComponent(`${import.meta.env.VITE_PUBLIC_FRONTEND_URL || ''}/verify/${item?.unitId || item?.bag?.bagNo || item?.bagNo || 'unknown'}`)}`}
             alt="QR Code"
             className="w-[1.5cm] h-[1.5cm]"
           />

@@ -105,7 +105,7 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                 {/* Left Side: QR Code scan area */}
                 <div className="w-[2.25cm] flex flex-col items-center justify-center border-r border-black pr-1 shrink-0 select-none">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${import.meta.env.VITE_PUBLIC_FRONTEND_URL || ''}/verify/${inv._id || 'unknown'}`)}`}
+                    src={`https://api.qrserver.com/v1/create-qr-code/?format=svg&size=400x400&qzone=2&data=${encodeURIComponent(`${import.meta.env.VITE_PUBLIC_FRONTEND_URL || ''}/verify/${inv._id || 'unknown'}`)}`}
                     alt="QR Code"
                     className="w-[1.6cm] h-[1.6cm]"
                   />
