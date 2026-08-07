@@ -23,6 +23,7 @@ const ViewDiscarded = () => {
     const { API, authorizationToken } = useAuth();
     const [selectedItem, setSelectedItem] = useState(null)
     const [showBagDetails, setShowBagDetails] = useState(false)
+    const [restoringId, setRestoringId] = useState(null)
     const [discardedItems, setDiscardedItems] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [paginationData, setPaginationData] = useState();
@@ -197,6 +198,24 @@ const ViewDiscarded = () => {
         setSelectedItem(item)
     }
 
+    const handleRestore = async (item) => {
+        const unitId = item.itemId;
+        if (!unitId) return;
+        if (!window.confirm(
+            `Restore unit ${unitId}? This reinstates the deleted donation/donor it belongs to (and every record cascade-deleted with it), and returns its bag to inventory.`
+        )) return;
+        setRestoringId(unitId);
+        try {
+            const response = await apiClient.post(`/api/discard/${unitId}/restore`);
+            toast.success(response?.data?.message || `Unit ${unitId} restored`);
+            getItems();
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Failed to restore unit");
+        } finally {
+            setRestoringId(null);
+        }
+    }
+
 
     const closeModal = () => {
         setSelectedItem(null)
@@ -367,7 +386,7 @@ const ViewDiscarded = () => {
 
                             {/* Table Section */}
                             <div className="overflow-x-auto">
-                                <DiscardTable items={discardedItems} isLoading={isLoading} onView={handleViewDetails} />
+                                <DiscardTable items={discardedItems} isLoading={isLoading} onView={handleViewDetails} onRestore={handleRestore} restoringId={restoringId} />
                             </div>
 
                             {/* Refined Pagination Footer */}
@@ -479,6 +498,15 @@ const ViewDiscarded = () => {
                                             >
                                                 View
                                             </button>
+                                            {item.reason === "CASCADE_DELETED" && (
+                                                <button
+                                                    onClick={() => handleRestore(item)}
+                                                    disabled={restoringId === item.itemId}
+                                                    className="flex-1 border border-green-200 text-green-700 rounded-md py-2 text-sm hover:bg-green-50 disabled:opacity-60"
+                                                >
+                                                    {restoringId === item.itemId ? "Restoring…" : "Restore"}
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}

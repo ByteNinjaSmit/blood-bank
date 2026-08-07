@@ -102,6 +102,7 @@ export const PERMISSION = [
   'bag-discard:read',
   'bag-discard:create',
   'bag-discard:approve',
+  'bag-discard:delete',
   'bulk-transfer:read',
   'bulk-transfer:create',
   'bulk-transfer:update',
@@ -124,6 +125,7 @@ export const PERMISSION = [
   // Clinical (blood-unit) discard register
   'discard:read',
   'discard:create',
+  'discard:restore',
 ] as const;
 export type Permission = (typeof PERMISSION)[number];
 
@@ -255,6 +257,10 @@ export const DISCARD_REASON = [
   'UNUSED_AFTER_THAW',
   'DONOR_RECALL',
   'LABEL_ERROR',
+  // Not a QC/clinical reason — set automatically when a unit is
+  // transitioned to DISCARDED as a side effect of cascade-deleting its
+  // upstream donation or donor (never a manual staff decision).
+  'CASCADE_DELETED',
 ] as const;
 export type DiscardReason = (typeof DISCARD_REASON)[number];
 

@@ -14,6 +14,7 @@ import { DonorModel } from '@/modules/donor/donor.model';
 import { DonationModel } from '@/modules/donation/donation.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
+import { BagStockModel } from '@/modules/bag-stock/bag-stock.model';
 
 let mongod: MongoMemoryServer;
 const actorId = new Types.ObjectId().toHexString();
@@ -34,6 +35,7 @@ beforeEach(async () => {
     DonationModel.deleteMany({}),
     BloodUnitModel.deleteMany({}),
     TtiResultModel.deleteMany({}),
+    BagStockModel.deleteMany({}),
   ]);
 });
 
@@ -118,5 +120,50 @@ describe('donation direct cascade soft-delete / restore', () => {
     await svc.permanentDelete(donation._id.toString(), actorId, 'Cleanup');
     const donationAfter = await DonationModel.findById(donation._id).lean();
     expect(donationAfter).toBeNull();
+  });
+
+  it('deleting a donation returns its consumed bag to BagStock (issuedQty), restore re-consumes it', async () => {
+    const { donor } = await seedDonationWithUnit();
+
+    const stock = await BagStockModel.create({
+      stockId: 'BS-DTEST-0001',
+      bagType: 'DOUBLE',
+      capacityMl: 450,
+      manufacturer: 'Test Mfg',
+      batchNumber: 'BATCH-DTEST-1',
+      expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      openingStock: 0,
+      receivedQty: 277,
+      issuedQty: 1,
+      createdBy: actorId,
+      updatedBy: actorId,
+    });
+
+    const donation = await DonationModel.create({
+      donationId: 'DN-DTEST-BAG-0001',
+      donor: donor._id,
+      donationType: 'WHOLE_BLOOD',
+      collectedAt: new Date(),
+      lotNo: 'BATCH-DTEST-1',
+      typeOfBag: 'DB',
+      bagStockIssueReversed: false,
+      createdBy: actorId,
+      updatedBy: actorId,
+    });
+
+    const svc = service();
+    await svc.remove(donation._id.toString(), actorId, 'Donor deleted');
+
+    const stockAfterDelete = await BagStockModel.findById(stock._id).lean();
+    expect(stockAfterDelete?.issuedQty).toBe(0);
+    const donationAfterDelete = await DonationModel.findById(donation._id).lean();
+    expect(donationAfterDelete?.bagStockIssueReversed).toBe(true);
+
+    await svc.restore(donation._id.toString(), actorId);
+
+    const stockAfterRestore = await BagStockModel.findById(stock._id).lean();
+    expect(stockAfterRestore?.issuedQty).toBe(1);
+    const donationAfterRestore = await DonationModel.findById(donation._id).lean();
+    expect(donationAfterRestore?.bagStockIssueReversed).toBe(false);
   });
 });

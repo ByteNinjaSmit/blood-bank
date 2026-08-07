@@ -69,6 +69,8 @@ export interface BagDiscardRepo {
     },
     actorId: string,
   ): Promise<BagDiscardDto | null>;
+  /** Hard delete — a discard record is a data-entry correction target, not a clinical record; nothing downstream references it. */
+  delete(id: string): Promise<void>;
 }
 
 export function createBagDiscardRepo(): BagDiscardRepo {
@@ -166,6 +168,10 @@ export function createBagDiscardRepo(): BagDiscardRepo {
           updatedAt?: Date;
         },
       );
+    },
+
+    async delete(id) {
+      await BagDiscardModel.deleteOne({ _id: new Types.ObjectId(id) });
     },
   };
 }

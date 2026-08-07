@@ -122,6 +122,7 @@ export function useDonorSubmit({ form, campId, draftId }) {
         lastDonationDate: formData.lastDonationDate ? new Date(formData.lastDonationDate).toISOString() : undefined,
         lastDonationPlace: formData.lastDonationDate ? formData.lastDonationPlace : undefined,
         emergencyDonationWillingness: formData.emergencyDonationWillingness || undefined,
+        campId: campId || undefined,
       };
 
       if (repeatedDonation === "Yes" && selectedDonor) {

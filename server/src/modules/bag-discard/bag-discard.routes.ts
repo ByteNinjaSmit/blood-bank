@@ -27,4 +27,6 @@ router.patch(
   controllers.approve,
 );
 
+router.delete('/:id', authenticate, requirePermission('bag-discard:delete'), controllers.remove);
+
 export default router;

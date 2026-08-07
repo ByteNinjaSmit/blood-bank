@@ -7,8 +7,11 @@ import { DonationModel } from '@/modules/donation/donation.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
+import { DonorModel } from '@/modules/donor/donor.model';
 import { invalidate } from '@/core/cache';
-import { NotFoundError, ValidationError } from '@/shared/errors';
+import { NotFoundError, ValidationError, ConflictError } from '@/shared/errors';
+import { cascadeRestore, runInCascadeTransaction } from '@/shared/utils/cascade-delete';
+import { donationNode, donorCascadeNode } from '@/shared/cascade-registry';
 import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { TtiService } from '@/modules/tti/tti.service';
 import type { TtiTestEntryInput } from '@/modules/tti/tti.repository';
@@ -38,6 +41,16 @@ export interface DiscardCreateInput {
 export interface DiscardRepo {
   list(filters: DiscardListFilters): Promise<{ data: any[]; total: number; totalPages: number }>;
   create(input: DiscardCreateInput): Promise<{ unitsDiscarded: number; bagNo: string }>;
+  /**
+   * Undo a unit that was auto-DISCARDED as a side effect of cascade-deleting
+   * its upstream donation/donor (see cascade-registry.ts bloodUnitNode) —
+   * restores the whole batch it was deleted with (donor or donation,
+   * whichever was the actual root), not just this one unit in isolation.
+   */
+  restoreCascadeDiscarded(
+    unitId: string,
+    actorId: string,
+  ): Promise<{ restoredScope: 'donor' | 'donation' }>;
 }
 
 export function createDiscardRepo(deps: { units: UnitRepo; ttiService: TtiService }): DiscardRepo {
@@ -252,6 +265,39 @@ export function createDiscardRepo(deps: { units: UnitRepo; ttiService: TtiServic
       await invalidate('inventory:*');
 
       return { unitsDiscarded: units.length, bagNo };
+    },
+
+    async restoreCascadeDiscarded(unitId, actorId) {
+      const unit = await BloodUnitModel.findOne({ unitId, status: 'DISCARDED' });
+      if (!unit) throw new NotFoundError('Discarded blood unit', unitId);
+      if (unit.affected) {
+        throw new ConflictError(
+          'This unit is preserved as an affected record (already part of a completed downstream workflow) and cannot be auto-restored — review it from the Recycle Bin instead.',
+        );
+      }
+      if (!unit.deleteBatchId) {
+        throw new ConflictError(
+          'This unit was not discarded by a cascade delete of its donation/donor, so it cannot be restored from here.',
+        );
+      }
+
+      const donation = await DonationModel.findOne({ donationId: unit.donationId });
+      if (!donation) throw new NotFoundError('Donation for unit', unit.donationId);
+
+      const donor = await DonorModel.findById(donation.donor);
+      const rootWasDonor = Boolean(
+        donor && donor.deletedAt && donor.deleteBatchId === unit.deleteBatchId,
+      );
+
+      await runInCascadeTransaction((session) =>
+        rootWasDonor
+          ? cascadeRestore(donorCascadeNode, donor!._id.toString(), actorId, session)
+          : cascadeRestore(donationNode, donation._id.toString(), actorId, session),
+      );
+
+      await invalidate('inventory:*');
+
+      return { restoredScope: rootWasDonor ? 'donor' : 'donation' };
     },
   };
 }
