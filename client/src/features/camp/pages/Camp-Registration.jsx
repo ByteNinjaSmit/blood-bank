@@ -1,8 +1,8 @@
 "use client"
-import { useEffect, useState } from "react"
-import { Droplets, CheckCircle, ClipboardList, MapPin, Phone, Mail, Calendar, Users, Plus, X, UserPlus } from "lucide-react"
+import { useState } from "react"
+import { Droplets, CheckCircle, ClipboardList, MapPin, Phone, Mail, Calendar, Plus, X, UserPlus } from "lucide-react"
 import { toast } from "sonner"
-import { apiClient } from "@/core/api-client"
+import { campApi } from "../api"
 import { useNavigate } from "react-router-dom"
 import Stepper, { Step } from "@/components/Stepper"
 import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav"
@@ -10,7 +10,6 @@ import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav"
 const CampRegistration = () => {
   const navigate = useNavigate()
   const [, setIsSubmitting] = useState(false)
-  const [staffList, setStaffList] = useState([])
   const [, setErrors] = useState({})
   const [stepErrors, setStepErrors] = useState({})
 
@@ -24,7 +23,6 @@ const CampRegistration = () => {
       phone: "",
       email: "",
     },
-    staff: [],
     volunteers: [],
     dateFrom: "",
     dateTo: "",
@@ -54,21 +52,6 @@ const CampRegistration = () => {
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
-
-  const getStaffNames = async () => {
-    try {
-      const response = await apiClient.get('/api/v2/camp/staff-list')
-      if (response.status === 200) {
-        setStaffList(response.data.data || [])
-      }
-    } catch {
-      // Staff list is non-critical; ignore load failures.
-    }
-  }
-
-  useEffect(() => {
-    getStaffNames();
-  }, [])
 
   const validateStep = (step) => {
     const newErrors = {}
@@ -111,21 +94,12 @@ const CampRegistration = () => {
     }
   }
 
-  const handleStaffToggle = (staffId) => {
-    setFormData({
-      ...formData,
-      staff: formData.staff.includes(staffId)
-        ? formData.staff.filter((id) => id !== staffId)
-        : [...formData.staff, staffId],
-    })
-  }
-
   const handleAddVolunteer = (e) => {
     if (e) e.preventDefault()
     const name = volunteerInput.trim()
     if (!name) return
     if (formData.volunteers.includes(name)) {
-      toast.info("Volunteer already added")
+      toast.info("Staff member already added")
       return
     }
     setFormData((prev) => ({
@@ -158,41 +132,35 @@ const CampRegistration = () => {
 
     setIsSubmitting(true)
     try {
-      const response = await apiClient.post('/api/v2/camp/new', {
-          campId: formData.siteId,
-          name: formData.name,
-          description: formData.description,
-          address: formData.address,
-          phone: formData.contactInfo.phone,
-          email: formData.contactInfo.email,
-          // Staff selection in this step is display-only — it is never sent,
-          // so it can never fail request-body validation on submit.
-          volunteers: formData.volunteers,
-          dateFrom: formData.dateFrom,
-          dateTo: formData.dateTo,
-        })
+      const created = await campApi.create({
+        campId: formData.siteId,
+        name: formData.name,
+        description: formData.description,
+        address: formData.address,
+        phone: formData.contactInfo.phone,
+        email: formData.contactInfo.email,
+        volunteers: formData.volunteers,
+        dateFrom: formData.dateFrom,
+        dateTo: formData.dateTo,
+      })
 
-      if (response.status === 201) {
-        const created = response.data.data
-        toast.success(response.data.message || "Camp created successfully")
-        setFormData({
-          siteId: "",
-          name: "",
-          description: "",
-          address: "",
-          contactInfo: { phone: "", email: "" },
-          staff: [],
-          volunteers: [],
-          dateFrom: "",
-          dateTo: "",
-        })
-        setVolunteerInput("")
-        // Land on the camp list first (so it's one back-step away), then
-        // Camp-Listing forwards straight into the camp we just created.
-        navigate("/camp-listing", { state: { openCampId: created?._id } })
-      }
+      toast.success("Camp created successfully")
+      setFormData({
+        siteId: "",
+        name: "",
+        description: "",
+        address: "",
+        contactInfo: { phone: "", email: "" },
+        volunteers: [],
+        dateFrom: "",
+        dateTo: "",
+      })
+      setVolunteerInput("")
+      // Land on the camp list first (so it's one back-step away), then
+      // Camp-Listing forwards straight into the camp we just created.
+      navigate("/camp-listing", { state: { openCampId: created?._id } })
     } catch (error) {
-      // apiClient's response interceptor throws a plain ApiError (not a raw
+      // campApi's response interceptor throws a plain ApiError (not a raw
       // axios error), so the real validation reason lives on error.message —
       // error.response is never set here.
       toast.error(error.message || "Error creating camp")
@@ -421,73 +389,21 @@ const CampRegistration = () => {
             </div>
           </Step>
 
-          {/* Step 4: Staff Selection */}
+          {/* Step 4: Staff Assignment */}
           <Step>
             <div className="space-y-6">
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Assign Staff</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Camp Staff</h2>
                 <p className="text-gray-600 text-sm sm:text-base">
-                  For reference only — staff can be formally assigned after the camp is created, from Camp Details.
+                  Type in the names of everyone assigned to run this camp.
                 </p>
               </div>
 
-              {/* System Staff Roster */}
-              <div>
-                <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-orange-800" />
-                  System Staff (from User Management)
+              <div className="space-y-4">
+                <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-orange-800" />
+                  Staff Names
                 </p>
-                {staffList && staffList.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    {staffList.map((staff) => {
-                      if (!staff || !staff._id || !staff.name) return null
-                      const staffName = `${String(staff?.name?.first || "")} ${String(staff?.name?.last || "")}`
-                      const isSelected = formData.staff.includes(staff._id)
-
-                      return (
-                        <div
-                          key={staff._id}
-                          onClick={() => handleStaffToggle(staff._id)}
-                          className={`p-4 sm:p-5 rounded-xl sm:rounded-2xl border-2 cursor-pointer transition-all ${
-                            isSelected ? "border-orange-800 bg-orange-50" : "border-gray-200 bg-white hover:border-orange-300"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
-                                isSelected ? "bg-orange-800 border-orange-800" : "border-gray-300"
-                              }`}
-                            >
-                              {isSelected && <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-900 text-sm sm:text-base">{staffName}</p>
-                              <p className="text-xs sm:text-sm text-gray-500">ID: {staff._id}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-xl">
-                    <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500 text-sm">No system staff available</p>
-                  </div>
-                )}
-              </div>
-
-              {/* External Volunteers / Guest Helpers */}
-              <div className="pt-6 border-t border-gray-200 space-y-4">
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                    <UserPlus className="w-4 h-4 text-orange-800" />
-                    External Volunteers & Guest Helpers
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Add names of NGO/Rotary/Student volunteers who do not have system accounts
-                  </p>
-                </div>
 
                 <div className="flex items-center gap-2">
                   <input
@@ -500,7 +416,7 @@ const CampRegistration = () => {
                         handleAddVolunteer()
                       }
                     }}
-                    placeholder="Enter volunteer name (e.g. Rahul Sharma - NSS)"
+                    placeholder="Enter name (e.g. Rahul Sharma - NSS)"
                     className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-orange-800 text-sm transition-colors"
                   />
                   <button
@@ -509,7 +425,7 @@ const CampRegistration = () => {
                     className="px-5 py-3 bg-orange-800 hover:bg-orange-900 text-white rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-colors shadow-sm shrink-0"
                   >
                     <Plus className="w-4 h-4" />
-                    Add Volunteer
+                    Add
                   </button>
                 </div>
 
@@ -525,7 +441,7 @@ const CampRegistration = () => {
                           type="button"
                           onClick={() => handleRemoveVolunteer(idx)}
                           className="w-4 h-4 rounded-full flex items-center justify-center text-orange-700 hover:bg-orange-200 transition-colors"
-                          title="Remove volunteer"
+                          title="Remove"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -533,7 +449,7 @@ const CampRegistration = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-400 italic">No external volunteers added yet.</p>
+                  <p className="text-xs text-gray-400 italic">No staff added yet.</p>
                 )}
               </div>
             </div>

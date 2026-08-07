@@ -185,7 +185,7 @@ const CampDetails = () => {
       description: "Browse, search, and manage existing donor records and history",
       icon: Users,
       color: "bg-orange-800",
-      stats: `${camp?.donorCount || 0} Active This Month`,
+      stats: `${camp?.donorCount || 0} Total Donors`,
     },
     {
       id: "create-donation",
@@ -405,7 +405,7 @@ const CampDetails = () => {
             <div className="space-y-3">
               {camp.staff && camp.staff.length > 0 && (
                 <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs font-medium text-gray-500 mb-2">System Staff ({camp.staff.length})</p>
+                  <p className="text-xs font-medium text-gray-500 mb-2">Assigned Staff ({camp.staff.length})</p>
                   <div className="space-y-2">
                     {camp.staff.map((member, index) => (
                       <div key={member._id || index} className="flex items-center gap-2">
@@ -425,7 +425,7 @@ const CampDetails = () => {
               )}
               {camp.volunteers && camp.volunteers.length > 0 && (
                 <div className="p-3 bg-orange-50/60 border border-orange-100 rounded-lg">
-                  <p className="text-xs font-medium text-orange-900 mb-2">External Volunteers ({camp.volunteers.length})</p>
+                  <p className="text-xs font-medium text-orange-900 mb-2">Staff Not In System ({camp.volunteers.length})</p>
                   <div className="flex flex-wrap gap-1.5">
                     {camp.volunteers.map((volName, index) => (
                       <span key={index} className="px-2 py-0.5 rounded bg-white text-orange-900 border border-orange-200 text-xs font-medium shadow-2xs">

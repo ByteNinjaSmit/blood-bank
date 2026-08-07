@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Droplets, Plus, Eye, Activity, Upload, X, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
+import { Droplets, Plus, Eye, Trash2, Activity, Upload, X, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import DonationDetails from '@/features/donation/components/DonationDetails';
-import { useDonationDetail } from '@/features/donation/queries';
+import { useDonationDetail, useDeleteDonation } from '@/features/donation/queries';
 import { useDonation } from '@/hooks/useDonation';
+import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
+import useAccess from '@/features/access/useAccess';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportCampDonations } from '@/utils/excelExportHelper';
@@ -14,6 +16,9 @@ const CampDonationManagement = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { donations: rawDonations, loading, error, fetchDonations } = useDonation();
+  const { can } = useAccess();
+  const donationAccess = { canDelete: can('camp', 'delete', 'camp-donation') };
+  const deleteMutation = useDeleteDonation();
   const [campId, setCampId] = useState(null);
   const [viewDonationId, setViewDonationId] = useState(null);
   const [excelLoading, setExcelLoading] = useState(false);
@@ -104,6 +109,26 @@ const CampDonationManagement = () => {
 
   const handleViewDonation = (donation) => {
     setViewDonationId(donation._id || donation.id);
+  };
+
+  // Soft-delete only — moves the donation (and any unused derived blood
+  // units) to the Recycle Bin. Mirrors the Master Donation Register flow.
+  const { requestDelete, DeleteReasonDialog } = useDeleteWithReason({
+    onDelete: async (donation, reason) => {
+      await deleteMutation.mutateAsync({ id: donation._id || donation.id, reason });
+      toast.success('Donation deleted and moved to Recycle Bin');
+      handleRefresh();
+    },
+    title: 'Delete Donation',
+    message: 'This donation and any unused blood units derived from it will be moved to the Recycle Bin. Units already issued are preserved and marked affected, not deleted.',
+  });
+
+  const handleDeleteDonation = (donation) => {
+    if (!donationAccess.canDelete) {
+      toast.error('You do not have permission to delete donations.');
+      return;
+    }
+    requestDelete(donation);
   };
 
   const getStatusColor = (status) => {
@@ -384,7 +409,7 @@ const CampDonationManagement = () => {
                           {colDate ? new Date(colDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center justify-center">
+                          <div className="flex items-center justify-center gap-1.5">
                             <button
                               onClick={() => handleViewDonation(donation)}
                               title="View Details"
@@ -392,6 +417,15 @@ const CampDonationManagement = () => {
                             >
                               <Eye className="w-3.5 h-3.5" />
                             </button>
+                            {donationAccess.canDelete && (
+                              <button
+                                onClick={() => handleDeleteDonation(donation)}
+                                title="Delete"
+                                className="p-1 hover:bg-red-50 rounded-lg text-red-600 border border-red-200 transition-all hover:scale-105"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -432,6 +466,8 @@ const CampDonationManagement = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {DeleteReasonDialog}
 
     </div>
   );

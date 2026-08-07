@@ -12,7 +12,7 @@ export default {
     // permissions, not a camp-specific one — camp:read/camp:manage alone
     // left the Donor Creation form's dropdowns/actions blocked.
     { id: 'camp-donors', label: 'Camp Donor Management', route: '/camp-donors', actions: { view: ['camp:read', 'donor:read'], create: ['donor:create'], update: ['donor:update', 'donor:delete'] } },
-    { id: 'camp-donation', label: 'Camp Donation Management', route: '/camp-donation', actions: { view: ['camp:read', 'donation:read'], update: ['camp:manage'] } },
+    { id: 'camp-donation', label: 'Camp Donation Management', route: '/camp-donation', actions: { view: ['camp:read', 'donation:read'], update: ['camp:manage'], delete: ['donation:delete'] } },
     { id: 'camp-reports', label: 'Camp Reports', route: '/camp-reports', actions: { view: ['camp:read', 'report:read'] } },
   ],
 };
