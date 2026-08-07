@@ -47,12 +47,24 @@ const CODE39_PATTERNS = {
 
 const Code39Barcode = ({ value, width = 1.0, height = 30, className = "" }) => {
   if (!value) return null;
-  const uppercaseValue = `*${value.toString().toUpperCase()}*`;
+  // Code 39 only supports 0-9 A-Z - . space $ / + %. Any other character
+  // (e.g. an underscore in a generated ID) is remapped to '-' rather than
+  // silently dropped, so the encoded barcode never desyncs from the text
+  // printed underneath it.
+  const sanitized = value
+    .toString()
+    .toUpperCase()
+    .replace(/[^0-9A-Z\-. $/+%]/g, '-');
+  const uppercaseValue = `*${sanitized}*`;
 
   const narrowWidth = width;
   const wideWidth = width * 3.0;
+  // Scanners need clear white space of roughly 10x the narrow-bar width on
+  // both sides to reliably detect the start/stop pattern — without this
+  // quiet zone the barcode reads as garbage or fails to scan at all.
+  const quietZone = narrowWidth * 10;
 
-  let currentX = 0;
+  let currentX = quietZone;
   const rects = [];
 
   for (let i = 0; i < uppercaseValue.length; i++) {
@@ -83,8 +95,10 @@ const Code39Barcode = ({ value, width = 1.0, height = 30, className = "" }) => {
     currentX += narrowWidth;
   }
 
+  const totalWidth = currentX + quietZone;
+
   return (
-    <svg width={currentX} height={height} viewBox={`0 0 ${currentX} ${height}`} className={`max-w-full ${className}`}>
+    <svg width={totalWidth} height={height} viewBox={`0 0 ${totalWidth} ${height}`} className={`max-w-full ${className}`}>
       {rects}
     </svg>
   );

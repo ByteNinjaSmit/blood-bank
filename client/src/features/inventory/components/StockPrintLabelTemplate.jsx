@@ -77,7 +77,7 @@ export default function StockPrintLabelTemplate({ item, formatDate }) {
         {/* Right Side: QR Code Scan Area & Dates below it */}
         <div className="w-[2.3cm] flex flex-col items-center justify-center border-l border-black pl-0.5 shrink-0 select-none">
           <img
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${import.meta.env.VITE_PUBLIC_FRONTEND_URL || ''}/verify/${item?.unitId || item?.bag?.bagNo || item?.bagNo || 'unknown'}`)}`}
+            src={`https://api.qrserver.com/v1/create-qr-code/?format=svg&size=400x400&qzone=2&data=${encodeURIComponent(`${import.meta.env.VITE_PUBLIC_FRONTEND_URL || ''}/verify/${item?.unitId || item?.bag?.bagNo || item?.bagNo || 'unknown'}`)}`}
             alt="QR Code"
             className="w-[1.5cm] h-[1.5cm]"
           />
@@ -113,7 +113,7 @@ export default function StockPrintLabelTemplate({ item, formatDate }) {
         <div className="flex-1 pt-1 flex items-center justify-center gap-3 select-none">
           {/* Bag No Barcode */}
           <div className="flex-1 flex flex-col items-center">
-            <Code39Barcode value={item?.bag?.bagNo || item?.bagNo || 'N/A'} width={1.1} height={30} className="h-[30px]" />
+            <Code39Barcode value={item?.bag?.bagNo || item?.bagNo || 'N/A'} width={0.85} height={30} className="h-[30px]" />
             <span className="text-[8px] font-black tracking-wider mt-1 uppercase text-black">
               {item?.bag?.bagNo || item?.bagNo || 'N/A'}
             </span>
@@ -121,7 +121,7 @@ export default function StockPrintLabelTemplate({ item, formatDate }) {
 
           {/* Segment No Barcode */}
           <div className="flex-1 flex flex-col items-center">
-            <Code39Barcode value={item?.bag?.segmentNo || item?.segmentNo || 'N/A'} width={1.0} height={30} className="h-[30px]" />
+            <Code39Barcode value={item?.bag?.segmentNo || item?.segmentNo || 'N/A'} width={0.8} height={30} className="h-[30px]" />
             <span className="text-[7.5px] font-black tracking-wider mt-1 uppercase text-black">
               Seg No: {item?.bag?.segmentNo || item?.segmentNo || 'N/A'}
             </span>

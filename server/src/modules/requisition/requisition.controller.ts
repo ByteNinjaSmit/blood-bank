@@ -97,7 +97,13 @@ export function createRequisitionControllers(deps: {
             }
           }
 
-          const firstComp = req.body.requestedComponents[0];
+          // The patient's own blood group must come from the patient card
+          // itself, never from requestedComponents[0] — that's the product
+          // being ordered, which is frequently NOT the patient's own type
+          // (e.g. a universal-donor O-negative unit requested for an
+          // A-positive patient). Falling back to the requested product's
+          // group here previously fed a wrong "patient" blood type into
+          // the incompatible-crossmatch auto-replacement logic.
           const createdPatient = await deps.patients.create(
             {
               patientPublicId,
@@ -106,8 +112,8 @@ export function createRequisitionControllers(deps: {
               dob,
               sex: p.sex || 'M',
               medicalRecordNumber: p.mrn,
-              aboGroup: firstComp?.aboGroup,
-              rhFactor: firstComp?.rhFactor,
+              aboGroup: p.aboGroup,
+              rhFactor: p.rhFactor,
               specialNeeds: Array.isArray(p.specialNeeds) ? p.specialNeeds : [],
             },
             actorId,

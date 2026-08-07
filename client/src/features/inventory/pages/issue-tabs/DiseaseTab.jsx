@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, MapPin, Eye, Send } from 'lucide-react';
+import { Loader2, MapPin, Eye } from 'lucide-react';
 import { formatDateTime } from '@/lib/format-date';
 
 const fmtDateTime = (v) => formatDateTime(v, { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -17,7 +17,6 @@ export default function DiseaseTab({
   fetchThalassemia,
   diseaseLabel,
   onViewRequisition,
-  onIssueRequisition,
 }) {
   return (
     <div className="bg-white shadow-md rounded-xl overflow-hidden">
@@ -64,7 +63,6 @@ export default function DiseaseTab({
             ) : thalRows.map((r) => {
               const p = r.patient || {};
               const matchedCount = Array.isArray(r.matchedInventory) ? r.matchedInventory.length : 0;
-              const canIssue = ['approved', 'issued'].includes(r.status);
               return (
                 <tr key={r._id} className="hover:bg-red-50/30 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs font-bold text-gray-700">{r.requestId || '—'}</td>
@@ -90,14 +88,6 @@ export default function DiseaseTab({
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 text-xs font-medium transition-colors"
                       >
                         <Eye className="w-3.5 h-3.5" /> View
-                      </button>
-                      <button
-                        onClick={() => onIssueRequisition(r)}
-                        disabled={!canIssue}
-                        title={canIssue ? 'Open requisition to issue matched bags' : 'Requisition must be approved before issuing'}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-orange-300 text-orange-800 hover:bg-orange-50 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                      >
-                        <Send className="w-3.5 h-3.5" /> Issue
                       </button>
                     </div>
                   </td>
