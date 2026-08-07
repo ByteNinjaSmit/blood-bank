@@ -56,6 +56,13 @@ const RequisitionPatient = z.object({
   indicationCategory: z.enum(CLINICAL_DISEASE).optional(),
   otherDiseaseName: z.string().trim().optional(),
   hb: z.coerce.number().optional(),
+  // The patient's own verified blood group — distinct from the ABO/Rh on
+  // each requestedComponents line (which is the product being ordered,
+  // not necessarily the patient's type). Used to seed the auto-created
+  // Patient record so downstream incompatible-crossmatch replacement
+  // logic (requisition.service.ts) matches against the real patient.
+  aboGroup: z.enum(ABO_GROUP).optional(),
+  rhFactor: z.enum(RH_FACTOR).optional(),
   specialNeeds: z.array(z.enum(SPECIAL_NEED)).optional(),
   history: PatientHistory.optional(),
   pregnancy: PatientPregnancy.optional(),

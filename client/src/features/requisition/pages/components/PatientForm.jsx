@@ -1,5 +1,6 @@
 import React from 'react';
 import ClinicalIndicationField from './ClinicalIndicationField';
+import { BLOOD_GROUPS, RH_TYPES } from '../constants';
 
 export default function PatientForm({ patient, onChange, readOnly = false }) {
   return (
@@ -44,6 +45,28 @@ export default function PatientForm({ patient, onChange, readOnly = false }) {
           <option value="F">Female</option>
           <option value="O">Other</option>
         </select>
+      </div>
+      <div>
+        <label className="block text-sm text-gray-700 mb-1">Patient's Blood Group <span className="text-red-600">*</span></label>
+        <div className="flex gap-2">
+          <select
+            className={`w-1/2 px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+            value={patient.aboGroup || 'O'}
+            onChange={(e) => !readOnly && onChange({ aboGroup: e.target.value })}
+            disabled={readOnly}
+          >
+            {BLOOD_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+          </select>
+          <select
+            className={`w-1/2 px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+            value={patient.rh || 'Positive'}
+            onChange={(e) => !readOnly && onChange({ rh: e.target.value })}
+            disabled={readOnly}
+          >
+            {RH_TYPES.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+        <p className="text-xs text-gray-400 mt-1">The patient's own verified type — not necessarily the same as the product being requested below.</p>
       </div>
       <div>
         <label className="block text-sm text-gray-700 mb-1">MRN</label>
