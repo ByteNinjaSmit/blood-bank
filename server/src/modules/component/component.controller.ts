@@ -12,6 +12,8 @@ export interface ComponentControllers {
   getGroupDetail: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   patch: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   patchBag: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  markBatchDraft: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  clearBatchDraft: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
 export function createComponentControllers(service: ComponentService): ComponentControllers {
@@ -106,6 +108,26 @@ export function createComponentControllers(service: ComponentService): Component
         const fields = ValidateComponent.patchBagBody(req);
         await service.patchBag(id, fields, actor(req));
         res.json({ success: true, message: 'Bag updated successfully' });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async markBatchDraft(req, res, next) {
+      try {
+        const { donationIds } = ValidateComponent.batchDraftBody(req);
+        await service.setBatchDraftActive(donationIds, true);
+        res.json({ success: true });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async clearBatchDraft(req, res, next) {
+      try {
+        const { donationIds } = ValidateComponent.batchDraftBody(req);
+        await service.setBatchDraftActive(donationIds, false);
+        res.json({ success: true });
       } catch (e) {
         next(e);
       }

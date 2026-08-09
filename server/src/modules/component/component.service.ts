@@ -46,6 +46,7 @@ export interface ComponentService {
     },
     actorId: string,
   ): ReturnType<ComponentRepo['patchBag']>;
+  setBatchDraftActive(donationIds: string[], active: boolean): ReturnType<ComponentRepo['setBatchDraftActive']>;
 }
 
 export function createComponentService(deps: { repo: ComponentRepo }): ComponentService {
@@ -144,5 +145,6 @@ export function createComponentService(deps: { repo: ComponentRepo }): Component
       );
       return result;
     },
+    setBatchDraftActive: (donationIds, active) => deps.repo.setBatchDraftActive(donationIds, active),
   };
 }

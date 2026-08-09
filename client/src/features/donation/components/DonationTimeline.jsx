@@ -64,20 +64,23 @@ function fmt(iso) {
 
 function TimelineStep({ icon, label, timestamp, status, detail, isLast }) {
   const StepIcon = icon;
-  const done   = status === 'done';
-  const failed = status === 'failed';
+  const done       = status === 'done';
+  const failed     = status === 'failed';
+  const inProgress = status === 'in_progress';
 
   return (
     <div className="flex gap-3">
       <div className="flex flex-col items-center">
         <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
-          done   ? 'bg-green-100 text-green-700 ring-2 ring-green-200' :
-          failed ? 'bg-red-100 text-red-700 ring-2 ring-red-200' :
-                   'bg-gray-100 text-gray-400'
+          done       ? 'bg-green-100 text-green-700 ring-2 ring-green-200' :
+          failed     ? 'bg-red-100 text-red-700 ring-2 ring-red-200' :
+          inProgress ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-200' :
+                       'bg-gray-100 text-gray-400'
         }`}>
-          {done   ? <CheckCircle2 className="w-3.5 h-3.5" /> :
-           failed ? <XCircle className="w-3.5 h-3.5" /> :
-                    <Clock className="w-3.5 h-3.5" />}
+          {done       ? <CheckCircle2 className="w-3.5 h-3.5" /> :
+           failed     ? <XCircle className="w-3.5 h-3.5" /> :
+           inProgress ? <Clock className="w-3.5 h-3.5 animate-pulse" /> :
+                        <Clock className="w-3.5 h-3.5" />}
         </div>
         {!isLast && <div className="w-px bg-gray-200 flex-1 my-1 min-h-[20px]" />}
       </div>
@@ -86,11 +89,16 @@ function TimelineStep({ icon, label, timestamp, status, detail, isLast }) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <StepIcon className={`w-3.5 h-3.5 flex-shrink-0 ${
-              done ? 'text-green-600' : failed ? 'text-red-600' : 'text-gray-400'
+              done ? 'text-green-600' : failed ? 'text-red-600' : inProgress ? 'text-amber-600' : 'text-gray-400'
             }`} />
             <p className={`text-sm font-semibold leading-tight ${
-              done ? 'text-gray-900' : failed ? 'text-red-700' : 'text-gray-400'
+              done ? 'text-gray-900' : failed ? 'text-red-700' : inProgress ? 'text-amber-700' : 'text-gray-400'
             }`}>{label}</p>
+            {inProgress && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                Under Separation
+              </span>
+            )}
           </div>
           {timestamp && (
             <span className="text-xs text-gray-400 flex-shrink-0">{timestamp}</span>
@@ -98,7 +106,7 @@ function TimelineStep({ icon, label, timestamp, status, detail, isLast }) {
         </div>
         {detail && (
           <p className={`text-xs mt-1 ml-5 leading-snug ${
-            failed ? 'text-red-500' : 'text-gray-500'
+            failed ? 'text-red-500' : inProgress ? 'text-amber-600' : 'text-gray-500'
           }`}>{detail}</p>
         )}
       </div>
@@ -115,10 +123,28 @@ export default function DonationTimeline({ donation }) {
     ttiDecision === 'released' ? 'done' :
     ttiDecision === 'reactive' ? 'failed' : 'pending';
 
-  // Separation has actually happened once any unit other than the raw
+  // Separation has actually started once any unit other than the raw
   // collection placeholder ('WB') exists — units.length alone isn't
   // reliable since a not-yet-separated donation still has exactly 1 unit.
+  // It isn't *finished* until every derived unit has left 'COLLECTED' —
+  // that only happens once staff sign off via "Mark as Complete" on the
+  // Component Separate screen (separationCompleted() in
+  // component.repository.ts), which fires SEPARATION_COMPLETE (or the
+  // full TTI-release chain) on each unit. Until then the bag still shows
+  // as "Under Separation" even though some components already have
+  // volumes entered.
+  //
+  // A bag can also be "Under Separation" before any unit exists at all —
+  // while it's staged (components/RPM entered but not yet finalized) in an
+  // active batch on the Component Separate screen. That has no BloodUnit
+  // to key off, so it's flagged separately via
+  // donation.separationBatchActive (set/cleared by
+  // POST /component/batch-draft[/clear] as bags join/leave a batch).
   const hasSeparated = donation.units && donation.units.some(u => u.componentType !== 'WB');
+  const batchDraftActive = Boolean(donation.separationBatchActive);
+  const separationInProgress =
+    batchDraftActive || (hasSeparated && donation.units.some(u => u.status === 'COLLECTED'));
+  const separationStepStatus = separationInProgress ? 'in_progress' : hasSeparated ? 'done' : 'pending';
 
   let releaseStatus;
   let releaseDetail;
@@ -181,10 +207,12 @@ export default function DonationTimeline({ donation }) {
       icon: Scissors,
       label: 'Component Separation',
       timestamp: null,
-      status: hasSeparated ? 'done' : 'pending',
+      status: separationStepStatus,
       detail: hasSeparated
-        ? `${donation.units.length} component${donation.units.length !== 1 ? 's' : ''}: ${[...new Set(donation.units.map(u => displayComponentType(donation.donationType, u.componentType)))].join(', ')}`
-        : 'Not separated yet',
+        ? `${separationInProgress ? 'Under Separation — ' : ''}${donation.units.length} component${donation.units.length !== 1 ? 's' : ''} entered: ${[...new Set(donation.units.map(u => displayComponentType(donation.donationType, u.componentType)))].join(', ')}`
+        : batchDraftActive
+          ? 'Under Separation — staged in a batch, not yet saved'
+          : 'Not separated yet',
     },
     {
       icon: TestTube,

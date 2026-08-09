@@ -52,6 +52,9 @@ export interface DonationDto {
 export interface DonationWithUnitsDto extends DonationDto {
   donorFitness?: { isFit: boolean; rejectionReason?: string; rejectedAtStep?: string };
   medicalExam?: Record<string, unknown>;
+  /** True while this bag sits in an active, not-yet-finalized batch on the
+   * Component Separate screen — see donation.model.ts separationBatchActive. */
+  separationBatchActive?: boolean;
   units: Array<{
     unitId: string;
     componentType: string;
@@ -198,6 +201,7 @@ async function loadDonationWithUnits(mongoId: string): Promise<DonationWithUnits
       | undefined,
     medicalExam: doc.medicalExam as Record<string, unknown> | undefined,
     isFit: doc.donorFitness?.isFit,
+    separationBatchActive: Boolean((doc as unknown as { separationBatchActive?: boolean }).separationBatchActive),
     createdAt: (doc as unknown as { createdAt: Date }).createdAt.toISOString(),
     updatedAt: (doc as unknown as { updatedAt: Date }).updatedAt.toISOString(),
     units: units.map((u) => ({

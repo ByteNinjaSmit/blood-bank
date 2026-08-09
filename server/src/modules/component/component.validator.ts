@@ -64,6 +64,10 @@ const PatchBagBody = z.object({
   editReason: z.string().trim().min(1, 'A reason is required to edit this bag').max(500),
 });
 
+const BatchDraftBody = z.object({
+  donationIds: z.array(z.string().trim().min(1)).min(1).max(200),
+});
+
 const IdParam = z.object({ id: z.string().trim().min(1).max(80) });
 
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {
@@ -80,5 +84,6 @@ export const ValidateComponent = {
     parseOrThrow(SeparationCompletedBody, req.body, 'request body'),
   patchBody: (req: Request) => parseOrThrow(PatchBody, req.body, 'request body'),
   patchBagBody: (req: Request) => parseOrThrow(PatchBagBody, req.body, 'request body'),
+  batchDraftBody: (req: Request) => parseOrThrow(BatchDraftBody, req.body, 'request body'),
   idParam: (req: Request) => parseOrThrow(IdParam, req.params, 'path params'),
 };

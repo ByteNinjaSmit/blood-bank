@@ -67,4 +67,22 @@ router.patch('/:id', authenticate, requirePermission('unit:read'), controllers.p
 // from this bag has been issued; always requires an edit reason.
 router.patch('/bag/:id', authenticate, requirePermission('unit:read'), controllers.patchBag);
 
+// Batch-draft flag: marks/clears Donation.separationBatchActive so the
+// donation timeline/details screens can show "Under Separation" while a
+// bag sits staged (not yet finalized) in the Component Separate batch UI.
+// No BloodUnit is created by either of these — same permission as
+// /separate since they're driven by the same screen/action.
+router.post(
+  '/batch-draft',
+  authenticate,
+  requirePermission('component:separate'),
+  controllers.markBatchDraft,
+);
+router.post(
+  '/batch-draft/clear',
+  authenticate,
+  requirePermission('component:separate'),
+  controllers.clearBatchDraft,
+);
+
 export default router;
