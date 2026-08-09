@@ -78,16 +78,16 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
             >
               
               {/* Blood Bank Header matching the image */}
-              <div className="w-full flex flex-col items-center justify-center border-b border-black pb-1 mb-1 bg-white shrink-0 text-center relative select-none overflow-hidden" style={{ minHeight: '2.0cm' }}>
-                <span className="text-[6.5px] font-bold tracking-wide text-black uppercase leading-tight mb-0.5 px-1">Sai Healthcare Foundation Charitable Trusts</span>
-                <h3 className="text-[18px] font-black text-black leading-none tracking-tight uppercase" style={{ wordSpacing: '1px' }}>
+              <div className="w-full flex flex-col items-center justify-center border-b border-black pb-1 mb-1 bg-white shrink-0 text-center relative select-none overflow-hidden" style={{ minHeight: '1.0cm' }}>
+                <span className="text-[8.5px] font-bold tracking-wide text-black uppercase leading-tight mb-0.5 px-1">Sai Healthcare Foundation Charitable Trusts</span>
+                <h3 className="text-[22px] font-black text-black leading-none tracking-tight uppercase" style={{ wordSpacing: '1px' }}>
                   SANJIVANI BLOOD CENTRE
                 </h3>
                 <div className="w-full flex justify-between text-[6px] font-medium text-black uppercase mt-1 px-1.5">
                   <span>(F.D.A. Lic. No. N-KD 15)</span>
                   <span>(SBTC Reg. No. - 0031)</span>
                 </div>
-                <div className="w-full text-center text-[5.5px] leading-tight font-bold text-black uppercase mt-1 px-1">
+                <div className="w-full text-center text-[5.8px] leading-tight font-bold text-black uppercase mt-1 px-1">
                   110-2-B, 'Nishigandha', Vivekanandnagar, Near S. G. Vidyalaya, Kopargaon - 423 601, Dist. Ahmednagar. (M.S.) <span style={{ filter: 'grayscale(100%) contrast(100%) brightness(0)' }}>☎︎</span> - (02423) 222237
                 </div>
               </div>
@@ -99,7 +99,7 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                   <img
                     src={`https://api.qrserver.com/v1/create-qr-code/?format=svg&size=400x400&qzone=2&data=${encodeURIComponent(`${import.meta.env.VITE_PUBLIC_FRONTEND_URL || ''}/verify/${inv._id || 'unknown'}`)}`}
                     alt="QR Code"
-                    className="w-[2.05cm] h-[2.05cm]"
+                    className="w-[2.45cm] h-[2.45cm]"
                   />
                   <span className="text-[6px] font-black text-center mt-1 uppercase tracking-tighter text-black leading-tight whitespace-nowrap">Scan To View</span>
                   <span className="text-[6px] font-black text-center uppercase tracking-tighter text-black leading-tight whitespace-nowrap">Compatibility Report</span>
