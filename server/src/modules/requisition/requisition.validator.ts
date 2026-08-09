@@ -138,6 +138,11 @@ export const RejectComponentBody = z.object({
   reason: z.string().trim().min(1).max(500),
 });
 
+export const RejectBagBody = z.object({
+  unitId: z.string().trim().min(1),
+  reason: z.string().trim().min(1).max(500),
+});
+
 // One agglutination reaction cell; null clears it.
 const Grade = z.enum(GRADING_REACTION).nullable().optional();
 
@@ -209,6 +214,18 @@ export const ListRequisitionsQuery = z.object({
     (val) => (val === '' ? undefined : val),
     z.enum(CLINICAL_DISEASE).optional(),
   ),
+  // Comma-separated list of categories — used by the Inventory Issue page's
+  // Thalassemia / Sickle Cell Anaemia tab, which only surfaces those two
+  // categories (unlike the generic hasClinicalIndication flag above, which
+  // matches any categorized requisition).
+  indicationCategoryIn: z.preprocess(
+    (val) => (val === '' || val == null ? undefined : val),
+    z
+      .string()
+      .transform((s) => s.split(',').map((v) => v.trim()).filter(Boolean))
+      .pipe(z.array(z.enum(CLINICAL_DISEASE)))
+      .optional(),
+  ),
   search: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
   urgency: z.preprocess(
     (val) => (val === '' ? undefined : val),
@@ -252,4 +269,5 @@ export const ValidateRequisition = {
     parseOrThrow(ConfirmCompatibilityBody, req.body, 'request body'),
   rejectComponentBody: (req: Request) =>
     parseOrThrow(RejectComponentBody, req.body, 'request body'),
+  rejectBagBody: (req: Request) => parseOrThrow(RejectBagBody, req.body, 'request body'),
 };

@@ -106,6 +106,7 @@ function deps(opts: { candidates?: SelectableUnit[]; pat?: PatientDto; req?: Req
     setMatchedUnitCompatibilityConfirmed: vi.fn(),
     setComponentStatus: vi.fn().mockImplementation(async () => reqDto()),
     removeMatchedUnitsByComponent: vi.fn().mockImplementation(async () => reqDto()),
+    pushRejectedUnit: vi.fn().mockImplementation(async () => reqDto()),
   };
   const patients: PatientRepo = {
     create: vi.fn(),
@@ -136,9 +137,8 @@ describe('requisition-service.match', () => {
   });
 
   it('reserves proposed units on approve and flips them to reserved', async () => {
-    // Approval-ready: recipient + bag grouping recorded and crossmatch compatible
-    // (the readiness gate blocks approve otherwise).
-    const grouping = { cellGrouping: { antiA: 'POS_4' as const, antiB: 'NEG_0' as const } };
+    // Approval-ready: crossmatch compatible (the readiness gate blocks
+    // approve otherwise).
     const matchedUnits = [
       {
         unitId: 'U1',
@@ -147,11 +147,10 @@ describe('requisition-service.match', () => {
         reserved: false,
         crossmatchRequired: true,
         crossmatchStatus: 'COMPATIBLE' as const,
-        grouping,
       },
     ];
     const d = deps({
-      req: reqDto({ status: 'MATCHED', matchedUnits, recipientGrouping: grouping }),
+      req: reqDto({ status: 'MATCHED', matchedUnits }),
     });
     d.units.applyEvent = vi.fn().mockResolvedValue({ status: 'RESERVED' });
     d.requisitions.setStatus = vi.fn().mockResolvedValue(reqDto({ status: 'APPROVED' }));
@@ -164,7 +163,7 @@ describe('requisition-service.match', () => {
     expect(d.requisitions.setStatus).toHaveBeenCalledWith(REQ_ID, 'APPROVED', 'actor');
   });
 
-  it('refuses to approve until grouping + crossmatch worksheets are recorded', async () => {
+  it('refuses to approve until the crossmatch worksheet is recorded', async () => {
     const matchedUnits = [
       {
         unitId: 'U1',
@@ -178,7 +177,7 @@ describe('requisition-service.match', () => {
     const d = deps({ req: reqDto({ status: 'MATCHED', matchedUnits }) });
     const svc = createRequisitionService(d);
     await expect(svc.approve(REQ_ID, 'actor')).rejects.toThrow(
-      /complete the grouping and crossmatch/i,
+      /complete the crossmatch/i,
     );
     // Nothing reserved — the gate short-circuits before touching inventory.
     expect(d.units.applyEvent).not.toHaveBeenCalled();

@@ -31,6 +31,7 @@ export interface RequisitionControllers {
   setMatchedUnitGrouping: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   confirmCompatibility: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   rejectComponent: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  rejectBag: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
 export function createRequisitionControllers(deps: {
@@ -361,6 +362,18 @@ export function createRequisitionControllers(deps: {
           reason,
           actor(req),
         );
+        const enriched = await enrichRequisition(updated);
+        res.json({ success: true, data: enriched, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async rejectBag(req, res, next) {
+      try {
+        const { id } = ValidateRequisition.idParam(req);
+        const { unitId, reason } = ValidateRequisition.rejectBagBody(req);
+        const updated = await deps.requisitions.rejectBag(id, unitId, reason, actor(req));
         const enriched = await enrichRequisition(updated);
         res.json({ success: true, data: enriched, requestId: req.id });
       } catch (e) {

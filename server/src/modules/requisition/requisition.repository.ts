@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
-import type { AboGroup, ComponentType, GradingReaction, RhFactor } from '@/shared/enums';
+import type { AboGroup, ClinicalDisease, ComponentType, GradingReaction, RhFactor } from '@/shared/enums';
 import { NotFoundError } from '@/shared/errors';
 
 export interface GroupingWorksheetDto {
@@ -59,6 +59,17 @@ export interface MatchedUnitDto {
   grouping?: GroupingWorksheetDto | null;
 }
 
+export interface RejectedUnitDto {
+  unitId: string;
+  componentType: ComponentType;
+  bloodGroup?: string;
+  rh?: string;
+  bagNo?: string;
+  reason: string;
+  rejectedAt?: Date | string;
+  rejectedBy?: string;
+}
+
 export interface CrossmatchDetails {
   compatibilityResult?: 'MAJOR_COMPATIBLE' | 'MINOR_COMPATIBLE' | 'UNIVERSAL';
   crossmatchDoneAt?: Date;
@@ -74,7 +85,7 @@ export interface RequisitionPatientDto {
   mrn?: string;
   diagnosis?: string;
   indication?: string;
-  indicationCategory?: 'THALASSEMIA' | 'SICKLE_CELL_ANAEMIA' | 'OTHER' | null;
+  indicationCategory?: ClinicalDisease | null;
   otherDiseaseName?: string;
   hb?: number;
   specialNeeds?: string[];
@@ -103,6 +114,7 @@ export interface RequisitionDto {
   recipientGrouping?: GroupingWorksheetDto | null;
   requestedComponents: RequestedComponentDto[];
   matchedUnits: MatchedUnitDto[];
+  rejectedUnits?: RejectedUnitDto[];
   status: RequisitionStatus;
   requiredAt?: string;
   requestedAt?: string;
@@ -124,6 +136,7 @@ interface RawReq {
   recipientGrouping?: GroupingWorksheetDto | null;
   requestedComponents: RequestedComponentDto[];
   matchedUnits: MatchedUnitDto[];
+  rejectedUnits?: (RejectedUnitDto & { rejectedBy?: { toString(): string } })[];
   status: RequisitionStatus;
   requiredAt?: Date;
   requestedAt?: Date;
@@ -178,6 +191,11 @@ function toDto(raw: RawReq): RequisitionDto {
     recipientGrouping: raw.recipientGrouping ?? null,
     requestedComponents: raw.requestedComponents || [],
     matchedUnits: raw.matchedUnits || [],
+    rejectedUnits: (raw.rejectedUnits || []).map((u) => ({
+      ...u,
+      rejectedAt: u.rejectedAt ? new Date(u.rejectedAt).toISOString() : undefined,
+      rejectedBy: u.rejectedBy ? u.rejectedBy.toString() : undefined,
+    })),
     status: raw.status,
     requiredAt: raw.requiredAt ? new Date(raw.requiredAt).toISOString() : undefined,
     requestedAt: raw.requestedAt
@@ -211,7 +229,8 @@ export interface ListRequisitionsFilter {
   patientId?: string;
   purpose?: 'REQUISITION' | 'RESERVATION';
   hasClinicalIndication?: boolean;
-  indicationCategory?: 'THALASSEMIA' | 'SICKLE_CELL_ANAEMIA' | 'OTHER';
+  indicationCategory?: ClinicalDisease;
+  indicationCategoryIn?: ClinicalDisease[];
   search?: string;
   urgency?: 'ROUTINE' | 'URGENT' | 'EMERGENCY';
   componentType?: ComponentType;
@@ -290,6 +309,8 @@ export interface RequisitionRepo {
   ): Promise<RequisitionDto>;
   /** Drops every matched unit of a component (used on component reject). */
   removeMatchedUnitsByComponent(id: string, componentType: string): Promise<RequisitionDto>;
+  /** Appends a permanent rejected-bag record (used on single-bag reject). */
+  pushRejectedUnit(id: string, entry: RejectedUnitDto, actorId: string): Promise<RequisitionDto>;
 }
 
 export function createRequisitionRepo(): RequisitionRepo {
@@ -309,6 +330,7 @@ export function createRequisitionRepo(): RequisitionRepo {
       if (f.purpose) query.purpose = f.purpose;
       if (f.hasClinicalIndication) query['patient.indicationCategory'] = { $ne: null };
       if (f.indicationCategory) query['patient.indicationCategory'] = f.indicationCategory;
+      if (f.indicationCategoryIn?.length) query['patient.indicationCategory'] = { $in: f.indicationCategoryIn };
       if (f.urgency) query['requestedComponents.urgency'] = f.urgency;
       if (f.componentType) query['requestedComponents.componentType'] = f.componentType;
 
@@ -481,6 +503,21 @@ export function createRequisitionRepo(): RequisitionRepo {
       const updated = (await RequisitionModel.findByIdAndUpdate(
         id,
         { $pull: { matchedUnits: { componentType } } },
+        { new: true },
+      ).lean()) as RawReq | null;
+      if (!updated) throw new NotFoundError('Requisition', id);
+      return toDto(updated);
+    },
+
+    async pushRejectedUnit(id, entry, actorId) {
+      const updated = (await RequisitionModel.findByIdAndUpdate(
+        id,
+        {
+          $push: {
+            rejectedUnits: { ...entry, rejectedAt: new Date(), rejectedBy: new Types.ObjectId(actorId) },
+          },
+          $set: { updatedBy: new Types.ObjectId(actorId) },
+        },
         { new: true },
       ).lean()) as RawReq | null;
       if (!updated) throw new NotFoundError('Requisition', id);

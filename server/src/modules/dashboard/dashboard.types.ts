@@ -49,6 +49,18 @@ export interface DiseaseSectionDto {
   other: DiseaseBucketDto;
 }
 
+// Requisition-driven reason-for-issue breakdown: every reason from the
+// Clinical Indication / Disease Patients dropdown (structured categories
+// plus any custom "Other" text), with issued-component counts per reason.
+export interface RequisitionIndicationRowDto {
+  reason: string;
+  byComponent: Record<string, number>;
+}
+
+export interface RequisitionIndicationSectionDto {
+  rows: RequisitionIndicationRowDto[];
+}
+
 export interface StorageBreakdownItemDto {
   location: string;
   count: number;

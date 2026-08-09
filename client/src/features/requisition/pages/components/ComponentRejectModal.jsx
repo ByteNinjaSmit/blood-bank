@@ -2,9 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertTriangle, AlertCircle } from 'lucide-react';
 
-// Reject a single component of a requisition (the rest continues). Shows the
-// component being rejected and requires a reason.
-export default function ComponentRejectModal({ isOpen, onClose, onConfirm, component, bagCount = 0, submitting = false }) {
+// Reject a single component (or, with the bag-scoped props, a single bag) of
+// a requisition — the rest continues. Shows what's being rejected and
+// requires a reason.
+export default function ComponentRejectModal({
+  isOpen, onClose, onConfirm, component, bagCount = 0, submitting = false,
+  title = 'Reject Component',
+  confirmDescription = 'This drops the component from the requisition; the remaining components continue.',
+  confirmLabel = 'Reject Component',
+}) {
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
 
@@ -30,7 +36,7 @@ export default function ComponentRejectModal({ isOpen, onClose, onConfirm, compo
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Reject Component</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex gap-3 text-red-950 text-xs">
@@ -38,9 +44,9 @@ export default function ComponentRejectModal({ isOpen, onClose, onConfirm, compo
             <AlertCircle className="w-5 h-5" />
           </div>
           <div>
-            <p className="font-semibold">Confirm component rejection</p>
+            <p className="font-semibold">Confirm rejection</p>
             <p className="text-red-700/90 mt-0.5">
-              This drops the component from the requisition; the remaining components continue.
+              {confirmDescription}
             </p>
           </div>
         </div>
@@ -86,7 +92,7 @@ export default function ComponentRejectModal({ isOpen, onClose, onConfirm, compo
           </button>
           <button type="submit" disabled={submitting || !reason.trim()}
             className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 active:bg-red-800 rounded-xl transition-all shadow-md shadow-red-100 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-            {submitting ? 'Rejecting...' : 'Reject Component'}
+            {submitting ? 'Rejecting...' : confirmLabel}
           </button>
         </div>
       </form>

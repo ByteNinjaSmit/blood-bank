@@ -50,6 +50,8 @@ export function useRequisitionList() {
   const [multiLabelDoc, setMultiLabelDoc] = useState(null);
   const [selectedPrintLabelDoc, setSelectedPrintLabelDoc] = useState(null);
   const [selectedPrintReportDoc, setSelectedPrintReportDoc] = useState(null);
+  const [reportSelectOpen, setReportSelectOpen] = useState(false);
+  const [reportSelectDoc, setReportSelectDoc] = useState(null);
 
   const [issueModalOpen, setIssueModalOpen] = useState(false);
   const [issueDoc, setIssueDoc] = useState(null);
@@ -415,6 +417,11 @@ export function useRequisitionList() {
 
   const printSingleLabel = (doc, matchedUnit) => {
     try {
+      const inv = typeof matchedUnit?.inventoryId === 'object' ? matchedUnit.inventoryId : null;
+      if (inv?.status !== 'ISSUED') {
+        toast.error('Issue this component before printing its label.');
+        return;
+      }
       // Create a temporary clone with ONLY this single matched inventory unit
       const singleDoc = {
         ...doc,
@@ -452,26 +459,60 @@ export function useRequisitionList() {
       });
 
       if (type === 'label') {
-        // If it has multiple matched inventory bags, open the pop-up selection modal
-        if (res.data?.matchedInventory?.length > 1) {
-          setMultiLabelDoc(res.data);
-          setMultiLabelModalOpen(true);
+        const units = res.data?.matchedInventory || [];
+        const issuedUnits = units.filter((mi) => {
+          const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+          return inv?.status === 'ISSUED';
+        });
+        if (units.length === 0) {
+          toast.error('No matched components on this requisition yet.');
           return;
         }
-        
-        // Otherwise, open the print preview modal for the single label directly
-        setSelectedPrintLabelDoc(res.data);
+        if (issuedUnits.length === 0) {
+          toast.error('Issue at least one component before printing its label.');
+          return;
+        }
+        // A single issued bag with nothing else to choose between — go
+        // straight to the label preview. Otherwise let the operator pick
+        // which (issued-only) component(s) to print via the selection modal.
+        if (units.length === 1 && issuedUnits.length === 1) {
+          setSelectedPrintLabelDoc(res.data);
+          return;
+        }
+        setMultiLabelDoc(res.data);
+        setMultiLabelModalOpen(true);
         return;
       }
 
-      // Report/Issue register: open a two-page preview before printing
-      setPrintReportPage('both');
-      setSelectedPrintReportDoc(res.data);
+      // Report/Issue register: show the component selection step first so
+      // the operator can restrict the printed report to specific
+      // (issued-only) components before previewing/printing.
+      setReportSelectDoc(res.data);
+      setReportSelectOpen(true);
     } catch (e) {
       toast.error('Network error while preparing print');
     } finally {
       setPrintLoading(false);
     }
+  };
+
+  // Confirms the operator's component selection from the report pre-print
+  // step, restricts the requisition doc to just those matched units, and
+  // opens the (existing) two-page report preview on that restricted doc.
+  const confirmReportSelection = (selectedInvIds) => {
+    if (!reportSelectDoc || !selectedInvIds?.length) return;
+    const filtered = {
+      ...reportSelectDoc,
+      matchedInventory: (reportSelectDoc.matchedInventory || []).filter((mi) => {
+        const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+        const id = inv?._id || mi.inventoryId;
+        return selectedInvIds.includes(id);
+      }),
+    };
+    setReportSelectOpen(false);
+    setReportSelectDoc(null);
+    setPrintReportPage('both');
+    setSelectedPrintReportDoc(filtered);
   };
 
   // Prints the issue report; page can be 1, 2, or 'both' so either page can
@@ -485,5 +526,5 @@ export function useRequisitionList() {
       RequisitionPrintService.print('report');
     }, 100);
   };
-  return { allSelectedIds,applyFilters,bulkAction,callAction,can,canManage,clearSelection,closeView,componentFulfillment,data,excelLoading,exportDropdownOpen,fetchList,filters,fmt,getReqLabel,handleConfirmReject,handleExportExcel,handleOpenIssueModal,handleOpenReject,handlePrint,hospitals,isApprovedForIssue,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocId,rejectingDocReqId,rejectModalOpen,rejectSubmitting,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setData,setExcelLoading,setExportDropdownOpen,setFilters,setHospitals,setIssueDoc,setIssueLoading,setIssueModalOpen,setIssuingRowId,setLimit,setLoading,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintLoading,setPrintReportPage,setPrintType,setRejectingDocId,setRejectingDocReqId,setRejectModalOpen,setRejectSubmitting,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,setTotal,setViewDoc,setViewLoading,setViewOpen,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen,user,authorizationToken };
+  return { allSelectedIds,applyFilters,bulkAction,callAction,can,canManage,clearSelection,closeView,componentFulfillment,confirmReportSelection,data,excelLoading,exportDropdownOpen,fetchList,filters,fmt,getReqLabel,handleConfirmReject,handleExportExcel,handleOpenIssueModal,handleOpenReject,handlePrint,hospitals,isApprovedForIssue,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocId,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setData,setExcelLoading,setExportDropdownOpen,setFilters,setHospitals,setIssueDoc,setIssueLoading,setIssueModalOpen,setIssuingRowId,setLimit,setLoading,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintLoading,setPrintReportPage,setPrintType,setRejectingDocId,setRejectingDocReqId,setRejectModalOpen,setRejectSubmitting,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,setTotal,setViewDoc,setViewLoading,setViewOpen,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen,user,authorizationToken };
 }

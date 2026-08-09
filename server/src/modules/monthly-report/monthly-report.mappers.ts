@@ -45,6 +45,30 @@ export const DISEASE_KEYWORDS: Array<{ label: string; terms: string[] }> = [
   { label: 'Dengue', terms: ['dengue'] },
 ];
 
+// Requisition.patient.indicationCategory → display label. Mirrors the
+// client's INDICATION_CATEGORY_LABELS (requisition/pages/constants.js) —
+// kept in sync manually since one is a Mongoose enum-backed value and the
+// other a React select option.
+export const INDICATION_CATEGORY_LABEL_MAP: Record<string, string> = {
+  THALASSEMIA: 'Thalassemia',
+  SICKLE_CELL_ANAEMIA: 'Sickle Cell Anemia',
+  PREGNANCY_RELATED_COMPLICATION: 'Pregnancy Related Complication',
+  CANCER: 'Cancer',
+  HAEMOPHILIA: 'Haemophilia',
+  ACCIDENT: 'Accident',
+  ANEMIA: 'Anemia',
+};
+
+// Reason label for the requisition-indication-driven issue breakdown. A
+// structured (non-Other) category returns its fixed label; OTHER returns the
+// operator-entered free text (or a generic "Other" if left blank); no
+// category at all returns "Not Specified".
+export function categoryLabel(indicationCategory?: string | null, otherDiseaseName?: string | null): string {
+  if (!indicationCategory) return 'Not Specified';
+  if (indicationCategory === 'OTHER') return otherDiseaseName?.trim() || 'Other';
+  return INDICATION_CATEGORY_LABEL_MAP[indicationCategory] || 'Not Specified';
+}
+
 export const REAGENT_CANONICAL = [
   'Anti-A',
   'Anti-B',

@@ -32,17 +32,9 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
     return rh;
   };
 
-  const formatRhShort = (rh) => {
-    if (!rh) return '';
-    const r = rh.toLowerCase();
-    if (r === 'positive' || r === '+') return 'Pos';
-    if (r === 'negative' || r === '-') return 'Neg';
-    return rh;
-  };
-
   // Retrieve patient blood group (default to the group of first requested component or '-' if missing)
   const patientBloodGroup = doc.requestedComponents?.[0]
-    ? `${doc.requestedComponents[0].bloodGroup} Rh(D) ${formatRhShort(doc.requestedComponents[0].rh)}`
+    ? `${doc.requestedComponents[0].bloodGroup} Rh(D) ${formatRh(doc.requestedComponents[0].rh)}`
     : '—';
 
   // We print one sticker label for each matched/reserved inventory unit
@@ -114,7 +106,7 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                 </div>
 
                 {/* Center: Component Details */}
-                <div className="flex-1 px-2 flex flex-col justify-start pt-2 select-none text-left font-bold uppercase tracking-tight text-black text-[7.5px] leading-tight space-y-1 min-w-0">
+                <div className="flex-1 px-2 flex flex-col justify-start pt-2 select-none text-left font-bold uppercase tracking-tight text-black text-[9.5px] leading-tight space-y-1 min-w-0">
                   <h4 className="text-[12.5px] font-black leading-none text-black uppercase mb-1.5">
                     {COMPONENT_PRINT_LABEL[comp.componentType] || comp.componentType || 'Blood Component'}
                   </h4>
@@ -187,8 +179,14 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                   </div>
                 </div>
 
+                {/* Technician / BTO sign-off */}
+                <div className="border-t border-black pt-1 mt-auto flex items-end justify-between px-1 text-[7px] font-bold text-black uppercase tracking-tight shrink-0">
+                  <span>Sign of Technician: ______________</span>
+                  <span>Sign of BTO: ______________</span>
+                </div>
+
                 {/* Box 4: Footer Disclaimer Block */}
-                <div className="border-t border-black pt-1 mt-auto text-[6.5px] leading-tight text-center font-bold text-black uppercase tracking-tight shrink-0">
+                <div className="border-t border-black pt-1 text-[6.5px] leading-tight text-center font-bold text-black uppercase tracking-tight shrink-0">
                   This Unit is not for sale. Service Charges of the unit include expenses for the total quality assurance of the unit
                 </div>
               </div>

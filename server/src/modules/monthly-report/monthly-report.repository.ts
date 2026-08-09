@@ -33,6 +33,8 @@ import {
   buildEntityBreakdown,
   ageAt,
   matchIndication,
+  INDICATION_CATEGORY_LABEL_MAP,
+  categoryLabel,
 } from './monthly-report.mappers';
 import { createMonthlyReportMethods2 } from './monthly-report.methods2';
 
@@ -435,13 +437,15 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
       })
         .select('requisitionId unitId')
         .lean();
-      if (issues.length === 0) return { rows: [], structuredDiseaseCounts };
+      if (issues.length === 0) {
+        return { rows: [], structuredDiseaseCounts, byIndicationCategory: { rows: [] } };
+      }
 
       const reqIds = [...new Set(issues.map((i) => String(i.requisitionId)))];
       const unitIdSet = [...new Set(issues.map((i) => i.unitId))];
       const [requisitions, units] = await Promise.all([
         RequisitionModel.find({ _id: { $in: reqIds } })
-          .select('patient.indication patient.diagnosis')
+          .select('patient.indication patient.diagnosis patient.indicationCategory patient.otherDiseaseName')
           .lean(),
         BloodUnitModel.find({ unitId: { $in: unitIdSet } })
           .select('unitId componentType')
@@ -449,27 +453,46 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
       ]);
 
       const indicationByReq = new Map<string, string>();
+      const categoryByReq = new Map<string, string>();
       for (const r of requisitions as any[]) {
         const text = r.patient?.indication || r.patient?.diagnosis || '';
         indicationByReq.set(String(r._id), text ? matchIndication(text) : 'Blood Supply Units');
+        categoryByReq.set(String(r._id), categoryLabel(r.patient?.indicationCategory, r.patient?.otherDiseaseName));
       }
       const componentByUnit = new Map<string, string>();
       for (const u of units as any[])
         componentByUnit.set(u.unitId, toProductLabel(u.componentType));
 
       const grid: Record<string, Record<string, number>> = {};
+      // Dropdown-driven reasons (Requisition.patient.indicationCategory), issued-only
+      // counts per component — every fixed category appears even with zero issues so
+      // the dashboard/monthly-report table can show "-" for reasons with no activity.
+      const categoryGrid: Record<string, Record<string, number>> = {};
+      for (const label of Object.values(INDICATION_CATEGORY_LABEL_MAP)) categoryGrid[label] = {};
       for (const issue of issues as any[]) {
         const indication = indicationByReq.get(String(issue.requisitionId)) ?? 'Blood Supply Units';
         const product = componentByUnit.get(issue.unitId) ?? 'Other';
         grid[indication] ??= {};
         grid[indication][product] = (grid[indication][product] ?? 0) + 1;
+
+        const category = categoryByReq.get(String(issue.requisitionId)) ?? 'Not Specified';
+        categoryGrid[category] ??= {};
+        categoryGrid[category][product] = (categoryGrid[category][product] ?? 0) + 1;
       }
 
       const rows = Object.entries(grid).map(([indication, byProduct]) => ({
         indication,
         byProduct,
       }));
-      return { rows, structuredDiseaseCounts };
+      const byIndicationCategoryRows = Object.entries(categoryGrid).map(([reason, byProduct]) => ({
+        reason,
+        byProduct,
+      }));
+      return {
+        rows,
+        structuredDiseaseCounts,
+        byIndicationCategory: { rows: byIndicationCategoryRows },
+      };
     },
 
     async getDonorCardsIssued(from, to) {

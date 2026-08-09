@@ -17,6 +17,7 @@ import {
   DonorCardSection,
   BulkTransferSection,
   DiseaseSection,
+  RequisitionIndicationSection,
   StorageBreakdownSection,
   DiscardSection,
   DeferralReasonSection,
@@ -396,6 +397,7 @@ export default function Dashboard() {
         <DonorCardSection data={payload?.donorCards} />
         <BulkTransferSection data={payload?.bulkTransfer} />
         <DiseaseSection data={payload?.diseasePatients} />
+        <RequisitionIndicationSection data={payload?.requisitionIndications} />
         <StorageBreakdownSection data={payload?.storageBreakdown} />
         <DiscardSection data={payload?.discards} />
         <DeferralReasonSection data={payload?.deferrals} />

@@ -205,6 +205,40 @@ export function DiseaseSection({ data }) {
   );
 }
 
+export function RequisitionIndicationSection({ data }) {
+  const rows = data?.rows || [];
+  const components = [...new Set(rows.flatMap((r) => Object.keys(r.byComponent || {})))];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <HeartPulse className="w-4 h-4 text-rose-600" />
+          Component Issue by Requisition Reason for Transfusion
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <SimpleTable
+          columns={["Reason", ...components, "Total"]}
+          rows={rows}
+          emptyLabel="No requisitions issued in this period."
+          renderRow={(r, idx) => {
+            const total = Object.values(r.byComponent || {}).reduce((a, b) => a + b, 0);
+            return (
+              <tr key={idx}>
+                <td className="px-4 py-2 font-medium text-slate-800">{r.reason}</td>
+                {components.map((c) => (
+                  <td key={c} className="px-4 py-2 text-slate-500">{r.byComponent?.[c] || '-'}</td>
+                ))}
+                <td className="px-4 py-2 text-slate-800 font-semibold">{total}</td>
+              </tr>
+            );
+          }}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
 export function StorageBreakdownSection({ data }) {
   const rows = data || [];
   return (

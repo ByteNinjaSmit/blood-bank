@@ -174,4 +174,12 @@ router.patch(
   controllers.rejectComponent,
 );
 
+// Match Review: reject one matched bag while continuing the requisition.
+router.patch(
+  '/:id/matched-unit/reject',
+  authenticate,
+  requirePermission('requisition:reject'),
+  controllers.rejectBag,
+);
+
 export default router;

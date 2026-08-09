@@ -105,6 +105,13 @@ class RequisitionApiService {
     );
   }
 
+  // Reject one matched bag (keeps the requisition/component open for the rest).
+  async rejectBag(id, { unitId, reason }) {
+    return this._wrap(
+      await apiService.patch(`${this.baseUrl}/${id}/matched-unit/reject`, { unitId, reason }),
+    );
+  }
+
   // Undo a recorded crossmatch back to pending so it can be edited.
   async resetCrossmatch(id, unitId) {
     return this._wrap(

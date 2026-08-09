@@ -7,39 +7,6 @@ const COMPATIBILITY_RESULT_LABELS = {
   UNIVERSAL: 'Universal',
 };
 
-// ── Blood-grouping worksheet (serum group / cell group / Rh typing) ──
-const GRADING_LABELS = {
-  NEG_0: 'Neg (0)', POS_1: '+1', POS_2: '+2', POS_3: '+3', POS_4: '+4', H: 'H', MF: 'MF',
-};
-// Fixed field order = the sub-column order under each group heading.
-const CELL_FIELDS = ['antiA', 'antiA1', 'antiB', 'antiAB', 'antiH'];
-const SERUM_FIELDS = ['aCell', 'bCell', 'oCell'];
-const RH_FIELDS = ['antiD', 'antiDBovine', 'indirectCoombs'];
-// Sub-column headers, repeated identically for the Recipient and Donor blocks.
-const GROUPING_SUBHEADERS = [
-  'Anti-A', 'Anti-A1', 'Anti-B', 'Anti-AB', 'Anti-H', // cell grouping
-  'A Cell', 'B Cell', 'O Cell',                        // serum grouping
-  'Anti-D', 'Anti-D (Bovine)', 'Indirect Coombs',      // Rh typing
-];
-
-function gradeLabel(v) {
-  return v ? GRADING_LABELS[v] || v : '—';
-}
-
-// 11 cells (cell grouping + serum grouping + Rh typing) for one worksheet.
-function groupingCells(g) {
-  if (!g) return new Array(11).fill('—');
-  const cg = g.cellGrouping || {};
-  const sg = g.serumGrouping || {};
-  const rt = g.rhTyping || {};
-  return [
-    ...CELL_FIELDS.map((f) => gradeLabel(cg[f])),
-    ...SERUM_FIELDS.map((f) => gradeLabel(sg[f])),
-    ...RH_FIELDS.map((f) => gradeLabel(rt[f])),
-  ];
-}
-const BLANK_GROUPING = new Array(11).fill('');
-
 // componentType is already one of the 6 canonical short codes (WB, PRBC,
 // FFP, RDP, CRYO) coming from the backend, so no translation is needed.
 function abbreviateComponent(componentType) {
@@ -150,21 +117,9 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
   const doneAtIdx = xmColumnsBase.indexOf('Crossmatch Done At');
   const crossmatchingResult = xmColumnsBase.indexOf('Crossmatching & Compatibility Test');
 
-  // Two blocks of blood-grouping sub-columns appended after the base columns:
-  // Recipient (entered once per requisition, shown on the first line only) and
-  // Donor (per matched bag, component-wise). Each block = cell grouping (5) +
-  // serum grouping (3) + Rh typing (3) = 11 columns, with a two-level header.
-  const xmColumns = [...xmColumnsBase, ...GROUPING_SUBHEADERS, ...GROUPING_SUBHEADERS];
-  const R0 = xmColumnsBase.length;        // recipient block start
-  const D0 = R0 + GROUPING_SUBHEADERS.length; // donor block start
+  const xmColumns = [...xmColumnsBase];
   const xmGroupHeaders = [
     { label: 'Crossmatching', startCol: doneAtIdx, endCol: crossmatchingResult, dark: true },
-    { label: 'Recipient — Cell Grouping', startCol: R0, endCol: R0 + 4 },
-    { label: 'Recipient — Serum Grouping', startCol: R0 + 5, endCol: R0 + 7 },
-    { label: 'Recipient — Rh Typing', startCol: R0 + 8, endCol: R0 + 10 },
-    { label: 'Donor — Cell Grouping', startCol: D0, endCol: D0 + 4, dark: true },
-    { label: 'Donor — Serum Grouping', startCol: D0 + 5, endCol: D0 + 7, dark: true },
-    { label: 'Donor — Rh Typing', startCol: D0 + 8, endCol: D0 + 10, dark: true },
   ];
 
   const xmRows = [];
@@ -210,9 +165,6 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
           first ? '—' : '',
           '—',
           '—',
-          // Recipient grouping once (first line); no donor bag yet.
-          ...(first ? groupingCells(r.recipientGrouping) : BLANK_GROUPING),
-          ...new Array(11).fill('—'),
         ]);
       });
       xmSrNo++;
@@ -253,9 +205,6 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
         first ? (mi.cardNumber || '—') : '',
         inv?.issuedAt ? fmtDateTime(inv.issuedAt) : '—',
         inv?.bagNo?.bagNo || '—',
-        // Recipient grouping once (first line); donor grouping per bag.
-        ...(first ? groupingCells(r.recipientGrouping) : BLANK_GROUPING),
-        ...groupingCells(mi.grouping),
       ]);
     });
     xmSrNo++;

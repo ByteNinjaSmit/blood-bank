@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { ConfirmModal } from '@/components/shared';
-import GroupingWorksheet from './GroupingWorksheet';
 import CrossmatchWorksheet from './CrossmatchWorksheet';
 import { COMPATIBILITY_RESULT_LABELS } from './grading';
 
@@ -31,12 +30,11 @@ export default function MatchedBagCard({
   fetchAvailableUnits,
   onSwapBag,
   swapping,
-  onSaveBagGrouping,
   onCrossmatchUpdate,
   onConfirmCompatibility,
   onResetCrossmatch,
   crossmatchUpdating,
-  groupingSaving,
+  onRejectBag,
 }) {
   const theme = color || { box: 'border-gray-200', tint: 'bg-gray-50', accent: 'border-gray-200' };
   const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
@@ -181,6 +179,26 @@ export default function MatchedBagCard({
               </span>
             )}
             {swapping && <span className="text-xs text-gray-400">Updating…</span>}
+            {onRejectBag && (
+              <button
+                type="button"
+                disabled={isReserved}
+                onClick={() => onRejectBag({
+                  unitId: currentUnitId,
+                  componentType,
+                  bloodGroup: currentGroup,
+                  rh: currentRh,
+                  bagNo: currentBagNo,
+                })}
+                className={`ml-auto px-2.5 py-1 rounded border text-xs font-medium ${
+                  isReserved
+                    ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'border-red-200 text-red-700 hover:bg-red-50 cursor-pointer'
+                }`}
+              >
+                Reject Bag
+              </button>
+            )}
           </div>
         </div>
 
@@ -212,22 +230,12 @@ export default function MatchedBagCard({
         onClick={() => setExpanded((v) => !v)}
         className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
       >
-        <span className="font-medium">Blood Grouping & Crossmatch Worksheet</span>
+        <span className="font-medium">Crossmatch Worksheet</span>
         {expanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
       </button>
 
       {expanded && (
         <div className="px-3 pb-3 space-y-3 border-t">
-          <div className="pt-3">
-            <GroupingWorksheet
-              title="Bag Grouping (donor)"
-              value={mi.grouping || {}}
-              onSave={(grouping) => onSaveBagGrouping(currentUnitId, grouping)}
-              saving={groupingSaving}
-              accentClass={theme.accent}
-            />
-          </div>
-
           {mi.crossmatchRequired && (
             <div>
               {showSavedCrossmatch ? (

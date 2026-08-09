@@ -35,7 +35,6 @@ export default function useRequisition(authToken) {
   const [completing, setCompleting] = useState(false);
   const [crossmatchUpdating, setCrossmatchUpdating] = useState(false);
   const [swapping, setSwapping] = useState(false);
-  const [groupingSaving, setGroupingSaving] = useState(false);
 
   const canProceedToMatch = useMemo(() => !!requestDoc?._id, [requestDoc]);
 
@@ -428,34 +427,6 @@ export default function useRequisition(authToken) {
     return true;
   };
 
-  const handleSaveRecipientGrouping = async (grouping) => {
-    if (!requestDoc?._id) return false;
-    setGroupingSaving(true);
-    const res = await requisitionApi.saveRecipientGrouping(requestDoc._id, grouping);
-    setGroupingSaving(false);
-    if (!res.success) {
-      toast.error(res.error || 'Failed to save grouping');
-      return false;
-    }
-    await refreshRequest(requestDoc._id);
-    toast.success('Recipient grouping saved');
-    return true;
-  };
-
-  const handleSaveBagGrouping = async (unitId, grouping) => {
-    if (!requestDoc?._id || !unitId) return false;
-    setGroupingSaving(true);
-    const res = await requisitionApi.saveBagGrouping(requestDoc._id, { unitId, grouping });
-    setGroupingSaving(false);
-    if (!res.success) {
-      toast.error(res.error || 'Failed to save grouping');
-      return false;
-    }
-    await refreshRequest(requestDoc._id);
-    toast.success('Bag grouping saved');
-    return true;
-  };
-
   const handleConfirmCompatibility = async (unitId, confirmed) => {
     if (!requestDoc?._id || !unitId) return false;
     const res = await requisitionApi.confirmCompatibility(requestDoc._id, { unitId, confirmed });
@@ -488,6 +459,18 @@ export default function useRequisition(authToken) {
     }
     await refreshRequest(requestDoc._id);
     toast.success(`${componentType} component rejected`);
+    return true;
+  };
+
+  const handleRejectBag = async (unitId, reason) => {
+    if (!requestDoc?._id || !unitId) return false;
+    const res = await requisitionApi.rejectBag(requestDoc._id, { unitId, reason });
+    if (!res.success) {
+      toast.error(res.error || 'Failed to reject bag');
+      return false;
+    }
+    await refreshRequest(requestDoc._id);
+    toast.success('Bag rejected');
     return true;
   };
 
@@ -527,7 +510,6 @@ export default function useRequisition(authToken) {
     completing,
     crossmatchUpdating,
     swapping,
-    groupingSaving,
     canProceedToMatch,
     hasChanges,
 
@@ -544,11 +526,10 @@ export default function useRequisition(authToken) {
     handleCrossmatchUpdate,
     fetchAvailableUnits,
     handleSwapBag,
-    handleSaveRecipientGrouping,
-    handleSaveBagGrouping,
     handleConfirmCompatibility,
     handleResetCrossmatch,
     handleRejectComponent,
+    handleRejectBag,
     loadRequest,
     refreshRequest,
   };

@@ -2,14 +2,6 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import requisitionApi from '@/services/requisitionApi';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { INDICATION_CATEGORY_LABELS } from '@/features/requisition/pages/constants';
-
-function clinicalIndicationLabel(patient) {
-  if (!patient?.indicationCategory) return null;
-  if (patient.indicationCategory === 'OTHER') return patient.otherDiseaseName || 'Other';
-  return INDICATION_CATEGORY_LABELS[patient.indicationCategory] || null;
-}
-
 const COMPATIBILITY_RESULT_LABELS = {
   MAJOR_COMPATIBLE: 'Major Compatible',
   MINOR_COMPATIBLE: 'Minor Compatible',
@@ -67,13 +59,12 @@ export default function RequisitionModals({
                 <div className="font-medium">{viewDoc.doctorName || '—'}</div>
               </div>
               <div>
+                <div className="text-gray-600">Patient Blood Group</div>
+                <div className="font-medium">{viewDoc.patient?.aboGroup ? `${viewDoc.patient.aboGroup} ${viewDoc.patient?.rhFactor || viewDoc.patient?.rh || ''}` : '—'}</div>
+              </div>
+              <div>
                 <div className="text-gray-600">Indication for Transfusion</div>
                 <div className="font-medium">{viewDoc.patient?.indication || '—'}</div>
-                {clinicalIndicationLabel(viewDoc.patient) && (
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    Clinical Indication / Disease Patients: <span className="font-medium text-gray-700">{clinicalIndicationLabel(viewDoc.patient)}</span>
-                  </div>
-                )}
               </div>
             </div>
             {(() => {
@@ -448,20 +439,21 @@ export default function RequisitionModals({
             <div className="space-y-4">
               <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-indigo-65"></span>
-                Issued Components ({multiLabelDoc.matchedInventory?.length || 0})
+                Matched Components ({multiLabelDoc.matchedInventory?.length || 0})
               </h4>
-              
+
               <div className="grid grid-cols-1 gap-4">
                 {multiLabelDoc.matchedInventory?.map((unit, index) => {
                   const inv = unit.inventoryId || {};
                   const bag = inv.bagNo || {};
                   const comp = inv.componentId || {};
-                  
-                  const expiryDateFormatted = comp.expiryDate 
+                  const isIssued = inv?.status === 'ISSUED';
+
+                  const expiryDateFormatted = comp.expiryDate
                     ? new Date(comp.expiryDate).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
                     : '—';
 
-                  const bloodGroupText = bag.bloodGroup 
+                  const bloodGroupText = bag.bloodGroup
                     ? `${bag.bloodGroup} Rh ${bag.rh || ''}`
                     : '—';
 
@@ -494,22 +486,30 @@ export default function RequisitionModals({
                           </div>
                           <div className="col-span-2 sm:col-span-1">
                             <span className="text-slate-400 font-medium">Status:</span>{' '}
-                            <span className="font-semibold text-green-700 capitalize">Issued</span>
+                            {isIssued ? (
+                              <span className="font-semibold text-green-700 capitalize">Issued</span>
+                            ) : (
+                              <span className="font-semibold text-gray-500 capitalize">Not Issued</span>
+                            )}
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex-shrink-0 pt-2 sm:pt-0">
-                        <button
-                          type="button"
-                          onClick={() => printSingleLabel(multiLabelDoc, unit)}
-                          className="w-full sm:w-auto px-4 py-2 bg-indigo-700 hover:bg-indigo-800 active:bg-indigo-900 text-white font-semibold rounded-lg text-xs shadow-sm hover:shadow transition-all flex items-center justify-center gap-1.5"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                          </svg>
-                          Issue Label
-                        </button>
+                        {isIssued ? (
+                          <button
+                            type="button"
+                            onClick={() => printSingleLabel(multiLabelDoc, unit)}
+                            className="w-full sm:w-auto px-4 py-2 bg-indigo-700 hover:bg-indigo-800 active:bg-indigo-900 text-white font-semibold rounded-lg text-xs shadow-sm hover:shadow transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            Issue Label
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-500 italic">Issue this component first</span>
+                        )}
                       </div>
                     </div>
                   );
