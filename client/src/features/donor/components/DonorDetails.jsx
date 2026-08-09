@@ -196,6 +196,14 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
                       <span className="text-sm font-semibold text-gray-900 font-mono">
                         Donation ID: {donation.donationId}
                       </span>
+                      {donation.ttiEditReason && (
+                        <span
+                          className="ml-2 inline-flex px-2 py-0.5 rounded-full text-2xs font-bold bg-orange-500 text-white border border-orange-600 uppercase tracking-wide align-middle"
+                          title={`Retested in Serology${donation.ttiLastEditedAt ? ` on ${new Date(donation.ttiLastEditedAt).toLocaleString('en-IN')}` : ''}: ${donation.ttiEditReason}`}
+                        >
+                          TTI Retest Done
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs font-semibold text-gray-700 flex flex-wrap items-center gap-2">
                       <span className="bg-white px-2 py-1 rounded-md border border-gray-200 shadow-sm">
@@ -215,6 +223,13 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
 
                   {/* Donation Components */}
                   <div className="p-4 space-y-4">
+                    {donation.ttiEditReason && (
+                      <p className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-md px-3 py-2">
+                        <span className="font-semibold">TTI Retest was done</span>
+                        {donation.ttiLastEditedAt && ` on ${new Date(donation.ttiLastEditedAt).toLocaleString('en-IN')}`}
+                        {`: ${donation.ttiEditReason}`}
+                      </p>
+                    )}
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Derived Components</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {donation.components && donation.components.map((comp) => {

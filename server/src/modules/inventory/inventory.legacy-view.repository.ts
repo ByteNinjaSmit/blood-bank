@@ -17,6 +17,7 @@ import { DonorModel } from '@/modules/donor/donor.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { IssueModel } from '@/modules/issue/issue.model';
 import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
+import { TtiResultModel } from '@/modules/tti/tti.model';
 import { invalidate } from '@/core/cache';
 import { ValidationError, NotFoundError } from '@/shared/errors';
 import type { UnitRepo } from '@/modules/unit/unit.repository';
@@ -38,6 +39,8 @@ export interface StockListFilters {
   expiryTo?: string;
   source?: string;
   purpose?: 'REQUISITION' | 'RESERVATION';
+  /** Only units whose donation's TTI result was ever edited/retested. */
+  ttiRetest?: boolean;
 }
 
 export interface SendToStorageInput {
@@ -99,6 +102,7 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         expiryTo,
         source,
         purpose,
+        ttiRetest,
       } = filters;
 
       const wantsOwn = status !== 'in-stock' || source !== 'loan';
@@ -127,6 +131,13 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       if (purpose) {
         const reqIds = await RequisitionModel.find({ purpose }).select('_id').lean();
         unitFilter.reservedFor = { $in: reqIds.map((r) => r._id) };
+      }
+
+      if (ttiRetest) {
+        const retestDonationIds = await TtiResultModel.distinct('donationId', {
+          editReason: { $exists: true, $nin: [null, ''] },
+        });
+        unitFilter.donationId = { $in: retestDonationIds };
       }
 
       if (siteId) unitFilter.campId = new Types.ObjectId(siteId);
@@ -214,6 +225,17 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       })
         .select('donationId bagNo segmentNo lotNo typeOfBag collectedAt donor donationType')
         .lean();
+
+      // TTI retest flag per donation — whether this bag's TTI result was
+      // ever edited/retested (e.g. a shadeness hold later cleared).
+      const ttiResults = await TtiResultModel.find({ donationId: { $in: donationIds } })
+        .select('donationId editReason lastEditedAt')
+        .lean();
+      const ttiRetestMap = new Map(
+        ttiResults
+          .filter((t) => t.editReason)
+          .map((t) => [t.donationId, t.lastEditedAt ? t.lastEditedAt.toISOString() : null]),
+      );
 
       const donorIds = donations.map((d: any) => d.donor).filter(Boolean);
       const donors = (await DonorModel.find({ _id: { $in: donorIds } })
@@ -348,6 +370,9 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
           clinicalIndicationPatient: u.clinicalIndicationPatient || undefined,
           typeOfBag,
           issuedAt: u.issuedAt ? u.issuedAt.toISOString() : undefined,
+          donationId: u.donationId || undefined,
+          ttiRetest: ttiRetestMap.has(u.donationId),
+          ttiLastEditedAt: ttiRetestMap.get(u.donationId) || undefined,
           bag: {
             bagNo: displayBagNo,
             bloodGroup: u.aboGroup,

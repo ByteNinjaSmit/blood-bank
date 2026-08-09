@@ -23,8 +23,11 @@ const DonationDetails = ({ donation }) => {
   const rhSymbol = donation.rhFactor 
     ? (donation.rhFactor === 'POSITIVE' || donation.rhFactor === 'Positive' ? '+' : '-') 
     : (donation.rh === 'Positive' || donation.rh === 'POSITIVE' ? '+' : donation.rh === 'Negative' || donation.rh === 'NEGATIVE' ? '-' : '');
-  const status = donation.status || 
-                 (donation.ttiReleaseDecision === 'released' ? 'passed' : donation.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
+  const status = donation.status ||
+                 (donation.ttiReleaseDecision === 'released' ? 'passed'
+                   : donation.ttiReleaseDecision === 'reactive' ? 'failed'
+                   : donation.ttiReleaseDecision === 'indeterminate' ? 'shadeness'
+                   : 'pending');
   const isFit = donation.isFit !== undefined 
     ? donation.isFit 
     : (donation.donorFitness?.isFit !== undefined ? donation.donorFitness.isFit : true);

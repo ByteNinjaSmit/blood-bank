@@ -247,6 +247,7 @@ const SerologyResults = () => {
                       <SelectItem value="discarded">Discarded</SelectItem>
                       <SelectItem value="failed">Failed</SelectItem>
                       <SelectItem value="shadeness">Shadeness</SelectItem>
+                      <SelectItem value="retest">TTI Retest</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -362,7 +363,14 @@ const SerologyResults = () => {
                       });
                       return (
                       <tr key={`${bag.bagNo}-${idx}`} className={hasReactive ? "bg-yellow-100 hover:bg-yellow-200/70" : "hover:bg-gray-50"}>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{bag.bagNo}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          <div>{bag.bagNo}</div>
+                          {bag.lastEditedAt && (
+                            <span className="mt-1 inline-flex px-2 py-0.5 rounded-full text-2xs font-bold bg-orange-500 text-white border border-orange-600 uppercase tracking-wide">
+                              Retest Done
+                            </span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-sm text-gray-700">{bag.segmentNo || "-"}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{formatBlood(bag.bloodGroup, bag.rh)}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{formatDateTime(bag.collectionDate)}</td>

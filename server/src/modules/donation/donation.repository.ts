@@ -47,6 +47,8 @@ export interface DonationDto {
     MALARIA: string | null;
   };
   ttiReason?: string | null;
+  ttiEditReason?: string | null;
+  ttiLastEditedAt?: string | null;
 }
 
 export interface DonationWithUnitsDto extends DonationDto {
@@ -65,6 +67,8 @@ export interface DonationWithUnitsDto extends DonationDto {
   ttiResultId?: string;
   ttiReleaseDecision?: string;
   ttiReason?: string | null;
+  ttiEditReason?: string | null;
+  ttiLastEditedAt?: string | null;
   requisitions?: any[];
 }
 
@@ -125,7 +129,9 @@ async function loadDonationWithUnits(mongoId: string): Promise<DonationWithUnits
       .select('unitId componentType volumeMl expiresAt status aboGroup rhFactor')
       .lean(),
     TtiResultModel.findOne({ donationId: doc.donationId })
-      .select('_id releaseDecision aboGroupConfirmed rhFactorConfirmed decisionNotes')
+      .select(
+        '_id releaseDecision aboGroupConfirmed rhFactorConfirmed decisionNotes editReason lastEditedAt',
+      )
       .lean(),
   ]);
 
@@ -214,6 +220,8 @@ async function loadDonationWithUnits(mongoId: string): Promise<DonationWithUnits
     ttiResultId: tti?._id?.toString(),
     ttiReleaseDecision: tti?.releaseDecision,
     ttiReason: tti?.decisionNotes || null,
+    ttiEditReason: tti?.editReason || null,
+    ttiLastEditedAt: tti?.lastEditedAt ? new Date(tti.lastEditedAt).toISOString() : null,
     requisitions: requisitionsInfo,
   };
 }
@@ -497,7 +505,7 @@ export function createDonationRepo(): DonationRepo {
           donationId: { $in: docs.map((d) => d.donationId) },
         })
           .select(
-            'donationId aboGroupConfirmed rhFactorConfirmed releaseDecision tests decisionNotes',
+            'donationId aboGroupConfirmed rhFactorConfirmed releaseDecision tests decisionNotes editReason lastEditedAt',
           )
           .lean(),
       ]);
@@ -543,6 +551,7 @@ export function createDonationRepo(): DonationRepo {
             if (tti.releaseDecision === 'released') status = 'passed';
             else if (tti.releaseDecision === 'reactive') status = 'failed';
             else if (tti.releaseDecision === 'pending') status = 'testing';
+            else if (tti.releaseDecision === 'indeterminate') status = 'shadeness';
           }
 
           const testMap: Record<string, string> = {};
@@ -593,6 +602,8 @@ export function createDonationRepo(): DonationRepo {
               MALARIA: testMap['MALARIA'] || null,
             },
             ttiReason: tti?.decisionNotes || null,
+            ttiEditReason: tti?.editReason || null,
+            ttiLastEditedAt: tti?.lastEditedAt ? new Date(tti.lastEditedAt).toISOString() : null,
           };
         }),
         total,

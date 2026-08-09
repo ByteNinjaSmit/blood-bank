@@ -48,6 +48,7 @@ const Stock = () => {
   const [order, setOrder] = useState("desc");
   const [sortBy, setSortBy] = useState("createdAt");
   const [source, setSource] = useState("all"); // all | own | loan
+  const [ttiRetest, setTtiRetest] = useState(false);
 
   const buildParams = (page, limit) => ({
     page,
@@ -66,6 +67,7 @@ const Stock = () => {
     // when this page opts in; every other screen omits `source` entirely
     // and must keep seeing real BloodUnit-backed rows only.
     source,
+    ttiRetest: ttiRetest || undefined,
   });
 
   const fetchRows = async (page = 1, limit = pagination.limit) => {
@@ -106,7 +108,7 @@ const Stock = () => {
   useEffect(() => {
     fetchRows(1, pagination.limit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, componentType, siteId, search, bloodGroup, rh, expiryFrom, expiryTo, order, sortBy, source]);
+  }, [status, componentType, siteId, search, bloodGroup, rh, expiryFrom, expiryTo, order, sortBy, source, ttiRetest]);
 
   return (
     <div className="min-h-screen bg-gray-50 uppercase tracking-tight">
@@ -274,6 +276,19 @@ const Stock = () => {
                 />
               </div>
 
+              {/* TTI Retest */}
+              <div className="w-40 space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">TTI Retest</label>
+                <label className="flex items-center gap-2 h-9 px-3 border border-gray-200 rounded-lg bg-gray-50/50 text-xs font-medium text-gray-700 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={ttiRetest}
+                    onChange={(e) => { setTtiRetest(e.target.checked); setPagination(p=>({...p,page:1})); }}
+                  />
+                  Retest Only
+                </label>
+              </div>
+
               {/* Actions */}
               <div className="flex items-center gap-2 border-l border-gray-200 pl-3 pt-4">
                 <button
@@ -286,12 +301,12 @@ const Stock = () => {
                 >
                   <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 </button>
-                {(search || componentType || status !== "in-stock" || bloodGroup || rh || expiryFrom || expiryTo || source !== "all") && (
+                {(search || componentType || status !== "in-stock" || bloodGroup || rh || expiryFrom || expiryTo || source !== "all" || ttiRetest) && (
                   <button
                     onClick={() => {
                       setSearch(""); setSearchInput(""); setComponentType(""); setStatus("in-stock");
                       setBloodGroup(""); setRh(""); setExpiryFrom(""); setExpiryTo("");
-                      setSortBy("createdAt"); setOrder("desc"); setSource("all");
+                      setSortBy("createdAt"); setOrder("desc"); setSource("all"); setTtiRetest(false);
                       setPagination(p=>({...p,page:1}));
                     }}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-100"
@@ -356,6 +371,13 @@ const Stock = () => {
                             <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">Loan</span>
                           )}
                         </div>
+                        {r.ttiRetest && (
+                          <div className="mt-1">
+                            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-orange-500 text-white border border-orange-600">
+                              TTI Retest Was Done
+                            </span>
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.component?.componentType}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{r?.bag?.bloodGroup} {r?.bag?.rh}</td>

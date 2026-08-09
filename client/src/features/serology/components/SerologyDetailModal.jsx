@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/format-date";
 import { RESULT_OPTIONS, statusBadge, formatBlood } from "./serology-helpers";
+import RetestHistory from "./RetestHistory";
 
 export default function SerologyDetailModal({
   selectedBag,
@@ -119,6 +120,8 @@ export default function SerologyDetailModal({
             <p className="text-sm text-slate-500">No serology tests recorded for this bag.</p>
           )}
         </div>
+
+        <RetestHistory bagId={selectedBag._id} enabled={!isEditing && Boolean(selectedBag.lastEditedAt)} />
 
         {isEditing && (
           <>

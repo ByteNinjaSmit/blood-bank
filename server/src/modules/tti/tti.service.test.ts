@@ -90,7 +90,7 @@ describe('tti-service.finalize', () => {
       'actor',
       ['QUARANTINE'],
       undefined,
-      { requestId: undefined },
+      { requestId: undefined, set: { quarantineReason: null } },
     );
     expect(m.deferrals.create).not.toHaveBeenCalled();
   });

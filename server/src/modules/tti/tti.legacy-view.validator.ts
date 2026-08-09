@@ -32,6 +32,23 @@ const RecordResultsBody = z.object({
   editReason: z.string().trim().max(500).optional(),
 });
 
+const BatchResultItem = z.object({
+  id: z.string().trim().min(1).max(80),
+  testResults: z
+    .array(
+      z.object({
+        test: z.string().trim().min(1),
+        result: z.string().trim().min(1),
+      }),
+    )
+    .min(1),
+});
+
+const RecordResultsBatchBody = z.object({
+  items: z.array(BatchResultItem).min(1).max(500),
+  technicianId: z.string().trim().optional(),
+});
+
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {
   const r = schema.safeParse(value);
   if (!r.success) throw new ValidationError(`Invalid ${where}`, r.error.issues);
@@ -43,4 +60,6 @@ export const ValidateTtiLegacyView = {
   resultListQuery: (req: Request) => parseOrThrow(ResultListQuery, req.query, 'query string'),
   resultIdParam: (req: Request) => parseOrThrow(ResultIdParam, req.params, 'path params'),
   recordResultsBody: (req: Request) => parseOrThrow(RecordResultsBody, req.body, 'request body'),
+  recordResultsBatchBody: (req: Request) =>
+    parseOrThrow(RecordResultsBatchBody, req.body, 'request body'),
 };

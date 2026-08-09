@@ -9,6 +9,7 @@ export default function DonationFilterBar({
   setBagTypeFilter,
   setBloodGroupFilter,
   setStatusFilter,
+  setTtiRetestFilter,
   setFromDate,
   setToDate,
   setSortBy,
@@ -17,7 +18,7 @@ export default function DonationFilterBar({
   onFilterChange,
   onSearchSubmit,
 }) {
-  const { searchInput, bagTypeFilter, bloodGroupFilter, statusFilter, fromDate, toDate, sortBy, order } = filters;
+  const { searchInput, bagTypeFilter, bloodGroupFilter, statusFilter, ttiRetestFilter, fromDate, toDate, sortBy, order } = filters;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
@@ -66,6 +67,14 @@ export default function DonationFilterBar({
             <option value="failed">Failed</option>
             <option value="issued">Issued</option>
           </select>
+          <label className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm text-gray-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={ttiRetestFilter}
+              onChange={(e) => onFilterChange(setTtiRetestFilter, e.target.checked)}
+            />
+            TTI Retest Only
+          </label>
         </div>
       </div>
       <div className="flex flex-col lg:flex-row lg:items-end gap-4 mt-4 pt-4 border-t border-gray-100">

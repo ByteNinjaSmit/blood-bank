@@ -190,7 +190,7 @@ export function createTtiService(deps: {
         actorId,
         ['QUARANTINE'],
         undefined,
-        { requestId },
+        { requestId, set: { quarantineReason: null } },
       );
       log.info({ donationId, unitsAffected }, 'TTI released units');
       void notificationCenterService
@@ -391,7 +391,10 @@ export function createTtiService(deps: {
         actorId,
         ['RELEASED'],
         `TTI shadeness: ${evaluation.reasons.join(', ')}`,
-        { requestId },
+        {
+          requestId,
+          set: { quarantineReason: `TTI shadeness: ${evaluation.reasons.join(', ')}` },
+        },
       );
       unitsAffected = reinstatedFromDiscard + quarantinedFromReleased;
 

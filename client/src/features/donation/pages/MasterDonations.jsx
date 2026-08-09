@@ -91,6 +91,7 @@ export default function MasterDonations() {
           setBagTypeFilter={reg.setBagTypeFilter}
           setBloodGroupFilter={reg.setBloodGroupFilter}
           setStatusFilter={reg.setStatusFilter}
+          setTtiRetestFilter={reg.setTtiRetestFilter}
           setFromDate={reg.setFromDate}
           setToDate={reg.setToDate}
           setSortBy={reg.setSortBy}

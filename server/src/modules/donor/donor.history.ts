@@ -4,6 +4,7 @@ import { CampModel } from '@/modules/camp/camp.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { HospitalModel } from '@/modules/hospital/hospital.model';
+import { TtiResultModel } from '@/modules/tti/tti.model';
 
 export async function getDetailedDonationHistory(donorId: string): Promise<any[]> {
   const donations = await DonationModel.find({
@@ -18,14 +19,18 @@ export async function getDetailedDonationHistory(donorId: string): Promise<any[]
   const campIds = [...new Set(donations.map((d) => d.campId).filter(Boolean))] as Types.ObjectId[];
   const donationIds = donations.map((d) => d.donationId);
 
-  const [camps, components] = await Promise.all([
+  const [camps, components, ttiResults] = await Promise.all([
     campIds.length
       ? CampModel.find({ _id: { $in: campIds } }, { name: 1 }).lean()
       : Promise.resolve([]),
     BloodUnitModel.find({ donationId: { $in: donationIds }, deletedAt: null }).lean(),
+    TtiResultModel.find({ donationId: { $in: donationIds } })
+      .select('donationId releaseDecision editReason lastEditedAt')
+      .lean(),
   ]);
 
   const campById = new Map(camps.map((c) => [c._id.toString(), c]));
+  const ttiByDonationId = new Map(ttiResults.map((t) => [t.donationId, t]));
 
   const componentUnitIds = components.map((c) => c.unitId);
   const reservedForIds = [
@@ -109,6 +114,8 @@ export async function getDetailedDonationHistory(donorId: string): Promise<any[]
       }),
     );
 
+    const tti = ttiByDonationId.get(donation.donationId);
+
     return {
       donationId: donation.donationId,
       bagNo: donation.bagNo,
@@ -117,6 +124,9 @@ export async function getDetailedDonationHistory(donorId: string): Promise<any[]
       collectedAt: donation.collectedAt ? donation.collectedAt.toISOString() : null,
       donationPlace,
       components: componentsWithReqs,
+      ttiReleaseDecision: tti?.releaseDecision,
+      ttiEditReason: tti?.editReason || null,
+      ttiLastEditedAt: tti?.lastEditedAt ? tti.lastEditedAt.toISOString() : null,
     };
   });
 }

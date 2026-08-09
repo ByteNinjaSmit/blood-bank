@@ -62,7 +62,7 @@ function fmt(iso) {
   });
 }
 
-function TimelineStep({ icon, label, timestamp, status, detail, isLast }) {
+function TimelineStep({ icon, label, timestamp, status, detail, isLast, badge }) {
   const StepIcon = icon;
   const done       = status === 'done';
   const failed     = status === 'failed';
@@ -94,9 +94,9 @@ function TimelineStep({ icon, label, timestamp, status, detail, isLast }) {
             <p className={`text-sm font-semibold leading-tight ${
               done ? 'text-gray-900' : failed ? 'text-red-700' : inProgress ? 'text-amber-700' : 'text-gray-400'
             }`}>{label}</p>
-            {inProgress && (
+            {inProgress && badge && (
               <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                Under Separation
+                {badge}
               </span>
             )}
           </div>
@@ -121,7 +121,15 @@ export default function DonationTimeline({ donation }) {
   const ttiDecision = donation.ttiReleaseDecision;
   const ttiStatus =
     ttiDecision === 'released' ? 'done' :
-    ttiDecision === 'reactive' ? 'failed' : 'pending';
+    ttiDecision === 'reactive' ? 'failed' :
+    ttiDecision === 'indeterminate' ? 'in_progress' : 'pending';
+
+  // Present whenever this donation's TTI panel has ever been corrected via
+  // the Serology edit/retest action (tti.setEditMeta) — most commonly a
+  // shadeness (indeterminate) retest, but also any other correction.
+  const ttiRetestNote = donation.ttiEditReason
+    ? `Retested in Serology${donation.ttiLastEditedAt ? ` on ${fmt(donation.ttiLastEditedAt)}` : ''}: ${donation.ttiEditReason}`
+    : null;
 
   // Separation has actually started once any unit other than the raw
   // collection placeholder ('WB') exists — units.length alone isn't
@@ -213,15 +221,21 @@ export default function DonationTimeline({ donation }) {
         : batchDraftActive
           ? 'Under Separation — staged in a batch, not yet saved'
           : 'Not separated yet',
+      badge: 'Under Separation',
     },
     {
       icon: TestTube,
       label: 'TTI Testing',
       timestamp: null,
       status: ttiStatus,
-      detail: ttiDecision === 'released' ? 'All TTI tests cleared — units released from quarantine'
-        : ttiDecision === 'reactive' ? `Donor tested positive — ${donation.ttiReason || 'reactive result, units discarded'}`
-        : 'Awaiting serology results',
+      detail: [
+        ttiDecision === 'released' ? 'All TTI tests cleared — units released from quarantine'
+          : ttiDecision === 'reactive' ? `Donor tested positive — ${donation.ttiReason || 'reactive result, units discarded'}`
+          : ttiDecision === 'indeterminate' ? `Shadeness (indeterminate) result — quarantined pending retest${donation.ttiReason ? `: ${donation.ttiReason}` : ''}`
+          : 'Awaiting serology results',
+        ttiRetestNote,
+      ].filter(Boolean).join(' · '),
+      badge: 'Retest Needed',
     },
     {
       icon: Package,

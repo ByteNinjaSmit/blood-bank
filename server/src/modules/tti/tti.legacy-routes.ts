@@ -34,6 +34,17 @@ router.get('/bags', authenticate, requirePermission('tti:read'), controllers.lis
 
 router.get('/results', authenticate, requirePermission('tti:read'), controllers.listDecided);
 
+// Must be registered before '/results/:id' so these literal paths aren't
+// swallowed by the ':id' param route.
+router.post(
+  '/results/batch',
+  authenticate,
+  requirePermission(['tti:edit', 'tti:release']),
+  controllers.recordAndFinalizeBatch,
+);
+
+router.get('/results/:id/history', authenticate, requirePermission('tti:read'), controllers.getHistory);
+
 router.post(
   '/results/:id',
   authenticate,
