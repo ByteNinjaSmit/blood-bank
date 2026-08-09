@@ -78,7 +78,7 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
             >
               
               {/* Blood Bank Header matching the image */}
-              <div className="w-full flex flex-col items-center justify-center border-b border-black pb-1 mb-1 bg-white shrink-0 text-center relative select-none overflow-hidden" style={{ minHeight: '2.5cm' }}>
+              <div className="w-full flex flex-col items-center justify-center border-b border-black pb-1 mb-1 bg-white shrink-0 text-center relative select-none overflow-hidden" style={{ minHeight: '2.0cm' }}>
                 <span className="text-[6.5px] font-bold tracking-wide text-black uppercase leading-tight mb-0.5 px-1">Sai Healthcare Foundation Charitable Trusts</span>
                 <h3 className="text-[18px] font-black text-black leading-none tracking-tight uppercase" style={{ wordSpacing: '1px' }}>
                   SANJIVANI BLOOD CENTRE
@@ -93,7 +93,7 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
               </div>
 
               {/* Middle Section (divided into QR code, component info, and Matched Bag Blood Group) */}
-              <div className="flex w-full border-b border-black pb-1 shrink-0" style={{ height: '4.1cm' }}>
+              <div className="flex w-full border-b border-black pb-1 shrink-0" style={{ height: '4.5cm' }}>
                 {/* Left Side: QR Code scan area */}
                 <div className="w-[2.5cm] flex flex-col items-center justify-center border-r border-black pr-1 shrink-0 select-none">
                   <img
@@ -127,12 +127,12 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                     className="font-black leading-none text-black tracking-tighter"
                     style={{
                       fontFamily: 'sans-serif',
-                      fontSize: (bag.bloodGroup || 'N/A') === 'AB' ? '58px' : '68px'
+                      fontSize: (bag.bloodGroup || 'N/A') === 'AB' ? '66px' : '80px'
                     }}
                   >
                     {bag.bloodGroup || 'N/A'}
                   </span>
-                  <span className="text-[9.5px] font-bold uppercase tracking-tighter mt-0.5 text-black whitespace-nowrap">
+                  <span className="text-[12px] font-bold uppercase tracking-tighter mt-1 text-black whitespace-nowrap">
                     Rh(D) {formatRh(bag.rh) || 'N/A'}
                   </span>
                 </div>
@@ -161,7 +161,7 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                       <span className="truncate">Patient B.G{'   '}: {patientBloodGroup}</span>
                       <span className="truncate">RID{'   '}: {doc.requestId || '—'}</span>
                       <span className="truncate">Method{'   '}: Fully automated</span>
-                      <span className="truncate">Issue No{'   '}: {unit.issueId || doc.issueNo || doc.requestId || '—'}</span>
+                      <span className="break-words">Issue No{'   '}: {unit.issueId || doc.issueNo || doc.requestId || '—'}</span>
                     </div>
                   </div>
                 </div>
