@@ -484,19 +484,19 @@ const CampList = () => {
                     <Users className="w-5 h-5 text-orange-700 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Staff</p>
-                      {camp.staff && camp.staff.length > 0 ? (
+                      {camp.volunteers && camp.volunteers.length > 0 ? (
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {camp.staff.slice(0, 3).map((member, index) => (
+                          {camp.volunteers.slice(0, 3).map((volName, index) => (
                             <span
-                              key={member._id || index}
+                              key={index}
                               className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-200"
                             >
-                              {member.name?.first || (typeof member.name === 'string' ? member.name : "Staff")}
+                              {volName}
                             </span>
                           ))}
-                          {camp.staff.length > 3 && (
+                          {camp.volunteers.length > 3 && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-slate-100 text-slate-700 border border-slate-200">
-                              +{camp.staff.length - 3}
+                              +{camp.volunteers.length - 3}
                             </span>
                           )}
                         </div>

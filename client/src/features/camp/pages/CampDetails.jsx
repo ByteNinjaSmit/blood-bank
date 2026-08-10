@@ -425,7 +425,7 @@ const CampDetails = () => {
               )}
               {camp.volunteers && camp.volunteers.length > 0 && (
                 <div className="p-3 bg-orange-50/60 border border-orange-100 rounded-lg">
-                  <p className="text-xs font-medium text-orange-900 mb-2">Staff Not In System ({camp.volunteers.length})</p>
+                  <p className="text-xs font-medium text-orange-900 mb-2">Staff ({camp.volunteers.length})</p>
                   <div className="flex flex-wrap gap-1.5">
                     {camp.volunteers.map((volName, index) => (
                       <span key={index} className="px-2 py-0.5 rounded bg-white text-orange-900 border border-orange-200 text-xs font-medium shadow-2xs">

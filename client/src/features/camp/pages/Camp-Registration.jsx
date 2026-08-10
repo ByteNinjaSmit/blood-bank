@@ -1,6 +1,6 @@
 "use client"
-import { useState, useEffect } from "react"
-import { Droplets, CheckCircle, ClipboardList, MapPin, Phone, Mail, Calendar, Plus, X, UserPlus, Users } from "lucide-react"
+import { useState } from "react"
+import { Droplets, CheckCircle, ClipboardList, MapPin, Phone, Mail, Calendar, Plus, X, UserPlus } from "lucide-react"
 import { toast } from "sonner"
 import { campApi } from "../api"
 import { useNavigate } from "react-router-dom"
@@ -14,7 +14,6 @@ const CampRegistration = () => {
   const [stepErrors, setStepErrors] = useState({})
 
   const [volunteerInput, setVolunteerInput] = useState("")
-  const [staffList, setStaffList] = useState([])
   const [formData, setFormData] = useState({
     siteId: "",
     name: "",
@@ -25,23 +24,9 @@ const CampRegistration = () => {
       email: "",
     },
     volunteers: [],
-    staff: [],
     dateFrom: "",
     dateTo: "",
   })
-
-  useEffect(() => {
-    campApi.staffList().then((list) => setStaffList(list || [])).catch(() => setStaffList([]))
-  }, [])
-
-  const handleToggleStaff = (userId) => {
-    setFormData((prev) => ({
-      ...prev,
-      staff: prev.staff.includes(userId)
-        ? prev.staff.filter((id) => id !== userId)
-        : [...prev.staff, userId],
-    }))
-  }
 
   const validateForm = () => {
     const newErrors = {}
@@ -155,7 +140,6 @@ const CampRegistration = () => {
         phone: formData.contactInfo.phone,
         email: formData.contactInfo.email,
         volunteers: formData.volunteers,
-        staff: formData.staff,
         dateFrom: formData.dateFrom,
         dateTo: formData.dateTo,
       })
@@ -168,7 +152,6 @@ const CampRegistration = () => {
         address: "",
         contactInfo: { phone: "", email: "" },
         volunteers: [],
-        staff: [],
         dateFrom: "",
         dateTo: "",
       })
@@ -470,38 +453,6 @@ const CampRegistration = () => {
                 )}
               </div>
 
-              <div className="space-y-3 pt-2">
-                <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-orange-800" />
-                  Assign System Users
-                </p>
-                <p className="text-xs text-gray-400 -mt-2">Click to assign a registered staff account — shown on the camp listing's Staff column.</p>
-                {staffList.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {staffList
-                      .filter((staff) => staff && staff._id && staff.name)
-                      .map((staff) => {
-                        const selected = formData.staff.includes(staff._id)
-                        return (
-                          <button
-                            key={staff._id}
-                            type="button"
-                            onClick={() => handleToggleStaff(staff._id)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-                              selected
-                                ? "bg-orange-800 border-orange-800 text-white"
-                                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                            }`}
-                          >
-                            {`${String(staff?.name?.first || "")} ${String(staff?.name?.last || "")}`.trim()}
-                          </button>
-                        )
-                      })}
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-400 italic">No system users found.</p>
-                )}
-              </div>
             </div>
           </Step>
         </Stepper>
