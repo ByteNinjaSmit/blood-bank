@@ -23,8 +23,11 @@ const DonationDetails = ({ donation }) => {
   const rhSymbol = donation.rhFactor 
     ? (donation.rhFactor === 'POSITIVE' || donation.rhFactor === 'Positive' ? '+' : '-') 
     : (donation.rh === 'Positive' || donation.rh === 'POSITIVE' ? '+' : donation.rh === 'Negative' || donation.rh === 'NEGATIVE' ? '-' : '');
-  const status = donation.status || 
-                 (donation.ttiReleaseDecision === 'released' ? 'passed' : donation.ttiReleaseDecision === 'reactive' ? 'failed' : 'pending');
+  const status = donation.status ||
+                 (donation.ttiReleaseDecision === 'released' ? 'passed'
+                   : donation.ttiReleaseDecision === 'reactive' ? 'failed'
+                   : donation.ttiReleaseDecision === 'indeterminate' ? 'shadeness'
+                   : 'pending');
   const isFit = donation.isFit !== undefined 
     ? donation.isFit 
     : (donation.donorFitness?.isFit !== undefined ? donation.donorFitness.isFit : true);
@@ -42,6 +45,18 @@ const DonationDetails = ({ donation }) => {
       : undefined
   } : undefined);
   const components = donation.components || donation.units || [];
+  // A component unit is created (status COLLECTED) as soon as its volume is
+  // entered on the Component Separate screen, but separation isn't actually
+  // finished until staff sign off via "Mark as Complete" — that's what moves
+  // every unit off COLLECTED (component.repository.ts separationCompleted()).
+  // Until then, show the bag as still under separation rather than "done".
+  // A bag can also be under separation before any unit exists at all, while
+  // staged (not yet finalized) in a batch — see separationBatchActive.
+  const hasSeparatedComponents = components.some((c) => c.componentType !== 'WB');
+  const batchDraftActive = Boolean(donation.separationBatchActive);
+  const separationInProgress =
+    batchDraftActive || (hasSeparatedComponents && components.some((c) => c.status === 'COLLECTED'));
+  const showSeparationBadge = hasSeparatedComponents || batchDraftActive;
   // SDP is collected by apheresis as a single already-separated product —
   // the 'WB' componentType on its unit is only an internal placeholder
   // (same derivation path whole-blood uses) and should never reach staff.
@@ -201,7 +216,18 @@ const DonationDetails = ({ donation }) => {
 
       {Array.isArray(components) && components.length > 0 && (
         <div className="rounded-lg border border-slate-100 bg-white/70 p-4">
-          <p className="font-semibold text-slate-700 mb-2">Components</p>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="font-semibold text-slate-700">Components</p>
+            {showSeparationBadge && (
+              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                separationInProgress
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-green-50 text-green-700 border-green-200'
+              }`}>
+                {separationInProgress ? 'Under Separation' : 'Separated'}
+              </span>
+            )}
+          </div>
           <div className="border rounded-lg divide-y">
             {components.map((comp) => (
               <div
@@ -216,14 +242,20 @@ const DonationDetails = ({ donation }) => {
                     <p className="text-slate-600">Volume: {comp.volumeMl} mL</p>
                   )}
                   {comp.status && (() => {
+                    // COLLECTED only means "under separation" for an actual
+                    // derived component (PRBC/FFP/...) that's been created
+                    // but not yet signed off. The raw 'WB' placeholder unit
+                    // sitting in COLLECTED just means "collected, not
+                    // separated at all yet" — that's not under separation.
                     const raw = comp.status === 'RELEASED' ? 'INSTOCK'
                       : comp.status === 'TRANSFUSED' ? 'ISSUED'
                       : comp.status === 'QUARANTINE' ? 'QUARANTINED'
+                      : comp.status === 'COLLECTED' && comp.componentType !== 'WB' ? 'UNDER SEPARATION'
                       : comp.status;
                     const cls =
                       raw === 'ISSUED'                    ? 'bg-blue-50 text-blue-700 border-blue-200' :
                       raw === 'INSTOCK'                   ? 'bg-green-50 text-green-700 border-green-200' :
-                      raw === 'COLLECTED'                 ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                      raw === 'UNDER SEPARATION'           ? 'bg-amber-50 text-amber-700 border-amber-200' :
                       raw === 'QUARANTINED'               ? 'bg-orange-50 text-orange-700 border-orange-200' :
                       raw === 'DISCARDED' || raw === 'EXPIRED' ? 'bg-red-50 text-red-700 border-red-200' :
                       'bg-gray-50 text-gray-600 border-gray-200';

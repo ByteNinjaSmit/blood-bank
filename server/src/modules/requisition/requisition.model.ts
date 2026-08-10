@@ -100,6 +100,24 @@ const MatchedUnit = new Schema(
   { _id: false },
 );
 
+// A single matched bag the operator dropped (with reason) before approval —
+// the rest of the requisition/component continues. Kept as a standalone
+// history record (unlike matchedUnits, which the bag is removed from) so the
+// rejection is visible for the life of the requisition.
+const RejectedUnit = new Schema(
+  {
+    unitId: { type: String, required: true },
+    componentType: { type: String, enum: COMPONENT_TYPE, required: true },
+    bloodGroup: { type: String, trim: true },
+    rh: { type: String, trim: true },
+    bagNo: { type: String, trim: true },
+    reason: { type: String, trim: true, required: true },
+    rejectedAt: { type: Date, default: Date.now },
+    rejectedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  },
+  { _id: false },
+);
+
 const PatientHistorySchema = new Schema(
   {
     previousTransfusions: { type: Number, default: 0 },
@@ -175,6 +193,9 @@ const RequisitionSchema = new Schema(
     recipientGrouping: { type: GroupingWorksheet, default: undefined },
     requestedComponents: { type: [RequestedComponent], default: [] },
     matchedUnits: { type: [MatchedUnit], default: [] },
+    // Individually rejected bags — removed from matchedUnits but kept here
+    // as a permanent record for the life of the requisition.
+    rejectedUnits: { type: [RejectedUnit], default: [] },
     status: {
       type: String,
       enum: ['PENDING', 'MATCHED', 'CROSSMATCHED', 'APPROVED', 'ISSUED', 'COMPLETED', 'REJECTED'],

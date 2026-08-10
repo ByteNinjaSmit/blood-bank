@@ -264,7 +264,16 @@ export const DISCARD_REASON = [
 ] as const;
 export type DiscardReason = (typeof DISCARD_REASON)[number];
 
-export const CLINICAL_DISEASE = ['THALASSEMIA', 'SICKLE_CELL_ANAEMIA', 'OTHER'] as const;
+export const CLINICAL_DISEASE = [
+  'THALASSEMIA',
+  'SICKLE_CELL_ANAEMIA',
+  'PREGNANCY_RELATED_COMPLICATION',
+  'CANCER',
+  'HAEMOPHILIA',
+  'ACCIDENT',
+  'ANEMIA',
+  'OTHER',
+] as const;
 export type ClinicalDisease = (typeof CLINICAL_DISEASE)[number];
 
 export const TTI_TEST = [

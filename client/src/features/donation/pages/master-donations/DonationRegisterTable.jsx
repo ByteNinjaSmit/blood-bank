@@ -56,9 +56,18 @@ export default function DonationRegisterTable({
                 const isCamp = !!d.campId;
                 // TTI reactive (not negative/released) → highlight the row.
                 const isReactive = d.ttiReleaseDecision === 'reactive' || d.status === 'failed';
+                // TTI shadeness (indeterminate) — quarantined awaiting retest, distinct
+                // from a reactive/discarded row.
+                const isShadeness = d.ttiReleaseDecision === 'indeterminate' || d.status === 'shadeness';
+                // A retest/correction has actually been recorded (independent of the
+                // above — a donation can be reactive AND have a retest history, or
+                // shadeness AND already retested once with the panel still unclear).
+                const isRetest = Boolean(d.ttiEditReason);
                 const rowCls = isReactive
                   ? 'bg-yellow-100 hover:bg-yellow-200/70'
-                  : trackId === d.id ? 'bg-orange-50 hover:bg-gray-50' : 'hover:bg-gray-50';
+                  : isShadeness
+                    ? 'bg-orange-50 hover:bg-orange-100/70'
+                    : trackId === d.id ? 'bg-orange-50 hover:bg-gray-50' : 'hover:bg-gray-50';
                 return (
                   <tr key={d.id} className={`transition-colors ${rowCls}`}>
                     <td className="px-4 py-3 font-mono text-xs text-gray-700 font-medium">
@@ -66,6 +75,16 @@ export default function DonationRegisterTable({
                       {isReactive && (
                         <span className="mt-1 inline-flex px-2 py-0.5 rounded-full text-2xs font-bold bg-red-600 text-white border border-red-700 uppercase tracking-wide">
                           TTI Reactive
+                        </span>
+                      )}
+                      {isShadeness && (
+                        <span className="mt-1 inline-flex px-2 py-0.5 rounded-full text-2xs font-bold bg-orange-500 text-white border border-orange-600 uppercase tracking-wide">
+                          Shadeness
+                        </span>
+                      )}
+                      {isRetest && (
+                        <span className="mt-1 ml-1 inline-flex px-2 py-0.5 rounded-full text-2xs font-bold bg-teal-600 text-white border border-teal-700 uppercase tracking-wide">
+                          TTI Retest Done
                         </span>
                       )}
                     </td>

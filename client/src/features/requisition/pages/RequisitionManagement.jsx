@@ -29,10 +29,8 @@ const RequisitionManagement = () => {
     shortages,
     issuing,
     approving,
-    completing,
     crossmatchUpdating,
     swapping,
-    groupingSaving,
     hasChanges,
     addRequestLine,
     removeRequestLine,
@@ -46,11 +44,10 @@ const RequisitionManagement = () => {
     handleCrossmatchUpdate,
     fetchAvailableUnits,
     handleSwapBag,
-    handleSaveRecipientGrouping,
-    handleSaveBagGrouping,
     handleConfirmCompatibility,
     handleResetCrossmatch,
     handleRejectComponent,
+    handleRejectBag,
     loadRequest,
     refreshRequest,
   } = useRequisition(authorizationToken);
@@ -116,8 +113,12 @@ const RequisitionManagement = () => {
     return !!requestDoc?._id && okStatus.includes(requestDoc?.status);
   }, [requestDoc]);
 
+  // Step 4's Next/Finish button is now the only way to complete the
+  // requisition (the old in-page "Complete Request" button was removed), so
+  // it must be enabled once the requisition is ready to complete —
+  // 'approved'/'issued' — not only after it's already 'completed'.
   const canProceedFromStep4 = React.useMemo(() => {
-    return requestDoc?.status === 'completed';
+    return !!requestDoc?._id && ['approved', 'issued', 'completed'].includes(requestDoc?.status);
   }, [requestDoc]);
 
   const handleRejectAndExit = async (rejectionReason) => {
@@ -165,6 +166,7 @@ const RequisitionManagement = () => {
             }}
             disableStepIndicators={nextDisabled}
             nextButtonText={nextLabel}
+            finishButtonText="Complete Request"
             stepCircleContainerClassName="bg-white"
             contentClassName="bg-white rounded-xl shadow border border-gray-100"
             footerClassName="bg-white rounded-b-xl"
@@ -180,7 +182,6 @@ const RequisitionManagement = () => {
                 handleCreate={handleCreate}
                 requestDoc={requestDoc}
                 hasChanges={hasChanges}
-                openAddHospital={() => navigate('/hospital/add')}
                 onReject={handleRejectAndExit}
               />
             </Step>
@@ -198,12 +199,10 @@ const RequisitionManagement = () => {
                 fetchAvailableUnits={fetchAvailableUnits}
                 onSwapBag={handleSwapBag}
                 swapping={swapping}
-                onSaveRecipientGrouping={handleSaveRecipientGrouping}
-                onSaveBagGrouping={handleSaveBagGrouping}
-                groupingSaving={groupingSaving}
                 onConfirmCompatibility={handleConfirmCompatibility}
                 onResetCrossmatch={handleResetCrossmatch}
                 onRejectComponent={handleRejectComponent}
+                onRejectBag={handleRejectBag}
                 step2Reasons={step2Reasons}
                 isPartialMatch={isPartialMatch}
               />
@@ -224,8 +223,6 @@ const RequisitionManagement = () => {
             <Step>
               <CompleteStep
                 requestDoc={requestDoc}
-                completing={completing}
-                onComplete={handleComplete}
                 shortages={shortages}
               />
             </Step>

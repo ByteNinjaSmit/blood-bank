@@ -17,5 +17,10 @@ export const SEX_TYPES = [
 export const INDICATION_CATEGORY_LABELS = {
   THALASSEMIA: 'Thalassemia',
   SICKLE_CELL_ANAEMIA: 'Sickle Cell Anemia',
+  PREGNANCY_RELATED_COMPLICATION: 'Pregnancy Related Complication',
+  CANCER: 'Cancer',
+  HAEMOPHILIA: 'Haemophilia',
+  ACCIDENT: 'Accident',
+  ANEMIA: 'Anemia',
   OTHER: 'Other',
 };

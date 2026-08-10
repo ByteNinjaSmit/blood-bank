@@ -65,6 +65,12 @@ const DonationSchema = new Schema(
     medicalExam: MedicalExamSchema,
     donorFitness: DonorFitnessSchema,
     separation: SeparationSchema,
+    // Set while this donation's bag sits in an active (not yet finalized)
+    // batch on the Component Separate screen — nothing is actually
+    // separated server-side until the batch is signed off, but other
+    // screens (donation timeline/details) need a way to show "Under
+    // Separation" for that period instead of "Not separated yet".
+    separationBatchActive: { type: Boolean, default: false },
     questionnaireFlags: { type: Map, of: Boolean },
     typeOfBag: { type: String, enum: ['SB', 'DB', 'TB', 'QB'], default: 'SB' },
     notes: { type: String, trim: true },

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import CompatibilityMatrix from '../components/CompatibilityMatrix';
-import GroupingWorksheet from '../components/GroupingWorksheet';
 import MatchedBagCard from '../components/MatchedBagCard';
 import ComponentRejectModal from '../components/ComponentRejectModal';
 import { componentColor } from '../components/component-colors';
@@ -23,15 +22,17 @@ export default function MatchReviewStep({
   requestDoc, matchedResult, matching, onMatch, onReject, shortages,
   onCrossmatchUpdate, crossmatchUpdating,
   fetchAvailableUnits, onSwapBag, swapping,
-  onSaveRecipientGrouping, onSaveBagGrouping, groupingSaving,
-  onConfirmCompatibility, onResetCrossmatch, onRejectComponent, step2Reasons = [],
+  onConfirmCompatibility, onResetCrossmatch, onRejectComponent, onRejectBag, step2Reasons = [],
   isPartialMatch = false,
   variant = 'requisition',
 }) {
   const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
   const [rejectComponentTarget, setRejectComponentTarget] = useState(null);
   const [rejectingComponent, setRejectingComponent] = useState(false);
+  const [rejectBagTarget, setRejectBagTarget] = useState(null);
+  const [rejectingBag, setRejectingBag] = useState(false);
   const rejectedComponents = (requestDoc?.requestedComponents || []).filter((c) => c.status === 'REJECTED');
+  const rejectedBags = requestDoc?.rejectedUnits || [];
   const status = requestDoc?.status;
   const canMatch = !!requestDoc?._id && status === 'pending' && !matching;
   const canReject = !!requestDoc?._id && ['pending', 'matched', 'approved'].includes(status);
@@ -73,18 +74,31 @@ export default function MatchReviewStep({
         }}
       />
 
+      <ComponentRejectModal
+        isOpen={!!rejectBagTarget}
+        onClose={() => setRejectBagTarget(null)}
+        title="Reject Bag"
+        confirmDescription="This drops just this bag from the requisition; the rest of the component/requisition continues. The rejection stays on record for the life of this requisition."
+        confirmLabel="Reject Bag"
+        component={rejectBagTarget ? {
+          componentType: rejectBagTarget.componentType,
+          bloodGroup: rejectBagTarget.bloodGroup,
+          rh: rejectBagTarget.rh,
+          units: 1,
+        } : null}
+        bagCount={1}
+        submitting={rejectingBag}
+        onConfirm={async (reason) => {
+          if (!rejectBagTarget) return;
+          setRejectingBag(true);
+          const ok = await onRejectBag(rejectBagTarget.unitId, reason);
+          setRejectingBag(false);
+          if (ok) setRejectBagTarget(null);
+        }}
+      />
+
       {/* Compatibility Reference (collapsible) */}
       <CompatibilityMatrix recipientGroup={recipientGroup} />
-
-      {/* Recipient blood-grouping worksheet */}
-      {requestDoc?._id && (
-        <GroupingWorksheet
-          title="Recipient Serum / Cell Grouping"
-          value={requestDoc?.recipientGrouping || {}}
-          onSave={onSaveRecipientGrouping}
-          saving={groupingSaving}
-        />
-      )}
 
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-gray-800">Match Results (Compatibility-Aware FIFO)</h3>
@@ -226,12 +240,11 @@ export default function MatchReviewStep({
                               fetchAvailableUnits={fetchAvailableUnits}
                               onSwapBag={onSwapBag}
                               swapping={swapping}
-                              onSaveBagGrouping={onSaveBagGrouping}
                               onCrossmatchUpdate={onCrossmatchUpdate}
                               onConfirmCompatibility={onConfirmCompatibility}
                               onResetCrossmatch={onResetCrossmatch}
                               crossmatchUpdating={crossmatchUpdating}
-                              groupingSaving={groupingSaving}
+                              onRejectBag={onRejectBag ? setRejectBagTarget : undefined}
                             />
                           );
                         })}
@@ -258,6 +271,28 @@ export default function MatchReviewStep({
                     </div>
                     {c.rejectionReason && (
                       <div className="px-3 py-2 text-sm text-red-700">Reason: {c.rejectionReason}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Rejected bags */}
+            {rejectedBags.length > 0 && (
+              <div className="space-y-4 mt-4">
+                {rejectedBags.map((u, idx) => (
+                  <div key={idx} className="border border-red-200 rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-red-50 border-b flex items-center gap-2">
+                      <span className="font-medium text-sm text-red-800">{u.componentType} — Bag {u.unitId}</span>
+                      {u.bloodGroup && (
+                        <span className="text-xs text-red-500">({u.bloodGroup}{u.rh === 'POSITIVE' || u.rh === 'Positive' ? '+' : '−'})</span>
+                      )}
+                      <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-200 border border-red-300 text-red-800">
+                        Bag Rejected
+                      </span>
+                    </div>
+                    {u.reason && (
+                      <div className="px-3 py-2 text-sm text-red-700">Reason: {u.reason}</div>
                     )}
                   </div>
                 ))}

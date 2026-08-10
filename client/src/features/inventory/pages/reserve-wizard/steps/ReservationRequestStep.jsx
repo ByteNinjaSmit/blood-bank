@@ -21,7 +21,6 @@ export default function ReservationRequestStep({
   handleCreate,
   requestDoc,
   hasChanges,
-  openAddHospital,
   shortages,
 }) {
   const updatePatientField = (patch) => {
@@ -44,7 +43,6 @@ export default function ReservationRequestStep({
           hospitalsLoading={hospitalsLoading}
           hospitalId={form.hospitalId}
           onHospitalIdChange={(v) => setForm((p) => ({ ...p, hospitalId: v }))}
-          onAddHospital={openAddHospital}
           doctorName={form.doctorName}
           onDoctorNameChange={(v) => setForm((p) => ({ ...p, doctorName: v }))}
           dateFieldLabel="Reserve Until (optional — default 3 days)"

@@ -124,10 +124,11 @@ const Issue = () => {
   const openView = (item) => { setViewItem(item); setViewOpen(true); };
   const closeView = () => { setViewOpen(false); setViewItem(null); };
 
-  // Clinical Indication / Disease Patients tab: a read view over real
-  // Requisitions whose patient.indicationCategory is set (Thalassemia /
-  // Sickle Cell Anaemia / Other) — created via the normal Requisition flow,
-  // not a bespoke form. Issuing is done from the requisition itself so
+  // Thalassemia / Sickle Cell Anaemia tab: a read view over real Requisitions
+  // whose Indication for Transfusion (patient.indicationCategory) is
+  // specifically Thalassemia or Sickle Cell Anaemia — created via the normal
+  // Requisition flow, not a bespoke form. Other indication categories (incl.
+  // Other) do not appear here. Issuing is done from the requisition itself so
   // crossmatch/TTI/issue-gate enforcement applies exactly as it does for
   // any other requisition (no more direct-dispatch bypass).
   const fetchThalassemia = async (page = thalPagination.page, limit = thalPagination.limit) => {
@@ -136,7 +137,7 @@ const Issue = () => {
       const { items, pagination: pg } = await requisitionApi.listPaged({
         page,
         limit,
-        hasClinicalIndication: true,
+        indicationCategoryIn: 'THALASSEMIA,SICKLE_CELL_ANAEMIA',
         excludeStatus: 'REJECTED',
         sortBy: 'updatedAt',
         order: 'desc',
@@ -144,7 +145,7 @@ const Issue = () => {
       setThalRows(items);
       setThalPagination((p) => ({ ...p, ...pg, page }));
     } catch {
-      toast.error('Failed to fetch clinical indication / disease records');
+      toast.error('Failed to fetch Thalassemia / Sickle Cell Anaemia records');
       setThalRows([]);
     } finally {
       setThalLoading(false);
@@ -213,7 +214,7 @@ const Issue = () => {
             {[
               { key: 'issue', label: 'Issue Stock', icon: <PackageCheck className="w-4 h-4" /> },
               { key: 'storage', label: 'Storage', icon: <Warehouse className="w-4 h-4" /> },
-              { key: 'disease', label: 'Clinical Indication / Disease Patients', icon: <MapPin className="w-4 h-4" /> },
+              { key: 'disease', label: 'Thalassemia / Sickle Cell Anaemia', icon: <MapPin className="w-4 h-4" /> },
               { key: 'bulkTransfer', label: 'Bulk Transfer', icon: <ArrowLeftRight className="w-4 h-4" /> },
             ].map(tab => (
               <button
@@ -248,7 +249,7 @@ const Issue = () => {
           />
         )}
 
-        {/* ── Clinical Indication / Disease Patients tab ──── */}
+        {/* ── Thalassemia / Sickle Cell Anaemia tab ──── */}
         {mainTab === 'disease' && (
           <DiseaseTab
             thalRows={thalRows}

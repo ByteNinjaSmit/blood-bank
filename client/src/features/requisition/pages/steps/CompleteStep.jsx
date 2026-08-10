@@ -1,32 +1,16 @@
 import React from 'react';
 
-export default function CompleteStep({ requestDoc, completing, onComplete, shortages }) {
+export default function CompleteStep({ requestDoc, shortages }) {
   const unavailableComponents = React.useMemo(() => {
     if (!Array.isArray(shortages) || !shortages.length) return [];
     return shortages.filter(s => s.available === 0);
   }, [shortages]);
-  const canComplete = !!requestDoc?._id && ['approved', 'issued'].includes(requestDoc.status) && !completing;
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
-        <div>
-          <h3 className="text-lg font-bold text-gray-800">Complete Requisition Request</h3>
-          <p className="text-sm text-gray-500 mt-1">Mark the requisition as completed after confirmation of receipt/transfusion.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            disabled={!canComplete}
-            onClick={onComplete}
-            className={`px-5 py-2.5 rounded-lg text-sm font-bold text-white transition active:scale-95 flex items-center gap-2 shadow-sm ${
-              canComplete
-                ? 'bg-purple-700 hover:bg-purple-800 cursor-pointer'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {completing ? 'Completing…' : 'Complete Request'}
-          </button>
-        </div>
+      <div className="border-b border-gray-100 pb-4">
+        <h3 className="text-lg font-bold text-gray-800">Complete Requisition Request</h3>
+        <p className="text-sm text-gray-500 mt-1">Mark the requisition as completed after confirmation of receipt/transfusion. Use the "Complete Request" button below to finish.</p>
       </div>
 
       {requestDoc && (

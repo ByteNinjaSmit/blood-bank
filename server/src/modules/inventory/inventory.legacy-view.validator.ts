@@ -22,6 +22,7 @@ const StockListQuery = z.object({
   // are merely RESERVED pending issue on a normal, already-approved
   // requisition — both share BloodUnit.status='RESERVED' otherwise.
   purpose: z.enum(['REQUISITION', 'RESERVATION']).optional(),
+  ttiRetest: z.coerce.boolean().optional(),
 });
 
 const UnreserveBody = z.object({

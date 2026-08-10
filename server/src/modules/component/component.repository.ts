@@ -84,6 +84,14 @@ export interface ComponentRepo {
     },
     actorId: string,
   ): Promise<void>;
+  /**
+   * Flags a set of donations as sitting in an active, not-yet-finalized
+   * batch on the Component Separate screen (or clears that flag), purely
+   * so other screens (donation timeline/details) can show "Under
+   * Separation" for bags that are being staged there — no BloodUnit is
+   * created by this call, only Donation.separationBatchActive is toggled.
+   */
+  setBatchDraftActive(donationIds: string[], active: boolean): Promise<void>;
 }
 
 export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
@@ -571,6 +579,19 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       if (rpmSecondSpin !== undefined) separationSet['separation.rpmSecondSpin'] = rpmSecondSpin;
       if (separationTime !== undefined) separationSet['separation.separationTime'] = separationTime;
       await DonationModel.updateOne({ donationId: resolvedDonationId }, { $set: separationSet });
+    },
+
+    async setBatchDraftActive(donationIds, active) {
+      // Each id may be either the human-readable donationId or the Mongo
+      // _id (the client's batch keys are the latter) — resolve each to its
+      // canonical donationId before writing, same as every other call here.
+      const resolved = await Promise.all(donationIds.map((id) => resolveDonation(id)));
+      const resolvedIds = resolved.filter(Boolean).map((d) => d!.donationId);
+      if (resolvedIds.length === 0) return;
+      await DonationModel.updateMany(
+        { donationId: { $in: resolvedIds } },
+        { $set: { separationBatchActive: active } },
+      );
     },
   };
 }

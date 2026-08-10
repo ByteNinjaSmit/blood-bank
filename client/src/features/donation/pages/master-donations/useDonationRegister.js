@@ -31,6 +31,7 @@ export function useDonationRegister(activeTab, setActiveTab) {
   const [bagTypeFilter, setBagTypeFilter] = useState('');
   const [bloodGroupFilter, setBloodGroupFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [ttiRetestFilter, setTtiRetestFilter] = useState(false);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [sortBy, setSortBy] = useState('collectedAt');
@@ -151,6 +152,7 @@ export function useDonationRegister(activeTab, setActiveTab) {
     if (bagTypeFilter && d.typeOfBag !== bagTypeFilter) return false;
     if (bloodGroupFilter && d.bloodGroup !== bloodGroupFilter) return false;
     if (statusFilter && donationStatus(d) !== statusFilter) return false;
+    if (ttiRetestFilter && !d.ttiEditReason) return false;
     if (fromDate && (!d.collectedAt || new Date(d.collectedAt) < new Date(fromDate))) return false;
     if (toDate && (!d.collectedAt || new Date(d.collectedAt) > new Date(`${toDate}T23:59:59`))) return false;
     return true;
@@ -182,6 +184,7 @@ export function useDonationRegister(activeTab, setActiveTab) {
     setBagTypeFilter('');
     setBloodGroupFilter('');
     setStatusFilter('');
+    setTtiRetestFilter(false);
     setFromDate('');
     setToDate('');
     setSortBy('collectedAt');
@@ -224,8 +227,8 @@ export function useDonationRegister(activeTab, setActiveTab) {
   return {
     donationAccess,
     // filters
-    filters: { searchInput, searchQuery, bagTypeFilter, bloodGroupFilter, statusFilter, fromDate, toDate, sortBy, order },
-    setSearchInput, setSearchQuery, setBagTypeFilter, setBloodGroupFilter, setStatusFilter, setFromDate, setToDate, setSortBy,
+    filters: { searchInput, searchQuery, bagTypeFilter, bloodGroupFilter, statusFilter, ttiRetestFilter, fromDate, toDate, sortBy, order },
+    setSearchInput, setSearchQuery, setBagTypeFilter, setBloodGroupFilter, setStatusFilter, setTtiRetestFilter, setFromDate, setToDate, setSortBy,
     toggleOrder, resetFilters, switchTab, handleFilterChange, runSearchLookup,
     // export
     excelLoading, handleExportRegister,

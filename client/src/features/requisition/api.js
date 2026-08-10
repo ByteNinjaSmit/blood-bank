@@ -6,7 +6,7 @@ export const requisitionApi = {
   // Listing and detail
   list: (params) => apiClient.get(BASE, { params }).then(unwrap),
   // Same as list(), but keeps the pagination envelope — for callers (e.g.
-  // the Clinical Indication / Disease Patients register) that page through
+  // the Thalassemia / Sickle Cell Anaemia register) that page through
   // results outside of useRequisitionList's own pagination state.
   listPaged: (params) =>
     apiClient.get(BASE, { params }).then((res) => ({

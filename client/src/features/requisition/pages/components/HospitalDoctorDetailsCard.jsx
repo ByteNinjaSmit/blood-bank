@@ -9,7 +9,6 @@ export default function HospitalDoctorDetailsCard({
   hospitalsLoading,
   hospitalId,
   onHospitalIdChange,
-  onAddHospital,
   doctorName,
   onDoctorNameChange,
   dateFieldLabel = 'Date & Time of Requirement',
@@ -32,7 +31,6 @@ export default function HospitalDoctorDetailsCard({
           loading={hospitalsLoading}
           value={hospitalId}
           onChange={(v) => !readOnly && onHospitalIdChange(v)}
-          onAdd={readOnly ? undefined : onAddHospital}
           disabled={readOnly}
         />
 

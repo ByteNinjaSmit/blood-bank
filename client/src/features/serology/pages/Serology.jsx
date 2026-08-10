@@ -3,11 +3,16 @@ import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Microscope, TestTube, RefreshCw } from "lucide-react";
+import { Loader2, Microscope, TestTube, RefreshCw, RotateCcw } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { formatDateTime } from "@/lib/format-date";
 import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
 import SearchBox from "@/components/shared/SearchBox";
+import { useBatchSerology } from "@/features/serology/components/batch/use-batch-serology";
+import BatchSerologyPanel from "@/features/serology/components/batch/BatchSerologyPanel";
+import BatchSerologyQueuePanel from "@/features/serology/components/batch/BatchSerologyQueuePanel";
+import BatchSerologySignatureModal from "@/features/serology/components/batch/BatchSerologySignatureModal";
 
 const DEFAULT_TESTS = [
   { key: "HIV", label: "HIV" },
@@ -37,6 +42,23 @@ const Serology = () => {
   const [tests, setTests] = useState(() => DEFAULT_TESTS.map(t => ({ test: t.key, result: "" })));
   const [editReason, setEditReason] = useState("");
   const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
+
+  // "Pending" = fresh entry (batch-eligible); "Shadeness" = quarantined
+  // bags awaiting an individual retest. Splitting the worklist this way
+  // keeps the two very different actions (batch entry vs. single-bag
+  // retest+reason) from being mixed in one undifferentiated list.
+  const [worklistTab, setWorklistTab] = useState("pending");
+  const batch = useBatchSerology();
+  const batchBags = bags.filter((b) => batch.selectedIds.has(b._id));
+  // Once a bag is queued into the batch it moves out of the plain table and
+  // into the queue panel instead — mirrors Component Separation's
+  // visibleBags (bags.filter(b => !selectedKeys.has(bagKey(b)))).
+  const visibleBags = bags.filter((b) => {
+    if (worklistTab === "shadeness") return b.status === "shadeness";
+    if (b.status === "shadeness") return false;
+    if (batch.batchMode && batch.selectedIds.has(b._id)) return false;
+    return true;
+  });
 
   // A bag already carries a decision (shadeness retest, or any other
   // correction) once its worklist status is no longer 'pending' — the
@@ -210,9 +232,48 @@ const Serology = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {batch.batchMode && (
+          <BatchSerologyQueuePanel
+            bags={batchBags}
+            matrix={batch.matrix}
+            onRemove={batch.removeBag}
+            onOpenPanel={batch.openPanel}
+            confirmChecked={batch.confirmChecked}
+            onConfirmCheckedChange={batch.setConfirmChecked}
+            onOpenSignModal={batch.openSignModal}
+            isSubmitting={batch.isSubmitting}
+          />
+        )}
         <div className="bg-white shadow-md rounded-xl overflow-hidden">
-          <div className="p-4 flex items-center justify-between border-b">
-            <div className="text-sm text-gray-600">{pagination.total} bag(s) found</div>
+          <div className="px-4 pt-4 border-b flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setWorklistTab("pending")}
+              className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${worklistTab === "pending" ? "border-red-600 text-red-700" : "border-transparent text-gray-500 hover:text-gray-800"}`}
+            >
+              Pending ({bags.filter(b => b.status !== "shadeness").length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setWorklistTab("shadeness")}
+              className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${worklistTab === "shadeness" ? "border-orange-600 text-orange-700" : "border-transparent text-gray-500 hover:text-gray-800"}`}
+            >
+              Shadeness — Retest Needed ({bags.filter(b => b.status === "shadeness").length})
+            </button>
+          </div>
+
+          <div className="p-4 flex items-center justify-between border-b flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600">{pagination.total} bag(s) found</span>
+              {worklistTab === "pending" && (
+                <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
+                  <Switch checked={batch.batchMode} onCheckedChange={batch.setBatchMode} id="batch-test" />
+                  <label htmlFor="batch-test" className="text-sm text-gray-700 cursor-pointer select-none">
+                    Batch Test
+                  </label>
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -261,7 +322,17 @@ const Serology = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  {worklistTab === "pending" && batch.batchMode && (
+                    <th className="px-4 py-3 text-left">
+                      <input
+                        type="checkbox"
+                        checked={visibleBags.length > 0 && visibleBags.every(b => batch.selectedIds.has(b._id))}
+                        onChange={(e) => e.target.checked ? batch.selectAll(visibleBags) : batch.clearSelection(visibleBags)}
+                      />
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag No</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag Type</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segment</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Site</th>
@@ -274,20 +345,32 @@ const Serology = () => {
               <tbody className="bg-white divide-y divide-gray-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan="8" className="px-4 py-8 text-center">
+                    <td colSpan="10" className="px-4 py-8 text-center">
                       <div className="inline-flex items-center gap-2 text-gray-500">
                         <Loader2 className="w-5 h-5 animate-spin" /> Loading bags...
                       </div>
                     </td>
                   </tr>
-                ) : bags.length === 0 ? (
+                ) : visibleBags.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="px-4 py-8 text-center text-gray-500">No bags found.</td>
+                    <td colSpan="10" className="px-4 py-8 text-center text-gray-500">
+                      {worklistTab === "shadeness" ? "No bags awaiting retest." : "No bags found."}
+                    </td>
                   </tr>
                 ) : (
-                  bags.map((bag, idx) => (
+                  visibleBags.map((bag, idx) => (
                     <tr key={`${bag.bagNo}-${idx}`} className="hover:bg-gray-50">
+                      {worklistTab === "pending" && batch.batchMode && (
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={batch.selectedIds.has(bag._id)}
+                            onChange={() => batch.toggleBag(bag)}
+                          />
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{bag.bagNo}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{bag.typeOfBag || "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.segmentNo || "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag.bloodGroup} {bag.rh}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{bag?.siteId?.name || "-"}</td>
@@ -308,9 +391,15 @@ const Serology = () => {
                       </td>
                       <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-2">
-                          <Button size="sm" onClick={() => openEnterResults(bag)} title="Enter Results">
-                            <TestTube className="w-4 h-4" />
-                          </Button>
+                          {bag.status === "shadeness" ? (
+                            <Button size="sm" onClick={() => openEnterResults(bag)} title="Retest" className="gap-1.5 bg-orange-600 hover:bg-orange-700">
+                              <RotateCcw className="w-4 h-4" /> Retest
+                            </Button>
+                          ) : (
+                            <Button size="sm" onClick={() => openEnterResults(bag)} title="Enter Results">
+                              <TestTube className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -433,6 +522,31 @@ const Serology = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BatchSerologyPanel
+        open={batch.showPanel}
+        onOpenChange={batch.setShowPanel}
+        bags={batchBags}
+        matrix={batch.matrix}
+        setCell={batch.setCell}
+        removeBag={batch.removeBag}
+      />
+
+      <BatchSerologySignatureModal
+        open={batch.showSignModal}
+        onOpenChange={batch.setShowSignModal}
+        bags={batchBags}
+        matrix={batch.matrix}
+        user={user}
+        signatureText={batch.signatureText}
+        setSignatureText={batch.setSignatureText}
+        isSubmitting={batch.isSubmitting}
+        onConfirm={() =>
+          batch.submitBatch(batchBags, user?._id || user?.id, {
+            onSuccess: () => fetchBags(pagination.page),
+          })
+        }
+      />
     </div>
   );
 };

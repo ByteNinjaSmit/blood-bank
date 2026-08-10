@@ -3,6 +3,7 @@ import { Loader2, X, ClipboardList, RefreshCw } from 'lucide-react';
 import { COMPONENT_TYPES } from '@/constants/component-types';
 import RequisitionModals from './components/RequisitionModals';
 import RequisitionPrintModals from './components/RequisitionPrintModals';
+import RequisitionReportSelectModal from './components/RequisitionReportSelectModal';
 import { RejectRequestModal } from '@/components/shared';
 import { useRequisitionList } from './hooks/useRequisitionList';
 
@@ -10,7 +11,7 @@ const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'reject
 
 export default function RequisitionList() {
   const rl = useRequisitionList();
-  const { allSelectedIds,applyFilters,bulkAction,callAction,can,canManage,clearSelection,closeView,componentFulfillment,data,excelLoading,exportDropdownOpen,fetchList,filters,fmt,handleConfirmReject,handleExportExcel,handleOpenReject,handlePrint,hospitals,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocReqId,rejectModalOpen,rejectSubmitting,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setExportDropdownOpen,setFilters,setIssueDoc,setIssueModalOpen,setIssuingRowId,setLimit,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintType,setRejectModalOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen } = rl;
+  const { allSelectedIds,applyFilters,bulkAction,callAction,can,canManage,clearSelection,closeView,componentFulfillment,confirmReportSelection,data,excelLoading,exportDropdownOpen,fetchList,filters,fmt,handleConfirmReject,handleExportExcel,handleOpenReject,handlePrint,hospitals,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setExportDropdownOpen,setFilters,setIssueDoc,setIssueModalOpen,setIssuingRowId,setLimit,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintType,setRejectModalOpen,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen } = rl;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -274,6 +275,13 @@ export default function RequisitionList() {
         multiLabelDoc={multiLabelDoc}
         setMultiLabelDoc={setMultiLabelDoc}
         printSingleLabel={printSingleLabel}
+      />
+
+      <RequisitionReportSelectModal
+        open={reportSelectOpen}
+        doc={reportSelectDoc}
+        onClose={() => { setReportSelectOpen(false); setReportSelectDoc(null); }}
+        onConfirm={confirmReportSelection}
       />
 
       {/* Hidden Print Wrapper (rendered directly under body via React Portal) */}

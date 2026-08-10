@@ -4,12 +4,17 @@ import { toast } from "sonner";
 import { apiClient } from "@/core/api-client";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { formatDateTime } from "@/lib/format-date";
 import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
 import SeparateComponentModal from "../components/separate/SeparateComponentModal";
 import SignatureModal from "../components/separate/SignatureModal";
 import EditSeparationModal from "../components/separate/EditSeparationModal";
 import CountdownCell from "../components/separate/CountdownCell";
+import BatchSeparationPanel from "../components/separate/BatchSeparationPanel";
+import BatchSeparateModal from "../components/separate/BatchSeparateModal";
+import BatchSignatureModal from "../components/separate/BatchSignatureModal";
+import { useBatchSeparation, BATCH_BAG_TYPES } from "../use-batch-separation";
 
 // Component separation from a whole-blood donation only ever yields these four
 // derived products — WB is never re-selected here.
@@ -45,7 +50,7 @@ const ComponentSeparate = () => {
   // signable state together.
   const bagKey = (bag) => bag?.id || bag?.donationId || bag?.bagNo;
 
-  const availableComponentTypes = (bag) => {
+  const computeAvailableTypes = (bag, pendingTypes) => {
     const all = isSdpBag(bag) ? ["SDP"] : (bag?.typeOfBag === "TB" || bag?.typeOfBag === "QB")
       ? SEPARABLE_COMPONENT_TYPES
       : ["PRBC", "FFP"];
@@ -53,9 +58,19 @@ const ComponentSeparate = () => {
       (Array.isArray(bag?.components) ? bag.components : [])
         .map((c) => c.componentType?.toUpperCase())
     );
-    const alreadyPending = new Set(pendingComponents.map((p) => p.componentType));
-    return all.filter((t) => !alreadyPending.has(t) && !alreadyPrepared.has(t.toUpperCase()));
+    return all.filter((t) => !pendingTypes.has(t) && !alreadyPrepared.has(t.toUpperCase()));
   };
+
+  const availableComponentTypes = (bag) =>
+    computeAvailableTypes(bag, new Set(pendingComponents.map((p) => p.componentType)));
+
+  // Same rule, but scoped to what's already staged for this bag inside the
+  // active batch run rather than the single-bag modal's pendingComponents.
+  const availableComponentTypesForBatch = (bag) =>
+    computeAvailableTypes(
+      bag,
+      new Set((batch.pendingByBag.get(bagKey(bag)) || []).map((p) => p.componentType)),
+    );
 
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [signatureBag, setSignatureBag] = useState(null);
@@ -71,6 +86,8 @@ const ComponentSeparate = () => {
   const [editRpmSecondSpin, setEditRpmSecondSpin] = useState("");
   const [editSeparationTime, setEditSeparationTime] = useState("");
 
+  const batch = useBatchSeparation({ bagKey });
+
   const fetchBags = async () => {
     setIsLoading(true);
     try {
@@ -78,6 +95,7 @@ const ComponentSeparate = () => {
 
       const bagsData = Array.isArray(bagsRes.data?.bags) ? bagsRes.data.bags : [];
       setBags(bagsData);
+      batch.pruneStaleKeys(bagsData);
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to fetch bags");
       setBags([]);
@@ -318,6 +336,10 @@ const ComponentSeparate = () => {
     }
   };
 
+  const visibleBags = batch.batchMode
+    ? bags.filter((b) => !batch.selectedKeys.has(bagKey(b)))
+    : bags;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-red-100 shadow-sm">
@@ -335,9 +357,46 @@ const ComponentSeparate = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <BatchSeparationPanel
+          bagType={batch.bagType}
+          bags={bags.filter((b) => batch.selectedKeys.has(bagKey(b)))}
+          bagKeyFn={bagKey}
+          inFlightKeys={batch.inFlightKeys}
+          isSubmitting={batch.isSubmitting}
+          onRemove={batch.removeBag}
+          onOpenModal={batch.openModal}
+          pendingByBag={batch.pendingByBag}
+          confirmChecked={batch.confirmChecked}
+          onConfirmCheckedChange={batch.setConfirmChecked}
+          onOpenSignModal={batch.openSignModal}
+          rpmFirstSpin={batch.rpmFirstSpin}
+          rpmSecondSpin={batch.rpmSecondSpin}
+          separationTime={batch.separationTime}
+        />
+
         <div className="bg-white shadow-md rounded-xl overflow-hidden">
-          <div className="p-4 flex items-center justify-between border-b">
-            <div className="text-sm text-gray-600">{bags.length} bag(s) ready</div>
+          <div className="p-4 flex flex-wrap items-center justify-between gap-3 border-b">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="text-sm text-gray-600">{bags.length} bag(s) ready</div>
+              <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
+                <Switch checked={batch.batchMode} onCheckedChange={batch.setBatchMode} id="multiple-separate" />
+                <label htmlFor="multiple-separate" className="text-sm text-gray-700 cursor-pointer select-none">
+                  Multiple Separate
+                </label>
+              </div>
+              {batch.batchMode && (
+                <select
+                  className="px-2 py-1.5 border rounded-md text-sm"
+                  value={batch.bagType}
+                  onChange={(e) => batch.setBagType(e.target.value)}
+                >
+                  <option value="">Select bag type</option>
+                  {BATCH_BAG_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => fetchBags()}
@@ -373,12 +432,14 @@ const ComponentSeparate = () => {
                       </div>
                     </td>
                   </tr>
-                ) : bags.length === 0 ? (
+                ) : visibleBags.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="px-4 py-8 text-center text-gray-500">No collected blood bags found.</td>
+                    <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                      {batch.batchMode ? "No bags left outside the current batch." : "No collected blood bags found."}
+                    </td>
                   </tr>
                 ) : (
-                  bags.map((bag, idx) => (
+                  visibleBags.map((bag, idx) => (
                     <tr key={`${bag.bagNo}-${idx}`} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{bag.bagNo}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">
@@ -412,6 +473,20 @@ const ComponentSeparate = () => {
                         <CountdownCell deadline={bag.collectionDate} now={now} />
                       </td>
                       <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                        {batch.batchMode ? (
+                          bag.typeOfBag === batch.bagType && availableComponentTypesForBatch(bag).length > 0 ? (
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 cursor-pointer"
+                              onChange={() => batch.addBag(bag)}
+                              title="Add to separation batch"
+                            />
+                          ) : (
+                            <span className="text-xs text-gray-400">
+                              {batch.bagType ? "Not eligible" : "Select a bag type"}
+                            </span>
+                          )
+                        ) : (
                         <div className="inline-flex items-center gap-2">
                           {!readyToSignBags.includes(bagKey(bag)) ? (
                             <>
@@ -461,6 +536,7 @@ const ComponentSeparate = () => {
                             </Button>
                           )}
                         </div>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -470,6 +546,45 @@ const ComponentSeparate = () => {
           </div>
         </div>
       </div>
+
+      <BatchSeparateModal
+        open={batch.showModal}
+        onOpenChange={batch.setShowModal}
+        bags={bags.filter((b) => batch.selectedKeys.has(bagKey(b)))}
+        bagKeyFn={bagKey}
+        availableTypesFor={availableComponentTypesForBatch}
+        pendingByBag={batch.pendingByBag}
+        addPendingComponent={batch.addPendingComponent}
+        removePendingComponent={batch.removePendingComponent}
+        rpmFirstSpin={batch.rpmFirstSpin}
+        setRpmFirstSpin={batch.setRpmFirstSpin}
+        rpmSecondSpin={batch.rpmSecondSpin}
+        setRpmSecondSpin={batch.setRpmSecondSpin}
+        separationTime={batch.separationTime}
+        setSeparationTime={batch.setSeparationTime}
+      />
+
+      <BatchSignatureModal
+        open={batch.showSignModal}
+        onOpenChange={batch.setShowSignModal}
+        bags={bags.filter((b) => batch.selectedKeys.has(bagKey(b)))}
+        bagKeyFn={bagKey}
+        pendingByBag={batch.pendingByBag}
+        rpmFirstSpin={batch.rpmFirstSpin}
+        rpmSecondSpin={batch.rpmSecondSpin}
+        separationTime={batch.separationTime}
+        user={user}
+        signatureText={batch.signatureText}
+        setSignatureText={batch.setSignatureText}
+        isSubmitting={batch.isSubmitting}
+        onConfirm={() =>
+          batch.finalizeBatch(
+            bags.filter((b) => batch.selectedKeys.has(bagKey(b))),
+            batch.signatureText,
+            { onSuccess: fetchBags },
+          )
+        }
+      />
 
       <SeparateComponentModal
         open={showSeparateModal}

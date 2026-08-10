@@ -35,6 +35,7 @@ import type {
   BulkTransferSectionDto,
   DiseaseBucketDto,
   DiseaseSectionDto,
+  RequisitionIndicationSectionDto,
   StorageBreakdownItemDto,
   DiscardSectionDto,
   DeferralReasonDto,
@@ -56,6 +57,7 @@ export type {
   BulkTransferSectionDto,
   DiseaseBucketDto,
   DiseaseSectionDto,
+  RequisitionIndicationSectionDto,
   StorageBreakdownItemDto,
   DiscardSectionDto,
   DeferralReasonDto,
@@ -81,6 +83,10 @@ export interface DashboardRepo {
   bagStock(fromDate?: Date, toDate?: Date): Promise<BagStockSectionDto>;
   bulkTransferSummary(fromDate?: Date, toDate?: Date): Promise<BulkTransferSectionDto>;
   diseaseSummary(fromDate?: Date, toDate?: Date): Promise<DiseaseSectionDto>;
+  requisitionIndicationSummary(
+    fromDate?: Date,
+    toDate?: Date,
+  ): Promise<RequisitionIndicationSectionDto>;
   storageBreakdown(fromDate?: Date, toDate?: Date): Promise<StorageBreakdownItemDto[]>;
   discardSummary(fromDate?: Date, toDate?: Date): Promise<DiscardSectionDto>;
   deferralReasonBreakdown(fromDate?: Date, toDate?: Date): Promise<DeferralReasonDto[]>;
@@ -404,6 +410,68 @@ export function createDashboardRepo(deps: {
         thalassemia: toDto(buckets.THALASSEMIA),
         sickleCellAnaemia: toDto(buckets.SICKLE_CELL_ANAEMIA),
         other: toDto(buckets.OTHER),
+      };
+    },
+
+    async requisitionIndicationSummary(fromDate?: Date, toDate?: Date) {
+      // Requisition.patient.indicationCategory → display label. Every fixed
+      // category is seeded at zero so it always appears in the table (with
+      // "-" cells) even when nothing was issued for it this period.
+      const CATEGORY_LABELS: Record<string, string> = {
+        THALASSEMIA: 'Thalassemia',
+        SICKLE_CELL_ANAEMIA: 'Sickle Cell Anemia',
+        PREGNANCY_RELATED_COMPLICATION: 'Pregnancy Related Complication',
+        CANCER: 'Cancer',
+        HAEMOPHILIA: 'Haemophilia',
+        ACCIDENT: 'Accident',
+        ANEMIA: 'Anemia',
+      };
+
+      const issues = await IssueModel.find({
+        ...buildDateQuery('issuedAt', fromDate, toDate),
+        returnedAt: { $exists: false },
+      })
+        .select('requisitionId unitId')
+        .lean();
+
+      const grid: Record<string, Record<string, number>> = {};
+      for (const label of Object.values(CATEGORY_LABELS)) grid[label] = {};
+
+      if (issues.length > 0) {
+        const reqIds = [...new Set((issues as any[]).map((i) => String(i.requisitionId)))];
+        const unitIds = [...new Set((issues as any[]).map((i) => i.unitId))];
+        const [requisitions, units] = await Promise.all([
+          RequisitionModel.find({ _id: { $in: reqIds } })
+            .select('patient.indicationCategory patient.otherDiseaseName')
+            .lean(),
+          BloodUnitModel.find({ unitId: { $in: unitIds } })
+            .select('unitId componentType')
+            .lean(),
+        ]);
+
+        const reasonByReq = new Map<string, string>();
+        for (const r of requisitions as any[]) {
+          const category = r.patient?.indicationCategory;
+          const reason = !category
+            ? 'Not Specified'
+            : category === 'OTHER'
+              ? r.patient?.otherDiseaseName?.trim() || 'Other'
+              : CATEGORY_LABELS[category] || 'Not Specified';
+          reasonByReq.set(String(r._id), reason);
+        }
+        const componentByUnit = new Map<string, string>();
+        for (const u of units as any[]) componentByUnit.set(u.unitId, u.componentType || 'Other');
+
+        for (const issue of issues as any[]) {
+          const reason = reasonByReq.get(String(issue.requisitionId)) ?? 'Not Specified';
+          const component = componentByUnit.get(issue.unitId) ?? 'Other';
+          grid[reason] ??= {};
+          grid[reason][component] = (grid[reason][component] ?? 0) + 1;
+        }
+      }
+
+      return {
+        rows: Object.entries(grid).map(([reason, byComponent]) => ({ reason, byComponent })),
       };
     },
 

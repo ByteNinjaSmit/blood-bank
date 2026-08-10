@@ -4,12 +4,13 @@ import { formatDateTime } from '@/lib/format-date';
 
 const fmtDateTime = (v) => formatDateTime(v, { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-// Clinical Indication / Disease Patients tab — a read view over real
-// Requisitions whose patient.indicationCategory is set (Thalassemia /
-// Sickle Cell Anaemia / Other). These are created via the normal
-// Requisition flow (selecting the indication from the dropdown), not a
-// separate form here — this tab surfaces them and routes issuing through
-// the normal requisition issue action (crossmatch/TTI/issue-gate enforced).
+// Thalassemia / Sickle Cell Anaemia tab — a read view over real
+// Requisitions whose patient.indicationCategory is specifically Thalassemia
+// or Sickle Cell Anaemia. These are created via the normal Requisition flow
+// (selecting the indication from the Indication for Transfusion dropdown),
+// not a separate form here — this tab surfaces them and routes issuing
+// through the normal requisition issue action (crossmatch/TTI/issue-gate
+// enforced).
 export default function DiseaseTab({
   thalRows,
   thalLoading,
@@ -23,7 +24,7 @@ export default function DiseaseTab({
       <div className="flex items-center justify-between px-5 py-3.5 border-b bg-gray-50">
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-red-700" />
-          <span className="font-semibold text-gray-800 text-sm">Clinical Indication / Disease Patient Records</span>
+          <span className="font-semibold text-gray-800 text-sm">Thalassemia / Sickle Cell Anaemia Records</span>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500">Total: {thalPagination.total || thalRows.length}</span>
@@ -58,7 +59,7 @@ export default function DiseaseTab({
               </td></tr>
             ) : thalRows.length === 0 ? (
               <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">
-                No clinical indication / disease patient requisitions found.
+                No Thalassemia / Sickle Cell Anaemia requisitions found.
               </td></tr>
             ) : thalRows.map((r) => {
               const p = r.patient || {};

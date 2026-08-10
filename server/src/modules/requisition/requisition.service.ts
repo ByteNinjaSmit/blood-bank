@@ -150,6 +150,8 @@ export interface RequisitionService {
     reason: string,
     actorId: string,
   ): Promise<RequisitionDto>;
+  /** Rejects one matched bag (drops it, keeps a record) while the requisition continues. */
+  rejectBag(id: string, unitId: string, reason: string, actorId: string): Promise<RequisitionDto>;
 }
 
 export function createRequisitionService(deps: {
@@ -376,12 +378,13 @@ export function createRequisitionService(deps: {
         );
       }
 
-      // Non-bypassable safety gate: recipient grouping, each bag's grouping and
-      // a compatible crossmatch must all be recorded before reservation.
-      const blockers = approvalBlockers(req.matchedUnits, req.recipientGrouping);
+      // Non-bypassable safety gate: a compatible crossmatch (and, for
+      // substitute-group bags, a compatibility sign-off) must be recorded
+      // before reservation.
+      const blockers = approvalBlockers(req.matchedUnits);
       if (blockers.length > 0) {
         throw new ValidationError(
-          'Cannot approve: complete the grouping and crossmatch worksheets first.',
+          'Cannot approve: complete the crossmatch worksheet first.',
           { blockers },
         );
       }
@@ -870,6 +873,58 @@ export function createRequisitionService(deps: {
         entityId: req.requisitionId,
         before: { component: componentType, status: rc.status || 'ACTIVE' },
         after: { component: componentType, status: 'REJECTED', reason },
+        reason,
+      });
+      return updated;
+    },
+
+    async rejectBag(id, unitId, reason, actorId) {
+      const req = await deps.requisitions.findById(id);
+      const mu = req.matchedUnits.find((m) => m.unitId === unitId);
+      if (!mu) throw new NotFoundError('Matched unit in this requisition', unitId);
+      if (!['PENDING', 'MATCHED'].includes(req.status)) {
+        throw new ConflictError(
+          `Bags can only be rejected before approval (status is ${req.status}).`,
+        );
+      }
+
+      // Release the bag if it was somehow already reserved, then drop it from
+      // matchedUnits and keep a permanent rejected-bag record — the rest of
+      // the component/requisition continues.
+      if (mu.reserved) {
+        await deps.units
+          .applyEvent({
+            unitId,
+            event: 'UNRESERVE',
+            actorId,
+            reason: `Bag rejected on requisition ${req.requisitionId}`,
+            set: { reservedFor: null, reservedAt: null, reservedUntil: null } as any,
+          })
+          .catch(() => undefined);
+      }
+
+      const unit = await deps.units.findByUnitId(unitId).catch(() => null);
+      await deps.requisitions.removeMatchedUnit(id, unitId);
+      const updated = await deps.requisitions.pushRejectedUnit(
+        id,
+        {
+          unitId,
+          componentType: mu.componentType,
+          bloodGroup: unit?.aboGroup,
+          rh: unit?.rhFactor,
+          reason,
+        },
+        actorId,
+      );
+
+      await audit.record({
+        actorId,
+        module: 'requisition',
+        action: 'UPDATE',
+        entityType: 'Requisition',
+        entityId: req.requisitionId,
+        before: { unitId, status: 'MATCHED' },
+        after: { unitId, status: 'REJECTED', reason },
         reason,
       });
       return updated;

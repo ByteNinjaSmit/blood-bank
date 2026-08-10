@@ -18,6 +18,18 @@ export default function IndicationSection({ issueByIndication, bagsToStorageCent
     ...Object.entries(structured.sickleCellAnaemia.byBloodGroup || {}).map(([bg, n]) => ['Sickle Cell Anaemia', bg, n]),
   ];
 
+  // Requisition-driven reason breakdown: every reason from the Clinical
+  // Indication / Disease Patients dropdown (plus any custom "Other" text the
+  // operator typed), with issued-component counts per reason. Cells with no
+  // issued units show "-" rather than 0.
+  const byCategory = issueByIndication.byIndicationCategory || { rows: [] };
+  const categoryProducts = [...new Set((byCategory.rows || []).flatMap((r) => Object.keys(r.byProduct)))];
+  const categoryHeaders = ['Reason', ...categoryProducts, 'Total'];
+  const categoryRows = (byCategory.rows || []).map((r) => {
+    const total = Object.values(r.byProduct).reduce((a, b) => a + b, 0);
+    return [r.reason, ...categoryProducts.map((p) => r.byProduct[p] || '-'), total];
+  });
+
   return (
     <>
       <Section title="14. Blood Bags Given to Blood Storage Centres">
@@ -47,6 +59,19 @@ export default function IndicationSection({ issueByIndication, bagsToStorageCent
           verify before statutory submission.
         </p>
         <ReportTable headers={headers} rows={rows} alignRight={headers.map((_, i) => i).filter((i) => i > 0)} />
+      </Section>
+
+      <Section title="16. Component Issue by Requisition Reason for Transfusion">
+        <p className="text-[11px] text-slate-400">
+          Every reason from the requisition's Indication for Transfusion dropdown (including any custom "Other"
+          text entered), with issued-component counts. "-" means that reason had no issued units of that
+          component in this period.
+        </p>
+        <ReportTable
+          headers={categoryHeaders}
+          rows={categoryRows}
+          alignRight={categoryHeaders.map((_, i) => i).filter((i) => i > 0)}
+        />
       </Section>
     </>
   );

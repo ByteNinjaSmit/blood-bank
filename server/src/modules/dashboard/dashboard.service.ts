@@ -12,6 +12,7 @@ export interface DashboardResponseDto {
   bagStock: Awaited<ReturnType<DashboardRepo['bagStock']>>;
   bulkTransfer: Awaited<ReturnType<DashboardRepo['bulkTransferSummary']>>;
   diseasePatients: Awaited<ReturnType<DashboardRepo['diseaseSummary']>>;
+  requisitionIndications: Awaited<ReturnType<DashboardRepo['requisitionIndicationSummary']>>;
   storageBreakdown: Awaited<ReturnType<DashboardRepo['storageBreakdown']>>;
   discards: Awaited<ReturnType<DashboardRepo['discardSummary']>>;
   deferrals: Awaited<ReturnType<DashboardRepo['deferralReasonBreakdown']>>;
@@ -61,6 +62,7 @@ export function createDashboardService(deps: { dashboard: DashboardRepo }): Dash
         bagStock,
         bulkTransfer,
         diseasePatients,
+        requisitionIndications,
         storageBreakdown,
         discards,
         deferrals,
@@ -75,6 +77,7 @@ export function createDashboardService(deps: { dashboard: DashboardRepo }): Dash
         deps.dashboard.bagStock(fromDate, toDate),
         deps.dashboard.bulkTransferSummary(fromDate, toDate),
         deps.dashboard.diseaseSummary(fromDate, toDate),
+        deps.dashboard.requisitionIndicationSummary(fromDate, toDate),
         deps.dashboard.storageBreakdown(fromDate, toDate),
         deps.dashboard.discardSummary(fromDate, toDate),
         deps.dashboard.deferralReasonBreakdown(fromDate, toDate),
@@ -94,6 +97,7 @@ export function createDashboardService(deps: { dashboard: DashboardRepo }): Dash
         bagStock,
         bulkTransfer,
         diseasePatients,
+        requisitionIndications,
         storageBreakdown,
         discards,
         deferrals,

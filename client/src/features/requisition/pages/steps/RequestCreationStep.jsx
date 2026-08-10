@@ -19,7 +19,6 @@ export default function RequestCreationStep({
   handleCreate,
   requestDoc,
   hasChanges,
-  openAddHospital,
   onReject,
 }) {
   const readOnly = false;
@@ -149,7 +148,6 @@ export default function RequestCreationStep({
           hospitalsLoading={hospitalsLoading}
           hospitalId={displayForm.hospitalId}
           onHospitalIdChange={(v) => setForm((p) => ({ ...p, hospitalId: v }))}
-          onAddHospital={openAddHospital}
           doctorName={displayForm.doctorName}
           onDoctorNameChange={(v) => setForm((p) => ({ ...p, doctorName: v }))}
           dateFieldLabel="Reserved Until (optional — default 3 days)"
