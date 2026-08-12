@@ -26,6 +26,8 @@ router.get('/:id', authenticate, requirePermission('donation:read'), controllers
 
 router.post('/', authenticate, requirePermission('donation:create'), controllers.create);
 
+router.patch('/:id', authenticate, requirePermission('donation:update'), controllers.update);
+
 router.delete('/:id', authenticate, requirePermission('donation:delete'), controllers.remove);
 router.post(
   '/:id/restore',

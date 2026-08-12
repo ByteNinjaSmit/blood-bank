@@ -77,6 +77,16 @@ export const ListDonationsQuery = z.object({
 });
 export type ListDonationsInput = z.infer<typeof ListDonationsQuery>;
 
+export const UpdateDonationBody = z.object({
+  collectedAt: z.coerce.date().optional(),
+  bagNo: z.string().trim().min(1).max(100).optional(),
+  segmentNo: z.string().trim().min(1).max(100).optional(),
+  lotNo: z.string().trim().min(1).max(100).optional(),
+  notes: blankToUndef(z.string().trim().max(1000).optional()),
+  phlebotomistId: blankToUndef(z.string().regex(OBJECT_ID, 'Invalid phlebotomist id').optional()),
+});
+export type UpdateDonationInput = z.infer<typeof UpdateDonationBody>;
+
 export const DonationIdParam = z.object({
   id: z.string().regex(OBJECT_ID, 'Invalid donation id'),
 });
@@ -104,4 +114,5 @@ export const ValidateDonation = {
   idParam: (req: Request) => parseOrThrow(DonationIdParam, req.params, 'path params'),
   deleteReasonBody: (req: Request) =>
     parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
+  updateBody: (req: Request) => parseOrThrow(UpdateDonationBody, req.body ?? {}, 'request body'),
 };

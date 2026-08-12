@@ -99,6 +99,7 @@ function mockDonations(): DonationRepo {
     softDelete: vi.fn(),
     restore: vi.fn(),
     delete: vi.fn(),
+    update: vi.fn(),
     lookupByBagNo: vi.fn(),
     bagNosByDonationIds: vi.fn().mockResolvedValue({}),
   };
