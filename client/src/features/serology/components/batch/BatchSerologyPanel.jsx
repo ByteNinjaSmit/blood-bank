@@ -2,6 +2,9 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DEFAULT_TESTS } from "./use-batch-serology";
+import { createGridKeyboardNavHandler } from "@/hooks/useGridKeyboardNav";
+
+const { onKeyDown: onGridKeyDown } = createGridKeyboardNavHandler();
 
 const RESULT_CELL_CLASSES = {
   Negative: "border-gray-200 text-gray-700",
@@ -57,7 +60,7 @@ export default function BatchSerologyPanel({
           </div>
 
           <div className="max-h-[50vh] overflow-auto border rounded-md">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <table className="min-w-full divide-y divide-gray-200 text-sm" onKeyDown={onGridKeyDown}>
               <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bag No</th>
@@ -70,7 +73,7 @@ export default function BatchSerologyPanel({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {bags.map((bag) => {
+                {bags.map((bag, rowIndex) => {
                   const row = matrix.get(bag._id) || {};
                   return (
                     <tr key={bag._id}>
@@ -78,11 +81,13 @@ export default function BatchSerologyPanel({
                         <div className="font-medium text-gray-900">{bag.bagNo}</div>
                         <div className="text-xs text-gray-500">{bag.bloodGroup} {bag.rh}</div>
                       </td>
-                      {DEFAULT_TESTS.map((t) => {
+                      {DEFAULT_TESTS.map((t, colIndex) => {
                         const value = row[t.key] || "Negative";
                         return (
                           <td key={t.key} className="px-2 py-2">
                             <select
+                              data-row={rowIndex}
+                              data-col={colIndex}
                               value={value}
                               onChange={(e) => setCell(bag._id, t.key, e.target.value)}
                               className={`w-32 px-2 py-1.5 border rounded-md text-xs focus:ring-red-400 focus:border-red-400 ${RESULT_CELL_CLASSES[value] || RESULT_CELL_CLASSES.Negative}`}
