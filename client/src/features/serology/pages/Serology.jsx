@@ -7,6 +7,7 @@ import { Loader2, Microscope, TestTube, RefreshCw, RotateCcw } from "lucide-reac
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { formatDateTime } from "@/lib/format-date";
+import { sortByBagNoAsc } from "@/lib/natural-sort";
 import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
 import SearchBox from "@/components/shared/SearchBox";
 import { useBatchSerology } from "@/features/serology/components/batch/use-batch-serology";
@@ -32,7 +33,7 @@ const Serology = () => {
   const [searchInput, setSearchInput] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [order, setOrder] = useState("desc");
+  const [order, setOrder] = useState("bagAsc");
   const [sortBy] = useState("collectionDate");
 
   const [activeBag, setActiveBag] = useState(null);
@@ -71,11 +72,12 @@ const Serology = () => {
     setIsLoading(true);
     try {
       const res = await apiClient.get(`/api/serology/bags`, {
-        params: { page, limit, search: search || undefined, fromDate: fromDate || undefined, toDate: toDate || undefined, sortBy, order },
+        params: { page, limit, search: search || undefined, fromDate: fromDate || undefined, toDate: toDate || undefined, sortBy, order: order === "bagAsc" ? "asc" : order },
       });
       const data = res.data?.data || [];
       const pg = res.data?.pagination || {};
-      setBags(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setBags(order === "bagAsc" ? sortByBagNoAsc(list) : list);
       setPagination(prev => ({ ...prev, ...pg }));
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to load serology bags");
@@ -182,8 +184,8 @@ const Serology = () => {
               <Microscope className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Serology</h1>
-              <p className="text-gray-500 text-sm">Manage serology testing and update results</p>
+              <h1 className="text-2xl font-bold text-gray-900">TTD Testing</h1>
+              <p className="text-gray-500 text-sm">Manage TTD testing and update results</p>
             </div>
           </div>
           {/* Pagination Controls */}
@@ -314,6 +316,7 @@ const Serology = () => {
               >
                 <option value="desc">Newest First</option>
                 <option value="asc">Oldest First</option>
+                <option value="bagAsc">Ascending Order</option>
               </select>
             </div>
           </div>
@@ -414,7 +417,7 @@ const Serology = () => {
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Enter Serology Results</DialogTitle>
+            <DialogTitle>Enter TTD Testing Results</DialogTitle>
           </DialogHeader>
           <div className="space-y-4" onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
             <div className="text-sm text-gray-600">Bag: <span className="font-medium text-gray-900">{activeBag?.bagNo}</span></div>

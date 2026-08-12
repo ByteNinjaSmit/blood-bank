@@ -11,6 +11,7 @@ import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportComponents } from "@/utils/excelExportHelper";
 import useAccess from "@/features/access/useAccess";
 import { useCampList } from "@/features/camp/queries";
+import { sortByBagNoAsc } from "@/lib/natural-sort";
 import ComponentFilterBar from "../components/ComponentFilterBar";
 import ComponentsTable from "../components/ComponentsTable";
 
@@ -161,15 +162,18 @@ const ComponentsList = () => {
         ...(appliedSearch && { search: appliedSearch }),
         ...(state.filters.site && { site: state.filters.site }),
         ...(state.filters.campId && { campId: state.filters.campId }),
-        order: state.filters.order,
+        order: state.filters.order === "bagAsc" ? "asc" : state.filters.order,
       };
 
       const response = await apiClient.get(`/api/v2/component/list`, { params });
 
       if (response.data?.components) {
+        const components = state.filters.order === "bagAsc"
+          ? sortByBagNoAsc(response.data.components)
+          : response.data.components;
         setState(prev => ({
           ...prev,
-          components: response.data.components,
+          components,
           pagination: {
             ...prev.pagination,
             total: response.data.pagination?.total || 0,
