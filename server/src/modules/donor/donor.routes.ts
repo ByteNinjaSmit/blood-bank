@@ -4,7 +4,8 @@ import { requirePermission } from '@/shared/middlewares/rbac';
 import { createDonorRepo } from '@/modules/donor/donor.repository';
 import { createDonorService } from '@/modules/donor/donor.service';
 import { createDonorControllers } from '@/modules/donor/donor.controller';
-import { DonationModel } from '@/modules/donation/donation.model';
+import type { Donation } from '@/modules/donation/donation.model';
+import { findAcrossDonations } from '@/modules/donation/donation-collections.util';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 
@@ -69,9 +70,9 @@ router.get(
       });
 
       const donorIds = items.map((d) => d.id);
-      const donations = await DonationModel.find({ donor: { $in: donorIds }, deletedAt: null })
-        .sort({ collectedAt: -1 })
-        .lean();
+      const donations = (
+        await findAcrossDonations<Donation>({ donor: { $in: donorIds }, deletedAt: null })
+      ).sort((a, b) => (b.collectedAt?.getTime() ?? 0) - (a.collectedAt?.getTime() ?? 0));
       const latestDonationByDonor = new Map<string, (typeof donations)[number]>();
       donations.forEach((d) => {
         const key = d.donor?.toString();

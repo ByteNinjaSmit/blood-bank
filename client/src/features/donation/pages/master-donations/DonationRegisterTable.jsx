@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Building2, Eye, GitCommitHorizontal, Trash2 } from 'lucide-react';
+import { Home, Building2, Eye, Pencil, GitCommitHorizontal, Trash2 } from 'lucide-react';
 
 const formatBloodGroup = (bloodGroup, rhFactor) => {
   if (!bloodGroup) return '';
@@ -20,6 +20,7 @@ export default function DonationRegisterTable({
   trackId,
   onTrack,
   onView,
+  onEdit,
   onDelete,
   currentPage,
   totalPages,
@@ -137,6 +138,15 @@ export default function DonationRegisterTable({
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </button>
+                        {donationAccess.canEdit && (
+                          <button
+                            onClick={() => onEdit(d.id)}
+                            title="Edit Donation"
+                            className="p-1 rounded-lg border border-orange-200 text-orange-700 hover:bg-orange-50 transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
                           onClick={() => onTrack(trackId === d.id ? null : d.id)}
                           title="Track donation timeline"

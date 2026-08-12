@@ -30,6 +30,7 @@ const RecordResultsBody = z.object({
     .min(1),
   technicianId: z.string().trim().optional(),
   editReason: z.string().trim().max(500).optional(),
+  performedAt: z.string().trim().optional(),
 });
 
 const BatchResultItem = z.object({
@@ -47,6 +48,12 @@ const BatchResultItem = z.object({
 const RecordResultsBatchBody = z.object({
   items: z.array(BatchResultItem).min(1).max(500),
   technicianId: z.string().trim().optional(),
+  // Single test date/time applied to every item in the batch.
+  performedAt: z.string().trim().optional(),
+});
+
+const BatchDraftBody = z.object({
+  donationIds: z.array(z.string().trim().min(1)).min(1).max(500),
 });
 
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {
@@ -62,4 +69,5 @@ export const ValidateTtiLegacyView = {
   recordResultsBody: (req: Request) => parseOrThrow(RecordResultsBody, req.body, 'request body'),
   recordResultsBatchBody: (req: Request) =>
     parseOrThrow(RecordResultsBatchBody, req.body, 'request body'),
+  batchDraftBody: (req: Request) => parseOrThrow(BatchDraftBody, req.body, 'request body'),
 };

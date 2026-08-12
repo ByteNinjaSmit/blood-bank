@@ -47,15 +47,27 @@ export function evaluateRelease(panel: ReadonlyArray<PanelEntry>): ReleaseEvalua
     return { decision: 'pending', reasons };
   }
 
-  // Indeterminate ("shadeness") on any mandatory test = on hold for re-test.
-  const indeterminate = MANDATORY_PANEL.filter((t) => latest.get(t) === 'INDETERMINATE');
-  if (indeterminate.length > 0) {
+  // Indeterminate ("shadeness") or Pending (held for retest, same
+  // clinical treatment as shadeness) on any mandatory test = on hold.
+  const held = MANDATORY_PANEL.filter(
+    (t) => latest.get(t) === 'INDETERMINATE' || latest.get(t) === 'PENDING',
+  );
+  if (held.length > 0) {
     return {
       decision: 'indeterminate',
-      reasons: indeterminate.map((t) => `${t} shadeness`),
+      reasons: held.map((t) => `${t} ${latest.get(t) === 'PENDING' ? 'pending' : 'shadeness'}`),
     };
   }
 
   // All mandatory negative.
   return { decision: 'released', reasons: [] };
+}
+
+// Whether the panel's latest per-test results include a 'PENDING' hold —
+// distinguishes a Pending-tab bag from a plain Shadeness (indeterminate)
+// bag even though both map to the same 'indeterminate' release decision.
+export function hasPendingResult(panel: ReadonlyArray<PanelEntry>): boolean {
+  const latest = new Map<TtiTest, TtiResult>();
+  for (const e of panel) latest.set(e.testName, e.result);
+  return MANDATORY_PANEL.some((t) => latest.get(t) === 'PENDING');
 }

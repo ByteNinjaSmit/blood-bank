@@ -17,7 +17,10 @@ import type {
 } from '@/modules/donor/donor.validator';
 import type { DonorDto, DonorRepo } from '@/modules/donor/donor.repository';
 import { CampModel } from '@/modules/camp/camp.model';
-import { DonationModel } from '@/modules/donation/donation.model';
+import {
+  findAcrossDonations,
+  existsAcrossDonations,
+} from '@/modules/donation/donation-collections.util';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { notificationCenterService } from '@/modules/notification/notification-center.service';
 
@@ -157,7 +160,7 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
       await invalidate(`donor:detail:${id}`);
       log.warn({ donorId: id, actorId, deleteBatchId }, 'donor cascade soft-deleted');
       const [affectedDonations, affectedBloodUnits] = await Promise.all([
-        DonationModel.find({ deleteBatchId }, { donationId: 1 }).lean(),
+        findAcrossDonations<{ donationId: string }>({ deleteBatchId }, { donationId: 1 }),
         BloodUnitModel.find({ deleteBatchId }, { unitId: 1 }).lean(),
       ]);
       void withAudit(
@@ -219,7 +222,7 @@ export function createDonorService(deps: { repo: DonorRepo }): DonorService {
       // references it would orphan that clinical record. The donor's own
       // donations were already cascade-soft-deleted by remove(); this
       // guards against donations created *after* the donor was deleted.
-      const hasActiveDonations = await DonationModel.exists({ donor: id, deletedAt: null });
+      const hasActiveDonations = await existsAcrossDonations({ donor: id, deletedAt: null });
       if (hasActiveDonations) {
         throw new AppError(
           'DONOR_HAS_DONATIONS',

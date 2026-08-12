@@ -4,7 +4,10 @@
 // lookups, small fan-out per donor).
 
 import { Types } from 'mongoose';
-import { DonationModel } from '@/modules/donation/donation.model';
+import {
+  findAcrossDonations,
+  findOneAcrossDonations,
+} from '@/modules/donation/donation-collections.util';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { IssueModel } from '@/modules/issue/issue.model';
 import { TransfusionModel } from '@/modules/transfusion/transfusion.model';
@@ -74,21 +77,23 @@ export function createLookbackRepo(): LookbackRepo {
 
   return {
     async traceByDonor(donorId) {
-      const donations = await DonationModel.find({ donor: new Types.ObjectId(donorId) })
-        .select('donationId')
-        .lean();
+      const donations = await findAcrossDonations<{ donationId: string }>(
+        { donor: new Types.ObjectId(donorId) },
+        { donationId: 1 },
+      );
       const donationIds = donations.map((d) => d.donationId);
       return buildTrace(donorId, donationIds);
     },
 
     async traceByDonation(donationId) {
-      const donation = await DonationModel.findOne({ donationId }).select('donor').lean();
+      const donation = await findOneAcrossDonations<{ donor?: Types.ObjectId }>({ donationId });
       const donorId = donation?.donor?.toString() ?? '';
       // Trace the whole donor (all prior donations), not just this one.
       if (donorId) {
-        const donations = await DonationModel.find({ donor: donation!.donor })
-          .select('donationId')
-          .lean();
+        const donations = await findAcrossDonations<{ donationId: string }>(
+          { donor: donation!.donor },
+          { donationId: 1 },
+        );
         return buildTrace(
           donorId,
           donations.map((d) => d.donationId),

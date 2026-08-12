@@ -13,6 +13,10 @@ export default function SerologyDetailModal({
   editReason,
   setEditReason,
   setEditedResult,
+  editTestDate,
+  setEditTestDate,
+  editTestTime,
+  setEditTestTime,
   isSaving,
   canEditRole,
   onClose,
@@ -146,6 +150,33 @@ export default function SerologyDetailModal({
                 onChange={(e) => setEditReason(e.target.value)}
               />
             </div>
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+              <div className="space-y-1">
+                <label htmlFor="tti-edit-test-date" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Test Date <span className="text-red-600">*</span>
+                </label>
+                <input
+                  id="tti-edit-test-date"
+                  type="date"
+                  value={editTestDate}
+                  onChange={(e) => setEditTestDate(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md text-sm border-gray-200 focus:border-red-400 focus:ring-red-400"
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="tti-edit-test-time" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Test Time (12-hour) <span className="text-red-600">*</span>
+                </label>
+                <input
+                  id="tti-edit-test-time"
+                  type="time"
+                  value={editTestTime}
+                  onChange={(e) => setEditTestTime(e.target.value)}
+                  step="60"
+                  className="w-full px-3 py-2 border rounded-md text-sm border-gray-200 focus:border-red-400 focus:ring-red-400"
+                />
+              </div>
+            </div>
           </>
         )}
 
@@ -157,7 +188,7 @@ export default function SerologyDetailModal({
               </Button>
               <Button
                 onClick={onSave}
-                disabled={isSaving || editedResults.length === 0 || !editReason.trim()}
+                disabled={isSaving || editedResults.length === 0 || !editReason.trim() || !editTestDate || !editTestTime}
                 className="bg-red-700 hover:bg-red-800"
               >
                 {isSaving ? (

@@ -1,5 +1,7 @@
-import { DonationModel } from '@/modules/donation/donation.model';
+import { DonationModel, type Donation } from '@/modules/donation/donation.model';
+import { CampDonationRecordModel } from '@/modules/donation/camp-donation-record.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
+import type { Model } from 'mongoose';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { mapSerologyTests, hasLeftBank } from '@/modules/component/component.mapper';
 import { componentSlot } from './component.helpers';
@@ -44,10 +46,6 @@ export async function componentList(filters: ComponentListFilters) {
   }
   if (campId) {
     donationFilter.campId = campId;
-  } else if (site === 'inhouse') {
-    donationFilter.campId = null;
-  } else if (site === 'camp') {
-    donationFilter.campId = { $ne: null };
   }
 
   const pageNum = Number(page) || 1;
@@ -55,13 +53,49 @@ export async function componentList(filters: ComponentListFilters) {
   const skipNum = (pageNum - 1) * limitNum;
   const sortDir = order === 'asc' ? 1 : -1;
 
-  const total = await DonationModel.countDocuments(donationFilter);
-  const donations = await DonationModel.find(donationFilter)
-    .sort({ collectedAt: sortDir })
-    .skip(skipNum)
-    .limit(limitNum)
-    .populate('campId', 'name')
-    .lean();
+  // Every camp donation lives in CampDonationRecordModel and every
+  // in-house donation lives in DonationModel by construction, so a
+  // site/campId filter can target one collection directly.
+  let models: Model<Donation>[];
+  if (campId || site === 'camp') {
+    models = [CampDonationRecordModel];
+  } else if (site === 'inhouse') {
+    models = [DonationModel];
+  } else {
+    models = [DonationModel, CampDonationRecordModel];
+  }
+
+  let donations: any[];
+  let total: number;
+  if (models.length === 1) {
+    const [m] = models;
+    [donations, total] = await Promise.all([
+      m!.find(donationFilter).sort({ collectedAt: sortDir }).skip(skipNum).limit(limitNum).lean(),
+      m!.countDocuments(donationFilter),
+    ]);
+  } else {
+    const cap = skipNum + limitNum;
+    const [groups, counts] = await Promise.all([
+      Promise.all(models.map((m) => m.find(donationFilter).sort({ collectedAt: sortDir }).limit(cap).lean())),
+      Promise.all(models.map((m) => m.countDocuments(donationFilter))),
+    ]);
+    const allDocs = groups.flat();
+    allDocs.sort((a: any, b: any) =>
+      sortDir === 1
+        ? a.collectedAt.getTime() - b.collectedAt.getTime()
+        : b.collectedAt.getTime() - a.collectedAt.getTime(),
+    );
+    donations = allDocs.slice(skipNum, skipNum + limitNum);
+    total = counts.reduce((a, b) => a + b, 0);
+  }
+
+  const campIds = [...new Set(donations.map((d) => d.campId).filter(Boolean))];
+  const campNameById = new Map<string, string>();
+  if (campIds.length) {
+    const { CampModel } = await import('@/modules/camp/camp.model');
+    const camps = await CampModel.find({ _id: { $in: campIds } }, { name: 1 }).lean();
+    camps.forEach((c) => campNameById.set(c._id.toString(), c.name));
+  }
 
   const donationIds = donations.map((d) => d.donationId);
   const allUnits = await BloodUnitModel.find({
@@ -92,7 +126,7 @@ export async function componentList(filters: ComponentListFilters) {
       bagNo: (d as any).bagNo || d.donationId,
       segmentNo: (d as any).segmentNo || '',
       bloodGroup: `${abo}${rh === 'POSITIVE' ? '+' : '-'}`,
-      site: d.campId ? (d.campId as any).name : 'Inhouse',
+      site: d.campId ? campNameById.get(d.campId.toString()) || 'Camp' : 'Inhouse',
       createdAt: (d.createdAt ?? d.collectedAt).toISOString(),
       rpmFirstSpin: separation?.rpmFirstSpin || '',
       rpmSecondSpin: separation?.rpmSecondSpin || '',

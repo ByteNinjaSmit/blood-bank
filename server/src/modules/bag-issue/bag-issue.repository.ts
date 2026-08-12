@@ -1,5 +1,11 @@
 import { Types } from 'mongoose';
-import { DonationModel } from '@/modules/donation/donation.model';
+import {
+  findAcrossDonations,
+  findByIdAcrossDonations,
+  findOneAcrossDonations,
+  countAcrossDonations,
+} from '@/modules/donation/donation-collections.util';
+import { DonorModel } from '@/modules/donor/donor.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { IssueModel } from '@/modules/issue/issue.model';
@@ -72,6 +78,22 @@ export interface BagIssueDto {
       transportTempCelsius?: number;
     } | null;
   }>;
+}
+
+// findAcrossDonations/findByIdAcrossDonations don't support populate (they
+// span two collections) — batch-join donor docs manually instead.
+async function withDonor<T extends { donor?: unknown }>(doc: T | null): Promise<T | null> {
+  if (!doc?.donor) return doc;
+  const donor = await DonorModel.findById(doc.donor).lean();
+  return donor ? { ...doc, donor } : doc;
+}
+
+async function withDonors<T extends { donor?: unknown }>(docs: T[]): Promise<T[]> {
+  const donorIds = [...new Set(docs.map((d) => d.donor).filter(Boolean))];
+  if (donorIds.length === 0) return docs;
+  const donors = await DonorModel.find({ _id: { $in: donorIds } }).lean();
+  const donorById = new Map(donors.map((d) => [d._id.toString(), d]));
+  return docs.map((d) => (d.donor ? { ...d, donor: donorById.get(String(d.donor)) } : d));
 }
 
 function toDto(doc: any, unitStatuses: string[] = []): BagIssueDto {
@@ -183,15 +205,15 @@ export function createBagIssueRepo(): BagIssueRepo {
       const pageSize = q.pageSize ?? 20;
       const skip = (page - 1) * pageSize;
 
-      const [docs, total] = await Promise.all([
-        DonationModel.find(filter)
-          .populate('donor')
-          .sort({ collectedAt: -1 })
-          .skip(skip)
-          .limit(pageSize)
-          .lean(),
-        DonationModel.countDocuments(filter),
+      const [rawDocs, total] = await Promise.all([
+        findAcrossDonations<any>(filter).then((all) =>
+          all
+            .sort((a, b) => (b.collectedAt?.getTime() ?? 0) - (a.collectedAt?.getTime() ?? 0))
+            .slice(skip, skip + pageSize),
+        ),
+        countAcrossDonations(filter),
       ]);
+      const docs = await withDonors(rawDocs);
 
       const donationIds = docs.map((d) => d.donationId);
       const units = await BloodUnitModel.find({
@@ -216,9 +238,7 @@ export function createBagIssueRepo(): BagIssueRepo {
     },
 
     async findById(id) {
-      const doc = await DonationModel.findOne({ _id: new Types.ObjectId(id) })
-        .populate('donor')
-        .lean();
+      const doc = await withDonor(await findByIdAcrossDonations<any>(id));
       if (!doc) return null;
 
       const units = await BloodUnitModel.find({
@@ -280,7 +300,9 @@ export function createBagIssueRepo(): BagIssueRepo {
     },
 
     async findBySerialNumber(bagSerialNumber) {
-      const doc = await DonationModel.findOne({ bagNo: bagSerialNumber }).populate('donor').lean();
+      const doc = await withDonor(
+        await findOneAcrossDonations<any>({ bagNo: bagSerialNumber }),
+      );
       if (!doc) return null;
 
       const units = await BloodUnitModel.find({

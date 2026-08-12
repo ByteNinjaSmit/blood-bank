@@ -11,7 +11,9 @@ import {
   runInCascadeTransaction,
   newDeleteBatchId,
 } from '@/shared/utils/cascade-delete';
-import { donationNode } from '@/shared/cascade-registry';
+import { donationNode, campDonationNode } from '@/shared/cascade-registry';
+import { findOwningModel } from '@/modules/donation/donation-collections.util';
+import { CampDonationRecordModel } from '@/modules/donation/camp-donation-record.model';
 import { AppError, ConflictError, NotFoundError } from '@/shared/errors';
 import { checkEligibility, yearsBetween } from '@/modules/donor/donor.eligibility';
 import { deriveUnits } from './donation.unit-derivation';
@@ -19,6 +21,7 @@ import { BloodUnitModel } from '@/modules/unit/unit.model';
 import type {
   CreateDonationInput,
   ListDonationsInput,
+  UpdateDonationInput,
 } from '@/modules/donation/donation.validator';
 import type {
   DonationDto,
@@ -43,6 +46,7 @@ export interface DonationService {
   remove(id: string, actorId: string, reason: string): Promise<{ permanentlyDeleted: boolean }>;
   restore(id: string, actorId: string): Promise<{ restored: boolean }>;
   permanentDelete(id: string, actorId: string, reason: string): Promise<void>;
+  update(id: string, input: UpdateDonationInput, actorId: string): Promise<DonationWithUnitsDto>;
 }
 
 export function createDonationService(deps: {
@@ -283,8 +287,10 @@ export function createDonationService(deps: {
       }
 
       const deleteBatchId = newDeleteBatchId();
+      const owningModel = await findOwningModel(id);
+      const node = owningModel === CampDonationRecordModel ? campDonationNode : donationNode;
       await runInCascadeTransaction((session) =>
-        cascadeSoftDelete(donationNode, id, actorId, reason, deleteBatchId, session),
+        cascadeSoftDelete(node, id, actorId, reason, deleteBatchId, session),
       );
       log.warn({ donationId: id, actorId, deleteBatchId }, 'donation cascade soft-deleted');
       void withAudit(
@@ -309,8 +315,10 @@ export function createDonationService(deps: {
       if (!status.deletedAt) {
         return { restored: false };
       }
+      const owningModel = await findOwningModel(id);
+      const node = owningModel === CampDonationRecordModel ? campDonationNode : donationNode;
       await runInCascadeTransaction((session) =>
-        cascadeRestore(donationNode, id, actorId, session),
+        cascadeRestore(node, id, actorId, session),
       );
       log.warn({ donationId: id, actorId }, 'donation cascade restored');
       void withAudit(
@@ -320,6 +328,70 @@ export function createDonationService(deps: {
         { deletedAt: null },
       );
       return { restored: true };
+    },
+
+    async update(id, input, actorId) {
+      const existing = await deps.donations.findById(id);
+      if (!existing) throw new NotFoundError('Donation', id);
+
+      const identifierChanged =
+        (input.bagNo !== undefined && input.bagNo !== existing.bagNo) ||
+        (input.lotNo !== undefined && input.lotNo !== existing.lotNo) ||
+        (input.segmentNo !== undefined && input.segmentNo !== existing.segmentNo);
+
+      if (identifierChanged) {
+        // Bag/segment/batch numbers are the physical identifiers used to
+        // trace this donation's units through separation. Once separation
+        // has started (any unit for this donation has moved past the raw
+        // COLLECTED state), changing them would desynchronize the paper
+        // trail from the system record — refuse.
+        const separationStarted = await BloodUnitModel.exists({
+          donationId: existing.donationId,
+          status: { $ne: 'COLLECTED' },
+        });
+        if (separationStarted) {
+          throw new ConflictError(
+            'Bag/segment/batch number cannot be changed once component separation has started for this donation',
+          );
+        }
+      }
+
+      await deps.donations.update(
+        id,
+        {
+          collectedAt: input.collectedAt,
+          bagNo: input.bagNo,
+          segmentNo: input.segmentNo,
+          lotNo: input.lotNo,
+          notes: input.notes,
+          phlebotomistId: input.phlebotomistId,
+        },
+        actorId,
+      );
+
+      log.info({ donationId: id, actorId, fields: Object.keys(input) }, 'donation updated');
+      void withAudit(
+        { actorId },
+        {
+          module: 'donation',
+          action: 'UPDATE',
+          entityType: 'Donation',
+          entityId: id,
+          entityLabel: existing.donationId,
+        },
+        {
+          bagNo: existing.bagNo,
+          segmentNo: existing.segmentNo,
+          lotNo: existing.lotNo,
+          collectedAt: existing.collectedAt,
+          notes: (existing as unknown as { notes?: string }).notes,
+        },
+        input,
+      );
+
+      const updated = await deps.donations.findById(id);
+      if (!updated) throw new NotFoundError('Donation', id);
+      return updated;
     },
 
     async permanentDelete(id, actorId, reason) {

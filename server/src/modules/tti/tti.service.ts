@@ -55,6 +55,7 @@ export interface TtiService {
     tests: TtiTestEntryInput[],
     actorId: string,
     requestId?: string,
+    editReason?: string,
   ): Promise<FinalizeResult>;
   get(donationId: string): Promise<TtiResultDto>;
 }
@@ -499,7 +500,7 @@ export function createTtiService(deps: {
       return { decision: evaluation.decision, unitsAffected, reasons: evaluation.reasons };
     },
 
-    async recordAndFinalize(donationId, tests, actorId, requestId) {
+    async recordAndFinalize(donationId, tests, actorId, requestId, editReason) {
       const before = await deps.tti.findByDonation(donationId);
       if (!before) throw new NotFoundError('TtiResult', donationId);
 
@@ -521,7 +522,16 @@ export function createTtiService(deps: {
       const unitsAffected = await applyDecision(donationId, actorId, before, evaluation, requestId);
 
       // ONE combined audit entry for the whole "Save Results" action —
-      // both the test-panel diff and the decision diff together.
+      // both the test-panel diff and the decision diff together. When
+      // this is a correction (editReason present — e.g. a retest from
+      // the Shadeness or Pending worklist), the reason is folded into
+      // this same entry so the audit trail records "retest done: <before
+      // panel, e.g. Pending> -> <after panel>" even where the UI is not
+      // showing an edited/retest marker next to the donor/donation/
+      // component (see tti.legacy-view.controller.ts recordAndFinalize).
+      const auditReason = editReason
+        ? `Retest: ${editReason}`
+        : evaluation.reasons.join('; ');
       void withAudit(
         { actorId, requestId },
         {
@@ -536,7 +546,7 @@ export function createTtiService(deps: {
               : evaluation.decision === 'indeterminate'
                 ? 'warning'
                 : 'info',
-          reason: evaluation.reasons.join('; '),
+          reason: auditReason,
         },
         { tests: before.tests, releaseDecision: before.releaseDecision },
         { tests: afterDto.tests, releaseDecision: evaluation.decision },

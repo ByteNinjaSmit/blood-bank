@@ -1,5 +1,5 @@
 import { DonorModel } from '@/modules/donor/donor.model';
-import { DonationModel } from '@/modules/donation/donation.model';
+import { CampDonationRecordModel } from '@/modules/donation/camp-donation-record.model';
 import { DeferralModel } from '@/modules/deferral/deferral.model';
 import { CampModel } from '@/modules/camp/camp.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
@@ -163,14 +163,13 @@ export function createMonthlyReportMethods2({
 
       const campIds = camps.map((c) => c._id);
 
-      const [donations, units] = await Promise.all([
-        DonationModel.find({
+      const [rawDonations, units] = await Promise.all([
+        CampDonationRecordModel.find({
           campId: { $in: campIds },
           collectedAt: { $gte: from, $lt: to },
           deletedAt: null,
         })
           .select('donor campId')
-          .populate('donor', 'sex')
           .lean(),
         BloodUnitModel.find({
           campId: { $in: campIds },
@@ -179,6 +178,15 @@ export function createMonthlyReportMethods2({
           .select('campId aboGroup rhFactor componentType')
           .lean(),
       ]);
+      const donorIds = [...new Set(rawDonations.map((d) => d.donor).filter(Boolean))];
+      const donorDocs = donorIds.length
+        ? await DonorModel.find({ _id: { $in: donorIds } }).select('sex').lean()
+        : [];
+      const donorById = new Map(donorDocs.map((d: any) => [d._id.toString(), d]));
+      const donations = rawDonations.map((d) => ({
+        ...d,
+        donor: d.donor ? donorById.get(d.donor.toString()) : undefined,
+      }));
 
       const blankGender = () => ({ male: 0, female: 0, other: 0, total: 0 });
       const blankGroups = () =>

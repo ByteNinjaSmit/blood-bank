@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { DonationModel } from '@/modules/donation/donation.model';
+import { donationUnionWithStage } from '@/modules/donation/donation-collections.util';
 import { DeferralModel } from '@/modules/deferral/deferral.model';
 import { DonorModel } from './donor.model';
 import type { DonorDto } from './donor.dto';
@@ -13,6 +14,7 @@ export async function populateLastDonationId(dtos: DonorDto[]): Promise<DonorDto
   if (dtos.length === 0) return dtos;
   const donorIds = dtos.map((d) => new Types.ObjectId(d.id));
   const donations = await DonationModel.aggregate([
+    donationUnionWithStage(),
     {
       $match: {
         donor: { $in: donorIds },
@@ -154,6 +156,7 @@ export async function donorIdsWithinDonationWindow(now = new Date()): Promise<Se
   // historical donations before the aggregation groups by donor.
   const windowStart = new Date(now.getTime() - 120 * 86_400_000);
   const lastDonations = await DonationModel.aggregate([
+    donationUnionWithStage(),
     {
       $match: {
         collectedAt: { $gte: windowStart },

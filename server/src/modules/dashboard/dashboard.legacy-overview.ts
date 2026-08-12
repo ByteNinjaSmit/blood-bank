@@ -1,6 +1,11 @@
 import { CampModel } from '@/modules/camp/camp.model';
 import { DonorModel } from '@/modules/donor/donor.model';
 import { DonationModel } from '@/modules/donation/donation.model';
+import { CampDonationRecordModel } from '@/modules/donation/camp-donation-record.model';
+import {
+  countAcrossDonations,
+  donationUnionWithStage,
+} from '@/modules/donation/donation-collections.util';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TransfusionModel } from '@/modules/transfusion/transfusion.model';
 import { BagDiscardModel } from '@/modules/bag-discard/bag-discard.model';
@@ -94,17 +99,15 @@ export async function legacyOverview(fromDate?: Date, toDate?: Date) {
         { lastDonationDate: { $exists: false } },
       ],
     }),
-    DonationModel.countDocuments({
+    countAcrossDonations({
       deletedAt: null,
       ...buildDateQuery('collectedAt', fromDate, toDate),
     }),
     DonationModel.countDocuments({
-      campId: null,
       deletedAt: null,
       ...buildDateQuery('collectedAt', fromDate, toDate),
     }),
-    DonationModel.countDocuments({
-      campId: { $ne: null },
+    CampDonationRecordModel.countDocuments({
       deletedAt: null,
       ...buildDateQuery('collectedAt', fromDate, toDate),
     }),
@@ -199,13 +202,11 @@ export async function legacyOverview(fromDate?: Date, toDate?: Date) {
       { $unwind: '$requestedComponents' },
       { $group: { _id: null, units: { $sum: '$requestedComponents.units' } } },
     ]),
-    DonationModel.find({
-      campId: { $ne: null },
+    CampDonationRecordModel.find({
       deletedAt: null,
       ...buildDateQuery('collectedAt', fromDate, toDate),
     }).distinct('donor'),
-    DonationModel.find({
-      campId: { $ne: null },
+    CampDonationRecordModel.find({
       deletedAt: null,
       ...buildDateQuery('collectedAt', fromDate, toDate),
     }).distinct('donationId'),
@@ -261,6 +262,7 @@ export async function legacyOverview(fromDate?: Date, toDate?: Date) {
       ...buildDateQuery('createdAt', fromDate, toDate),
     }),
     DonationModel.aggregate([
+      donationUnionWithStage(),
       { $match: { deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) } },
       { $group: { _id: '$donor', count: { $sum: 1 } } },
     ]),

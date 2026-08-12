@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useBagStockList } from "@/features/bag-procurement/queries";
-import { DEFERRAL_REASONS, QUESTIONS, INITIAL_FORM_DATA } from "@/features/donor/donor-constants";
+import { DEFERRAL_REASONS, QUESTIONS, INITIAL_FORM_DATA, getBagNoPrefix } from "@/features/donor/donor-constants";
 import {
   getDaysDifference,
   calculateAgeFromDob,
@@ -77,6 +77,16 @@ export function useDonorCreationForm() {
   const handleFormFieldChange = (field, value) => {
     setFormData((prev) => {
       const updated = { ...prev, [field]: value };
+
+      // 0. Bag type changes should recompute the bag-number prefix, but only
+      // rewrite it if the operator hasn't already typed a fully custom value.
+      if (field === "typeOfBag") {
+        const oldPrefix = getBagNoPrefix(prev.typeOfBag);
+        const newPrefix = getBagNoPrefix(value);
+        if (!prev.bagNo || prev.bagNo.startsWith(oldPrefix)) {
+          updated.bagNo = newPrefix + prev.bagNo.slice(oldPrefix.length);
+        }
+      }
 
       // 1. Determine if any medical history question is unhealthy
       const questionReason = getUnhealthyQuestionReason(updated);

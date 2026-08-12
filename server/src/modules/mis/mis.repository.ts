@@ -4,6 +4,12 @@
 
 import { DonorModel } from '@/modules/donor/donor.model';
 import { DonationModel } from '@/modules/donation/donation.model';
+import { CampDonationRecordModel } from '@/modules/donation/camp-donation-record.model';
+import {
+  countAcrossDonations,
+  findAcrossDonations,
+  donationUnionWithStage,
+} from '@/modules/donation/donation-collections.util';
 import { DeferralModel } from '@/modules/deferral/deferral.model';
 import { CampModel } from '@/modules/camp/camp.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
@@ -124,6 +130,7 @@ export function createMisRepo(): MisRepo {
           .limit(50)
           .lean(),
         DonationModel.aggregate([
+          donationUnionWithStage(),
           { $group: { _id: '$donor', donations: { $sum: 1 } } },
           { $match: { donations: { $gt: 1 } } },
           { $count: 'repeatDonors' },
@@ -164,8 +171,9 @@ export function createMisRepo(): MisRepo {
       const filter = { collectedAt: { $gte: from, $lte: to }, deletedAt: null };
 
       const [total, bySiteRaw, byBloodGroupAgg, byTypeAgg, donations] = await Promise.all([
-        DonationModel.countDocuments(filter),
+        countAcrossDonations(filter),
         DonationModel.aggregate([
+          donationUnionWithStage(),
           { $match: filter },
           {
             $group: {
@@ -175,16 +183,19 @@ export function createMisRepo(): MisRepo {
           },
         ]),
         DonationModel.aggregate([
+          donationUnionWithStage(),
           { $match: filter },
           { $lookup: { from: 'donors', localField: 'donor', foreignField: '_id', as: 'd' } },
           { $unwind: '$d' },
           { $group: { _id: '$d.bloodGroup', count: { $sum: 1 } } },
         ]),
         DonationModel.aggregate([
+          donationUnionWithStage(),
           { $match: filter },
           { $group: { _id: '$donationType', count: { $sum: 1 } } },
         ]),
         DonationModel.aggregate([
+          donationUnionWithStage(),
           { $match: filter },
           {
             $group: {
@@ -197,6 +208,7 @@ export function createMisRepo(): MisRepo {
       ]);
 
       const byGenderAgg = await DonationModel.aggregate([
+        donationUnionWithStage(),
         { $match: filter },
         { $lookup: { from: 'donors', localField: 'donor', foreignField: '_id', as: 'd' } },
         { $unwind: '$d' },
@@ -231,7 +243,7 @@ export function createMisRepo(): MisRepo {
 
       const campIds = camps.map((c: any) => c._id);
       const [donationAgg, discardAgg, ttiAgg] = await Promise.all([
-        DonationModel.aggregate([
+        CampDonationRecordModel.aggregate([
           { $match: { campId: { $in: campIds }, deletedAt: null } },
           { $group: { _id: '$campId', totalBags: { $sum: 1 }, donors: { $addToSet: '$donor' } } },
         ]),
@@ -242,8 +254,10 @@ export function createMisRepo(): MisRepo {
         TtiResultModel.aggregate([
           { $match: { releaseDecision: 'quarantined' } },
           {
+            // Only camp donations carry campId — the TTI-to-camp join only
+            // needs to look at campdonationrecords, not the in-house collection.
             $lookup: {
-              from: 'donations',
+              from: CampDonationRecordModel.collection.name,
               localField: 'donationId',
               foreignField: 'donationId',
               as: 'don',
@@ -302,12 +316,21 @@ export function createMisRepo(): MisRepo {
       ]);
 
       const donationIds = [...new Set((units as any[]).map((u) => u.donationId))];
-      const donations = donationIds.length
-        ? await DonationModel.find({ donationId: { $in: donationIds } })
-            .select('donationId bagNo donor')
-            .populate('donor', 'donorId')
-            .lean()
+      const rawDonations = donationIds.length
+        ? await findAcrossDonations<any>(
+            { donationId: { $in: donationIds } },
+            { donationId: 1, bagNo: 1, donor: 1 },
+          )
         : [];
+      const donorIds = [...new Set(rawDonations.map((d) => d.donor).filter(Boolean))];
+      const donorDocs = donorIds.length
+        ? await DonorModel.find({ _id: { $in: donorIds } }).select('donorId').lean()
+        : [];
+      const donorById = new Map(donorDocs.map((d: any) => [d._id.toString(), d]));
+      const donations = rawDonations.map((d) => ({
+        ...d,
+        donor: d.donor ? donorById.get(d.donor.toString()) : undefined,
+      }));
       const donationByDonationId = new Map((donations as any[]).map((d) => [d.donationId, d]));
 
       const bags = (units as any[]).map((u) => {
@@ -486,9 +509,10 @@ export function createMisRepo(): MisRepo {
       let reactiveTests = 0;
 
       const donationIds = (results as any[]).map((r) => r.donationId).filter(Boolean);
-      const donations = await DonationModel.find({ donationId: { $in: donationIds } })
-        .select('donationId donationType')
-        .lean();
+      const donations = await findAcrossDonations<any>(
+        { donationId: { $in: donationIds } },
+        { donationId: 1, donationType: 1 },
+      );
       const donationTypeMap = new Map(donations.map((d: any) => [d.donationId, d.donationType]));
 
       for (const r of results as any[]) {
@@ -553,7 +577,7 @@ export function createMisRepo(): MisRepo {
 
     async getRegulatoryStats() {
       const [collection, production, issued, discarded, ttiResults] = await Promise.all([
-        DonationModel.countDocuments({ deletedAt: null }),
+        countAcrossDonations({ deletedAt: null }),
         BloodUnitModel.countDocuments({ componentType: { $ne: 'WB' } }),
         BloodUnitModel.countDocuments({ status: { $in: ['ISSUED', 'TRANSFUSED'] } }),
         BloodUnitModel.countDocuments({ status: 'DISCARDED' }),
@@ -608,14 +632,15 @@ export function createMisRepo(): MisRepo {
         discardsMonth,
         trendAgg,
       ] = await Promise.all([
-        DonationModel.countDocuments({ collectedAt: { $gte: startOfToday }, deletedAt: null }),
-        DonationModel.countDocuments({ collectedAt: { $gte: startOfMonth }, deletedAt: null }),
+        countAcrossDonations({ collectedAt: { $gte: startOfToday }, deletedAt: null }),
+        countAcrossDonations({ collectedAt: { $gte: startOfMonth }, deletedAt: null }),
         DonorModel.countDocuments({ createdAt: { $gte: startOfMonth }, deletedAt: null }),
         BloodUnitModel.countDocuments({ issuedAt: { $gte: startOfMonth } }),
         BloodUnitModel.countDocuments({ status: 'RELEASED' }),
         CampModel.countDocuments({ dateFrom: { $gte: startOfMonth } }),
         BloodUnitModel.countDocuments({ status: 'DISCARDED', updatedAt: { $gte: startOfMonth } }),
         DonationModel.aggregate([
+          donationUnionWithStage(),
           { $match: { collectedAt: { $gte: trendFrom }, deletedAt: null } },
           {
             $group: {
@@ -655,14 +680,14 @@ export function createMisRepo(): MisRepo {
 
       const [lastMonthDonations, lastMonthIssues, priorMonthDonations, priorMonthIssues, stock] =
         await Promise.all([
-          DonationModel.countDocuments({
+          countAcrossDonations({
             collectedAt: { $gte: startOfLastMonth, $lt: startOfThisMonth },
             deletedAt: null,
           }),
           BloodUnitModel.countDocuments({
             issuedAt: { $gte: startOfLastMonth, $lt: startOfThisMonth },
           }),
-          DonationModel.countDocuments({
+          countAcrossDonations({
             collectedAt: { $gte: startOfMonthBefore, $lt: startOfLastMonth },
             deletedAt: null,
           }),

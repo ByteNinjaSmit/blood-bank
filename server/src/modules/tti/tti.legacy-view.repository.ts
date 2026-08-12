@@ -4,11 +4,19 @@
 // tti/donation/unit/bag-inspection directly. Ported byte-for-byte
 // from the old compatibility.routes.ts inline handlers so the
 // response shape stays identical for existing callers.
+import mongoose from 'mongoose';
 import { TtiResultModel } from '@/modules/tti/tti.model';
-import { DonationModel } from '@/modules/donation/donation.model';
+import type { Donation } from '@/modules/donation/donation.model';
+import {
+  findAcrossDonations,
+  findOneAcrossDonations,
+  updateManyAcrossDonations,
+} from '@/modules/donation/donation-collections.util';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { BagInspectionModel } from '@/modules/bag-inspection/bag-inspection.model';
 import { DonorModel } from '@/modules/donor/donor.model';
+import { hasPendingResult } from '@/modules/tti/tti.release-rules';
+import type { TtiTest, TtiResult } from '@/shared/enums';
 
 export interface TtiBagListFilters {
   page?: number;
@@ -40,6 +48,8 @@ export interface TtiBagViewDto {
   canEdit: boolean;
   editReason?: string;
   lastEditedAt?: string;
+  /** When the panel was actually performed (technician-entered date/time, falls back to entry time). */
+  testedAt?: string;
 }
 
 const ISSUED_STATUSES = new Set(['ISSUED', 'TRANSFUSED', 'RETURNED_UNUSED']);
@@ -64,12 +74,17 @@ export interface PagedTtiBags {
 
 async function mapTtiBags(ttis: any[]): Promise<TtiBagViewDto[]> {
   const donationIds = ttis.map((t) => t.donationId);
-  const donations = await DonationModel.find({
+  const donations = await findAcrossDonations<Donation & { _id: mongoose.Types.ObjectId }>({
     donationId: { $in: donationIds },
     $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-  })
-    .populate('campId', 'name')
-    .lean();
+  });
+
+  const campIds = [...new Set(donations.map((d) => d.campId).filter(Boolean))] as mongoose.Types.ObjectId[];
+  const { CampModel } = await import('@/modules/camp/camp.model');
+  const camps = campIds.length
+    ? await CampModel.find({ _id: { $in: campIds } }, { name: 1 }).lean()
+    : [];
+  const campNameById = new Map(camps.map((c) => [c._id.toString(), c.name]));
 
   const donationMap = new Map(donations.map((d) => [d.donationId, d]));
 
@@ -124,12 +139,22 @@ async function mapTtiBags(ttis: any[]): Promise<TtiBagViewDto[]> {
 
         let resVal = et.result;
         if (resVal === 'INDETERMINATE') resVal = 'Shadeness';
+        if (resVal === 'PENDING') resVal = 'Pending';
 
         return { test: testName, result: resVal };
       });
 
       const inspection = inspectionMap.get(t.donationId);
       const segmentNo = inspection?.segmentNo || uList[0]?.unitDin || uList[0]?.unitId || '';
+
+      const panel = existingTests.map((et: any) => ({
+        testName: et.testName as TtiTest,
+        result: et.result as TtiResult,
+      }));
+      const latestPerformedAt = existingTests
+        .map((et: any) => et.performedAt)
+        .filter(Boolean)
+        .sort((a: Date, b: Date) => new Date(b).getTime() - new Date(a).getTime())[0];
 
       return {
         _id: t._id.toString(),
@@ -140,7 +165,7 @@ async function mapTtiBags(ttis: any[]): Promise<TtiBagViewDto[]> {
         bloodGroup: t.aboGroupConfirmed || uList[0]?.aboGroup || 'O',
         rh: t.rhFactorConfirmed === 'NEGATIVE' ? 'Negative' : 'Positive',
         typeOfBag: (d as any).typeOfBag || undefined,
-        siteId: { name: d.campId ? (d.campId as any).name : 'Inhouse' },
+        siteId: { name: d.campId ? campNameById.get(d.campId.toString()) || 'Camp' : 'Inhouse' },
         collectionDate: d.collectedAt.toISOString(),
         status:
           t.releaseDecision === 'released'
@@ -148,12 +173,15 @@ async function mapTtiBags(ttis: any[]): Promise<TtiBagViewDto[]> {
             : t.releaseDecision === 'reactive'
               ? 'failed'
               : t.releaseDecision === 'indeterminate'
-                ? 'shadeness'
+                ? hasPendingResult(panel)
+                  ? 'pending-retest'
+                  : 'shadeness'
                 : 'pending',
         testResults,
         canEdit: !hasLeftBank(uList),
         editReason: t.editReason || undefined,
         lastEditedAt: t.lastEditedAt ? new Date(t.lastEditedAt).toISOString() : undefined,
+        testedAt: latestPerformedAt ? new Date(latestPerformedAt).toISOString() : undefined,
       };
     })
     .filter(Boolean) as TtiBagViewDto[];
@@ -164,6 +192,24 @@ export interface TtiLegacyViewRepo {
   listQuarantined(filters: TtiBagListFilters): Promise<PagedTtiBags>;
   /** TTI panels already finalized (released or reactive). */
   listDecided(filters: TtiResultListFilters): Promise<PagedTtiBags>;
+  /** Marks/clears Donation.ttiBatchActive — drives the "Under Testing" hint
+   * on the donation timeline while bags sit selected (not yet submitted)
+   * in the Serology batch-test queue. */
+  setBatchDraftActive(donationIds: string[], active: boolean): Promise<void>;
+}
+
+async function resolveDonationId(idOrDonationId: string): Promise<string | null> {
+  const byPublicId = await findOneAcrossDonations<{ donationId: string }>({
+    donationId: idOrDonationId,
+    deletedAt: null,
+  });
+  if (byPublicId) return byPublicId.donationId;
+  if (!mongoose.Types.ObjectId.isValid(idOrDonationId)) return null;
+  const byMongoId = await findOneAcrossDonations<{ donationId: string }>({
+    _id: idOrDonationId,
+    deletedAt: null,
+  });
+  return byMongoId?.donationId ?? null;
 }
 
 export function createTtiLegacyViewRepo(): TtiLegacyViewRepo {
@@ -188,14 +234,15 @@ export function createTtiLegacyViewRepo(): TtiLegacyViewRepo {
 
       if (search) {
         const searchRegex = new RegExp(search, 'i');
-        const matchingDonations = await DonationModel.find({
-          $and: [
-            { $or: [{ donationId: searchRegex }, { bagNo: searchRegex }] },
-            { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] },
-          ],
-        })
-          .select('donationId')
-          .lean();
+        const matchingDonations = await findAcrossDonations<{ donationId: string }>(
+          {
+            $and: [
+              { $or: [{ donationId: searchRegex }, { bagNo: searchRegex }] },
+              { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] },
+            ],
+          },
+          { donationId: 1 },
+        );
 
         const matchedDonationIds = matchingDonations.map((d) => d.donationId);
         const targetIds = matchedDonationIds.filter((id) => separatedDonationIds.includes(id));
@@ -206,13 +253,14 @@ export function createTtiLegacyViewRepo(): TtiLegacyViewRepo {
         const collectedAtRange: any = {};
         if (fromDate) collectedAtRange.$gte = new Date(fromDate);
         if (toDate) collectedAtRange.$lte = new Date(`${toDate}T23:59:59`);
-        const donationsInRange = await DonationModel.find({
-          donationId: { $in: ttiFilter.donationId.$in },
-          collectedAt: collectedAtRange,
-          $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-        })
-          .select('donationId')
-          .lean();
+        const donationsInRange = await findAcrossDonations<{ donationId: string }>(
+          {
+            donationId: { $in: ttiFilter.donationId.$in },
+            collectedAt: collectedAtRange,
+            $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+          },
+          { donationId: 1 },
+        );
         ttiFilter.donationId = { $in: donationsInRange.map((d) => d.donationId) };
       }
 
@@ -251,6 +299,10 @@ export function createTtiLegacyViewRepo(): TtiLegacyViewRepo {
           ttiFilter.releaseDecision = 'reactive';
         } else if (status === 'shadeness') {
           ttiFilter.releaseDecision = 'indeterminate';
+          ttiFilter.tests = { $not: { $elemMatch: { result: 'PENDING' } } };
+        } else if (status === 'pending-retest') {
+          ttiFilter.releaseDecision = 'indeterminate';
+          ttiFilter.tests = { $elemMatch: { result: 'PENDING' } };
         } else if (status === 'retest') {
           // Any decided bag that's ever been corrected/retested via the
           // Serology edit action, regardless of its current decision.
@@ -260,14 +312,15 @@ export function createTtiLegacyViewRepo(): TtiLegacyViewRepo {
 
       if (search) {
         const searchRegex = new RegExp(search, 'i');
-        const matchingDonations = await DonationModel.find({
-          $and: [
-            { $or: [{ donationId: searchRegex }, { bagNo: searchRegex }] },
-            { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] },
-          ],
-        })
-          .select('donationId')
-          .lean();
+        const matchingDonations = await findAcrossDonations<{ donationId: string }>(
+          {
+            $and: [
+              { $or: [{ donationId: searchRegex }, { bagNo: searchRegex }] },
+              { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] },
+            ],
+          },
+          { donationId: 1 },
+        );
 
         const matchedDonationIds = matchingDonations.map((d) => d.donationId);
         ttiFilter.donationId = { $in: matchedDonationIds };
@@ -308,6 +361,16 @@ export function createTtiLegacyViewRepo(): TtiLegacyViewRepo {
         page: pageNum,
         limit: limitNum,
       };
+    },
+
+    async setBatchDraftActive(donationIds, active) {
+      const resolved = await Promise.all(donationIds.map((id) => resolveDonationId(id)));
+      const resolvedIds = resolved.filter((id): id is string => Boolean(id));
+      if (resolvedIds.length === 0) return;
+      await updateManyAcrossDonations(
+        { donationId: { $in: resolvedIds } },
+        { $set: { ttiBatchActive: active } },
+      );
     },
   };
 }

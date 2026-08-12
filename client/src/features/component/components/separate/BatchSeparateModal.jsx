@@ -3,11 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/format-date";
 import { COMPONENT_LABEL } from "@/constants/component-types";
+import { createGridKeyboardNavHandler } from "@/hooks/useGridKeyboardNav";
+
+const { onKeyDown: onGridKeyDown } = createGridKeyboardNavHandler();
 
 // One bag's component-entry block inside the batch modal — mirrors the
 // single-bag SeparateComponentModal's "pick type, enter volume, Add" row,
 // but scoped to this bag's own pending list.
-function BagComponentBlock({ bag, bagKey, availableTypes, pending, onAdd, onRemove }) {
+function BagComponentBlock({ bag, bagKey, rowIndex, availableTypes, pending, onAdd, onRemove }) {
   const [componentType, setComponentType] = useState(availableTypes[0] || "");
   const [volumeMl, setVolumeMl] = useState("");
 
@@ -38,6 +41,8 @@ function BagComponentBlock({ bag, bagKey, availableTypes, pending, onAdd, onRemo
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Component</label>
           <select
+            data-row={rowIndex}
+            data-col={0}
             className="w-full px-2 py-1.5 border rounded-md text-sm"
             value={selected}
             onChange={(e) => setComponentType(e.target.value)}
@@ -54,6 +59,8 @@ function BagComponentBlock({ bag, bagKey, availableTypes, pending, onAdd, onRemo
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Volume (mL)</label>
           <input
+            data-row={rowIndex}
+            data-col={1}
             type="number"
             className="w-full px-2 py-1.5 border rounded-md text-sm"
             value={volumeMl}
@@ -153,14 +160,15 @@ export default function BatchSeparateModal({
             />
           </div>
 
-          <div className="max-h-[45vh] overflow-y-auto space-y-3 pr-1">
-            {bags.map((bag) => {
+          <div className="max-h-[45vh] overflow-y-auto space-y-3 pr-1" onKeyDown={onGridKeyDown}>
+            {bags.map((bag, rowIndex) => {
               const key = bagKeyFn(bag);
               return (
                 <BagComponentBlock
                   key={key}
                   bag={bag}
                   bagKey={key}
+                  rowIndex={rowIndex}
                   availableTypes={availableTypesFor(bag)}
                   pending={pendingByBag.get(key) || []}
                   onAdd={addPendingComponent}

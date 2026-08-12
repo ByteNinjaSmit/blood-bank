@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "@/core/api-client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Microscope, Calendar, X, ChevronLeft, ChevronRight, Pencil, RefreshCw } from "lucide-react";
+import { Loader2, Microscope, Calendar, X, Pencil, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/lib/format-date";
+import { sortByBagNoAsc } from "@/lib/natural-sort";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportSerologyResults } from "@/utils/excelExportHelper";
@@ -29,6 +30,8 @@ const SerologyResults = () => {
   const [editedResults, setEditedResults] = useState([]);
   const [editReason, setEditReason] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [editTestDate, setEditTestDate] = useState("");
+  const [editTestTime, setEditTestTime] = useState("");
 
   const mapSerologyForExport = (bagsList) => {
     return bagsList.map(bag => ({
@@ -76,7 +79,7 @@ const SerologyResults = () => {
       setExcelLoading(false);
     }
   };
-  const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
+  const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState({
     search: "",
     status: "all",
@@ -92,24 +95,29 @@ const SerologyResults = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [showComponents, setShowComponents] = useState(false);
 
-  const fetchBags = async (page = 1, limit = pagination.limit) => {
+  // Results are shown in full — no pagination, so always request the max
+  // page size the backend allows (tti.legacy-view.validator.ts caps
+  // `limit` at 5000).
+  const ALL_ROWS_LIMIT = 5000;
+
+  const fetchBags = async () => {
     setIsLoading(true);
     try {
       const res = await apiClient.get(`/api/serology/results`, {
         params: {
-          page,
-          limit,
+          page: 1,
+          limit: ALL_ROWS_LIMIT,
           search: filters.search || undefined,
           status: filters.status === "all" ? undefined : filters.status,
           fromDate: filters.fromDate || undefined,
           toDate: filters.toDate || undefined,
           sortBy,
-          order
+          order: order === "bagAsc" ? "asc" : order
         },
       });
       const data = Array.isArray(res.data?.data) ? res.data.data : [];
-      setBags(data);
-      setPagination(prev => ({ ...prev, ...(res.data?.pagination || {}) }));
+      setBags(order === "bagAsc" ? sortByBagNoAsc(data) : data);
+      setTotal(res.data?.pagination?.total ?? data.length);
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to load results");
       setBags([]);
@@ -119,30 +127,17 @@ const SerologyResults = () => {
   };
 
   useEffect(() => {
-    fetchBags(1, pagination.limit);
+    fetchBags();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, order, sortBy]);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   const clearFilters = () => {
     setSearchInput("");
     setFilters({ search: "", status: "all", fromDate: "", toDate: "" });
-    setPagination(prev => ({ ...prev, page: 1 }));
-  };
-
-  const handlePageChange = (newPage) => {
-    setPagination(prev => ({ ...prev, page: newPage }));
-    fetchBags(newPage, pagination.limit);
-  };
-
-  const handleRowsPerPageChange = (newLimit) => {
-    const limit = parseInt(newLimit);
-    setPagination(prev => ({ ...prev, limit, page: 1 }));
-    fetchBags(1, limit);
   };
 
   const handleViewDetails = (bag) => {
@@ -151,10 +146,31 @@ const SerologyResults = () => {
     setShowDetails(true);
   };
 
+  // Mirrors Serology.jsx's nowDateTimeParts — HTML value formats
+  // (YYYY-MM-DD / HH:mm 24h) for native <input type="date"/"time">.
+  const nowDateTimeParts = () => {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    return {
+      date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+      time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
+    };
+  };
+
   const handleEditDetails = (bag) => {
     setSelectedBag(bag);
     setEditedResults((Array.isArray(bag.testResults) ? bag.testResults : []).map((t) => ({ ...t })));
     setEditReason("");
+    const existingTestedAt = bag.testedAt ? new Date(bag.testedAt) : null;
+    if (existingTestedAt && !Number.isNaN(existingTestedAt.getTime())) {
+      const pad = (n) => String(n).padStart(2, "0");
+      setEditTestDate(`${existingTestedAt.getFullYear()}-${pad(existingTestedAt.getMonth() + 1)}-${pad(existingTestedAt.getDate())}`);
+      setEditTestTime(`${pad(existingTestedAt.getHours())}:${pad(existingTestedAt.getMinutes())}`);
+    } else {
+      const { date, time } = nowDateTimeParts();
+      setEditTestDate(date);
+      setEditTestTime(time);
+    }
     setIsEditing(true);
     setShowDetails(true);
   };
@@ -165,6 +181,8 @@ const SerologyResults = () => {
     setIsEditing(false);
     setEditedResults([]);
     setEditReason("");
+    setEditTestDate("");
+    setEditTestTime("");
     setShowComponents(false);
   };
 
@@ -178,15 +196,21 @@ const SerologyResults = () => {
       toast.error("Please enter a reason for this edit");
       return;
     }
+    if (!editTestDate || !editTestTime) {
+      toast.error("Please enter the test date and time");
+      return;
+    }
     setIsSaving(true);
     try {
+      const performedAt = new Date(`${editTestDate}T${editTestTime}:00`).toISOString();
       await apiClient.post(`/api/serology/results/${selectedBag._id || selectedBag.bagNo}`, {
         testResults: editedResults.map(({ test, result }) => ({ test, result })),
         editReason: editReason.trim(),
+        performedAt,
       });
       toast.success("Serology results updated");
       handleCloseDetails();
-      fetchBags(pagination.page, pagination.limit);
+      fetchBags();
     } catch (err) {
       toast.error(err?.response?.data?.message || err?.message || "Failed to save results");
     } finally {
@@ -205,8 +229,8 @@ const SerologyResults = () => {
                   <Microscope className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Serology Results</h1>
-                  <p className="text-gray-500 text-sm">View finalized or recorded serology results</p>
+                  <h1 className="text-2xl font-bold text-gray-900">TTD Testing Results</h1>
+                  <p className="text-gray-500 text-sm">View finalized or recorded TTD testing results</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -247,6 +271,7 @@ const SerologyResults = () => {
                       <SelectItem value="discarded">Discarded</SelectItem>
                       <SelectItem value="failed">Failed</SelectItem>
                       <SelectItem value="shadeness">Shadeness</SelectItem>
+                      <SelectItem value="pending-retest">Pending</SelectItem>
                       <SelectItem value="retest">TTI Retest</SelectItem>
                     </SelectContent>
                   </Select>
@@ -302,7 +327,7 @@ const SerologyResults = () => {
 
           <div className="bg-white shadow-md rounded-xl overflow-hidden">
             <div className="p-4 flex items-center justify-between border-b bg-gray-50/30">
-              <div className="text-sm font-semibold text-gray-700">Results ({pagination.total})</div>
+              <div className="text-sm font-semibold text-gray-700">Results ({total})</div>
               <div className="flex items-center gap-2">
                 <Select value={order} onValueChange={(val) => setOrder(val)}>
                   <SelectTrigger className="h-8 text-xs w-32 bg-white">
@@ -311,11 +336,12 @@ const SerologyResults = () => {
                   <SelectContent>
                     <SelectItem value="desc">Newest First</SelectItem>
                     <SelectItem value="asc">Oldest First</SelectItem>
+                    <SelectItem value="bagAsc">Ascending Order</SelectItem>
                   </SelectContent>
                 </Select>
                 <button
                   type="button"
-                  onClick={() => fetchBags(pagination.page)}
+                  onClick={() => fetchBags()}
                   disabled={isLoading}
                   title="Refresh"
                   aria-label="Refresh"
@@ -334,6 +360,7 @@ const SerologyResults = () => {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segment</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Collected</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tested</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tests</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Edited</th>
@@ -343,7 +370,7 @@ const SerologyResults = () => {
                 <tbody className="bg-white divide-y divide-gray-100">
                   {isLoading ? (
                     <tr>
-                      <td colSpan="8" className="px-4 py-8 text-center">
+                      <td colSpan="9" className="px-4 py-8 text-center">
                         <div className="inline-flex items-center gap-2 text-gray-500">
                           <Loader2 className="w-5 h-5 animate-spin" /> Loading results...
                         </div>
@@ -351,7 +378,7 @@ const SerologyResults = () => {
                     </tr>
                   ) : bags.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="px-4 py-8 text-center text-gray-500">No results found.</td>
+                      <td colSpan="9" className="px-4 py-8 text-center text-gray-500">No results found.</td>
                     </tr>
                   ) : (
                     bags.map((bag, idx) => {
@@ -374,6 +401,7 @@ const SerologyResults = () => {
                         <td className="px-4 py-3 text-sm text-gray-700">{bag.segmentNo || "-"}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{formatBlood(bag.bloodGroup, bag.rh)}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{formatDateTime(bag.collectionDate)}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{bag.testedAt ? formatDateTime(bag.testedAt) : "-"}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{statusBadge(bag.status)}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">
                           {Array.isArray(bag.testResults) && bag.testResults.length > 0 ? (
@@ -438,99 +466,6 @@ const SerologyResults = () => {
                 </tbody>
               </table>
             </div>
-
-            {/* Pagination Section */}
-            <div className="flex items-center justify-between p-4 border-t bg-gray-50/10">
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-gray-500">
-                  Showing {((pagination.page - 1) * pagination.limit) + 1} to{" "}
-                  {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
-                  {pagination.total} results
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Rows per page:</span>
-                  <Select 
-                    value={pagination.limit.toString()} 
-                    onValueChange={handleRowsPerPageChange}
-                  >
-                    <SelectTrigger className="w-20 h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5</SelectItem>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="25">25</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              {pagination.totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(pagination.page - 1)}
-                    disabled={pagination.page === 1 || isLoading}
-                    className="h-8 text-xs"
-                  >
-                    <ChevronLeft className="w-4 h-4 mr-1" />
-                    Previous
-                  </Button>
-                  
-                  <div className="flex items-center gap-1">
-                    {(() => {
-                      const totalPages = pagination.totalPages;
-                      const currentPage = pagination.page;
-                      const pages = [];
-                      
-                      let startPage = Math.max(1, currentPage - 2);
-                      let endPage = Math.min(totalPages, currentPage + 2);
-                      
-                      if (endPage - startPage < 4) {
-                        if (startPage === 1) {
-                          endPage = Math.min(totalPages, startPage + 4);
-                        } else {
-                          startPage = Math.max(1, endPage - 4);
-                        }
-                      }
-                      
-                      for (let i = startPage; i <= endPage; i++) {
-                        if (i > 0 && i <= totalPages) {
-                          pages.push(
-                            <Button
-                              key={i}
-                              variant={currentPage === i ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handlePageChange(i)}
-                              disabled={isLoading}
-                              className={`w-8 h-8 p-0 text-xs ${currentPage === i ? "bg-red-600 hover:bg-red-700" : ""}`}
-                            >
-                              {i}
-                            </Button>
-                          );
-                        }
-                      }
-                      return pages;
-                    })()}
-                  </div>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(pagination.page + 1)}
-                    disabled={pagination.page === pagination.totalPages || isLoading}
-                    className="h-8 text-xs"
-                  >
-                    Next
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </div>
-              )}
-            </div>
           </div>
         </div>
 
@@ -542,6 +477,10 @@ const SerologyResults = () => {
             editReason={editReason}
             setEditReason={setEditReason}
             setEditedResult={setEditedResult}
+            editTestDate={editTestDate}
+            setEditTestDate={setEditTestDate}
+            editTestTime={editTestTime}
+            setEditTestTime={setEditTestTime}
             isSaving={isSaving}
             canEditRole={canEditRole}
             onClose={handleCloseDetails}

@@ -6,6 +6,7 @@ import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { formatDateTime } from "@/lib/format-date";
+import { sortByBagNoAsc } from "@/lib/natural-sort";
 import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav";
 import SeparateComponentModal from "../components/separate/SeparateComponentModal";
 import SignatureModal from "../components/separate/SignatureModal";
@@ -25,6 +26,7 @@ const ComponentSeparate = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [bags, setBags] = useState([]);
+  const [sortMode, setSortMode] = useState("bagAsc");
   const [now, setNow] = useState(() => Date.now());
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [showSeparateModal, setShowSeparateModal] = useState(false);
@@ -336,9 +338,16 @@ const ComponentSeparate = () => {
     }
   };
 
+  const sortedBags = sortMode === "bagAsc"
+    ? sortByBagNoAsc(bags)
+    : [...bags].sort((a, b) => {
+        const diff = new Date(a.collectionDate || 0) - new Date(b.collectionDate || 0);
+        return sortMode === "asc" ? diff : -diff;
+      });
+
   const visibleBags = batch.batchMode
-    ? bags.filter((b) => !batch.selectedKeys.has(bagKey(b)))
-    : bags;
+    ? sortedBags.filter((b) => !batch.selectedKeys.has(bagKey(b)))
+    : sortedBags;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -397,16 +406,27 @@ const ComponentSeparate = () => {
                 </select>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => fetchBags()}
-              disabled={isLoading}
-              title="Refresh"
-              aria-label="Refresh"
-              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="flex items-center gap-2">
+              <select
+                value={sortMode}
+                onChange={(e) => setSortMode(e.target.value)}
+                className="px-2 py-1.5 border rounded-md text-sm"
+              >
+                <option value="desc">Newest First</option>
+                <option value="asc">Oldest First</option>
+                <option value="bagAsc">Ascending Order (Bag No)</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => fetchBags()}
+                disabled={isLoading}
+                title="Refresh"
+                aria-label="Refresh"
+                className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">

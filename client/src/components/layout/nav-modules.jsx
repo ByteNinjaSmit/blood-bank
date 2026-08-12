@@ -165,17 +165,17 @@ export const MODULES = [
     permissions: ["read", "admin"],
     subModules: [
       {
-        name: "Serology Results",
+        name: "TTD Testing Results",
         href: "/labs/serology-results",
         permissions: ["read"],
-        description: "View serology testing results",
+        description: "View TTD testing results",
         icon: <FaEye className="w-5 h-5" />,
       },
       {
-        name: "Serology",
+        name: "TTD Testing",
         href: "/labs/serology",
         permissions: ["write", "read"],
-        description: "Enter serology results",
+        description: "Enter TTD testing results",
         icon: <FaMicroscope className="w-5 h-5" />,
       },
     ],

@@ -4,7 +4,7 @@ import { ConflictError, ForbiddenError, NotFoundError } from '@/shared/errors';
 import { auditService } from '@/modules/audit/audit.service';
 import { campRepo, type VoluntaryFilter } from './camp.repository';
 import { toDto as donorToDto } from '@/modules/donor/donor.repository';
-import { DonationModel } from '@/modules/donation/donation.model';
+import { CampDonationRecordModel } from '@/modules/donation/camp-donation-record.model';
 
 export interface CreateCampInput {
   campId: string;
@@ -156,7 +156,7 @@ export const campService = {
 
     // Second delete click on an already soft-deleted camp: permanent,
     // irreversible. Refuse if donations were ever recorded against it.
-    const hasDonations = await DonationModel.exists({ campId: id, deletedAt: null });
+    const hasDonations = await CampDonationRecordModel.exists({ campId: id, deletedAt: null });
     if (hasDonations) {
       throw new ConflictError('Camp has donation records and cannot be permanently deleted');
     }
@@ -211,11 +211,22 @@ export const campService = {
       unitData?: unknown[];
     };
     const unitCount = c.unitData?.length ?? 0;
-    const donationCount = await DonationModel.countDocuments({ campId: c._id, deletedAt: null });
-    // Live count of distinct donors who actually donated at this camp — the
-    // embedded donorData ref array is populated only through one donor
-    // registration path and goes stale, so it undercounts (often to 0).
-    const donorCount = (await DonationModel.distinct('donor', { campId: c._id, deletedAt: null })).length;
+    const donationCount = await CampDonationRecordModel.countDocuments({
+      campId: c._id,
+      deletedAt: null,
+    });
+    // Donor count = union of donors registered at the camp (donorData, set
+    // at registration even before they've donated) and donors who have
+    // actually donated there (CampDonationRecordModel.distinct) — a donor
+    // added but not yet donated must still show up immediately.
+    const donatedDonorIds = await CampDonationRecordModel.distinct('donor', {
+      campId: c._id,
+      deletedAt: null,
+    });
+    const registeredDonorIds = (c.donorData ?? []) as unknown[];
+    const donorCount = new Set(
+      [...registeredDonorIds, ...donatedDonorIds].map((v) => String(v)),
+    ).size;
     delete c.donorData;
     delete c.unitData;
     return { ...c, donorCount, unitCount, donationCount };

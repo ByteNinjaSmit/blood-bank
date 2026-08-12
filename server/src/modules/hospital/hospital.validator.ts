@@ -9,9 +9,9 @@ const blank = <T extends z.ZodTypeAny>(s: T) =>
 
 export const CreateHospitalBody = z.object({
   name: z.string().trim().min(1).max(200),
-  address: z.string().trim().min(1).max(500),
-  contactPerson: z.string().trim().min(1).max(200),
-  phone: z.string().regex(PHONE, 'Valid phone number required'),
+  address: blank(z.string().trim().max(500).optional()),
+  contactPerson: blank(z.string().trim().max(200).optional()),
+  phone: blank(z.string().regex(PHONE, 'Valid phone number required').optional()),
   email: blank(z.string().email().optional()),
   licenseNo: blank(z.string().trim().max(120).optional()),
 });

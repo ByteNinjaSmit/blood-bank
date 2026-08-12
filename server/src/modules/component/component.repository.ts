@@ -6,7 +6,13 @@
 // status to transition from, so it sets the initial COLLECTED status
 // directly, same as donation registration does elsewhere.
 import mongoose, { Types } from 'mongoose';
-import { DonationModel } from '@/modules/donation/donation.model';
+import {
+  findAcrossDonations,
+  findOneAcrossDonations,
+  findByIdAcrossDonations,
+  resolveDonationModel,
+  updateManyAcrossDonations,
+} from '@/modules/donation/donation-collections.util';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { BagInspectionModel } from '@/modules/bag-inspection/bag-inspection.model';
@@ -105,12 +111,12 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       // separation into TTI, same queue as Whole Blood bags — see
       // ComponentSeparate.jsx, which restricts the selectable component
       // type to SDP only for these donations.
-      const donations = await DonationModel.find({
-        donationType: { $in: ['WHOLE_BLOOD', 'SDP'] },
-        deletedAt: null,
-      })
-        .sort({ collectedAt: -1 })
-        .lean();
+      const donations = (
+        await findAcrossDonations({
+          donationType: { $in: ['WHOLE_BLOOD', 'SDP'] },
+          deletedAt: null,
+        })
+      ).sort((a: any, b: any) => b.collectedAt.getTime() - a.collectedAt.getTime());
 
       const donationIds = donations.map((d) => d.donationId);
       const allUnits = await BloodUnitModel.find({
@@ -145,7 +151,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
           const separation = (d as any).separation;
 
           return {
-            id: d._id.toString(),
+            id: (d as any)._id.toString(),
             donationId: d.donationId,
             donationType: d.donationType,
             bagNo: (d as any).bagNo || d.donationId,
@@ -218,7 +224,10 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         if (rpmSecondSpin !== undefined) separationSet['separation.rpmSecondSpin'] = rpmSecondSpin;
         if (separationTime !== undefined)
           separationSet['separation.separationTime'] = separationTime;
-        await DonationModel.updateOne({ donationId: resolvedDonationId }, { $set: separationSet });
+        await resolveDonationModel(donation.campId).updateOne(
+          { donationId: resolvedDonationId },
+          { $set: separationSet },
+        );
       }
 
       // Reference unit (ignoring soft-delete) for the original ABO/Rh.
@@ -330,13 +339,11 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         .lean();
 
       const donationIds = units.map((u) => u.donationId).filter(Boolean);
-      const donations = await DonationModel.find({
-        donationId: { $in: donationIds },
-        deletedAt: null,
-      })
-        .select('donationId bagNo')
-        .lean();
-      const donationMap = new Map(donations.map((d) => [d.donationId, d]));
+      const donations = await findAcrossDonations(
+        { donationId: { $in: donationIds }, deletedAt: null },
+        { donationId: 1, bagNo: 1 },
+      );
+      const donationMap = new Map(donations.map((d: any) => [d.donationId, d]));
       const ttiResults = await TtiResultModel.find({ donationId: { $in: donationIds } })
         .select('donationId releaseDecision')
         .lean();
@@ -364,16 +371,14 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
     async getGroupDetail(id) {
       let donationDoc: any = null;
       if (id && Types.ObjectId.isValid(id)) {
-        donationDoc = await DonationModel.findById(id).populate('campId', 'name').lean();
+        donationDoc = await findByIdAcrossDonations(id);
         if (!donationDoc) {
           const unitDoc = await BloodUnitModel.findById(id).lean();
           if (unitDoc) {
-            donationDoc = await DonationModel.findOne({
+            donationDoc = await findOneAcrossDonations({
               donationId: unitDoc.donationId,
               deletedAt: null,
-            })
-              .populate('campId', 'name')
-              .lean();
+            });
           }
         }
       }
@@ -381,11 +386,14 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       // used by callers like the serology worklist that only have that
       // string, not a Mongo _id.
       if (!donationDoc) {
-        donationDoc = await DonationModel.findOne({ donationId: id, deletedAt: null })
-          .populate('campId', 'name')
-          .lean();
+        donationDoc = await findOneAcrossDonations({ donationId: id, deletedAt: null });
       }
       if (!donationDoc) throw new NotFoundError('Component group', id);
+      const campDoc = donationDoc.campId
+        ? await (await import('@/modules/camp/camp.model')).CampModel.findById(donationDoc.campId)
+            .select('name')
+            .lean()
+        : null;
 
       const units = await BloodUnitModel.find({
         donationId: donationDoc.donationId,
@@ -423,9 +431,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
           bloodGroup: `${abo}${rh === 'POSITIVE' ? '+' : '-'}`,
           collectionDate: donationDoc.collectedAt.toISOString(),
           status: donationDoc.donorFitness?.isFit ? 'collected' : 'rejected',
-          site: donationDoc.campId
-            ? { name: (donationDoc.campId as any).name }
-            : { name: 'Inhouse' },
+          site: donationDoc.campId ? { name: campDoc?.name || 'Camp' } : { name: 'Inhouse' },
           donor: donor
             ? {
                 name: {
@@ -578,7 +584,10 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       if (rpmFirstSpin !== undefined) separationSet['separation.rpmFirstSpin'] = rpmFirstSpin;
       if (rpmSecondSpin !== undefined) separationSet['separation.rpmSecondSpin'] = rpmSecondSpin;
       if (separationTime !== undefined) separationSet['separation.separationTime'] = separationTime;
-      await DonationModel.updateOne({ donationId: resolvedDonationId }, { $set: separationSet });
+      await resolveDonationModel(donation.campId).updateOne(
+        { donationId: resolvedDonationId },
+        { $set: separationSet },
+      );
     },
 
     async setBatchDraftActive(donationIds, active) {
@@ -588,7 +597,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       const resolved = await Promise.all(donationIds.map((id) => resolveDonation(id)));
       const resolvedIds = resolved.filter(Boolean).map((d) => d!.donationId);
       if (resolvedIds.length === 0) return;
-      await DonationModel.updateMany(
+      await updateManyAcrossDonations(
         { donationId: { $in: resolvedIds } },
         { $set: { separationBatchActive: active } },
       );

@@ -290,7 +290,7 @@ export const TTI_TEST = [
 ] as const;
 export type TtiTest = (typeof TTI_TEST)[number];
 
-export const TTI_RESULT = ['NEGATIVE', 'REACTIVE', 'INDETERMINATE'] as const;
+export const TTI_RESULT = ['NEGATIVE', 'REACTIVE', 'INDETERMINATE', 'PENDING'] as const;
 export type TtiResult = (typeof TTI_RESULT)[number];
 
 export const ADVERSE_REACTION_CATEGORY = [

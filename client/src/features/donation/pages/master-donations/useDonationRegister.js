@@ -6,16 +6,22 @@ import { useAuth } from '@/store/auth';
 import useAccess from '@/features/access/useAccess';
 import { exportDonationRegister } from '@/features/donation/donationRegisterExport';
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
+import { compareBagNo } from '@/lib/natural-sort';
 import { PAGE_SIZE } from './constants';
 import { donationStatus } from './donationRegister.utils';
+import { useDonationEdit } from './useDonationEdit';
 
 // Owns all state, data, filtering and actions for the Master Donation
 // Register tabs. Keeps the page shell purely presentational.
 export function useDonationRegister(activeTab, setActiveTab) {
   const { user } = useAuth();
   const { can } = useAccess();
-  const donationAccess = { canDelete: can('donor', 'delete', 'donation-list') };
+  const donationAccess = {
+    canDelete: can('donor', 'delete', 'donation-list'),
+    canEdit: can('donor', 'update', 'donation-list'),
+  };
   const deleteMutation = useDeleteDonation();
+  const donationEdit = useDonationEdit();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [trackId, setTrackId] = useState(null);
@@ -34,8 +40,8 @@ export function useDonationRegister(activeTab, setActiveTab) {
   const [ttiRetestFilter, setTtiRetestFilter] = useState(false);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const [sortBy, setSortBy] = useState('collectedAt');
-  const [order, setOrder] = useState('desc');
+  const [sortBy, setSortBy] = useState('bagNo');
+  const [order, setOrder] = useState('asc');
   const [excelLoading, setExcelLoading] = useState(false);
 
   const toggleOrder = () => setOrder((o) => (o === 'desc' ? 'asc' : 'desc'));
@@ -163,7 +169,7 @@ export function useDonationRegister(activeTab, setActiveTab) {
     if (sortBy === 'collectedAt') {
       cmp = new Date(a.collectedAt || 0) - new Date(b.collectedAt || 0);
     } else if (sortBy === 'bagNo') {
-      cmp = (a.bagNo || a.donationId || '').localeCompare(b.bagNo || b.donationId || '');
+      cmp = compareBagNo(a.bagNo || a.donationId || '', b.bagNo || b.donationId || '');
     } else if (sortBy === 'donorName') {
       cmp = (a.donorName || '').localeCompare(b.donorName || '');
     }
@@ -187,8 +193,8 @@ export function useDonationRegister(activeTab, setActiveTab) {
     setTtiRetestFilter(false);
     setFromDate('');
     setToDate('');
-    setSortBy('collectedAt');
-    setOrder('desc');
+    setSortBy('bagNo');
+    setOrder('asc');
     setCurrentPage(1);
   };
 
@@ -238,6 +244,7 @@ export function useDonationRegister(activeTab, setActiveTab) {
     // timeline + view + delete
     trackId, setTrackId, detail, detailLoading,
     viewDonationId, setViewDonationId, viewDetail, viewDetailLoading,
+    ...donationEdit,
     handleDelete,
     DeleteReasonDialog,
   };
