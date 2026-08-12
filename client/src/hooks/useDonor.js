@@ -43,7 +43,7 @@ export function useDonor() {
     loading,
     error: listQuery.error?.message ?? null,
     fetchDonors: (f) => setFilters(f ?? {}),
-    fetchCampDonors: (campId) => setFilters({ campId }),
+    fetchCampDonors: (campId) => setFilters({ campId, pageSize: 10000 }),
     createDonor: async (data) => {
       try {
         const result = await createMutation.mutateAsync(data);
