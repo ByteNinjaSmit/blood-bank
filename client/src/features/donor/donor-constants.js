@@ -113,9 +113,12 @@ export const QUESTIONS = [
 // current year's last two digits (e.g. "SBCK26-"), rolling over
 // automatically at each new year. The operator types the remaining
 // digits after the prefix; the field stays fully editable.
-export function getBagNoPrefix() {
+export function getBagNoPrefix(bagType) {
   const yy = String(new Date().getFullYear()).slice(-2);
-  return `SBCK${yy}-`;
+  const base = `SBCK${yy}-`;
+  if (bagType === "DB") return `${base}D`;
+  if (bagType === "TB") return `${base}T`;
+  return base;
 }
 
 export const INITIAL_FORM_DATA = {
