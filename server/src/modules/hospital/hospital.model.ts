@@ -5,9 +5,9 @@ const HospitalSchema = new Schema(
   {
     hospitalId: { type: String, required: true, unique: true, trim: true, index: true },
     name: { type: String, required: true, trim: true, index: true },
-    address: { type: String, required: true, trim: true },
-    contactPerson: { type: String, required: true, trim: true },
-    phone: { type: String, required: true, trim: true },
+    address: { type: String, trim: true },
+    contactPerson: { type: String, trim: true },
+    phone: { type: String, trim: true },
     email: { type: String, trim: true, lowercase: true },
     isActive: { type: Boolean, default: true, index: true },
     deletedAt: { type: Date, default: null, index: true },

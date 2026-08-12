@@ -13,9 +13,9 @@ import { hospitalRepo, type HospitalDto, type ListHospitalsFilter } from './hosp
 
 export interface CreateHospitalInput {
   name: string;
-  address: string;
-  contactPerson: string;
-  phone: string;
+  address?: string;
+  contactPerson?: string;
+  phone?: string;
   email?: string;
   licenseNo?: string;
 }
@@ -29,16 +29,16 @@ const hospitalKey = (id: string) => `hospital:detail:${id}`;
 
 export const hospitalService = {
   async create(input: CreateHospitalInput, actorId: string): Promise<HospitalDto> {
-    if (await hospitalRepo.findOnePhone(input.phone)) {
+    if (input.phone && (await hospitalRepo.findOnePhone(input.phone))) {
       throw new ConflictError('Hospital with this phone number already exists');
     }
     const hospitalId = await hospitalRepo.nextHospitalId();
     const created = await hospitalRepo.create({
       hospitalId,
       name: input.name.trim(),
-      address: input.address.trim(),
-      contactPerson: input.contactPerson.trim(),
-      phone: input.phone.trim(),
+      address: input.address?.trim(),
+      contactPerson: input.contactPerson?.trim(),
+      phone: input.phone?.trim(),
       email: input.email?.toLowerCase().trim(),
       licenseNo: input.licenseNo?.trim(),
     });

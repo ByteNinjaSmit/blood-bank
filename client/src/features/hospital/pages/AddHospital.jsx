@@ -50,17 +50,7 @@ const AddHospital = () => {
       newErrors.name = 'Hospital name is required';
     }
 
-    if (!formData.address.trim()) {
-      newErrors.address = 'Address is required';
-    }
-
-    if (!formData.contactPerson.trim()) {
-      newErrors.contactPerson = 'Contact person is required';
-    }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!/^[+]?[\d\s\-()]{10,15}$/.test(formData.phone)) {
+    if (formData.phone.trim() && !/^[+]?[\d\s\-()]{10,15}$/.test(formData.phone)) {
       newErrors.phone = 'Please enter a valid phone number';
     }
 
@@ -183,7 +173,7 @@ const AddHospital = () => {
               {/* Contact Person */}
               <div className="space-y-2">
                 <Label htmlFor="contactPerson" className="text-sm font-medium">
-                  Contact Person <span className="text-red-500">*</span>
+                  Contact Person
                 </Label>
                 <Input
                   id="contactPerson"
@@ -201,7 +191,7 @@ const AddHospital = () => {
               {/* Phone */}
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-sm font-medium">
-                  Phone Number <span className="text-red-500">*</span>
+                  Phone Number
                 </Label>
                 <Input
                   id="phone"
@@ -222,7 +212,7 @@ const AddHospital = () => {
             {/* Address */}
             <div className="space-y-2">
               <Label htmlFor="address" className="text-sm font-medium">
-                Address <span className="text-red-500">*</span>
+                Address
               </Label>
               <Textarea
                 id="address"
