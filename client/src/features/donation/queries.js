@@ -31,6 +31,14 @@ export function useCreateDonation() {
   });
 }
 
+export function useUpdateDonation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => donationApi.update(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: donationKeys.all }),
+  });
+}
+
 export function useDeleteDonation() {
   const qc = useQueryClient();
   return useMutation({

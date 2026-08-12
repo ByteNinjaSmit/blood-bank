@@ -8,14 +8,19 @@ import { exportDonationRegister } from '@/features/donation/donationRegisterExpo
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
 import { PAGE_SIZE } from './constants';
 import { donationStatus } from './donationRegister.utils';
+import { useDonationEdit } from './useDonationEdit';
 
 // Owns all state, data, filtering and actions for the Master Donation
 // Register tabs. Keeps the page shell purely presentational.
 export function useDonationRegister(activeTab, setActiveTab) {
   const { user } = useAuth();
   const { can } = useAccess();
-  const donationAccess = { canDelete: can('donor', 'delete', 'donation-list') };
+  const donationAccess = {
+    canDelete: can('donor', 'delete', 'donation-list'),
+    canEdit: can('donor', 'update', 'donation-list'),
+  };
   const deleteMutation = useDeleteDonation();
+  const donationEdit = useDonationEdit();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [trackId, setTrackId] = useState(null);
@@ -238,6 +243,7 @@ export function useDonationRegister(activeTab, setActiveTab) {
     // timeline + view + delete
     trackId, setTrackId, detail, detailLoading,
     viewDonationId, setViewDonationId, viewDetail, viewDetailLoading,
+    ...donationEdit,
     handleDelete,
     DeleteReasonDialog,
   };

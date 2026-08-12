@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Droplets, Plus, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DonationDetails from '../components/DonationDetails';
+import DonationEditForm from '../components/DonationEditForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import RegisterExportDropdown from '@/components/shared/RegisterExportDropdown';
 import { DONATION_REGISTERS, TABS } from './master-donations/constants';
@@ -111,6 +112,7 @@ export default function MasterDonations() {
           trackId={reg.trackId}
           onTrack={reg.setTrackId}
           onView={reg.setViewDonationId}
+          onEdit={reg.setEditDonationId}
           onDelete={reg.handleDelete}
           currentPage={reg.currentPage}
           totalPages={reg.totalPages}
@@ -139,6 +141,28 @@ export default function MasterDonations() {
               <div className="py-16 text-center text-gray-400 text-sm">Loading details…</div>
             ) : reg.viewDetail ? (
               <DonationDetails donation={reg.viewDetail} />
+            ) : (
+              <div className="py-16 text-center text-gray-400 text-sm">Donation not found.</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit modal — clerical fields only (bag/segment/batch no, collected date/time, notes, phlebotomist) */}
+      <Dialog open={!!reg.editDonationId} onOpenChange={(open) => { if (!open) reg.setEditDonationId(null); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Donation</DialogTitle>
+          </DialogHeader>
+          <div className="pt-2">
+            {reg.editDetailLoading ? (
+              <div className="py-16 text-center text-gray-400 text-sm">Loading details…</div>
+            ) : reg.editDetail ? (
+              <DonationEditForm
+                donation={reg.editDetail}
+                onSubmit={(data) => reg.handleSaveEdit(reg.editDonationId, data)}
+                onCancel={() => reg.setEditDonationId(null)}
+              />
             ) : (
               <div className="py-16 text-center text-gray-400 text-sm">Donation not found.</div>
             )}

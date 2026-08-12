@@ -12,6 +12,7 @@ import { IssueModel } from '@/modules/issue/issue.model';
 import type {
   CreateDonationInput,
   ListDonationsInput,
+  UpdateDonationInput,
 } from '@/modules/donation/donation.validator';
 import type { DerivedUnit } from '@/modules/donation/donation.unit-derivation';
 import { NotFoundError } from '@/shared/errors';
@@ -89,6 +90,8 @@ export interface DonationRepo {
   findLatestByDonor(donorId: string): Promise<{ collectedAt: Date; donationType: string } | null>;
   softDelete(id: string, actorId: string): Promise<void>;
   restore(id: string, actorId: string): Promise<void>;
+  /** Clerical-field patch (bag/segment/batch no, collectedAt, notes, phlebotomist). */
+  update(id: string, patch: Partial<UpdateDonationInput>, actorId: string): Promise<void>;
   delete(id: string): Promise<void>;
   /** Batch/segment lookup by bag number, for the discard-entry form. */
   lookupByBagNo(bagNo: string): Promise<{ lotNo: string; segmentNo: string } | null>;
@@ -641,6 +644,20 @@ export function createDonationRepo(): DonationRepo {
         { _id: id },
         { deletedAt: null, updatedBy: new Types.ObjectId(actorId) },
       );
+      if (result.matchedCount === 0) throw new NotFoundError('Donation', id);
+    },
+
+    async update(id, patch, actorId) {
+      const $set: Record<string, unknown> = { updatedBy: new Types.ObjectId(actorId) };
+      if (patch.collectedAt !== undefined) $set.collectedAt = patch.collectedAt;
+      if (patch.bagNo !== undefined) $set.bagNo = patch.bagNo;
+      if (patch.segmentNo !== undefined) $set.segmentNo = patch.segmentNo;
+      if (patch.lotNo !== undefined) $set.lotNo = patch.lotNo;
+      if (patch.notes !== undefined) $set.notes = patch.notes;
+      if (patch.phlebotomistId !== undefined) {
+        $set.phlebotomistId = new Types.ObjectId(patch.phlebotomistId);
+      }
+      const result = await DonationModel.updateOne({ _id: id }, { $set });
       if (result.matchedCount === 0) throw new NotFoundError('Donation', id);
     },
 
