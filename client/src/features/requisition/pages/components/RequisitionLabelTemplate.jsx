@@ -153,7 +153,6 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                       <span className="truncate">Age{'   '}: {doc.patientAge || doc.patient?.age || '—'} Years</span>
                       <span className="truncate">Sex{'   '}: {doc.patientGender || doc.patient?.gender || doc.patient?.sex || '—'}</span>
                       <span className="break-words">Hospital{'   '}: {doc.hospitalId?.name || '—'}</span>
-                      <span className="break-words">X-Match{'   '}: {unit.crossmatchDoneAt ? `${formatShortDate(unit.crossmatchDoneAt)} by ${moSignatureName}` : '—'}</span>
                     </div>
 
                     {/* Column 2 */}

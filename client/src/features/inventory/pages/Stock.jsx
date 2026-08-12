@@ -45,8 +45,8 @@ const Stock = () => {
   const [rh, setRh] = useState("");
   const [expiryFrom, setExpiryFrom] = useState("");
   const [expiryTo, setExpiryTo] = useState("");
-  const [order, setOrder] = useState("desc");
-  const [sortBy, setSortBy] = useState("createdAt");
+  const [order, setOrder] = useState("asc");
+  const [sortBy, setSortBy] = useState("bagNo");
   const [source, setSource] = useState("all"); // all | own | loan
   const [ttiRetest, setTtiRetest] = useState(false);
 
@@ -233,6 +233,7 @@ const Stock = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="bagNo">Bag Number</SelectItem>
                     <SelectItem value="createdAt">Created Date</SelectItem>
                     <SelectItem value="collectedAt">Collection Date</SelectItem>
                     <SelectItem value="expiresAt">Expiry Date</SelectItem>
@@ -306,7 +307,7 @@ const Stock = () => {
                     onClick={() => {
                       setSearch(""); setSearchInput(""); setComponentType(""); setStatus("in-stock");
                       setBloodGroup(""); setRh(""); setExpiryFrom(""); setExpiryTo("");
-                      setSortBy("createdAt"); setOrder("desc"); setSource("all"); setTtiRetest(false);
+                      setSortBy("bagNo"); setOrder("asc"); setSource("all"); setTtiRetest(false);
                       setPagination(p=>({...p,page:1}));
                     }}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-100"

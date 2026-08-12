@@ -72,7 +72,7 @@ export default function useRequisition(authToken) {
         ...prev,
         hospitalId: requestDoc.hospitalId?._id || requestDoc.hospitalId || '',
         doctorName: requestDoc.doctorName || requestDoc.clinicianName || '',
-        requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 16) : '',
+        requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 10) : '',
         patient: {
           name: requestDoc.patient?.name || '',
           address: requestDoc.patient?.address || '',

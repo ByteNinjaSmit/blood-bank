@@ -15,6 +15,7 @@ export default function HospitalDoctorDetailsCard({
   dateValue,
   onDateChange,
   maxDate,
+  dateOnly = false,
   readOnly = false,
 }) {
   const inputClass = `w-full px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`;
@@ -48,7 +49,7 @@ export default function HospitalDoctorDetailsCard({
         <div>
           <label className="block text-sm text-gray-700 mb-1">{dateFieldLabel}</label>
           <input
-            type="datetime-local"
+            type={dateOnly ? 'date' : 'datetime-local'}
             max={maxDate}
             className={inputClass}
             value={dateValue}

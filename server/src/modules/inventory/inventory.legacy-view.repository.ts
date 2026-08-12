@@ -201,24 +201,30 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       const skipNum = (pageNum - 1) * limitNum;
       const sortDir = order === 'asc' ? 1 : -1;
       const sortField = sortBy || 'createdAt';
+      // bagNo lives on the joined donation record, not on BloodUnit, so it
+      // can't be sorted at the Mongoose query level — fetch unpaginated
+      // (like the own+loan merge path already does) and sort in memory
+      // once the donation join below has populated bag.bagNo.
+      const bagNoSort = sortBy === 'bagNo';
 
       const needsMerge = wantsOwn && wantsLoan;
+      const deferPagination = needsMerge || bagNoSort;
 
       let total = 0;
       let units: any[] = [];
       if (wantsOwn) {
         total = await BloodUnitModel.countDocuments(unitFilter);
-        units = await BloodUnitModel.find(unitFilter)
-          .populate({
-            path: 'reservedFor',
-            populate: [
-              { path: 'hospitalId', select: 'name' },
-              { path: 'patientId', select: 'name dob sex' },
-            ],
-          })
-          .sort({ [sortField]: sortDir })
-          .skip(needsMerge ? 0 : skipNum)
-          .limit(needsMerge ? 5000 : limitNum)
+        const query = BloodUnitModel.find(unitFilter).populate({
+          path: 'reservedFor',
+          populate: [
+            { path: 'hospitalId', select: 'name' },
+            { path: 'patientId', select: 'name dob sex' },
+          ],
+        });
+        if (!bagNoSort) query.sort({ [sortField]: sortDir });
+        units = await query
+          .skip(deferPagination ? 0 : skipNum)
+          .limit(deferPagination ? 5000 : limitNum)
           .lean();
       }
 
@@ -472,23 +478,34 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         });
       }
 
+      const bagNoCompare = (a: any, b: any) =>
+        String(a.bag?.bagNo ?? a.bagNo ?? '').localeCompare(String(b.bag?.bagNo ?? b.bagNo ?? ''), undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        }) * (sortDir === 1 ? 1 : -1);
+
       let combined: any[];
       let combinedTotal: number;
       if (source === 'loan') {
-        combined = loanRows;
+        combined = bagNoSort ? [...loanRows].sort(bagNoCompare) : loanRows;
         combinedTotal = loanRows.length;
       } else if (needsMerge) {
         combined = [...data, ...loanRows].sort(
-          (a, b) => new Date(b._sortDate || 0).getTime() - new Date(a._sortDate || 0).getTime(),
+          bagNoSort
+            ? bagNoCompare
+            : (a, b) => new Date(b._sortDate || 0).getTime() - new Date(a._sortDate || 0).getTime(),
         );
         combinedTotal = combined.length;
+      } else if (bagNoSort) {
+        combined = [...data].sort(bagNoCompare);
+        combinedTotal = total;
       } else {
         combined = data;
         combinedTotal = total;
       }
 
       const pageData =
-        source === 'loan' || needsMerge ? combined.slice(skipNum, skipNum + limitNum) : combined;
+        source === 'loan' || deferPagination ? combined.slice(skipNum, skipNum + limitNum) : combined;
       pageData.forEach((row: any) => {
         delete row._sortDate;
       });

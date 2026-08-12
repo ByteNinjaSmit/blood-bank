@@ -1,6 +1,7 @@
 import React from 'react';
 import { Loader2, X, ClipboardList, RefreshCw } from 'lucide-react';
 import { COMPONENT_TYPES } from '@/constants/component-types';
+import { formatDate } from '@/lib/format-date';
 import RequisitionModals from './components/RequisitionModals';
 import RequisitionPrintModals from './components/RequisitionPrintModals';
 import RequisitionReportSelectModal from './components/RequisitionReportSelectModal';
@@ -194,7 +195,7 @@ export default function RequisitionList() {
                       <td className="p-3 font-medium">{row.requestId}</td>
                       <td className="p-3">{row.hospitalId?.name || '—'}</td>
                       <td className="p-3">{row.patient?.name} ({row.patient?.age}/{row.patient?.sex})</td>
-                      <td className="p-3">{row.requestedAt ? new Date(row.requestedAt).toLocaleString() : '—'}</td>
+                      <td className="p-3">{formatDate(row.requestedAt)}</td>
                       <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass(rowDisplayStatus(row))}`}>{rowDisplayStatus(row)}</span></td>
                       <td className="p-3">
                         <div className="flex flex-wrap gap-2">

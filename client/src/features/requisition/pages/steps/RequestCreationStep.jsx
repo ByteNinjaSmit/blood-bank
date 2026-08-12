@@ -64,7 +64,7 @@ export default function RequestCreationStep({
       return {
         hospitalId: requestDoc.hospitalId?._id || requestDoc.hospitalId || '',
         doctorName: requestDoc.doctorName || '',
-        requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 16) : '',
+        requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 10) : '',
         patient: {
           name: requestDoc.patient?.name || '',
           address: requestDoc.patient?.address || '',
@@ -153,6 +153,7 @@ export default function RequestCreationStep({
           dateFieldLabel="Reserved Until (optional — default 3 days)"
           dateValue={displayForm.requiredAt}
           onDateChange={(v) => setForm((p) => ({ ...p, requiredAt: v }))}
+          dateOnly
           readOnly={readOnly}
         />
 
