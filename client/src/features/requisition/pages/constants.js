@@ -1,8 +1,5 @@
 export { COMPONENT_TYPES } from '@/constants/component-types';
-
-export const BLOOD_GROUPS = ['A', 'B', 'AB', 'O'];
-
-export const RH_TYPES = ['Positive', 'Negative'];
+export { ABO_GROUPS as BLOOD_GROUPS, RH_VALUES as RH_TYPES } from '@/lib/blood-groups';
 
 export const URGENCY = ['regular', 'urgent'];
 

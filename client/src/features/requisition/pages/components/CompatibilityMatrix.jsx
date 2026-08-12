@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, ShieldCheck, Info } from 'lucide-react';
 
-const ABO_RBC = { O: ['O'], A: ['A', 'O'], B: ['B', 'O'], AB: ['A', 'B', 'AB', 'O'] };
-const ABO_FFP = { O: ['O'], A: ['A'], B: ['B'], AB: ['AB'] }; // Strict same group only
-const ABO_PLATELET_UNIVERSAL = { O: ['O', 'A', 'B', 'AB'], A: ['O', 'A', 'B', 'AB'], B: ['O', 'A', 'B', 'AB'], AB: ['O', 'A', 'B', 'AB'] };
-const ABO_PLATELET_MAJOR = { O: ['O'], A: ['A', 'O'], B: ['B', 'O'], AB: ['A', 'B', 'AB', 'O'] };
-const ABO_PLATELET_MINOR = { O: ['O', 'A', 'B', 'AB'], A: ['A', 'AB'], B: ['B', 'AB'], AB: ['AB'] };
-const ABO_CRYO = { O: ['O'], A: ['A'], B: ['B'], AB: ['AB'] };
+// Bombay phenotype (BBG) lacks the H antigen and carries anti-H, so it is
+// compatible only with other Bombay units in every component — same rule
+// as server/src/shared/compatibility/abo-rh.ts.
+const ABO_RBC = { O: ['O'], A: ['A', 'O'], B: ['B', 'O'], AB: ['A', 'B', 'AB', 'O'], BBG: ['BBG'] };
+const ABO_FFP = { O: ['O'], A: ['A'], B: ['B'], AB: ['AB'], BBG: ['BBG'] }; // Strict same group only
+const ABO_PLATELET_UNIVERSAL = { O: ['O', 'A', 'B', 'AB'], A: ['O', 'A', 'B', 'AB'], B: ['O', 'A', 'B', 'AB'], AB: ['O', 'A', 'B', 'AB'], BBG: ['BBG'] };
+const ABO_PLATELET_MAJOR = { O: ['O'], A: ['A', 'O'], B: ['B', 'O'], AB: ['A', 'B', 'AB', 'O'], BBG: ['BBG'] };
+const ABO_PLATELET_MINOR = { O: ['O', 'A', 'B', 'AB'], A: ['A', 'AB'], B: ['B', 'AB'], AB: ['AB'], BBG: ['BBG'] };
+const ABO_CRYO = { O: ['O'], A: ['A'], B: ['B'], AB: ['AB'], BBG: ['BBG'] };
 
-const GROUPS = ['O', 'A', 'B', 'AB'];
+const GROUPS = ['O', 'A', 'B', 'AB', 'BBG'];
 
 const COMPONENTS = [
   {

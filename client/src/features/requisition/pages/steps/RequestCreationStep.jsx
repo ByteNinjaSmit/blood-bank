@@ -8,6 +8,7 @@ import RequestedComponentsList from '../components/RequestedComponentsList';
 import { RejectRequestModal } from '@/components/shared';
 import { toast } from 'sonner';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
+import { BLOOD_GROUPS as FULL_BLOOD_GROUPS } from '@/lib/blood-groups';
 
 export default function RequestCreationStep({
   hospitals,
@@ -268,7 +269,7 @@ export default function RequestCreationStep({
                 onChange={(e) => !readOnly && setForm((p) => ({ ...p, donorCard: { ...p.donorCard, bloodGroup: e.target.value } }))}
                 disabled={readOnly}
               >
-                {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) => (
+                {FULL_BLOOD_GROUPS.map((bg) => (
                   <option key={bg} value={bg}>{bg}</option>
                 ))}
               </select>

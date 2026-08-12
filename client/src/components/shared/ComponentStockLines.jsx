@@ -1,4 +1,4 @@
-const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+import { BLOOD_GROUPS } from '@/lib/blood-groups';
 
 // Stock summary tracks only the separated/derived products (not WB itself).
 const COMPONENT_THEMES = {
@@ -45,7 +45,7 @@ const COMPONENT_THEMES = {
 };
 
 export default function ComponentStockLines({ stockSummary }) {
-  const initialStock = () => ({ 'A+': 0, 'A-': 0, 'B+': 0, 'B-': 0, 'AB+': 0, 'AB-': 0, 'O+': 0, 'O-': 0 });
+  const initialStock = () => Object.fromEntries(BLOOD_GROUPS.map((bg) => [bg, 0]));
   const stocks = {
     PRBC: initialStock(),
     FFP: initialStock(),

@@ -19,6 +19,8 @@ export const MATRIX_BLOOD_GROUPS = [
   { group: "AB", rh: "Negative", label: "AB-" },
   { group: "O", rh: "Positive", label: "O+" },
   { group: "O", rh: "Negative", label: "O-" },
+  { group: "BBG", rh: "Positive", label: "BBG+" },
+  { group: "BBG", rh: "Negative", label: "BBG-" },
 ];
 
 function table({ name, subtitle, headers, rows, alignments }) {
@@ -128,6 +130,8 @@ function buildDashboardSheets(data) {
         ["B-", number(legacy.bloodGroups?.Bneg)],
         ["AB+", number(legacy.bloodGroups?.ABpos)],
         ["AB-", number(legacy.bloodGroups?.ABneg)],
+        ["BBG+", number(legacy.bloodGroups?.Bbgpos)],
+        ["BBG-", number(legacy.bloodGroups?.Bbgneg)],
       ],
     }),
     table({

@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { Syringe, RefreshCw } from 'lucide-react';
 import { useBagIssueList } from '../queries';
-import { useStockSummary } from '@/features/inventory/queries';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
-import ComponentStockLines from '@/components/shared/ComponentStockLines';
 import SearchBox from '@/components/shared/SearchBox';
 import { exportProcurementIssue } from '@/utils/excelExportHelper';
 import ViewIssueModal from '../components/issuance/ViewIssueModal';
@@ -34,8 +32,6 @@ export default function BagIssuance() {
     fromDate: dateFilterType === 'custom' && fromDate ? fromDate : undefined,
     toDate: dateFilterType === 'custom' && toDate ? toDate : undefined,
   });
-  const { data: stockSummaryData } = useStockSummary();
-
   const issues = data?.items ?? data?.bagIssues ?? (Array.isArray(data) ? data : []);
 
   // Filter logic
@@ -159,8 +155,6 @@ export default function BagIssuance() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
-        <ComponentStockLines stockSummary={stockSummaryData} />
-
         {/* Search and Date Filter Bar */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex flex-col md:flex-row gap-4 items-end">

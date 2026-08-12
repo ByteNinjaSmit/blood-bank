@@ -206,6 +206,7 @@ const Stock = () => {
                     <SelectItem value="B">B</SelectItem>
                     <SelectItem value="AB">AB</SelectItem>
                     <SelectItem value="O">O</SelectItem>
+                    <SelectItem value="BBG">BBG</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { BLOOD_GROUPS as GROUP_LABELS } from '@/lib/blood-groups';
 
 export function NotTracked({ note }) {
   return (
@@ -18,8 +19,6 @@ export function Section({ title, children }) {
     </div>
   );
 }
-
-const GROUP_LABELS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 // Renders one product x blood-group matrix per entity (hospital / storage centre).
 export function EntityBreakdown({ entities, emptyLabel = 'No units issued to any entity for this period.' }) {

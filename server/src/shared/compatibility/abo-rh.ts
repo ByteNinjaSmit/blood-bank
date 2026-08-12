@@ -24,6 +24,9 @@ const ABO_RBC: Readonly<Record<AboGroup, ReadonlyArray<AboGroup>>> = {
   A: ['A', 'O'],
   B: ['B', 'O'],
   AB: ['A', 'B', 'AB', 'O'],
+  // Bombay phenotype (Oh) lacks the H antigen and carries anti-H, so it is
+  // incompatible with every other ABO group in both directions.
+  BBG: ['BBG'],
 };
 
 // Plasma is strict same-group matching.
@@ -32,6 +35,7 @@ const ABO_PLASMA: Readonly<Record<AboGroup, ReadonlyArray<AboGroup>>> = {
   A: ['A'],
   B: ['B'],
   AB: ['AB'],
+  BBG: ['BBG'],
 };
 
 // Original Plasma compatibility table (used for Platelet Minor Compatibility mode)
@@ -40,6 +44,7 @@ const ABO_PLASMA_COMPAT: Readonly<Record<AboGroup, ReadonlyArray<AboGroup>>> = {
   A: ['A', 'AB'],
   B: ['B', 'AB'],
   AB: ['AB'],
+  BBG: ['BBG'],
 };
 
 // Platelets: prefer ABO-identical, accept compatible. Any group can
@@ -50,6 +55,7 @@ const ABO_PLATELET_PREF: Readonly<Record<AboGroup, ReadonlyArray<AboGroup>>> = {
   A: ['A', 'AB', 'O', 'B'],
   B: ['B', 'AB', 'O', 'A'],
   AB: ['AB', 'A', 'B', 'O'],
+  BBG: ['BBG'],
 };
 
 // Cryoprecipitate: any ABO acceptable. Preference order = recipient first.
@@ -58,6 +64,7 @@ const ABO_CRYO_PREF: Readonly<Record<AboGroup, ReadonlyArray<AboGroup>>> = {
   A: ['A', 'O', 'AB', 'B'],
   B: ['B', 'O', 'AB', 'A'],
   AB: ['AB', 'A', 'B', 'O'],
+  BBG: ['BBG'],
 };
 
 // ---------------------------------------------------------------------

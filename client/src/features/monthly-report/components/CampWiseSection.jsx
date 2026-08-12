@@ -1,8 +1,7 @@
 import React from 'react';
 import { Section, ReportTable } from './ReportTable';
 import { COMPONENT_TYPES } from '@/constants/component-types';
-
-const GROUP_LABELS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+import { BLOOD_GROUPS as GROUP_LABELS } from '@/lib/blood-groups';
 const PRODUCTS = COMPONENT_TYPES.map((c) => c.value);
 
 export default function CampWiseSection({ campWise }) {

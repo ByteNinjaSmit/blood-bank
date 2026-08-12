@@ -6,6 +6,7 @@ import { bagProcurementApi } from '../../api';
 import ConfirmDeleteModal from '@/components/shared/ConfirmDeleteModal';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 import { TESTING_TYPE_LABELS } from './inspection-constants';
+import { BLOOD_GROUPS } from '@/lib/blood-groups';
 
 const uploadFile = bagProcurementApi.upload.file;
 const deleteFile = bagProcurementApi.upload.remove;
@@ -247,7 +248,7 @@ export default function UpdateReportDrawer({ onClose, inspection, mode }) {
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Blood Group {mode !== 'edit' && '*'}</label>
                   <select required={mode !== 'edit'} value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)} className={`${fieldClass} bg-white`}>
-                    {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                    {BLOOD_GROUPS.map(bg => <option key={bg} value={bg}>{bg}</option>)}
                   </select>
                 </div>
                 <div className="text-xs font-bold text-gray-600 uppercase tracking-wide mt-2">Coagulation Work Up Results</div>

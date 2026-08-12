@@ -1,5 +1,6 @@
 import { buildStyledSheet, XLSX } from '@/utils/xlsxStyleHelper';
 import requisitionApi from '@/services/requisitionApi';
+import { BLOOD_GROUPS } from '@/lib/blood-groups';
 
 const COMPATIBILITY_RESULT_LABELS = {
   MAJOR_COMPATIBLE: 'Major Compatible',
@@ -263,7 +264,7 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
   XLSX.utils.book_append_sheet(wb, hospSheet, 'Hospital Analysis');
 
   // Blood Group Analysis
-  const bgList = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
+  const bgList = BLOOD_GROUPS;
   const bgMap = new Map(bgList.map((bg) => [bg, 0]));
   let unknownBg = 0;
   records.forEach((r) => {

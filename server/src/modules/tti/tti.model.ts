@@ -4,7 +4,7 @@
 // releaseDecision) regardless of how many units the donation produced.
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
-import { TTI_RESULT, TTI_TEST } from '@/shared/enums';
+import { ABO_GROUP, RH_FACTOR, TTI_RESULT, TTI_TEST } from '@/shared/enums';
 import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 const TestEntry = new Schema(
@@ -26,8 +26,8 @@ const TtiResultSchema = new Schema(
     donationId: { type: String, required: true, unique: true },
     legacyBagId: { type: Schema.Types.ObjectId, index: true },
 
-    aboGroupConfirmed: { type: String, enum: ['A', 'B', 'AB', 'O'] },
-    rhFactorConfirmed: { type: String, enum: ['POSITIVE', 'NEGATIVE'] },
+    aboGroupConfirmed: { type: String, enum: ABO_GROUP },
+    rhFactorConfirmed: { type: String, enum: RH_FACTOR },
 
     tests: { type: [TestEntry], default: [] },
 

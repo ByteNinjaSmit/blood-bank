@@ -379,6 +379,7 @@ export default function DonorProfileStep({ form, submit }) {
               <option value="B">B</option>
               <option value="AB">AB</option>
               <option value="O">O</option>
+              <option value="BBG">BBG (Bombay Blood Group)</option>
             </select>
           </div>
           <div>

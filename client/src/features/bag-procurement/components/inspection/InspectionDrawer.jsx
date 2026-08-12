@@ -4,6 +4,7 @@ import { useCreateBagInspection, useUpdateBagInspectionReport } from '../../quer
 import { useDonationList } from '@/features/donation/queries';
 import { useAuth } from '@/store/auth';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
+import { BLOOD_GROUPS } from '@/lib/blood-groups';
 
 const emptyBagDetail = () => ({ bagNo: '', segmentNo: '' });
 
@@ -257,7 +258,7 @@ export default function InspectionDrawer({ onClose, grns, inspection = null, mod
                   }}
                   className={`${fieldClass} bg-white`}
                 >
-                  {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                  {BLOOD_GROUPS.map(bg => <option key={bg} value={bg}>{bg}</option>)}
                 </select>
               </div>
             )}
