@@ -253,8 +253,6 @@ export default function MatchedBagCard({
                     )}
                   </div>
                   <div>Compatibility: <span className="font-medium">{COMPATIBILITY_RESULT_LABELS[mi.compatibilityResult] || mi.compatibilityResult}</span></div>
-                  {mi.crossmatchDoneAt && <div>Done At: {new Date(mi.crossmatchDoneAt).toLocaleString()}</div>}
-                  {mi.crossmatchSeenAt && <div>Seen At: {new Date(mi.crossmatchSeenAt).toLocaleString()}</div>}
                 </div>
               ) : showCrossmatchWorksheet ? (
                 <CrossmatchWorksheet

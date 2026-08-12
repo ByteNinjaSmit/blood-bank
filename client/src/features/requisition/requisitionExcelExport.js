@@ -104,23 +104,17 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
   // Crossmatch & Component Detail — one row per matched unit, covering the
   // full crossmatch worksheet: hospital, doctor, indication, recipient
   // name/address, blood group, component (WB/PRBC/FFP/RDP/CRYO), bags given
-  // (component-wise), when required, crossmatch done-at/seen-at (grouped
-  // under "Crossmatching"), compatibility result, card number, and
+  // (component-wise), when required, compatibility result, card number, and
   // per-unit issue date/time. Created FIRST so it's the sheet Excel opens
   // to by default — it used to be the 7th tab and easy to miss.
   const xmColumnsBase = [
     'Sr No', 'Date', 'Hospital Name', 'Doctor Name', 'Indication for Transfusion',
     "Recipient's Name", "Recipient's Address", 'Blood Group', 'Component (WB/PRBC/FFP/RDP/CRYO)',
-    'Total Bags Given', 'When Required', 'Crossmatch Done At', 'Seen At',
+    'Total Bags Given', 'When Required',
     'Crossmatching & Compatibility Test', 'Card Number', 'Issue Date & Time', 'Bag No',
   ];
-  const doneAtIdx = xmColumnsBase.indexOf('Crossmatch Done At');
-  const crossmatchingResult = xmColumnsBase.indexOf('Crossmatching & Compatibility Test');
 
   const xmColumns = [...xmColumnsBase];
-  const xmGroupHeaders = [
-    { label: 'Crossmatching', startCol: doneAtIdx, endCol: crossmatchingResult, dark: true },
-  ];
 
   const xmRows = [];
   let xmSrNo = 1;
@@ -160,8 +154,6 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
           rc ? (requestedCounts.get(abbr) || 0) : 0,
           first ? (r.requiredAt ? fmtDateTime(r.requiredAt) : '—') : '',
           'Not Matched Yet',
-          'Not Matched Yet',
-          'Not Matched Yet',
           first ? '—' : '',
           '—',
           '—',
@@ -181,8 +173,8 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
     // hospital, doctor, indication, recipient name/address, when required,
     // card number) are shown only on the first line; each matched bag gets its
     // own line below with only the per-bag columns filled (blood group,
-    // component, total bags of that component, crossmatch done-at/seen-at,
-    // compatibility test, issue date/time, bag no).
+    // component, total bags of that component, compatibility test, issue
+    // date/time, bag no).
     matchedInventory.forEach((mi, i) => {
       const first = i === 0;
       const inv = mi.inventoryId;
@@ -199,8 +191,6 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
         abbr,
         componentCounts.get(abbr) || 0,
         first ? (r.requiredAt ? fmtDateTime(r.requiredAt) : '—') : '',
-        mi.crossmatchDoneAt ? fmtDateTime(mi.crossmatchDoneAt) : '—',
-        mi.crossmatchSeenAt ? fmtDateTime(mi.crossmatchSeenAt) : '—',
         COMPATIBILITY_RESULT_LABELS[mi.compatibilityResult] || '—',
         first ? (mi.cardNumber || '—') : '',
         inv?.issuedAt ? fmtDateTime(inv.issuedAt) : '—',
@@ -216,7 +206,6 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
     generatedBy,
     reportPeriod,
     columns: xmColumns,
-    groupHeaders: xmGroupHeaders,
   });
   XLSX.utils.book_append_sheet(wb, xmSheet, 'Crossmatch & Component Detail');
 
