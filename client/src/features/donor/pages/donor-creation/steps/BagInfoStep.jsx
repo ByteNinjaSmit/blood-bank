@@ -8,26 +8,6 @@ export default function BagInfoStep({ form }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Bag Number <span className="text-red-500">*</span></label>
-          <input
-            type="text"
-            value={formData.bagNo}
-            onChange={(e) => handleFormFieldChange("bagNo", e.target.value.toUpperCase())}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Segment Number <span className="text-red-500">*</span></label>
-          <input
-            type="text"
-            value={formData.segmentNo}
-            onChange={(e) => handleFormFieldChange("segmentNo", e.target.value.toUpperCase())}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
-            required
-          />
-        </div>
-        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Bag Type <span className="text-red-500">*</span></label>
           <select
             value={formData.typeOfBag}
@@ -65,6 +45,26 @@ export default function BagInfoStep({ form }) {
           {formData.typeOfBag && activeBatches.length === 0 && (
             <p className="text-xs text-red-500 mt-1">No active, opened boxes found for this bag type in inventory.</p>
           )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Bag Number <span className="text-red-500">*</span></label>
+          <input
+            type="text"
+            value={formData.bagNo}
+            onChange={(e) => handleFormFieldChange("bagNo", e.target.value.toUpperCase())}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Segment Number <span className="text-red-500">*</span></label>
+          <input
+            type="text"
+            value={formData.segmentNo}
+            onChange={(e) => handleFormFieldChange("segmentNo", e.target.value.toUpperCase())}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
+            required
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Donation Type <span className="text-red-500">*</span></label>
