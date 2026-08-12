@@ -10,6 +10,7 @@ const RESULT_CELL_CLASSES = {
   Negative: "border-gray-200 text-gray-700",
   Reactive: "border-red-300 bg-red-50 text-red-700 font-medium",
   Shadeness: "border-orange-300 bg-orange-50 text-orange-700 font-medium",
+  Pending: "border-blue-300 bg-blue-50 text-blue-700 font-medium",
 };
 
 // The matrix grid: rows = selected bags, columns = the 5 TTI parameters.
@@ -26,8 +27,12 @@ export default function BatchSerologyPanel({
   matrix,
   setCell,
   removeBag,
+  batchTestDate,
+  setBatchTestDate,
+  batchTestTime,
+  setBatchTestTime,
 }) {
-  const counts = { Negative: 0, Reactive: 0, Shadeness: 0 };
+  const counts = { Negative: 0, Reactive: 0, Shadeness: 0, Pending: 0 };
   bags.forEach((bag) => {
     const row = matrix.get(bag._id) || {};
     DEFAULT_TESTS.forEach((t) => {
@@ -56,6 +61,9 @@ export default function BatchSerologyPanel({
             </span>
             <span className="px-2.5 py-1 rounded-full bg-orange-50 text-orange-700 border border-orange-200">
               {counts.Shadeness || 0} Shadeness
+            </span>
+            <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+              {counts.Pending || 0} Pending
             </span>
           </div>
 
@@ -95,6 +103,7 @@ export default function BatchSerologyPanel({
                               <option value="Negative">Negative</option>
                               <option value="Reactive">Reactive</option>
                               <option value="Shadeness">Shadeness</option>
+                              <option value="Pending">Pending</option>
                             </select>
                           </td>
                         );
@@ -122,10 +131,38 @@ export default function BatchSerologyPanel({
               </tbody>
             </table>
           </div>
+
+          <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+            <div className="space-y-1">
+              <label htmlFor="tti-batch-test-date" className="text-xs font-medium text-gray-600">
+                Test Date <span className="text-gray-400 font-normal">(applies to all {bags.length} bag(s))</span>
+              </label>
+              <input
+                id="tti-batch-test-date"
+                type="date"
+                value={batchTestDate}
+                onChange={(e) => setBatchTestDate(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md text-sm border-gray-200 focus:border-red-400 focus:ring-red-400"
+              />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="tti-batch-test-time" className="text-xs font-medium text-gray-600">
+                Test Time (12-hour)
+              </label>
+              <input
+                id="tti-batch-test-time"
+                type="time"
+                value={batchTestTime}
+                onChange={(e) => setBatchTestTime(e.target.value)}
+                step="60"
+                className="w-full px-3 py-2 border rounded-md text-sm border-gray-200 focus:border-red-400 focus:ring-red-400"
+              />
+            </div>
+          </div>
         </div>
 
         <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>Done</Button>
+          <Button onClick={() => onOpenChange(false)} disabled={!batchTestDate || !batchTestTime}>Done</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

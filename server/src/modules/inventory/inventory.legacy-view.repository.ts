@@ -11,7 +11,10 @@
 // behavior exactly and is a pre-existing gap, not something
 // introduced by this refactor.
 import { Types } from 'mongoose';
-import { DonationModel } from '@/modules/donation/donation.model';
+import {
+  findAcrossDonations,
+  findOneAcrossDonations,
+} from '@/modules/donation/donation-collections.util';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { DonorModel } from '@/modules/donor/donor.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
@@ -152,14 +155,15 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
 
       if (search) {
         const searchRegex = new RegExp(search, 'i');
-        const matchingDonations = await DonationModel.find({
-          $and: [
-            { $or: [{ donationId: searchRegex }, { bagNo: searchRegex }] },
-            { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] },
-          ],
-        })
-          .select('donationId')
-          .lean();
+        const matchingDonations = await findAcrossDonations<{ donationId: string }>(
+          {
+            $and: [
+              { $or: [{ donationId: searchRegex }, { bagNo: searchRegex }] },
+              { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] },
+            ],
+          },
+          { donationId: 1 },
+        );
         const matchedDonationIds = matchingDonations.map((d) => d.donationId);
         unitFilter.$and.push({
           $or: [
@@ -219,12 +223,13 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       }
 
       const donationIds = units.map((u) => u.donationId).filter(Boolean);
-      const donations = await DonationModel.find({
-        donationId: { $in: donationIds },
-        $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-      })
-        .select('donationId bagNo segmentNo lotNo typeOfBag collectedAt donor donationType')
-        .lean();
+      const donations = await findAcrossDonations(
+        {
+          donationId: { $in: donationIds },
+          $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+        },
+        { donationId: 1, bagNo: 1, segmentNo: 1, lotNo: 1, typeOfBag: 1, collectedAt: 1, donor: 1, donationType: 1 },
+      );
 
       // TTI retest flag per donation — whether this bag's TTI result was
       // ever edited/retested (e.g. a shadeness hold later cleared).
@@ -512,9 +517,9 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
           set: { reservedFor: null, reservedUntil: null, reservedAt: null } as any,
         });
 
-        const donation = await DonationModel.findOne({ donationId: unit.donationId })
-          .select('bagNo')
-          .lean();
+        const donation = await findOneAcrossDonations<{ bagNo?: string }>(
+          { donationId: unit.donationId },
+        );
         affected.push({
           unitId: unit.unitId,
           componentType: unit.componentType,
@@ -608,9 +613,9 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       await unit.save();
       await invalidate('inventory:*');
 
-      const donation = await DonationModel.findOne({ donationId: unit.donationId })
-        .select('bagNo')
-        .lean();
+      const donation = await findOneAcrossDonations<{ bagNo?: string }>({
+        donationId: unit.donationId,
+      });
       return {
         id: unit._id.toString(),
         bagNo: donation?.bagNo || unit.donationId,
@@ -642,9 +647,9 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       await unit.save();
       await invalidate('inventory:*');
 
-      const donation = await DonationModel.findOne({ donationId: unit.donationId })
-        .select('bagNo segmentNo')
-        .lean();
+      const donation = await findOneAcrossDonations<{ bagNo?: string; segmentNo?: string }>({
+        donationId: unit.donationId,
+      });
       return {
         id: unit._id.toString(),
         bagNo: donation?.bagNo || unit.donationId,

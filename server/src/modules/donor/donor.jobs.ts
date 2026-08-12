@@ -44,8 +44,10 @@ export async function runBirthdayGreetings(): Promise<number> {
   for (const donor of donors) {
     if (!donor.email) continue;
     try {
-      const { DonationModel } = await import('@/modules/donation/donation.model');
-      const totalDonations = await DonationModel.countDocuments({
+      const { countAcrossDonations } = await import(
+        '@/modules/donation/donation-collections.util'
+      );
+      const totalDonations = await countAcrossDonations({
         donor: donor._id,
         deletedAt: null,
       });

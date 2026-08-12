@@ -14,7 +14,7 @@ import {
   generateMonthlyMisReportPdf,
 } from '@/core/pdf/pdf.service';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
-import { DonationModel } from '@/modules/donation/donation.model';
+import { countAcrossDonations } from '@/modules/donation/donation-collections.util';
 import { DonorModel } from '@/modules/donor/donor.model';
 import { CampModel } from '@/modules/camp/camp.model';
 
@@ -290,7 +290,7 @@ export async function runMonthlyMisReport(): Promise<void> {
     campCount,
     newDonors,
   ] = await Promise.all([
-    DonationModel.countDocuments({ collectedAt: { $gte: from, $lte: to }, deletedAt: null }),
+    countAcrossDonations({ collectedAt: { $gte: from, $lte: to }, deletedAt: null }),
     BloodUnitModel.countDocuments({ status: 'ISSUED', updatedAt: { $gte: from, $lte: to } }),
     BloodUnitModel.countDocuments({ status: 'DISCARDED', updatedAt: { $gte: from, $lte: to } }),
     BloodUnitModel.countDocuments({ status: 'EXPIRED', updatedAt: { $gte: from, $lte: to } }),

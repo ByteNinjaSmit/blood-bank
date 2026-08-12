@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import { CampModel } from './camp.model';
 import { CampDonationModel } from './camp-donation.model';
 import { UserModel } from '@/modules/user/user.model';
-import { DonationModel } from '@/modules/donation/donation.model';
+import { CampDonationRecordModel } from '@/modules/donation/camp-donation-record.model';
 import { NotFoundError } from '@/shared/errors';
 
 export interface VoluntaryFilter {
@@ -76,16 +76,32 @@ export const campRepo = {
       .lean();
 
     const campIds = camps.map((c) => c._id);
-    const donationCounts = await DonationModel.aggregate([
-      { $match: { campId: { $in: campIds }, deletedAt: null } },
-      { $group: { _id: '$campId', count: { $sum: 1 } } },
+    const [donationCounts, donatedDonors] = await Promise.all([
+      CampDonationRecordModel.aggregate([
+        { $match: { campId: { $in: campIds }, deletedAt: null } },
+        { $group: { _id: '$campId', count: { $sum: 1 } } },
+      ]),
+      CampDonationRecordModel.aggregate([
+        { $match: { campId: { $in: campIds }, deletedAt: null } },
+        { $group: { _id: '$campId', donors: { $addToSet: '$donor' } } },
+      ]),
     ]);
     const donationCountMap = new Map(
       donationCounts.map((d) => [d._id.toString(), d.count as number]),
     );
+    const donatedDonorMap = new Map(
+      donatedDonors.map((d) => [d._id.toString(), (d.donors as unknown[]) ?? []]),
+    );
 
     return camps.map((c) => {
-      const donorCount = c.donorData?.length ?? 0;
+      // Same union as camp.service.ts detail(): registered-at-camp donors
+      // (donorData) plus donors who have actually donated there, so the
+      // list view and detail view agree on the same count.
+      const registeredDonorIds = (c.donorData ?? []) as unknown[];
+      const donatedDonorIds = donatedDonorMap.get(c._id.toString()) ?? [];
+      const donorCount = new Set(
+        [...registeredDonorIds, ...donatedDonorIds].map((v) => String(v)),
+      ).size;
       const unitCount = c.unitData?.length ?? 0;
       const donationCount = donationCountMap.get(c._id.toString()) ?? 0;
       const { donorData, unitData, ...rest } = c;

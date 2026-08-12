@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
-import { DonationModel } from '@/modules/donation/donation.model';
+import type { Donation } from '@/modules/donation/donation.model';
+import { findAcrossDonations } from '@/modules/donation/donation-collections.util';
 import { CampModel } from '@/modules/camp/camp.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
@@ -7,12 +8,12 @@ import { HospitalModel } from '@/modules/hospital/hospital.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 
 export async function getDetailedDonationHistory(donorId: string): Promise<any[]> {
-  const donations = await DonationModel.find({
-    donor: new Types.ObjectId(donorId),
-    deletedAt: null,
-  })
-    .sort({ collectedAt: -1 })
-    .lean();
+  const donations = (
+    await findAcrossDonations<Donation & { _id: Types.ObjectId }>({
+      donor: new Types.ObjectId(donorId),
+      deletedAt: null,
+    })
+  ).sort((a, b) => (b.collectedAt?.getTime() ?? 0) - (a.collectedAt?.getTime() ?? 0));
 
   if (donations.length === 0) return [];
 

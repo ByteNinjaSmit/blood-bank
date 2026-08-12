@@ -5,6 +5,7 @@ import type { TtiRepo } from '@/modules/tti/tti.repository';
 import type { TtiService } from '@/modules/tti/tti.service';
 import type { UnitRepo } from '@/modules/unit/unit.repository';
 import { auditRepository } from '@/modules/audit/audit.repository';
+import { hasPendingResult } from '@/modules/tti/tti.release-rules';
 import { ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '@/shared/errors';
 
 export interface TtiLegacyViewControllers {
@@ -13,6 +14,8 @@ export interface TtiLegacyViewControllers {
   recordAndFinalize: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   recordAndFinalizeBatch: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   getHistory: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  markBatchDraft: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  clearBatchDraft: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
 // Legacy display keys (HIV/HBsAg/HCV/VDRL/MP, Title-case results) -> the
@@ -21,6 +24,7 @@ function mapLegacyTestResults(
   testResults: Array<{ test: string; result: string }>,
   technicianId: string | undefined,
   actorId: string,
+  performedAt?: Date,
 ) {
   return testResults.map((t) => {
     let testName = t.test.toUpperCase();
@@ -35,7 +39,7 @@ function mapLegacyTestResults(
       method: 'ELISA' as const,
       result: result as any,
       technicianId: technicianId || actorId,
-      performedAt: new Date(),
+      performedAt: performedAt || new Date(),
     };
   });
 }
@@ -50,6 +54,7 @@ function toLegacyTestName(testName: string): string {
 }
 function toLegacyResult(result: string): string {
   if (result === 'INDETERMINATE') return 'Shadeness';
+  if (result === 'PENDING') return 'Pending';
   if (result === 'NEGATIVE') return 'Negative';
   if (result === 'REACTIVE') return 'Reactive';
   return result;
@@ -117,7 +122,7 @@ export function createTtiLegacyViewControllers(deps: {
     async recordAndFinalize(req, res, next) {
       try {
         const { id } = ValidateTtiLegacyView.resultIdParam(req);
-        const { testResults, technicianId, editReason } =
+        const { testResults, technicianId, editReason, performedAt } =
           ValidateTtiLegacyView.recordResultsBody(req);
         const actorId = actor(req);
 
@@ -137,12 +142,36 @@ export function createTtiLegacyViewControllers(deps: {
           }
         }
 
-        const mappedTests = mapLegacyTestResults(testResults, technicianId, actorId);
+        // A bag held in the Pending tab (any latest test result 'PENDING')
+        // gets retested through the same recordAndFinalize path as a
+        // Shadeness correction, but the retest must not surface as an
+        // "edited"/"retest done" marker anywhere the donor/donation/
+        // component name is shown — only the audit trail (via
+        // recordAndFinalize's tests+decision diff below, which already
+        // captures before=Pending/after=<chosen result>) keeps that record.
+        const wasPendingOrigin =
+          isEdit &&
+          hasPendingResult(
+            tti.tests.map((t) => ({ testName: t.testName as any, result: t.result as any })),
+          );
+
+        const mappedTests = mapLegacyTestResults(
+          testResults,
+          technicianId,
+          actorId,
+          performedAt ? new Date(performedAt) : undefined,
+        );
 
         // One combined call so the whole "Save Results" action produces a
         // single audit entry (tests + decision together), not two.
-        await deps.ttiService.recordAndFinalize(tti.donationId, mappedTests, actorId, req.id);
-        if (isEdit) {
+        await deps.ttiService.recordAndFinalize(
+          tti.donationId,
+          mappedTests,
+          actorId,
+          req.id,
+          isEdit ? editReason!.trim() : undefined,
+        );
+        if (isEdit && !wasPendingOrigin) {
           await deps.tti.setEditMeta(tti.donationId, editReason!.trim(), actorId);
         }
 
@@ -162,8 +191,9 @@ export function createTtiLegacyViewControllers(deps: {
     // block the other 99 from saving.
     async recordAndFinalizeBatch(req, res, next) {
       try {
-        const { items, technicianId } = ValidateTtiLegacyView.recordResultsBatchBody(req);
+        const { items, technicianId, performedAt } = ValidateTtiLegacyView.recordResultsBatchBody(req);
         const actorId = actor(req);
+        const performedAtDate = performedAt ? new Date(performedAt) : undefined;
 
         const results: Array<{ id: string; donationId: string; decision: string; unitsAffected: number }> = [];
         const failures: Array<{ id: string; message: string }> = [];
@@ -186,7 +216,7 @@ export function createTtiLegacyViewControllers(deps: {
               );
             }
 
-            const mappedTests = mapLegacyTestResults(item.testResults, technicianId, actorId);
+            const mappedTests = mapLegacyTestResults(item.testResults, technicianId, actorId, performedAtDate);
             const outcome = await deps.ttiService.recordAndFinalize(
               tti.donationId,
               mappedTests,
@@ -241,6 +271,31 @@ export function createTtiLegacyViewControllers(deps: {
           .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
         res.json({ success: true, data: history });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    // Batch-draft flag: marks/clears Donation.ttiBatchActive so the
+    // donation timeline can show "Under Testing" while a bag sits selected
+    // (not yet submitted) in the Serology batch-test queue. No TtiResult
+    // is touched by either of these — same idea as component's
+    // /batch-draft for separation.
+    async markBatchDraft(req, res, next) {
+      try {
+        const { donationIds } = ValidateTtiLegacyView.batchDraftBody(req);
+        await deps.view.setBatchDraftActive(donationIds, true);
+        res.json({ success: true });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async clearBatchDraft(req, res, next) {
+      try {
+        const { donationIds } = ValidateTtiLegacyView.batchDraftBody(req);
+        await deps.view.setBatchDraftActive(donationIds, false);
+        res.json({ success: true });
       } catch (e) {
         next(e);
       }

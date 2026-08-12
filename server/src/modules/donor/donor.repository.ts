@@ -5,7 +5,11 @@ import type {
 } from '@/modules/donor/donor.validator';
 import { NotFoundError } from '@/shared/errors';
 import { DonorModel } from './donor.model';
-import { DonationModel } from '@/modules/donation/donation.model';
+import { CampDonationRecordModel } from '@/modules/donation/camp-donation-record.model';
+import {
+  findAcrossDonations,
+  distinctAcrossDonations,
+} from '@/modules/donation/donation-collections.util';
 import { CampModel } from '@/modules/camp/camp.model';
 import { Types } from 'mongoose';
 import type { DonorDto, RawDonor } from './donor.dto';
@@ -119,8 +123,10 @@ export function createDonorRepo(): DonorRepo {
       let allCampDonorIdsCache: string[] | null = null;
       const getAllCampDonorIds = async (): Promise<string[]> => {
         if (allCampDonorIdsCache) return allCampDonorIdsCache;
+        // Every row in CampDonationRecordModel already has campId set —
+        // no filter needed, it's a physically separate collection now.
         const [campDonations, camps] = await Promise.all([
-          DonationModel.find({ campId: { $ne: null } }, { donor: 1 }).lean(),
+          CampDonationRecordModel.find({}, { donor: 1 }).lean(),
           CampModel.find({}, { donorData: 1 }).lean(),
         ]);
         const campDonorIds = campDonations
@@ -141,7 +147,10 @@ export function createDonorRepo(): DonorRepo {
 
       if (input.campId) {
         const campIdObj = new Types.ObjectId(input.campId);
-        const campDonations = await DonationModel.find({ campId: campIdObj }, { donor: 1 }).lean();
+        const campDonations = await CampDonationRecordModel.find(
+          { campId: campIdObj },
+          { donor: 1 },
+        ).lean();
         const campDonorIds = campDonations.map((d) => d.donor?.toString()).filter(Boolean);
         const camp = await CampModel.findById(campIdObj, { donorData: 1 }).lean();
         const campDataDonorIds = (camp?.donorData || []).map((id) => id.toString());
@@ -159,16 +168,17 @@ export function createDonorRepo(): DonorRepo {
         // resolve matching donations first and OR their donor ids in, so a
         // staff member can find a donor by any of the identifiers printed
         // on the physical bag/segment, not just donor-side fields.
-        const matchingDonations = await DonationModel.find({
-          $or: [
-            { donationId: { $regex: term, $options: 'i' } },
-            { bagNo: { $regex: term, $options: 'i' } },
-            { segmentNo: { $regex: term, $options: 'i' } },
-            { lotNo: { $regex: term, $options: 'i' } },
-          ],
-        })
-          .select('donor')
-          .lean();
+        const matchingDonations = await findAcrossDonations<{ donor?: Types.ObjectId }>(
+          {
+            $or: [
+              { donationId: { $regex: term, $options: 'i' } },
+              { bagNo: { $regex: term, $options: 'i' } },
+              { segmentNo: { $regex: term, $options: 'i' } },
+              { lotNo: { $regex: term, $options: 'i' } },
+            ],
+          },
+          { donor: 1 },
+        );
         const donorIdsFromDonations = [
           ...new Set(matchingDonations.map((d) => d.donor?.toString()).filter(Boolean)),
         ];
@@ -199,7 +209,7 @@ export function createDonorRepo(): DonorRepo {
       // (e.g. TTI reactive lookback) still has a donation on record, so they
       // still show up in this list.
       if (!input.deletedOnly) {
-        const donatedDonorIds = await DonationModel.distinct('donor');
+        const donatedDonorIds = await distinctAcrossDonations('donor', {});
         filter.$and = ((filter.$and as unknown[]) || []).concat([
           {
             $or: [

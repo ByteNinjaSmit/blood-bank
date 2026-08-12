@@ -15,9 +15,10 @@
 // and Transfusion represent completed clinical actions and are always
 // marked `affected` rather than deleted, preserving traceability.
 
-import { Types } from 'mongoose';
+import { Types, type Model } from 'mongoose';
 import { DonorModel } from '@/modules/donor/donor.model';
-import { DonationModel } from '@/modules/donation/donation.model';
+import { DonationModel, type Donation } from '@/modules/donation/donation.model';
+import { CampDonationRecordModel } from '@/modules/donation/camp-donation-record.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { DeferralModel } from '@/modules/deferral/deferral.model';
@@ -183,64 +184,79 @@ function mapBagType(typeOfBag: string | undefined): 'DOUBLE' | 'TRIPLE' | null {
   return typeOfBag === 'DB' ? 'DOUBLE' : typeOfBag === 'TB' ? 'TRIPLE' : null;
 }
 
+// Shared by donationNode and campDonationNode — same BagStock reversal
+// behavior, only the backing model differs (donation vs camp donation
+// record, now physically separate collections).
+function makeDonationNode(name: string, model: Model<Donation>): CascadeNode {
+  return {
+    name,
+    model,
+    linkField: 'donor',
+    linkType: 'objectId',
+    children: [bloodUnitNode, ttiNode],
+    onSoftDelete: async (doc, ctx: CascadeContext) => {
+      if (doc.bagStockIssueReversed || !doc.lotNo || !doc.typeOfBag) return;
+      const bagType = mapBagType(doc.typeOfBag);
+      if (!bagType) return;
+      const bagStock = await BagStockModel.findOne({
+        batchNumber: doc.lotNo,
+        bagType,
+        deletedAt: null,
+      }).session(ctx.session);
+      if (!bagStock) return;
+      await BagStockModel.updateOne(
+        { _id: bagStock._id },
+        {
+          $inc: { issuedQty: -1 },
+          $set: { lastUpdatedAt: new Date(), updatedBy: new Types.ObjectId(ctx.actorId) },
+        },
+        { session: ctx.session ?? undefined },
+      );
+      await model.updateOne(
+        { _id: doc._id },
+        { $set: { bagStockIssueReversed: true } },
+        { session: ctx.session ?? undefined },
+      );
+    },
+    onRestore: async (doc, ctx: CascadeRestoreContext) => {
+      if (!doc.bagStockIssueReversed || !doc.lotNo || !doc.typeOfBag) return;
+      const bagType = mapBagType(doc.typeOfBag);
+      if (!bagType) return;
+      const bagStock = await BagStockModel.findOne({
+        batchNumber: doc.lotNo,
+        bagType,
+        deletedAt: null,
+      }).session(ctx.session);
+      if (!bagStock) return;
+      await BagStockModel.updateOne(
+        { _id: bagStock._id },
+        {
+          $inc: { issuedQty: 1 },
+          $set: { lastUpdatedAt: new Date(), updatedBy: new Types.ObjectId(ctx.actorId) },
+        },
+        { session: ctx.session ?? undefined },
+      );
+      await model.updateOne(
+        { _id: doc._id },
+        { $set: { bagStockIssueReversed: false } },
+        { session: ctx.session ?? undefined },
+      );
+    },
+  };
+}
+
 // Exported so donation.service.ts can reuse the exact same subtree
 // (BloodUnit/TTI) when a donation is deleted directly, not only when
 // cascading down from a deleted Donor.
-export const donationNode: CascadeNode = {
-  name: 'donation',
-  model: DonationModel,
-  linkField: 'donor',
-  linkType: 'objectId',
-  children: [bloodUnitNode, ttiNode],
-  onSoftDelete: async (doc, ctx: CascadeContext) => {
-    if (doc.bagStockIssueReversed || !doc.lotNo || !doc.typeOfBag) return;
-    const bagType = mapBagType(doc.typeOfBag);
-    if (!bagType) return;
-    const bagStock = await BagStockModel.findOne({
-      batchNumber: doc.lotNo,
-      bagType,
-      deletedAt: null,
-    }).session(ctx.session);
-    if (!bagStock) return;
-    await BagStockModel.updateOne(
-      { _id: bagStock._id },
-      {
-        $inc: { issuedQty: -1 },
-        $set: { lastUpdatedAt: new Date(), updatedBy: new Types.ObjectId(ctx.actorId) },
-      },
-      { session: ctx.session ?? undefined },
-    );
-    await DonationModel.updateOne(
-      { _id: doc._id },
-      { $set: { bagStockIssueReversed: true } },
-      { session: ctx.session ?? undefined },
-    );
-  },
-  onRestore: async (doc, ctx: CascadeRestoreContext) => {
-    if (!doc.bagStockIssueReversed || !doc.lotNo || !doc.typeOfBag) return;
-    const bagType = mapBagType(doc.typeOfBag);
-    if (!bagType) return;
-    const bagStock = await BagStockModel.findOne({
-      batchNumber: doc.lotNo,
-      bagType,
-      deletedAt: null,
-    }).session(ctx.session);
-    if (!bagStock) return;
-    await BagStockModel.updateOne(
-      { _id: bagStock._id },
-      {
-        $inc: { issuedQty: 1 },
-        $set: { lastUpdatedAt: new Date(), updatedBy: new Types.ObjectId(ctx.actorId) },
-      },
-      { session: ctx.session ?? undefined },
-    );
-    await DonationModel.updateOne(
-      { _id: doc._id },
-      { $set: { bagStockIssueReversed: false } },
-      { session: ctx.session ?? undefined },
-    );
-  },
-};
+export const donationNode: CascadeNode = makeDonationNode('donation', DonationModel);
+
+// Same shape as donationNode, but for camp donations — a separate
+// collection (campdonationrecords), so a donor's cascade delete/restore
+// must sweep both (see donorCascadeNode below).
+export const campDonationNode: CascadeNode = makeDonationNode(
+  'camp-donation',
+  CampDonationRecordModel,
+);
 
 const deferralNode: CascadeNode = {
   name: 'deferral',
@@ -254,7 +270,7 @@ export const donorCascadeNode: CascadeNode = {
   model: DonorModel,
   linkField: '_id', // root — unused, cascadeSoftDelete looks the root up directly
   linkType: 'objectId',
-  children: [donationNode, deferralNode],
+  children: [donationNode, campDonationNode, deferralNode],
 };
 
 // ── Vendor -> PurchaseOrder -> GoodsReceipt -> {BagInspection, BagStock} ──

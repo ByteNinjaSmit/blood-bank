@@ -4,7 +4,7 @@
 
 import { Types } from 'mongoose';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
-import { DonationModel } from '@/modules/donation/donation.model';
+import { findAcrossDonations } from '@/modules/donation/donation-collections.util';
 import { transition, type UnitEvent } from '@/modules/unit/unit.state-machine';
 import { NotFoundError } from '@/shared/errors';
 import { invalidate } from '@/core/cache';
@@ -393,9 +393,11 @@ export function createUnitRepo(): UnitRepo {
         .lean()) as RawUnit[];
 
       const donationIds = raws.map((r) => r.donationId).filter(Boolean);
-      const donations = (await DonationModel.find({ donationId: { $in: donationIds } })
-        .select('donationId bagNo segmentNo')
-        .lean()) as Array<{ donationId: string; bagNo?: string; segmentNo?: string }>;
+      const donations = await findAcrossDonations<{
+        donationId: string;
+        bagNo?: string;
+        segmentNo?: string;
+      }>({ donationId: { $in: donationIds } }, { donationId: 1, bagNo: 1, segmentNo: 1 });
       const donationMap = new Map(donations.map((d) => [d.donationId, d]));
 
       return raws.map((r) => {

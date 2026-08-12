@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { DonationModel } from '@/modules/donation/donation.model';
+import { findOneAcrossDonations } from '@/modules/donation/donation-collections.util';
 import { toLegacyUnitStatus } from '@/modules/component/component.mapper';
 
 export interface ComponentListFilters {
@@ -26,15 +26,15 @@ export interface NearExpiryFilters {
 }
 
 export async function resolveDonation(donationIdOrObjectId: string) {
-  let donation = await DonationModel.findOne({
+  let donation = await findOneAcrossDonations({
     donationId: donationIdOrObjectId,
     deletedAt: null,
-  }).lean();
+  });
   if (!donation && Types.ObjectId.isValid(donationIdOrObjectId)) {
-    donation = await DonationModel.findOne({
+    donation = await findOneAcrossDonations({
       _id: donationIdOrObjectId,
       deletedAt: null,
-    }).lean();
+    });
   }
   return donation;
 }

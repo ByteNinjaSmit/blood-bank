@@ -52,4 +52,22 @@ router.post(
   controllers.recordAndFinalize,
 );
 
+// Batch-draft flag: marks/clears Donation.ttiBatchActive so the donation
+// timeline/details screens can show "Under Testing" while a bag sits
+// selected (not yet submitted) in the Serology batch-test queue. No
+// TtiResult is created/changed by either of these — same permission as
+// /results/:id since they're driven by the same screen/action.
+router.post(
+  '/batch-draft',
+  authenticate,
+  requirePermission(['tti:edit', 'tti:release']),
+  controllers.markBatchDraft,
+);
+router.post(
+  '/batch-draft/clear',
+  authenticate,
+  requirePermission(['tti:edit', 'tti:release']),
+  controllers.clearBatchDraft,
+);
+
 export default router;

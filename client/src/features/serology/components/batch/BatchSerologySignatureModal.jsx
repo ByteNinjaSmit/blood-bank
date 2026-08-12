@@ -1,6 +1,7 @@
 import { Loader2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { formatDateTime } from "@/lib/format-date";
 import { DEFAULT_TESTS } from "./use-batch-serology";
 
 // Final review before the batch is actually submitted. Groups the entered
@@ -13,11 +14,17 @@ export default function BatchSerologySignatureModal({
   bags,
   matrix,
   user,
+  batchTestDate,
+  batchTestTime,
   signatureText,
   setSignatureText,
   isSubmitting,
   onConfirm,
 }) {
+  const performedAtLabel =
+    batchTestDate && batchTestTime
+      ? formatDateTime(new Date(`${batchTestDate}T${batchTestTime}:00`).toISOString())
+      : "—";
   const byTest = DEFAULT_TESTS.map((t) => {
     const exceptions = bags
       .map((bag) => ({ bag, result: (matrix.get(bag._id) || {})[t.key] || "Negative" }))
@@ -39,6 +46,10 @@ export default function BatchSerologySignatureModal({
           <p className="text-sm text-gray-600">
             Common result: <span className="font-semibold text-gray-900">Negative</span> for every parameter
             unless listed below.
+          </p>
+          <p className="text-sm text-gray-600">
+            Test Date/Time (applied to all {bags.length} bag(s)):{" "}
+            <span className="font-semibold text-gray-900">{performedAtLabel}</span>
           </p>
 
           <div className="max-h-[40vh] overflow-y-auto border rounded-md divide-y">

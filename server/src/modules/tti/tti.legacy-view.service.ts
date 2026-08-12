@@ -8,6 +8,7 @@ import type {
 export interface TtiLegacyViewService {
   listQuarantined(filters: TtiBagListFilters): Promise<PagedTtiBags>;
   listDecided(filters: TtiResultListFilters): Promise<PagedTtiBags>;
+  setBatchDraftActive(donationIds: string[], active: boolean): Promise<void>;
 }
 
 export function createTtiLegacyViewService(deps: {
@@ -16,5 +17,6 @@ export function createTtiLegacyViewService(deps: {
   return {
     listQuarantined: (filters) => deps.view.listQuarantined(filters),
     listDecided: (filters) => deps.view.listDecided(filters),
+    setBatchDraftActive: (donationIds, active) => deps.view.setBatchDraftActive(donationIds, active),
   };
 }

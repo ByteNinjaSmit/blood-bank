@@ -4,6 +4,9 @@
 // by their respective modules, same shape as `mis`/`component`.
 import { Types } from 'mongoose';
 import { DonationModel } from '@/modules/donation/donation.model';
+import { CampDonationRecordModel } from '@/modules/donation/camp-donation-record.model';
+import { findAcrossDonations } from '@/modules/donation/donation-collections.util';
+import { CampModel } from '@/modules/camp/camp.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
@@ -11,7 +14,7 @@ import { DonorModel } from '@/modules/donor/donor.model';
 import { invalidate } from '@/core/cache';
 import { NotFoundError, ValidationError, ConflictError } from '@/shared/errors';
 import { cascadeRestore, runInCascadeTransaction } from '@/shared/utils/cascade-delete';
-import { donationNode, donorCascadeNode } from '@/shared/cascade-registry';
+import { donationNode, campDonationNode, donorCascadeNode } from '@/shared/cascade-registry';
 import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { TtiService } from '@/modules/tti/tti.service';
 import type { TtiTestEntryInput } from '@/modules/tti/tti.repository';
@@ -65,14 +68,15 @@ export function createDiscardRepo(deps: { units: UnitRepo; ttiService: TtiServic
 
       if (search) {
         const searchRegex = new RegExp(search, 'i');
-        const matchingDonations = await DonationModel.find({
-          $and: [
-            { $or: [{ donationId: searchRegex }, { bagNo: searchRegex }] },
-            { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] },
-          ],
-        })
-          .select('donationId')
-          .lean();
+        const matchingDonations = await findAcrossDonations<{ donationId: string }>(
+          {
+            $and: [
+              { $or: [{ donationId: searchRegex }, { bagNo: searchRegex }] },
+              { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] },
+            ],
+          },
+          { donationId: 1 },
+        );
         const matchedDonationIds = matchingDonations.map((d) => d.donationId);
         unitFilter.$and.push({
           $or: [
@@ -104,13 +108,23 @@ export function createDiscardRepo(deps: { units: UnitRepo; ttiService: TtiServic
         .lean();
 
       const donationIds = units.map((u) => u.donationId).filter(Boolean);
-      const donations = await DonationModel.find({
+      const rawDonations = await findAcrossDonations<any>({
         donationId: { $in: donationIds },
         $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-      })
-        .populate('donor')
-        .populate('campId')
-        .lean();
+      });
+      const donorIds = [...new Set(rawDonations.map((d) => d.donor).filter(Boolean))];
+      const campIds = [...new Set(rawDonations.map((d) => d.campId).filter(Boolean))];
+      const [donorDocs, campDocs] = await Promise.all([
+        donorIds.length ? DonorModel.find({ _id: { $in: donorIds } }).lean() : Promise.resolve([]),
+        campIds.length ? CampModel.find({ _id: { $in: campIds } }).lean() : Promise.resolve([]),
+      ]);
+      const donorById = new Map(donorDocs.map((d) => [d._id.toString(), d]));
+      const campById = new Map(campDocs.map((c) => [c._id.toString(), c]));
+      const donations = rawDonations.map((d) => ({
+        ...d,
+        donor: d.donor ? donorById.get(d.donor.toString()) : undefined,
+        campId: d.campId ? campById.get(d.campId.toString()) : undefined,
+      }));
       const ttis = await TtiResultModel.find({ donationId: { $in: donationIds } }).lean();
 
       const donationMap = new Map<string, any>();
@@ -200,10 +214,10 @@ export function createDiscardRepo(deps: { units: UnitRepo; ttiService: TtiServic
     },
 
     async create({ bagNo, batchNo, segmentNo, reason, description, ttiResults, actorId }) {
-      const donation = await DonationModel.findOne({
-        $or: [{ donationId: bagNo }, { bagNo }],
-        deletedAt: null,
-      });
+      const donationFilter = { $or: [{ donationId: bagNo }, { bagNo }], deletedAt: null };
+      const donation =
+        (await DonationModel.findOne(donationFilter)) ??
+        (await CampDonationRecordModel.findOne(donationFilter));
       if (!donation) throw new NotFoundError('Donation matching bag number', bagNo);
 
       const units = await BloodUnitModel.find({ donationId: donation.donationId, deletedAt: null });
@@ -281,8 +295,11 @@ export function createDiscardRepo(deps: { units: UnitRepo; ttiService: TtiServic
         );
       }
 
-      const donation = await DonationModel.findOne({ donationId: unit.donationId });
+      const donation =
+        (await DonationModel.findOne({ donationId: unit.donationId })) ??
+        (await CampDonationRecordModel.findOne({ donationId: unit.donationId }));
       if (!donation) throw new NotFoundError('Donation for unit', unit.donationId);
+      const donationCascadeNode = donation.campId ? campDonationNode : donationNode;
 
       const donor = await DonorModel.findById(donation.donor);
       const rootWasDonor = Boolean(
@@ -292,7 +309,7 @@ export function createDiscardRepo(deps: { units: UnitRepo; ttiService: TtiServic
       await runInCascadeTransaction((session) =>
         rootWasDonor
           ? cascadeRestore(donorCascadeNode, donor!._id.toString(), actorId, session)
-          : cascadeRestore(donationNode, donation._id.toString(), actorId, session),
+          : cascadeRestore(donationCascadeNode, donation._id.toString(), actorId, session),
       );
 
       await invalidate('inventory:*');

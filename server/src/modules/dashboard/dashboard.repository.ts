@@ -6,7 +6,7 @@
 
 import { CampModel } from '@/modules/camp/camp.model';
 import { DonorModel } from '@/modules/donor/donor.model';
-import { DonationModel } from '@/modules/donation/donation.model';
+import { countAcrossDonations } from '@/modules/donation/donation-collections.util';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TransfusionModel } from '@/modules/transfusion/transfusion.model';
 import { BagDiscardModel } from '@/modules/bag-discard/bag-discard.model';
@@ -122,7 +122,7 @@ export function createDashboardRepo(deps: {
           deletedAt: null,
           ...buildDateQuery('createdAt', fromDate, toDate),
         }),
-        DonationModel.countDocuments({
+        countAcrossDonations({
           deletedAt: null,
           ...buildDateQuery('collectedAt', fromDate, toDate),
         }),

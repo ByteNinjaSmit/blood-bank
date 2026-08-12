@@ -3,7 +3,10 @@
 // data — this module owns no Mongoose model of its own.
 
 import { DonorModel } from '@/modules/donor/donor.model';
-import { DonationModel } from '@/modules/donation/donation.model';
+import {
+  findAcrossDonations,
+  distinctAcrossDonations,
+} from '@/modules/donation/donation-collections.util';
 import { DeferralModel } from '@/modules/deferral/deferral.model';
 import { CampModel } from '@/modules/camp/camp.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
@@ -38,6 +41,18 @@ import {
 } from './monthly-report.mappers';
 import { createMonthlyReportMethods2 } from './monthly-report.methods2';
 
+// findAcrossDonations spans two collections so it can't use Mongoose
+// .populate() — batch-load the referenced donors separately instead.
+async function loadDonorsById(
+  donations: Array<{ donor?: unknown }>,
+  select: string,
+): Promise<Map<string, any>> {
+  const donorIds = [...new Set(donations.map((d) => d.donor).filter(Boolean))];
+  if (donorIds.length === 0) return new Map();
+  const donors = await DonorModel.find({ _id: { $in: donorIds } }).select(select).lean();
+  return new Map(donors.map((d: any) => [d._id.toString(), d]));
+}
+
 export interface MonthlyReportRepo {
   getCampsCount(from: Date, to: Date): Promise<number>;
   getCollectionStats(from: Date, to: Date): Promise<any>;
@@ -71,13 +86,11 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
     },
 
     async getCollectionStats(from, to) {
-      const donations = await DonationModel.find({
-        collectedAt: { $gte: from, $lt: to },
-        deletedAt: null,
-      })
-        .select('donor donationType campId collectedAt')
-        .populate('donor', 'sex')
-        .lean();
+      const donations = await findAcrossDonations<any>(
+        { collectedAt: { $gte: from, $lt: to }, deletedAt: null },
+        { donor: 1, donationType: 1, campId: 1, collectedAt: 1 },
+      );
+      const donorById = await loadDonorsById(donations, 'sex');
 
       const blank = () => ({ male: 0, female: 0, total: 0 });
       const inCamps = blank();
@@ -86,7 +99,7 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
       let replacement = 0;
 
       for (const d of donations as any[]) {
-        const sex = d.donor?.sex;
+        const sex = donorById.get(String(d.donor))?.sex;
         const bucket = d.campId ? inCamps : inBloodBank;
         bucket.total += 1;
         if (sex === 'M') bucket.male += 1;
@@ -218,23 +231,21 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
     },
 
     async getRepeatedDonors(from, to) {
-      const donations = await DonationModel.find({
-        collectedAt: { $gte: from, $lt: to },
-        deletedAt: null,
-      })
-        .select('donor collectedAt')
-        .lean();
+      const donations = await findAcrossDonations<any>(
+        { collectedAt: { $gte: from, $lt: to }, deletedAt: null },
+        { donor: 1, collectedAt: 1 },
+      );
 
       const donorIds = [...new Set(donations.map((d: any) => String(d.donor)))];
       if (donorIds.length === 0) return { male: 0, female: 0, total: 0 };
 
       const priorDonorIds = new Set(
         (
-          await DonationModel.find({
+          await distinctAcrossDonations('donor', {
             donor: { $in: donorIds },
             collectedAt: { $lt: from },
             deletedAt: null,
-          }).distinct('donor')
+          })
         ).map(String),
       );
 
@@ -258,29 +269,26 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
     },
 
     async getDonorTestingTotals(from, to) {
-      const donations = await DonationModel.find({
-        collectedAt: { $gte: from, $lt: to },
-        deletedAt: null,
-      })
-        .select('donor')
-        .populate('donor', 'sex')
-        .lean();
+      const donations = await findAcrossDonations<any>(
+        { collectedAt: { $gte: from, $lt: to }, deletedAt: null },
+        { donor: 1 },
+      );
+      const donorById = await loadDonorsById(donations, 'sex');
       let male = 0;
       let female = 0;
       for (const d of donations as any[]) {
-        if (d.donor?.sex === 'M') male += 1;
-        else if (d.donor?.sex === 'F') female += 1;
+        const sex = donorById.get(String(d.donor))?.sex;
+        if (sex === 'M') male += 1;
+        else if (sex === 'F') female += 1;
       }
       return { male, female, total: donations.length };
     },
 
     async getTtiTesting(from, to) {
-      const donations = await DonationModel.find({
-        collectedAt: { $gte: from, $lt: to },
-        deletedAt: null,
-      })
-        .select('donationId')
-        .lean();
+      const donations = await findAcrossDonations<any>(
+        { collectedAt: { $gte: from, $lt: to }, deletedAt: null },
+        { donationId: 1 },
+      );
       const donationIds = donations.map((d: any) => d.donationId);
       if (donationIds.length === 0) return { rows: [] };
 
@@ -380,19 +388,18 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
     },
 
     async getBloodGroupCollection(from, to) {
-      const donations = await DonationModel.find({
-        collectedAt: { $gte: from, $lt: to },
-        deletedAt: null,
-      })
-        .select('donor')
-        .populate('donor', 'bloodGroup rh')
-        .lean();
+      const donations = await findAcrossDonations<any>(
+        { collectedAt: { $gte: from, $lt: to }, deletedAt: null },
+        { donor: 1 },
+      );
+      const donorById = await loadDonorsById(donations, 'bloodGroup rh');
 
       const labels = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
       const counts: Record<string, number> = Object.fromEntries(labels.map((l) => [l, 0]));
       for (const d of donations as any[]) {
-        const group = d.donor?.bloodGroup;
-        const rh = d.donor?.rh;
+        const donor = donorById.get(String(d.donor));
+        const group = donor?.bloodGroup;
+        const rh = donor?.rh;
         if (!group || !rh) continue;
         const label = `${group}${rh === 'POSITIVE' ? '+' : '-'}`;
         if (label in counts) counts[label] = (counts[label] ?? 0) + 1;

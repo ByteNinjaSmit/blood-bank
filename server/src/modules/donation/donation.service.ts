@@ -11,7 +11,9 @@ import {
   runInCascadeTransaction,
   newDeleteBatchId,
 } from '@/shared/utils/cascade-delete';
-import { donationNode } from '@/shared/cascade-registry';
+import { donationNode, campDonationNode } from '@/shared/cascade-registry';
+import { findOwningModel } from '@/modules/donation/donation-collections.util';
+import { CampDonationRecordModel } from '@/modules/donation/camp-donation-record.model';
 import { AppError, ConflictError, NotFoundError } from '@/shared/errors';
 import { checkEligibility, yearsBetween } from '@/modules/donor/donor.eligibility';
 import { deriveUnits } from './donation.unit-derivation';
@@ -285,8 +287,10 @@ export function createDonationService(deps: {
       }
 
       const deleteBatchId = newDeleteBatchId();
+      const owningModel = await findOwningModel(id);
+      const node = owningModel === CampDonationRecordModel ? campDonationNode : donationNode;
       await runInCascadeTransaction((session) =>
-        cascadeSoftDelete(donationNode, id, actorId, reason, deleteBatchId, session),
+        cascadeSoftDelete(node, id, actorId, reason, deleteBatchId, session),
       );
       log.warn({ donationId: id, actorId, deleteBatchId }, 'donation cascade soft-deleted');
       void withAudit(
@@ -311,8 +315,10 @@ export function createDonationService(deps: {
       if (!status.deletedAt) {
         return { restored: false };
       }
+      const owningModel = await findOwningModel(id);
+      const node = owningModel === CampDonationRecordModel ? campDonationNode : donationNode;
       await runInCascadeTransaction((session) =>
-        cascadeRestore(donationNode, id, actorId, session),
+        cascadeRestore(node, id, actorId, session),
       );
       log.warn({ donationId: id, actorId }, 'donation cascade restored');
       void withAudit(

@@ -6,7 +6,7 @@
 // as `mis`/`component`/`discard`.
 import mongoose from 'mongoose';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
-import { DonationModel } from '@/modules/donation/donation.model';
+import { findAcrossDonations } from '@/modules/donation/donation-collections.util';
 import { HospitalModel } from '@/modules/hospital/hospital.model';
 import { PatientModel } from '@/modules/patient/patient.model';
 import { DonorModel } from '@/modules/donor/donor.model';
@@ -27,9 +27,10 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
   const issueMap = new Map(issues.map((iss) => [iss.unitId, iss]));
 
   const donationIds = units.map((u) => u.donationId).filter(Boolean);
-  const donations = (await DonationModel.find({ donationId: { $in: donationIds } })
-    .select('donationId bagNo segmentNo collectedAt donor')
-    .lean()) as any[];
+  const donations = await findAcrossDonations<any>(
+    { donationId: { $in: donationIds } },
+    { donationId: 1, bagNo: 1, segmentNo: 1, collectedAt: 1, donor: 1 },
+  );
   const donationMap = new Map(donations.map((d) => [d.donationId, d]));
 
   const donorIds = donations.map((d) => d.donor).filter(Boolean);

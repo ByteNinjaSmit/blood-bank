@@ -119,10 +119,15 @@ export default function DonationTimeline({ donation }) {
   const maxIdx = maxStatusIndex(donation.units);
 
   const ttiDecision = donation.ttiReleaseDecision;
+  // Selected (not yet submitted) into the Serology batch-test queue —
+  // Donation.ttiBatchActive, set/cleared by POST /serology/batch-draft[/clear]
+  // as bags join/leave a batch, mirrors separationBatchActive below.
+  const ttiBatchActive = Boolean(donation.ttiBatchActive);
   const ttiStatus =
     ttiDecision === 'released' ? 'done' :
     ttiDecision === 'reactive' ? 'failed' :
-    ttiDecision === 'indeterminate' ? 'in_progress' : 'pending';
+    ttiDecision === 'indeterminate' ? 'in_progress' :
+    ttiBatchActive ? 'in_progress' : 'pending';
 
   // Present whenever this donation's TTI panel has ever been corrected via
   // the Serology edit/retest action (tti.setEditMeta) — most commonly a
@@ -214,7 +219,7 @@ export default function DonationTimeline({ donation }) {
     {
       icon: Scissors,
       label: 'Component Separation',
-      timestamp: null,
+      timestamp: fmt(donation.separatedAt),
       status: separationStepStatus,
       detail: hasSeparated
         ? `${separationInProgress ? 'Under Separation — ' : ''}${donation.units.length} component${donation.units.length !== 1 ? 's' : ''} entered: ${[...new Set(donation.units.map(u => displayComponentType(donation.donationType, u.componentType)))].join(', ')}`
@@ -225,17 +230,18 @@ export default function DonationTimeline({ donation }) {
     },
     {
       icon: TestTube,
-      label: 'TTI Testing',
-      timestamp: null,
+      label: 'TTD Testing',
+      timestamp: fmt(donation.ttiTestedAt),
       status: ttiStatus,
       detail: [
-        ttiDecision === 'released' ? 'All TTI tests cleared — units released from quarantine'
+        ttiDecision === 'released' ? 'All TTD tests cleared — units released from quarantine'
           : ttiDecision === 'reactive' ? `Donor tested positive — ${donation.ttiReason || 'reactive result, units discarded'}`
           : ttiDecision === 'indeterminate' ? `Shadeness (indeterminate) result — quarantined pending retest${donation.ttiReason ? `: ${donation.ttiReason}` : ''}`
+          : ttiBatchActive ? 'Under Testing — selected in a TTD batch, not yet submitted'
           : 'Awaiting serology results',
         ttiRetestNote,
       ].filter(Boolean).join(' · '),
-      badge: 'Retest Needed',
+      badge: ttiBatchActive && ttiDecision !== 'indeterminate' ? 'Under Testing' : 'Retest Needed',
     },
     {
       icon: Package,
