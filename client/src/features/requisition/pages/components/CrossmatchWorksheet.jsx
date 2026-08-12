@@ -4,65 +4,33 @@ import React, { useState } from 'react';
 // crossmatch. The operator explicitly picks the compatibility type; there is
 // no default selection. Before approval this saves as data only (the unit
 // isn't reserved yet); the unit state transition happens after approval.
-// Turn a stored ISO timestamp into the value a datetime-local input expects.
-function toLocalInput(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const off = d.getTimezoneOffset();
-  return new Date(d.getTime() - off * 60000).toISOString().slice(0, 16);
-}
 
 export default function CrossmatchWorksheet({ invId, onSave, updating, initial, accentClass }) {
   const [compatibility, setCompatibility] = useState(initial?.compatibilityResult || '');
-  const [doneAt, setDoneAt] = useState(toLocalInput(initial?.crossmatchDoneAt));
-  const [seenAt, setSeenAt] = useState(toLocalInput(initial?.crossmatchSeenAt));
 
-  const canSave = compatibility && doneAt && seenAt;
+  const canSave = !!compatibility;
 
   const handleSave = () => {
     if (!canSave) return;
     onSave(invId, 'compatible', {
       compatibilityResult: compatibility,
-      crossmatchDoneAt: new Date(doneAt).toISOString(),
-      crossmatchSeenAt: new Date(seenAt).toISOString(),
     });
   };
 
   return (
     <div className={`p-3 rounded-lg border-2 bg-white space-y-2 ${accentClass || 'border-amber-300'}`}>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Compatibility <span className="text-red-600">*</span></label>
-          <select
-            value={compatibility}
-            onChange={(e) => setCompatibility(e.target.value)}
-            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white"
-          >
-            <option value="">— Select —</option>
-            <option value="MAJOR_COMPATIBLE">Major Compatible</option>
-            <option value="MINOR_COMPATIBLE">Minor Compatible</option>
-            <option value="UNIVERSAL">Universal</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Crossmatch Done At <span className="text-red-600">*</span></label>
-          <input
-            type="datetime-local"
-            value={doneAt}
-            onChange={(e) => setDoneAt(e.target.value)}
-            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Seen At <span className="text-red-600">*</span></label>
-          <input
-            type="datetime-local"
-            value={seenAt}
-            onChange={(e) => setSeenAt(e.target.value)}
-            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white"
-          />
-        </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Compatibility <span className="text-red-600">*</span></label>
+        <select
+          value={compatibility}
+          onChange={(e) => setCompatibility(e.target.value)}
+          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white"
+        >
+          <option value="">— Select —</option>
+          <option value="MAJOR_COMPATIBLE">Major Compatible</option>
+          <option value="MINOR_COMPATIBLE">Minor Compatible</option>
+          <option value="UNIVERSAL">Universal</option>
+        </select>
       </div>
       <button
         type="button"

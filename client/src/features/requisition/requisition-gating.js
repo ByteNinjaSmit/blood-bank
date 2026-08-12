@@ -4,7 +4,7 @@
 // operator has recorded, for every proposed bag: a compatible crossmatch
 // (when required), and a substitute-compatibility sign-off (for non-exact
 // groups). Blood-grouping worksheets are no longer captured in the UI —
-// only the compatibility result and crossmatch done-at/seen-at fields are.
+// only the compatibility result is.
 //
 // Both the list (`useRequisitionList`) and the Manage stepper
 // (`RequisitionManagement`) consume this so the two entry points cannot

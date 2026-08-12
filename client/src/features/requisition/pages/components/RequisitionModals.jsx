@@ -164,8 +164,6 @@ export default function RequisitionModals({
                         <th className="p-2">Day of Donation</th>
                         <th className="p-2">Reserved At</th>
                         <th className="p-2">Compatibility</th>
-                        <th className="p-2">Crossmatch Done At</th>
-                        <th className="p-2">Seen At</th>
                         <th className="p-2">Issue ID</th>
                         <th className="p-2">Issue Date</th>
                         <th className="p-2">Status</th>
@@ -200,8 +198,6 @@ export default function RequisitionModals({
                             <td className="p-2">{mi?.inventoryId?.bagNo?.collectedAt ? new Date(mi.inventoryId.bagNo.collectedAt).toLocaleDateString() : '—'}</td>
                             <td className="p-2">{mi?.reservedAt ? fmt(mi.reservedAt) : '—'}</td>
                             <td className="p-2">{COMPATIBILITY_RESULT_LABELS[mi?.compatibilityResult] || '—'}</td>
-                            <td className="p-2">{mi?.crossmatchDoneAt ? fmt(mi.crossmatchDoneAt) : '—'}</td>
-                            <td className="p-2">{mi?.crossmatchSeenAt ? fmt(mi.crossmatchSeenAt) : '—'}</td>
                             <td className="p-2 font-mono text-xs font-semibold">{mi?.issueId || '—'}</td>
                             <td className="p-2">{mi?.inventoryId?.issuedAt ? fmt(mi.inventoryId.issuedAt) : '—'}</td>
                             <td className="p-2">
