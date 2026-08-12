@@ -147,6 +147,7 @@ export default function ComponentFilterBar({ filters, isLoading, onFilterChange,
               <SelectContent>
                 <SelectItem value="desc">Newest First</SelectItem>
                 <SelectItem value="asc">Oldest First</SelectItem>
+                <SelectItem value="bagAsc">Ascending Order</SelectItem>
               </SelectContent>
             </Select>
           </div>

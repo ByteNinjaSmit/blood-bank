@@ -7,6 +7,7 @@ import { useAuth } from "@/store/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/lib/format-date";
+import { sortByBagNoAsc } from "@/lib/natural-sort";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import { exportSerologyResults } from "@/utils/excelExportHelper";
@@ -104,11 +105,11 @@ const SerologyResults = () => {
           fromDate: filters.fromDate || undefined,
           toDate: filters.toDate || undefined,
           sortBy,
-          order
+          order: order === "bagAsc" ? "asc" : order
         },
       });
       const data = Array.isArray(res.data?.data) ? res.data.data : [];
-      setBags(data);
+      setBags(order === "bagAsc" ? sortByBagNoAsc(data) : data);
       setPagination(prev => ({ ...prev, ...(res.data?.pagination || {}) }));
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to load results");
@@ -205,8 +206,8 @@ const SerologyResults = () => {
                   <Microscope className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Serology Results</h1>
-                  <p className="text-gray-500 text-sm">View finalized or recorded serology results</p>
+                  <h1 className="text-2xl font-bold text-gray-900">TTD Testing Results</h1>
+                  <p className="text-gray-500 text-sm">View finalized or recorded TTD testing results</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -311,6 +312,7 @@ const SerologyResults = () => {
                   <SelectContent>
                     <SelectItem value="desc">Newest First</SelectItem>
                     <SelectItem value="asc">Oldest First</SelectItem>
+                    <SelectItem value="bagAsc">Ascending Order</SelectItem>
                   </SelectContent>
                 </Select>
                 <button
