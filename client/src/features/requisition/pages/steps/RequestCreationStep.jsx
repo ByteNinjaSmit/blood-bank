@@ -5,6 +5,7 @@ import PatientForm from '../components/PatientForm';
 import TransfusionHistoryCard from '../components/TransfusionHistoryCard';
 import PregnancyHistoryCard from '../components/PregnancyHistoryCard';
 import RequestedComponentsList from '../components/RequestedComponentsList';
+import AddHospitalModal from '../components/AddHospitalModal';
 import { RejectRequestModal } from '@/components/shared';
 import { toast } from 'sonner';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
@@ -13,6 +14,12 @@ import { BLOOD_GROUPS as FULL_BLOOD_GROUPS } from '@/lib/blood-groups';
 export default function RequestCreationStep({
   hospitals,
   hospitalsLoading,
+  addHospitalOpen,
+  setAddHospitalOpen,
+  addHospitalForm,
+  setAddHospitalForm,
+  addingHospital,
+  handleCreateHospital,
   form,
   setForm,
   addRequestLine,
@@ -156,6 +163,7 @@ export default function RequestCreationStep({
           onDateChange={(v) => setForm((p) => ({ ...p, requiredAt: v }))}
           dateOnly
           readOnly={readOnly}
+          onAddHospital={readOnly ? undefined : () => setAddHospitalOpen(true)}
         />
 
         {/* Card 2: Patient Demographics & Indication */}
@@ -340,6 +348,15 @@ export default function RequestCreationStep({
           setRejectConfirmOpen(false);
         }}
         requestId={requestDoc?.requestId || 'New Requisition'}
+      />
+
+      <AddHospitalModal
+        isOpen={addHospitalOpen}
+        onClose={() => setAddHospitalOpen(false)}
+        form={addHospitalForm}
+        onChange={(patch) => setAddHospitalForm((p) => ({ ...p, ...patch }))}
+        saving={addingHospital}
+        onSave={handleCreateHospital}
       />
     </div>
   );

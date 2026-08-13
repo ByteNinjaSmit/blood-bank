@@ -21,6 +21,12 @@ const RequisitionManagement = () => {
     setCurrentStep,
     hospitals,
     hospitalsLoading,
+    addHospitalOpen,
+    setAddHospitalOpen,
+    addHospitalForm,
+    setAddHospitalForm,
+    addingHospital,
+    handleCreateHospital,
     form,
     setForm,
     requestDoc,
@@ -175,6 +181,12 @@ const RequisitionManagement = () => {
               <RequestCreationStep
                 hospitals={hospitals}
                 hospitalsLoading={hospitalsLoading}
+                addHospitalOpen={addHospitalOpen}
+                setAddHospitalOpen={setAddHospitalOpen}
+                addHospitalForm={addHospitalForm}
+                setAddHospitalForm={setAddHospitalForm}
+                addingHospital={addingHospital}
+                handleCreateHospital={handleCreateHospital}
                 form={form}
                 setForm={setForm}
                 addRequestLine={addRequestLine}

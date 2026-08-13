@@ -17,6 +17,7 @@ export default function HospitalDoctorDetailsCard({
   maxDate,
   dateOnly = false,
   readOnly = false,
+  onAddHospital,
 }) {
   const inputClass = `w-full px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`;
 
@@ -33,6 +34,7 @@ export default function HospitalDoctorDetailsCard({
           value={hospitalId}
           onChange={(v) => !readOnly && onHospitalIdChange(v)}
           disabled={readOnly}
+          onAddHospital={onAddHospital}
         />
 
         <div>
