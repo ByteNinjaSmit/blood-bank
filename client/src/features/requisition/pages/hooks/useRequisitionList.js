@@ -242,6 +242,13 @@ export function useRequisitionList() {
   // approval, units are reserved, so patient/component/bag details are locked.
   const canManage = (row) => !['approved', 'issued', 'completed', 'rejected'].includes(row.status);
 
+  // The dedicated Edit modal (details-only correction, not the full
+  // match/approve/issue wizard) is also allowed on issued/completed
+  // requisitions — units are already reserved/issued by then, so the edit
+  // modal skips re-matching for any status other than pending/matched
+  // (see RequisitionEditModal).
+  const canEdit = (row) => !['approved', 'rejected'].includes(row.status);
+
   const can = (row, act) => {
     const s = row.status;
     if (act === 'match') return s === 'pending';
@@ -535,5 +542,5 @@ export function useRequisitionList() {
       RequisitionPrintService.print('report');
     }, 100);
   };
-  return { allSelectedIds,applyFilters,bulkAction,callAction,can,canManage,clearSelection,closeEdit,closeView,componentFulfillment,confirmReportSelection,data,editModalOpen,editRequisitionId,excelLoading,exportDropdownOpen,fetchList,filters,fmt,getReqLabel,handleConfirmReject,handleExportExcel,handleOpenIssueModal,handleOpenReject,handlePrint,hospitals,isApprovedForIssue,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openEdit,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocId,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setData,setEditModalOpen,setExcelLoading,setExportDropdownOpen,setFilters,setHospitals,setIssueDoc,setIssueLoading,setIssueModalOpen,setIssuingRowId,setLimit,setLoading,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintLoading,setPrintReportPage,setPrintType,setRejectingDocId,setRejectingDocReqId,setRejectModalOpen,setRejectSubmitting,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,setTotal,setViewDoc,setViewLoading,setViewOpen,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen,user,authorizationToken };
+  return { allSelectedIds,applyFilters,bulkAction,callAction,can,canEdit,canManage,clearSelection,closeEdit,closeView,componentFulfillment,confirmReportSelection,data,editModalOpen,editRequisitionId,excelLoading,exportDropdownOpen,fetchList,filters,fmt,getReqLabel,handleConfirmReject,handleExportExcel,handleOpenIssueModal,handleOpenReject,handlePrint,hospitals,isApprovedForIssue,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openEdit,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocId,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setData,setEditModalOpen,setExcelLoading,setExportDropdownOpen,setFilters,setHospitals,setIssueDoc,setIssueLoading,setIssueModalOpen,setIssuingRowId,setLimit,setLoading,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintLoading,setPrintReportPage,setPrintType,setRejectingDocId,setRejectingDocReqId,setRejectModalOpen,setRejectSubmitting,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,setTotal,setViewDoc,setViewLoading,setViewOpen,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen,user,authorizationToken };
 }

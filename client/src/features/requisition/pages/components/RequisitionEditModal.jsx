@@ -130,8 +130,13 @@ export default function RequisitionEditModal({ open, onClose, requisitionId, hos
       }
       // Re-run FIFO matching so the reserved inventory reflects any changes
       // made to the requested components — mirrors the Manage wizard's
-      // "Update Changes" behavior in useRequisition.js.
-      await requisitionApi.match(doc._id);
+      // "Update Changes" behavior in useRequisition.js. Only valid pre-approval
+      // (backend rejects match() once a requisition is approved/issued/
+      // completed) — a completed requisition's units are already issued, so
+      // this is a details-only correction there.
+      if (['pending', 'matched'].includes(doc.status)) {
+        await requisitionApi.match(doc._id);
+      }
       toast.success('Requisition updated');
       onSaved?.();
       onClose();

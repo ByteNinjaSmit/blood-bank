@@ -13,7 +13,7 @@ const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'reject
 
 export default function RequisitionList() {
   const rl = useRequisitionList();
-  const { allSelectedIds,applyFilters,bulkAction,callAction,can,canManage,clearSelection,closeEdit,closeView,componentFulfillment,confirmReportSelection,data,editModalOpen,editRequisitionId,excelLoading,exportDropdownOpen,fetchList,filters,fmt,handleConfirmReject,handleExportExcel,handleOpenReject,handlePrint,hospitals,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openEdit,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setExportDropdownOpen,setFilters,setIssueDoc,setIssueModalOpen,setIssuingRowId,setLimit,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintType,setRejectModalOpen,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen } = rl;
+  const { allSelectedIds,applyFilters,bulkAction,callAction,can,canEdit,canManage,clearSelection,closeEdit,closeView,componentFulfillment,confirmReportSelection,data,editModalOpen,editRequisitionId,excelLoading,exportDropdownOpen,fetchList,filters,fmt,handleConfirmReject,handleExportExcel,handleOpenReject,handlePrint,hospitals,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openEdit,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setExportDropdownOpen,setFilters,setIssueDoc,setIssueModalOpen,setIssuingRowId,setLimit,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintType,setRejectModalOpen,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen } = rl;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -203,10 +203,10 @@ export default function RequisitionList() {
                           <button onClick={() => openView(row)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">View</button>
                           {row.status !== 'rejected' && (
                             <button
-                              disabled={!canManage(row)}
+                              disabled={!canEdit(row)}
                               onClick={() => openEdit(row)}
-                              title={canManage(row) ? 'Edit requisition details' : 'Locked — details cannot be edited after approval'}
-                              className={`px-3 py-1 rounded border ${canManage(row) ? 'border-gray-300 text-gray-800 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed'}`}
+                              title={canEdit(row) ? 'Edit requisition details' : 'Locked — details cannot be edited once approved'}
+                              className={`px-3 py-1 rounded border ${canEdit(row) ? 'border-gray-300 text-gray-800 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed'}`}
                             >
                               Edit
                             </button>
