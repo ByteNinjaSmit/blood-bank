@@ -184,7 +184,10 @@ function parseBloodGroup(bloodGroup: string): { aboGroup: string; rhFactor: stri
 // component-separation pipeline — that already happened at the lending
 // bank). Mutates each item in place, setting unitId, so the caller can
 // persist the same items array with the new unit already linked.
-async function createUnitsForTakeLoan(
+// Exported for scripts/backfill-take-loan-units.ts, which runs this same
+// logic against TAKE_LOAN transfers recorded before units were created on
+// intake.
+export async function createUnitsForTakeLoan(
   items: CreateBulkTransferItemInput[],
   ctx: { transferId: string; bloodBankName: string; transferDate: Date; actorId: string },
 ): Promise<void> {
@@ -216,7 +219,12 @@ async function createUnitsForTakeLoan(
           reason: `Taken on loan from ${ctx.bloodBankName}`,
         },
       ],
-      loanedFrom: { transferId: ctx.transferId, bloodBankName: ctx.bloodBankName },
+      loanedFrom: {
+        transferId: ctx.transferId,
+        bloodBankName: ctx.bloodBankName,
+        bagNo: item.bagNo,
+        segmentNo: item.segmentNo,
+      },
       createdBy: actor,
       updatedBy: actor,
     } as any);
@@ -426,6 +434,7 @@ export function createBulkTransferRepo(): BulkTransferRepo {
               volumeMl: item.volumeMl || 350,
               collectedAt: item.collectedAt || raw.transferDate,
               expiresAt: item.expiresAt,
+              'loanedFrom.segmentNo': item.segmentNo,
               updatedBy: new Types.ObjectId(actorId),
             },
           );

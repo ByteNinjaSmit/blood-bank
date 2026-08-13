@@ -389,10 +389,14 @@ export function createUnitRepo(): UnitRepo {
         expiresAt: { $gt: new Date() },
       })
         .sort({ expiresAt: 1 })
-        .select('unitId aboGroup rhFactor componentType volumeMl expiresAt donationId unitDin')
-        .lean()) as RawUnit[];
+        .select('unitId aboGroup rhFactor componentType volumeMl expiresAt donationId unitDin loanedFrom')
+        .lean()) as (RawUnit & { loanedFrom?: { bagNo?: string; segmentNo?: string } })[];
 
-      const donationIds = raws.map((r) => r.donationId).filter(Boolean);
+      // Loaned-in bags (BulkTransfer TAKE_LOAN) share one synthetic
+      // donationId across the whole batch — donationMap lookup below would
+      // give every one of them the same label, so their real bagNo/segmentNo
+      // (captured on intake) always takes priority over the donation lookup.
+      const donationIds = raws.filter((r) => !r.loanedFrom).map((r) => r.donationId).filter(Boolean);
       const donations = await findAcrossDonations<{
         donationId: string;
         bagNo?: string;
@@ -409,8 +413,8 @@ export function createUnitRepo(): UnitRepo {
           componentType: r.componentType,
           volumeMl: r.volumeMl,
           expiresAt: r.expiresAt.toISOString(),
-          bagNo: d?.bagNo || r.donationId,
-          segmentNo: d?.segmentNo || r.unitDin || r.unitId,
+          bagNo: r.loanedFrom?.bagNo || d?.bagNo || r.donationId,
+          segmentNo: r.loanedFrom?.segmentNo || d?.segmentNo || r.unitDin || r.unitId,
         };
       });
     },

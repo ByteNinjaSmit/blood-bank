@@ -53,11 +53,16 @@ const BloodUnitSchema = new Schema(
 
     // Set only for a bag taken on loan from another blood bank (BulkTransfer
     // TAKE_LOAN) — this bank never ran its own donation/collection for it,
-    // so donationId is a synthetic `LOAN-<transferId>` rather than a real
-    // Donation record. Kept for traceability/display only.
+    // so donationId is a synthetic `LOAN-<transferId>` shared by every bag
+    // in that batch, not a real per-bag Donation record. bagNo/segmentNo
+    // are duplicated here (also on the BulkTransfer item) so unit pickers
+    // can display the real physical bag number instead of that shared
+    // synthetic donationId.
     loanedFrom: {
       transferId: { type: String, trim: true },
       bloodBankName: { type: String, trim: true },
+      bagNo: { type: String, trim: true },
+      segmentNo: { type: String, trim: true },
     },
 
     quarantineReason: { type: String, trim: true },
