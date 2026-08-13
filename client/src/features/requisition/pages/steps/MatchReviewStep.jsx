@@ -193,7 +193,7 @@ export default function MatchReviewStep({
               <p><span className="text-gray-600">Status:</span> <strong className="capitalize">{requestDoc.status}</strong></p>
             </div>
             <div>
-              <p><span className="text-gray-600">Patient:</span> <strong>{requestDoc.patient?.name}</strong> ({requestDoc.patient?.age}/{requestDoc.patient?.sex})</p>
+              <p><span className="text-gray-600">Patient:</span> <strong>{requestDoc.patient?.name}</strong> ({requestDoc.patient?.age}{requestDoc.patient?.ageUnit === 'DAYS' ? 'd' : 'y'}/{requestDoc.patient?.sex})</p>
               <p><span className="text-gray-600">Hospital:</span> <strong>{requestDoc.hospitalId?.name || '—'}</strong></p>
             </div>
           </div>

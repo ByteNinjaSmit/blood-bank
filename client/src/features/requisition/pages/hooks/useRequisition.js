@@ -81,6 +81,7 @@ export default function useRequisition(authToken) {
           name: requestDoc.patient?.name || '',
           address: requestDoc.patient?.address || '',
           age: requestDoc.patient?.age || '',
+          ageUnit: requestDoc.patient?.ageUnit || 'YEARS',
           sex: requestDoc.patient?.sex || 'M',
           mrn: requestDoc.patient?.mrn || '',
           diagnosis: requestDoc.patient?.diagnosis || '',
@@ -163,12 +164,20 @@ export default function useRequisition(authToken) {
     }
   };
 
+  // New rows default to the patient's own blood group (set above in the
+  // Patient Information card) rather than a hardcoded O+ — the requested
+  // product is almost always the patient's own type unless the operator
+  // deliberately picks a substitute group.
   const addRequestLine = () => {
     setForm((prev) => ({
       ...prev,
       requestedComponents: [
         ...prev.requestedComponents,
-        { ...defaultRequestedComponent },
+        {
+          ...defaultRequestedComponent,
+          bloodGroup: prev.patient?.aboGroup || defaultRequestedComponent.bloodGroup,
+          rh: prev.patient?.rh || defaultRequestedComponent.rh,
+        },
       ],
     }));
   };

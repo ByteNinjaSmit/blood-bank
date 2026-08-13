@@ -81,6 +81,7 @@ export interface RequisitionPatientDto {
   name: string;
   address?: string;
   age: number;
+  ageUnit?: 'YEARS' | 'DAYS';
   sex: 'M' | 'F' | 'O';
   mrn?: string;
   diagnosis?: string;
@@ -163,6 +164,7 @@ function toDto(raw: RawReq): RequisitionDto {
           name: raw.patient.name,
           address: raw.patient.address,
           age: raw.patient.age,
+          ageUnit: raw.patient.ageUnit || 'YEARS',
           sex: raw.patient.sex,
           mrn: raw.patient.mrn,
           diagnosis: raw.patient.diagnosis,

@@ -94,7 +94,11 @@ export function createRequisitionControllers(deps: {
             const ageNum = Number(p.age);
             if (!isNaN(ageNum)) {
               dob = new Date();
-              dob.setFullYear(dob.getFullYear() - ageNum);
+              if (p.ageUnit === 'DAYS') {
+                dob.setDate(dob.getDate() - ageNum);
+              } else {
+                dob.setFullYear(dob.getFullYear() - ageNum);
+              }
             }
           }
 

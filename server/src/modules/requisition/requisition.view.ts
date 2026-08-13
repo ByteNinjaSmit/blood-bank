@@ -52,21 +52,27 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
       if (!unit) return null;
       const donation = donationMap.get(unit.donationId);
       const donorInfo = donation?.donor ? donorMap.get(donation.donor.toString()) : undefined;
+      // Loaned-in bags (BulkTransfer TAKE_LOAN) share one synthetic
+      // donationId across the whole batch and have no real Donation record —
+      // their real bagNo/segmentNo (captured on intake) always wins over the
+      // donation lookup, which would otherwise label every loaned bag in the
+      // batch identically.
+      const loanedFrom = (unit as any).loanedFrom;
       return {
         inventoryId: {
           _id: unit.unitId,
           bagNo: {
-            bagNo: donation?.bagNo || unit.donationId,
+            bagNo: loanedFrom?.bagNo || donation?.bagNo || unit.donationId,
             bloodGroup: unit.aboGroup,
             rh: unit.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
-            donorName: donorInfo?.fullName || 'Unknown',
+            donorName: loanedFrom ? `On loan — ${loanedFrom.bloodBankName || 'Unknown'}` : donorInfo?.fullName || 'Unknown',
             donorPublicId: donorInfo?.donorId,
             collectedAt: donation?.collectedAt
               ? donation.collectedAt.toISOString()
               : unit.collectedAt
                 ? new Date(unit.collectedAt).toISOString()
                 : null,
-            segmentNo: donation?.segmentNo || unit.unitDin || unit.unitId || '—',
+            segmentNo: loanedFrom?.segmentNo || donation?.segmentNo || unit.unitDin || unit.unitId || '—',
           },
           componentId: {
             componentType: unit.componentType,

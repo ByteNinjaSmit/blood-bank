@@ -195,7 +195,7 @@ export default function RequisitionList() {
                       <td className="p-3"><input type="checkbox" checked={!!selected[row._id]} onChange={() => toggle(row._id)} /></td>
                       <td className="p-3 font-medium">{row.requestId}</td>
                       <td className="p-3">{row.hospitalId?.name || '—'}</td>
-                      <td className="p-3">{row.patient?.name} ({row.patient?.age}/{row.patient?.sex})</td>
+                      <td className="p-3">{row.patient?.name} ({row.patient?.age}{row.patient?.ageUnit === 'DAYS' ? 'd' : 'y'}/{row.patient?.sex})</td>
                       <td className="p-3">{formatDate(row.requestedAt)}</td>
                       <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass(rowDisplayStatus(row))}`}>{rowDisplayStatus(row)}</span></td>
                       <td className="p-3">

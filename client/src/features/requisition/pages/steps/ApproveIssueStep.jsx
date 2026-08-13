@@ -155,7 +155,7 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
                 </div>
                 <div>
                   <span className="text-gray-400 text-xs uppercase tracking-wide font-medium block">Age / Sex</span>
-                  <p className="font-semibold text-gray-800 mt-0.5">{requestDoc.patient?.age || '—'} Y / {requestDoc.patient?.sex || '—'}</p>
+                  <p className="font-semibold text-gray-800 mt-0.5">{requestDoc.patient?.age || '—'} {requestDoc.patient?.ageUnit === 'DAYS' ? 'D' : 'Y'} / {requestDoc.patient?.sex || '—'}</p>
                 </div>
                 <div>
                   <span className="text-gray-400 text-xs uppercase tracking-wide font-medium block">Clinician</span>

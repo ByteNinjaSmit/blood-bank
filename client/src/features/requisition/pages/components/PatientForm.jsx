@@ -25,13 +25,25 @@ export default function PatientForm({ patient, onChange, readOnly = false }) {
       </div>
       <div>
         <label className="block text-sm text-gray-700 mb-1">Age <span className="text-red-600">*</span></label>
-        <input
-          type="number"
-          className={`w-full px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
-          value={patient.age}
-          onChange={(e) => !readOnly && onChange({ age: e.target.value })}
-          disabled={readOnly}
-        />
+        <div className="flex gap-2">
+          <input
+            type="number"
+            min="0"
+            className={`w-2/3 px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+            value={patient.age}
+            onChange={(e) => !readOnly && onChange({ age: e.target.value })}
+            disabled={readOnly}
+          />
+          <select
+            className={`w-1/3 px-2 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+            value={patient.ageUnit || 'YEARS'}
+            onChange={(e) => !readOnly && onChange({ ageUnit: e.target.value })}
+            disabled={readOnly}
+          >
+            <option value="YEARS">Years</option>
+            <option value="DAYS">Days</option>
+          </select>
+        </div>
       </div>
       <div>
         <label className="block text-sm text-gray-700 mb-1">Sex <span className="text-red-600">*</span></label>
