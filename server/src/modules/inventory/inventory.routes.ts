@@ -2,13 +2,11 @@ import { Router } from 'express';
 import { authenticate } from '@/shared/middlewares/authenticate';
 import { requirePermission } from '@/shared/middlewares/rbac';
 import { createUnitRepo } from '@/modules/unit/unit.repository';
-import { createBulkTransferRepo } from '@/modules/bulk-transfer/bulk-transfer.repository';
 import { createInventoryService } from '@/modules/inventory/inventory.service';
 import { createInventoryControllers } from '@/modules/inventory/inventory.controller';
 
 const service = createInventoryService({
   units: createUnitRepo(),
-  bulkTransfer: createBulkTransferRepo(),
 });
 const controllers = createInventoryControllers(service);
 

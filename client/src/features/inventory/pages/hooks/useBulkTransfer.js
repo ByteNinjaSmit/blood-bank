@@ -224,6 +224,15 @@ export function useBulkTransfer({ mainTab, availableUnits, fetchAvailableUnits }
       return toast.warning("Please add at least one blood bag");
     }
 
+    // Taken-in bags become real stock immediately, so they need an expiry
+    // date (and a volume) the same way any other in-stock bag does.
+    if (bulkTransferType === "TAKE_LOAN") {
+      const missing = items.find((it) => !it.expiresAt || !it.volumeMl);
+      if (missing) {
+        return toast.warning(`Bag ${missing.bagNo}: expiry date and volume are both required`);
+      }
+    }
+
     if (bulkEditTarget) {
       saveBulkEdit({
         bloodBankName: bulkBloodBankName.trim(),

@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
-import { ConflictError, NotFoundError } from '@/shared/errors';
+import { ConflictError, NotFoundError, ValidationError } from '@/shared/errors';
 import { invalidate } from '@/core/cache';
 import type {
   ListBulkTransferInput,
@@ -77,13 +77,6 @@ export interface CreateBulkTransferInput {
   notes?: string;
 }
 
-export interface LoanStockSummaryItem {
-  componentType: string;
-  aboGroup: string;
-  rhFactor: string;
-  count: number;
-}
-
 export interface BulkTransferRepo {
   list(f: ListBulkTransferInput): Promise<{ items: BulkTransferDto[]; total: number }>;
   findById(id: string): Promise<BulkTransferDto>;
@@ -91,7 +84,6 @@ export interface BulkTransferRepo {
   update(id: string, input: UpdateBulkTransferInput, actorId: string): Promise<BulkTransferDto>;
   remove(id: string, actorId: string): Promise<BulkTransferDto>;
   restore(id: string, actorId: string): Promise<BulkTransferDto>;
-  loanStockSummary(): Promise<LoanStockSummaryItem[]>;
 }
 
 // Bags given on loan leave our stock (ISSUED); deleting that transfer puts
@@ -178,6 +170,139 @@ async function restoreUnitsFromLoan(unitIds: string[], actorId: string): Promise
   await invalidate('inventory:*');
 }
 
+function parseBloodGroup(bloodGroup: string): { aboGroup: string; rhFactor: string } {
+  const bg = (bloodGroup || '').trim();
+  const rhFactor = bg.endsWith('-') ? 'NEGATIVE' : 'POSITIVE';
+  const aboGroup = bg.replace(/[+-]$/, '');
+  return { aboGroup, rhFactor };
+}
+
+// TAKE_LOAN bags are borrowed from another blood bank but physically become
+// this bank's stock the moment they're logged — so, unlike GIVE_LOAN (which
+// only ever references bags this bank already owns), each item here needs a
+// brand-new BloodUnit created directly in RELEASED status (no donation/TTI/
+// component-separation pipeline — that already happened at the lending
+// bank). Mutates each item in place, setting unitId, so the caller can
+// persist the same items array with the new unit already linked.
+async function createUnitsForTakeLoan(
+  items: CreateBulkTransferItemInput[],
+  ctx: { transferId: string; bloodBankName: string; transferDate: Date; actorId: string },
+): Promise<void> {
+  if (!items.length) return;
+  const actor = new Types.ObjectId(ctx.actorId);
+  const now = new Date();
+
+  for (const item of items) {
+    if (!item.expiresAt) {
+      throw new ValidationError('Every taken-in bag needs an expiry date');
+    }
+    const { aboGroup, rhFactor } = parseBloodGroup(item.bloodGroup);
+    const unit = await BloodUnitModel.create({
+      unitId: `LOAN-${ctx.transferId}-${item.bagNo}`,
+      donationId: `LOAN-${ctx.transferId}`,
+      componentType: item.componentType,
+      aboGroup,
+      rhFactor,
+      volumeMl: item.volumeMl || 350,
+      collectedAt: item.collectedAt || ctx.transferDate,
+      expiresAt: item.expiresAt,
+      status: 'RELEASED',
+      statusHistory: [
+        {
+          to: 'RELEASED',
+          event: 'BULK_TRANSFER_LOAN_TAKEN',
+          actor,
+          at: now,
+          reason: `Taken on loan from ${ctx.bloodBankName}`,
+        },
+      ],
+      loanedFrom: { transferId: ctx.transferId, bloodBankName: ctx.bloodBankName },
+      createdBy: actor,
+      updatedBy: actor,
+    } as any);
+    item.unitId = (unit._id as Types.ObjectId).toString();
+  }
+  await invalidate('inventory:*');
+}
+
+// Deleting a TAKE_LOAN transfer must pull its bags back out of stock;
+// restoring must put them back — but only while they're still sitting
+// untouched (RELEASED, never matched/issued/sent to storage), exactly
+// mirroring markUnitsIssuedForLoan/restoreUnitsFromLoan's guarantees below
+// for GIVE_LOAN, just soft-deleting the unit instead of flipping status.
+async function retireUnitsFromTakeLoan(unitIds: string[], actorId: string): Promise<void> {
+  if (!unitIds.length) return;
+  const actor = new Types.ObjectId(actorId);
+  const now = new Date();
+
+  const releasedCount = await BloodUnitModel.countDocuments({
+    _id: { $in: unitIds },
+    status: 'RELEASED',
+    deletedAt: null,
+  });
+  if (releasedCount !== unitIds.length) {
+    throw new ConflictError(
+      'One or more taken-in bags have already been reserved, issued, or sent to storage. Refresh and try again.',
+    );
+  }
+
+  for (const id of unitIds) {
+    const unit = await BloodUnitModel.findOneAndUpdate(
+      { _id: id, status: 'RELEASED', deletedAt: null },
+      {
+        deletedAt: now,
+        deletedBy: actor,
+        updatedBy: actor,
+        $push: {
+          statusHistory: {
+            from: 'RELEASED',
+            to: 'RELEASED',
+            event: 'BULK_TRANSFER_LOAN_TAKEN_DELETED',
+            actor,
+            at: now,
+            reason: 'Bulk transfer (loan taken) deleted — bag removed from stock',
+          },
+        },
+      },
+    );
+    if (!unit) {
+      throw new ConflictError(
+        'One or more taken-in bags have already been reserved, issued, or sent to storage. Refresh and try again.',
+      );
+    }
+  }
+  await invalidate('inventory:*');
+}
+
+async function reinstateUnitsFromTakeLoan(unitIds: string[], actorId: string): Promise<void> {
+  if (!unitIds.length) return;
+  const actor = new Types.ObjectId(actorId);
+  const now = new Date();
+  for (const id of unitIds) {
+    // Only reinstate bags still soft-deleted from this module's own retire()
+    // call — never resurrect one that moved on some other way since.
+    await BloodUnitModel.findOneAndUpdate(
+      { _id: id, status: 'RELEASED', deletedAt: { $ne: null } },
+      {
+        deletedAt: null,
+        deletedBy: null,
+        updatedBy: actor,
+        $push: {
+          statusHistory: {
+            from: 'RELEASED',
+            to: 'RELEASED',
+            event: 'BULK_TRANSFER_LOAN_TAKEN_RESTORED',
+            actor,
+            at: now,
+            reason: 'Bulk transfer (loan taken) restored — bag returned to stock',
+          },
+        },
+      },
+    );
+  }
+  await invalidate('inventory:*');
+}
+
 export function createBulkTransferRepo(): BulkTransferRepo {
   return {
     async list(f) {
@@ -224,6 +349,13 @@ export function createBulkTransferRepo(): BulkTransferRepo {
       if (input.transferType === 'GIVE_LOAN') {
         const unitIds = input.items.map((it) => it.unitId).filter(Boolean) as string[];
         await markUnitsIssuedForLoan(unitIds, actorId);
+      } else {
+        await createUnitsForTakeLoan(input.items, {
+          transferId: input.transferId,
+          bloodBankName: input.bloodBankName,
+          transferDate: input.transferDate,
+          actorId,
+        });
       }
 
       const doc = await BulkTransferModel.create({
@@ -239,11 +371,10 @@ export function createBulkTransferRepo(): BulkTransferRepo {
       const raw = await BulkTransferModel.findOne({ _id: id, deletedAt: null });
       if (!raw) throw new NotFoundError('BulkTransfer', id);
 
-      // Only GIVE_LOAN items are tied to real BloodUnits taken out of
-      // stock — reconcile the diff before persisting so a bag dropped
-      // from the transfer goes back to stock, and a bag newly added is
-      // re-validated as available before it's claimed. TAKE_LOAN items
-      // never touch BloodUnit records, so they can simply be replaced.
+      // GIVE_LOAN items are tied to real BloodUnits taken out of stock —
+      // reconcile the diff before persisting so a bag dropped from the
+      // transfer goes back to stock, and a bag newly added is re-validated
+      // as available before it's claimed.
       if (input.items && raw.transferType === 'GIVE_LOAN') {
         const oldUnitIds = new Set(
           (raw.items || [])
@@ -261,6 +392,62 @@ export function createBulkTransferRepo(): BulkTransferRepo {
         await restoreUnitsFromLoan(removedUnitIds, actorId);
       }
 
+      // TAKE_LOAN items each own a real BloodUnit created on intake (see
+      // createUnitsForTakeLoan) — reconcile by bagNo (the client form never
+      // round-trips unitId for these) so an edited row keeps its existing
+      // unit, a removed row retires its unit, and a newly added row gets a
+      // fresh one.
+      if (input.items && raw.transferType === 'TAKE_LOAN') {
+        const oldByBagNo = new Map((raw.items || []).map((it: any) => [it.bagNo, it]));
+        const newBagNos = new Set(input.items.map((it) => it.bagNo));
+        const removedUnitIds = (raw.items || [])
+          .filter((it: any) => !newBagNos.has(it.bagNo))
+          .map((it: any) => it.unitId)
+          .filter(Boolean)
+          .map((u: any) => u.toString());
+
+        const toCreate: CreateBulkTransferItemInput[] = [];
+        for (const item of input.items) {
+          const old = oldByBagNo.get(item.bagNo);
+          if (!old || !old.unitId) {
+            toCreate.push(item);
+            continue;
+          }
+          if (!item.expiresAt) {
+            throw new ValidationError('Every taken-in bag needs an expiry date');
+          }
+          const { aboGroup, rhFactor } = parseBloodGroup(item.bloodGroup);
+          const updated = await BloodUnitModel.findOneAndUpdate(
+            { _id: old.unitId, status: 'RELEASED', deletedAt: null },
+            {
+              componentType: item.componentType,
+              aboGroup,
+              rhFactor,
+              volumeMl: item.volumeMl || 350,
+              collectedAt: item.collectedAt || raw.transferDate,
+              expiresAt: item.expiresAt,
+              updatedBy: new Types.ObjectId(actorId),
+            },
+          );
+          if (!updated) {
+            throw new ConflictError(
+              `Bag ${item.bagNo} has already been reserved, issued, or sent to storage and can no longer be edited here.`,
+            );
+          }
+          item.unitId = old.unitId.toString();
+        }
+
+        // Create newly-added rows first (fails fast, nothing committed yet)
+        // before retiring removed rows, mirroring the GIVE_LOAN order above.
+        await createUnitsForTakeLoan(toCreate, {
+          transferId: raw.transferId,
+          bloodBankName: input.bloodBankName ?? raw.bloodBankName,
+          transferDate: input.transferDate ?? raw.transferDate,
+          actorId,
+        });
+        await retireUnitsFromTakeLoan(removedUnitIds, actorId);
+      }
+
       if (input.bloodBankName !== undefined) raw.bloodBankName = input.bloodBankName;
       if (input.bloodBankAddress !== undefined) raw.bloodBankAddress = input.bloodBankAddress;
       if (input.transferDate !== undefined) raw.transferDate = input.transferDate;
@@ -275,12 +462,14 @@ export function createBulkTransferRepo(): BulkTransferRepo {
       const raw = await BulkTransferModel.findOne({ _id: id, deletedAt: null });
       if (!raw) throw new NotFoundError('BulkTransfer', id);
 
+      const unitIds = (raw.items || [])
+        .map((it: any) => it.unitId)
+        .filter(Boolean)
+        .map((u: any) => u.toString());
       if (raw.transferType === 'GIVE_LOAN') {
-        const unitIds = (raw.items || [])
-          .map((it: any) => it.unitId)
-          .filter(Boolean)
-          .map((u: any) => u.toString());
         await restoreUnitsFromLoan(unitIds, actorId);
+      } else {
+        await retireUnitsFromTakeLoan(unitIds, actorId);
       }
 
       raw.deletedAt = new Date();
@@ -293,43 +482,25 @@ export function createBulkTransferRepo(): BulkTransferRepo {
       const raw = await BulkTransferModel.findOne({ _id: id });
       if (!raw || !raw.deletedAt) throw new NotFoundError('BulkTransfer', id);
 
-      // GIVE_LOAN bags must still be sitting unclaimed in stock — if any
-      // moved on (issued, reserved, discarded...) since this transfer was
-      // deleted, markUnitsIssuedForLoan rejects the whole restore rather
-      // than silently dropping bags from the recovered transfer. TAKE_LOAN
-      // items never had a BloodUnit record, so there's nothing to reclaim.
+      // Bags must still be sitting untouched (unclaimed in stock for
+      // GIVE_LOAN, soft-deleted-by-us for TAKE_LOAN) — if any moved on
+      // (issued, reserved, discarded...) since this transfer was deleted,
+      // the reclaim rejects the whole restore rather than silently dropping
+      // bags from the recovered transfer.
+      const unitIds = (raw.items || [])
+        .map((it: any) => it.unitId)
+        .filter(Boolean)
+        .map((u: any) => u.toString());
       if (raw.transferType === 'GIVE_LOAN') {
-        const unitIds = (raw.items || [])
-          .map((it: any) => it.unitId)
-          .filter(Boolean)
-          .map((u: any) => u.toString());
         await markUnitsIssuedForLoan(unitIds, actorId);
+      } else {
+        await reinstateUnitsFromTakeLoan(unitIds, actorId);
       }
 
       (raw as any).deletedAt = null;
       raw.updatedBy = new Types.ObjectId(actorId);
       await raw.save();
       return toDto(raw.toObject());
-    },
-
-    async loanStockSummary() {
-      // TAKE_LOAN bags are always "in stock" — this module never tracks
-      // them being issued out (no BloodUnit record exists to transition).
-      const docs = await BulkTransferModel.find({ transferType: 'TAKE_LOAN', deletedAt: null })
-        .select('items')
-        .lean();
-      const counts = new Map<string, LoanStockSummaryItem>();
-      docs.forEach((t: any) => {
-        (t.items || []).forEach((it: any) => {
-          const rhFactor = it.bloodGroup?.endsWith('-') ? 'NEGATIVE' : 'POSITIVE';
-          const aboGroup = (it.bloodGroup || '').replace(/[+-]/, '');
-          const key = `${it.componentType}|${aboGroup}|${rhFactor}`;
-          const existing = counts.get(key);
-          if (existing) existing.count += 1;
-          else counts.set(key, { componentType: it.componentType, aboGroup, rhFactor, count: 1 });
-        });
-      });
-      return [...counts.values()];
     },
   };
 }

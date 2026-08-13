@@ -77,6 +77,7 @@ export default function RequestCreationStep({
           name: requestDoc.patient?.name || '',
           address: requestDoc.patient?.address || '',
           age: requestDoc.patient?.age || '',
+          ageUnit: requestDoc.patient?.ageUnit || 'YEARS',
           sex: requestDoc.patient?.sex || 'M',
           mrn: requestDoc.patient?.mrn || '',
           diagnosis: requestDoc.patient?.diagnosis || '',
@@ -104,10 +105,23 @@ export default function RequestCreationStep({
 
   const updatePatientField = (patch) => {
     if (readOnly) return;
-    setForm((p) => ({
-      ...p,
-      patient: { ...p.patient, ...patch },
-    }));
+    setForm((p) => {
+      const patient = { ...p.patient, ...patch };
+      // When the patient's own blood group changes, carry that into any
+      // requested-component rows still tracking the previous patient group
+      // (i.e. not manually overridden to a different/substitute group).
+      let requestedComponents = p.requestedComponents;
+      if (patch.aboGroup !== undefined || patch.rh !== undefined) {
+        const prevGroup = p.patient?.aboGroup || 'O';
+        const prevRh = p.patient?.rh || 'Positive';
+        requestedComponents = p.requestedComponents.map((rc) =>
+          rc.bloodGroup === prevGroup && rc.rh === prevRh
+            ? { ...rc, bloodGroup: patient.aboGroup, rh: patient.rh }
+            : rc
+        );
+      }
+      return { ...p, patient, requestedComponents };
+    });
   };
 
   const updateHistoryField = (patch) => {

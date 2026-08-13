@@ -145,6 +145,7 @@ const RequisitionPatientSchema = new Schema(
     name: { type: String, required: true, trim: true },
     address: { type: String, trim: true },
     age: { type: Number, required: true },
+    ageUnit: { type: String, enum: ['YEARS', 'DAYS'], default: 'YEARS' },
     sex: { type: String, enum: ['M', 'F', 'O'], required: true },
     mrn: { type: String, trim: true },
     diagnosis: { type: String, trim: true },

@@ -52,6 +52,12 @@ function reportPeriodLabel(filters) {
   return 'All Records';
 }
 
+// Age is stored in Years by default; DAYS is only used for infant patients.
+function formatAge(patient) {
+  if (patient?.age == null) return '—';
+  return `${patient.age} ${patient.ageUnit === 'DAYS' ? 'Days' : 'Years'}`;
+}
+
 function buildAllRequestsRows(records) {
   const rows = [];
   let srNo = 1;
@@ -63,14 +69,14 @@ function buildAllRequestsRows(records) {
     if (components.length === 0) {
       rows.push([
         srNo, r.requestId || '—', r.hospitalId?.name || '—', r.patient?.name || '—',
-        r.patient?.age ?? '—', r.patient?.sex || '—', '—', '—', '—',
+        formatAge(r.patient), r.patient?.sex || '—', '—', '—', '—',
         r.requestedAt ? fmtDateTime(r.requestedAt) : '—', (r.status || '—').toUpperCase(),
       ]);
     } else {
       components.forEach((rc, i) => {
         rows.push([
           i === 0 ? srNo : '', r.requestId || '—', r.hospitalId?.name || '—', r.patient?.name || '—',
-          r.patient?.age ?? '—', r.patient?.sex || '—', `${rc.bloodGroup}${rc.rh === 'Positive' ? '+' : rc.rh === 'Negative' ? '-' : rc.rh}`,
+          formatAge(r.patient), r.patient?.sex || '—', `${rc.bloodGroup}${rc.rh === 'Positive' ? '+' : rc.rh === 'Negative' ? '-' : rc.rh}`,
           rc.componentType || '—', rc.units || 0,
           r.requestedAt ? fmtDateTime(r.requestedAt) : '—', (r.status || '—').toUpperCase(),
         ]);

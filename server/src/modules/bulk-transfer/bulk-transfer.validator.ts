@@ -22,15 +22,40 @@ const BulkTransferItem = z.object({
   unitId: z.string().regex(OBJECT_ID).optional(),
 });
 
-export const CreateBulkTransferBody = z.object({
-  transferType: z.enum(['GIVE_LOAN', 'TAKE_LOAN']),
-  bloodBankName: z.string().trim().min(1).max(200),
-  bloodBankAddress: z.string().trim().min(1).max(500),
-  transferDate: z.coerce.date(),
-  items: z.array(BulkTransferItem).min(1),
-  notes: z.string().trim().max(2000).optional(),
-});
+// TAKE_LOAN items become real BloodUnit stock (see bulk-transfer.repository.ts),
+// which requires an expiry date — GIVE_LOAN items always reference an
+// existing unit that already has one, so only TAKE_LOAN enforces this.
+function requireExpiryForTakeLoan<T extends { transferType?: string; items?: { expiresAt?: Date } [] }>(
+  data: T,
+  ctx: z.RefinementCtx,
+) {
+  if (data.transferType === 'TAKE_LOAN' && data.items) {
+    data.items.forEach((it, idx) => {
+      if (!it.expiresAt) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Expiry date is required for every taken-in bag',
+          path: ['items', idx, 'expiresAt'],
+        });
+      }
+    });
+  }
+}
 
+export const CreateBulkTransferBody = z
+  .object({
+    transferType: z.enum(['GIVE_LOAN', 'TAKE_LOAN']),
+    bloodBankName: z.string().trim().min(1).max(200),
+    bloodBankAddress: z.string().trim().min(1).max(500),
+    transferDate: z.coerce.date(),
+    items: z.array(BulkTransferItem).min(1),
+    notes: z.string().trim().max(2000).optional(),
+  })
+  .superRefine(requireExpiryForTakeLoan);
+
+// Update never receives transferType (immutable after create — it's fetched
+// from the existing record), so the TAKE_LOAN expiry check runs in
+// bulk-transfer.repository.ts's update() instead of here.
 export const UpdateBulkTransferBody = z.object({
   bloodBankName: z.string().trim().min(1).max(200).optional(),
   bloodBankAddress: z.string().trim().min(1).max(500).optional(),

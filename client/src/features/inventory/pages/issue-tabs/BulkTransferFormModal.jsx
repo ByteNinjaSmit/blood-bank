@@ -410,10 +410,11 @@ export default function BulkTransferFormModal({
                           />
                         </div>
                         <div className="md:col-span-2 flex flex-col">
-                          <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Volume (mL)</label>
+                          <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Volume (mL) *</label>
                           <input
                             type="number"
                             min="0"
+                            required
                             value={bag.volumeMl}
                             onChange={(e) => {
                               const next = [...bulkTakeGroups];
@@ -438,9 +439,10 @@ export default function BulkTransferFormModal({
                           />
                         </div>
                         <div className="md:col-span-3 flex flex-col">
-                          <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Expiry Date</label>
+                          <label className="text-[10px] font-bold text-gray-500 mb-1 uppercase">Expiry Date *</label>
                           <input
                             type="date"
+                            required
                             value={bag.expiresAt}
                             onChange={(e) => {
                               const next = [...bulkTakeGroups];

@@ -66,7 +66,7 @@ export interface RequisitionService {
     filter: ListRequisitionsFilter,
   ): Promise<{ items: RequisitionDto[]; total: number; page: number; pages: number }>;
   create(
-    input: Omit<CreateRequisitionInput, 'requisitionId'>,
+    input: Omit<CreateRequisitionInput, 'requisitionId' | 'clinicianName'> & { clinicianName?: string },
     actorId: string,
   ): Promise<RequisitionDto>;
   update(
@@ -174,7 +174,12 @@ export function createRequisitionService(deps: {
     async create(input, actorId) {
       const patient = await deps.patients.findById(input.patientId);
       const requisitionId = `RQ-${dateStamp()}-${rand()}`;
-      const created = await deps.requisitions.create({ ...input, requisitionId }, actorId);
+      const clinicianName = input.clinicianName || input.doctorName || 'Not Specified';
+      const doctorName = input.doctorName || clinicianName;
+      const created = await deps.requisitions.create(
+        { ...input, clinicianName, doctorName, requisitionId },
+        actorId,
+      );
       await audit.record({
         actorId,
         module: 'requisition',
@@ -195,7 +200,11 @@ export function createRequisitionService(deps: {
         let dob: Date | undefined;
         if (input.patient.age) {
           dob = new Date();
-          dob.setFullYear(dob.getFullYear() - input.patient.age);
+          if (input.patient.ageUnit === 'DAYS') {
+            dob.setDate(dob.getDate() - input.patient.age);
+          } else {
+            dob.setFullYear(dob.getFullYear() - input.patient.age);
+          }
         }
         await deps.patients.updateSnapshot(existing.patientId, {
           name: input.patient.name,

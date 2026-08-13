@@ -51,6 +51,15 @@ const BloodUnitSchema = new Schema(
 
     campId: { type: Schema.Types.ObjectId, ref: 'Camp', index: true },
 
+    // Set only for a bag taken on loan from another blood bank (BulkTransfer
+    // TAKE_LOAN) — this bank never ran its own donation/collection for it,
+    // so donationId is a synthetic `LOAN-<transferId>` rather than a real
+    // Donation record. Kept for traceability/display only.
+    loanedFrom: {
+      transferId: { type: String, trim: true },
+      bloodBankName: { type: String, trim: true },
+    },
+
     quarantineReason: { type: String, trim: true },
     discardReason: { type: String, enum: DISCARD_REASON },
     discardNotes: { type: String, trim: true },

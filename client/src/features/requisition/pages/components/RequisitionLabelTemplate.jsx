@@ -150,7 +150,7 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                   <div className="grid grid-cols-2 gap-x-4 text-[12px] font-normal text-black uppercase leading-tight mt-1">
                     {/* Column 1 */}
                     <div className="flex flex-col gap-y-1.5">
-                      <span className="truncate">Age{'   '}: {doc.patientAge || doc.patient?.age || '—'} Years</span>
+                      <span className="truncate">Age{'   '}: {doc.patientAge || doc.patient?.age || '—'} {doc.patient?.ageUnit === 'DAYS' ? 'Days' : 'Years'}</span>
                       <span className="truncate">Sex{'   '}: {doc.patientGender || doc.patient?.gender || doc.patient?.sex || '—'}</span>
                       <span className="break-words">Hospital{'   '}: {doc.hospitalId?.name || '—'}</span>
                     </div>

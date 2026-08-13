@@ -49,6 +49,7 @@ const RequisitionPatient = z.object({
   name: z.string().trim().min(1).max(200),
   address: z.string().trim().max(300).optional(),
   age: z.coerce.number().int().min(0),
+  ageUnit: z.enum(['YEARS', 'DAYS']).default('YEARS'),
   sex: z.enum(['M', 'F', 'O']),
   mrn: z.string().trim().max(80).optional(),
   diagnosis: z.string().trim().optional(),
@@ -71,7 +72,7 @@ const RequisitionPatient = z.object({
 export const CreateRequisitionBody = z.object({
   hospitalId: z.string().regex(OBJECT_ID),
   patientId: z.string().regex(OBJECT_ID),
-  clinicianName: z.string().trim().min(1).max(200),
+  clinicianName: z.string().trim().max(200).optional(),
   doctorName: z.string().trim().max(200).optional(),
   requiredAt: z.coerce.date().optional(),
   // Set once at creation, never editable via UpdateRequisitionBody — a

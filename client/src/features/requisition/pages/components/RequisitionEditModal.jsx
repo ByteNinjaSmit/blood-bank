@@ -20,6 +20,7 @@ function docToForm(doc) {
       name: doc.patient?.name || '',
       address: doc.patient?.address || '',
       age: doc.patient?.age || '',
+      ageUnit: doc.patient?.ageUnit || 'YEARS',
       sex: doc.patient?.sex || 'M',
       aboGroup: doc.patient?.aboGroup || 'O',
       rh: doc.patient?.rhFactor === 'NEGATIVE' || doc.patient?.rh === 'Negative' ? 'Negative' : 'Positive',
@@ -78,7 +79,20 @@ export default function RequisitionEditModal({ open, onClose, requisitionId, hos
     return () => { cancelled = true; };
   }, [open, requisitionId]);
 
-  const updatePatientField = (patch) => setForm((p) => ({ ...p, patient: { ...p.patient, ...patch } }));
+  const updatePatientField = (patch) => setForm((p) => {
+    const patient = { ...p.patient, ...patch };
+    let requestedComponents = p.requestedComponents;
+    if (patch.aboGroup !== undefined || patch.rh !== undefined) {
+      const prevGroup = p.patient?.aboGroup || 'O';
+      const prevRh = p.patient?.rh || 'Positive';
+      requestedComponents = p.requestedComponents.map((rc) =>
+        rc.bloodGroup === prevGroup && rc.rh === prevRh
+          ? { ...rc, bloodGroup: patient.aboGroup, rh: patient.rh }
+          : rc
+      );
+    }
+    return { ...p, patient, requestedComponents };
+  });
   const updateHistoryField = (patch) => setForm((p) => ({
     ...p,
     patient: { ...p.patient, history: { ...(p.patient.history || {}), ...patch } },
@@ -89,7 +103,14 @@ export default function RequisitionEditModal({ open, onClose, requisitionId, hos
   }));
   const addRequestLine = () => setForm((p) => ({
     ...p,
-    requestedComponents: [...p.requestedComponents, { ...defaultRequestedComponent }],
+    requestedComponents: [
+      ...p.requestedComponents,
+      {
+        ...defaultRequestedComponent,
+        bloodGroup: p.patient?.aboGroup || defaultRequestedComponent.bloodGroup,
+        rh: p.patient?.rh || defaultRequestedComponent.rh,
+      },
+    ],
   }));
   const removeRequestLine = (idx) => setForm((p) => ({
     ...p,

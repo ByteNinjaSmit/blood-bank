@@ -13,6 +13,7 @@ export function checkHasChanges(doc, payload) {
   // Patient details
   if ((doc.patient?.name || '') !== (payload.patient.name || '')) return true;
   if (Number(doc.patient?.age || 0) !== Number(payload.patient.age || 0)) return true;
+  if ((doc.patient?.ageUnit || 'YEARS') !== (payload.patient.ageUnit || 'YEARS')) return true;
   if ((doc.patient?.sex || 'M') !== (payload.patient.sex || 'M')) return true;
   if ((doc.patient?.mrn || '') !== (payload.patient.mrn || '')) return true;
   if ((doc.patient?.diagnosis || '') !== (payload.patient.diagnosis || '')) return true;
