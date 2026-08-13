@@ -17,7 +17,7 @@ export default function RequisitionModals({
   return (
     <>
       <Dialog open={viewOpen} onOpenChange={(o) => { if (!o) closeView(); }}>
-        <DialogContent className="sm:max-w-7xl">
+        <DialogContent className="sm:max-w-7xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Requisition Details</DialogTitle>
         </DialogHeader>
@@ -246,7 +246,7 @@ export default function RequisitionModals({
       </Dialog>
 
       <Dialog open={issueModalOpen} onOpenChange={(o) => { if (!o) { setIssueModalOpen(false); setIssueDoc(null); } }}>
-        <DialogContent className="sm:max-w-6xl">
+        <DialogContent className="sm:max-w-6xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Issue Components separately</DialogTitle>
         </DialogHeader>
@@ -402,7 +402,7 @@ export default function RequisitionModals({
       </Dialog>
 
       <Dialog open={multiLabelModalOpen} onOpenChange={(o) => { if (!o) { setMultiLabelModalOpen(false); setMultiLabelDoc(null); } }}>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Select Issue Label to Generate</DialogTitle>
         </DialogHeader>
