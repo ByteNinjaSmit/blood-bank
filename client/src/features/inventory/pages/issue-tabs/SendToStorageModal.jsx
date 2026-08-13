@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import MultiBagSelect from './MultiBagSelect';
 import { COMPONENT_TYPES } from '@/constants/component-types';
-
-const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+import { BLOOD_GROUPS } from '@/lib/blood-groups';
 
 // Send-to-Storage form. All state lives in the page; this component
 // renders the form and calls the provided setters and handleSendToStorage.

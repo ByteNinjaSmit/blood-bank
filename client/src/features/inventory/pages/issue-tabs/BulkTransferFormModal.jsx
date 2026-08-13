@@ -5,8 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import MultiBagSelect from './MultiBagSelect';
 import { COMPONENT_TYPES } from '@/constants/component-types';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
-
-const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+import { BLOOD_GROUPS } from '@/lib/blood-groups';
 
 // Bulk Transfer (Give / Take Loan) form. GIVE_LOAN picks from our own stock;
 // TAKE_LOAN captures incoming bags manually. All state lives in the page.

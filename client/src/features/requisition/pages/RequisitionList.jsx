@@ -1,7 +1,9 @@
 import React from 'react';
 import { Loader2, X, ClipboardList, RefreshCw } from 'lucide-react';
 import { COMPONENT_TYPES } from '@/constants/component-types';
+import { formatDate } from '@/lib/format-date';
 import RequisitionModals from './components/RequisitionModals';
+import RequisitionEditModal from './components/RequisitionEditModal';
 import RequisitionPrintModals from './components/RequisitionPrintModals';
 import RequisitionReportSelectModal from './components/RequisitionReportSelectModal';
 import { RejectRequestModal } from '@/components/shared';
@@ -11,7 +13,7 @@ const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'reject
 
 export default function RequisitionList() {
   const rl = useRequisitionList();
-  const { allSelectedIds,applyFilters,bulkAction,callAction,can,canManage,clearSelection,closeView,componentFulfillment,confirmReportSelection,data,excelLoading,exportDropdownOpen,fetchList,filters,fmt,handleConfirmReject,handleExportExcel,handleOpenReject,handlePrint,hospitals,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setExportDropdownOpen,setFilters,setIssueDoc,setIssueModalOpen,setIssuingRowId,setLimit,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintType,setRejectModalOpen,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen } = rl;
+  const { allSelectedIds,applyFilters,bulkAction,callAction,can,canEdit,canManage,clearSelection,closeEdit,closeView,componentFulfillment,confirmReportSelection,data,editModalOpen,editRequisitionId,excelLoading,exportDropdownOpen,fetchList,filters,fmt,handleConfirmReject,handleExportExcel,handleOpenReject,handlePrint,hospitals,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openEdit,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setExportDropdownOpen,setFilters,setIssueDoc,setIssueModalOpen,setIssuingRowId,setLimit,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintType,setRejectModalOpen,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen } = rl;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -194,11 +196,21 @@ export default function RequisitionList() {
                       <td className="p-3 font-medium">{row.requestId}</td>
                       <td className="p-3">{row.hospitalId?.name || '—'}</td>
                       <td className="p-3">{row.patient?.name} ({row.patient?.age}/{row.patient?.sex})</td>
-                      <td className="p-3">{row.requestedAt ? new Date(row.requestedAt).toLocaleString() : '—'}</td>
+                      <td className="p-3">{formatDate(row.requestedAt)}</td>
                       <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass(rowDisplayStatus(row))}`}>{rowDisplayStatus(row)}</span></td>
                       <td className="p-3">
                         <div className="flex flex-wrap gap-2">
                           <button onClick={() => openView(row)} className="px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50">View</button>
+                          {row.status !== 'rejected' && (
+                            <button
+                              disabled={!canEdit(row)}
+                              onClick={() => openEdit(row)}
+                              title={canEdit(row) ? 'Edit requisition details' : 'Locked — details cannot be edited once approved'}
+                              className={`px-3 py-1 rounded border ${canEdit(row) ? 'border-gray-300 text-gray-800 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed'}`}
+                            >
+                              Edit
+                            </button>
+                          )}
                           {(rowDisplayStatus(row) === 'completed' || rowDisplayStatus(row) === 'approved') && (
                             <>
                               <button 
@@ -275,6 +287,18 @@ export default function RequisitionList() {
         multiLabelDoc={multiLabelDoc}
         setMultiLabelDoc={setMultiLabelDoc}
         printSingleLabel={printSingleLabel}
+      />
+
+      <RequisitionEditModal
+        open={editModalOpen}
+        onClose={closeEdit}
+        requisitionId={editRequisitionId}
+        hospitals={hospitals}
+        hospitalsLoading={false}
+        onSaved={() => {
+          fetchList();
+          if (viewOpen && viewDoc?._id === editRequisitionId) openView(viewDoc);
+        }}
       />
 
       <RequisitionReportSelectModal

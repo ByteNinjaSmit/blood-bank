@@ -16,6 +16,10 @@ export default function useRequisition(authToken) {
   const [hospitals, setHospitals] = useState([]);
   const [hospitalsLoading, setHospitalsLoading] = useState(false);
 
+  const [addHospitalOpen, setAddHospitalOpen] = useState(false);
+  const [addHospitalForm, setAddHospitalForm] = useState({ name: '', address: '', contactPerson: '', phone: '' });
+  const [addingHospital, setAddingHospital] = useState(false);
+
   const [form, setForm] = useState({
     hospitalId: '',
     doctorName: '',
@@ -72,7 +76,7 @@ export default function useRequisition(authToken) {
         ...prev,
         hospitalId: requestDoc.hospitalId?._id || requestDoc.hospitalId || '',
         doctorName: requestDoc.doctorName || requestDoc.clinicianName || '',
-        requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 16) : '',
+        requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 10) : '',
         patient: {
           name: requestDoc.patient?.name || '',
           address: requestDoc.patient?.address || '',
@@ -129,6 +133,35 @@ export default function useRequisition(authToken) {
       setHospitalsLoading(false);
     })();
   }, [authToken]);
+
+  // Adds a hospital from the inline "+ Add Hospital" modal on the request
+  // form, without a page refresh: the new hospital is appended to the local
+  // `hospitals` list (so it appears in the dropdown immediately) and
+  // pre-selected on the form.
+  const handleCreateHospital = async () => {
+    if (!addHospitalForm.name?.trim()) {
+      toast.error('Hospital name is required');
+      return;
+    }
+    setAddingHospital(true);
+    try {
+      const res = await hospitalApi.createHospital(addHospitalForm);
+      if (!res.success) {
+        toast.error(res.error || 'Failed to add hospital');
+        return;
+      }
+      const created = res.data;
+      setHospitals((prev) => [...prev, created]);
+      setForm((p) => ({ ...p, hospitalId: created._id || created.id }));
+      toast.success('Hospital added');
+      setAddHospitalOpen(false);
+      setAddHospitalForm({ name: '', address: '', contactPerson: '', phone: '' });
+    } catch (e) {
+      toast.error('Network error while adding hospital');
+    } finally {
+      setAddingHospital(false);
+    }
+  };
 
   const addRequestLine = () => {
     setForm((prev) => ({
@@ -499,6 +532,12 @@ export default function useRequisition(authToken) {
     setCurrentStep,
     hospitals,
     hospitalsLoading,
+    addHospitalOpen,
+    setAddHospitalOpen,
+    addHospitalForm,
+    setAddHospitalForm,
+    addingHospital,
+    handleCreateHospital,
     form,
     setForm,
     requestDoc,

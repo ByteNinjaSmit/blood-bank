@@ -123,6 +123,8 @@ export function BloodGroupAvailabilitySection({ data }) {
           <Stat label="B- Stock" value={d.Bneg} />
           <Stat label="AB+ Stock" value={d.ABpos} />
           <Stat label="AB- Stock" value={d.ABneg} />
+          <Stat label="BBG+ Stock" value={d.Bbgpos} />
+          <Stat label="BBG- Stock" value={d.Bbgneg} />
         </StatGrid>
       </CardContent>
     </Card>

@@ -394,7 +394,7 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
       );
       const donorById = await loadDonorsById(donations, 'bloodGroup rh');
 
-      const labels = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+      const labels = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'BBG+', 'BBG-'];
       const counts: Record<string, number> = Object.fromEntries(labels.map((l) => [l, 0]));
       for (const d of donations as any[]) {
         const donor = donorById.get(String(d.donor));

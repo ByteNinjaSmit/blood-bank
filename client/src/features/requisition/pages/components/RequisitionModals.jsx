@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import requisitionApi from '@/services/requisitionApi';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { formatDate } from '@/lib/format-date';
 const COMPATIBILITY_RESULT_LABELS = {
   MAJOR_COMPATIBLE: 'Major Compatible',
   MINOR_COMPATIBLE: 'Minor Compatible',
@@ -16,7 +17,7 @@ export default function RequisitionModals({
   return (
     <>
       <Dialog open={viewOpen} onOpenChange={(o) => { if (!o) closeView(); }}>
-        <DialogContent className="sm:max-w-7xl">
+        <DialogContent className="sm:max-w-7xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Requisition Details</DialogTitle>
         </DialogHeader>
@@ -39,11 +40,11 @@ export default function RequisitionModals({
               </div>
               <div>
                 <div className="text-gray-600">Requested At</div>
-                <div className="font-medium">{fmt(viewDoc.requestedAt)}</div>
+                <div className="font-medium">{formatDate(viewDoc.requestedAt)}</div>
               </div>
               <div>
                 <div className="text-gray-600">Reserved Until</div>
-                <div className="font-medium">{viewDoc.reservedUntil ? fmt(viewDoc.reservedUntil) : '—'}</div>
+                <div className="font-medium">{viewDoc.reservedUntil ? formatDate(viewDoc.reservedUntil) : '—'}</div>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -245,7 +246,7 @@ export default function RequisitionModals({
       </Dialog>
 
       <Dialog open={issueModalOpen} onOpenChange={(o) => { if (!o) { setIssueModalOpen(false); setIssueDoc(null); } }}>
-        <DialogContent className="sm:max-w-6xl">
+        <DialogContent className="sm:max-w-6xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Issue Components separately</DialogTitle>
         </DialogHeader>
@@ -401,7 +402,7 @@ export default function RequisitionModals({
       </Dialog>
 
       <Dialog open={multiLabelModalOpen} onOpenChange={(o) => { if (!o) { setMultiLabelModalOpen(false); setMultiLabelDoc(null); } }}>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Select Issue Label to Generate</DialogTitle>
         </DialogHeader>

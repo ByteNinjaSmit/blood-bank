@@ -42,7 +42,7 @@ export default function RequisitionPrintTemplate({ doc, isPreview = false, print
     return rh.toString().toUpperCase();
   };
 
-  const requestDate = doc.completedAt || doc.requestedAt;
+  const requestDate = doc.requestedAt;
   const patientComponent = doc.requestedComponents?.[0];
   const matchedUnits = doc.matchedInventory || [];
 

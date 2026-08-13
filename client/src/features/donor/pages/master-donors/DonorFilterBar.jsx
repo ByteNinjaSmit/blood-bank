@@ -47,6 +47,7 @@ export default function DonorFilterBar({
             <option value="B">B</option>
             <option value="AB">AB</option>
             <option value="O">O</option>
+            <option value="BBG">BBG</option>
           </select>
           <select
             value={rhFilter}

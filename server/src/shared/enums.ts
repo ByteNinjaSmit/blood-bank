@@ -180,7 +180,7 @@ export type BagDiscardReason = (typeof BAG_DISCARD_REASON)[number];
 
 // ── ABO / Rh ─────────────────────────────────────────────────────────────────
 
-export const ABO_GROUP = ['O', 'A', 'B', 'AB'] as const;
+export const ABO_GROUP = ['O', 'A', 'B', 'AB', 'BBG'] as const;
 export type AboGroup = (typeof ABO_GROUP)[number];
 
 export const RH_FACTOR = ['POSITIVE', 'NEGATIVE'] as const;

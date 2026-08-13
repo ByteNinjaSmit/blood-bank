@@ -455,6 +455,8 @@ export async function legacyOverview(fromDate?: Date, toDate?: Date) {
       Bneg: stockFor('B', 'Negative'),
       ABpos: stockFor('AB', 'Positive'),
       ABneg: stockFor('AB', 'Negative'),
+      Bbgpos: stockFor('BBG', 'Positive'),
+      Bbgneg: stockFor('BBG', 'Negative'),
     },
     componentAvailability: {
       rbcStock: componentStockMap.PRBC || 0,

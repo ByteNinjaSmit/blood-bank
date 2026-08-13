@@ -87,7 +87,7 @@ export const ELISA_CANONICAL = [
   { label: 'VDRL ELISA', terms: ['vdrl', 'syphilis'] },
 ];
 
-export const GROUP_LABELS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
+export const GROUP_LABELS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'BBG+', 'BBG-'] as const;
 export const STORAGE_CENTRE_PATTERN = /storage/i;
 
 export function toProductLabel(componentType: string): string {

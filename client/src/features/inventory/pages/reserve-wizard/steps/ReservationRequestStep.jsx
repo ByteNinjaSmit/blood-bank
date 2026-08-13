@@ -6,6 +6,7 @@ import TransfusionHistoryCard from '@/features/requisition/pages/components/Tran
 import PregnancyHistoryCard from '@/features/requisition/pages/components/PregnancyHistoryCard';
 import RequestedComponentsList from '@/features/requisition/pages/components/RequestedComponentsList';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
+import { BLOOD_GROUPS } from '@/lib/blood-groups';
 
 // Step 1 of the Reservation wizard — same fields/UX as Requisition's
 // RequestCreationStep, including the Donor Card section and Enter-to-next-field
@@ -138,7 +139,7 @@ export default function ReservationRequestStep({
                 value={form.donorCard?.bloodGroup || 'A+'}
                 onChange={(e) => setForm((p) => ({ ...p, donorCard: { ...p.donorCard, bloodGroup: e.target.value } }))}
               >
-                {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) => (
+                {BLOOD_GROUPS.map((bg) => (
                   <option key={bg} value={bg}>{bg}</option>
                 ))}
               </select>

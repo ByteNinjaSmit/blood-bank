@@ -41,7 +41,7 @@ export const donorFormSchema = z.object({
   address: AddressSchema,
   occupation: z.string().trim().max(120).optional().or(z.literal('')),
   weightKg: z.coerce.number().positive('Weight must be > 0').max(300),
-  bloodGroup: z.enum(['A', 'B', 'AB', 'O'], { message: 'Blood group required' }),
+  bloodGroup: z.enum(['A', 'B', 'AB', 'O', 'BBG'], { message: 'Blood group required' }),
   rh: z.enum(['Positive', 'Negative'], { message: 'Rh required' }),
   eligibilityStatus: z.enum(['eligible', 'deferred', 'temp-deferred']).optional(),
 });
@@ -50,7 +50,7 @@ export const donorUpdateSchema = donorFormSchema.partial();
 
 export const listFiltersSchema = z.object({
   search: z.string().trim().max(120).optional(),
-  bloodGroup: z.enum(['A', 'B', 'AB', 'O']).optional(),
+  bloodGroup: z.enum(['A', 'B', 'AB', 'O', 'BBG']).optional(),
   rh: z.enum(['Positive', 'Negative']).optional(),
   city: z.string().trim().max(80).optional(),
   page: z.coerce.number().int().min(1).default(1),
