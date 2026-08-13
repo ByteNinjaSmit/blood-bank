@@ -21,6 +21,17 @@ export default function ExamFitnessStep({ form }) {
       {/* Vitals Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
+          <label className="block text-sm font-medium text-gray-755 mb-1">Blood Pressure <span className="text-red-500">*</span></label>
+          <input
+            type="text"
+            placeholder="e.g. 120/80"
+            value={formData.bp}
+            onChange={(e) => handleFormFieldChange("bp", e.target.value)}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
+          />
+        </div>
+        <div>
           <label className="block text-sm font-medium text-gray-750 mb-1">Haemoglobin (Hb gm%) <span className="text-red-500">*</span></label>
           <input
             type="number"
@@ -39,6 +50,17 @@ export default function ExamFitnessStep({ form }) {
           )}
         </div>
         <div>
+          <label className="block text-sm font-medium text-gray-755 mb-1">Pulse Rate (Bpm) <span className="text-red-500">*</span></label>
+          <input
+            type="number"
+            placeholder="e.g. 72"
+            value={formData.pulse}
+            onChange={(e) => handleFormFieldChange("pulse", e.target.value)}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
+          />
+        </div>
+        <div>
           <label className="block text-sm font-medium text-gray-750 mb-1">Temperature (°C) <span className="text-red-500">*</span></label>
           <input
             type="number"
@@ -51,29 +73,7 @@ export default function ExamFitnessStep({ form }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-755 mb-1">Pulse Rate (Bpm) <span className="text-red-500">*</span></label>
-          <input
-            type="number"
-            placeholder="e.g. 72"
-            value={formData.pulse}
-            onChange={(e) => handleFormFieldChange("pulse", e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-755 mb-1">Blood Pressure (Systolic/Diastolic) <span className="text-red-500">*</span></label>
-          <input
-            type="text"
-            placeholder="e.g. 120/80"
-            value={formData.bp}
-            onChange={(e) => handleFormFieldChange("bp", e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-755 mb-1">Oxygen Saturation (%) <span className="text-red-500">*</span></label>
+          <label className="block text-sm font-medium text-gray-755 mb-1">O2 Level (%) <span className="text-red-500">*</span></label>
           <input
             type="number"
             placeholder="e.g. 98"
