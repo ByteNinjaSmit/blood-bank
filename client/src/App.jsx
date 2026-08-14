@@ -98,6 +98,9 @@ import ExecutiveMIS from './features/mis/pages/ExecutiveMIS';
 import AnalyticsMIS from './features/mis/pages/AnalyticsMIS';
 import RecycleBin from './features/mis/pages/RecycleBin';
 
+// Guide
+import SoftwareGuide from './features/guide/pages/SoftwareGuide';
+
 // Error
 import NotFound from './page/Error-Page';
 
@@ -209,6 +212,9 @@ const App = () => {
           <Route path="mis/executive" element={<PageGuard module="mis" page="mis-executive"><ExecutiveMIS /></PageGuard>} />
           <Route path="mis/analytics" element={<PageGuard module="mis" page="mis-analytics"><AnalyticsMIS /></PageGuard>} />
           <Route path="recycle-bin" element={<PageGuard module="mis" page="mis-recycle-bin"><RecycleBin /></PageGuard>} />
+
+          {/* Guide */}
+          <Route path="software-guide" element={<PageGuard module="guide" page="software-guide"><SoftwareGuide /></PageGuard>} />
 
           <Route path="*" element={<NotFound />} />
         </Route>

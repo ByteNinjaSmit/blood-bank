@@ -21,6 +21,7 @@ import admin from './admin';
 import hospital from './hospital';
 import requisition from './requisition';
 import mis from './mis';
+import guide from './guide';
 
 export const ACCESS_MODULES = [
   dashboard,
@@ -40,6 +41,7 @@ export const ACCESS_MODULES = [
   hospital,
   requisition,
   mis,
+  guide,
 ];
 
 export function findModule(moduleId) {
