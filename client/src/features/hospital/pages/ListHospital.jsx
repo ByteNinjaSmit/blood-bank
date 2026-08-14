@@ -443,9 +443,9 @@ const ListHospital = () => {
                             <div className="font-medium">{hospital.name}</div>
                             <div className="text-sm text-gray-500 flex items-center">
                               <MapPin className="w-3 h-3 mr-1" />
-                              {hospital.address.length > 50 
-                                ? `${hospital.address.substring(0, 50)}...` 
-                                : hospital.address
+                              {hospital.address && hospital.address.length > 50
+                                ? `${hospital.address.substring(0, 50)}...`
+                                : hospital.address || '—'
                               }
                             </div>
                           </div>
