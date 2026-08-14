@@ -41,6 +41,7 @@ function toDto(raw: any): MonthlyReportInputDto {
 export interface MonthlyReportInputRepo {
   upsert(input: UpsertMonthlyReportInput, actorId: string): Promise<MonthlyReportInputDto>;
   findByPeriod(month: number, year: number): Promise<MonthlyReportInputDto | null>;
+  findAllByYear(year: number): Promise<MonthlyReportInputDto[]>;
 }
 
 export function createMonthlyReportInputRepo(): MonthlyReportInputRepo {
@@ -70,6 +71,11 @@ export function createMonthlyReportInputRepo(): MonthlyReportInputRepo {
       const doc = await MonthlyReportInputModel.findOne({ month, year }).lean();
       if (!doc) return null;
       return toDto(doc);
+    },
+
+    async findAllByYear(year) {
+      const docs = await MonthlyReportInputModel.find({ year }).lean();
+      return docs.map(toDto);
     },
   };
 }

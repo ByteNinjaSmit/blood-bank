@@ -39,6 +39,7 @@ import storageTransferRouter from '@/modules/storage-transfer/storage-transfer.r
 import componentRouter from '@/modules/component/component.routes';
 import chemicalInventoryRouter from '@/modules/chemical-inventory/chemical-inventory.routes';
 import monthlyReportRouter from '@/modules/monthly-report/monthly-report.routes';
+import yearlyReportRouter from '@/modules/yearly-report/yearly-report.routes';
 import uploadRouter from '@/modules/upload/upload.routes';
 import exportRouter from '@/modules/export/export.routes';
 import dashboardRouter from '@/modules/dashboard/dashboard.routes';
@@ -85,6 +86,7 @@ const MODULE_ROUTES: ReadonlyArray<ModuleRoute> = [
   { path: '/component', router: componentRouter },
   { path: '/chemical-inventory', router: chemicalInventoryRouter },
   { path: '/monthly-report', router: monthlyReportRouter },
+  { path: '/yearly-report', router: yearlyReportRouter },
   { path: '/upload', router: uploadRouter },
   { path: '/export', router: exportRouter },
   { path: '/dashboard', router: dashboardRouter },

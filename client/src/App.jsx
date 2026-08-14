@@ -69,8 +69,9 @@ import AuditHistory from './features/chemical-inventory/pages/AuditHistory';
 // Audit Trail (centralized)
 import AuditTrail from './features/audit/pages/AuditTrail';
 
-// Monthly Statutory Report
+// Monthly / Yearly Statutory Report
 import MonthlyReport from './features/monthly-report/pages/MonthlyReport';
+import YearlyReport from './features/yearly-report/pages/YearlyReport';
 
 // Requisition
 import RequisitionManagement from './features/requisition/pages/RequisitionManagement';
@@ -96,6 +97,9 @@ import RegulatoryMIS from './features/mis/pages/RegulatoryMIS';
 import ExecutiveMIS from './features/mis/pages/ExecutiveMIS';
 import AnalyticsMIS from './features/mis/pages/AnalyticsMIS';
 import RecycleBin from './features/mis/pages/RecycleBin';
+
+// Guide
+import SoftwareGuide from './features/guide/pages/SoftwareGuide';
 
 // Error
 import NotFound from './page/Error-Page';
@@ -165,6 +169,7 @@ const App = () => {
           <Route path="audit-trail" element={<PageGuard module="audit" page="audit-trail"><AuditTrail /></PageGuard>} />
 
           <Route path="reports/monthly" element={<PageGuard module="monthly-report" page="monthly-report"><MonthlyReport /></PageGuard>} />
+          <Route path="reports/yearly" element={<PageGuard module="yearly-report" page="yearly-report"><YearlyReport /></PageGuard>} />
 
           {/* Serology */}
           <Route path="labs/serology" element={<PageGuard module="labs" page="labs-serology"><Serology /></PageGuard>} />
@@ -207,6 +212,9 @@ const App = () => {
           <Route path="mis/executive" element={<PageGuard module="mis" page="mis-executive"><ExecutiveMIS /></PageGuard>} />
           <Route path="mis/analytics" element={<PageGuard module="mis" page="mis-analytics"><AnalyticsMIS /></PageGuard>} />
           <Route path="recycle-bin" element={<PageGuard module="mis" page="mis-recycle-bin"><RecycleBin /></PageGuard>} />
+
+          {/* Guide */}
+          <Route path="software-guide" element={<PageGuard module="guide" page="software-guide"><SoftwareGuide /></PageGuard>} />
 
           <Route path="*" element={<NotFound />} />
         </Route>

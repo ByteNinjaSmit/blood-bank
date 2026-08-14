@@ -13,6 +13,7 @@ import bagProcurement from './bag-procurement';
 import chemicalInventory from './chemical-inventory';
 import audit from './audit';
 import monthlyReport from './monthly-report';
+import yearlyReport from './yearly-report';
 import labs from './labs';
 import donor from './donor';
 import appointment from './appointment';
@@ -20,6 +21,7 @@ import admin from './admin';
 import hospital from './hospital';
 import requisition from './requisition';
 import mis from './mis';
+import guide from './guide';
 
 export const ACCESS_MODULES = [
   dashboard,
@@ -31,6 +33,7 @@ export const ACCESS_MODULES = [
   chemicalInventory,
   audit,
   monthlyReport,
+  yearlyReport,
   labs,
   donor,
   appointment,
@@ -38,6 +41,7 @@ export const ACCESS_MODULES = [
   hospital,
   requisition,
   mis,
+  guide,
 ];
 
 export function findModule(moduleId) {

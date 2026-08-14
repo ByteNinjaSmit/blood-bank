@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { apiClient } from "@/core/api-client";
 import { downloadExcelReport, formatDate, buildExportMeta } from "@/utils/excelExportHelper";
 import { toast } from "sonner";
-import { Droplets, FileSpreadsheet, Loader2, RefreshCw, ClipboardCheck } from "lucide-react";
+import { Droplets, FileSpreadsheet, Loader2, RefreshCw, ClipboardCheck, FileBarChart } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useDashboard } from "@/features/dashboard/queries";
 import MonthlyReportInputsModal from "@/features/dashboard/components/MonthlyReportInputsModal";
 import {
@@ -37,6 +38,7 @@ import {
 import { number, MATRIX_COMPONENTS, MATRIX_BLOOD_GROUPS, buildDashboardSheet } from "@/features/dashboard/dashboardExcel";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const getPresetDates = (presetName) => {
     const today = new Date();
     // Set hours to local bounds
@@ -168,6 +170,10 @@ export default function Dashboard() {
     }
   };
 
+  const handleCreateYearlyReport = () => {
+    navigate(`/reports/yearly?year=${new Date().getFullYear()}`);
+  };
+
   const totals = payload?.stockOverview?.totals || {};
   const matrix = payload?.stockOverview?.stockMatrix || [];
   const getMatrixStock = (compKey, group, rh) => {
@@ -239,6 +245,10 @@ export default function Dashboard() {
               <Button variant="outline" size="sm" onClick={handleCreateMonthlyReport} disabled={reportChecking}>
                 {reportChecking ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ClipboardCheck className="w-4 h-4 mr-2 text-indigo-600" />}
                 {reportChecking ? "Checking..." : "Create Monthly Report"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleCreateYearlyReport}>
+                <FileBarChart className="w-4 h-4 mr-2 text-indigo-600" />
+                Create Yearly Report
               </Button>
             </div>
           </div>
