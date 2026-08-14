@@ -35,7 +35,11 @@ export const CreateUserBody = z.object({
   role: z.string().trim().min(1).max(80),
   roleId: blank(z.string().regex(OBJECT_ID).optional()),
   isFullAccess: z.boolean().optional(),
-  password: z.string().min(8),
+  // Admin-set password (create/edit from /admin/user-manage) has no format
+  // requirement beyond a sane minimum length — this is an operator setting
+  // another staff member's password, not self-registration. The strict
+  // uppercase+number policy stays on the /register flow (auth.validator.ts).
+  password: z.string().min(6),
   permissions: z.array(PermissionEntry).optional(),
   campId: blank(z.string().regex(OBJECT_ID).optional()),
 });
@@ -53,7 +57,7 @@ export const UpdateUserBody = z.object({
   role: blank(z.string().trim().min(1).max(80).optional()),
   roleId: blank(z.string().regex(OBJECT_ID).optional()),
   isFullAccess: z.boolean().optional(),
-  password: blank(z.string().min(8).optional()),
+  password: blank(z.string().min(6).optional()),
   permissions: z.array(PermissionEntry).optional(),
   campId: blank(z.string().regex(OBJECT_ID).optional()),
   status: z.enum(['active', 'inactive', 'pending', 'blocked', 'rejected']).optional(),

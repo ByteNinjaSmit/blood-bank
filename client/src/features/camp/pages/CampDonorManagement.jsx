@@ -29,13 +29,11 @@ const CampDonorManagement = () => {
     loading,
     error,
     fetchCampDonors,
-    createDonor,
     updateDonor,
     deleteDonor,
   } = useDonor();
   const queryClient = useQueryClient();
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedDonor, setSelectedDonor] = useState(null);
@@ -90,18 +88,6 @@ const CampDonorManagement = () => {
     fetchCampDonors(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, navigate]);
-
-  const handleCreateDonor = async (donorData) => {
-    setActionLoading(true);
-    const result = await createDonor({ ...donorData, campId });
-    if (result.success) {
-      setShowCreateModal(false);
-      fetchCampDonors(campId);
-      queryClient.invalidateQueries({ queryKey: campKeys.detail(campId) });
-      queryClient.invalidateQueries({ queryKey: campKeys.list() });
-    }
-    setActionLoading(false);
-  };
 
   const handleEditDonor = (donor) => {
     setSelectedDonor(donor);
@@ -267,7 +253,7 @@ const CampDonorManagement = () => {
             </button>
             <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => navigate(`/master-register/donor-creation?campId=${campId}`)}
               className="flex items-center gap-2 px-4 py-2 bg-orange-850 bg-orange-800 text-white rounded-lg text-sm font-semibold hover:bg-orange-900 transition-colors shadow-sm animate-in fade-in zoom-in duration-200"
             >
               <Plus className="w-4 h-4" />
@@ -489,21 +475,6 @@ const CampDonorManagement = () => {
       </div>
 
       {/* Modals */}
-      <Dialog open={showCreateModal} onOpenChange={(open) => { if (!open) setShowCreateModal(false); }}>
-        <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create New Donor</DialogTitle>
-          </DialogHeader>
-          <div className="pt-2">
-            <DonorForm
-              onSubmit={handleCreateDonor}
-              onCancel={() => setShowCreateModal(false)}
-              loading={actionLoading}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <Dialog
         open={showEditModal}
         onOpenChange={(open) => {

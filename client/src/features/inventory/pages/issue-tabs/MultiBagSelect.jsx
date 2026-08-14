@@ -58,6 +58,7 @@ const MultiBagSelect = ({ availableBags, selectedBags, onChange }) => {
                       Bag: {bag.bagNo} ({bag.component?.componentType || '—'}
                       {bag.bag?.bloodGroup ? `, ${bag.bag.bloodGroup}${bag.bag.rh === 'Positive' ? '+' : bag.bag.rh === 'Negative' ? '-' : ''}` : ''}) —{' '}
                       {bag.component?.volumeMl ? `${bag.component.volumeMl} mL` : 'Vol: —'}
+                      {bag.isLoan ? ' [LB]' : ''}
                     </span>
                     <span className="text-xs text-gray-400">Exp: {bag.component?.expiryDate ? new Date(bag.component.expiryDate).toLocaleDateString() : '—'}</span>
                   </div>

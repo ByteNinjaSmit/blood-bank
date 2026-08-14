@@ -161,7 +161,7 @@ export default function MatchedBagCard({
                 .filter((u) => u.unitId !== currentUnitId)
                 .map((u) => (
                   <option key={u.unitId} value={u.unitId}>
-                    {u.bagNo} : {u.aboGroup}{rhSymbol(u.rhFactor)} : {new Date(u.expiresAt).toLocaleDateString()} : {u.volumeMl} ml
+                    {u.bagNo} : {u.volumeMl} ml : {u.aboGroup}{rhSymbol(u.rhFactor)} : {new Date(u.expiresAt).toLocaleDateString()}{u.isLoan ? ' [LB]' : ''}
                   </option>
                 ))}
             </select>

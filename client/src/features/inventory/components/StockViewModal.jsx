@@ -141,7 +141,7 @@ export default function StockViewModal({ item, onClose, formatDate }) {
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Loan Source</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 bg-gray-50 rounded-xl p-3">
                 <div>
-                  <p className="text-[10px] text-gray-500">Company Name</p>
+                  <p className="text-[10px] text-gray-500">Company/Blood Bank Name</p>
                   <p className="font-semibold text-gray-800">{item?.loanTransfer?.bloodBankName || '—'}</p>
                 </div>
                 <div>

@@ -10,6 +10,7 @@ import MatchReviewStep from './steps/MatchReviewStep';
 import ApproveIssueStep from './steps/ApproveIssueStep';
 import CompleteStep from './steps/CompleteStep';
 import { requisitionApprovalBlockers } from '../requisition-gating';
+import { scrollAppToTop } from '@/lib/scroll-to-top';
 
 const RequisitionManagement = () => {
   const navigate = useNavigate();
@@ -73,6 +74,13 @@ const RequisitionManagement = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, params?.id]);
 
+  // The wizard's steps share one URL (only `currentStep` state changes), so
+  // the route-level ScrollToTop never fires between them — scroll back to
+  // the top of the step content on every step change too.
+  React.useEffect(() => {
+    scrollAppToTop();
+  }, [currentStep]);
+
   const nextLabel = React.useMemo(() => {
     if (currentStep === 1) return 'Continue to Match Review';
     if (currentStep === 2) return 'Continue to Approve & Issue';
@@ -118,6 +126,26 @@ const RequisitionManagement = () => {
     const okStatus = ['approved', 'issued', 'completed'];
     return !!requestDoc?._id && okStatus.includes(requestDoc?.status);
   }, [requestDoc]);
+
+  // Approve lives in the step-3 footer, beside "Continue to Complete" —
+  // same gating ApproveIssueStep used to apply when the button lived
+  // inside the step content.
+  const canApprove =
+    !!requestDoc?._id && requestDoc?.status === 'matched' && !approving && step2Reasons.length === 0;
+  const approveFooterButton = currentStep === 3 ? (
+    <button
+      type="button"
+      disabled={!canApprove}
+      onClick={handleApprove}
+      className={`duration-350 flex items-center justify-center rounded-full py-1.5 px-3.5 font-medium tracking-tight transition ${
+        canApprove
+          ? 'bg-blue-700 text-white hover:bg-blue-800 cursor-pointer'
+          : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+      }`}
+    >
+      {approving ? 'Approving…' : 'Approve'}
+    </button>
+  ) : null;
 
   // Step 4's Next/Finish button is now the only way to complete the
   // requisition (the old in-page "Complete Request" button was removed), so
@@ -173,6 +201,7 @@ const RequisitionManagement = () => {
             disableStepIndicators={nextDisabled}
             nextButtonText={nextLabel}
             finishButtonText="Complete Request"
+            footerExtra={approveFooterButton}
             stepCircleContainerClassName="bg-white"
             contentClassName="bg-white rounded-xl shadow border border-gray-100"
             footerClassName="bg-white rounded-b-xl"
@@ -223,9 +252,7 @@ const RequisitionManagement = () => {
             <Step>
               <ApproveIssueStep
                 requestDoc={requestDoc}
-                approving={approving}
                 issuing={issuing}
-                onApprove={handleApprove}
                 onIssue={handleIssue}
                 shortages={shortages}
                 step2Reasons={step2Reasons}

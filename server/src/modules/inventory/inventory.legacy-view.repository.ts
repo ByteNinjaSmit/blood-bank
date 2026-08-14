@@ -352,8 +352,16 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         }
 
         const donObj = donationMap.get(u.donationId);
-        const displayBagNo = donObj?.bagNo || u.donationId;
-        const segmentNo = donObj?.segmentNo || u.unitDin || u.unitId || '—';
+        // Loaned-in bags (BulkTransfer TAKE_LOAN) share one synthetic
+        // donationId across the whole batch and have no real Donation
+        // record — their real bagNo/segmentNo (captured on intake) always
+        // wins over the donation lookup, same as unit.repository.ts's
+        // availableForSelection() and requisition.view.ts's enrichRequisition().
+        // Without this, every bag in a take-loan batch collapsed to the same
+        // "LOAN-<transferId>" label and was effectively unusable in pickers.
+        const loanedFrom = (u as any).loanedFrom;
+        const displayBagNo = loanedFrom?.bagNo || donObj?.bagNo || u.donationId;
+        const segmentNo = loanedFrom?.segmentNo || donObj?.segmentNo || u.unitDin || u.unitId || '—';
         const typeOfBag = donObj?.typeOfBag || 'SB';
 
         const givenLoanCompany = givenLoanMap.get(u._id.toString());
@@ -382,6 +390,7 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
           typeOfBag,
           issuedAt: u.issuedAt ? u.issuedAt.toISOString() : undefined,
           donationId: u.donationId || undefined,
+          isLoan: !!loanedFrom,
           ttiRetest: ttiRetestMap.has(u.donationId),
           ttiLastEditedAt: ttiRetestMap.get(u.donationId) || undefined,
           bag: {
@@ -391,11 +400,11 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
             segmentNo,
             batchNo: donObj?.batchNo || undefined,
             donationDate: donObj?.collectedAt ? donObj.collectedAt.toISOString() : undefined,
-            donorName: donObj?.donorName || 'Unknown',
+            donorName: loanedFrom ? `On loan — ${loanedFrom.bloodBankName || 'Unknown'}` : (donObj?.donorName || 'Unknown'),
             donorId: donObj?.donorId || undefined,
             donorPhone: donObj?.donorPhone || undefined,
             donorEmail: donObj?.donorEmail || undefined,
-            donationType: donObj?.donationType || 'VOLUNTARY',
+            donationType: loanedFrom ? 'LOAN' : (donObj?.donationType || 'VOLUNTARY'),
           },
           component: {
             componentType: legacyType,

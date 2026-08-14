@@ -150,6 +150,7 @@ export interface UnitRepo {
       expiresAt: string;
       bagNo: string;
       segmentNo: string;
+      isLoan: boolean;
     }>
   >;
   inStockSummary(): Promise<
@@ -415,6 +416,7 @@ export function createUnitRepo(): UnitRepo {
           expiresAt: r.expiresAt.toISOString(),
           bagNo: r.loanedFrom?.bagNo || d?.bagNo || r.donationId,
           segmentNo: r.loanedFrom?.segmentNo || d?.segmentNo || r.unitDin || r.unitId,
+          isLoan: !!r.loanedFrom,
         };
       });
     },

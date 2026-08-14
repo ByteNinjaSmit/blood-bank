@@ -2,6 +2,11 @@ import React from 'react';
 import ClinicalIndicationField from './ClinicalIndicationField';
 import { BLOOD_GROUPS, RH_TYPES } from '../constants';
 
+// Patient's own blood group defaults to O — shown first in this dropdown
+// specifically (most common group, fastest to pick) without touching the
+// shared BLOOD_GROUPS/ABO_GROUPS canonical order used elsewhere.
+const PATIENT_ABO_GROUPS = ['O', ...BLOOD_GROUPS.filter((g) => g !== 'O')];
+
 export default function PatientForm({ patient, onChange, readOnly = false }) {
   return (
     <div className="contents">
@@ -67,7 +72,7 @@ export default function PatientForm({ patient, onChange, readOnly = false }) {
             onChange={(e) => !readOnly && onChange({ aboGroup: e.target.value })}
             disabled={readOnly}
           >
-            {BLOOD_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+            {PATIENT_ABO_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
           </select>
           <select
             className={`w-1/2 px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}

@@ -5,6 +5,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import MultiBagSelect from './MultiBagSelect';
 import { COMPONENT_TYPES } from '@/constants/component-types';
 import { BLOOD_GROUPS } from '@/lib/blood-groups';
+import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
+import { createSectionShortcutHandler } from '@/hooks/useSectionShortcuts';
 
 // Send-to-Storage form. All state lives in the page; this component
 // renders the form and calls the provided setters and handleSendToStorage.
@@ -29,13 +31,37 @@ export default function SendToStorageModal({
 }) {
   const title = isEdit ? "Edit Storage Batch" : "Send to Storage Form";
 
+  const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
+
+  // Ctrl+G adds a new component section; Ctrl+B adds a blood-group row to
+  // whichever section focus was last inside (falls back to the last one).
+  const sectionShortcuts = createSectionShortcutHandler({
+    onAddSection: () => setStorageBags([...storageBags, { componentType: "PRBC", groups: [{ bloodGroup: "A+", selectedBags: [] }] }]),
+    onAddItem: (idx) => {
+      const newBags = [...storageBags];
+      newBags[idx].groups.push({ bloodGroup: "A+", bagType: "All", selectedBags: [] });
+      setStorageBags(newBags);
+    },
+    sectionCount: () => storageBags.length,
+  });
+
+  const handleContainerKeyDown = (e) => {
+    sectionShortcuts.onKeyDown(e);
+    if (!e.defaultPrevented) handleFormKeyDown(e);
+  };
+
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-5xl">
+      <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
       </DialogHeader>
-      <div className="space-y-6 text-sm p-2">
+      <div
+        className="space-y-6 text-sm p-2"
+        onKeyDown={handleContainerKeyDown}
+        onChange={handleFormEnterNavChange}
+        onFocusCapture={sectionShortcuts.onFocusCapture}
+      >
 
         <div className="bg-red-50/50 p-4 rounded-xl border border-red-100 flex gap-3 items-start animate-fadeIn">
           <Warehouse className="w-5 h-5 text-red-800 mt-0.5" />
@@ -98,15 +124,16 @@ export default function SendToStorageModal({
               onClick={() => setStorageBags([...storageBags, { componentType: "PRBC", groups: [{ bloodGroup: "A+", selectedBags: [] }] }])}
               variant="outline"
               size="sm"
+              title="Ctrl+G"
               className="text-red-700 border-red-200 hover:bg-red-50 flex items-center gap-1"
             >
-              <Plus className="w-3.5 h-3.5" /> Add Component Section
+              <Plus className="w-3.5 h-3.5" /> Add Component Section <span className="text-[10px] opacity-60">(Ctrl+G)</span>
             </Button>
           </div>
 
           <div className="space-y-6 max-h-[500px] overflow-y-auto pr-1">
             {storageBags.map((comp, compIndex) => (
-              <div key={compIndex} className="p-5 border rounded-xl bg-white shadow-sm border-gray-200 flex flex-col gap-4 relative">
+              <div key={compIndex} data-section-index={compIndex} className="p-5 border rounded-xl bg-white shadow-sm border-gray-200 flex flex-col gap-4 relative">
 
                 {/* Component Row Header */}
                 <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
@@ -139,9 +166,10 @@ export default function SendToStorageModal({
                       }}
                       variant="outline"
                       size="xs"
+                      title="Ctrl+B"
                       className="text-xs text-red-700 border-red-200 hover:bg-red-50 flex items-center gap-1 py-1 px-2.5 h-8 cursor-pointer"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Add Blood Group
+                      <Plus className="w-3.5 h-3.5" /> Add Blood Group <span className="text-[10px] opacity-60">(Ctrl+B)</span>
                     </Button>
 
                     {storageBags.length > 1 && (
