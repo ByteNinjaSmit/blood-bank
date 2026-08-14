@@ -257,7 +257,10 @@ export function useBulkTransfer({ mainTab, availableUnits, fetchAvailableUnits }
       setBulkFormOpen(false);
       resetBulkForm();
       fetchBulkTransfers(1);
-      if (bulkTransferType === "GIVE_LOAN") fetchAvailableUnits();
+      // Refresh regardless of direction: GIVE_LOAN removes bags from stock,
+      // TAKE_LOAN adds newly-released units that Send-to-Storage/give-loan
+      // pickers should see immediately without having to reopen the modal.
+      fetchAvailableUnits();
     } catch (e) {
       toast.error(e?.response?.data?.message || "Failed to record bulk transfer");
     } finally {

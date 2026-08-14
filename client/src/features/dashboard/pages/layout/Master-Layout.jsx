@@ -94,7 +94,7 @@ function MasterLayout() {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto print:overflow-visible print:block">
+                <main id="app-main-scroll" className="flex-1 overflow-y-auto print:overflow-visible print:block">
                     <div className="h-full print:h-auto">
                         <Outlet />
                     </div>

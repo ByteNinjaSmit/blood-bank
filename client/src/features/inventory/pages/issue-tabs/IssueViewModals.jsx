@@ -398,7 +398,7 @@ export default function IssueViewModals({
                   <div className="font-bold text-red-700">{bulkViewItem.transferType === 'GIVE_LOAN' ? 'Give Loan' : 'Take Loan'}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Company Name</div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Company/Blood Bank Name</div>
                   <div className="font-semibold text-gray-800">{bulkViewItem.bloodBankName}</div>
                 </div>
                 <div>
@@ -406,7 +406,7 @@ export default function IssueViewModals({
                   <div className="text-gray-700">{formatDate(bulkViewItem.transferDate)}</div>
                 </div>
                 <div className="md:col-span-2">
-                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Blood Bank Address</div>
+                  <div className="text-gray-500 text-xs uppercase font-semibold mb-0.5">Company/Blood Bank Address</div>
                   <div className="text-gray-700">{bulkViewItem.bloodBankAddress}</div>
                 </div>
                 {bulkViewItem.notes && (

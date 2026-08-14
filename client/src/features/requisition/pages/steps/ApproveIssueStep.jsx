@@ -26,14 +26,15 @@ function CrossmatchStatusBadge({ status, required }) {
   return map[status] || map.pending;
 }
 
-export default function ApproveIssueStep({ requestDoc, approving, issuing, onApprove, onIssue, shortages, step2Reasons = [] }) {
+export default function ApproveIssueStep({ requestDoc, issuing, onIssue, shortages, step2Reasons = [] }) {
   const status = requestDoc?.status;
   // Approve (and, downstream, Issue) stays blocked until the recipient
   // serum/cell grouping, every proposed bag's grouping, and the crossmatch
   // worksheet are recorded. Once approved, those fields are locked in so the
-  // gate no longer applies.
+  // gate no longer applies. The Approve button itself now lives in the
+  // wizard footer (RequisitionManagement) — this only drives the warning
+  // panel below.
   const worksheetIncomplete = status === 'matched' && step2Reasons.length > 0;
-  const canApprove = !!requestDoc?._id && status === 'matched' && !approving && step2Reasons.length === 0;
   // Units stay "Pending" (not issuable) until the request has actually been
   // approved — the Issue button only appears once that's happened.
   const isApproved = ['approved', 'issued', 'completed'].includes(status);
@@ -94,7 +95,9 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
         </div>
       )}
 
-      {worksheetIncomplete ? (
+      {/* The Approve action itself now lives in the wizard footer, next to
+          "Continue to Complete" — see RequisitionManagement's footerExtra. */}
+      {worksheetIncomplete && (
         <div className="p-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900">
           <p className="font-medium">Complete these in Match Review before you can approve &amp; issue:</p>
           <ul className="mt-2 text-sm list-disc pl-5 space-y-1">
@@ -103,20 +106,6 @@ export default function ApproveIssueStep({ requestDoc, approving, issuing, onApp
           <p className="mt-2 text-xs text-amber-700">
             Fill the recipient serum/cell grouping, each bag&apos;s grouping and the crossmatch worksheet, then return here.
           </p>
-        </div>
-      ) : (
-        <div className="flex gap-3">
-          <button
-            disabled={!canApprove}
-            onClick={onApprove}
-            className={`px-4 py-2 rounded-lg text-white ${
-              canApprove
-                ? 'bg-blue-700 hover:bg-blue-800 cursor-pointer'
-                : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {approving ? 'Approving…' : 'Approve'}
-          </button>
         </div>
       )}
 

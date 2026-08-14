@@ -198,7 +198,7 @@ export function useDonorSubmit({ form, campId, draftId }) {
         }
       }
 
-      navigate("/master-register/donors");
+      navigate(campId ? `/camp-details?id=${campId}` : "/master-register/donors");
     } catch (err) {
       const details = err.response?.data?.details;
       if (Array.isArray(details)) {

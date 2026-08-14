@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import MultiBagSelect from './MultiBagSelect';
 import { COMPONENT_TYPES } from '@/constants/component-types';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
+import { createSectionShortcutHandler } from '@/hooks/useSectionShortcuts';
 import { BLOOD_GROUPS } from '@/lib/blood-groups';
 
 // Bulk Transfer (Give / Take Loan) form. GIVE_LOAN picks from our own stock;
@@ -32,13 +33,48 @@ export default function BulkTransferFormModal({
 }) {
   const isEdit = mode === 'edit';
   const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
+
+  // Ctrl+G always adds a new component section; Ctrl+B adds a blood-group
+  // (GIVE_LOAN) or bag (TAKE_LOAN) row to whichever section focus was last
+  // inside. Recomputed each render (cheap) so it always targets the branch
+  // that's actually showing.
+  const sectionShortcuts = bulkTransferType === 'GIVE_LOAN'
+    ? createSectionShortcutHandler({
+        onAddSection: () => setBulkGiveBags([...bulkGiveBags, { componentType: "PRBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }]),
+        onAddItem: (idx) => {
+          const next = [...bulkGiveBags];
+          next[idx].groups.push({ bloodGroup: "A+", bagType: "All", selectedBags: [] });
+          setBulkGiveBags(next);
+        },
+        sectionCount: () => bulkGiveBags.length,
+      })
+    : createSectionShortcutHandler({
+        onAddSection: () => setBulkTakeGroups([...bulkTakeGroups, { componentType: "PRBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" }] }]),
+        onAddItem: (idx) => {
+          const next = [...bulkTakeGroups];
+          next[idx].bags.push({ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" });
+          setBulkTakeGroups(next);
+        },
+        sectionCount: () => bulkTakeGroups.length,
+      });
+
+  const handleContainerKeyDown = (e) => {
+    sectionShortcuts.onKeyDown(e);
+    if (!e.defaultPrevented) handleFormKeyDown(e);
+  };
+
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-5xl">
+      <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>{isEdit ? 'Edit Bulk Transfer' : 'Bulk Transfer — Give / Take Loan'}</DialogTitle>
       </DialogHeader>
-      <div className="space-y-6 text-sm p-2" onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange}>
+      <div
+        className="space-y-6 text-sm p-2"
+        onKeyDown={handleContainerKeyDown}
+        onChange={handleFormEnterNavChange}
+        onFocusCapture={sectionShortcuts.onFocusCapture}
+      >
         {/* Give Loan / Take Loan selector — locked once created, since
             changing the transfer type after bags are already claimed/logged
             would require a different reconciliation than a plain edit. */}
@@ -65,7 +101,7 @@ export default function BulkTransferFormModal({
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex flex-col md:col-span-2">
-            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Company Name</label>
+            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Company/Blood Bank Name</label>
             <input
               type="text"
               value={bulkBloodBankName}
@@ -84,7 +120,7 @@ export default function BulkTransferFormModal({
             />
           </div>
           <div className="flex flex-col md:col-span-3">
-            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Blood Bank Address</label>
+            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Company/Blood Bank Address</label>
             <input
               type="text"
               value={bulkBloodBankAddress}
@@ -104,15 +140,16 @@ export default function BulkTransferFormModal({
                 onClick={() => setBulkGiveBags([...bulkGiveBags, { componentType: "PRBC", groups: [{ bloodGroup: "A+", bagType: "All", selectedBags: [] }] }])}
                 variant="outline"
                 size="sm"
+                title="Ctrl+G"
                 className="text-red-700 border-red-200 hover:bg-red-50 flex items-center gap-1"
               >
-                <Plus className="w-3.5 h-3.5" /> Add Component Section
+                <Plus className="w-3.5 h-3.5" /> Add Component Section <span className="text-[10px] opacity-60">(Ctrl+G)</span>
               </Button>
             </div>
 
             <div className="space-y-6 max-h-[420px] overflow-y-auto pr-1">
               {bulkGiveBags.map((comp, compIndex) => (
-                <div key={compIndex} className="p-5 border rounded-xl bg-white shadow-sm border-gray-200 flex flex-col gap-4 relative">
+                <div key={compIndex} data-section-index={compIndex} className="p-5 border rounded-xl bg-white shadow-sm border-gray-200 flex flex-col gap-4 relative">
                   <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black text-slate-700 uppercase tracking-wider">Component Type</span>
@@ -142,9 +179,10 @@ export default function BulkTransferFormModal({
                         }}
                         variant="outline"
                         size="xs"
+                        title="Ctrl+B"
                         className="text-xs text-red-700 border-red-200 hover:bg-red-50 flex items-center gap-1 py-1 px-2.5 h-8 cursor-pointer"
                       >
-                        <Plus className="w-3.5 h-3.5" /> Add Blood Group
+                        <Plus className="w-3.5 h-3.5" /> Add Blood Group <span className="text-[10px] opacity-60">(Ctrl+B)</span>
                       </Button>
 
                       {bulkGiveBags.length > 1 && (
@@ -303,15 +341,16 @@ export default function BulkTransferFormModal({
                 onClick={() => setBulkTakeGroups([...bulkTakeGroups, { componentType: "PRBC", bloodGroup: "A+", bags: [{ bagNo: "", segmentNo: "", volumeMl: "", collectedAt: "", expiresAt: "" }] }])}
                 variant="outline"
                 size="sm"
+                title="Ctrl+G"
                 className="text-red-700 border-red-200 hover:bg-red-50 flex items-center gap-1"
               >
-                <Plus className="w-3.5 h-3.5" /> Add Component / Group
+                <Plus className="w-3.5 h-3.5" /> Add Component / Group <span className="text-[10px] opacity-60">(Ctrl+G)</span>
               </Button>
             </div>
 
             <div className="space-y-6 max-h-[420px] overflow-y-auto pr-1">
               {bulkTakeGroups.map((group, groupIndex) => (
-                <div key={groupIndex} className="p-5 border rounded-xl bg-white shadow-sm border-gray-200 flex flex-col gap-4 relative">
+                <div key={groupIndex} data-section-index={groupIndex} className="p-5 border rounded-xl bg-white shadow-sm border-gray-200 flex flex-col gap-4 relative">
                   <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
                     <div className="flex items-center gap-3">
                       <div className="flex flex-col">
@@ -358,9 +397,10 @@ export default function BulkTransferFormModal({
                         }}
                         variant="outline"
                         size="xs"
+                        title="Ctrl+B"
                         className="text-xs text-red-700 border-red-200 hover:bg-red-50 flex items-center gap-1 py-1 px-2.5 h-8 cursor-pointer"
                       >
-                        <Plus className="w-3.5 h-3.5" /> Add Bag
+                        <Plus className="w-3.5 h-3.5" /> Add Bag <span className="text-[10px] opacity-60">(Ctrl+B)</span>
                       </Button>
 
                       {bulkTakeGroups.length > 1 && (

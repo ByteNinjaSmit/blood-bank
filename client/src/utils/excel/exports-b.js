@@ -118,7 +118,7 @@ export async function exportBulkTransfers(items, meta = {}) {
   const toBlock = (r) => {
     const bagCount = r.items?.length || 0;
     return {
-      label: `${typeLabel(r.transferType)} — ${r.bloodBankName || 'Unknown Blood Bank'}, ${r.bloodBankAddress || '—'} — ${formatDate(r.transferDate)} — ${bagCount} bag${bagCount === 1 ? '' : 's'} (${r.transferId || '—'})`,
+      label: `${typeLabel(r.transferType)} — ${r.bloodBankName || 'Unknown Company/Blood Bank'}, ${r.bloodBankAddress || '—'} — ${formatDate(r.transferDate)} — ${bagCount} bag${bagCount === 1 ? '' : 's'} (${r.transferId || '—'})`,
       rows: (r.items || []).map((it, i) => [
         i + 1,
         it.bagNo || '—',

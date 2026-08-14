@@ -20,6 +20,11 @@ export default function Stepper({
     finishButtonText = "Complete",
     disableStepIndicators = false,
     renderStepIndicator,
+    // Optional node rendered immediately to the left of the Next/Complete
+    // button — lets a step-specific action (e.g. requisition's "Approve")
+    // sit right beside the wizard's own navigation button instead of living
+    // inside the step content. Omit for the default Back/Next-only footer.
+    footerExtra = null,
     ...rest
 }) {
     const [currentStep, setCurrentStep] = useState(initialStep)
@@ -121,7 +126,7 @@ export default function Stepper({
                 </StepContentWrapper>
                 {!isCompleted && (
                     <div className={`px-8 pb-8 ${footerClassName}`}>
-                        <div className={`mt-10 flex ${currentStep !== 1 ? "justify-between" : "justify-end"}`}>
+                        <div className={`mt-10 flex items-center ${currentStep !== 1 ? "justify-between" : "justify-end"}`}>
                             {currentStep !== 1 && (
                                 <button
                                     onClick={handleBack}
@@ -134,13 +139,16 @@ export default function Stepper({
                                     {backButtonText}
                                 </button>
                             )}
-                            <button
-                                onClick={isLastStep ? handleComplete : handleNext}
-                                className="duration-350 flex items-center justify-center rounded-full bg-red-800 py-1.5 px-3.5 font-medium tracking-tight text-white transition hover:bg-red-900 active:bg-red-950"
-                                {...nextButtonProps}
-                            >
-                                {isLastStep ? finishButtonText : nextButtonText}
-                            </button>
+                            <div className="flex items-center gap-3">
+                                {footerExtra}
+                                <button
+                                    onClick={isLastStep ? handleComplete : handleNext}
+                                    className="duration-350 flex items-center justify-center rounded-full bg-red-800 py-1.5 px-3.5 font-medium tracking-tight text-white transition hover:bg-red-900 active:bg-red-950"
+                                    {...nextButtonProps}
+                                >
+                                    {isLastStep ? finishButtonText : nextButtonText}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
