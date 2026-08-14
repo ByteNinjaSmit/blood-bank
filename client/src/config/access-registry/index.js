@@ -13,6 +13,7 @@ import bagProcurement from './bag-procurement';
 import chemicalInventory from './chemical-inventory';
 import audit from './audit';
 import monthlyReport from './monthly-report';
+import yearlyReport from './yearly-report';
 import labs from './labs';
 import donor from './donor';
 import appointment from './appointment';
@@ -31,6 +32,7 @@ export const ACCESS_MODULES = [
   chemicalInventory,
   audit,
   monthlyReport,
+  yearlyReport,
   labs,
   donor,
   appointment,

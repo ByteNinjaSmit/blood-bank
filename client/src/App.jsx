@@ -69,8 +69,9 @@ import AuditHistory from './features/chemical-inventory/pages/AuditHistory';
 // Audit Trail (centralized)
 import AuditTrail from './features/audit/pages/AuditTrail';
 
-// Monthly Statutory Report
+// Monthly / Yearly Statutory Report
 import MonthlyReport from './features/monthly-report/pages/MonthlyReport';
+import YearlyReport from './features/yearly-report/pages/YearlyReport';
 
 // Requisition
 import RequisitionManagement from './features/requisition/pages/RequisitionManagement';
@@ -165,6 +166,7 @@ const App = () => {
           <Route path="audit-trail" element={<PageGuard module="audit" page="audit-trail"><AuditTrail /></PageGuard>} />
 
           <Route path="reports/monthly" element={<PageGuard module="monthly-report" page="monthly-report"><MonthlyReport /></PageGuard>} />
+          <Route path="reports/yearly" element={<PageGuard module="yearly-report" page="yearly-report"><YearlyReport /></PageGuard>} />
 
           {/* Serology */}
           <Route path="labs/serology" element={<PageGuard module="labs" page="labs-serology"><Serology /></PageGuard>} />
