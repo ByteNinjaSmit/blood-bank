@@ -34,6 +34,7 @@ const requisitionService = createRequisitionService({
   patients,
   crossmatch: crossmatchService,
   issue: issueService,
+  issues,
 });
 
 const controllers = createRequisitionControllers({

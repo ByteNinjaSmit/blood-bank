@@ -221,7 +221,6 @@ export function useDonorCreationForm() {
       validateDate(formData.dobDisplay) &&
       formData.sex &&
       formData.phone.trim().length === 10 &&
-      parseFloat(formData.weightKg) > 0 &&
       formData.city.trim() &&
       formData.district.trim() &&
       formData.state &&
@@ -251,6 +250,7 @@ export function useDonorCreationForm() {
 
   const isStep3Complete = () => {
     return (
+      parseFloat(formData.weightKg) > 0 &&
       formData.hb.toString().trim() !== "" &&
       formData.tempC.toString().trim() !== "" &&
       formData.pulse.toString().trim() !== "" &&
@@ -279,7 +279,6 @@ export function useDonorCreationForm() {
     if (currentStep === 2) return isStep2Complete();
     if (currentStep === 3) return isStep3Complete();
     if (currentStep === 4) return isStep4Complete();
-    if (currentStep === 5) return true;
     return true;
   };
 

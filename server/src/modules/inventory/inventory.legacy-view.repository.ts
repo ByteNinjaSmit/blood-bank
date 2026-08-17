@@ -568,16 +568,52 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
 
         // Keep the owning requisition's matched-unit entry in sync so
         // /requisition/list shows "Unreserved — Manually unreserved" too.
+        // Also clear any recorded crossmatch back to PENDING (unless the
+        // component never needed one) — it was only ever valid for this
+        // specific reservation; a re-reservation later must not silently
+        // inherit a compatible result that was never re-verified for it.
         if (requisitionId) {
           await RequisitionModel.findOneAndUpdate(
             { _id: requisitionId, 'matchedUnits.unitId': unit.unitId },
-            {
-              $set: {
-                'matchedUnits.$.reserved': false,
-                'matchedUnits.$.unreservedBy': 'MANUAL',
-                'matchedUnits.$.unreservedReason': reason,
+            [
+              {
+                $set: {
+                  matchedUnits: {
+                    $map: {
+                      input: '$matchedUnits',
+                      as: 'mu',
+                      in: {
+                        $cond: [
+                          { $eq: ['$$mu.unitId', unit.unitId] },
+                          {
+                            $mergeObjects: [
+                              '$$mu',
+                              {
+                                reserved: false,
+                                unreservedBy: 'MANUAL',
+                                unreservedReason: reason,
+                                crossmatchStatus: {
+                                  $cond: [
+                                    { $eq: ['$$mu.crossmatchStatus', 'NOT_REQUIRED'] },
+                                    'NOT_REQUIRED',
+                                    'PENDING',
+                                  ],
+                                },
+                                compatibilityResult: null,
+                                crossmatchDoneAt: null,
+                                crossmatchSeenAt: null,
+                                cardNumber: null,
+                              },
+                            ],
+                          },
+                          '$$mu',
+                        ],
+                      },
+                    },
+                  },
+                },
               },
-            },
+            ],
           ).catch(() => undefined);
         }
 

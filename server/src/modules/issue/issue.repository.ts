@@ -41,6 +41,10 @@ export interface CreateIssueInput {
 
 export interface IssueRepo {
   create(input: CreateIssueInput, actorId: string): Promise<IssueDto>;
+  /** Soft-deletes the Issue record(s) for this unit on this requisition —
+   * used when an issue is corrected via Unissue, so the issueId stops
+   * showing as if it were still an active/current issue. */
+  voidForUnit(requisitionId: string, unitId: string, actorId: string): Promise<void>;
 }
 
 export function createIssueRepo(): IssueRepo {
@@ -60,6 +64,14 @@ export function createIssueRepo(): IssueRepo {
         updatedBy: actor,
       });
       return toDto(doc.toObject() as RawIssue);
+    },
+
+    async voidForUnit(requisitionId, unitId, actorId) {
+      const actor = new Types.ObjectId(actorId);
+      await IssueModel.updateMany(
+        { requisitionId: new Types.ObjectId(requisitionId), unitId, deletedAt: null },
+        { deletedAt: new Date(), deletedBy: actor, updatedBy: actor },
+      );
     },
   };
 }

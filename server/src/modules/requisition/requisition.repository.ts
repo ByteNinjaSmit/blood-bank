@@ -291,13 +291,17 @@ export interface RequisitionRepo {
   swapMatchedUnit(id: string, fromUnitId: string, newUnit: MatchedUnitDto): Promise<RequisitionDto>;
   /** Marks one matched unit as actually reserved (set on match). */
   markReserved(id: string, unitId: string, actorId: string): Promise<RequisitionDto>;
-  /** Marks one matched unit as unreserved, attributing who did it and why. */
+  /** Marks one matched unit as unreserved, attributing who did it and why.
+   * `resetCrossmatch` clears any recorded crossmatch back to PENDING — pass
+   * true whenever the unit could plausibly be re-reserved later (a stale
+   * compatible result must never carry over to a new reservation). */
   markUnreserved(
     id: string,
     unitId: string,
     by: 'SYSTEM' | 'MANUAL',
     reason: string,
     actorId: string,
+    resetCrossmatch?: boolean,
   ): Promise<RequisitionDto>;
   /** Saves the recipient (patient-side) grouping worksheet. */
   setRecipientGrouping(
@@ -463,17 +467,29 @@ export function createRequisitionRepo(): RequisitionRepo {
       return toDto(updated);
     },
 
-    async markUnreserved(id, unitId, by, reason, actorId) {
+    async markUnreserved(id, unitId, by, reason, actorId, resetCrossmatch = false) {
+      const setFields: Record<string, unknown> = {
+        'matchedUnits.$.reserved': false,
+        'matchedUnits.$.unreservedBy': by,
+        'matchedUnits.$.unreservedReason': reason,
+        updatedBy: new Types.ObjectId(actorId),
+      };
+      // A crossmatch is only valid for the specific reservation it was
+      // performed against — once the bag is let go, that determination is
+      // stale (it may be re-reserved for a different patient/requisition
+      // next, or picked up here again with no fresh crossmatch actually
+      // re-run). Clear it back to PENDING so a re-reservation can't inherit
+      // a compatible result that was never re-verified for it.
+      if (resetCrossmatch) {
+        setFields['matchedUnits.$.crossmatchStatus'] = 'PENDING';
+        setFields['matchedUnits.$.compatibilityResult'] = null;
+        setFields['matchedUnits.$.crossmatchDoneAt'] = null;
+        setFields['matchedUnits.$.crossmatchSeenAt'] = null;
+        setFields['matchedUnits.$.cardNumber'] = null;
+      }
       const updated = (await RequisitionModel.findOneAndUpdate(
         { _id: id, 'matchedUnits.unitId': unitId },
-        {
-          $set: {
-            'matchedUnits.$.reserved': false,
-            'matchedUnits.$.unreservedBy': by,
-            'matchedUnits.$.unreservedReason': reason,
-            updatedBy: new Types.ObjectId(actorId),
-          },
-        },
+        { $set: setFields },
         { new: true },
       ).lean()) as RawReq | null;
       if (!updated) throw new NotFoundError('Requisition matched unit', `${id}/${unitId}`);
@@ -613,6 +629,11 @@ export function createRequisitionRepo(): RequisitionRepo {
     },
 
     async reject(id, reason, actorId) {
+      // Keep matchedUnits — the service layer already unreserves every one
+      // of these at the BloodUnit level (back to stock) before calling
+      // this. Wiping the array here destroyed the historical record of
+      // what was matched/rejected, so the requisition's View showed no
+      // component/bag details at all once rejected.
       const updated = (await RequisitionModel.findByIdAndUpdate(
         id,
         {
@@ -621,7 +642,6 @@ export function createRequisitionRepo(): RequisitionRepo {
           rejectedBy: new Types.ObjectId(actorId),
           rejectedAt: new Date(),
           updatedBy: new Types.ObjectId(actorId),
-          matchedUnits: [],
         },
         { new: true },
       ).lean()) as RawReq | null;

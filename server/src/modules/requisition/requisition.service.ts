@@ -24,6 +24,7 @@ import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { PatientRepo } from '@/modules/patient/patient.repository';
 import type { CrossmatchService } from '@/modules/crossmatch/crossmatch.service';
 import type { IssueService } from '@/modules/issue/issue.service';
+import type { IssueRepo } from '@/modules/issue/issue.repository';
 import { normalizeRequestedComponents } from '@/modules/requisition/requisition.mapper';
 import { approvalBlockers } from '@/modules/requisition/requisition.approval-readiness';
 import { notificationCenterService } from '@/modules/notification/notification-center.service';
@@ -189,6 +190,7 @@ export function createRequisitionService(deps: {
   patients: PatientRepo;
   crossmatch: CrossmatchService;
   issue: IssueService;
+  issues?: IssueRepo;
   audit?: IAuditService;
 }): RequisitionService {
   const log = childLogger({ module: 'requisition-service' });
@@ -574,21 +576,37 @@ export function createRequisitionService(deps: {
 
     async reject(id, reason, actorId) {
       const req = await deps.requisitions.findById(id);
+      const rejectReason = `Requisition ${req.requisitionId} rejected`;
       for (const m of req.matchedUnits) {
-        await deps.units
-          .applyEvent({
+        try {
+          await deps.units.applyEvent({
             unitId: m.unitId,
             event: 'UNRESERVE',
             actorId,
-            reason: `Requisition ${req.requisitionId} rejected`,
+            reason: rejectReason,
             set: {
               reservedFor: null,
               reservedAt: null,
               reservedUntil: null,
               issuedAt: null,
               issuedTo: null,
+              unreservedBy: 'MANUAL',
+              unreservedReason: rejectReason,
             } as any,
-          })
+          });
+        } catch {
+          // Already ISSUED (or otherwise not RESERVED/CROSSMATCHED) — no
+          // UNRESERVE transition exists from there; leave it as-is and
+          // don't touch its matched-unit entry below either.
+          continue;
+        }
+        // Keep the matched-unit entry's own reserved/crossmatch fields in
+        // sync with the unit — same as the manual unreserve path — so the
+        // View shows "Unreserved — Manually unreserved" instead of a stale
+        // "Reserved" badge, and a stale compatible crossmatch can't carry
+        // over if this same bag gets picked up by a future requisition.
+        await deps.requisitions
+          .markUnreserved(id, m.unitId, 'MANUAL', rejectReason, actorId, m.crossmatchRequired)
           .catch(() => undefined);
       }
       const updated = await deps.requisitions.reject(id, reason, actorId);
@@ -659,8 +677,8 @@ export function createRequisitionService(deps: {
       } = input;
 
       const request = await deps.requisitions.findById(id);
-      if (!['MATCHED', 'APPROVED'].includes(request.status)) {
-        throw new ConflictError('Crossmatch can only be updated for matched or approved requests');
+      if (request.status === 'REJECTED') {
+        throw new ConflictError('Crossmatch cannot be updated on a rejected requisition');
       }
 
       const miEntry = request.matchedUnits.find((mu) => mu.unitId === inventoryId);
@@ -678,31 +696,22 @@ export function createRequisitionService(deps: {
         cardNumber,
       };
 
-      // Before approval, the crossmatch worksheet is recorded as data only
-      // on the matched unit — the actual unit CROSSMATCH transition and
-      // issue-gate enforcement happen in approve()'s commit step. (Units
-      // are RESERVED as soon as they're matched now, so "reserved" is no
-      // longer a usable proxy for "already approved" — request.status is.)
-      // 'pending' is the Edit/undo path: revert to PENDING but keep the
-      // stored details so the worksheet can reopen prefilled.
-      if (request.status !== 'APPROVED') {
-        const dataStatus =
-          crossmatchStatus === 'compatible'
-            ? 'COMPATIBLE'
-            : crossmatchStatus === 'incompatible'
-              ? 'INCOMPATIBLE'
-              : 'PENDING';
-        return deps.requisitions.setCrossmatchStatus(
-          id,
-          inventoryId,
-          dataStatus,
-          actorId,
-          crossmatchStatus === 'pending' ? undefined : crossmatchDetails,
-        );
-      }
-
+      // Reservation now happens at match time, so a matched unit is
+      // RESERVED (not just "proposed") from the moment it's picked —
+      // there's no longer a pre-reservation phase to defer the real
+      // CROSSMATCH transition to. The worksheet commits immediately here,
+      // regardless of the overall requisition status (PENDING through
+      // ISSUED/COMPLETED all have this be valid — e.g. Edit adding extra
+      // bags to an already-approved/issued requisition still needs its own
+      // crossmatch before *those* bags can be issued). Only a bag whose
+      // crossmatch has already been committed (unit status CROSSMATCHED)
+      // blocks a 'pending' reset.
+      const unit = await deps.units.findByUnitId(inventoryId).catch(() => null);
       if (crossmatchStatus === 'pending') {
-        throw new ConflictError('Crossmatch cannot be edited after the requisition is approved.');
+        if (unit?.status === 'CROSSMATCHED') {
+          throw new ConflictError('Crossmatch cannot be edited after it has been committed.');
+        }
+        return deps.requisitions.setCrossmatchStatus(id, inventoryId, 'PENDING', actorId, undefined);
       }
 
       if (crossmatchStatus === 'compatible') {
@@ -1052,7 +1061,14 @@ export function createRequisitionService(deps: {
           unreservedReason: reason,
         } as any,
       });
-      const updated = await deps.requisitions.markUnreserved(id, unitId, 'MANUAL', reason, actorId);
+      const updated = await deps.requisitions.markUnreserved(
+        id,
+        unitId,
+        'MANUAL',
+        reason,
+        actorId,
+        mu.crossmatchRequired,
+      );
 
       await audit.record({
         actorId,
@@ -1116,6 +1132,10 @@ export function createRequisitionService(deps: {
           } as any,
         });
         updated = await deps.requisitions.markReserved(id, mu.unitId, actorId);
+        // Void the Issue record too (soft-delete) — otherwise its issueId
+        // keeps showing on this bag as if it were still actively issued,
+        // even after it's been unissued (and possibly unreserved next).
+        await deps.issues?.voidForUnit(id, mu.unitId, actorId).catch(() => undefined);
 
         await audit.record({
           actorId,

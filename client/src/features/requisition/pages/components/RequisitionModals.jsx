@@ -243,8 +243,10 @@ export default function RequisitionModals({
               </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">Matched/Reserved Inventory</h4>
-              {viewDoc?.status !== 'rejected' && viewDoc?.matchedInventory?.length ? (
+              <h4 className="font-semibold mb-2">
+                {viewDoc?.status === 'rejected' ? 'Matched Inventory (rejected — returned to stock)' : 'Matched/Reserved Inventory'}
+              </h4>
+              {viewDoc?.matchedInventory?.length ? (
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
                     <thead>
@@ -452,6 +454,11 @@ export default function RequisitionModals({
                         const isIssued = unitStatus === 'ISSUED';
                         const isReserved = unitStatus === 'RESERVED' || unitStatus === 'CROSSMATCHED';
                         const issuedAtDisplay = isIssued && inv?.issuedAt ? fmt(inv.issuedAt) : '—';
+                        // A component needing crossmatch can't be issued
+                        // until its own worksheet is recorded compatible —
+                        // surface that clearly instead of letting the
+                        // operator hit Issue and get a blocked-request error.
+                        const crossmatchBlocked = mi.crossmatchRequired && mi.crossmatchStatus !== 'compatible';
 
                         return (
                           <tr key={invId} className="hover:bg-gray-50/50">
@@ -486,7 +493,14 @@ export default function RequisitionModals({
                               </span>
                             </td>
                             <td className="p-3 text-right">
-                              {!unissueMode && isReserved ? (
+                              {!unissueMode && isReserved && crossmatchBlocked ? (
+                                <span
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 border border-amber-200 text-amber-800"
+                                  title="Complete this bag's crossmatch worksheet (Edit → 2. Matched Bags) before it can be issued."
+                                >
+                                  ⏳ Crossmatch Pending
+                                </span>
+                              ) : !unissueMode && isReserved ? (
                                 <button
                                   type="button"
                                   disabled={issuingRowId === invId}

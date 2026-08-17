@@ -192,8 +192,12 @@ const Reserve = () => {
     }
   };
 
+  // Reservation is just a requisition whose components stay Reserved until
+  // issued — there's no separate creation flow anymore. Creating one here
+  // goes straight to the normal requisition form; its components will show
+  // up on this page (grouped by requisition) the moment they're matched.
   const handleAdd = () => {
-    navigate('/inventory/reserve/new');
+    navigate('/requisition');
   };
 
   useEffect(() => {
@@ -275,7 +279,7 @@ const Reserve = () => {
                   <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 </button>
                 <Button onClick={handleAdd} size="sm" className="h-10" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Add Reservation`}
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : `New Requisition`}
                 </Button>
               </div>
             </div>

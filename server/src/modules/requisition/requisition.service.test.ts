@@ -6,6 +6,7 @@ import type { PatientRepo, PatientDto } from '@/modules/patient/patient.reposito
 import type { SelectableUnit } from '@/shared/compatibility/fefo';
 import type { CrossmatchService } from '@/modules/crossmatch/crossmatch.service';
 import type { IssueService } from '@/modules/issue/issue.service';
+import type { IssueRepo } from '@/modules/issue/issue.repository';
 
 vi.mock('@/modules/issue/issue.model', () => ({
   IssueModel: {
@@ -120,7 +121,11 @@ function deps(opts: { candidates?: SelectableUnit[]; pat?: PatientDto; req?: Req
   const issue: IssueService = {
     issue: vi.fn(),
   };
-  return { units, requisitions, patients, crossmatch, issue };
+  const issues: IssueRepo = {
+    create: vi.fn(),
+    voidForUnit: vi.fn().mockResolvedValue(undefined),
+  };
+  return { units, requisitions, patients, crossmatch, issue, issues };
 }
 
 describe('requisition-service.match', () => {
@@ -276,8 +281,86 @@ describe('requisition-service.reject', () => {
         reservedUntil: null,
         issuedAt: null,
         issuedTo: null,
+        unreservedBy: 'MANUAL',
+        unreservedReason: 'Requisition RQ-1 rejected',
       },
     });
+    // Matched-unit entries must be synced too (not left stale reserved:true
+    // with a now-meaningless crossmatch result), same as manual unreserve.
+    expect(d.requisitions.markUnreserved).toHaveBeenCalledWith(
+      REQ_ID,
+      'U1',
+      'MANUAL',
+      'Requisition RQ-1 rejected',
+      'actor',
+      true,
+    );
+    expect(d.requisitions.markUnreserved).toHaveBeenCalledWith(
+      REQ_ID,
+      'U2',
+      'MANUAL',
+      'Requisition RQ-1 rejected',
+      'actor',
+      true,
+    );
+  });
+
+  it('does not choke on an already-ISSUED matched unit — leaves it as-is and never touches its matched-unit entry', async () => {
+    const d = deps({
+      req: reqDto({
+        status: 'ISSUED',
+        matchedUnits: [
+          {
+            unitId: 'U1',
+            componentType: 'PRBC',
+            compatibilityType: 'EXACT',
+            crossmatchRequired: true,
+            crossmatchStatus: 'COMPATIBLE',
+          },
+        ],
+      }),
+    });
+    d.units.applyEvent = vi.fn().mockRejectedValue(new Error('InvalidUnitTransition'));
+    const svc = createRequisitionService(d);
+    await svc.reject(REQ_ID, 'Patient discharged', 'actor');
+    expect(d.requisitions.markUnreserved).not.toHaveBeenCalled();
+  });
+});
+
+describe('requisition-service.unreserve', () => {
+  it('unreserves a bag and tells the repo to clear its stale crossmatch (crossmatchRequired=true)', async () => {
+    // Regression: manually unreserving a crossmatched bag left its
+    // crossmatchStatus='COMPATIBLE' stuck on the matched-unit entry. If
+    // that same bag (or unitId) got re-selected/re-reserved later, the
+    // stale COMPATIBLE data made Issue's self-heal (or a stale UI read)
+    // treat it as already crossmatched even though the real BloodUnit
+    // never re-ran CROSSMATCH_PASS for that reservation — leaving it stuck
+    // "Unit status RESERVED, expected CROSSMATCHED". The reset must be
+    // requested whenever the component actually requires a crossmatch.
+    const matchedUnits = [
+      {
+        unitId: 'U1',
+        componentType: 'PRBC' as const,
+        compatibilityType: 'EXACT' as const,
+        reserved: true,
+        crossmatchRequired: true,
+        crossmatchStatus: 'COMPATIBLE' as const,
+      },
+    ];
+    const d = deps({ req: reqDto({ matchedUnits }) });
+    d.units.findByUnitId = vi.fn().mockResolvedValue({ unitId: 'U1', status: 'RESERVED' });
+    const svc = createRequisitionService(d);
+
+    await svc.unreserve(REQ_ID, 'U1', 'Patient discharged early', 'actor');
+
+    expect(d.requisitions.markUnreserved).toHaveBeenCalledWith(
+      REQ_ID,
+      'U1',
+      'MANUAL',
+      'Patient discharged early',
+      'actor',
+      true,
+    );
   });
 });
 
@@ -313,6 +396,9 @@ describe('requisition-service.unissueUnits', () => {
     // A fully-issued requisition reverts to APPROVED so Issue stays reachable.
     expect(d.requisitions.setStatus).toHaveBeenCalledWith(REQ_ID, 'APPROVED', 'actor');
     expect(updated.status).toBe('APPROVED');
+    // The Issue record's issueId must stop showing as "current" once the
+    // issue that created it has been undone.
+    expect(d.issues.voidForUnit).toHaveBeenCalledWith(REQ_ID, 'U1', 'actor');
   });
 
   it('refuses to unissue a unit that is not currently issued', async () => {
@@ -390,6 +476,41 @@ describe('requisition-service.swapMatchedUnit', () => {
     d.units.findByUnitId = vi.fn().mockResolvedValue({ unitId: 'U1', status: 'ISSUED' });
     const svc = createRequisitionService(d);
     await expect(svc.swapMatchedUnit(REQ_ID, 'U1', 'U2', 'actor')).rejects.toThrow(/issued/i);
+  });
+});
+
+describe('requisition-service.updateCrossmatchLegacy', () => {
+  it('commits the crossmatch (unblocking Issue) even on an already-ISSUED requisition', async () => {
+    // Regression: Edit can add extra bags to a requisition that's already
+    // ISSUED/APPROVED (status preserved, see match()). Those new bags still
+    // need their own crossmatch before *they* can be issued — the worksheet
+    // must actually commit (RESERVED -> CROSSMATCHED), not just record data
+    // that never applies, which previously left the unit stuck RESERVED and
+    // Issue permanently blocked with "Crossmatch not performed".
+    const matchedUnits = [
+      {
+        unitId: 'U1',
+        componentType: 'PRBC' as const,
+        compatibilityType: 'EXACT' as const,
+        reserved: true,
+        crossmatchRequired: true,
+        crossmatchStatus: 'PENDING' as const,
+      },
+    ];
+    const d = deps({ req: reqDto({ status: 'ISSUED', matchedUnits }) });
+    d.units.findByUnitId = vi.fn().mockResolvedValue({ unitId: 'U1', status: 'RESERVED' });
+    const svc = createRequisitionService(d);
+
+    await svc.updateCrossmatchLegacy(
+      REQ_ID,
+      { inventoryId: 'U1', crossmatchStatus: 'compatible' },
+      'actor',
+    );
+
+    expect(d.crossmatch.perform).toHaveBeenCalledWith(
+      expect.objectContaining({ unitId: 'U1', result: 'COMPATIBLE' }),
+      'actor',
+    );
   });
 });
 

@@ -33,7 +33,7 @@ export default function StockPrintLabelTemplate({ item, formatDate }) {
       </div>
 
       {/* Middle Section (divided into Blood Group, Component details, and QR code/Dates) */}
-      <div className="flex w-full border-b border-black pb-1 shrink-0" style={{ height: '4.2cm' }}>
+      <div className="flex w-full border-b border-black pb-1 shrink-0" style={{ height: '4.6cm' }}>
         {/* Left Side: Huge Blood Group Display */}
         <div className="w-[2.3cm] flex flex-col items-center justify-center border-r border-black pr-0.5 select-none shrink-0 text-center">
           <span
@@ -94,9 +94,9 @@ export default function StockPrintLabelTemplate({ item, formatDate }) {
       {/* Bottom Section (instructions stacked above barcodes, since width is now the constrained dimension) */}
       <div className="flex flex-col flex-1 w-full pt-1 overflow-hidden">
         {/* Top: Instructions (full label width for the 10-point list) */}
-        <div className="w-full pb-1 border-b border-black flex flex-col justify-start shrink-0 select-none">
+        <div className="w-full pb-3 border-b border-black flex flex-col justify-start shrink-0 select-none">
           <h5 className="text-[7.5px] font-black uppercase tracking-wider mb-0.5 text-black underline">Instructions for Use & Storage</h5>
-          <ol className="list-decimal pl-2.5 text-[7px] leading-tight font-bold space-y-0.5 text-black">
+          <ol className="list-decimal pl-3.5 text-[7.8px] leading-tight font-bold space-y-0.5 text-black">
             <li>Keep continuously at +2°C to +6°C until administration.</li>
             <li>Do not dispense without prescription.</li>
             <li>Double check recipient's identity and cross-check the blood group of the unit and recipient before administration.</li>

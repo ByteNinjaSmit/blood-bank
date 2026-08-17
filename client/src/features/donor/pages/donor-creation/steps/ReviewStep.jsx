@@ -84,25 +84,6 @@ export default function ReviewStep({ form }) {
           </div>
         </div>
 
-        {/* Blood Collection QA Details Card */}
-        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-          <h4 className="font-semibold text-yellow-900 mb-2">Blood Collection</h4>
-          <div className="space-y-1 text-sm text-yellow-800">
-            <p>
-              <strong>Empty bag examined:</strong>{" "}
-              {formData.emptyBagExamined ? "✅ Yes" : "❌ No"}
-            </p>
-            <p>
-              <strong>Collected within 3-5 min:</strong>{" "}
-              {formData.collectedWithin6to8Min ? "✅ Yes" : "❌ No"}
-            </p>
-            <p>
-              <strong>Cross checking done:</strong>{" "}
-              {formData.crossCheckingDone ? "✅ Yes" : "❌ No"}
-            </p>
-          </div>
-        </div>
-
         {/* Fitness Assessment Card */}
         <div className={`p-4 rounded-lg border ${formData.donorIsFit === false ? "bg-red-50 border-red-200" : "bg-emerald-50 border-emerald-200"}`}>
           <h4 className={`font-semibold mb-2 ${formData.donorIsFit === false ? "text-red-900" : "text-emerald-900"}`}>

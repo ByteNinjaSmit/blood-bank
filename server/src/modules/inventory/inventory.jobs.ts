@@ -34,20 +34,75 @@ export async function runAutoUnreserveScan(): Promise<number> {
     deletedAt: null,
   });
 
+  const AUTO_UNRESERVE_REASON = 'Auto-cancelled reservation (expired after 3-day/7pm limit)';
+
   let unreservedCount = 0;
   for (const unit of reservedUnits) {
     try {
+      const requisitionId = unit.reservedFor;
       await units.applyEvent({
         unitId: unit.unitId,
         event: 'UNRESERVE',
         actorId: SYSTEM_ACTOR,
-        reason: 'Auto-cancelled reservation (expired after 3 days limit)',
+        reason: AUTO_UNRESERVE_REASON,
         set: {
           reservedFor: null,
           reservedUntil: null,
           reservedAt: null,
+          unreservedBy: 'SYSTEM',
+          unreservedReason: AUTO_UNRESERVE_REASON,
         } as any,
       });
+
+      // Keep the owning requisition's matched-unit entry in sync — same
+      // fields the manual-unreserve paths set — so /requisition/list shows
+      // "Unreserved — System unreserved" too, and any recorded crossmatch
+      // (only ever valid for this specific reservation) is cleared back to
+      // PENDING rather than silently carried into a future re-reservation.
+      if (requisitionId) {
+        await RequisitionModel.findOneAndUpdate(
+          { _id: requisitionId, 'matchedUnits.unitId': unit.unitId },
+          [
+            {
+              $set: {
+                matchedUnits: {
+                  $map: {
+                    input: '$matchedUnits',
+                    as: 'mu',
+                    in: {
+                      $cond: [
+                        { $eq: ['$$mu.unitId', unit.unitId] },
+                        {
+                          $mergeObjects: [
+                            '$$mu',
+                            {
+                              reserved: false,
+                              unreservedBy: 'SYSTEM',
+                              unreservedReason: AUTO_UNRESERVE_REASON,
+                              crossmatchStatus: {
+                                $cond: [
+                                  { $eq: ['$$mu.crossmatchStatus', 'NOT_REQUIRED'] },
+                                  'NOT_REQUIRED',
+                                  'PENDING',
+                                ],
+                              },
+                              compatibilityResult: null,
+                              crossmatchDoneAt: null,
+                              crossmatchSeenAt: null,
+                              cardNumber: null,
+                            },
+                          ],
+                        },
+                        '$$mu',
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        ).catch(() => undefined);
+      }
       unreservedCount++;
 
       const dayBucket = new Date().toISOString().slice(0, 10);

@@ -12,7 +12,6 @@ import DonorProfileStep from "./donor-creation/steps/DonorProfileStep";
 import MedicalHistoryStep from "./donor-creation/steps/MedicalHistoryStep";
 import ExamFitnessStep from "./donor-creation/steps/ExamFitnessStep";
 import BagInfoStep from "./donor-creation/steps/BagInfoStep";
-import QaChecklistStep from "./donor-creation/steps/QaChecklistStep";
 import ReviewStep from "./donor-creation/steps/ReviewStep";
 
 export default function DonorCreation() {
@@ -104,7 +103,7 @@ export default function DonorCreation() {
     } else if (currentStep === 3 && !formData.donorIsFit) {
       handleSubmit();
     } else {
-      setCurrentStep((prev) => Math.min(prev + 1, 6));
+      setCurrentStep((prev) => Math.min(prev + 1, 5));
     }
   };
 
@@ -146,7 +145,7 @@ export default function DonorCreation() {
         </div>
       </div>
 
-      {/* Stepper Status Indicator Bar (6 Steps) */}
+      {/* Stepper Status Indicator Bar (5 Steps) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <div className="bg-white p-6 rounded-3xl border border-red-200 flex justify-between items-center shadow-md">
           {[
@@ -154,8 +153,7 @@ export default function DonorCreation() {
             { step: 2, label: "Medical History" },
             { step: 3, label: "Exam & Fitness" },
             { step: 4, label: "Bag Info" },
-            { step: 5, label: "QA Checklist" },
-            { step: 6, label: "Review & Save" }
+            { step: 5, label: "Review & Save" }
           ].map((s, idx) => {
             const isCompleted = currentStep > s.step;
             const isActive = currentStep === s.step;
@@ -187,7 +185,7 @@ export default function DonorCreation() {
                     {s.label}
                   </span>
                 </div>
-                {idx < 5 && (
+                {idx < 4 && (
                   <div className="relative mx-2 h-1 flex-1 overflow-hidden rounded bg-gray-200">
                     <div
                       className="absolute left-0 top-0 h-full bg-red-800 transition-all duration-500"
@@ -267,9 +265,7 @@ export default function DonorCreation() {
 
           {currentStep === 4 && <BagInfoStep form={form} />}
 
-          {currentStep === 5 && <QaChecklistStep form={form} />}
-
-          {currentStep === 6 && <ReviewStep form={form} />}
+          {currentStep === 5 && <ReviewStep form={form} />}
 
           {/* Stepper Footer Buttons */}
           <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
@@ -281,7 +277,7 @@ export default function DonorCreation() {
               <ArrowLeft className="w-4 h-4" />
               Back
             </button>
-            {currentStep < 6 && campId && (
+            {currentStep < 5 && campId && (
               <button
                 type="button"
                 onClick={handleSaveDraft}
@@ -293,14 +289,14 @@ export default function DonorCreation() {
               </button>
             )}
             <button
-              onClick={currentStep === 6 ? handleSubmit : handleNext}
+              onClick={currentStep === 5 ? handleSubmit : handleNext}
               disabled={!form.isStepComplete(currentStep) || isSubmitting}
               className={`px-6 py-2 rounded-full text-sm font-semibold text-white transition-all shadow flex items-center gap-1.5 select-none ${
                 !form.isStepComplete(currentStep) || isSubmitting
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
                   : currentStep === 3 && !formData.donorIsFit
                   ? "bg-red-800 hover:bg-red-900 active:bg-red-950"
-                  : currentStep === 6
+                  : currentStep === 5
                   ? "bg-green-700 hover:bg-green-800 active:bg-green-900"
                   : "bg-red-800 hover:bg-red-900 active:bg-red-950"
               }`}
@@ -315,7 +311,7 @@ export default function DonorCreation() {
                   Complete (Defer)
                   <CheckCircle className="w-4 h-4" />
                 </>
-              ) : currentStep === 6 ? (
+              ) : currentStep === 5 ? (
                 <>
                   Complete
                   <Save className="w-4 h-4" />
