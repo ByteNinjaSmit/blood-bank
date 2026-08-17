@@ -108,12 +108,23 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         ttiRetest,
       } = filters;
 
-      const wantsOwn = status !== 'in-stock' || source !== 'loan';
-      const wantsLoan = status === 'in-stock' && (source === 'all' || source === 'loan');
-
       const unitFilter: any = {
         $and: [{ $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] }],
       };
+
+      // A loan-taken bag (BulkTransfer TAKE_LOAN) is a real BloodUnit —
+      // createUnitsForTakeLoan creates one on intake, tagged via
+      // `loanedFrom`. It must show up here exactly like any other bag (via
+      // the query below), just carrying the loan tag/badge — never as a
+      // second, separately-constructed row built straight from the
+      // BulkTransfer document. (A parallel `loanRows` merge used to build
+      // that second row for every loan bag whenever source was 'all' or
+      // 'loan' — the exact cause of loan bags appearing twice in Stock.)
+      if (source === 'own') {
+        unitFilter['loanedFrom.transferId'] = { $exists: false };
+      } else if (source === 'loan') {
+        unitFilter['loanedFrom.transferId'] = { $exists: true };
+      }
 
       if (status) {
         if (status === 'in-stock') unitFilter.status = 'RELEASED';
@@ -207,26 +218,19 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       // once the donation join below has populated bag.bagNo.
       const bagNoSort = sortBy === 'bagNo';
 
-      const needsMerge = wantsOwn && wantsLoan;
-      const deferPagination = needsMerge || bagNoSort;
-
-      let total = 0;
-      let units: any[] = [];
-      if (wantsOwn) {
-        total = await BloodUnitModel.countDocuments(unitFilter);
-        const query = BloodUnitModel.find(unitFilter).populate({
-          path: 'reservedFor',
-          populate: [
-            { path: 'hospitalId', select: 'name' },
-            { path: 'patientId', select: 'name dob sex' },
-          ],
-        });
-        if (!bagNoSort) query.sort({ [sortField]: sortDir });
-        units = await query
-          .skip(deferPagination ? 0 : skipNum)
-          .limit(deferPagination ? 5000 : limitNum)
-          .lean();
-      }
+      const total = await BloodUnitModel.countDocuments(unitFilter);
+      const query = BloodUnitModel.find(unitFilter).populate({
+        path: 'reservedFor',
+        populate: [
+          { path: 'hospitalId', select: 'name' },
+          { path: 'patientId', select: 'name dob sex' },
+        ],
+      });
+      if (!bagNoSort) query.sort({ [sortField]: sortDir });
+      const units = await query
+        .skip(bagNoSort ? 0 : skipNum)
+        .limit(bagNoSort ? 5000 : limitNum)
+        .lean();
 
       const donationIds = units.map((u) => u.donationId).filter(Boolean);
       const donations = await findAcrossDonations(
@@ -399,7 +403,14 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
             rh: u.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
             segmentNo,
             batchNo: donObj?.batchNo || undefined,
-            donationDate: donObj?.collectedAt ? donObj.collectedAt.toISOString() : undefined,
+            // Loaned-in bags have no real Donation record to join (see
+            // above) — their own collectedAt (set directly on the
+            // BloodUnit at intake) is the real collection date instead.
+            donationDate: donObj?.collectedAt
+              ? donObj.collectedAt.toISOString()
+              : loanedFrom && u.collectedAt
+                ? new Date(u.collectedAt).toISOString()
+                : undefined,
             donorName: loanedFrom ? `On loan — ${loanedFrom.bloodBankName || 'Unknown'}` : (donObj?.donorName || 'Unknown'),
             donorId: donObj?.donorId || undefined,
             donorPhone: donObj?.donorPhone || undefined,
@@ -419,73 +430,13 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
           reservedPatientAge: patientAge,
           reservedPatientSex: patientSex,
           requisition: requisitionObj,
-          source: 'OWN',
+          source: loanedFrom ? 'LOAN' : 'OWN',
+          loanTransfer: loanedFrom
+            ? { transferId: loanedFrom.transferId, bloodBankName: loanedFrom.bloodBankName }
+            : undefined,
           _sortDate: u.createdAt,
         };
       });
-
-      let loanRows: any[] = [];
-      if (wantsLoan) {
-        const loanTransfers = await BulkTransferModel.find({
-          transferType: 'TAKE_LOAN',
-          deletedAt: null,
-        }).lean();
-        const searchRegex = search ? new RegExp(search, 'i') : null;
-
-        loanTransfers.forEach((t: any) => {
-          (t.items || []).forEach((it: any, idx: number) => {
-            if (componentType && it.componentType !== componentType) return;
-            if (bloodGroup && it.bloodGroup?.replace(/[+-]/, '') !== bloodGroup) return;
-            if (rh) {
-              const wantsNegative = rh === 'Negative' || rh === 'NEGATIVE';
-              const isNegative = it.bloodGroup?.endsWith('-');
-              if (wantsNegative !== Boolean(isNegative)) return;
-            }
-            if (expiryFrom && it.expiresAt && new Date(it.expiresAt) < new Date(expiryFrom)) return;
-            if (expiryTo && it.expiresAt && new Date(it.expiresAt) > new Date(expiryTo)) return;
-            if (
-              searchRegex &&
-              !searchRegex.test(it.bagNo || '') &&
-              !searchRegex.test(t.transferId || '')
-            )
-              return;
-
-            const rhLabel = it.bloodGroup?.endsWith('-') ? 'Negative' : 'Positive';
-            const bloodGroupLetter = (it.bloodGroup || '').replace(/[+-]/, '');
-
-            loanRows.push({
-              _id: `LOAN-${t._id.toString()}-${idx}`,
-              bagNo: it.bagNo,
-              segmentNo: it.segmentNo || '—',
-              typeOfBag: 'SB',
-              bag: {
-                bagNo: it.bagNo,
-                bloodGroup: bloodGroupLetter,
-                rh: rhLabel,
-                segmentNo: it.segmentNo || '—',
-                donationDate: it.collectedAt ? new Date(it.collectedAt).toISOString() : undefined,
-                donorName: `Loan: ${t.bloodBankName}`,
-                donationType: 'LOAN',
-              },
-              component: {
-                componentType: it.componentType,
-                volumeMl: it.volumeMl,
-                expiryDate: it.expiresAt ? new Date(it.expiresAt).toISOString() : '',
-              },
-              status: 'in-stock',
-              hospital: { name: `Loan From: ${t.bloodBankName}` },
-              source: 'LOAN',
-              loanTransfer: {
-                transferId: t.transferId,
-                bloodBankName: t.bloodBankName,
-                bloodBankAddress: t.bloodBankAddress,
-                transferDate: t.transferDate ? new Date(t.transferDate).toISOString() : undefined,
-              },
-              _sortDate: t.createdAt,
-            });
-          });
-        });
-      }
 
       // Sort purely by the trailing digit run (e.g. `SBCK26-D-0002` -> 2),
       // not a left-to-right natural compare — the D/T segment-type letter
@@ -509,27 +460,14 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       };
 
       let combined: any[];
-      let combinedTotal: number;
-      if (source === 'loan') {
-        combined = bagNoSort ? [...loanRows].sort(bagNoCompare) : loanRows;
-        combinedTotal = loanRows.length;
-      } else if (needsMerge) {
-        combined = [...data, ...loanRows].sort(
-          bagNoSort
-            ? bagNoCompare
-            : (a, b) => new Date(b._sortDate || 0).getTime() - new Date(a._sortDate || 0).getTime(),
-        );
-        combinedTotal = combined.length;
-      } else if (bagNoSort) {
+      const combinedTotal = total;
+      if (bagNoSort) {
         combined = [...data].sort(bagNoCompare);
-        combinedTotal = total;
       } else {
         combined = data;
-        combinedTotal = total;
       }
 
-      const pageData =
-        source === 'loan' || deferPagination ? combined.slice(skipNum, skipNum + limitNum) : combined;
+      const pageData = bagNoSort ? combined.slice(skipNum, skipNum + limitNum) : combined;
       pageData.forEach((row: any) => {
         delete row._sortDate;
       });

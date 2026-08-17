@@ -17,6 +17,9 @@
 // - ArrowUp/ArrowDown are left to native handling — they're what
 //   highlights/changes the option, both inside an open picker and on a
 //   closed select.
+// - Radio button groups (Yes/No questions, etc.) count as a single field:
+//   Enter on any radio in the group moves to the next field, focusing
+//   whichever option is already checked (or the first option if none is).
 //
 // Usage: spread the two handlers onto the form's outer container (the
 // same element whose descendants you want Enter-navigation to span).
@@ -28,22 +31,56 @@
 //   <div onKeyDown={onKeyDown} onChange={onChange}>...form fields...</div>
 
 const FOCUSABLE_SELECTOR =
-  "input:not([disabled]):not([type=submit]):not([type=button]):not([type=radio]):not([type=checkbox]), select:not([disabled]), textarea:not([disabled])";
+  "input:not([disabled]):not([type=submit]):not([type=button]):not([type=checkbox]), select:not([disabled]), textarea:not([disabled])";
 
 // Input types whose selectionStart/selectionEnd are readable and whose
 // left/right arrows move a text caret (as opposed to date/time/color pickers
 // where the arrows drive segment/value changes instead).
 const CURSOR_NAV_INPUT_TYPES = new Set(["text", "search", "tel", "url", "email", "password", "number"]);
 
+function isRadio(el) {
+  return el.tagName === "INPUT" && el.type === "radio";
+}
+
+// A radio group counts as one field: focusableList collapses each
+// same-`name` group down to the first radio encountered in DOM order.
 function focusableList(container) {
-  return Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR));
+  const raw = Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR));
+  const seenRadioNames = new Set();
+  return raw.filter((el) => {
+    if (!isRadio(el)) return true;
+    if (seenRadioNames.has(el.name)) return false;
+    seenRadioNames.add(el.name);
+    return true;
+  });
+}
+
+// The element indexOf(target) should compare against for radios: the first
+// radio in DOM order sharing target's name (same object focusableList kept).
+function indexOfField(all, target) {
+  if (isRadio(target)) {
+    return all.findIndex((el) => isRadio(el) && el.name === target.name);
+  }
+  return all.indexOf(target);
+}
+
+// Focusing a radio-group entry should land on the checked option if there is
+// one, falling back to the first option in the group.
+function focusField(container, el) {
+  if (!el) return;
+  if (isRadio(el)) {
+    const checked = container.querySelector(`input[type="radio"][name="${CSS.escape(el.name)}"]:checked`);
+    (checked || el).focus();
+    return;
+  }
+  el.focus();
 }
 
 function advanceFocus(container, target, onComplete) {
   const all = focusableList(container);
-  const idx = all.indexOf(target);
+  const idx = indexOfField(all, target);
   if (idx !== -1 && idx < all.length - 1) {
-    all[idx + 1].focus();
+    focusField(container, all[idx + 1]);
   } else if (idx === all.length - 1 && onComplete) {
     onComplete();
   }
@@ -51,8 +88,7 @@ function advanceFocus(container, target, onComplete) {
 
 function stepFocus(container, target, delta) {
   const all = focusableList(container);
-  const next = all[all.indexOf(target) + delta];
-  if (next) next.focus();
+  focusField(container, all[indexOfField(all, target) + delta]);
 }
 
 export function createFormEnterNavHandlers({ validateField, onComplete } = {}) {
@@ -62,7 +98,7 @@ export function createFormEnterNavHandlers({ validateField, onComplete } = {}) {
     const isField =
       isSelect ||
       target.tagName === "TEXTAREA" ||
-      (target.tagName === "INPUT" && !["submit", "button", "radio", "checkbox"].includes(target.type));
+      (target.tagName === "INPUT" && !["submit", "button", "checkbox"].includes(target.type));
     if (!isField) return;
 
     if (isSelect && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {

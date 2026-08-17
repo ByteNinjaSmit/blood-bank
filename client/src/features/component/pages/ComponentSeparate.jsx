@@ -349,6 +349,10 @@ const ComponentSeparate = () => {
     ? sortedBags.filter((b) => !batch.selectedKeys.has(bagKey(b)))
     : sortedBags;
 
+  // Bags queued into the current batch — always shown ascending by bag
+  // number, regardless of the order they were checked into the batch.
+  const batchQueuedBags = sortByBagNoAsc(bags.filter((b) => batch.selectedKeys.has(bagKey(b))));
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-red-100 shadow-sm">
@@ -368,7 +372,7 @@ const ComponentSeparate = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <BatchSeparationPanel
           bagType={batch.bagType}
-          bags={bags.filter((b) => batch.selectedKeys.has(bagKey(b)))}
+          bags={batchQueuedBags}
           bagKeyFn={bagKey}
           inFlightKeys={batch.inFlightKeys}
           isSubmitting={batch.isSubmitting}
@@ -570,7 +574,7 @@ const ComponentSeparate = () => {
       <BatchSeparateModal
         open={batch.showModal}
         onOpenChange={batch.setShowModal}
-        bags={bags.filter((b) => batch.selectedKeys.has(bagKey(b)))}
+        bags={batchQueuedBags}
         bagKeyFn={bagKey}
         availableTypesFor={availableComponentTypesForBatch}
         pendingByBag={batch.pendingByBag}
@@ -587,7 +591,7 @@ const ComponentSeparate = () => {
       <BatchSignatureModal
         open={batch.showSignModal}
         onOpenChange={batch.setShowSignModal}
-        bags={bags.filter((b) => batch.selectedKeys.has(bagKey(b)))}
+        bags={batchQueuedBags}
         bagKeyFn={bagKey}
         pendingByBag={batch.pendingByBag}
         rpmFirstSpin={batch.rpmFirstSpin}
@@ -599,7 +603,7 @@ const ComponentSeparate = () => {
         isSubmitting={batch.isSubmitting}
         onConfirm={() =>
           batch.finalizeBatch(
-            bags.filter((b) => batch.selectedKeys.has(bagKey(b))),
+            batchQueuedBags,
             batch.signatureText,
             { onSuccess: fetchBags },
           )
