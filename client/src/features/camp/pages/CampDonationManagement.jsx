@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Droplets, Plus, Eye, Trash2, Activity, Upload, X, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
+import { Droplets, Plus, Eye, Trash2, Activity, Upload, X, Search, ArrowUpDown, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -185,6 +185,15 @@ const CampDonationManagement = () => {
       <div className="bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/camp-listing')}
+              title="Back to camp list"
+              aria-label="Back to camp list"
+              className="p-2 border border-gray-200 rounded-lg bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
             <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
               <Droplets className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
             </div>
