@@ -1,19 +1,17 @@
 import React, { useState } from "react"
-import { Edit, Plus, X, Users, UserPlus } from "lucide-react"
+import { Edit, Plus, X, UserPlus } from "lucide-react"
 import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 const CampEditModal = ({
   open,
   camp,
-  staffList,
   form,
   errors,
   saving,
   onChange,
   onAddVolunteer,
   onRemoveVolunteer,
-  onToggleStaff,
   onClose,
   onSubmit,
 }) => {
@@ -206,40 +204,6 @@ const CampEditModal = ({
               </div>
             ) : (
               <p className="text-xs text-slate-400 italic">No staff added yet.</p>
-            )}
-          </div>
-
-          {/* System users — select who from User Management is assigned to this camp */}
-          <div className="space-y-2 pt-3 border-t border-slate-200">
-            <label className="block text-sm font-medium text-slate-700 flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-orange-800" />
-              Assign System Users
-            </label>
-            <p className="text-[11px] text-slate-400 -mt-1">Click to toggle a registered staff account as assigned to this camp — shown on the camp listing's Staff column.</p>
-            {staffList && staffList.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {staffList
-                  .filter((staff) => staff && staff._id && staff.name)
-                  .map((staff) => {
-                    const selected = (form?.staff || []).includes(staff._id)
-                    return (
-                      <button
-                        key={staff._id}
-                        type="button"
-                        onClick={() => onToggleStaff && onToggleStaff(staff._id)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ${
-                          selected
-                            ? "bg-orange-800 border-orange-800 text-white"
-                            : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                        }`}
-                      >
-                        {`${String(staff?.name?.first || "")} ${String(staff?.name?.last || "")}`.trim()}
-                      </button>
-                    )
-                  })}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-400 italic">No system users found.</p>
             )}
           </div>
 

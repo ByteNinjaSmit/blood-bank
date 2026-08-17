@@ -14,6 +14,7 @@ import { useCamp } from "@/hooks/useCamp"
 import { useAuth } from "@/store/auth"
 import { useEditWithReason } from "@/hooks/useEditWithReason"
 import { exportCampsExcel } from "@/features/camp/campExcelExport"
+import { toISTDatetimeLocal, fromISTDatetimeLocal } from "@/lib/format-date"
 
 const CampList = () => {
   const { camps, loading, fetchCamps, updateCamp, deleteCamp } = useCamp()
@@ -156,8 +157,8 @@ const CampList = () => {
       address: camp.address || "",
       phone: camp.contactInfo?.phone || "",
       email: camp.contactInfo?.email || "",
-      dateFrom: camp.dateFrom ? new Date(new Date(camp.dateFrom).getTime() - new Date(camp.dateFrom).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
-      dateTo: camp.dateTo ? new Date(new Date(camp.dateTo).getTime() - new Date(camp.dateTo).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+      dateFrom: toISTDatetimeLocal(camp.dateFrom),
+      dateTo: toISTDatetimeLocal(camp.dateTo),
       volunteers: camp.volunteers || [],
       staff: (camp.staff || []).map((s) => s._id || s).filter(Boolean),
     })
@@ -262,8 +263,8 @@ const CampList = () => {
       email: editForm.email.trim(),
       volunteers: editForm.volunteers,
       staff: editForm.staff || [],
-      dateFrom: editForm.dateFrom,
-      dateTo: editForm.dateTo,
+      dateFrom: fromISTDatetimeLocal(editForm.dateFrom),
+      dateTo: fromISTDatetimeLocal(editForm.dateTo),
     }
     wrappedSaveCamp(payload)
   }

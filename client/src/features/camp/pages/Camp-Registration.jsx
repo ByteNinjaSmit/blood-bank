@@ -6,6 +6,7 @@ import { campApi } from "../api"
 import { useNavigate } from "react-router-dom"
 import Stepper, { Step } from "@/components/Stepper"
 import { createFormEnterNavHandlers } from "@/hooks/useFormEnterNav"
+import { fromISTDatetimeLocal } from "@/lib/format-date"
 
 const CampRegistration = () => {
   const navigate = useNavigate()
@@ -140,8 +141,8 @@ const CampRegistration = () => {
         phone: formData.contactInfo.phone,
         email: formData.contactInfo.email,
         volunteers: formData.volunteers,
-        dateFrom: formData.dateFrom,
-        dateTo: formData.dateTo,
+        dateFrom: fromISTDatetimeLocal(formData.dateFrom),
+        dateTo: fromISTDatetimeLocal(formData.dateTo),
       })
 
       toast.success("Camp created successfully")
