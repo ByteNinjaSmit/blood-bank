@@ -1,5 +1,6 @@
 import { XLSX } from '@/utils/xlsxStyleHelper';
 import { formatDate, formatDateTime, downloadExcelReport, downloadMultiTableExcelReport } from './core';
+import { buildPairedGroups } from '@/utils/stockRegisterGrouping';
 
 export async function exportCampDonors(items, campName = 'Camp', meta = {}) {
   const headers = ['Sr No', 'Full Name', 'DOB', 'Age', 'Sex', 'Phone', 'Email', 'Blood Group', 'Last Donation', 'Status'];
@@ -255,41 +256,50 @@ export async function exportSerologyResults(items, meta = {}) {
   }], 'Serology_Lab_Results.xlsx');
 }
 
-// 5. Inventory Stock
+// 5. Inventory Stock — blood-group-paired register (Positive / Negative
+// columns, serial-numbered, padded to equal length) matching the Stock
+// page's "Export Stocks" print report layout, one table per blood group
+// stacked below another on the same sheet. Reservation stock is deliberately
+// excluded — this mirrors only what the Stock page itself shows as stock.
 export async function exportStock(items, meta = {}) {
-  const headers = ['Sr No', 'Bag No', 'Segment No', 'Component', 'Blood Group', 'Volume', 'Collection Date', 'Expiry Date', 'Status', 'Storage / Destination'];
-  const alignments = ['center', 'center', 'center', 'left', 'center', 'center', 'center', 'center', 'center', 'left'];
+  const inStockRows = (items || [])
+    .filter((r) => r.status === 'in-stock')
+    .map((r) => ({
+      bagNo: r?.bag?.bagNo || r.bagNo || '—',
+      bloodGroup: r?.bag?.bloodGroup,
+      rh: r?.bag?.rh,
+      collectionDate: r?.bag?.donationDate,
+      expiryDate: r?.component?.expiryDate,
+    }));
 
-  const rows = items.map((r, i) => [
-    i + 1,
-    r?.bag?.bagNo || r.bagNo || '—',
-    r?.bag?.segmentNo || r.segmentNo || '—',
-    r?.component?.componentType || '—',
-    r?.bag?.bloodGroup ? `${r.bag.bloodGroup} ${r.bag.rh || ''}` : '—',
-    r?.component?.volumeMl ? `${r.component.volumeMl} mL` : '—',
-    formatDate(r?.bag?.donationDate),
-    formatDate(r?.component?.expiryDate),
-    (r.status || '—').toUpperCase(),
-    r.status === 'in-stock' || r.status === 'quarantine' ? (r.storageLocation || 'Main Fridge') : (r.hospital?.name || r.storageLocation || '—'),
-  ]);
+  const groups = buildPairedGroups(inStockRows);
 
-  const stats = [
-    { label: 'Total In-Stock Items', value: items.filter(r => r.status === 'in-stock').length },
-    { label: 'Total Reserved Items', value: items.filter(r => r.status === 'reserved').length },
-    { label: 'Total Quarantined Items', value: items.filter(r => r.status === 'quarantine').length },
-    { label: 'Total Stocked units', value: items.length },
-  ];
+  const tables = groups.map(({ group, positive, negative, rowCount }) => {
+    const headers = ['Sr No', 'Bag No', 'Collection', 'Expiry', 'Sr No', 'Bag No', 'Collection', 'Expiry'];
+    const rows = [];
+    for (let i = 0; i < rowCount; i++) {
+      const p = positive[i];
+      const n = negative[i];
+      rows.push([
+        p.serial, p.empty ? '' : p.bagNo, p.empty ? '' : formatDate(p.collectionDate), p.empty ? '' : formatDate(p.expiryDate),
+        n.serial, n.empty ? '' : n.bagNo, n.empty ? '' : formatDate(n.collectionDate), n.empty ? '' : formatDate(n.expiryDate),
+      ]);
+    }
+    return {
+      name: group,
+      subtitle: `${group}+ [Positive]   |   ${group}- [Negative]`,
+      headers,
+      rows,
+    };
+  });
 
   await downloadExcelReport([{
     name: 'Current Inventory Stock',
     title: 'SANJIVANI BLOOD BANK, KOPARGAON',
-    subtitle: 'Blood Units Inventory Stock Report',
-    headers,
-    rows,
-    alignments,
-    stats,
+    subtitle: `Blood Stock Register — Serial-wise by Blood Group (${inStockRows.length} in-stock unit${inStockRows.length === 1 ? '' : 's'})`,
+    tables,
     ...meta,
-  }], 'Inventory_Stock_Report.xlsx');
+  }], 'Inventory_Stock_Register.xlsx');
 }
 
 // 6. Inventory Reserve

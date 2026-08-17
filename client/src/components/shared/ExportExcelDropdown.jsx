@@ -4,7 +4,7 @@ import React, { useState } from 'react';
  * Reusable premium dropdown button to trigger Excel exports.
  * Provides two choices: Export Current View (Filtered) and Export All Records.
  */
-export default function ExportExcelDropdown({ onExport, isLoading = false, disabled = false }) {
+export default function ExportExcelDropdown({ onExport, isLoading = false, disabled = false, onPrintReport, printReportLabel = 'Export Stocks (Print Report)' }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleAction = (exportAll) => {
@@ -60,6 +60,18 @@ export default function ExportExcelDropdown({ onExport, isLoading = false, disab
                 </svg>
                 Export All Records
               </button>
+              {onPrintReport && (
+                <button
+                  type="button"
+                  onClick={() => { setIsOpen(false); onPrintReport(); }}
+                  className="flex w-full items-center px-4 py-2.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors text-left font-medium cursor-pointer border-t border-gray-100"
+                >
+                  <svg className="w-3.5 h-3.5 mr-2.5 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
+                  </svg>
+                  {printReportLabel}
+                </button>
+              )}
             </div>
           </div>
         </>

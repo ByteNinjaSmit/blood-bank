@@ -14,6 +14,7 @@ import { COMPONENT_TYPES } from "@/constants/component-types";
 import ComponentStockLines from "@/components/shared/ComponentStockLines";
 import StockViewModal from "../components/StockViewModal";
 import StockPrintLabelModal from "../components/StockPrintLabelModal";
+import StockRegisterReportModal from "../components/StockRegisterReportModal";
 
 const formatDate = (dateStr) => {
   if (!dateStr) return 'N/A';
@@ -34,6 +35,7 @@ const Stock = () => {
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
   const [selectedPrintItem, setSelectedPrintItem] = useState(null);
   const [selectedViewItem, setSelectedViewItem] = useState(null);
+  const [registerReportOpen, setRegisterReportOpen] = useState(false);
 
   // filters
   const [componentType, setComponentType] = useState("");
@@ -317,7 +319,12 @@ const Stock = () => {
                     <X className="w-3 h-3" />
                   </button>
                 )}
-                <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+                <ExportExcelDropdown
+                  onExport={handleExportExcel}
+                  isLoading={excelLoading}
+                  onPrintReport={() => setRegisterReportOpen(true)}
+                  printReportLabel="Export Stocks"
+                />
               </div>
             </div>
           </CardContent>
@@ -560,6 +567,9 @@ const Stock = () => {
 
       {/* Print Preview Modal */}
       <StockPrintLabelModal item={selectedPrintItem} onClose={() => setSelectedPrintItem(null)} formatDate={formatDate} />
+
+      {/* Stock Register — combined stock + reserved + under-testing print report */}
+      <StockRegisterReportModal open={registerReportOpen} onClose={() => setRegisterReportOpen(false)} />
     </div>
   );
 };
