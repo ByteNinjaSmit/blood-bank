@@ -173,7 +173,14 @@ export default function MatchedBagCard({
 
           <div className="flex items-center gap-2 pt-4">
             <CompatBadge type={mi.compatibilityType || 'exact'} />
-            {isReserved ? (
+            {/* Actual unit status, not `mi.reserved` — that flag stays true
+                even after the bag is issued, so it can't tell "Issued"
+                apart from "Reserved" on its own. */}
+            {inv?.status === 'ISSUED' ? (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                Issued
+              </span>
+            ) : isReserved ? (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
                 Reserved
               </span>

@@ -72,7 +72,7 @@ const Reserve = () => {
             page: 1,
             limit: 5000,
             status: 'reserved',
-            purpose: 'RESERVATION',
+            // No purpose filter — export the same set the list shows.
             componentType: componentType || undefined,
             search: search || undefined,
             bloodGroup: bloodGroup || undefined,

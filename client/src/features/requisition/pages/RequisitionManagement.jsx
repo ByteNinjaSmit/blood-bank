@@ -8,7 +8,6 @@ import useRequisition from './hooks/useRequisition';
 import RequestCreationStep from './steps/RequestCreationStep';
 import MatchReviewStep from './steps/MatchReviewStep';
 import ApproveIssueStep from './steps/ApproveIssueStep';
-import CompleteStep from './steps/CompleteStep';
 import { requisitionApprovalBlockers } from '../requisition-gating';
 import { scrollAppToTop } from '@/lib/scroll-to-top';
 
@@ -84,7 +83,6 @@ const RequisitionManagement = () => {
   const nextLabel = React.useMemo(() => {
     if (currentStep === 1) return 'Continue to Match Review';
     if (currentStep === 2) return 'Continue to Approve & Issue';
-    if (currentStep === 3) return 'Continue to Complete';
     return 'Finish';
   }, [currentStep]);
 
@@ -147,14 +145,6 @@ const RequisitionManagement = () => {
     </button>
   ) : null;
 
-  // Step 4's Next/Finish button is now the only way to complete the
-  // requisition (the old in-page "Complete Request" button was removed), so
-  // it must be enabled once the requisition is ready to complete —
-  // 'approved'/'issued' — not only after it's already 'completed'.
-  const canProceedFromStep4 = React.useMemo(() => {
-    return !!requestDoc?._id && ['approved', 'issued', 'completed'].includes(requestDoc?.status);
-  }, [requestDoc]);
-
   const handleRejectAndExit = async (rejectionReason) => {
     let ok;
     if (requestDoc?._id) {
@@ -169,8 +159,7 @@ const RequisitionManagement = () => {
   const nextDisabled =
     (currentStep === 1 && !canProceedFromStep1) ||
     (currentStep === 2 && !canProceedFromStep2) ||
-    (currentStep === 3 && !canProceedFromStep3) ||
-    (currentStep === 4 && !canProceedFromStep4);
+    (currentStep === 3 && !canProceedFromStep3);
 
   return (
       <div className="min-h-screen bg-gray-50">
@@ -200,7 +189,7 @@ const RequisitionManagement = () => {
             }}
             disableStepIndicators={nextDisabled}
             nextButtonText={nextLabel}
-            finishButtonText="Complete Request"
+            finishButtonText="Complete"
             footerExtra={approveFooterButton}
             stepCircleContainerClassName="bg-white"
             contentClassName="bg-white rounded-xl shadow border border-gray-100"
@@ -256,13 +245,6 @@ const RequisitionManagement = () => {
                 onIssue={handleIssue}
                 shortages={shortages}
                 step2Reasons={step2Reasons}
-              />
-            </Step>
-
-            <Step>
-              <CompleteStep
-                requestDoc={requestDoc}
-                shortages={shortages}
               />
             </Step>
           </Stepper>

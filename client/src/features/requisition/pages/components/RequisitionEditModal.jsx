@@ -362,10 +362,16 @@ export default function RequisitionEditModal({ open, onClose, requisitionId, hos
               </>
             ) : (
               <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-sm space-y-4">
-                <p className="text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-                  Bags already <strong>Issued</strong> are locked here — they can only be corrected via
-                  "Unissue" from the Issue screen. Every other bag can still be swapped for a different one.
-                </p>
+                {(doc?.matchedInventory || []).some((mi) => {
+                  const inv = typeof mi.inventoryId === 'object' ? mi.inventoryId : null;
+                  return inv?.status === 'ISSUED';
+                }) && (
+                  <p className="text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                    One or more bags below are already <strong>Issued</strong> — those are locked here and can
+                    only be corrected via "Unissue" from the Issue screen. Bags still <strong>Reserved</strong>{' '}
+                    (not yet issued) can be freely swapped for a different one below.
+                  </p>
+                )}
                 {Object.keys(groupMatchedByComponent(doc?.matchedInventory)).length > 0 ? (
                   <div className="space-y-4">
                     {Object.entries(groupMatchedByComponent(doc?.matchedInventory)).map(([compType, items]) => {

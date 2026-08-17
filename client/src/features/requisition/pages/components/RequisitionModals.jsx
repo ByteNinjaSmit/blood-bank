@@ -17,11 +17,59 @@ export default function RequisitionModals({
   issueModalOpen, setIssueModalOpen, issueDoc, setIssueDoc, issueLoading, issuingRowId, setIssuingRowId, fetchList,
   multiLabelModalOpen, setMultiLabelModalOpen, multiLabelDoc, setMultiLabelDoc, printSingleLabel,
 }) {
-  const [issueTime, setIssueTime] = useState(() => new Date());
   const [unissueMode, setUnissueMode] = useState(false);
   const [selectedUnissue, setSelectedUnissue] = useState({});
   const [unissuing, setUnissuing] = useState(false);
   const [unissueReasonModalOpen, setUnissueReasonModalOpen] = useState(false);
+
+  // Issue confirmation popup: opened by the per-row Issue button, not shown
+  // up front. Shows the current system time (editable) and only actually
+  // issues the component once the operator confirms inside the popup.
+  const [issueConfirmTarget, setIssueConfirmTarget] = useState(null);
+  const [issueConfirmTime, setIssueConfirmTime] = useState(() => new Date());
+  const [confirmingIssue, setConfirmingIssue] = useState(false);
+
+  const openIssueConfirm = (invId) => {
+    setIssueConfirmTarget(invId);
+    setIssueConfirmTime(new Date());
+  };
+  const closeIssueConfirm = () => {
+    setIssueConfirmTarget(null);
+  };
+
+  const confirmIssue = async () => {
+    if (!issueConfirmTarget) return;
+    const invId = issueConfirmTarget;
+    setIssuingRowId(invId);
+    setConfirmingIssue(true);
+    try {
+      const res = await requisitionApi.issue(issueDoc._id, [invId], issueConfirmTime);
+      if (!res.success) {
+        toast.error(res.error || 'Failed to issue component');
+      } else {
+        toast.success('Component issued successfully');
+        closeIssueConfirm();
+        const fresh = await requisitionApi.getRequest(issueDoc._id);
+        if (fresh.success) {
+          setIssueDoc(fresh.data);
+          // Server auto-completes the requisition once all matched units
+          // are issued (requisition.service.ts issueAll) — just react to
+          // that status, don't call complete() again.
+          if (fresh.data.status === 'COMPLETED') {
+            toast.success('All components issued. Requisition completed.');
+            setIssueModalOpen(false);
+            setIssueDoc(null);
+          }
+        }
+        fetchList();
+      }
+    } catch (e) {
+      toast.error('Network error during issue');
+    } finally {
+      setIssuingRowId(null);
+      setConfirmingIssue(false);
+    }
+  };
 
   const toggleUnissueRow = (invId) => {
     setSelectedUnissue((prev) => ({ ...prev, [invId]: !prev[invId] }));
@@ -343,12 +391,8 @@ export default function RequisitionModals({
               </div>
             </div>
 
-            {/* Issue time + unissue toggle */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white border border-gray-200 rounded-xl p-3">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Issue Time</span>
-                <TimePicker12h value={issueTime} onChange={setIssueTime} />
-              </div>
+            {/* Unissue toggle */}
+            <div className="flex justify-end bg-white border border-gray-200 rounded-xl p-3">
               <label className="flex items-center gap-2 text-xs font-semibold text-amber-800 cursor-pointer">
                 <input
                   type="checkbox"
@@ -446,35 +490,7 @@ export default function RequisitionModals({
                                 <button
                                   type="button"
                                   disabled={issuingRowId === invId}
-                                  onClick={async () => {
-                                    setIssuingRowId(invId);
-                                    try {
-                                      const res = await requisitionApi.issue(issueDoc._id, [invId], issueTime);
-                                      if (!res.success) {
-                                        toast.error(res.error || 'Failed to issue component');
-                                      } else {
-                                        toast.success('Component issued successfully');
-                                        // Refresh the popup state
-                                        const fresh = await requisitionApi.getRequest(issueDoc._id);
-                                        if (fresh.success) {
-                                          setIssueDoc(fresh.data);
-                                          // Server auto-completes the requisition once all matched
-                                          // units are issued (requisition.service.ts issueAll) — just
-                                          // react to that status, don't call complete() again.
-                                          if (fresh.data.status === 'COMPLETED') {
-                                            toast.success('All components issued. Requisition completed.');
-                                            setIssueModalOpen(false);
-                                            setIssueDoc(null);
-                                          }
-                                        }
-                                        fetchList();
-                                      }
-                                    } catch (e) {
-                                      toast.error('Network error during issue');
-                                    } finally {
-                                      setIssuingRowId(null);
-                                    }
-                                  }}
+                                  onClick={() => openIssueConfirm(invId)}
                                   className="px-3 py-1 bg-green-700 hover:bg-green-800 text-white rounded text-xs font-bold transition active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed cursor-pointer"
                                 >
                                   {issuingRowId === invId ? 'Issuing…' : 'Issue'}
@@ -633,6 +649,41 @@ export default function RequisitionModals({
         fieldLabel="Reason for Unissuing"
         submitting={unissuing}
       />
+
+      <Dialog open={!!issueConfirmTarget} onOpenChange={(o) => { if (!o) closeIssueConfirm(); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirm Issue Time</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <p className="text-gray-600">
+              Check the issue time below — edit it if needed — then confirm to issue this component.
+            </p>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Issue Time</span>
+              <TimePicker12h value={issueConfirmTime} onChange={setIssueConfirmTime} />
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <button
+                type="button"
+                onClick={closeIssueConfirm}
+                disabled={confirmingIssue}
+                className="px-4 py-2 border border-gray-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold rounded-xl text-xs shadow-sm transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmIssue}
+                disabled={confirmingIssue}
+                className="px-4 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-white font-semibold text-xs shadow-sm transition-all disabled:opacity-50"
+              >
+                {confirmingIssue ? 'Issuing…' : 'Issue'}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
