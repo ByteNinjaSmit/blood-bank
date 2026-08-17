@@ -142,7 +142,10 @@ const Reserve = () => {
           page,
           limit,
           status: 'reserved',
-          purpose: 'RESERVATION',
+          // No purpose filter: show every currently-reserved bag regardless
+          // of whether it came from the Reserve wizard or a normal
+          // requisition — reservation now happens as soon as a requisition
+          // is created+matched, so those bags must show here too.
           componentType: componentType || undefined,
           search: search || undefined,
           bloodGroup: bloodGroup || undefined,

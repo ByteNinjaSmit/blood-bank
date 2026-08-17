@@ -72,6 +72,11 @@ const BloodUnitSchema = new Schema(
     reservedFor: { type: Schema.Types.ObjectId, ref: 'Requisition' },
     reservedAt: Date,
     reservedUntil: Date,
+    // Who last unreserved this unit — set alongside the UNRESERVE
+    // transition, cleared on the next RESERVE. Lets the UI show "System
+    // unreserved" vs "Manually unreserved".
+    unreservedBy: { type: String, enum: ['SYSTEM', 'MANUAL'], default: null },
+    unreservedReason: { type: String, trim: true, default: null },
 
     issuedTo: { type: Schema.Types.ObjectId, ref: 'Issue' },
     issuedAt: Date,

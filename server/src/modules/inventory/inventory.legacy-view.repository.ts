@@ -487,11 +487,26 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         });
       }
 
-      const bagNoCompare = (a: any, b: any) =>
-        String(a.bag?.bagNo ?? a.bagNo ?? '').localeCompare(String(b.bag?.bagNo ?? b.bagNo ?? ''), undefined, {
-          numeric: true,
-          sensitivity: 'base',
-        }) * (sortDir === 1 ? 1 : -1);
+      // Sort purely by the trailing digit run (e.g. `SBCK26-D-0002` -> 2),
+      // not a left-to-right natural compare — the D/T segment-type letter
+      // must never affect ordering (a plain numeric localeCompare would
+      // hit that letter before the digits and wrongly group all D's ahead
+      // of all T's regardless of sequence number).
+      const lastDigitRun = (s: string): number | null => {
+        const m = s.match(/(\d+)(?!.*\d)/);
+        return m ? Number(m[1]) : null;
+      };
+      const bagNoCompare = (a: any, b: any) => {
+        const aStr = String(a.bag?.bagNo ?? a.bagNo ?? '');
+        const bStr = String(b.bag?.bagNo ?? b.bagNo ?? '');
+        const aNum = lastDigitRun(aStr);
+        const bNum = lastDigitRun(bStr);
+        const cmp =
+          aNum !== null && bNum !== null && aNum !== bNum
+            ? aNum - bNum
+            : aStr.localeCompare(bStr, undefined, { numeric: true, sensitivity: 'base' });
+        return cmp * (sortDir === 1 ? 1 : -1);
+      };
 
       let combined: any[];
       let combinedTotal: number;
@@ -535,13 +550,36 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         if (!unit) unit = await BloodUnitModel.findOne({ unitId: id });
         if (!unit) continue;
 
+        const requisitionId = unit.reservedFor;
+
         await deps.units.applyEvent({
           unitId: unit.unitId,
           event: 'UNRESERVE',
           actorId,
           reason,
-          set: { reservedFor: null, reservedUntil: null, reservedAt: null } as any,
+          set: {
+            reservedFor: null,
+            reservedUntil: null,
+            reservedAt: null,
+            unreservedBy: 'MANUAL',
+            unreservedReason: reason,
+          } as any,
         });
+
+        // Keep the owning requisition's matched-unit entry in sync so
+        // /requisition/list shows "Unreserved — Manually unreserved" too.
+        if (requisitionId) {
+          await RequisitionModel.findOneAndUpdate(
+            { _id: requisitionId, 'matchedUnits.unitId': unit.unitId },
+            {
+              $set: {
+                'matchedUnits.$.reserved': false,
+                'matchedUnits.$.unreservedBy': 'MANUAL',
+                'matchedUnits.$.unreservedReason': reason,
+              },
+            },
+          ).catch(() => undefined);
+        }
 
         const donation = await findOneAcrossDonations<{ bagNo?: string }>(
           { donationId: unit.donationId },

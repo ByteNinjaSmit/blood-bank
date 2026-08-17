@@ -43,6 +43,10 @@ export default function MatchedBagCard({
   const currentRh = inv?.bagNo?.rh || rc?.rh;
   const currentBagNo = inv?.bagNo?.bagNo || '—';
   const isReserved = !!mi.reserved;
+  // Reservation now happens right at match time, so `mi.reserved` is true
+  // almost immediately — it can no longer be used to lock this card.
+  // Only an actually-issued (or later) bag is truly locked from editing.
+  const isLocked = !!inv?.status && !['RELEASED', 'RESERVED', 'CROSSMATCHED'].includes(inv.status);
 
   const recipientGroup = rc?.bloodGroup;
   const recipientRh = rc?.rh;
@@ -132,7 +136,7 @@ export default function MatchedBagCard({
             <label className="block text-[11px] font-medium text-gray-500 mb-1">Blood Group</label>
             <select
               value={selectedGroup || ''}
-              disabled={isReserved}
+              disabled={isLocked}
               onChange={(e) => setSelectedGroup(e.target.value)}
               className="px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white disabled:bg-gray-100"
             >
@@ -149,7 +153,7 @@ export default function MatchedBagCard({
             <label className="block text-[11px] font-medium text-gray-500 mb-1">Bag Number</label>
             <select
               value={currentUnitId}
-              disabled={isReserved}
+              disabled={isLocked}
               onChange={(e) => handlePickBag(e.target.value)}
               className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white disabled:bg-gray-100 font-mono"
             >
@@ -182,7 +186,7 @@ export default function MatchedBagCard({
             {onRejectBag && (
               <button
                 type="button"
-                disabled={isReserved}
+                disabled={isLocked}
                 onClick={() => onRejectBag({
                   unitId: currentUnitId,
                   componentType,
@@ -191,7 +195,7 @@ export default function MatchedBagCard({
                   bagNo: currentBagNo,
                 })}
                 className={`ml-auto px-2.5 py-1 rounded border text-xs font-medium ${
-                  isReserved
+                  isLocked
                     ? 'border-gray-200 text-gray-400 cursor-not-allowed'
                     : 'border-red-200 text-red-700 hover:bg-red-50 cursor-pointer'
                 }`}
@@ -211,7 +215,7 @@ export default function MatchedBagCard({
             <button
               type="button"
               onClick={() => onConfirmCompatibility(currentUnitId, !mi.compatibilityConfirmed)}
-              disabled={isReserved}
+              disabled={isLocked}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors cursor-pointer disabled:opacity-60 ${
                 mi.compatibilityConfirmed
                   ? 'bg-green-600 text-white border-green-700 hover:bg-green-700'
@@ -242,7 +246,7 @@ export default function MatchedBagCard({
                 <div className="text-xs text-gray-600 bg-green-50 border border-green-200 rounded-md p-2.5 space-y-0.5">
                   <div className="flex items-center justify-between">
                     <div className="font-semibold text-green-800">Crossmatch recorded</div>
-                    {!isReserved && (
+                    {!isLocked && (
                       <button
                         type="button"
                         onClick={() => onResetCrossmatch(currentUnitId)}

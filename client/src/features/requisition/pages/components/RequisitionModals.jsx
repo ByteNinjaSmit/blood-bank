@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import requisitionApi from '@/services/requisitionApi';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatDate } from '@/lib/format-date';
+import TimePicker12h from '@/features/requisition/components/TimePicker12h';
+import ReasonForChangeModal from '@/components/shared/ReasonForChangeModal';
 const COMPATIBILITY_RESULT_LABELS = {
   MAJOR_COMPATIBLE: 'Major Compatible',
   MINOR_COMPATIBLE: 'Minor Compatible',
@@ -10,10 +13,52 @@ const COMPATIBILITY_RESULT_LABELS = {
 };
 
 export default function RequisitionModals({
-  viewOpen, closeView, viewDoc, viewLoading, fmt, componentFulfillment, handleOpenReject,
+  viewOpen, closeView, viewDoc, viewLoading, fmt, componentFulfillment, handleOpenReject, onUnreserve,
   issueModalOpen, setIssueModalOpen, issueDoc, setIssueDoc, issueLoading, issuingRowId, setIssuingRowId, fetchList,
   multiLabelModalOpen, setMultiLabelModalOpen, multiLabelDoc, setMultiLabelDoc, printSingleLabel,
 }) {
+  const [issueTime, setIssueTime] = useState(() => new Date());
+  const [unissueMode, setUnissueMode] = useState(false);
+  const [selectedUnissue, setSelectedUnissue] = useState({});
+  const [unissuing, setUnissuing] = useState(false);
+  const [unissueReasonModalOpen, setUnissueReasonModalOpen] = useState(false);
+
+  const toggleUnissueRow = (invId) => {
+    setSelectedUnissue((prev) => ({ ...prev, [invId]: !prev[invId] }));
+  };
+
+  const openUnissueReasonModal = () => {
+    const unitIds = Object.keys(selectedUnissue).filter((k) => selectedUnissue[k]);
+    if (unitIds.length === 0) {
+      toast.error('Select at least one issued component to unissue');
+      return;
+    }
+    setUnissueReasonModalOpen(true);
+  };
+
+  const submitUnissue = async (reason) => {
+    const unitIds = Object.keys(selectedUnissue).filter((k) => selectedUnissue[k]);
+    setUnissuing(true);
+    try {
+      const res = await requisitionApi.unissue(issueDoc._id, { unitIds, reason });
+      if (!res.success) {
+        toast.error(res.error || 'Failed to unissue component(s)');
+      } else {
+        toast.success('Component(s) reverted to Reserved — still listed on this requisition');
+        setSelectedUnissue({});
+        setUnissueMode(false);
+        setUnissueReasonModalOpen(false);
+        const fresh = await requisitionApi.getRequest(issueDoc._id);
+        if (fresh.success) setIssueDoc(fresh.data);
+        fetchList();
+      }
+    } catch {
+      toast.error('Network error while unissuing');
+    } finally {
+      setUnissuing(false);
+    }
+  };
+
   return (
     <>
       <Dialog open={viewOpen} onOpenChange={(o) => { if (!o) closeView(); }}>
@@ -161,13 +206,13 @@ export default function RequisitionModals({
                         <th className="p-2">Segment No</th>
                         <th className="p-2">Blood</th>
                         <th className="p-2">Quantity (mL)</th>
-                        <th className="p-2">Donor Name</th>
                         <th className="p-2">Day of Donation</th>
                         <th className="p-2">Reserved At</th>
                         <th className="p-2">Compatibility</th>
                         <th className="p-2">Issue ID</th>
                         <th className="p-2">Issue Date</th>
                         <th className="p-2">Status</th>
+                        <th className="p-2">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -182,6 +227,10 @@ export default function RequisitionModals({
                           badgeColor = 'bg-blue-50 border border-blue-200 text-blue-700';
                           label = 'Reserved';
                         }
+                        if (!mi?.reserved && mi?.unreservedBy) {
+                          badgeColor = 'bg-amber-50 border border-amber-200 text-amber-700';
+                          label = 'Unreserved';
+                        }
 
                         return (
                           <tr key={i} className="border-t">
@@ -195,7 +244,6 @@ export default function RequisitionModals({
                             <td className="p-2">{mi?.inventoryId?.bagNo?.segmentNo || '—'}</td>
                             <td className="p-2">{mi?.inventoryId?.bagNo ? `${mi.inventoryId.bagNo.bloodGroup} ${mi.inventoryId.bagNo.rh}` : '—'}</td>
                             <td className="p-2">{mi?.inventoryId?.componentId?.volumeMl ?? '—'}</td>
-                            <td className="p-2">{mi?.inventoryId?.bagNo?.donorName || '—'}</td>
                             <td className="p-2">{mi?.inventoryId?.bagNo?.collectedAt ? new Date(mi.inventoryId.bagNo.collectedAt).toLocaleDateString() : '—'}</td>
                             <td className="p-2">{mi?.reservedAt ? fmt(mi.reservedAt) : '—'}</td>
                             <td className="p-2">{COMPATIBILITY_RESULT_LABELS[mi?.compatibilityResult] || '—'}</td>
@@ -205,6 +253,22 @@ export default function RequisitionModals({
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${badgeColor}`}>
                                 {label}
                               </span>
+                              {!mi?.reserved && mi?.unreservedBy && (
+                                <div className="text-[10px] text-gray-500 mt-0.5">
+                                  {mi.unreservedBy === 'MANUAL' ? 'Manually unreserved' : 'System unreserved'}
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-2">
+                              {(st === 'RESERVED' || st === 'CROSSMATCHED') && (
+                                <button
+                                  type="button"
+                                  onClick={() => onUnreserve && onUnreserve(mi.inventoryId._id)}
+                                  className="px-2 py-1 rounded border border-amber-300 text-amber-800 hover:bg-amber-50 text-xs font-semibold"
+                                >
+                                  Unreserve
+                                </button>
+                              )}
                             </td>
                           </tr>
                         );
@@ -279,6 +343,35 @@ export default function RequisitionModals({
               </div>
             </div>
 
+            {/* Issue time + unissue toggle */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white border border-gray-200 rounded-xl p-3">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Issue Time</span>
+                <TimePicker12h value={issueTime} onChange={setIssueTime} />
+              </div>
+              <label className="flex items-center gap-2 text-xs font-semibold text-amber-800 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={unissueMode}
+                  onChange={(e) => { setUnissueMode(e.target.checked); setSelectedUnissue({}); }}
+                />
+                Unissue components (correct a mistaken issue)
+              </label>
+            </div>
+
+            {unissueMode && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  disabled={unissuing}
+                  onClick={openUnissueReasonModal}
+                  className="px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded text-xs font-bold disabled:bg-gray-300"
+                >
+                  {unissuing ? 'Unissuing…' : 'Unissue Selected'}
+                </button>
+              </div>
+            )}
+
             {/* Components list */}
             <div>
               <h4 className="font-semibold mb-2">Reserved Components to Issue</h4>
@@ -287,6 +380,7 @@ export default function RequisitionModals({
                   <table className="min-w-full divide-y divide-gray-200 text-sm">
                     <thead className="bg-gray-50">
                       <tr className="text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        {unissueMode && <th className="p-3">Unissue</th>}
                         <th className="p-3">Bag No</th>
                         <th className="p-3">Segment No</th>
                         <th className="p-3">Component</th>
@@ -317,6 +411,17 @@ export default function RequisitionModals({
 
                         return (
                           <tr key={invId} className="hover:bg-gray-50/50">
+                            {unissueMode && (
+                              <td className="p-3">
+                                <input
+                                  type="checkbox"
+                                  disabled={!isIssued}
+                                  checked={!!selectedUnissue[invId]}
+                                  onChange={() => toggleUnissueRow(invId)}
+                                  title={isIssued ? '' : 'Only issued components can be unissued'}
+                                />
+                              </td>
+                            )}
                             <td className="p-3 font-mono text-xs font-bold text-gray-800">{bagNo}</td>
                             <td className="p-3 font-mono text-xs font-bold text-gray-800">{segmentNo}</td>
                             <td className="p-3 font-semibold text-gray-700">{compType}</td>
@@ -337,14 +442,14 @@ export default function RequisitionModals({
                               </span>
                             </td>
                             <td className="p-3 text-right">
-                              {isReserved ? (
+                              {!unissueMode && isReserved ? (
                                 <button
                                   type="button"
                                   disabled={issuingRowId === invId}
                                   onClick={async () => {
                                     setIssuingRowId(invId);
                                     try {
-                                      const res = await requisitionApi.issue(issueDoc._id, [invId]);
+                                      const res = await requisitionApi.issue(issueDoc._id, [invId], issueTime);
                                       if (!res.success) {
                                         toast.error(res.error || 'Failed to issue component');
                                       } else {
@@ -517,6 +622,17 @@ export default function RequisitionModals({
         )}
         </DialogContent>
       </Dialog>
+
+      <ReasonForChangeModal
+        isOpen={unissueReasonModalOpen}
+        onClose={() => setUnissueReasonModalOpen(false)}
+        onConfirm={submitUnissue}
+        title="Confirm Unissue"
+        message="Selected component(s) will be reverted from Issued back to Reserved on this same requisition — they will need to be issued again."
+        actionLabel="Yes, Unissue"
+        fieldLabel="Reason for Unissuing"
+        submitting={unissuing}
+      />
     </>
   );
 }

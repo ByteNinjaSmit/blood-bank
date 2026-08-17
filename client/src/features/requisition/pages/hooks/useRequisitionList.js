@@ -128,7 +128,10 @@ export function useRequisitionList() {
   // approved) requisition must not be issuable.
   const isApprovedForIssue = (row) => {
     const status = rowDisplayStatus(row);
-    return status === 'approved' || status === 'issued';
+    // 'completed' is included so the Issue modal stays reachable even once
+    // every component has been issued — that's the only way to reopen it
+    // and unissue a mistakenly-issued bag back to Reserved.
+    return status === 'approved' || status === 'issued' || status === 'completed';
   };
 
   useEffect(() => {
@@ -247,7 +250,11 @@ export function useRequisitionList() {
   // requisitions — units are already reserved/issued by then, so the edit
   // modal skips re-matching for any status other than pending/matched
   // (see RequisitionEditModal).
-  const canEdit = (row) => !['approved', 'rejected'].includes(row.status);
+  // Edit stays open on any non-rejected status — including approved/issued/
+  // completed — since Step 2 (matched bags) locks only the individual bags
+  // that are actually issued, and Step 1 can still add more units for a
+  // not-yet-fully-satisfied component.
+  const canEdit = (row) => row.status !== 'rejected';
 
   const can = (row, act) => {
     const s = row.status;
@@ -265,13 +272,10 @@ export function useRequisitionList() {
       if (s === 'approved') return true;
       const hasMatches = Array.isArray(row.matchedInventory) && row.matchedInventory.length > 0;
       if (!hasMatches) return false;
-      const hasUnissued = row.matchedInventory.some(
-        (mi) => {
-          const status = typeof mi.inventoryId === 'object' ? mi.inventoryId?.status : '';
-          return status !== 'ISSUED';
-        }
-      );
-      return hasUnissued;
+      // Stay enabled even once everything is issued — the Issue modal is
+      // also where an accidental issue gets corrected (unissued back to
+      // Reserved), so the button/modal must not disappear at full issuance.
+      return true;
     }
     if (act === 'complete') {
       if (s === 'completed' || s === 'rejected' || s === 'pending') return false;
@@ -431,6 +435,40 @@ export function useRequisitionList() {
     }
   };
 
+  const [unreserveModalOpen, setUnreserveModalOpen] = useState(false);
+  const [unreserveTargetUnitId, setUnreserveTargetUnitId] = useState(null);
+  const [unreserveSubmitting, setUnreserveSubmitting] = useState(false);
+
+  const openUnreserveModal = (unitId) => {
+    setUnreserveTargetUnitId(unitId);
+    setUnreserveModalOpen(true);
+  };
+  const closeUnreserveModal = () => {
+    setUnreserveModalOpen(false);
+    setUnreserveTargetUnitId(null);
+  };
+
+  const confirmUnreserve = async (reason) => {
+    if (!viewDoc || !unreserveTargetUnitId) return;
+    try {
+      setUnreserveSubmitting(true);
+      const res = await requisitionApi.unreserve(viewDoc._id, { unitId: unreserveTargetUnitId, reason });
+      if (!res.success) {
+        toast.error(res.error || 'Failed to unreserve component');
+        return;
+      }
+      toast.success('Component manually unreserved and returned to stock');
+      const fresh = await requisitionApi.getRequest(viewDoc._id);
+      if (fresh.success) setViewDoc(fresh.data);
+      fetchList();
+      closeUnreserveModal();
+    } catch (e) {
+      toast.error('Network error while unreserving');
+    } finally {
+      setUnreserveSubmitting(false);
+    }
+  };
+
   const printSingleLabel = (doc, matchedUnit) => {
     try {
       const inv = typeof matchedUnit?.inventoryId === 'object' ? matchedUnit.inventoryId : null;
@@ -542,5 +580,5 @@ export function useRequisitionList() {
       RequisitionPrintService.print('report');
     }, 100);
   };
-  return { allSelectedIds,applyFilters,bulkAction,callAction,can,canEdit,canManage,clearSelection,closeEdit,closeView,componentFulfillment,confirmReportSelection,data,editModalOpen,editRequisitionId,excelLoading,exportDropdownOpen,fetchList,filters,fmt,getReqLabel,handleConfirmReject,handleExportExcel,handleOpenIssueModal,handleOpenReject,handlePrint,hospitals,isApprovedForIssue,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openEdit,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocId,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setData,setEditModalOpen,setExcelLoading,setExportDropdownOpen,setFilters,setHospitals,setIssueDoc,setIssueLoading,setIssueModalOpen,setIssuingRowId,setLimit,setLoading,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintLoading,setPrintReportPage,setPrintType,setRejectingDocId,setRejectingDocReqId,setRejectModalOpen,setRejectSubmitting,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,setTotal,setViewDoc,setViewLoading,setViewOpen,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen,user,authorizationToken };
+  return { allSelectedIds,applyFilters,bulkAction,callAction,can,canEdit,canManage,clearSelection,closeEdit,closeView,componentFulfillment,confirmReportSelection,data,editModalOpen,editRequisitionId,excelLoading,exportDropdownOpen,fetchList,filters,fmt,getReqLabel,handleConfirmReject,handleExportExcel,handleOpenIssueModal,handleOpenReject,handlePrint,hospitals,isApprovedForIssue,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openEdit,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocId,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setData,setEditModalOpen,setExcelLoading,setExportDropdownOpen,setFilters,setHospitals,setIssueDoc,setIssueLoading,setIssueModalOpen,setIssuingRowId,setLimit,setLoading,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintLoading,setPrintReportPage,setPrintType,setRejectingDocId,setRejectingDocReqId,setRejectModalOpen,setRejectSubmitting,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,setTotal,setViewDoc,setViewLoading,setViewOpen,statusClass,toggle,total,totalPages,openUnreserveModal,closeUnreserveModal,confirmUnreserve,unreserveModalOpen,unreserveSubmitting,viewDoc,viewLoading,viewOpen,user,authorizationToken };
 }

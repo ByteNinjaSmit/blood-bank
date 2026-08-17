@@ -182,4 +182,15 @@ router.patch(
   controllers.rejectBag,
 );
 
+// Manually unreserve one matched (not-yet-issued) bag, returning it to stock.
+router.patch(
+  '/:id/unreserve',
+  authenticate,
+  requirePermission('unit:reserve'),
+  controllers.unreserve,
+);
+
+// Revert one or more mistakenly-issued bags back to stock.
+router.patch('/:id/unissue', authenticate, requirePermission('unit:issue'), controllers.unissue);
+
 export default router;

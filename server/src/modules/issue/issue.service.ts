@@ -18,6 +18,7 @@ export interface IssueUnitInput {
   collectedByName?: string;
   transportTempCelsius?: number;
   override?: { reason: string };
+  issuedAt?: Date;
 }
 
 export interface IssueService {
@@ -67,6 +68,8 @@ export function createIssueService(deps: {
       if (!gate.allowed) throw new ForbiddenError(`Issue blocked: ${gate.blockers.join('; ')}`);
 
       const issueId = `IS-${dateStamp()}-${rand()}`;
+      const issuedAt =
+        input.issuedAt && !isNaN(input.issuedAt.getTime()) ? input.issuedAt : new Date();
 
       await deps.units.applyEvent({
         unitId: input.unitId,
@@ -75,7 +78,7 @@ export function createIssueService(deps: {
         reason: gate.usedOverride
           ? `Issued with MO override: ${input.override?.reason}`
           : `Issued for requisition ${req.requisitionId}`,
-        set: { issuedAt: new Date() },
+        set: { issuedAt },
       });
 
       const issue = await deps.issues.create(

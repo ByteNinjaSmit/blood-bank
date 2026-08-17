@@ -33,6 +33,13 @@ export const requisitionApi = {
   issue: (data) => apiClient.post(`${BASE}/issue`, data).then(unwrap),
   issueAll: (id, unitIds) => apiClient.patch(`${BASE}/${id}/issue`, { unitIds }).then(unwrap),
 
+  // Manual unreserve (requisition list View + /inventory/reserve).
+  unreserve: (id, unitId, reason) =>
+    apiClient.patch(`${BASE}/${id}/unreserve`, { unitId, reason }).then(unwrap),
+  // Revert one or more mistaken issues back to stock.
+  unissue: (id, unitIds, reason) =>
+    apiClient.patch(`${BASE}/${id}/unissue`, { unitIds, reason }).then(unwrap),
+
   // Match Review: bag picking, grouping worksheets, crossmatch sign-off.
   availableUnits: (id, params) => apiClient.get(`${BASE}/${id}/available-units`, { params }).then(unwrap),
   swapMatchedUnit: (id, data) => apiClient.patch(`${BASE}/${id}/matched-unit`, data).then(unwrap),

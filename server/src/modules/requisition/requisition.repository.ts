@@ -48,6 +48,8 @@ export interface MatchedUnitDto {
   componentType: ComponentType;
   compatibilityType: 'EXACT' | 'COMPATIBLE';
   reserved?: boolean;
+  unreservedBy?: 'SYSTEM' | 'MANUAL' | null;
+  unreservedReason?: string | null;
   compatibilityConfirmed?: boolean;
   crossmatchRequired: boolean;
   crossmatchStatus: 'NOT_REQUIRED' | 'PENDING' | 'COMPATIBLE' | 'INCOMPATIBLE';
@@ -263,7 +265,15 @@ export interface RequisitionRepo {
     input: UpdateRequisitionInput,
     actorId: string,
   ): Promise<RequisitionDto | null>;
-  setMatched(id: string, matched: MatchedUnitDto[], actorId: string): Promise<RequisitionDto>;
+  /** `status` defaults to MATCHED (initial PENDING->MATCHED transition); pass
+   * the requisition's current status on a re-match past that point so
+   * APPROVED/ISSUED/COMPLETED isn't stomped back to MATCHED. */
+  setMatched(
+    id: string,
+    matched: MatchedUnitDto[],
+    actorId: string,
+    status?: RequisitionStatus,
+  ): Promise<RequisitionDto>;
   setCrossmatchStatus(
     id: string,
     unitId: string,
@@ -279,8 +289,16 @@ export interface RequisitionRepo {
   pushMatchedUnit(id: string, unit: MatchedUnitDto): Promise<RequisitionDto>;
   /** Replaces one proposed matched unit with a different (unreserved) one. */
   swapMatchedUnit(id: string, fromUnitId: string, newUnit: MatchedUnitDto): Promise<RequisitionDto>;
-  /** Marks one matched unit as actually reserved (set on approve). */
+  /** Marks one matched unit as actually reserved (set on match). */
   markReserved(id: string, unitId: string, actorId: string): Promise<RequisitionDto>;
+  /** Marks one matched unit as unreserved, attributing who did it and why. */
+  markUnreserved(
+    id: string,
+    unitId: string,
+    by: 'SYSTEM' | 'MANUAL',
+    reason: string,
+    actorId: string,
+  ): Promise<RequisitionDto>;
   /** Saves the recipient (patient-side) grouping worksheet. */
   setRecipientGrouping(
     id: string,
@@ -445,6 +463,23 @@ export function createRequisitionRepo(): RequisitionRepo {
       return toDto(updated);
     },
 
+    async markUnreserved(id, unitId, by, reason, actorId) {
+      const updated = (await RequisitionModel.findOneAndUpdate(
+        { _id: id, 'matchedUnits.unitId': unitId },
+        {
+          $set: {
+            'matchedUnits.$.reserved': false,
+            'matchedUnits.$.unreservedBy': by,
+            'matchedUnits.$.unreservedReason': reason,
+            updatedBy: new Types.ObjectId(actorId),
+          },
+        },
+        { new: true },
+      ).lean()) as RawReq | null;
+      if (!updated) throw new NotFoundError('Requisition matched unit', `${id}/${unitId}`);
+      return toDto(updated);
+    },
+
     async setRecipientGrouping(id, grouping, actorId) {
       const updated = (await RequisitionModel.findByIdAndUpdate(
         id,
@@ -526,12 +561,12 @@ export function createRequisitionRepo(): RequisitionRepo {
       return toDto(updated);
     },
 
-    async setMatched(id, matched, actorId) {
+    async setMatched(id, matched, actorId, status = 'MATCHED') {
       const updated = (await RequisitionModel.findByIdAndUpdate(
         id,
         {
           matchedUnits: matched,
-          status: 'MATCHED',
+          status,
           updatedBy: new Types.ObjectId(actorId),
         },
         { new: true },

@@ -12,6 +12,9 @@ export const IssueUnitBody = z.object({
   // Presence of override.reason triggers the MO-override path. The
   // route restricts who may send it (medical-officer / bbo).
   override: z.object({ reason: z.string().trim().min(1).max(300) }).optional(),
+  // Operator-editable issue time from the Issue modal (12h picker), defaults
+  // to system time when omitted.
+  issuedAt: z.coerce.date().optional(),
 });
 
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {

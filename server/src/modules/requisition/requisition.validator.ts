@@ -115,6 +115,9 @@ export const RequisitionIdParam = z.object({
 
 export const IssueAllBody = z.object({
   unitIds: z.array(z.string().trim().min(1)).optional(),
+  // Operator-editable issue time from the Issue modal (12h picker), defaults
+  // to system time when omitted.
+  issuedAt: z.coerce.date().optional(),
 });
 
 export const UpdateCrossmatchLegacyBody = z.object({
@@ -141,6 +144,16 @@ export const RejectComponentBody = z.object({
 
 export const RejectBagBody = z.object({
   unitId: z.string().trim().min(1),
+  reason: z.string().trim().min(1).max(500),
+});
+
+export const UnreserveBody = z.object({
+  unitId: z.string().trim().min(1),
+  reason: z.string().trim().min(1).max(500),
+});
+
+export const UnissueBody = z.object({
+  unitIds: z.array(z.string().trim().min(1)).min(1),
   reason: z.string().trim().min(1).max(500),
 });
 
@@ -271,4 +284,6 @@ export const ValidateRequisition = {
   rejectComponentBody: (req: Request) =>
     parseOrThrow(RejectComponentBody, req.body, 'request body'),
   rejectBagBody: (req: Request) => parseOrThrow(RejectBagBody, req.body, 'request body'),
+  unreserveBody: (req: Request) => parseOrThrow(UnreserveBody, req.body, 'request body'),
+  unissueBody: (req: Request) => parseOrThrow(UnissueBody, req.body, 'request body'),
 };

@@ -84,6 +84,8 @@ export async function enrichRequisition(reqDto: any): Promise<any> {
         },
         compatibilityType: mu.compatibilityType.toLowerCase(),
         reserved: mu.reserved ?? false,
+        unreservedBy: mu.unreservedBy || (unit as any).unreservedBy || null,
+        unreservedReason: mu.unreservedReason || (unit as any).unreservedReason || null,
         compatibilityConfirmed: mu.compatibilityConfirmed ?? false,
         crossmatchRequired: mu.crossmatchRequired,
         crossmatchStatus: mu.crossmatchStatus.toLowerCase(),
