@@ -35,6 +35,7 @@ export default function DonorProfileStep({ form, submit }) {
         <label className="block text-sm font-semibold text-gray-700">Repeated Donation?</label>
         <select
           value={repeatedDonation}
+          autoFocus
           onChange={(e) => {
             const val = e.target.value;
             setRepeatedDonation(val);

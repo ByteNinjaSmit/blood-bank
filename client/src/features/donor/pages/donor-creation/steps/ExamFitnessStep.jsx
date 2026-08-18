@@ -24,6 +24,7 @@ export default function ExamFitnessStep({ form }) {
           <label className="block text-sm font-medium text-gray-755 mb-1">Weight (Kg) <span className="text-red-500">*</span></label>
           <input
             type="number"
+            autoFocus
             value={formData.weightKg}
             onChange={(e) => handleFormFieldChange("weightKg", e.target.value)}
             required

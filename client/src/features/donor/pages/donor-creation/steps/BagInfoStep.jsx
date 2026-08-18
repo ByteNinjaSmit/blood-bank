@@ -11,6 +11,7 @@ export default function BagInfoStep({ form }) {
           <label className="block text-sm font-medium text-gray-700 mb-1">Bag Type <span className="text-red-500">*</span></label>
           <select
             value={formData.typeOfBag}
+            autoFocus
             onChange={(e) => {
               handleFormFieldChange("typeOfBag", e.target.value);
               handleFormFieldChange("lotNo", "");
