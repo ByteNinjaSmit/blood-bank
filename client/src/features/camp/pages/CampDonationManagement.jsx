@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Droplets, Plus, Eye, Trash2, Activity, Upload, X, Search, ArrowUpDown, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Droplets, Plus, Package, Eye, Trash2, Activity, Upload, X, Search, ArrowUpDown, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -214,6 +214,13 @@ const CampDonationManagement = () => {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+            <button
+              onClick={() => navigate(`/master-register/donation-inward?campId=${campId}`)}
+              className="flex items-center gap-2 px-4 py-2 border border-orange-800 text-orange-800 bg-white rounded-lg text-sm font-semibold hover:bg-orange-50 transition-colors shadow-sm animate-in fade-in zoom-in duration-200"
+            >
+              <Package className="w-4 h-4" />
+              Inward Donation
+            </button>
             <button
               onClick={() => navigate(`/master-register/donor-creation?campId=${campId}`)}
               className="flex items-center gap-2 px-4 py-2 bg-orange-850 bg-orange-800 text-white rounded-lg text-sm font-semibold hover:bg-orange-900 transition-colors shadow-sm animate-in fade-in zoom-in duration-200"

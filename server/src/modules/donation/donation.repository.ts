@@ -12,6 +12,7 @@
 
 import { Types, type Model } from 'mongoose';
 import { DonationModel, type Donation } from '@/modules/donation/donation.model';
+import { DonorModel } from '@/modules/donor/donor.model';
 import { CampDonationRecordModel } from '@/modules/donation/camp-donation-record.model';
 import {
   resolveDonationModel,
@@ -28,6 +29,7 @@ import type {
 } from '@/modules/donation/donation.validator';
 import type { DerivedUnit } from '@/modules/donation/donation.unit-derivation';
 import { NotFoundError } from '@/shared/errors';
+import type { AboGroup, DonationType, RhFactor } from '@/shared/enums';
 
 export interface DonationDto {
   id: string;
@@ -68,6 +70,10 @@ export interface DonationDto {
 export interface DonationWithUnitsDto extends DonationDto {
   donorFitness?: { isFit: boolean; rejectionReason?: string; rejectedAtStep?: string };
   medicalExam?: Record<string, unknown>;
+  questionnaireFlags?: Record<string, boolean>;
+  registrationMode?: 'STANDARD' | 'INWARD';
+  completionStatus?: 'BAG_ONLY' | 'DONOR_PENDING' | 'MEDICAL_PENDING' | 'COMPLETE';
+  provisionalBloodGroup?: { aboGroup: string; rhFactor: string };
   /** True while this bag sits in an active, not-yet-finalized batch on the
    * Component Separate screen — see donation.model.ts separationBatchActive. */
   separationBatchActive?: boolean;
@@ -99,8 +105,65 @@ interface CreateInput {
   actorId: string;
 }
 
+export interface CreateInwardInput {
+  donationPublicId: string;
+  bagNo: string;
+  lotNo?: string;
+  segmentNo?: string;
+  collectedAt: Date;
+  donationType: DonationType;
+  provisionalBloodGroup: { aboGroup: AboGroup; rhFactor: RhFactor };
+  units: DerivedUnit[];
+  campId?: string;
+  actorId: string;
+}
+
+/** Minimal state a caller needs to decide what step an inward donation is on. */
+export interface InwardDonationState {
+  id: string;
+  donationId: string;
+  registrationMode: 'STANDARD' | 'INWARD';
+  completionStatus: 'BAG_ONLY' | 'DONOR_PENDING' | 'MEDICAL_PENDING' | 'COMPLETE';
+  donor: string | null;
+  hasMedicalHistory: boolean;
+}
+
+export interface IncompleteDonationRow {
+  id: string;
+  donationId: string;
+  bagNo?: string | null;
+  lotNo?: string | null;
+  segmentNo?: string | null;
+  collectedAt: string;
+  completionStatus: string;
+  registrationMode: string;
+  provisionalBloodGroup?: { aboGroup: string; rhFactor: string };
+  donorName?: string;
+  donorPhone?: string;
+  createdAt: string;
+}
+
+export interface ListIncompleteInput {
+  q?: string;
+  page: number;
+  pageSize: number;
+}
+
 export interface DonationRepo {
   createAtomic(c: CreateInput): Promise<DonationWithUnitsDto>;
+  /** Bag-first (Inward Donation) creation: no donor yet, provisional ABO/Rh only. */
+  createInwardAtomic(c: CreateInwardInput): Promise<DonationWithUnitsDto>;
+  /** Raw state used by the inward workflow to decide legal next steps. */
+  findInwardState(id: string): Promise<InwardDonationState | null>;
+  setDonor(id: string, donorId: string, completionStatus: string, actorId: string): Promise<void>;
+  setMedicalHistory(
+    id: string,
+    medicalData: { medicalExam?: unknown; questionnaireFlags?: Record<string, boolean> },
+    completionStatus: string,
+    actorId: string,
+  ): Promise<void>;
+  setCompletionStatus(id: string, completionStatus: string, actorId: string): Promise<void>;
+  listIncomplete(q: ListIncompleteInput): Promise<{ items: IncompleteDonationRow[]; total: number }>;
   findById(id: string): Promise<DonationWithUnitsDto | null>;
   /** Same enriched shape as findById, keyed by the public donationId (not the Mongo _id). */
   findByDonationId(donationId: string): Promise<DonationWithUnitsDto | null>;
@@ -248,6 +311,21 @@ async function loadDonationWithUnits(
       | { isFit: boolean; rejectionReason?: string; rejectedAtStep?: string }
       | undefined,
     medicalExam: doc.medicalExam as Record<string, unknown> | undefined,
+    questionnaireFlags: mapToObject(
+      (doc as unknown as { questionnaireFlags?: unknown }).questionnaireFlags,
+    ),
+    registrationMode: (doc as unknown as { registrationMode?: 'STANDARD' | 'INWARD' })
+      .registrationMode,
+    completionStatus: (
+      doc as unknown as {
+        completionStatus?: 'BAG_ONLY' | 'DONOR_PENDING' | 'MEDICAL_PENDING' | 'COMPLETE';
+      }
+    ).completionStatus,
+    provisionalBloodGroup: (
+      doc as unknown as {
+        provisionalBloodGroup?: { aboGroup: string; rhFactor: string };
+      }
+    ).provisionalBloodGroup,
     isFit: doc.donorFitness?.isFit,
     separationBatchActive: Boolean((doc as unknown as { separationBatchActive?: boolean }).separationBatchActive),
     ttiBatchActive: Boolean((doc as unknown as { ttiBatchActive?: boolean }).ttiBatchActive),
@@ -269,6 +347,15 @@ async function loadDonationWithUnits(
     ttiTestedAt: ttiTestedAt ? ttiTestedAt.toISOString() : null,
     requisitions: requisitionsInfo,
   };
+}
+
+// Mongoose Map-typed schema fields (questionnaireFlags) survive .lean() as a
+// real Map instance, not a plain object — the client-facing DTO needs JSON.
+function mapToObject(v: unknown): Record<string, boolean> | undefined {
+  if (!v) return undefined;
+  if (v instanceof Map) return Object.fromEntries(v);
+  if (typeof v === 'object') return v as Record<string, boolean>;
+  return undefined;
 }
 
 function docToDto(
@@ -572,6 +659,229 @@ export function createDonationRepo(): DonationRepo {
           ttiReleaseDecision: 'pending',
         };
       }
+    },
+
+    async createInwardAtomic({
+      donationPublicId,
+      bagNo,
+      lotNo,
+      segmentNo,
+      collectedAt,
+      donationType,
+      provisionalBloodGroup,
+      units,
+      campId: campIdInput,
+      actorId,
+    }) {
+      const actor = new Types.ObjectId(actorId);
+      const campId = campIdInput ? new Types.ObjectId(campIdInput) : undefined;
+      const TargetDonationModel = resolveDonationModel(campId);
+
+      const buildDonationDoc = () => ({
+        donationId: donationPublicId,
+        donor: null,
+        registrationMode: 'INWARD' as const,
+        completionStatus: 'BAG_ONLY' as const,
+        provisionalBloodGroup,
+        donationType,
+        collectedAt,
+        campId,
+        bagNo,
+        segmentNo,
+        lotNo,
+        donorFitness: { isFit: true },
+        createdBy: actor,
+        updatedBy: actor,
+      });
+
+      const buildUnitDocs = (donationId: string) =>
+        units.map((u) => ({
+          unitId: u.unitId,
+          productCode: u.productCode,
+          donationId,
+          componentType: u.componentType,
+          aboGroup: provisionalBloodGroup.aboGroup,
+          rhFactor: provisionalBloodGroup.rhFactor,
+          bloodGroupConfirmed: false,
+          volumeMl: u.volumeMl,
+          collectedAt: u.collectedAt,
+          expiresAt: u.expiresAt,
+          status: 'COLLECTED',
+          statusHistory: [{ to: 'COLLECTED', event: 'CREATE', actor, at: new Date() }],
+          campId,
+          createdBy: actor,
+          updatedBy: actor,
+        }));
+
+      const toResult = (
+        donation: { _id: Types.ObjectId; createdAt: Date; updatedAt: Date },
+        unitDocs: Array<{
+          unitId: string;
+          componentType: string;
+          volumeMl: number;
+          expiresAt: Date;
+          status: string;
+        }>,
+      ): DonationWithUnitsDto => ({
+        id: donation._id.toString(),
+        donationId: donationPublicId,
+        donor: '',
+        donationType,
+        collectedAt: collectedAt.toISOString(),
+        bloodGroup: provisionalBloodGroup.aboGroup,
+        rhFactor: provisionalBloodGroup.rhFactor,
+        unitCount: unitDocs.length,
+        bagNo,
+        segmentNo,
+        lotNo,
+        createdAt: donation.createdAt.toISOString(),
+        updatedAt: donation.updatedAt.toISOString(),
+        units: unitDocs.map((u) => ({
+          unitId: u.unitId,
+          componentType: u.componentType,
+          volumeMl: u.volumeMl,
+          expiresAt: u.expiresAt.toISOString(),
+          status: u.status,
+        })),
+      });
+
+      try {
+        const session = await TargetDonationModel.startSession();
+        try {
+          let result!: DonationWithUnitsDto;
+          await session.withTransaction(async () => {
+            const [donation] = await TargetDonationModel.create([buildDonationDoc()], { session });
+            if (!donation) throw new Error('Failed to create inward donation');
+            const unitDocs = await BloodUnitModel.insertMany(buildUnitDocs(donationPublicId), {
+              session,
+            });
+            result = toResult(donation as unknown as { _id: Types.ObjectId; createdAt: Date; updatedAt: Date }, unitDocs);
+          });
+          return result;
+        } finally {
+          await session.endSession();
+        }
+      } catch {
+        // Fallback (no-transaction) path — mirrors createAtomic() above.
+        const [donation] = await TargetDonationModel.create([buildDonationDoc()]);
+        if (!donation) throw new Error('Failed to create inward donation');
+        const unitDocs = await BloodUnitModel.insertMany(buildUnitDocs(donationPublicId));
+        return toResult(donation as unknown as { _id: Types.ObjectId; createdAt: Date; updatedAt: Date }, unitDocs);
+      }
+    },
+
+    async findInwardState(id) {
+      const model = await findOwningModel(id);
+      if (!model) return null;
+      const doc = await model
+        .findById(id)
+        .select('donationId registrationMode completionStatus donor medicalExam')
+        .lean();
+      if (!doc) return null;
+      return {
+        id: doc._id.toString(),
+        donationId: doc.donationId,
+        registrationMode: (doc.registrationMode as 'STANDARD' | 'INWARD') ?? 'STANDARD',
+        completionStatus:
+          (doc.completionStatus as InwardDonationState['completionStatus']) ?? 'COMPLETE',
+        donor: doc.donor ? doc.donor.toString() : null,
+        hasMedicalHistory: Boolean(doc.medicalExam),
+      };
+    },
+
+    async setDonor(id, donorId, completionStatus, actorId) {
+      const model = (await findOwningModel(id)) ?? DonationModel;
+      const result = await model.updateOne(
+        { _id: id },
+        {
+          donor: new Types.ObjectId(donorId),
+          completionStatus,
+          updatedBy: new Types.ObjectId(actorId),
+        },
+      );
+      if (result.matchedCount === 0) throw new NotFoundError('Donation', id);
+    },
+
+    async setMedicalHistory(id, medicalData, completionStatus, actorId) {
+      const model = (await findOwningModel(id)) ?? DonationModel;
+      const $set: Record<string, unknown> = {
+        completionStatus,
+        updatedBy: new Types.ObjectId(actorId),
+      };
+      if (medicalData.medicalExam !== undefined) $set.medicalExam = medicalData.medicalExam;
+      if (medicalData.questionnaireFlags !== undefined) {
+        $set.questionnaireFlags = new Map(Object.entries(medicalData.questionnaireFlags));
+      }
+      const result = await model.updateOne({ _id: id }, { $set });
+      if (result.matchedCount === 0) throw new NotFoundError('Donation', id);
+    },
+
+    async setCompletionStatus(id, completionStatus, actorId) {
+      const model = (await findOwningModel(id)) ?? DonationModel;
+      const result = await model.updateOne(
+        { _id: id },
+        { completionStatus, updatedBy: new Types.ObjectId(actorId) },
+      );
+      if (result.matchedCount === 0) throw new NotFoundError('Donation', id);
+    },
+
+    async listIncomplete({ q, page, pageSize }) {
+      const filter: Record<string, unknown> = { completionStatus: { $ne: 'COMPLETE' } };
+
+      if (q && q.trim()) {
+        const term = q.trim();
+        const regex = { $regex: term, $options: 'i' };
+        const donorIds = await DonorModel.find({ phone: regex }).distinct('_id');
+        filter.$or = [
+          { donationId: regex },
+          { bagNo: regex },
+          { lotNo: regex },
+          ...(donorIds.length ? [{ donor: { $in: donorIds } }] : []),
+        ];
+      }
+
+      const skip = (page - 1) * pageSize;
+      const [inhouse, camp, totalInhouse, totalCamp] = await Promise.all([
+        DonationModel.find(filter).sort({ createdAt: -1 }).lean(),
+        CampDonationRecordModel.find(filter).sort({ createdAt: -1 }).lean(),
+        DonationModel.countDocuments(filter),
+        CampDonationRecordModel.countDocuments(filter),
+      ]);
+      const all = [...inhouse, ...camp].sort(
+        (a: any, b: any) =>
+          (b.createdAt?.getTime?.() ?? 0) - (a.createdAt?.getTime?.() ?? 0),
+      );
+      const page_ = all.slice(skip, skip + pageSize);
+
+      const donorIds = [...new Set(page_.map((d: any) => d.donor?.toString()).filter(Boolean))];
+      const donors = donorIds.length
+        ? await DonorModel.find({ _id: { $in: donorIds } }).select('name phone').lean()
+        : [];
+      const donorMap = new Map(donors.map((d: any) => [d._id.toString(), d]));
+
+      const items: IncompleteDonationRow[] = page_.map((d: any) => {
+        const donor = d.donor ? donorMap.get(d.donor.toString()) : undefined;
+        return {
+          id: d._id.toString(),
+          donationId: d.donationId,
+          bagNo: d.bagNo,
+          lotNo: d.lotNo,
+          segmentNo: d.segmentNo,
+          collectedAt: d.collectedAt ? d.collectedAt.toISOString() : '',
+          completionStatus: d.completionStatus ?? 'COMPLETE',
+          registrationMode: d.registrationMode ?? 'STANDARD',
+          provisionalBloodGroup: d.provisionalBloodGroup,
+          donorName: donor?.name
+            ? [donor.name.firstName, donor.name.middleName, donor.name.lastName]
+                .filter(Boolean)
+                .join(' ')
+            : undefined,
+          donorPhone: donor?.phone,
+          createdAt: d.createdAt ? d.createdAt.toISOString() : '',
+        };
+      });
+
+      return { items, total: totalInhouse + totalCamp };
     },
 
     async findById(id) {

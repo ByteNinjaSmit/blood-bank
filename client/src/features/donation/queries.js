@@ -62,3 +62,45 @@ export function usePermanentDeleteDonation() {
     onSuccess: () => qc.invalidateQueries({ queryKey: donationKeys.all }),
   });
 }
+
+// ── Inward Donation (bag-first) ─────────────────────────────────────────
+
+export function useIncompleteDonations(params) {
+  return useQuery({
+    queryKey: ['donation', 'incomplete', params ?? {}],
+    queryFn: () => donationApi.listIncomplete(params),
+    staleTime: 15_000,
+  });
+}
+
+export function useCreateInwardDonation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: donationApi.createInward,
+    onSuccess: () => qc.invalidateQueries({ queryKey: donationKeys.all }),
+  });
+}
+
+export function useLinkDonor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => donationApi.linkDonor(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: donationKeys.all }),
+  });
+}
+
+export function useSaveMedicalHistory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => donationApi.saveMedicalHistory(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: donationKeys.all }),
+  });
+}
+
+export function useFinalizeInward() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => donationApi.finalizeInward(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: donationKeys.all }),
+  });
+}

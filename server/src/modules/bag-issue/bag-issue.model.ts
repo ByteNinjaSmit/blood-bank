@@ -13,6 +13,9 @@ const BagIssueSchema = new Schema(
     collectionRoom: { type: String, trim: true },
     donorId: { type: Schema.Types.ObjectId, ref: 'Donor', index: true },
     donationId: { type: Schema.Types.ObjectId, ref: 'Donation', index: true },
+    // Segment number captured when this issued bag is linked back to a
+    // donation (standard register() flow or Inward Donation bag-first flow).
+    segmentNo: { type: String, trim: true },
     status: { type: String, enum: BAG_ISSUE_STATUS, default: 'ISSUED', index: true },
     returnedAt: { type: Date },
     usedAt: { type: Date },

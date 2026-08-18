@@ -18,17 +18,19 @@ class RequisitionPrintService {
         @media print {
           /* Setup absolute page dimensions for the sticker labels */
           @page {
-            size: 10cm 13cm !important;
             margin: 0 !important;
           }
           
           html, body {
-            width: 10cm !important;
-            height: 13cm !important;
+            width: 95mm !important;
+            height: 130mm !important;
             margin: 0 !important;
             padding: 0 !important;
             background: white !important;
             overflow: hidden !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
             font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif !important;
           }
           

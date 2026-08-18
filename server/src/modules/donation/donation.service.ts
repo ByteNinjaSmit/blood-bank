@@ -22,13 +22,20 @@ import type {
   CreateDonationInput,
   ListDonationsInput,
   UpdateDonationInput,
+  CreateInwardDonationInput,
+  LinkDonorInput,
+  MedicalHistoryInput,
+  FinalizeInwardInput,
+  ListIncompleteInput,
 } from '@/modules/donation/donation.validator';
 import type {
   DonationDto,
   DonationRepo,
   DonationWithUnitsDto,
+  IncompleteDonationRow,
 } from '@/modules/donation/donation.repository';
 import type { DonorRepo } from '@/modules/donor/donor.repository';
+import type { DonorService } from '@/modules/donor/donor.service';
 import type { DeferralRepo } from '@/modules/deferral/deferral.repository';
 import type { BagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
 import type { BagIssueRepo } from '@/modules/bag-issue/bag-issue.repository';
@@ -47,6 +54,27 @@ export interface DonationService {
   restore(id: string, actorId: string): Promise<{ restored: boolean }>;
   permanentDelete(id: string, actorId: string, reason: string): Promise<void>;
   update(id: string, input: UpdateDonationInput, actorId: string): Promise<DonationWithUnitsDto>;
+
+  // ── Inward Donation (bag-first) ──
+  createInward(input: CreateInwardDonationInput, actorId: string): Promise<DonationWithUnitsDto>;
+  linkDonor(
+    donationId: string,
+    input: LinkDonorInput,
+    actorId: string,
+  ): Promise<DonationWithUnitsDto>;
+  saveMedicalHistory(
+    donationId: string,
+    input: MedicalHistoryInput,
+    actorId: string,
+  ): Promise<DonationWithUnitsDto>;
+  finalizeInward(
+    donationId: string,
+    input: FinalizeInwardInput,
+    actorId: string,
+  ): Promise<DonationWithUnitsDto>;
+  listIncomplete(
+    query: ListIncompleteInput,
+  ): Promise<{ items: IncompleteDonationRow[]; total: number; page: number; pageSize: number }>;
 }
 
 export function createDonationService(deps: {
@@ -55,6 +83,8 @@ export function createDonationService(deps: {
   deferrals: DeferralRepo;
   bagStock?: BagStockRepo;
   bagIssues?: BagIssueRepo;
+  /** Full donor create path (eligibility validation etc.) — used by linkDonor() for a brand-new donor. */
+  donorService?: DonorService;
 }): DonationService {
   const log = childLogger({ module: 'donation-service' });
 
@@ -176,29 +206,13 @@ export function createDonationService(deps: {
         }
       }
 
-      if (input.bagNo && deps.bagIssues) {
-        try {
-          const bagIssue = await deps.bagIssues.findBySerialNumber(input.bagNo);
-          if (bagIssue) {
-            await deps.bagIssues.updateStatus(
-              bagIssue.id,
-              {
-                status: 'USED',
-                donorId: input.donor,
-                donationId: created.id,
-                usedAt: new Date(),
-              },
-              actorId,
-            );
-            log.info(
-              { bagSerialNumber: input.bagNo, donationId: created.id },
-              'BagIssue marked as USED',
-            );
-          }
-        } catch (err) {
-          log.error({ err: (err as Error).message }, 'Failed to mark BagIssue as USED');
-        }
-      }
+      await linkBagIssueUsed(deps, log, {
+        bagNo: input.bagNo,
+        donorId: input.donor,
+        donationId: created.id,
+        segmentNo: input.segmentNo,
+        actorId,
+      });
 
       void withAudit(
         { actorId },
@@ -394,6 +408,298 @@ export function createDonationService(deps: {
       return updated;
     },
 
+    // ── Inward Donation (bag-first) ──
+
+    async createInward(input, actorId) {
+      const collectedAt = mergeDateTime(input.collectionDate, input.collectionTime);
+      const donationPublicId = generateDonationId(collectedAt);
+
+      const units = deriveUnits({
+        donationId: donationPublicId,
+        bagNo: input.bagNo,
+        donationType: input.donationType,
+        collectedAt,
+      });
+
+      const created = await deps.donations.createInwardAtomic({
+        donationPublicId,
+        bagNo: input.bagNo,
+        lotNo: input.lotNo,
+        segmentNo: input.segmentNo,
+        collectedAt,
+        donationType: input.donationType,
+        provisionalBloodGroup: input.provisionalBloodGroup,
+        units,
+        campId: input.source === 'camp' ? input.campId : undefined,
+        actorId,
+      });
+
+      log.info(
+        {
+          donationId: donationPublicId,
+          bagNo: input.bagNo,
+          unitCount: units.length,
+          actorId,
+        },
+        'inward (bag-first) donation registered',
+      );
+
+      await linkBagIssueUsed(deps, log, {
+        bagNo: input.bagNo,
+        donationId: created.id,
+        segmentNo: input.segmentNo,
+        actorId,
+      });
+
+      void withAudit(
+        { actorId },
+        {
+          module: 'donation',
+          action: 'CREATE',
+          entityType: 'Donation',
+          entityId: created.id,
+          entityLabel: donationPublicId,
+        },
+        undefined,
+        {
+          donationId: donationPublicId,
+          registrationMode: 'INWARD',
+          bagNo: input.bagNo,
+          provisionalBloodGroup: input.provisionalBloodGroup,
+          unitCount: units.length,
+        },
+      );
+
+      if (units.length > 0) {
+        void notificationCenterService
+          .notify({
+            title: 'Inward bag registered',
+            message: `Bag ${input.bagNo} registered as ${donationPublicId} — donor identity pending`,
+            module: 'COLLECTION',
+            category: 'INWARD_DONATION_PENDING',
+            severity: 'WARNING',
+            relatedRecordId: created.id,
+            relatedRecordType: 'Donation',
+            actionLink: `/master-register/donations`,
+          })
+          .catch(() => undefined);
+        void notificationCenterService
+          .notify({
+            title: 'Component separation pending',
+            message: `${units.length} unit(s) from donation ${donationPublicId} await component separation`,
+            module: 'COMPONENT_SEPARATION',
+            category: 'COMPONENT_SEPARATION_PENDING',
+            severity: 'WARNING',
+            relatedRecordId: created.id,
+            relatedRecordType: 'Donation',
+            actionLink: `/component/separate`,
+            dedupeKey: `COMPONENT_SEPARATION_PENDING:${created.id}`,
+          })
+          .catch(() => undefined);
+      }
+
+      return created;
+    },
+
+    async linkDonor(donationId, input, actorId) {
+      const state = await deps.donations.findInwardState(donationId);
+      if (!state) throw new NotFoundError('Donation', donationId);
+      if (state.completionStatus !== 'BAG_ONLY' && state.completionStatus !== 'DONOR_PENDING') {
+        throw new ConflictError(
+          `Donation ${donationId} is not awaiting a donor link (status: ${state.completionStatus})`,
+        );
+      }
+      if (state.donor) {
+        throw new ConflictError(`Donation ${donationId} already has a linked donor`);
+      }
+
+      let donorId: string;
+      if ('existingDonorId' in input) {
+        const donor = await deps.donors.findById(input.existingDonorId);
+        if (!donor) throw new NotFoundError('Donor', input.existingDonorId);
+        donorId = donor.id;
+      } else {
+        if (!deps.donorService) {
+          throw new AppError(
+            'INTERNAL_ERROR',
+            'Donor creation path not wired for this donation service instance',
+            500,
+          );
+        }
+        // Full donor create — eligibility validation (age/weight) runs
+        // untouched inside donor.service.ts register().
+        const donor = await deps.donorService.register(input, actorId);
+        donorId = donor.id;
+      }
+
+      const nextStatus = nextInwardStatus(true, state.hasMedicalHistory);
+      await deps.donations.setDonor(donationId, donorId, nextStatus, actorId);
+
+      log.info({ donationId, donorId, actorId, nextStatus }, 'donor linked to inward donation');
+      void withAudit(
+        { actorId },
+        {
+          module: 'donation',
+          action: 'UPDATE',
+          entityType: 'Donation',
+          entityId: donationId,
+          entityLabel: state.donationId,
+        },
+        { donor: null, completionStatus: state.completionStatus },
+        { donor: donorId, completionStatus: nextStatus },
+      );
+
+      const updated = await deps.donations.findById(donationId);
+      if (!updated) throw new NotFoundError('Donation', donationId);
+      return updated;
+    },
+
+    async saveMedicalHistory(donationId, input, actorId) {
+      const state = await deps.donations.findInwardState(donationId);
+      if (!state) throw new NotFoundError('Donation', donationId);
+      if (state.completionStatus === 'COMPLETE') {
+        throw new ConflictError(`Donation ${donationId} is already complete`);
+      }
+
+      const nextStatus = nextInwardStatus(Boolean(state.donor), true);
+      await deps.donations.setMedicalHistory(
+        donationId,
+        { medicalExam: input.medicalExam, questionnaireFlags: input.questionnaireFlags },
+        nextStatus,
+        actorId,
+      );
+
+      log.info({ donationId, actorId, nextStatus }, 'medical history saved for inward donation');
+      void withAudit(
+        { actorId },
+        {
+          module: 'donation',
+          action: 'UPDATE',
+          entityType: 'Donation',
+          entityId: donationId,
+          entityLabel: state.donationId,
+        },
+        { completionStatus: state.completionStatus },
+        { completionStatus: nextStatus },
+      );
+
+      const updated = await deps.donations.findById(donationId);
+      if (!updated) throw new NotFoundError('Donation', donationId);
+      return updated;
+    },
+
+    async finalizeInward(donationId, input, actorId) {
+      const state = await deps.donations.findInwardState(donationId);
+      if (!state) throw new NotFoundError('Donation', donationId);
+      if (!state.donor) {
+        throw new ConflictError(
+          `Donation ${donationId} needs a linked donor before it can be finalized`,
+        );
+      }
+
+      const donation = await deps.donations.findById(donationId);
+      if (!donation) throw new NotFoundError('Donation', donationId);
+
+      const donor = await deps.donors.findById(state.donor);
+      if (!donor) throw new NotFoundError('Donor', state.donor);
+
+      const medicalExam = input.medicalExam ?? donation.medicalExam;
+
+      const [latestDonation, activeDeferrals] = await Promise.all([
+        deps.donations.findLatestByDonor(state.donor),
+        deps.deferrals.findActiveByDonor(state.donor, new Date()),
+      ]);
+
+      const eligibility = checkEligibility({
+        donor: {
+          ageYears: yearsBetween(new Date(donor.dob), new Date()),
+          weightKg: (medicalExam as { weightKg?: number } | undefined)?.weightKg ?? donor.weightKg,
+          sex: donor.sex,
+          hbGdl: (medicalExam as { hbGdl?: number } | undefined)?.hbGdl,
+          pulseBpm: (medicalExam as { pulseBpm?: number } | undefined)?.pulseBpm,
+          temperatureCelsius: (medicalExam as { temperatureCelsius?: number } | undefined)
+            ?.temperatureCelsius,
+          bloodPressure: (
+            medicalExam as { bloodPressure?: { systolic: number; diastolic: number } } | undefined
+          )?.bloodPressure,
+          lastDonationDate: latestDonation?.collectedAt,
+          lastDonationType: latestDonation?.donationType as
+            | CreateDonationInput['donationType']
+            | undefined,
+          activeDeferrals,
+        },
+        proposedDonationType: donation.donationType as CreateDonationInput['donationType'],
+        now: new Date(),
+      });
+
+      const isFit = input.donorFitness.isFit && eligibility.eligible;
+
+      if (isFit) {
+        await deps.donations.setMedicalHistory(
+          donationId,
+          { medicalExam: input.medicalExam ?? medicalExam },
+          'COMPLETE',
+          actorId,
+        );
+        log.info({ donationId, actorId }, 'inward donation finalized as COMPLETE');
+        void withAudit(
+          { actorId },
+          {
+            module: 'donation',
+            action: 'UPDATE',
+            entityType: 'Donation',
+            entityId: donationId,
+            entityLabel: state.donationId,
+          },
+          { completionStatus: state.completionStatus },
+          { completionStatus: 'COMPLETE' },
+        );
+      } else {
+        // Eligibility (or manual fitness) failed — route through the
+        // deferral module instead of throwing an unhandled 500, mirroring
+        // the TTI-reactive deferral pattern in tti.service.ts.
+        const reasons = input.donorFitness.isFit
+          ? eligibility.reasons
+          : [input.donorFitness.rejectionReason ?? 'Marked unfit at inward finalize'];
+        await deps.deferrals.create(
+          {
+            donor: state.donor,
+            type: 'TEMPORARY',
+            reason: `Inward donation finalize failed: ${reasons.join(', ')}`,
+            source: 'VITALS',
+            relatedDonationId: state.donationId,
+          },
+          actorId,
+        );
+        log.warn(
+          { donationId, actorId, reasons },
+          'inward donation failed finalize eligibility — deferral raised, not completed',
+        );
+        void withAudit(
+          { actorId },
+          {
+            module: 'donation',
+            action: 'UPDATE',
+            entityType: 'Donation',
+            entityId: donationId,
+            entityLabel: state.donationId,
+            severity: 'warning',
+          },
+          { completionStatus: state.completionStatus },
+          { completionStatus: state.completionStatus, deferred: true, reasons },
+        );
+      }
+
+      const updated = await deps.donations.findById(donationId);
+      if (!updated) throw new NotFoundError('Donation', donationId);
+      return updated;
+    },
+
+    async listIncomplete(query) {
+      const { items, total } = await deps.donations.listIncomplete(query);
+      return { items, total, page: query.page, pageSize: query.pageSize };
+    },
+
     async permanentDelete(id, actorId, reason) {
       const status = await deps.donations.findRawStatus(id);
       if (!status) throw new NotFoundError('Donation', id);
@@ -446,4 +752,76 @@ function generateDonationId(collectedAt: Date): string {
   const dd = String(collectedAt.getUTCDate()).padStart(2, '0');
   const rand = new Types.ObjectId().toHexString().slice(-6).toUpperCase();
   return `DN-${yyyy}${mm}${dd}-${rand}`;
+}
+
+// Shared by register() and createInward() — marks the physical BagIssue
+// (procurement module) that this bag came from as USED once a donation
+// event has been recorded against it. Best-effort: a missing/failed
+// BagIssue lookup must never fail the donation write itself.
+async function linkBagIssueUsed(
+  deps: { bagIssues?: BagIssueRepo },
+  log: ReturnType<typeof childLogger>,
+  params: {
+    bagNo?: string;
+    donorId?: string;
+    donationId: string;
+    segmentNo?: string;
+    actorId: string;
+  },
+): Promise<void> {
+  if (!params.bagNo || !deps.bagIssues) return;
+  try {
+    const bagIssue = await deps.bagIssues.findBySerialNumber(params.bagNo);
+    if (bagIssue) {
+      await deps.bagIssues.updateStatus(
+        bagIssue.id,
+        {
+          status: 'USED',
+          donorId: params.donorId,
+          donationId: params.donationId,
+          segmentNo: params.segmentNo,
+          usedAt: new Date(),
+        },
+        params.actorId,
+      );
+      log.info(
+        { bagSerialNumber: params.bagNo, donationId: params.donationId },
+        'BagIssue marked as USED',
+      );
+    }
+  } catch (err) {
+    log.error({ err: (err as Error).message }, 'Failed to mark BagIssue as USED');
+  }
+}
+
+// Combines a date-only value with an "HH:mm" time-of-day string. When no
+// time is given, the date is used as-is (its own time component, if any).
+function mergeDateTime(date: Date, time?: string): Date {
+  if (!time) return date;
+  const [hhRaw, mmRaw] = time.split(':');
+  const hh = Number(hhRaw);
+  const mm = Number(mmRaw);
+  const merged = new Date(date);
+  if (!Number.isNaN(hh) && !Number.isNaN(mm)) merged.setHours(hh, mm, 0, 0);
+  return merged;
+}
+
+// Inward Donation completionStatus is named after the single next
+// outstanding prerequisite before the donation can be finalized —
+// BAG_ONLY only ever applies at creation. Once any progress is made,
+// the status names whichever of {donor, medical+exam-fitness} is still
+// outstanding, prioritizing donor first since medical history logically
+// depends on knowing who the donor is. Never regresses and never
+// returns COMPLETE — only finalizeInward() sets that, after eligibility
+// passes.
+function nextInwardStatus(
+  hasDonor: boolean,
+  hasMedicalHistory: boolean,
+): 'DONOR_PENDING' | 'MEDICAL_PENDING' {
+  if (!hasDonor) return 'DONOR_PENDING';
+  // Even if medical history is already present, MEDICAL_PENDING also
+  // covers "awaiting finalizeInward()" — there is no separate status for
+  // that step, and exam-fitness data is supplied to finalizeInward
+  // directly regardless of whether saveMedicalHistory ran first.
+  return 'MEDICAL_PENDING';
 }

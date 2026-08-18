@@ -1,17 +1,57 @@
-export default function BagInfoStep({ form }) {
+export default function BagInfoStep({ form, showProvisionalBloodGroup = false }) {
   const { formData, handleFormFieldChange, activeBatches } = form;
 
   return (
     <div className="p-6 sm:p-8 space-y-6 animate-fadeIn">
       <h3 className="font-semibold text-gray-800 mb-1 text-lg">Bag Information</h3>
-      <p className="text-sm text-gray-500">Record blood bag specification and collection details. Bag type and donation type selections are required.</p>
+      <p className="text-sm text-gray-500">
+        {showProvisionalBloodGroup
+          ? "Record blood bag specification and a provisional blood group before the donor is registered. Bag type, donation type and provisional blood group are required."
+          : "Record blood bag specification and collection details. Bag type and donation type selections are required."}
+      </p>
+
+      {showProvisionalBloodGroup && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Provisional Blood Group <span className="text-red-500">*</span></label>
+            <select
+              value={formData.bloodGroup}
+              autoFocus
+              onChange={(e) => handleFormFieldChange("bloodGroup", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
+              required
+            >
+              <option value="">Select</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="AB">AB</option>
+              <option value="O">O</option>
+              <option value="BBG">BBG (Bombay Blood Group)</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">Confirmed later during lab testing — this is a provisional value only.</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Provisional Rh Factor <span className="text-red-500">*</span></label>
+            <select
+              value={formData.rh}
+              onChange={(e) => handleFormFieldChange("rh", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
+              required
+            >
+              <option value="">Select</option>
+              <option value="Positive">Positive (+)</option>
+              <option value="Negative">Negative (-)</option>
+            </select>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Bag Type <span className="text-red-500">*</span></label>
           <select
             value={formData.typeOfBag}
-            autoFocus
+            autoFocus={!showProvisionalBloodGroup}
             onChange={(e) => {
               handleFormFieldChange("typeOfBag", e.target.value);
               handleFormFieldChange("lotNo", "");

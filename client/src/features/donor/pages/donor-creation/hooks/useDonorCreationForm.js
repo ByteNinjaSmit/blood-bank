@@ -211,9 +211,12 @@ export function useDonorCreationForm() {
     }
   };
 
-  const isStep1Complete = () => {
+  const isStep1Complete = (skipBloodGroupCheck = false, requireWeight = false) => {
     if (repeatedDonation === "Yes" && !selectedDonor) return false;
 
+    // In inward mode, blood group is captured on the (earlier) Bag Info
+    // step; skipBloodGroupCheck is set there so a resumed donation that
+    // hasn't re-populated it client-side doesn't get wrongly blocked here.
     const isBaseComplete =
       formData.firstName.trim() &&
       formData.middleName.trim() &&
@@ -224,10 +227,17 @@ export function useDonorCreationForm() {
       formData.city.trim() &&
       formData.district.trim() &&
       formData.state &&
-      formData.bloodGroup &&
-      formData.rh;
+      (skipBloodGroupCheck || (formData.bloodGroup && formData.rh));
 
     if (!isBaseComplete) return false;
+
+    // Inward mode, new donor only: the donor record is created right after
+    // this step (before Exam & Fitness, where weight is normally captured),
+    // so weight has to be collected here instead. An existing donor already
+    // has a weight on file, so the repeat-donor path skips this.
+    if (requireWeight && repeatedDonation !== "Yes" && !(parseFloat(formData.weightKg) > 0)) {
+      return false;
+    }
 
     if (formData.pincode && !/^\d{6}$/.test(formData.pincode)) return false;
     if (formData.lastDonationDateDisplay && !validateMonthYear(formData.lastDonationDateDisplay)) return false;
@@ -262,23 +272,34 @@ export function useDonorCreationForm() {
     );
   };
 
-  const isStep4Complete = () => {
-    return (
+  const isStep4Complete = (requireProvisionalBloodGroup = false) => {
+    const base =
       formData.bagNo.trim() &&
       formData.segmentNo.trim() &&
       formData.lotNo.trim() &&
       formData.typeOfBag &&
       formData.donationType &&
       formData.collectionDate &&
-      formData.collectionTime
-    );
+      formData.collectionTime;
+    if (!base) return false;
+    // Inward mode: Bag Info runs before Donor Profile, so the provisional
+    // blood group fields live here instead and are required for the bag
+    // step to be considered complete.
+    if (requireProvisionalBloodGroup) return Boolean(formData.bloodGroup && formData.rh);
+    return true;
   };
 
-  const isStepComplete = (currentStep) => {
-    if (currentStep === 1) return isStep1Complete();
-    if (currentStep === 2) return isStep2Complete();
-    if (currentStep === 3) return isStep3Complete();
-    if (currentStep === 4) return isStep4Complete();
+  // Keyed by step key ("profile" | "medical" | "exam" | "bag" | "review")
+  // rather than a step number so the same completion rules apply whichever
+  // order the wizard renders them in (see donor-creation-steps.js).
+  // `isInward` is set by DonorCreation.jsx only in inward mode — it moves
+  // the blood-group requirement from the Donor Profile step to the (now
+  // earlier) Bag Info step.
+  const isStepComplete = (stepKey, isInward = false) => {
+    if (stepKey === "profile") return isStep1Complete(isInward, isInward);
+    if (stepKey === "medical") return isStep2Complete();
+    if (stepKey === "exam") return isStep3Complete();
+    if (stepKey === "bag") return isStep4Complete(isInward);
     return true;
   };
 

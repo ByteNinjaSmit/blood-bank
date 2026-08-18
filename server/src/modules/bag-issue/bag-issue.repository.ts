@@ -179,6 +179,7 @@ export interface BagIssueRepo {
       status: string;
       donorId?: string;
       donationId?: string;
+      segmentNo?: string;
       returnedAt?: Date;
       usedAt?: Date;
       damagedAt?: Date;

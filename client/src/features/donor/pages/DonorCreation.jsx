@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,26 +8,51 @@ import { validateDate, validateMonthYear, getUnhealthyQuestionReason } from "./d
 import { useDonorCreationForm } from "./donor-creation/hooks/useDonorCreationForm";
 import { useDonorSubmit } from "./donor-creation/hooks/useDonorSubmit";
 import { useDonorDraft } from "./donor-creation/hooks/useDonorDraft";
-import DonorProfileStep from "./donor-creation/steps/DonorProfileStep";
-import MedicalHistoryStep from "./donor-creation/steps/MedicalHistoryStep";
-import ExamFitnessStep from "./donor-creation/steps/ExamFitnessStep";
-import BagInfoStep from "./donor-creation/steps/BagInfoStep";
-import ReviewStep from "./donor-creation/steps/ReviewStep";
+import { useInwardSubmit } from "./donor-creation/hooks/useInwardSubmit";
+import { useInwardResume } from "./donor-creation/hooks/useInwardResume";
+import InwardSearchBox from "./donor-creation/components/InwardSearchBox";
+import { STEP_DEFS, getStepOrder } from "./donor-creation/donor-creation-steps";
 
-export default function DonorCreation() {
+// `modeOverride` lets a dedicated route (e.g. master-register/donation-inward)
+// bake mode="inward" in without duplicating this component — see
+// src/App.jsx. Absent that, mode is read from ?mode=inward the same way
+// ?campId= already is.
+export default function DonorCreation({ modeOverride }) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const campId = searchParams.get("campId");
   const draftId = searchParams.get("draftId");
+  const resumeId = searchParams.get("resumeId");
+  const mode = modeOverride || (searchParams.get("mode") === "inward" ? "inward" : "standard");
+  const isInward = mode === "inward";
+
+  const stepOrder = getStepOrder(mode);
 
   const [currentStep, setCurrentStep] = useState(1);
+  const [bagConfirmOpen, setBagConfirmOpen] = useState(false);
+  const currentStepKey = stepOrder[currentStep - 1];
 
   const form = useDonorCreationForm();
   const submit = useDonorSubmit({ form, campId, draftId });
   const { handleSaveDraft } = useDonorDraft({ form, currentStep, setCurrentStep, campId, draftId });
+  const inward = useInwardSubmit({ form, campId });
+  const resume = useInwardResume({
+    form,
+    setInwardDonation: inward.setInwardDonation,
+    setCurrentStep,
+    stepOrder,
+  });
+
+  useEffect(() => {
+    if (isInward && resumeId) {
+      resume.resumeFromId(resumeId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInward, resumeId]);
 
   const { formData } = form;
   const { isSubmitting, handleSubmit } = submit;
+  const busy = isInward ? inward.isSubmitting || resume.isResuming : isSubmitting;
 
   // Field-level validation run before Enter is allowed to advance focus —
   // shared navigation mechanics (including native-select showPicker()
@@ -73,7 +98,7 @@ export default function DonorCreation() {
   const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers({
     validateField: validateEnterNavField,
     onComplete: () => {
-      if (form.isStepComplete(currentStep)) {
+      if (form.isStepComplete(currentStepKey, isInward)) {
         handleNext();
       } else {
         toast.warning("Please complete all required fields on this step before continuing.");
@@ -81,7 +106,46 @@ export default function DonorCreation() {
     },
   });
 
+  // Inward mode: each step persists to the server as it completes (POST
+  // /inward, then PATCH link-donor / medical-history / finalize) instead of
+  // the standard flow's single final submit. Kept as a separate function
+  // (rather than threading `isInward` through the standard branches below)
+  // per the "prefer an early branch" guidance — standard mode's handleNext
+  // body is untouched.
+  const handleInwardNext = async () => {
+    if (currentStepKey === "bag") {
+      const created = await inward.submitBagInfo();
+      if (created) setBagConfirmOpen(true);
+      return;
+    }
+    if (currentStepKey === "profile") {
+      const ok = await inward.submitDonorLink();
+      if (ok) setCurrentStep((prev) => Math.min(prev + 1, stepOrder.length));
+      return;
+    }
+    if (currentStepKey === "medical") {
+      const questionReason = getUnhealthyQuestionReason(formData);
+      if (questionReason) {
+        form.setFormData((prev) => ({ ...prev, donorIsFit: false, deferralReasonObj: questionReason }));
+      } else if (formData.deferralReasonObj && formData.deferralReasonObj.reason.startsWith("Unfit due to Medical Question")) {
+        form.setFormData((prev) => ({ ...prev, donorIsFit: true, deferralReasonObj: null }));
+      }
+      const ok = await inward.submitMedicalHistory();
+      if (ok) setCurrentStep((prev) => Math.min(prev + 1, stepOrder.length));
+      return;
+    }
+    if (currentStepKey === "exam") {
+      // Finalize handles both the fit and unfit (deferral) paths server-side
+      // — no separate "Complete (Defer)" branch needed here.
+      await inward.submitFinalize();
+    }
+  };
+
   const handleNext = () => {
+    if (isInward) {
+      handleInwardNext();
+      return;
+    }
     if (currentStep === 2) {
       const questionReason = getUnhealthyQuestionReason(formData);
       if (questionReason) {
@@ -103,13 +167,21 @@ export default function DonorCreation() {
     } else if (currentStep === 3 && !formData.donorIsFit) {
       handleSubmit();
     } else {
-      setCurrentStep((prev) => Math.min(prev + 1, 5));
+      setCurrentStep((prev) => Math.min(prev + 1, stepOrder.length));
     }
   };
 
   const handlePrev = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
+
+  const StepComponent = STEP_DEFS[currentStepKey].Component;
+  const stepExtraProps =
+    currentStepKey === "profile"
+      ? { submit, hideSaveButton: isInward, showWeightField: isInward }
+      : currentStepKey === "bag"
+        ? { showProvisionalBloodGroup: isInward }
+        : {};
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
@@ -133,28 +205,25 @@ export default function DonorCreation() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                {campId ? "New Camp Donation" : "Donor Creation & Register"}
+                {isInward ? "Inward Donation (Bag-First)" : campId ? "New Camp Donation" : "Donor Creation & Register"}
               </h1>
               <p className="text-gray-500 text-sm">
-                {campId
-                  ? "Unified camp donor registration and donation form"
-                  : "Register a new donor"}
+                {isInward
+                  ? "Register the bag first, then complete donor and medical details as they become available."
+                  : campId
+                    ? "Unified camp donor registration and donation form"
+                    : "Register a new donor"}
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Stepper Status Indicator Bar (5 Steps) */}
+      {/* Stepper Status Indicator Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <div className="bg-white p-6 rounded-3xl border border-red-200 flex justify-between items-center shadow-md">
-          {[
-            { step: 1, label: "Donor Profile" },
-            { step: 2, label: "Medical History" },
-            { step: 3, label: "Exam & Fitness" },
-            { step: 4, label: "Bag Info" },
-            { step: 5, label: "Review & Save" }
-          ].map((s, idx) => {
+          {stepOrder.map((key, idx) => {
+            const s = { step: idx + 1, label: STEP_DEFS[key].label };
             const isCompleted = currentStep > s.step;
             const isActive = currentStep === s.step;
             return (
@@ -185,7 +254,7 @@ export default function DonorCreation() {
                     {s.label}
                   </span>
                 </div>
-                {idx < 4 && (
+                {idx < stepOrder.length - 1 && (
                   <div className="relative mx-2 h-1 flex-1 overflow-hidden rounded bg-gray-200">
                     <div
                       className="absolute left-0 top-0 h-full bg-red-800 transition-all duration-500"
@@ -203,13 +272,15 @@ export default function DonorCreation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
         <div onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="bg-white rounded-2xl border border-gray-200 shadow overflow-hidden">
 
-          {currentStep === 1 && <DonorProfileStep form={form} submit={submit} />}
+          {isInward && currentStepKey === "bag" && !inward.inwardDonation && (
+            <div className="p-6 sm:p-8 pb-0">
+              <InwardSearchBox onSelect={resume.resumeFromRow} isResuming={resume.isResuming} />
+            </div>
+          )}
 
-          {currentStep === 2 && <MedicalHistoryStep form={form} />}
+          <StepComponent form={form} {...stepExtraProps} />
 
-          {currentStep === 3 && <ExamFitnessStep form={form} />}
-
-          {/* Deferral Reason Picker Modal (always mounted; opened from Step 3) */}
+          {/* Deferral Reason Picker Modal (always mounted; opened from Exam & Fitness) */}
           <Dialog
             open={form.dropdownOpen && !form.isFitnessForcedUnfit}
             onOpenChange={(o) => {
@@ -263,21 +334,17 @@ export default function DonorCreation() {
             </DialogContent>
           </Dialog>
 
-          {currentStep === 4 && <BagInfoStep form={form} />}
-
-          {currentStep === 5 && <ReviewStep form={form} />}
-
           {/* Stepper Footer Buttons */}
           <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
             <button
               onClick={handlePrev}
-              disabled={currentStep === 1 || isSubmitting}
+              disabled={currentStep === 1 || busy}
               className="px-5 py-2 border border-gray-305 rounded-full text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors flex items-center gap-1 bg-white select-none shadow-sm"
             >
               <ArrowLeft className="w-4 h-4" />
               Back
             </button>
-            {currentStep < 5 && campId && (
+            {!isInward && currentStep < stepOrder.length && campId && (
               <button
                 type="button"
                 onClick={handleSaveDraft}
@@ -288,44 +355,126 @@ export default function DonorCreation() {
                 Save Draft
               </button>
             )}
-            <button
-              onClick={currentStep === 5 ? handleSubmit : handleNext}
-              disabled={!form.isStepComplete(currentStep) || isSubmitting}
-              className={`px-6 py-2 rounded-full text-sm font-semibold text-white transition-all shadow flex items-center gap-1.5 select-none ${
-                !form.isStepComplete(currentStep) || isSubmitting
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
-                  : currentStep === 3 && !formData.donorIsFit
-                  ? "bg-red-800 hover:bg-red-900 active:bg-red-950"
-                  : currentStep === 5
-                  ? "bg-green-700 hover:bg-green-800 active:bg-green-900"
-                  : "bg-red-800 hover:bg-red-900 active:bg-red-950"
-              }`}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving...
-                </>
-              ) : currentStep === 3 && !formData.donorIsFit ? (
-                <>
-                  Complete (Defer)
-                  <CheckCircle className="w-4 h-4" />
-                </>
-              ) : currentStep === 5 ? (
-                <>
-                  Complete
-                  <Save className="w-4 h-4" />
-                </>
-              ) : (
-                <>
-                  Continue
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
+
+            {isInward ? (
+              <button
+                onClick={handleNext}
+                disabled={!form.isStepComplete(currentStepKey, true) || busy}
+                className={`px-6 py-2 rounded-full text-sm font-semibold text-white transition-all shadow flex items-center gap-1.5 select-none ${
+                  !form.isStepComplete(currentStepKey, true) || busy
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
+                    : currentStepKey === "exam"
+                    ? "bg-green-700 hover:bg-green-800 active:bg-green-900"
+                    : "bg-red-800 hover:bg-red-900 active:bg-red-950"
+                }`}
+              >
+                {busy ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : currentStepKey === "exam" ? (
+                  <>
+                    Finish & Save
+                    <Save className="w-4 h-4" />
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={currentStep === stepOrder.length ? handleSubmit : handleNext}
+                disabled={!form.isStepComplete(currentStepKey) || isSubmitting}
+                className={`px-6 py-2 rounded-full text-sm font-semibold text-white transition-all shadow flex items-center gap-1.5 select-none ${
+                  !form.isStepComplete(currentStepKey) || isSubmitting
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
+                    : currentStepKey === "exam" && !formData.donorIsFit
+                    ? "bg-red-800 hover:bg-red-900 active:bg-red-950"
+                    : currentStep === stepOrder.length
+                    ? "bg-green-700 hover:bg-green-800 active:bg-green-900"
+                    : "bg-red-800 hover:bg-red-900 active:bg-red-950"
+                }`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : currentStepKey === "exam" && !formData.donorIsFit ? (
+                  <>
+                    Complete (Defer)
+                    <CheckCircle className="w-4 h-4" />
+                  </>
+                ) : currentStep === stepOrder.length ? (
+                  <>
+                    Complete
+                    <Save className="w-4 h-4" />
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Bag Info confirmation (inward mode only) — explicit affordance to
+          leave and come back rather than forcing the rest of the wizard. */}
+      <Dialog
+        open={bagConfirmOpen}
+        onOpenChange={(o) => { if (!o) setBagConfirmOpen(false); }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Donation Created</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 p-2 text-sm">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
+              <CheckCircle className="w-6 h-6 text-emerald-700 mt-0.5 shrink-0" />
+              <div>
+                <h3 className="font-bold text-emerald-900 text-sm">
+                  Donation {inward.inwardDonation?.donationId} created
+                </h3>
+                <p className="text-gray-600 text-xs mt-1">
+                  The bag is registered. Continue now to link a donor, or finish this later —
+                  it stays listed under Incomplete Inward Donations until you do.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setBagConfirmOpen(false);
+                  navigate(campId ? `/camp-details?id=${campId}` : "/master-register/inward-donations");
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Finish Later
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setBagConfirmOpen(false);
+                  setCurrentStep((prev) => Math.min(prev + 1, stepOrder.length));
+                }}
+                className="px-4 py-2 bg-red-800 hover:bg-red-900 active:bg-red-950 text-white text-xs font-semibold rounded-lg shadow transition-colors"
+              >
+                Continue Now
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Deferral Warning Modal */}
       <Dialog
         open={form.deferralModalOpen}

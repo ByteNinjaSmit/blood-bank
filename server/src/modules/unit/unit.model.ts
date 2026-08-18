@@ -39,6 +39,10 @@ const BloodUnitSchema = new Schema(
     componentType: { type: String, enum: COMPONENT_TYPE, required: true, index: true },
     aboGroup: { type: String, enum: ABO_GROUP, required: true, index: true },
     rhFactor: { type: String, enum: RH_FACTOR, required: true, index: true },
+    // False only for units derived from an INWARD donation's staff-entered
+    // provisionalBloodGroup — true (default) for every standard-flow unit,
+    // whose group is already lab/donor-confirmed at creation.
+    bloodGroupConfirmed: { type: Boolean, default: true },
 
     volumeMl: { type: Number, required: true },
     collectedAt: { type: Date, required: true },

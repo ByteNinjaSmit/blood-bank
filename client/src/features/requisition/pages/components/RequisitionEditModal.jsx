@@ -13,6 +13,15 @@ import { componentColor } from './component-colors';
 import { defaultPatient, defaultRequestedComponent, buildPatientPayload } from '../hooks/requisition-defaults';
 
 function docToForm(doc) {
+  const rawAbo = doc.patient?.aboGroup || doc.patient?.bloodGroup || doc.requestedComponents?.[0]?.bloodGroup;
+  const cleanedAbo = rawAbo ? String(rawAbo).replace(/[\+\-]/g, '').trim().toUpperCase() : 'O';
+  const validAbo = ['A', 'B', 'AB', 'O'].includes(cleanedAbo) ? cleanedAbo : 'O';
+
+  const rawRh = doc.patient?.rhFactor || doc.patient?.rh || doc.requestedComponents?.[0]?.rh;
+  const rhStr = rawRh ? String(rawRh).toUpperCase() : '';
+  const isNeg = rhStr.includes('NEG') || rhStr === '-';
+  const validRh = isNeg ? 'Negative' : 'Positive';
+
   return {
     hospitalId: doc.hospitalId?._id || doc.hospitalId || '',
     doctorName: doc.doctorName || doc.clinicianName || '',
@@ -24,8 +33,8 @@ function docToForm(doc) {
       age: doc.patient?.age || '',
       ageUnit: doc.patient?.ageUnit || 'YEARS',
       sex: doc.patient?.sex || 'M',
-      aboGroup: doc.patient?.aboGroup || 'O',
-      rh: doc.patient?.rhFactor === 'NEGATIVE' || doc.patient?.rh === 'Negative' ? 'Negative' : 'Positive',
+      aboGroup: validAbo,
+      rh: validRh,
       mrn: doc.patient?.mrn || '',
       diagnosis: doc.patient?.diagnosis || '',
       hb: doc.patient?.hb || '',

@@ -2,13 +2,14 @@ import { z } from 'zod';
 import type { Request } from 'express';
 import { ABO_GROUP, COMPONENT_TYPE, DONATION_TYPE, RH_FACTOR } from '@/shared/enums';
 import { ValidationError } from '@/shared/errors';
+import { CreateDonorBody } from '@/modules/donor/donor.validator';
 
 const OBJECT_ID = /^[a-f0-9]{24}$/i;
 
 const blankToUndef = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess((v) => (v === '' || v === null ? undefined : v), schema);
 
-const MedicalExamSchema = z.object({
+export const MedicalExamSchema = z.object({
   weightKg: z.coerce.number().positive().max(300).optional(),
   hbGdl: z.coerce.number().positive().max(25).optional(),
   temperatureCelsius: z.coerce.number().min(30).max(45).optional(),
@@ -29,7 +30,7 @@ const MedicalExamSchema = z.object({
   volumeMl: z.coerce.number().positive().max(700).optional(),
 });
 
-const DonorFitnessSchema = z.object({
+export const DonorFitnessSchema = z.object({
   isFit: z.boolean(),
   rejectionReason: blankToUndef(z.string().trim().max(300).optional()),
   rejectedAtStep: z.enum(['QUESTIONNAIRE', 'VITALS', 'COLLECTION', 'POST_DONATION']).optional(),
@@ -95,6 +96,64 @@ export const DeleteReasonBody = z.object({
   reason: z.string().trim().min(1, 'A reason is required for this action').max(500),
 });
 
+// ── Inward Donation (bag-first) ─────────────────────────────────────────
+
+const ProvisionalBloodGroupSchema = z.object({
+  aboGroup: z.enum(ABO_GROUP),
+  rhFactor: z.enum(RH_FACTOR),
+});
+
+export const CreateInwardDonationBody = z
+  .object({
+    bagNo: z.string().trim().min(1).max(100),
+    lotNo: blankToUndef(z.string().trim().min(1).max(100).optional()),
+    segmentNo: blankToUndef(z.string().trim().min(1).max(100).optional()),
+    collectionDate: z.coerce.date(),
+    // "HH:mm" — merged onto collectionDate server-side. Optional; when
+    // absent, collectionDate is used as the full collection timestamp.
+    collectionTime: blankToUndef(
+      z
+        .string()
+        .regex(/^\d{2}:\d{2}$/, 'collectionTime must be HH:mm')
+        .optional(),
+    ),
+    provisionalBloodGroup: ProvisionalBloodGroupSchema,
+    donationType: z.enum(DONATION_TYPE).default('WHOLE_BLOOD'),
+    typeOfBag: z.enum(['SB', 'DB', 'TB', 'QB']).optional(),
+    source: z.enum(['inhouse', 'camp']).default('inhouse'),
+    campId: blankToUndef(z.string().regex(OBJECT_ID).optional()),
+  })
+  .refine((v) => v.source !== 'camp' || Boolean(v.campId), {
+    message: 'campId is required when source is camp',
+    path: ['campId'],
+  });
+export type CreateInwardDonationInput = z.infer<typeof CreateInwardDonationBody>;
+
+export const LinkDonorBody = z.union([
+  z.object({ existingDonorId: z.string().regex(OBJECT_ID, 'Invalid donor id') }),
+  CreateDonorBody,
+]);
+export type LinkDonorInput = z.infer<typeof LinkDonorBody>;
+
+export const MedicalHistoryBody = z.object({
+  medicalExam: MedicalExamSchema.optional(),
+  questionnaireFlags: z.record(z.string(), z.boolean()).optional(),
+});
+export type MedicalHistoryInput = z.infer<typeof MedicalHistoryBody>;
+
+export const FinalizeInwardBody = z.object({
+  donorFitness: DonorFitnessSchema,
+  medicalExam: MedicalExamSchema.optional(),
+});
+export type FinalizeInwardInput = z.infer<typeof FinalizeInwardBody>;
+
+export const ListIncompleteQuery = z.object({
+  q: blankToUndef(z.string().trim().max(200).optional()),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(500).default(25),
+});
+export type ListIncompleteInput = z.infer<typeof ListIncompleteQuery>;
+
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {
   const result = schema.safeParse(value);
   if (!result.success) {
@@ -115,4 +174,13 @@ export const ValidateDonation = {
   deleteReasonBody: (req: Request) =>
     parseOrThrow(DeleteReasonBody, req.body ?? {}, 'request body'),
   updateBody: (req: Request) => parseOrThrow(UpdateDonationBody, req.body ?? {}, 'request body'),
+  createInwardBody: (req: Request) =>
+    parseOrThrow(CreateInwardDonationBody, req.body, 'request body'),
+  linkDonorBody: (req: Request) => parseOrThrow(LinkDonorBody, req.body, 'request body'),
+  medicalHistoryBody: (req: Request) =>
+    parseOrThrow(MedicalHistoryBody, req.body ?? {}, 'request body'),
+  finalizeInwardBody: (req: Request) =>
+    parseOrThrow(FinalizeInwardBody, req.body, 'request body'),
+  listIncompleteQuery: (req: Request) =>
+    parseOrThrow(ListIncompleteQuery, req.query, 'query string'),
 };

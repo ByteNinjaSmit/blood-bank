@@ -2,7 +2,7 @@
  * StockLabelPrintService
  * Print-isolation for the inventory stock bag label, mirroring
  * RequisitionPrintService's 'label' mode so both printed labels render at
- * the identical physical size (10cm x 13cm) instead of being constrained
+ * the identical physical size (9.5cm x 13cm) instead of being constrained
  * by a transformed dialog ancestor.
  */
 class StockLabelPrintService {
@@ -20,17 +20,19 @@ class StockLabelPrintService {
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
       @media print {
         @page {
-          size: 10cm 13cm !important;
           margin: 0 !important;
         }
 
         html, body {
-          width: 10cm !important;
-          height: 13cm !important;
+          width: 95mm !important;
+          height: 130mm !important;
           margin: 0 !important;
           padding: 0 !important;
           background: white !important;
           overflow: hidden !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
           font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif !important;
         }
 
@@ -43,8 +45,8 @@ class StockLabelPrintService {
           position: absolute !important;
           left: 0 !important;
           top: 0 !important;
-          width: 10cm !important;
-          height: 13cm !important;
+          width: 95mm !important;
+          height: 130mm !important;
           margin: 0 !important;
           padding: 0 !important;
           box-sizing: border-box !important;

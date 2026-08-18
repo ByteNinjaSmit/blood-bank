@@ -41,6 +41,7 @@ import SerologyResults from './features/serology/pages/SerologyResults';
 import MasterDonors from './features/donor/pages/MasterDonors';
 import MasterDonations from './features/donation/pages/MasterDonations';
 import DonorCreation from './features/donor/pages/DonorCreation';
+import InwardDonationsList from './features/donation/pages/InwardDonationsList';
 
 // User + Hospital
 import UserManage from './features/user/pages/UserManage';
@@ -182,6 +183,8 @@ const App = () => {
           <Route path="master-register/donors" element={<PageGuard module="donor" page="donor-list"><MasterDonors /></PageGuard>} />
           <Route path="master-register/donations" element={<PageGuard module="donor" page="donation-list"><MasterDonations /></PageGuard>} />
           <Route path="master-register/donor-creation" element={<PageGuard module="donor" page="donor-creation"><DonorCreation /></PageGuard>} />
+          <Route path="master-register/donation-inward" element={<PageGuard module="donor" page="donation-inward"><DonorCreation modeOverride="inward" /></PageGuard>} />
+          <Route path="master-register/inward-donations" element={<PageGuard module="donor" page="inward-donations-list"><InwardDonationsList /></PageGuard>} />
 
           {/* Appointments */}
           <Route path="appointments/donors" element={<PageGuard module="appointment" page="appointment-donors"><DonorAppointmentList /></PageGuard>} />

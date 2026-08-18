@@ -12,6 +12,7 @@ export const QUEUE_NAMES = {
   INVENTORY_MAINTENANCE: 'inventory-maintenance',
   INVENTORY_REPORTS: 'inventory-reports',
   DONOR_MAINTENANCE: 'donor-maintenance',
+  DONATION_MAINTENANCE: 'donation-maintenance',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

@@ -17,5 +17,12 @@ export default {
     // excluded from the client's effective-permission set on purpose, so
     // requiring it here would make this page invisible to everyone.
     { id: 'donor-creation', label: 'Donor Creation', route: '/master-register/donor-creation', actions: { create: ['donor:create', 'donation:create', 'donor:update', 'donor:read'] } },
+    // Bag-first (Inward Donation) entry point into the same wizard, plus its
+    // resume list. Deliberately the SAME permissions as Donor Creation above
+    // (server routes reuse donor:create/donation:create/donor:update/read
+    // and donation:read/update — no additional role restriction per the
+    // product decision recorded in donation.routes.ts).
+    { id: 'donation-inward', label: 'Inward Donation', route: '/master-register/donation-inward', actions: { create: ['donor:create', 'donation:create', 'donor:update', 'donor:read'] } },
+    { id: 'inward-donations-list', label: 'Incomplete Inward Donations', route: '/master-register/inward-donations', actions: { view: ['donation:read'] } },
   ],
 };

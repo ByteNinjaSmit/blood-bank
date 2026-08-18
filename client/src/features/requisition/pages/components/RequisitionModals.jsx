@@ -667,15 +667,35 @@ export default function RequisitionModals({
       <Dialog open={!!issueConfirmTarget} onOpenChange={(o) => { if (!o) closeIssueConfirm(); }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Confirm Issue Time</DialogTitle>
+            <DialogTitle>Confirm Issue Date & Time</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 text-sm">
             <p className="text-gray-600">
-              Check the issue time below — edit it if needed — then confirm to issue this component.
+              Check the issue date and time below — edit if needed — then confirm to issue this component.
             </p>
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Issue Time</span>
-              <TimePicker12h value={issueConfirmTime} onChange={setIssueConfirmTime} />
+            <div className="flex flex-col gap-3 bg-gray-50 p-3.5 rounded-xl border border-gray-200">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">Issue Date</span>
+                <input
+                  type="date"
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white font-medium focus:ring-2 focus:ring-green-500/20 focus:border-green-600 outline-none"
+                  value={issueConfirmTime instanceof Date && !isNaN(issueConfirmTime.getTime()) ? issueConfirmTime.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!val) return;
+                    const [y, m, d] = val.split('-').map(Number);
+                    setIssueConfirmTime((prev) => {
+                      const next = new Date(prev || new Date());
+                      next.setFullYear(y, m - 1, d);
+                      return next;
+                    });
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-gray-200/70 pt-2.5">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">Issue Time</span>
+                <TimePicker12h value={issueConfirmTime} onChange={setIssueConfirmTime} />
+              </div>
             </div>
             <div className="flex justify-end gap-2 pt-2 border-t">
               <button
@@ -690,9 +710,9 @@ export default function RequisitionModals({
                 type="button"
                 onClick={confirmIssue}
                 disabled={confirmingIssue}
-                className="px-4 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-white font-semibold text-xs shadow-sm transition-all disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-white font-semibold text-xs shadow-sm transition-all disabled:opacity-50 cursor-pointer"
               >
-                {confirmingIssue ? 'Issuing…' : 'Issue'}
+                {confirmingIssue ? 'Issuing…' : 'Confirm Issue'}
               </button>
             </div>
           </div>

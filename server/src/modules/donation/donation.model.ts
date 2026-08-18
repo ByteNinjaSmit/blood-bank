@@ -8,7 +8,7 @@
 // sync structurally; only the target collection differs.
 
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
-import { DONATION_TYPE } from '@/shared/enums';
+import { ABO_GROUP, DONATION_TYPE, RH_FACTOR } from '@/shared/enums';
 import { cascadeFields } from '@/shared/schemas/cascade-fields';
 
 export function buildDonationSchema() {
@@ -64,10 +64,35 @@ export function buildDonationSchema() {
       segmentNo: { type: String, trim: true },
       lotNo: { type: String, trim: true },
       legacyBagId: { type: Schema.Types.ObjectId, index: true },
-      donor: { type: Schema.Types.ObjectId, ref: 'Donor', required: true, index: true },
+      // Nullable — an INWARD (bag-first) donation is created before a
+      // donor is identified/linked. STANDARD (donor-first) donations
+      // always set this at creation and it stays required in practice
+      // for that flow; register() still passes a real donor id.
+      donor: { type: Schema.Types.ObjectId, ref: 'Donor', required: false, index: true },
       donationType: { type: String, enum: DONATION_TYPE, required: true },
       collectedAt: { type: Date, required: true, index: true },
       campId: { type: Schema.Types.ObjectId, ref: 'Camp', index: true },
+      // Inward Donation feature — bag-first registration workflow.
+      // STANDARD is the existing donor-first flow (register()); INWARD is
+      // the new bag-first flow (createInward()/linkDonor()/etc).
+      registrationMode: { type: String, enum: ['STANDARD', 'INWARD'], default: 'STANDARD' },
+      // Tracks how far an INWARD donation has progressed toward being a
+      // complete clinical record. Defaults to COMPLETE so every
+      // pre-existing donation and every STANDARD-flow donation (which is
+      // fully formed at creation) is unaffected by this field's presence.
+      completionStatus: {
+        type: String,
+        enum: ['BAG_ONLY', 'DONOR_PENDING', 'MEDICAL_PENDING', 'COMPLETE'],
+        default: 'COMPLETE',
+      },
+      // Staff-entered ABO/Rh at bag-registration time for an INWARD
+      // donation, before TTI/lab confirmation. Mirrors onto the derived
+      // BloodUnit(s) as aboGroup/rhFactor with bloodGroupConfirmed=false
+      // — see unit.model.ts.
+      provisionalBloodGroup: {
+        aboGroup: { type: String, enum: ABO_GROUP },
+        rhFactor: { type: String, enum: RH_FACTOR },
+      },
       phlebotomistId: { type: Schema.Types.ObjectId, ref: 'User' },
       medicalExam: MedicalExamSchema,
       donorFitness: DonorFitnessSchema,

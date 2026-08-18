@@ -102,6 +102,12 @@ function mockDonations(): DonationRepo {
     update: vi.fn(),
     lookupByBagNo: vi.fn(),
     bagNosByDonationIds: vi.fn().mockResolvedValue({}),
+    createInwardAtomic: vi.fn(),
+    findInwardState: vi.fn(),
+    setDonor: vi.fn(),
+    setMedicalHistory: vi.fn(),
+    setCompletionStatus: vi.fn(),
+    listIncomplete: vi.fn().mockResolvedValue({ items: [], total: 0 }),
   };
 }
 

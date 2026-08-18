@@ -72,6 +72,15 @@ export default function useRequisition(authToken) {
       }
     })();
 
+    const rawAbo = requestDoc.patient?.aboGroup || requestDoc.patient?.bloodGroup || requestDoc.requestedComponents?.[0]?.bloodGroup;
+    const cleanedAbo = rawAbo ? String(rawAbo).replace(/[\+\-]/g, '').trim().toUpperCase() : 'O';
+    const validAbo = ['A', 'B', 'AB', 'O'].includes(cleanedAbo) ? cleanedAbo : 'O';
+
+    const rawRh = requestDoc.patient?.rhFactor || requestDoc.patient?.rh || requestDoc.requestedComponents?.[0]?.rh;
+    const rhStr = rawRh ? String(rawRh).toUpperCase() : '';
+    const isNeg = rhStr.includes('NEG') || rhStr === '-';
+    const validRh = isNeg ? 'Negative' : 'Positive';
+
     setForm((prev) => ({
         ...prev,
         hospitalId: requestDoc.hospitalId?._id || requestDoc.hospitalId || '',
@@ -83,6 +92,8 @@ export default function useRequisition(authToken) {
           age: requestDoc.patient?.age || '',
           ageUnit: requestDoc.patient?.ageUnit || 'YEARS',
           sex: requestDoc.patient?.sex || 'M',
+          aboGroup: validAbo,
+          rh: validRh,
           mrn: requestDoc.patient?.mrn || '',
           diagnosis: requestDoc.patient?.diagnosis || '',
           hb: requestDoc.patient?.hb || '',

@@ -3,7 +3,7 @@ import { states } from "@/constants/states";
 import { INITIAL_FORM_DATA } from "@/features/donor/donor-constants";
 import { validateDate, validateMonthYear, getDaysDifference } from "../donor-creation-utils";
 
-export default function DonorProfileStep({ form, submit }) {
+export default function DonorProfileStep({ form, submit, hideSaveButton = false, showWeightField = false }) {
   const {
     formData,
     handleFormFieldChange,
@@ -357,6 +357,24 @@ export default function DonorProfileStep({ form, submit }) {
       <div className="bg-white rounded-lg border border-orange-200 p-6 space-y-4 shadow-sm">
         <h3 className="text-md font-semibold text-gray-900 border-b pb-1">Medical Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Inward mode only: weight is normally captured on the (later)
+              Exam & Fitness step, but a new donor record needs it at
+              creation time here, since Donor Profile submits the donor
+              before Exam & Fitness runs in this reordered flow. */}
+          {showWeightField && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg) <span className="text-red-500">*</span></label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={formData.weightKg}
+                onChange={(e) => handleFormFieldChange("weightKg", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
+                required
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Blood Group <span className="text-red-500">*</span></label>
             <select
@@ -435,31 +453,35 @@ export default function DonorProfileStep({ form, submit }) {
           </div>
         </div>
       </div>
-      {/* Save Donor Button (Step 1 Only) */}
-      <div className="flex justify-center pt-6 pb-2">
-        <button
-          type="button"
-          onClick={handleSaveDonorOnly}
-          disabled={!isStep1Complete() || isSubmitting}
-          className={`px-8 py-3 rounded-xl text-sm font-semibold text-white transition-all shadow flex items-center gap-1.5 select-none ${
-            !isStep1Complete() || isSubmitting
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
-              : "bg-red-800 hover:bg-red-900 active:bg-red-950"
-          }`}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Saving Donor...
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4" />
-              Save Donor
-            </>
-          )}
-        </button>
-      </div>
+      {/* Save Donor Button (Step 1 Only, standard mode) — inward mode links
+          the donor to the in-progress inward donation from the wizard's
+          Continue button instead, so this standalone save is hidden. */}
+      {!hideSaveButton && (
+        <div className="flex justify-center pt-6 pb-2">
+          <button
+            type="button"
+            onClick={handleSaveDonorOnly}
+            disabled={!isStep1Complete() || isSubmitting}
+            className={`px-8 py-3 rounded-xl text-sm font-semibold text-white transition-all shadow flex items-center gap-1.5 select-none ${
+              !isStep1Complete() || isSubmitting
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
+                : "bg-red-800 hover:bg-red-900 active:bg-red-950"
+            }`}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving Donor...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Save Donor
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

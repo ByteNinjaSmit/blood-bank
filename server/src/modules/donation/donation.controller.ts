@@ -11,6 +11,11 @@ export interface DonationControllers {
   update: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   restore: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   permanentDelete: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  createInward: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  linkDonor: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  saveMedicalHistory: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  finalizeInward: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  listIncomplete: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
 export function createDonationControllers(service: DonationService): DonationControllers {
@@ -209,6 +214,59 @@ export function createDonationControllers(service: DonationService): DonationCon
         const actorId = actorIdOrThrow(req);
         await service.permanentDelete(id, actorId, reason);
         res.status(204).end();
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async createInward(req, res, next) {
+      try {
+        const body = ValidateDonation.createInwardBody(req);
+        const created = await service.createInward(body, actorIdOrThrow(req));
+        res.status(201).json({ success: true, data: created, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async linkDonor(req, res, next) {
+      try {
+        const { id } = ValidateDonation.idParam(req);
+        const body = ValidateDonation.linkDonorBody(req);
+        const result = await service.linkDonor(id, body, actorIdOrThrow(req));
+        res.json({ success: true, data: result, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async saveMedicalHistory(req, res, next) {
+      try {
+        const { id } = ValidateDonation.idParam(req);
+        const body = ValidateDonation.medicalHistoryBody(req);
+        const result = await service.saveMedicalHistory(id, body, actorIdOrThrow(req));
+        res.json({ success: true, data: result, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async finalizeInward(req, res, next) {
+      try {
+        const { id } = ValidateDonation.idParam(req);
+        const body = ValidateDonation.finalizeInwardBody(req);
+        const result = await service.finalizeInward(id, body, actorIdOrThrow(req));
+        res.json({ success: true, data: result, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async listIncomplete(req, res, next) {
+      try {
+        const query = ValidateDonation.listIncompleteQuery(req);
+        const result = await service.listIncomplete(query);
+        res.json({ success: true, data: result, requestId: req.id });
       } catch (e) {
         next(e);
       }

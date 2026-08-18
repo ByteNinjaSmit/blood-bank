@@ -4,9 +4,12 @@
 
 import { Types } from 'mongoose';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
-import { findAcrossDonations } from '@/modules/donation/donation-collections.util';
+import {
+  findAcrossDonations,
+  findOneAcrossDonations,
+} from '@/modules/donation/donation-collections.util';
 import { transition, type UnitEvent } from '@/modules/unit/unit.state-machine';
-import { NotFoundError } from '@/shared/errors';
+import { NotFoundError, TtiQuarantineViolation } from '@/shared/errors';
 import { invalidate } from '@/core/cache';
 import { withAudit } from '@/shared/utils/with-audit';
 import type {
@@ -196,6 +199,29 @@ export interface UnitRepo {
   findDonationsWithIssuedUnit(donationIds: string[]): Promise<Set<string>>;
 }
 
+// Inward Donation guard: a unit may only reach RELEASED (QUARANTINE ->
+// RELEASE) if the donation that owns it has completionStatus COMPLETE.
+// This is the single non-bypassable gate for the feature — it lives here
+// because `applyEvent`/`applyEventToDonation` below are the ONLY two
+// places in the codebase that ever call the state-machine `transition()`
+// function (see the module comment at the top of this file). Every
+// caller — TTI release, component separation, anything added later —
+// necessarily goes through one of these two functions, so gating here
+// (rather than in unit.state-machine.ts, which stays pure/DB-free, or in
+// each individual calling service, which could be bypassed by a new
+// call site) makes the check impossible to skip.
+async function assertDonationCompleteForRelease(donationId: string): Promise<void> {
+  const donation = await findOneAcrossDonations<{ completionStatus?: string }>({ donationId });
+  // No donation row (e.g. loaner/synthetic donationId) — nothing to gate.
+  if (!donation) return;
+  if (donation.completionStatus && donation.completionStatus !== 'COMPLETE') {
+    throw new TtiQuarantineViolation(
+      `Unit cannot be released: donation ${donationId} is not yet complete (status: ${donation.completionStatus}). ` +
+        'Inward donations must have donor identity and medical history linked before release.',
+    );
+  }
+}
+
 export function createUnitRepo(): UnitRepo {
   return {
     async findByUnitId(unitId) {
@@ -217,6 +243,10 @@ export function createUnitRepo(): UnitRepo {
         | (RawUnit & { save: () => Promise<unknown>; status: UnitStatus })
         | null;
       if (!current) throw new NotFoundError('BloodUnit', unitId);
+
+      if (event === 'RELEASE') {
+        await assertDonationCompleteForRelease(current.donationId);
+      }
 
       const nextStatus = transition(current.status, event, unitId);
       const actor = new Types.ObjectId(actorId);
@@ -269,6 +299,10 @@ export function createUnitRepo(): UnitRepo {
     },
 
     async applyEventToDonation(donationId, event, actorId, fromStatuses, reason, extra) {
+      if (event === 'RELEASE') {
+        await assertDonationCompleteForRelease(donationId);
+      }
+
       const actor = new Types.ObjectId(actorId);
       let changed = 0;
       const findFilter = {

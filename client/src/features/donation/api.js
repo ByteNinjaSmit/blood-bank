@@ -10,4 +10,11 @@ export const donationApi = {
   remove: (id, reason) => apiClient.delete(`${BASE}/${id}`, { data: { reason } }).then(unwrap),
   restore: (id) => apiClient.post(`${BASE}/${id}/restore`).then(unwrap),
   permanentDelete: (id, reason) => apiClient.delete(`${BASE}/${id}/permanent`, { data: { reason } }).then(unwrap),
+
+  // Inward Donation (bag-first) workflow — see server/src/modules/donation/donation.routes.ts.
+  createInward: (data) => apiClient.post(`${BASE}/inward`, data).then(unwrap),
+  linkDonor: (id, data) => apiClient.patch(`${BASE}/${id}/link-donor`, data).then(unwrap),
+  saveMedicalHistory: (id, data) => apiClient.patch(`${BASE}/${id}/medical-history`, data).then(unwrap),
+  finalizeInward: (id, data) => apiClient.patch(`${BASE}/${id}/finalize`, data).then(unwrap),
+  listIncomplete: (params) => apiClient.get(`${BASE}/incomplete`, { params }).then(unwrap),
 };

@@ -8,8 +8,8 @@ export default function StockPrintLabelTemplate({ item, formatDate }) {
     <div
       className="printable-label-area border border-black bg-white flex flex-col text-black font-sans relative overflow-hidden shrink-0 select-none"
       style={{
-        width: '10cm',
-        height: '13cm',
+        width: '95mm',
+        height: '130mm',
         boxSizing: 'border-box',
         padding: '0.15cm',
         border: '1.2px solid black',
@@ -18,22 +18,22 @@ export default function StockPrintLabelTemplate({ item, formatDate }) {
       }}
     >
       {/* Blood Bank Header matching the image */}
-      <div className="w-full flex flex-col items-center justify-center border-b border-black pb-1 mb-1 bg-white shrink-0 text-center relative select-none" style={{ height: '2cm' }}>
-        <span className="text-[9px] font-bold tracking-wide text-black uppercase leading-none mb-1">Sai Healthcare Foundation Charitable Trusts</span>
+      <div className="w-full flex flex-col items-center justify-center border-b border-black pb-0.5 mb-0.5 bg-white shrink-0 text-center relative select-none" style={{ height: '1.75cm' }}>
+        <span className="text-[9px] font-bold tracking-wide text-black uppercase leading-none mb-0.5">Sai Healthcare Foundation Charitable Trusts</span>
         <h3 className="text-[25px] font-black text-black leading-none tracking-tight uppercase" style={{ wordSpacing: '1px' }}>
           SANJIVANI BLOOD CENTRE
         </h3>
-        <div className="w-full flex justify-between text-[6.5px] font-medium text-black uppercase mt-1 px-1.5">
+        <div className="w-full flex justify-between text-[6.5px] font-medium text-black uppercase mt-0.5 px-1.5">
           <span>(F.D.A. Lic. No. N-KD 15)</span>
           <span>(SBTC Reg. No. - 0031)</span>
         </div>
-        <div className="w-full text-center text-[6px] leading-tight font-bold text-black uppercase mt-1 px-1">
+        <div className="w-full text-center text-[6px] leading-tight font-bold text-black uppercase mt-0.5 px-1">
           110-2-B, 'Nishigandha', Vivekanandnagar, Near S. G. Vidyalaya, Kopargaon - 423 601, Dist. Ahmednagar. (M.S.) <span style={{ filter: 'grayscale(100%) contrast(100%) brightness(0)' }}>☎︎</span> - (02423) 222237
         </div>
       </div>
 
       {/* Middle Section (divided into Blood Group, Component details, and QR code/Dates) */}
-      <div className="flex w-full border-b border-black pb-1 shrink-0" style={{ height: '4.6cm' }}>
+      <div className="flex w-full border-b border-black pb-1 shrink-0" style={{ height: '4.3cm' }}>
         {/* Left Side: Huge Blood Group Display */}
         <div className="w-[2.3cm] flex flex-col items-center justify-center border-r border-black pr-0.5 select-none shrink-0 text-center">
           <span
@@ -54,22 +54,22 @@ export default function StockPrintLabelTemplate({ item, formatDate }) {
         </div>
 
         {/* Center: Component Name, Volume, Test Results, and both separation specifications */}
-        <div className="flex-1 px-1.5 flex flex-col justify-start pt-2 select-none text-left min-w-0">
+        <div className="flex-1 px-1.5 flex flex-col justify-start pt-0.5 select-none text-left min-w-0">
           <h4 className="text-[14.5px] font-black leading-tight text-black uppercase">
             {COMPONENT_PRINT_LABEL[item?.component?.componentType] || 'Blood Component'}
           </h4>
-          <p className="text-[13px] font-extrabold text-black leading-none mb-1.5">({item?.component?.volumeMl ? `${item.component.volumeMl} ml` : '— ml'})</p>
+          <p className="text-[13px] font-extrabold text-black leading-none mb-0.5">({item?.component?.volumeMl ? `${item.component.volumeMl} ml` : '— ml'})</p>
 
-          <div className="text-[8px] leading-snug font-black text-black uppercase tracking-tight space-y-1.4 mt-1">
+          <div className="text-[8px] leading-tight font-black text-black uppercase tracking-tight space-y-0.5 mt-0.5">
             <p>HIV I & II antibodies / HBs Ag / HCV: Non Reactive.</p>
             <p>VDRL / Malarial Parasite / Atypical Antibodies: Not Detected.</p>
           </div>
 
-          <div className="border-t border-black my-1.5"></div>
+          <div className="border-t border-black my-0.5"></div>
 
-          <div className="text-[7.4px] leading-tight font-bold text-black uppercase tracking-tight space-y-1">
+          <div className="text-[7.4px] leading-tight font-bold text-black uppercase tracking-tight space-y-0.5">
             <p>Separated from 450 ml / 350 ml of human blood + 63 / 49 ml. of CPDA, anticoagulant</p>
-            <div className="border-t border-black my-1 opacity-60"></div>
+            <div className="border-t border-black my-0.5 opacity-60"></div>
             <p>350 ml of human blood + SAGM-2 Solution (Volume 350 ± 20 ml.)</p>
           </div>
         </div>
@@ -84,7 +84,7 @@ export default function StockPrintLabelTemplate({ item, formatDate }) {
           />
           <span className="text-[5.5px] font-black text-center mt-1 uppercase tracking-tighter text-black leading-none">Scan For Details</span>
 
-          <div className="flex flex-col text-[8px] font-black text-black mt-1.5 text-center leading-tight">
+          <div className="flex flex-col text-[7.5px] font-black text-black mt-1.5 text-center leading-tight">
             <span>Collection: {formatDate(item?.bag?.donationDate)}</span>
             <span>Expiry: {formatDate(item?.component?.expiryDate)}</span>
           </div>

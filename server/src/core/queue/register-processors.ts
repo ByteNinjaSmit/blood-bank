@@ -4,6 +4,7 @@ import { registerDonorJobs } from '@/modules/donor/donor.jobs';
 import { registerComponentJobs } from '@/modules/component/component.jobs';
 import { registerTtiJobs } from '@/modules/tti/tti.jobs';
 import { registerRequisitionJobs } from '@/modules/requisition/requisition.jobs';
+import { registerDonationJobs } from '@/modules/donation/donation.jobs';
 import { childLogger } from '@/core/logger';
 
 const log = childLogger({ module: 'core/queue/register' });
@@ -15,5 +16,6 @@ export function registerProcessors(): void {
   registerComponentJobs();
   registerTtiJobs();
   registerRequisitionJobs();
+  registerDonationJobs();
   log.info('queue processors registered');
 }
