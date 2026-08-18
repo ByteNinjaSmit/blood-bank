@@ -32,6 +32,8 @@ export interface RequisitionControllers {
   confirmCompatibility: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   rejectComponent: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   rejectBag: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  unreserve: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  unissue: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
 export function createRequisitionControllers(deps: {
@@ -255,8 +257,8 @@ export function createRequisitionControllers(deps: {
     async issueAll(req, res, next) {
       try {
         const { id } = ValidateRequisition.idParam(req);
-        const { unitIds } = ValidateRequisition.issueAllBody(req);
-        const results = await deps.requisitions.issueAll(id, unitIds, actor(req));
+        const { unitIds, issuedAt } = ValidateRequisition.issueAllBody(req);
+        const results = await deps.requisitions.issueAll(id, unitIds, actor(req), issuedAt);
         res.status(201).json({ success: true, data: results, requestId: req.id });
       } catch (e) {
         next(e);
@@ -378,6 +380,30 @@ export function createRequisitionControllers(deps: {
         const { id } = ValidateRequisition.idParam(req);
         const { unitId, reason } = ValidateRequisition.rejectBagBody(req);
         const updated = await deps.requisitions.rejectBag(id, unitId, reason, actor(req));
+        const enriched = await enrichRequisition(updated);
+        res.json({ success: true, data: enriched, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async unreserve(req, res, next) {
+      try {
+        const { id } = ValidateRequisition.idParam(req);
+        const { unitId, reason } = ValidateRequisition.unreserveBody(req);
+        const updated = await deps.requisitions.unreserve(id, unitId, reason, actor(req));
+        const enriched = await enrichRequisition(updated);
+        res.json({ success: true, data: enriched, requestId: req.id });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async unissue(req, res, next) {
+      try {
+        const { id } = ValidateRequisition.idParam(req);
+        const { unitIds, reason } = ValidateRequisition.unissueBody(req);
+        const updated = await deps.requisitions.unissueUnits(id, unitIds, reason, actor(req));
         const enriched = await enrichRequisition(updated);
         res.json({ success: true, data: enriched, requestId: req.id });
       } catch (e) {

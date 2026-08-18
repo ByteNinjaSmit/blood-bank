@@ -1,5 +1,5 @@
 import React from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthenticatedRoute } from './components/auth/Authentic-Routes';
 import PageGuard from './features/access/PageGuard';
 import ScrollToTop from './features/dashboard/pages/layout/ScrollToTop';
@@ -30,7 +30,6 @@ import ViewDiscarded from './features/discard/components/View-Discarded';
 // Inventory
 import Stock from './features/inventory/pages/Stock';
 import Reserve from './features/inventory/pages/Reserve';
-import ReserveWizard from './features/inventory/pages/reserve-wizard/ReserveWizard';
 import Issue from './features/inventory/pages/Issue';
 import InventoryNearExpiry from './features/inventory/pages/NearExpiry';
 
@@ -143,7 +142,11 @@ const App = () => {
           {/* Inventory */}
           <Route path="inventory/stock" element={<PageGuard module="inventory" page="inventory-stock"><Stock /></PageGuard>} />
           <Route path="inventory/reserve" element={<PageGuard module="inventory" page="inventory-reserve"><Reserve /></PageGuard>} />
-          <Route path="inventory/reserve/new" element={<PageGuard module="inventory" page="inventory-reserve-new"><ReserveWizard /></PageGuard>} />
+          {/* Reservation is just a requisition whose components stay held
+              until issued — there's no separate creation flow anymore.
+              Old bookmarks/links to the dedicated wizard land on the normal
+              requisition creation form instead. */}
+          <Route path="inventory/reserve/new" element={<Navigate to="/requisition" replace />} />
           <Route path="inventory/issue" element={<PageGuard module="inventory" page="inventory-issue"><Issue /></PageGuard>} />
           <Route path="inventory/near-expiry" element={<PageGuard module="inventory" page="inventory-near-expiry"><InventoryNearExpiry /></PageGuard>} />
 

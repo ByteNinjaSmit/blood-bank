@@ -17,6 +17,7 @@ import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { countAcrossDonations } from '@/modules/donation/donation-collections.util';
 import { DonorModel } from '@/modules/donor/donor.model';
 import { CampModel } from '@/modules/camp/camp.model';
+import { RequisitionModel } from '@/modules/requisition/requisition.model';
 
 const log = childLogger({ module: 'inventory-jobs' });
 const SYSTEM_ACTOR = env.SYSTEM_USER_ID;
@@ -33,20 +34,75 @@ export async function runAutoUnreserveScan(): Promise<number> {
     deletedAt: null,
   });
 
+  const AUTO_UNRESERVE_REASON = 'Auto-cancelled reservation (expired after 3-day/7pm limit)';
+
   let unreservedCount = 0;
   for (const unit of reservedUnits) {
     try {
+      const requisitionId = unit.reservedFor;
       await units.applyEvent({
         unitId: unit.unitId,
         event: 'UNRESERVE',
         actorId: SYSTEM_ACTOR,
-        reason: 'Auto-cancelled reservation (expired after 3 days limit)',
+        reason: AUTO_UNRESERVE_REASON,
         set: {
           reservedFor: null,
           reservedUntil: null,
           reservedAt: null,
+          unreservedBy: 'SYSTEM',
+          unreservedReason: AUTO_UNRESERVE_REASON,
         } as any,
       });
+
+      // Keep the owning requisition's matched-unit entry in sync — same
+      // fields the manual-unreserve paths set — so /requisition/list shows
+      // "Unreserved — System unreserved" too, and any recorded crossmatch
+      // (only ever valid for this specific reservation) is cleared back to
+      // PENDING rather than silently carried into a future re-reservation.
+      if (requisitionId) {
+        await RequisitionModel.findOneAndUpdate(
+          { _id: requisitionId, 'matchedUnits.unitId': unit.unitId },
+          [
+            {
+              $set: {
+                matchedUnits: {
+                  $map: {
+                    input: '$matchedUnits',
+                    as: 'mu',
+                    in: {
+                      $cond: [
+                        { $eq: ['$$mu.unitId', unit.unitId] },
+                        {
+                          $mergeObjects: [
+                            '$$mu',
+                            {
+                              reserved: false,
+                              unreservedBy: 'SYSTEM',
+                              unreservedReason: AUTO_UNRESERVE_REASON,
+                              crossmatchStatus: {
+                                $cond: [
+                                  { $eq: ['$$mu.crossmatchStatus', 'NOT_REQUIRED'] },
+                                  'NOT_REQUIRED',
+                                  'PENDING',
+                                ],
+                              },
+                              compatibilityResult: null,
+                              crossmatchDoneAt: null,
+                              crossmatchSeenAt: null,
+                              cardNumber: null,
+                            },
+                          ],
+                        },
+                        '$$mu',
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        ).catch(() => undefined);
+      }
       unreservedCount++;
 
       const dayBucket = new Date().toISOString().slice(0, 10);
@@ -76,11 +132,88 @@ export async function runAutoUnreserveScan(): Promise<number> {
       entityType: 'BloodUnit',
       entityId: `batch:unreserve:${unreservedCount}`,
       after: { event: 'UNRESERVE', count: unreservedCount },
-      reason: 'daily auto-unreserve scan',
+      reason: 'auto-unreserve scan',
     });
   }
 
   return unreservedCount;
+}
+
+// ─── Reservation pre-expiry alerts (2h / 1h before auto-unreserve) ─────────────
+
+export async function runReservationPreExpiryAlerts(): Promise<void> {
+  const now = Date.now();
+  const windows: Array<{ label: '2H' | '1H'; from: number; to: number }> = [
+    { label: '2H', from: now + 60 * 60_000, to: now + 120 * 60_000 },
+    { label: '1H', from: now, to: now + 60 * 60_000 },
+  ];
+
+  for (const w of windows) {
+    const units = await BloodUnitModel.find({
+      status: { $in: ['RESERVED', 'CROSSMATCHED'] },
+      reservedUntil: { $gte: new Date(w.from), $lt: new Date(w.to) },
+      deletedAt: null,
+    });
+
+    for (const unit of units) {
+      await notificationCenterService
+        .notify({
+          title: `Reservation expiring in ~${w.label === '2H' ? '2 hours' : '1 hour'}`,
+          message: `Unit ${unit.unitId} (${unit.componentType} ${unit.aboGroup}${unit.rhFactor}) reservation auto-cancels at ${unit.reservedUntil?.toLocaleString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })} unless issued`,
+          module: 'INVENTORY',
+          category: 'RESERVATION_EXPIRED',
+          severity: 'WARNING',
+          relatedRecordId: unit.unitId,
+          relatedRecordType: 'BloodUnit',
+          actionLink: '/inventory/reserve',
+          dedupeKey: `RESERVATION_DUE_${w.label}:${unit.unitId}`,
+        })
+        .catch(() => undefined);
+    }
+  }
+}
+
+// ─── Daily "still reserved" reminder (09:00 IST) ───────────────────────────────
+
+export async function runDailyReservedReminder(): Promise<number> {
+  const units = await BloodUnitModel.find({
+    status: { $in: ['RESERVED', 'CROSSMATCHED'] },
+    deletedAt: null,
+  }).lean();
+  if (units.length === 0) return 0;
+
+  const byRequisition = new Map<string, typeof units>();
+  for (const u of units) {
+    const key = u.reservedFor ? String(u.reservedFor) : 'unknown';
+    const list = byRequisition.get(key) ?? [];
+    list.push(u);
+    byRequisition.set(key, list);
+  }
+
+  const dayBucket = new Date().toISOString().slice(0, 10);
+  for (const [requisitionId, list] of byRequisition) {
+    if (requisitionId === 'unknown') continue;
+    const req = await RequisitionModel.findById(requisitionId).select('requisitionId patient').lean();
+    const patientName = req?.patient?.name ?? 'Unknown patient';
+    const components = list
+      .map((u) => `${u.componentType} ${u.aboGroup}${u.rhFactor}`)
+      .join(', ');
+    await notificationCenterService
+      .notify({
+        title: 'Still reserved',
+        message: `${patientName} — requisition ${req?.requisitionId ?? requisitionId} still holds: ${components}`,
+        module: 'INVENTORY',
+        category: 'RESERVATION_EXPIRED',
+        severity: 'INFORMATION',
+        relatedRecordId: requisitionId,
+        relatedRecordType: 'Requisition',
+        actionLink: `/requisition/${requisitionId}`,
+        dedupeKey: `RESERVATION_DAILY_REMINDER:${requisitionId}:${dayBucket}`,
+      })
+      .catch(() => undefined);
+  }
+
+  return byRequisition.size;
 }
 
 // ─── Expiry scan ──────────────────────────────────────────────────────────────
@@ -391,6 +524,35 @@ export function registerInventoryJobs(): void {
   const expiryQueue = getQueue('inventory-maintenance');
   const discardQueue = getQueue('inventory-reports');
   const misQueue = getQueue('inventory-reports');
+  const reservationQueue = getQueue('inventory-maintenance');
+  const reservationReportQueue = getQueue('inventory-reports');
+
+  reservationQueue.process('hourly-reservation-scan', async () => {
+    await runReservationPreExpiryAlerts();
+    await runAutoUnreserveScan();
+  });
+  void reservationQueue.add(
+    'hourly-reservation-scan',
+    {},
+    {
+      repeat: { cron: '0 * * * *' }, // every hour, on the hour
+      removeOnComplete: true,
+      removeOnFail: 50,
+      jobId: 'hourly-reservation-scan',
+    },
+  );
+
+  reservationReportQueue.process('daily-reserved-reminder', async () => runDailyReservedReminder());
+  void reservationReportQueue.add(
+    'daily-reserved-reminder',
+    {},
+    {
+      repeat: { cron: '0 9 * * *' }, // daily 09:00 IST
+      removeOnComplete: true,
+      removeOnFail: 50,
+      jobId: 'daily-reserved-reminder',
+    },
+  );
 
   expiryQueue.process('daily-expiry-scan', async () => runExpiryScan());
   void expiryQueue.add(
@@ -431,4 +593,6 @@ export function registerInventoryJobs(): void {
   log.info('inventory expiry scan scheduled (daily 08:00)');
   log.info('daily discard report scheduled (daily 21:30)');
   log.info('monthly MIS report scheduled (1st of month 06:00)');
+  log.info('hourly reservation scan scheduled (every hour)');
+  log.info('daily still-reserved reminder scheduled (daily 09:00)');
 }

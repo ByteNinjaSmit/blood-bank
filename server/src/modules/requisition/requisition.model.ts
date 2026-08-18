@@ -68,10 +68,15 @@ const MatchedUnit = new Schema(
     unitId: { type: String, required: true },
     componentType: { type: String, enum: COMPONENT_TYPE, required: true },
     compatibilityType: { type: String, enum: ['EXACT', 'COMPATIBLE'], required: true },
-    // Proposed vs actually reserved. Units are only picked (not reserved)
-    // at match time; reservation happens on approve, so bag/group can be
-    // freely changed in Match Review until then.
+    // Whether the unit is currently reserved (RESERVE fires at match time,
+    // right when this entry is created). Cleared (false) once the unit is
+    // unreserved (manually or by the auto-expiry scan) or issued.
     reserved: { type: Boolean, default: false },
+    // Set when this unit is unreserved (manually from the requisition list /
+    // Reserve page, or automatically by the expiry scan) so the UI can show
+    // "Manually unreserved" vs "System unreserved" instead of just "Reserved".
+    unreservedBy: { type: String, enum: ['SYSTEM', 'MANUAL'], default: null },
+    unreservedReason: { type: String, trim: true, default: null },
     // Operator's explicit sign-off that a compatible SUBSTITUTE-group bag
     // (e.g. O− for an AB− patient) is acceptable. Only meaningful when
     // compatibilityType === 'COMPATIBLE'; reset on bag swap.

@@ -39,8 +39,18 @@ class RequisitionApiService {
     return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/approve`, {}));
   }
 
-  async issue(id, unitIds = []) {
-    return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/issue`, { unitIds }));
+  async issue(id, unitIds = [], issuedAt) {
+    return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/issue`, { unitIds, issuedAt }));
+  }
+
+  // Manually unreserve one matched (not-yet-issued) bag, returning it to stock.
+  async unreserve(id, { unitId, reason }) {
+    return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/unreserve`, { unitId, reason }));
+  }
+
+  // Revert one or more mistakenly-issued bags back to stock.
+  async unissue(id, { unitIds, reason }) {
+    return this._wrap(await apiService.patch(`${this.baseUrl}/${id}/unissue`, { unitIds, reason }));
   }
 
   async complete(id) {

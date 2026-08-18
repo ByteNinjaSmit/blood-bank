@@ -7,6 +7,7 @@
 //   COLLECTED -> IN_TESTING -> QUARANTINE -> RELEASED -> RESERVED
 //             -> CROSSMATCHED -> ISSUED -> TRANSFUSED
 //                                       -> RETURNED_UNUSED
+//                                       -> RESERVED (UNISSUE, operator correction)
 //   Any state can fork to DISCARDED (with a reason) or EXPIRED.
 //
 // Tests in state-machine.test.ts enumerate the matrix.
@@ -24,6 +25,12 @@ export const UNIT_EVENT = [
   'CROSSMATCH_PASS',
   'CROSSMATCH_FAIL',
   'ISSUE',
+  // Operator correction: an issue recorded by mistake is reverted one step
+  // back to RESERVED (still held against the same requisition, ready to be
+  // issued again) — not all the way to stock. Distinct from RETURN_UNUSED,
+  // which is the clinical "bag went out, came back unused" path — UNISSUE
+  // means "it never should have left in the first place."
+  'UNISSUE',
   'CONFIRM_TRANSFUSION',
   'RETURN_UNUSED',
   'DISCARD',
@@ -80,6 +87,7 @@ const TRANSITIONS: ReadonlyArray<Transition> = [
 
   { from: 'ISSUED', event: 'CONFIRM_TRANSFUSION', to: 'TRANSFUSED' },
   { from: 'ISSUED', event: 'RETURN_UNUSED', to: 'RETURNED_UNUSED' },
+  { from: 'ISSUED', event: 'UNISSUE', to: 'RESERVED' },
   { from: 'ISSUED', event: 'DISCARD', to: 'DISCARDED' },
 
   { from: 'DISCARDED', event: 'REINSTATE', to: 'QUARANTINE' },

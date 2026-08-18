@@ -21,12 +21,46 @@ export default function ExamFitnessStep({ form }) {
       {/* Vitals Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
+          <label className="block text-sm font-medium text-gray-755 mb-1">Weight (Kg) <span className="text-red-500">*</span></label>
+          <input
+            type="number"
+            autoFocus
+            value={formData.weightKg}
+            onChange={(e) => handleFormFieldChange("weightKg", e.target.value)}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-750 mb-1">Temperature (°C) <span className="text-red-500">*</span></label>
+          <input
+            type="number"
+            step="0.1"
+            placeholder="e.g. 36.8"
+            value={formData.tempC}
+            onChange={(e) => handleFormFieldChange("tempC", e.target.value)}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
+          />
+        </div>
+        <div>
           <label className="block text-sm font-medium text-gray-755 mb-1">Blood Pressure <span className="text-red-500">*</span></label>
           <input
             type="text"
             placeholder="e.g. 120/80"
             value={formData.bp}
             onChange={(e) => handleFormFieldChange("bp", e.target.value)}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-755 mb-1">O2 Level (%) <span className="text-red-500">*</span></label>
+          <input
+            type="number"
+            placeholder="e.g. 98"
+            value={formData.o2Level}
+            onChange={(e) => handleFormFieldChange("o2Level", e.target.value)}
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
           />
@@ -56,29 +90,6 @@ export default function ExamFitnessStep({ form }) {
             placeholder="e.g. 72"
             value={formData.pulse}
             onChange={(e) => handleFormFieldChange("pulse", e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-750 mb-1">Temperature (°C) <span className="text-red-500">*</span></label>
-          <input
-            type="number"
-            step="0.1"
-            placeholder="e.g. 36.8"
-            value={formData.tempC}
-            onChange={(e) => handleFormFieldChange("tempC", e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-755 mb-1">O2 Level (%) <span className="text-red-500">*</span></label>
-          <input
-            type="number"
-            placeholder="e.g. 98"
-            value={formData.o2Level}
-            onChange={(e) => handleFormFieldChange("o2Level", e.target.value)}
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
           />

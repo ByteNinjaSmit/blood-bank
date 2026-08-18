@@ -147,8 +147,8 @@ export default function ApproveIssueStep({ requestDoc, issuing, onIssue, shortag
                   <p className="font-semibold text-gray-800 mt-0.5">{requestDoc.patient?.age || '—'} {requestDoc.patient?.ageUnit === 'DAYS' ? 'D' : 'Y'} / {requestDoc.patient?.sex || '—'}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 text-xs uppercase tracking-wide font-medium block">Clinician</span>
-                  <p className="font-semibold text-gray-800 mt-0.5">{requestDoc.doctorName || '—'}</p>
+                  <span className="text-gray-400 text-xs uppercase tracking-wide font-medium block">Indication for Transfusion</span>
+                  <p className="font-semibold text-gray-800 mt-0.5">{requestDoc.patient?.indication || '—'}</p>
                 </div>
               </div>
             </div>
@@ -211,6 +211,8 @@ export default function ApproveIssueStep({ requestDoc, issuing, onIssue, shortag
                         <th className="p-2">Bag No</th>
                         <th className="p-2">Segment No</th>
                         <th className="p-2">Blood</th>
+                        <th className="p-2">Donation Date</th>
+                        <th className="p-2">Expiry Date</th>
                         <th className="p-2">Compatibility</th>
                         <th className="p-2">Crossmatch</th>
                         <th className="p-2">Reserved At</th>
@@ -224,6 +226,8 @@ export default function ApproveIssueStep({ requestDoc, issuing, onIssue, shortag
                         const bagNo = inv?.bagNo?.bagNo || '—';
                         const segmentNo = inv?.bagNo?.segmentNo || '—';
                         const blood = inv?.bagNo ? `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}` : '—';
+                        const donationDate = inv?.bagNo?.collectedAt ? new Date(inv.bagNo.collectedAt).toLocaleDateString() : '—';
+                        const expiryDate = inv?.componentId?.expiryDate ? new Date(inv.componentId.expiryDate).toLocaleDateString() : '—';
 
                         const rc = requestDoc?.requestedComponents?.find((c) => c.componentType === compType);
                         const isGroupMismatch = rc && inv?.bagNo && (
@@ -248,6 +252,8 @@ export default function ApproveIssueStep({ requestDoc, issuing, onIssue, shortag
                                 </div>
                               )}
                             </td>
+                            <td className="p-2 text-gray-600">{donationDate}</td>
+                            <td className="p-2 text-gray-600">{expiryDate}</td>
                             <td className="p-2"><CompatBadge type={mi.compatibilityType || 'exact'} /></td>
                             <td className="p-2 align-top">
                               <CrossmatchStatusBadge status={mi.crossmatchStatus || 'not-required'} required={mi.crossmatchRequired || false} />

@@ -86,7 +86,7 @@ const SerologyResults = () => {
     fromDate: "",
     toDate: ""
   });
-  const [order, setOrder] = useState("desc");
+  const [order, setOrder] = useState("bagAsc");
   const [sortBy] = useState("updatedAt");
   // Draft search text bound to the SearchBox; only committed into
   // filters.search (the actual fetch dependency) on explicit submit.

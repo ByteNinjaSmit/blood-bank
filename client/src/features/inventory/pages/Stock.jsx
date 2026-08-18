@@ -14,6 +14,7 @@ import { COMPONENT_TYPES } from "@/constants/component-types";
 import ComponentStockLines from "@/components/shared/ComponentStockLines";
 import StockViewModal from "../components/StockViewModal";
 import StockPrintLabelModal from "../components/StockPrintLabelModal";
+import StockRegisterReportModal from "../components/StockRegisterReportModal";
 
 const formatDate = (dateStr) => {
   if (!dateStr) return 'N/A';
@@ -34,6 +35,36 @@ const Stock = () => {
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
   const [selectedPrintItem, setSelectedPrintItem] = useState(null);
   const [selectedViewItem, setSelectedViewItem] = useState(null);
+  const [registerReportConfig, setRegisterReportConfig] = useState(null);
+
+  // Export Stocks (print report) variants — PRBC/FFP include the reserved
+  // highlight + Under Testing (TTD pending) section; RDP is stock-only.
+  const STOCK_REGISTER_CONFIGS = [
+    {
+      label: 'Export Stocks PRBC',
+      reportTitle: 'Blood Stock Register — PRBC',
+      componentType: 'PRBC',
+      includeTesting: true,
+      minRows: 3,
+      bbgMinRows: 1,
+    },
+    {
+      label: 'Export Stocks FFP',
+      reportTitle: 'Blood Stock Register — FFP',
+      componentType: 'FFP',
+      includeTesting: true,
+      minRows: 3,
+      bbgMinRows: 1,
+    },
+    {
+      label: 'Export Stocks RDP',
+      reportTitle: 'Blood Stock Register — RDP',
+      componentType: 'RDP',
+      includeTesting: false,
+      minRows: 1,
+      bbgMinRows: 1,
+    },
+  ];
 
   // filters
   const [componentType, setComponentType] = useState("");
@@ -317,7 +348,14 @@ const Stock = () => {
                     <X className="w-3 h-3" />
                   </button>
                 )}
-                <ExportExcelDropdown onExport={handleExportExcel} isLoading={excelLoading} />
+                <ExportExcelDropdown
+                  onExport={handleExportExcel}
+                  isLoading={excelLoading}
+                  printReports={STOCK_REGISTER_CONFIGS.map((cfg) => ({
+                    label: cfg.label,
+                    onClick: () => setRegisterReportConfig(cfg),
+                  }))}
+                />
               </div>
             </div>
           </CardContent>
@@ -560,6 +598,9 @@ const Stock = () => {
 
       {/* Print Preview Modal */}
       <StockPrintLabelModal item={selectedPrintItem} onClose={() => setSelectedPrintItem(null)} formatDate={formatDate} />
+
+      {/* Stock Register — combined stock + reserved (+ under-testing) print report */}
+      <StockRegisterReportModal config={registerReportConfig} onClose={() => setRegisterReportConfig(null)} />
     </div>
   );
 };

@@ -24,8 +24,10 @@ import type { UnitRepo } from '@/modules/unit/unit.repository';
 import type { PatientRepo } from '@/modules/patient/patient.repository';
 import type { CrossmatchService } from '@/modules/crossmatch/crossmatch.service';
 import type { IssueService } from '@/modules/issue/issue.service';
+import type { IssueRepo } from '@/modules/issue/issue.repository';
 import { normalizeRequestedComponents } from '@/modules/requisition/requisition.mapper';
 import { approvalBlockers } from '@/modules/requisition/requisition.approval-readiness';
+import { notificationCenterService } from '@/modules/notification/notification-center.service';
 
 export interface MatchShortageDto {
   componentType: string;
@@ -87,6 +89,7 @@ export interface RequisitionService {
     id: string,
     unitIds: string[] | undefined,
     actorId: string,
+    issuedAt?: Date,
   ): Promise<Array<{ issueId: string; unitId: string }>>;
   /** Legacy per-unit crossmatch update with auto-replacement on incompatible result. */
   updateCrossmatchLegacy(
@@ -152,6 +155,33 @@ export interface RequisitionService {
   ): Promise<RequisitionDto>;
   /** Rejects one matched bag (drops it, keeps a record) while the requisition continues. */
   rejectBag(id: string, unitId: string, reason: string, actorId: string): Promise<RequisitionDto>;
+  /** Manually unreserves one matched (not-yet-issued) unit, returning it to stock. */
+  unreserve(id: string, unitId: string, reason: string, actorId: string): Promise<RequisitionDto>;
+  /** Reverts one or more mistakenly-issued units back to stock (ISSUED -> RELEASED). */
+  unissueUnits(
+    id: string,
+    unitIds: string[],
+    reason: string,
+    actorId: string,
+  ): Promise<RequisitionDto>;
+}
+
+// Reservation window: the requisition's required-by date when it's a valid
+// future time earlier than the day-3 cutoff, otherwise the day-3 cutoff
+// itself — end of day at 19:00 local time (the fixed auto-unreserve moment).
+export function computeReservedUntil(requiredAt?: Date | null): Date {
+  const day3Cutoff = new Date();
+  day3Cutoff.setDate(day3Cutoff.getDate() + 3);
+  day3Cutoff.setHours(19, 0, 0, 0);
+  if (
+    requiredAt &&
+    !isNaN(requiredAt.getTime()) &&
+    requiredAt.getTime() > Date.now() &&
+    requiredAt.getTime() < day3Cutoff.getTime()
+  ) {
+    return requiredAt;
+  }
+  return day3Cutoff;
 }
 
 export function createRequisitionService(deps: {
@@ -160,6 +190,7 @@ export function createRequisitionService(deps: {
   patients: PatientRepo;
   crossmatch: CrossmatchService;
   issue: IssueService;
+  issues?: IssueRepo;
   audit?: IAuditService;
 }): RequisitionService {
   const log = childLogger({ module: 'requisition-service' });
@@ -240,66 +271,120 @@ export function createRequisitionService(deps: {
 
     async match(id, actorId) {
       const req = await deps.requisitions.findById(id);
-      if (req.status !== 'PENDING' && req.status !== 'MATCHED') {
+      // Re-matching is also how "Edit" adds bags for a quantity increase
+      // after approval/issue — allowed on any status except REJECTED. The
+      // incremental logic below never touches already-ISSUED units, so
+      // this is safe post-approval: it only fills the shortfall.
+      if (req.status === 'REJECTED') {
         throw new ConflictError(`Cannot match requisition in status ${req.status}`);
       }
 
-      // Release any *actually reserved* units from a prior (approved) match
-      // before re-proposing. Proposed-but-unreserved units hold no unit
-      // state, so they need no cleanup.
-      if (Array.isArray(req.matchedUnits) && req.matchedUnits.length > 0) {
-        for (const m of req.matchedUnits) {
-          if (!m.reserved) continue;
-          await deps.units
-            .applyEvent({
-              unitId: m.unitId,
-              event: 'UNRESERVE',
-              actorId,
-              reason: `Unreserving previous match for re-matching requisition ${req.requisitionId}`,
-              set: {
-                reservedFor: null,
-                reservedAt: null,
-                reservedUntil: null,
-              } as any,
-            })
-            .catch(() => undefined);
-        }
-      }
-
       const patient = await deps.patients.findById(req.patientId);
+
+      // Reservation now happens right here at match time (not on approve),
+      // so bags show as reserved the moment a requisition is created. A
+      // re-match (e.g. from Edit, after the requested quantity changed)
+      // must be non-destructive: units already ISSUED are locked and never
+      // touched; units still RESERVED/CROSSMATCHED for an unchanged
+      // component are left alone; only the delta (shortfall to reserve
+      // more, or excess to release) is adjusted per component.
+      const existingByComponent = new Map<
+        string,
+        Array<MatchedUnitDto & { locked: boolean }>
+      >();
+      for (const m of req.matchedUnits ?? []) {
+        const unit = await deps.units.findByUnitId(m.unitId).catch(() => null);
+        const locked = !unit || !['RELEASED', 'RESERVED', 'CROSSMATCHED'].includes(unit.status);
+        const list = existingByComponent.get(m.componentType) ?? [];
+        list.push({ ...m, locked });
+        existingByComponent.set(m.componentType, list);
+      }
 
       const matched: MatchedUnitDto[] = [];
       const shortages: Record<string, number> = {};
       // Per-component availability outcome, applied as component status after
       // setMatched. Rejected components are skipped entirely (no bags proposed).
       const componentOutcome: Array<{ componentType: string; available: number }> = [];
+      const reservedUntil = computeReservedUntil(
+        req.requiredAt ? new Date(req.requiredAt) : null,
+      );
 
       for (const rc of req.requestedComponents) {
-        if (rc.status === 'REJECTED') continue;
+        const kept = existingByComponent.get(rc.componentType) ?? [];
+        if (rc.status === 'REJECTED') {
+          // A rejected component keeps nothing matched; any previously kept
+          // (non-locked) units are released back to stock.
+          for (const k of kept) {
+            if (k.locked) continue;
+            await deps.units
+              .applyEvent({
+                unitId: k.unitId,
+                event: 'UNRESERVE',
+                actorId,
+                reason: `Component ${rc.componentType} rejected on requisition ${req.requisitionId}`,
+                set: { reservedFor: null, reservedAt: null, reservedUntil: null } as any,
+              })
+              .catch(() => undefined);
+          }
+          continue;
+        }
+
+        const lockedUnits = kept.filter((k) => k.locked);
+        const nonLocked = kept.filter((k) => !k.locked);
+        matched.push(...lockedUnits.map(({ locked, ...rest }) => rest));
+        matched.push(...nonLocked.map(({ locked, ...rest }) => rest));
+
+        const need = rc.units - kept.length;
+        if (need <= 0) {
+          if (need < 0) {
+            // Excess beyond the new target: release the most-recently
+            // matched non-locked units first.
+            const toDrop = nonLocked.slice(need); // need is negative
+            for (const d of toDrop) {
+              await deps.units
+                .applyEvent({
+                  unitId: d.unitId,
+                  event: 'UNRESERVE',
+                  actorId,
+                  reason: `Requested units reduced for ${rc.componentType} on requisition ${req.requisitionId}`,
+                  set: { reservedFor: null, reservedAt: null, reservedUntil: null } as any,
+                })
+                .catch(() => undefined);
+              const idx = matched.findIndex((mm) => mm.unitId === d.unitId);
+              if (idx >= 0) matched.splice(idx, 1);
+            }
+          }
+          componentOutcome.push({ componentType: rc.componentType, available: kept.length + need });
+          continue;
+        }
+
+        // need > 0: reserve additional units for the shortfall.
         const aboGroups = [...compatibleAboGroups(rc.aboGroup, rc.componentType)];
-        const candidates = await deps.units.selectable({
-          componentType: rc.componentType,
-          aboGroups,
-        });
+        const alreadyPicked = new Set(kept.map((k) => k.unitId));
+        const candidates = (
+          await deps.units.selectable({ componentType: rc.componentType, aboGroups })
+        ).filter((c) => !alreadyPicked.has(c.unitId));
         const selection = selectUnits(candidates, {
           recipient: { aboGroup: rc.aboGroup, rhFactor: rc.rhFactor },
           component: rc.componentType,
           specialNeeds: patient.specialNeeds,
-          unitsRequired: rc.units,
-        });
-
-        if (selection.shortage > 0) {
-          shortages[`${rc.componentType}-${rc.aboGroup}${rc.rhFactor}`] = selection.shortage;
-        }
-        componentOutcome.push({
-          componentType: rc.componentType,
-          available: selection.selected.length,
+          unitsRequired: need,
         });
 
         const needsXm = requiresCrossmatch(rc.componentType);
+        let reservedCount = 0;
         for (const sel of selection.selected) {
-          // Propose only — do NOT reserve. Units stay RELEASED and freely
-          // swappable in Match Review; reservation happens on approve.
+          try {
+            await deps.units.applyEvent({
+              unitId: sel.unit.unitId,
+              event: 'RESERVE',
+              actorId,
+              reason: `Reserved on match of requisition ${req.requisitionId}`,
+              set: { reservedFor: req.id, reservedAt: new Date(), reservedUntil },
+            });
+          } catch {
+            continue; // bag grabbed elsewhere between selection and reserve
+          }
           matched.push({
             unitId: sel.unit.unitId,
             componentType: rc.componentType,
@@ -307,15 +392,32 @@ export function createRequisitionService(deps: {
               { aboGroup: rc.aboGroup, rhFactor: rc.rhFactor },
               { aboGroup: sel.unit.aboGroup, rhFactor: sel.unit.rhFactor },
             ),
-            reserved: false,
+            reserved: true,
             compatibilityConfirmed: false,
             crossmatchRequired: needsXm,
             crossmatchStatus: needsXm ? 'PENDING' : 'NOT_REQUIRED',
           });
+          reservedCount++;
         }
+
+        // reservedCount already falls short of `need` for both reasons
+        // (not enough candidates, or a candidate's RESERVE call failing) —
+        // selection.shortage must not be added again on top of that.
+        const shortfall = need - reservedCount;
+        if (shortfall > 0) {
+          shortages[`${rc.componentType}-${rc.aboGroup}${rc.rhFactor}`] = shortfall;
+        }
+        componentOutcome.push({
+          componentType: rc.componentType,
+          available: kept.length + reservedCount,
+        });
       }
 
-      const updated = await deps.requisitions.setMatched(id, matched, actorId);
+      // A re-match past the initial PENDING->MATCHED transition (e.g. Edit
+      // adding bags to an already-approved/issued requisition) must not
+      // regress the status — only the very first match sets MATCHED.
+      const nextStatus = req.status === 'PENDING' ? 'MATCHED' : req.status;
+      const updated = await deps.requisitions.setMatched(id, matched, actorId, nextStatus);
       // Flag components with no compatible/available stock as UNAVAILABLE so
       // the status persists throughout the requisition; the rest are ACTIVE.
       // (Return value not reused — the client refreshes the requisition after
@@ -398,58 +500,9 @@ export function createRequisitionService(deps: {
         );
       }
 
-      // Reservation happens here (not at match): reserve every proposed unit
-      // now that the operator has finalised the bag/group selection. If any
-      // chosen unit is no longer available, roll back the ones just reserved
-      // and surface which bags failed so the operator can re-pick.
-      //
-      // Reservation window (reservedUntil): the requisition's required-by date
-      // when it's a valid future date, otherwise a 3-day default — mirroring
-      // the inventory Reserve flow so the Reserve list shows a value.
-      const threeDaysFromNow = new Date();
-      threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
-      const requiredAt = req.requiredAt ? new Date(req.requiredAt) : null;
-      const reservedUntil =
-        requiredAt && !isNaN(requiredAt.getTime()) && requiredAt.getTime() > Date.now()
-          ? requiredAt
-          : threeDaysFromNow;
-
-      const justReserved: string[] = [];
-      const failed: string[] = [];
-      for (const m of req.matchedUnits) {
-        if (m.reserved) continue;
-        try {
-          await deps.units.applyEvent({
-            unitId: m.unitId,
-            event: 'RESERVE',
-            actorId,
-            reason: `Reserved on approval of requisition ${req.requisitionId}`,
-            set: { reservedFor: req.id, reservedAt: new Date(), reservedUntil },
-          });
-          await deps.requisitions.markReserved(id, m.unitId, actorId);
-          justReserved.push(m.unitId);
-        } catch {
-          failed.push(m.unitId);
-        }
-      }
-
-      if (failed.length > 0) {
-        for (const unitId of justReserved) {
-          await deps.units
-            .applyEvent({
-              unitId,
-              event: 'UNRESERVE',
-              actorId,
-              reason: `Rolling back reservation — approval of ${req.requisitionId} failed`,
-              set: { reservedFor: null, reservedAt: null, reservedUntil: null } as any,
-            })
-            .catch(() => undefined);
-        }
-        throw new ConflictError(
-          `Cannot approve: bag(s) ${failed.join(', ')} are no longer available. Re-run Match Review and pick replacements.`,
-          { unavailableUnitIds: failed },
-        );
-      }
+      // Reservation already happened at match time (units are RESERVED as
+      // soon as they're proposed) — approve() no longer reserves anything,
+      // it just commits the crossmatch worksheet and flips the status.
 
       // Commit any crossmatch that was recorded (as data) during Match
       // Review: now that the unit is reserved, run the RESERVED -> CROSSMATCHED
@@ -523,21 +576,37 @@ export function createRequisitionService(deps: {
 
     async reject(id, reason, actorId) {
       const req = await deps.requisitions.findById(id);
+      const rejectReason = `Requisition ${req.requisitionId} rejected`;
       for (const m of req.matchedUnits) {
-        await deps.units
-          .applyEvent({
+        try {
+          await deps.units.applyEvent({
             unitId: m.unitId,
             event: 'UNRESERVE',
             actorId,
-            reason: `Requisition ${req.requisitionId} rejected`,
+            reason: rejectReason,
             set: {
               reservedFor: null,
               reservedAt: null,
               reservedUntil: null,
               issuedAt: null,
               issuedTo: null,
+              unreservedBy: 'MANUAL',
+              unreservedReason: rejectReason,
             } as any,
-          })
+          });
+        } catch {
+          // Already ISSUED (or otherwise not RESERVED/CROSSMATCHED) — no
+          // UNRESERVE transition exists from there; leave it as-is and
+          // don't touch its matched-unit entry below either.
+          continue;
+        }
+        // Keep the matched-unit entry's own reserved/crossmatch fields in
+        // sync with the unit — same as the manual unreserve path — so the
+        // View shows "Unreserved — Manually unreserved" instead of a stale
+        // "Reserved" badge, and a stale compatible crossmatch can't carry
+        // over if this same bag gets picked up by a future requisition.
+        await deps.requisitions
+          .markUnreserved(id, m.unitId, 'MANUAL', rejectReason, actorId, m.crossmatchRequired)
           .catch(() => undefined);
       }
       const updated = await deps.requisitions.reject(id, reason, actorId);
@@ -557,7 +626,7 @@ export function createRequisitionService(deps: {
       return deps.requisitions.setStatus(id, status, actorId);
     },
 
-    async issueAll(id, unitIds, actorId) {
+    async issueAll(id, unitIds, actorId, issuedAt) {
       const requisition = await deps.requisitions.findById(id);
       const results: Array<{ issueId: string; unitId: string }> = [];
 
@@ -567,7 +636,10 @@ export function createRequisitionService(deps: {
           : requisition.matchedUnits;
 
       for (const unit of targetUnits) {
-        const result = await deps.issue.issue({ requisitionId: id, unitId: unit.unitId }, actorId);
+        const result = await deps.issue.issue(
+          { requisitionId: id, unitId: unit.unitId, issuedAt },
+          actorId,
+        );
         results.push(result);
       }
 
@@ -605,8 +677,8 @@ export function createRequisitionService(deps: {
       } = input;
 
       const request = await deps.requisitions.findById(id);
-      if (!['MATCHED', 'APPROVED'].includes(request.status)) {
-        throw new ConflictError('Crossmatch can only be updated for matched or approved requests');
+      if (request.status === 'REJECTED') {
+        throw new ConflictError('Crossmatch cannot be updated on a rejected requisition');
       }
 
       const miEntry = request.matchedUnits.find((mu) => mu.unitId === inventoryId);
@@ -624,30 +696,22 @@ export function createRequisitionService(deps: {
         cardNumber,
       };
 
-      // Before approval the unit is only *proposed* (still RELEASED, not
-      // RESERVED), so we cannot run the crossmatch state transition — record
-      // the worksheet result as data on the matched unit. The unit CROSSMATCH
-      // transition and issue-gate enforcement happen after approval/reserve.
-      // 'pending' is the Edit/undo path: revert to PENDING but keep the stored
-      // details so the worksheet can reopen prefilled.
-      if (!miEntry.reserved) {
-        const dataStatus =
-          crossmatchStatus === 'compatible'
-            ? 'COMPATIBLE'
-            : crossmatchStatus === 'incompatible'
-              ? 'INCOMPATIBLE'
-              : 'PENDING';
-        return deps.requisitions.setCrossmatchStatus(
-          id,
-          inventoryId,
-          dataStatus,
-          actorId,
-          crossmatchStatus === 'pending' ? undefined : crossmatchDetails,
-        );
-      }
-
+      // Reservation now happens at match time, so a matched unit is
+      // RESERVED (not just "proposed") from the moment it's picked —
+      // there's no longer a pre-reservation phase to defer the real
+      // CROSSMATCH transition to. The worksheet commits immediately here,
+      // regardless of the overall requisition status (PENDING through
+      // ISSUED/COMPLETED all have this be valid — e.g. Edit adding extra
+      // bags to an already-approved/issued requisition still needs its own
+      // crossmatch before *those* bags can be issued). Only a bag whose
+      // crossmatch has already been committed (unit status CROSSMATCHED)
+      // blocks a 'pending' reset.
+      const unit = await deps.units.findByUnitId(inventoryId).catch(() => null);
       if (crossmatchStatus === 'pending') {
-        throw new ConflictError('Crossmatch cannot be edited after the unit is reserved.');
+        if (unit?.status === 'CROSSMATCHED') {
+          throw new ConflictError('Crossmatch cannot be edited after it has been committed.');
+        }
+        return deps.requisitions.setCrossmatchStatus(id, inventoryId, 'PENDING', actorId, undefined);
       }
 
       if (crossmatchStatus === 'compatible') {
@@ -754,17 +818,21 @@ export function createRequisitionService(deps: {
 
     async swapMatchedUnit(id, fromUnitId, toUnitId, actorId) {
       const req = await deps.requisitions.findById(id);
-      if (!['MATCHED', 'PENDING'].includes(req.status)) {
-        throw new ConflictError(
-          `Bags can only be changed before approval (status is ${req.status}).`,
-        );
+      if (req.status === 'REJECTED') {
+        throw new ConflictError(`Bags cannot be changed on a rejected requisition.`);
       }
       const current = req.matchedUnits.find((mu) => mu.unitId === fromUnitId);
       if (!current) {
         throw new NotFoundError('Matched unit in this requisition', fromUnitId);
       }
-      if (current.reserved) {
-        throw new ConflictError('This bag is already reserved and cannot be swapped.');
+      // Reservation now happens at match time, so every matched unit is
+      // normally already RESERVED — that alone must not block a swap
+      // anymore. Only an already-issued (or later) bag is truly locked.
+      const currentUnit = await deps.units.findByUnitId(fromUnitId).catch(() => null);
+      if (currentUnit && !['RELEASED', 'RESERVED', 'CROSSMATCHED'].includes(currentUnit.status)) {
+        throw new ConflictError(
+          `Bag ${fromUnitId} is already ${currentUnit.status.toLowerCase()} and cannot be swapped.`,
+        );
       }
       if (req.matchedUnits.some((mu) => mu.unitId === toUnitId)) {
         throw new ConflictError('That bag is already selected for this requisition.');
@@ -795,6 +863,32 @@ export function createRequisitionService(deps: {
       }
 
       const needsXm = requiresCrossmatch(compType);
+      const reservedUntil = computeReservedUntil(
+        req.requiredAt ? new Date(req.requiredAt) : null,
+      );
+
+      // Release the outgoing bag back to stock (if it was actually held),
+      // then reserve the incoming one — reservation must follow the bag,
+      // not stay pinned to whichever unit was picked first.
+      if (currentUnit && ['RESERVED', 'CROSSMATCHED'].includes(currentUnit.status)) {
+        await deps.units
+          .applyEvent({
+            unitId: fromUnitId,
+            event: 'UNRESERVE',
+            actorId,
+            reason: `Swapped out on requisition ${req.requisitionId}`,
+            set: { reservedFor: null, reservedAt: null, reservedUntil: null } as any,
+          })
+          .catch(() => undefined);
+      }
+      await deps.units.applyEvent({
+        unitId: target.unitId,
+        event: 'RESERVE',
+        actorId,
+        reason: `Swapped in on requisition ${req.requisitionId}`,
+        set: { reservedFor: req.id, reservedAt: new Date(), reservedUntil },
+      });
+
       const swapped = await deps.requisitions.swapMatchedUnit(id, fromUnitId, {
         unitId: target.unitId,
         componentType: compType,
@@ -802,7 +896,7 @@ export function createRequisitionService(deps: {
           { aboGroup: rc.aboGroup, rhFactor: rc.rhFactor },
           { aboGroup: target.aboGroup, rhFactor: target.rhFactor },
         ),
-        reserved: false,
+        reserved: true,
         // A new bag resets any prior crossmatch/compatibility sign-off.
         compatibilityConfirmed: false,
         crossmatchRequired: needsXm,
@@ -834,8 +928,13 @@ export function createRequisitionService(deps: {
       const req = await deps.requisitions.findById(id);
       const mu = req.matchedUnits.find((m) => m.unitId === unitId);
       if (!mu) throw new NotFoundError('Matched unit in this requisition', unitId);
-      if (mu.reserved) {
-        throw new ConflictError('Compatibility sign-off cannot change after the unit is reserved.');
+      // Reservation now happens at match time, so `mu.reserved` is normally
+      // always true by the time this runs — that alone must not block the
+      // sign-off anymore. Only once the bag has actually gone out (issued
+      // or beyond) is this locked.
+      const unit = await deps.units.findByUnitId(unitId).catch(() => null);
+      if (unit && !['RELEASED', 'RESERVED', 'CROSSMATCHED'].includes(unit.status)) {
+        throw new ConflictError('Compatibility sign-off cannot change after the unit is issued.');
       }
       return deps.requisitions.setMatchedUnitCompatibilityConfirmed(id, unitId, confirmed, actorId);
     },
@@ -936,6 +1035,143 @@ export function createRequisitionService(deps: {
         after: { unitId, status: 'REJECTED', reason },
         reason,
       });
+      return updated;
+    },
+
+    async unreserve(id, unitId, reason, actorId) {
+      const req = await deps.requisitions.findById(id);
+      const mu = req.matchedUnits.find((m) => m.unitId === unitId);
+      if (!mu) throw new NotFoundError('Matched unit in this requisition', unitId);
+
+      const unit = await deps.units.findByUnitId(unitId);
+      if (!unit || !['RESERVED', 'CROSSMATCHED'].includes(unit.status)) {
+        throw new ConflictError(`Bag ${unitId} is not currently reserved.`);
+      }
+
+      await deps.units.applyEvent({
+        unitId,
+        event: 'UNRESERVE',
+        actorId,
+        reason,
+        set: {
+          reservedFor: null,
+          reservedAt: null,
+          reservedUntil: null,
+          unreservedBy: 'MANUAL',
+          unreservedReason: reason,
+        } as any,
+      });
+      const updated = await deps.requisitions.markUnreserved(
+        id,
+        unitId,
+        'MANUAL',
+        reason,
+        actorId,
+        mu.crossmatchRequired,
+      );
+
+      await audit.record({
+        actorId,
+        module: 'requisition',
+        action: 'UPDATE',
+        entityType: 'BloodUnit',
+        entityId: unitId,
+        before: { status: unit.status, reservedFor: req.requisitionId },
+        after: { status: 'RELEASED', unreservedBy: 'MANUAL', reason },
+        reason,
+      });
+      void notificationCenterService
+        .notify({
+          title: 'Reservation manually cancelled',
+          message: `Unit ${unitId} (${mu.componentType}) manually unreserved for requisition ${req.requisitionId}: ${reason}`,
+          module: 'INVENTORY',
+          category: 'RESERVATION_EXPIRED',
+          severity: 'INFORMATION',
+          relatedRecordId: unitId,
+          relatedRecordType: 'BloodUnit',
+          actionLink: `/requisition/${id}`,
+        })
+        .catch(() => undefined);
+
+      log.info({ requisitionId: req.requisitionId, unitId, actorId }, 'unit manually unreserved');
+      return updated;
+    },
+
+    async unissueUnits(id, unitIds, reason, actorId) {
+      const req = await deps.requisitions.findById(id);
+      const targets = req.matchedUnits.filter((m) => unitIds.includes(m.unitId));
+      if (targets.length === 0) {
+        throw new NotFoundError('Matched unit(s) in this requisition', unitIds.join(', '));
+      }
+
+      let updated = req;
+      const reservedUntil = computeReservedUntil(
+        req.requiredAt ? new Date(req.requiredAt) : null,
+      );
+      for (const mu of targets) {
+        const unit = await deps.units.findByUnitId(mu.unitId).catch(() => null);
+        if (!unit || unit.status !== 'ISSUED') {
+          throw new ConflictError(`Bag ${mu.unitId} is not currently issued.`);
+        }
+        // One step back, not all the way to stock: UNISSUE lands the unit
+        // back on RESERVED, still held against this same requisition, so it
+        // stays listed here and can be issued again from the same screen.
+        await deps.units.applyEvent({
+          unitId: mu.unitId,
+          event: 'UNISSUE',
+          actorId,
+          reason,
+          set: {
+            issuedAt: null,
+            issuedTo: null,
+            reservedFor: req.id,
+            reservedAt: new Date(),
+            reservedUntil,
+            unreservedBy: null,
+            unreservedReason: null,
+          } as any,
+        });
+        updated = await deps.requisitions.markReserved(id, mu.unitId, actorId);
+        // Void the Issue record too (soft-delete) — otherwise its issueId
+        // keeps showing on this bag as if it were still actively issued,
+        // even after it's been unissued (and possibly unreserved next).
+        await deps.issues?.voidForUnit(id, mu.unitId, actorId).catch(() => undefined);
+
+        await audit.record({
+          actorId,
+          module: 'requisition',
+          action: 'UPDATE',
+          entityType: 'BloodUnit',
+          entityId: mu.unitId,
+          before: { status: 'ISSUED' },
+          after: { status: 'RESERVED', reason },
+          reason,
+        });
+        void notificationCenterService
+          .notify({
+            title: 'Issue reverted (unissued)',
+            message: `Unit ${mu.unitId} (${mu.componentType}) unissued and returned to Reserved on requisition ${req.requisitionId}: ${reason}`,
+            module: 'ISSUE_BLOOD',
+            category: 'BLOOD_ISSUED',
+            severity: 'WARNING',
+            relatedRecordId: mu.unitId,
+            relatedRecordType: 'BloodUnit',
+            actionLink: `/requisition/${id}`,
+          })
+          .catch(() => undefined);
+      }
+
+      // If the requisition had been marked COMPLETED, an un-issue means it
+      // no longer is — revert to APPROVED so it re-enters the active
+      // workflow and the Issue action stays available for this bag.
+      if (updated.status === 'COMPLETED') {
+        updated = await deps.requisitions.setStatus(id, 'APPROVED', actorId);
+      }
+
+      log.info(
+        { requisitionId: req.requisitionId, unitIds, actorId },
+        'unit(s) unissued back to reserved',
+      );
       return updated;
     },
   };

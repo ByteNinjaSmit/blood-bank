@@ -35,6 +35,7 @@ export default function DonorProfileStep({ form, submit }) {
         <label className="block text-sm font-semibold text-gray-700">Repeated Donation?</label>
         <select
           value={repeatedDonation}
+          autoFocus
           onChange={(e) => {
             const val = e.target.value;
             setRepeatedDonation(val);
@@ -206,7 +207,7 @@ export default function DonorProfileStep({ form, submit }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth <span className="text-red-500">*</span></label>
             <input
@@ -237,16 +238,6 @@ export default function DonorProfileStep({ form, submit }) {
               <option value="F">Female</option>
               <option value="O">Other</option>
             </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Weight (Kg) <span className="text-red-500">*</span></label>
-            <input
-              type="number"
-              value={formData.weightKg}
-              onChange={(e) => handleFormFieldChange("weightKg", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
-              required
-            />
           </div>
         </div>
 

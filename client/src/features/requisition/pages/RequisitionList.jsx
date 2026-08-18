@@ -7,13 +7,14 @@ import RequisitionEditModal from './components/RequisitionEditModal';
 import RequisitionPrintModals from './components/RequisitionPrintModals';
 import RequisitionReportSelectModal from './components/RequisitionReportSelectModal';
 import { RejectRequestModal } from '@/components/shared';
+import ReasonForChangeModal from '@/components/shared/ReasonForChangeModal';
 import { useRequisitionList } from './hooks/useRequisitionList';
 
 const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'rejected'];
 
 export default function RequisitionList() {
   const rl = useRequisitionList();
-  const { allSelectedIds,applyFilters,bulkAction,callAction,can,canEdit,canManage,clearSelection,closeEdit,closeView,componentFulfillment,confirmReportSelection,data,editModalOpen,editRequisitionId,excelLoading,exportDropdownOpen,fetchList,filters,fmt,handleConfirmReject,handleExportExcel,handleOpenReject,handlePrint,hospitals,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openEdit,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setExportDropdownOpen,setFilters,setIssueDoc,setIssueModalOpen,setIssuingRowId,setLimit,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintType,setRejectModalOpen,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,statusClass,toggle,total,totalPages,viewDoc,viewLoading,viewOpen } = rl;
+  const { allSelectedIds,applyFilters,bulkAction,callAction,can,canEdit,canManage,clearSelection,closeEdit,closeView,componentFulfillment,confirmReportSelection,data,editModalOpen,editRequisitionId,excelLoading,exportDropdownOpen,fetchList,filters,fmt,handleConfirmReject,handleExportExcel,handleOpenReject,handlePrint,hospitals,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openEdit,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setExportDropdownOpen,setFilters,setIssueDoc,setIssueModalOpen,setIssuingRowId,setLimit,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintType,setRejectModalOpen,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,statusClass,toggle,total,totalPages,openUnreserveModal,closeUnreserveModal,confirmUnreserve,unreserveModalOpen,unreserveSubmitting,viewDoc,viewLoading,viewOpen } = rl;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -159,7 +160,6 @@ export default function RequisitionList() {
               <div className="flex gap-2">
                 <button onClick={() => bulkAction('approve')} className="px-3 py-1 rounded bg-blue-700 hover:bg-blue-800 text-white">Approve</button>
                 <button onClick={() => bulkAction('issue')} className="px-3 py-1 rounded bg-green-700 hover:bg-green-800 text-white">Issue</button>
-                <button onClick={() => bulkAction('complete')} className="px-3 py-1 rounded bg-purple-700 hover:bg-purple-800 text-white">Complete</button>
                 <button onClick={() => bulkAction('reject')} className="px-3 py-1 rounded border border-red-200 text-red-700 hover:bg-red-50">Reject</button>
                 <button onClick={clearSelection} className="px-3 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">Clear</button>
               </div>
@@ -239,10 +239,8 @@ export default function RequisitionList() {
                               >
                                 Manage
                               </button>
-                              <button disabled={!can(row, 'match')} onClick={() => callAction(row._id, 'match')} className={`px-3 py-1 rounded ${can(row,'match') ? 'bg-orange-800 hover:bg-orange-900 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Match</button>
                               <button disabled={!can(row, 'approve')} onClick={() => callAction(row._id, 'approve')} className={`px-3 py-1 rounded ${can(row,'approve') ? 'bg-blue-700 hover:bg-blue-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Approve</button>
                               <button disabled={!can(row, 'issue')} onClick={() => callAction(row._id, 'issue')} className={`px-3 py-1 rounded ${can(row,'issue') ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Issue</button>
-                              <button disabled={!can(row, 'complete')} onClick={() => callAction(row._id, 'complete')} className={`px-3 py-1 rounded ${can(row,'complete') ? 'bg-purple-700 hover:bg-purple-800 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Complete</button>
                               {can(row, 'reject') && (
                                 <button onClick={() => handleOpenReject(row._id, row.requestId)} className="px-3 py-1 rounded border border-red-200 text-red-700 hover:bg-red-50">Reject</button>
                               )}
@@ -274,6 +272,7 @@ export default function RequisitionList() {
         fmt={fmt}
         componentFulfillment={componentFulfillment}
         handleOpenReject={handleOpenReject}
+        onUnreserve={openUnreserveModal}
         issueModalOpen={issueModalOpen}
         setIssueModalOpen={setIssueModalOpen}
         issueDoc={issueDoc}
@@ -328,6 +327,17 @@ export default function RequisitionList() {
         onConfirm={handleConfirmReject}
         requestId={rejectingDocReqId}
         submitting={rejectSubmitting}
+      />
+
+      <ReasonForChangeModal
+        isOpen={unreserveModalOpen}
+        onClose={closeUnreserveModal}
+        onConfirm={confirmUnreserve}
+        title="Confirm Unreservation"
+        message="This component will be manually unreserved and returned to stock."
+        actionLabel="Yes, Unreserve"
+        fieldLabel="Reason for Unreserving"
+        submitting={unreserveSubmitting}
       />
     </div>
   );

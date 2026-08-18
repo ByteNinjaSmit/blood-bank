@@ -53,6 +53,11 @@ describe('BloodUnit state machine', () => {
     expect(isTerminal('RETURNED_UNUSED')).toBe(true);
   });
 
+  it('a mistakenly issued unit can be corrected one step back to RESERVED via UNISSUE', () => {
+    expect(transition('ISSUED', 'UNISSUE')).toBe('RESERVED');
+    expect(isTerminal('RESERVED')).toBe(false);
+  });
+
   it("terminal statuses have no outgoing events, except DISCARDED's guarded reinstate", () => {
     for (const t of ['TRANSFUSED', 'RETURNED_UNUSED', 'EXPIRED'] as const) {
       expect(allowedEvents(t)).toEqual([]);

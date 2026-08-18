@@ -75,6 +75,7 @@ function deps(opts: {
 }) {
   const issues: IssueRepo = {
     create: vi.fn().mockResolvedValue({ issueId: 'IS-1', unitId: 'U1' }),
+    voidForUnit: vi.fn().mockResolvedValue(undefined),
   };
   const requisitions = {
     findById: vi.fn().mockResolvedValue(reqDto()),
@@ -82,7 +83,9 @@ function deps(opts: {
   const units: UnitRepo = {
     findByUnitId: vi.fn().mockResolvedValue(opts.unit ?? unitDto()),
     findReleasableByDonation: vi.fn(),
-    applyEvent: vi.fn().mockResolvedValue(unitDto({ status: 'ISSUED' })),
+    applyEvent: vi.fn().mockImplementation(async ({ event }) =>
+      unitDto({ status: event === 'CROSSMATCH_PASS' ? 'CROSSMATCHED' : 'ISSUED' }),
+    ),
     applyEventToDonation: vi.fn(),
     selectable: vi.fn(),
     inStockSummary: vi.fn(),
@@ -99,7 +102,7 @@ function deps(opts: {
     updateSnapshot: vi.fn(),
   };
   const crossmatches = {
-    record: vi.fn(),
+    record: vi.fn().mockResolvedValue({}),
     findLatestForUnit: vi
       .fn()
       .mockResolvedValue(
@@ -176,6 +179,32 @@ describe('issue-service.issue', () => {
       'mo-actor',
     );
     expect(r.issueId).toBe('IS-1');
+  });
+
+  it('self-heals a RESERVED unit whose crossmatch was recorded compatible as data but never applied to the unit', async () => {
+    // Regression: "Issue blocked: ... Unit status RESERVED, expected
+    // CROSSMATCHED" even after the operator recorded a compatible
+    // crossmatch — the requisition's matched-unit data said COMPATIBLE,
+    // but the BloodUnit itself was stuck RESERVED (and no Crossmatch
+    // record existed) because of a bug in how/when that got committed.
+    // Issue must catch the unit up rather than stay permanently blocked.
+    const d = deps({ unit: unitDto({ status: 'RESERVED' }), xm: null });
+    // First lookup (before self-heal): no record yet. Second lookup (after
+    // self-heal's crossmatches.record call): the backfilled record.
+    d.crossmatches.findLatestForUnit = vi
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValue({ result: 'COMPATIBLE' } as any);
+    const svc = createIssueService(d);
+    const r = await svc.issue({ requisitionId: REQ_ID, unitId: 'U1' }, 'actor');
+    expect(r.issueId).toBe('IS-1');
+    expect(d.crossmatches.record).toHaveBeenCalledWith(
+      expect.objectContaining({ unitId: 'U1', requisitionId: REQ_ID, result: 'COMPATIBLE' }),
+      'actor',
+    );
+    expect(d.units.applyEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ unitId: 'U1', event: 'CROSSMATCH_PASS' }),
+    );
   });
 
   it('blocks when patient special need unmet, even with override', async () => {
