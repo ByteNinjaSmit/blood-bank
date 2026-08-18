@@ -14,15 +14,23 @@ import { PERMISSION, type Permission } from './enums';
 export interface LegacyPermissionEntry {
   moduleName: string;
   // Page-scoped grants carry a pageId — see PermissionSchema in
-  // user.model.ts. It's frontend-only metadata: the conversion below
-  // treats a page-scoped entry identically to a module-wide one, since
-  // the backend still only enforces at the Permission-string level.
+  // user.model.ts. Usually treated identically to a module-wide grant
+  // (the backend only enforces at the Permission-string level either
+  // way), except where PAGE_PERMISSION_OVERRIDES below says this specific
+  // page means something different by the same (moduleName, action) pair.
   pageId?: string | null;
   view?: boolean;
   create?: boolean;
   update?: boolean;
   delete?: boolean;
 }
+
+// A grid action can require MORE than one backend permission string at
+// once (e.g. TTI's "Update" checkbox must earn both tti:edit AND
+// tti:release, or the finalize/release route 403s even though the admin
+// checked every box the editor showed them) — so overrides may resolve to
+// an array, not just a single Permission.
+type ActionOverrideMap = Partial<Record<'view' | 'create' | 'update' | 'delete', Permission | Permission[]>>;
 
 // Module (resource-prefix) names whose actual enforced route permission
 // keys don't follow the generic `{module}:{action}` convention below —
@@ -31,9 +39,13 @@ export interface LegacyPermissionEntry {
 // client/src/config/access-registry/*.js, so the admin panel's per-module
 // or per-page grid checkboxes always translate into a permission string
 // the corresponding route's requirePermission(...) actually checks.
-const LEGACY_MODULE_PERMISSION_OVERRIDES: Partial<
-  Record<string, Partial<Record<'view' | 'create' | 'update' | 'delete', Permission>>>
-> = {
+//
+// Applies to every page that uses a given (moduleName, action) pair. If a
+// SPECIFIC page needs something different from every other page sharing
+// that pair, add a scoped entry to PAGE_PERMISSION_OVERRIDES below instead
+// of changing this table (which would silently over/under-grant every
+// other page using the same pair).
+const LEGACY_MODULE_PERMISSION_OVERRIDES: Partial<Record<string, ActionOverrideMap>> = {
   // Component Separation: no component:read/create/update exist — its
   // pages actually gate on unit:read (list/near-expiry) and
   // component:separate (the separation action itself).
@@ -55,13 +67,92 @@ const LEGACY_MODULE_PERMISSION_OVERRIDES: Partial<
   // permission server-side — every mutation gates on chemical:manage.
   chemical: { create: 'chemical:manage', update: 'chemical:manage' },
   report: { create: 'report:generate' },
-  tti: { create: 'tti:edit', update: 'tti:edit' },
+  // Recording TTI results (tti:edit) and finalizing/releasing (tti:release)
+  // are two separate route-level permissions, but the TTD Testing page's
+  // Create/Update checkboxes are the only UI for either — so both boxes
+  // must earn both permissions, or "release" 403s no matter what the admin
+  // checked (see requirePermission('tti:release') on the finalize route).
+  tti: { create: ['tti:edit', 'tti:release'], update: ['tti:edit', 'tti:release'] },
   user: { delete: 'user:deactivate' },
-  hospital: { create: 'hospital:manage', update: 'hospital:manage' },
+  hospital: { create: 'hospital:manage', update: 'hospital:manage', delete: 'hospital:manage' },
   requisition: { update: 'requisition:approve', delete: 'requisition:reject' },
-  camp: { create: 'camp:manage', update: 'camp:manage' },
+  camp: { create: ['camp:manage', 'camp:read'], update: 'camp:manage', delete: 'camp:manage' },
   audit: { update: 'audit:write' },
+  // donor:create is only ever offered as a checkbox on the Donor Creation
+  // page (donor-list has no "create" action at all) — that flow always
+  // also creates/updates the donor record and needs donor:update +
+  // donor:read too, so this is safe as a blanket module-level grant. Camp
+  // Donor Management is the only other page sharing donor:create, and it
+  // separately needs donor:update/donor:read anyway (via its own update
+  // and view actions), so this never over-grants anything there either.
+  donor: { create: ['donor:create', 'donor:update', 'donor:read'] },
+  // crossmatch:perform has no dedicated create/update route split — both
+  // the Reserve wizard's "create" checkbox and Requisition's "update"
+  // checkbox gate the same crossmatch action.
+  crossmatch: { create: 'crossmatch:perform', update: 'crossmatch:perform' },
 };
+
+// Page-scoped overrides win over LEGACY_MODULE_PERMISSION_OVERRIDES above,
+// for the (rare but real) case where the same (moduleName, action) pair
+// means something different depending on which page's checkbox triggered
+// it — e.g. donor:update on Camp Donor Management also implies donor
+// deletion (that page has no separate Delete checkbox), while donor:update
+// on the main Donor Register must NOT imply delete rights. Keyed by
+// pageId → moduleName(prefix) → action, mirroring the shape above one
+// level deeper. Every entry here should trace back to an access-registry
+// `actions` array that a module-wide override would get wrong for this
+// specific page.
+const PAGE_PERMISSION_OVERRIDES: Partial<Record<string, Partial<Record<string, ActionOverrideMap>>>> = {
+  // Camp Donor Management has no separate Delete checkbox for donors — its
+  // Update checkbox is the only control, so it must also carry donor:delete.
+  'camp-donors': {
+    donor: { update: ['donor:update', 'donor:delete'] },
+  },
+  // The Reserve wizard's single "create" checkbox performs the whole
+  // requisition → crossmatch → reserve flow, unlike Requisition Manage's
+  // create (which only creates the requisition record).
+  'inventory-reserve-new': {
+    requisition: { create: ['requisition:create', 'requisition:approve', 'requisition:reject'] },
+  },
+  // Issue page's "update" checkbox also covers creating a bulk transfer,
+  // distinct from Recycle Bin's use of the same (bulk-transfer, update)
+  // pair to mean "restore".
+  'inventory-issue': {
+    'bulk-transfer': { update: 'bulk-transfer:create' },
+  },
+  // Component List's "update" checkbox is really a read-only detail
+  // view (unit:read), distinct from the Issue page's unit:update.
+  'component-list': {
+    unit: { update: 'unit:read' },
+  },
+  // Discard Register's "create" checkbox needs read access into donation
+  // and bag-inspection records to select what's being discarded, not
+  // create rights on either.
+  'discard-list': {
+    donation: { create: 'donation:read' },
+    'bag-inspection': { create: 'bag-inspection:read' },
+  },
+  // Recycle Bin's Update = "restore", Delete = "permanently delete" —
+  // meanings that diverge sharply from every other page sharing these
+  // (moduleName, action) pairs.
+  'mis-recycle-bin': {
+    donor: { update: 'donor:delete', delete: 'donor:permanent-delete' },
+    donation: { update: 'donation:delete', delete: 'donation:permanent-delete' },
+    'bulk-transfer': { update: 'bulk-transfer:update' },
+    unit: { update: 'unit:read' },
+  },
+};
+
+function resolvePermissions(
+  moduleName: string,
+  pageId: string | null | undefined,
+  action: 'view' | 'create' | 'update' | 'delete',
+): Permission[] {
+  const pageOverride = pageId ? PAGE_PERMISSION_OVERRIDES[pageId]?.[moduleName]?.[action] : undefined;
+  const moduleOverride = LEGACY_MODULE_PERMISSION_OVERRIDES[moduleName]?.[action];
+  const resolved = pageOverride ?? moduleOverride ?? ((action === 'view' ? `${moduleName}:read` : `${moduleName}:${action}`) as Permission);
+  return Array.isArray(resolved) ? resolved : [resolved];
+}
 
 // Granted to every authenticated user server-side, regardless of grid, so
 // cross-module lookups embedded in pages the user does have access to
@@ -103,11 +194,10 @@ function earnedPermissions(legacyPermissions: ReadonlyArray<LegacyPermissionEntr
   const explicit: Permission[] = [];
   for (const p of legacyPermissions) {
     const m = p.moduleName.toLowerCase();
-    const overrides = LEGACY_MODULE_PERMISSION_OVERRIDES[m];
-    if (p.view) explicit.push((overrides?.view ?? `${m}:read`) as Permission);
-    if (p.create) explicit.push((overrides?.create ?? `${m}:create`) as Permission);
-    if (p.update) explicit.push((overrides?.update ?? `${m}:update`) as Permission);
-    if (p.delete) explicit.push((overrides?.delete ?? `${m}:delete`) as Permission);
+    if (p.view) explicit.push(...resolvePermissions(m, p.pageId, 'view'));
+    if (p.create) explicit.push(...resolvePermissions(m, p.pageId, 'create'));
+    if (p.update) explicit.push(...resolvePermissions(m, p.pageId, 'update'));
+    if (p.delete) explicit.push(...resolvePermissions(m, p.pageId, 'delete'));
   }
   return explicit;
 }
