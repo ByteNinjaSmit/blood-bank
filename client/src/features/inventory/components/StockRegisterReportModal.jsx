@@ -4,13 +4,12 @@ import { toast } from "sonner";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { fetchCombinedStockRegister } from "../stockRegisterReport";
+import { fetchStockRegister } from "../stockRegisterReport";
 import StockRegisterReportTemplate from "./StockRegisterReportTemplate";
 import StockRegisterPrintService from "@/services/stockRegisterPrintService";
 
 const formatDate = (dateStr) => {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
+  const d = dateStr ? new Date(dateStr) : new Date();
   if (isNaN(d.getTime())) return "—";
   const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -18,15 +17,16 @@ const formatDate = (dateStr) => {
   return `${day}/${month}/${year}`;
 };
 
-export default function StockRegisterReportModal({ open, onClose }) {
+// `config` = { label, reportTitle, componentType, includeTesting, minRows, bbgMinRows }
+export default function StockRegisterReportModal({ config, onClose }) {
   const [isLoading, setIsLoading] = useState(false);
   const [report, setReport] = useState(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!config) return;
     setReport(null);
     setIsLoading(true);
-    fetchCombinedStockRegister()
+    fetchStockRegister(config)
       .then(setReport)
       .catch((e) => {
         toast.error(e?.response?.data?.message || "Failed to build stock register report");
@@ -34,7 +34,9 @@ export default function StockRegisterReportModal({ open, onClose }) {
       })
       .finally(() => setIsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [config]);
+
+  const open = !!config;
 
   return (
     <>
@@ -44,6 +46,7 @@ export default function StockRegisterReportModal({ open, onClose }) {
             stockGroups={report.stockGroups}
             testingGroups={report.testingGroups}
             formatDate={formatDate}
+            reportTitle={config?.reportTitle}
           />
         </div>,
         document.body
@@ -52,7 +55,7 @@ export default function StockRegisterReportModal({ open, onClose }) {
       <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
         <DialogContent className="sm:max-w-5xl no-print flex flex-col items-center">
           <DialogHeader>
-            <DialogTitle>Stock Register — Print Preview</DialogTitle>
+            <DialogTitle>{config?.label || 'Stock Register'} — Print Preview</DialogTitle>
           </DialogHeader>
 
           {isLoading ? (
@@ -61,11 +64,12 @@ export default function StockRegisterReportModal({ open, onClose }) {
             </div>
           ) : report ? (
             <>
-              <div className="w-full max-h-[65vh] overflow-auto border border-dashed border-gray-200 rounded-lg bg-gray-50/50 p-4 flex flex-col items-center gap-4">
+              <div className="w-full max-h-[65vh] overflow-auto border border-dashed border-gray-200 rounded-lg bg-gray-50/50 p-4 flex flex-col items-center">
                 <StockRegisterReportTemplate
                   stockGroups={report.stockGroups}
                   testingGroups={report.testingGroups}
                   formatDate={formatDate}
+                  reportTitle={config?.reportTitle}
                 />
               </div>
 

@@ -26,9 +26,12 @@ export function bagNoCompare(a, b) {
 
 /**
  * @param {Array<{bagNo:string, bloodGroup:string, rh:'Positive'|'Negative', collectionDate?:string, expiryDate?:string, isReserved?:boolean}>} rows
+ * @param {object} [opts]
+ * @param {number} [opts.minRows=5] - minimum padded row count for a group with no per-group override
+ * @param {Record<string,number>} [opts.minRowsByGroup] - per-group override (e.g. `{ BBG: 1 }`)
  * @returns {Array<{group:string, positive:Array, negative:Array, rowCount:number}>}
  */
-export function buildPairedGroups(rows) {
+export function buildPairedGroups(rows, { minRows = 5, minRowsByGroup = {} } = {}) {
   const byGroup = {};
   REPORT_BLOOD_GROUPS.forEach((g) => {
     byGroup[g] = { positive: [], negative: [] };
@@ -43,7 +46,8 @@ export function buildPairedGroups(rows) {
   return REPORT_BLOOD_GROUPS.map((group) => {
     const positiveSorted = [...byGroup[group].positive].sort((a, b) => bagNoCompare(a.bagNo, b.bagNo));
     const negativeSorted = [...byGroup[group].negative].sort((a, b) => bagNoCompare(a.bagNo, b.bagNo));
-    const rowCount = Math.max(positiveSorted.length, negativeSorted.length, 5);
+    const groupMinRows = minRowsByGroup[group] ?? minRows;
+    const rowCount = Math.max(positiveSorted.length, negativeSorted.length, groupMinRows);
 
     const pad = (arr) => {
       const out = arr.map((item, i) => ({ ...item, serial: i + 1, empty: false }));

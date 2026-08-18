@@ -1,10 +1,12 @@
 /**
  * StockRegisterPrintService
- * Print-isolation for the multi-page Stock Register report (Stock page ->
- * Export Excel -> Export Stocks). One .stock-register-page per blood group
- * gets its own printed page via page-break-after, and the app chrome
- * (#root) is hidden entirely so only the register prints — no app header,
- * sidebar, or footer.
+ * Print-isolation for the Stock Register report (Stock page -> Export Excel
+ * -> Export Stocks PRBC/FFP/RDP). Blood-group blocks flow continuously one
+ * below another with a small gap — each block is marked "avoid splitting"
+ * so the browser only starts a new page when a block wouldn't otherwise
+ * fit (and still lets an oversized block split across pages rather than
+ * overflow). The app chrome (#root) is hidden entirely so only the
+ * register prints — no app header, sidebar, or footer.
  */
 class StockRegisterPrintService {
   static print() {
@@ -72,14 +74,9 @@ class StockRegisterPrintService {
           display: table-cell !important;
         }
 
-        .stock-register-page {
-          page-break-after: always;
-          break-after: page;
-        }
-
-        .stock-register-page:last-child {
-          page-break-after: auto;
-          break-after: auto;
+        .stock-register-block {
+          break-inside: avoid;
+          page-break-inside: avoid;
         }
 
         * {
