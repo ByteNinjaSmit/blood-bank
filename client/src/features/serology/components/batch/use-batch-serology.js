@@ -282,6 +282,16 @@ export function useBatchSerology() {
 
   const submitBatch = useCallback(
     async (bags, technicianId, { onSuccess } = {}) => {
+      // Can happen if every queued bag drops out of the worklist (already
+      // processed elsewhere, moved to a held status, etc.) via
+      // pruneStaleKeys while the signature modal is still open — the modal
+      // itself doesn't auto-close, and without this guard an empty
+      // `items: []` batch reaches the server and 400s on its min(1) check.
+      if (!bags || bags.length === 0) {
+        toast.error("No bags left in this batch — it may have emptied out since you opened the review step.");
+        setShowSignModal(false);
+        return;
+      }
       if (!signatureText || !signatureText.trim()) {
         toast.error("Please enter your signature to complete the batch");
         return;

@@ -3,18 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Droplets, Search, RefreshCw, ArrowRight, ChevronDown, MapPin } from "lucide-react";
 import { useIncompleteDonations } from "../queries";
 import { useCampList } from "@/features/camp/queries";
-import { formatDate } from "@/lib/format-date";
-
-const STATUS_LABEL = {
-  BAG_ONLY: "Awaiting Donor",
-  DONOR_PENDING: "Awaiting Medical History",
-  MEDICAL_PENDING: "Awaiting Exam & Fitness",
-};
-const STATUS_COLOR = {
-  BAG_ONLY: "bg-amber-100 text-amber-700 border-amber-200",
-  DONOR_PENDING: "bg-blue-100 text-blue-700 border-blue-200",
-  MEDICAL_PENDING: "bg-purple-100 text-purple-700 border-purple-200",
-};
+import { formatDateTime } from "@/lib/format-date";
 
 // ABO/Rh ordering used to sort rows within a camp's dropdown — O first,
 // Positive before Negative within each group.
@@ -44,38 +33,23 @@ function sortRows(rows) {
   });
 }
 
-function ageSince(iso) {
-  if (!iso) return "";
-  const ms = Date.now() - new Date(iso).getTime();
-  const hours = Math.floor(ms / 3_600_000);
-  if (hours < 1) return "< 1h ago";
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 function DonationRow({ row, navigate }) {
   return (
     <tr className="hover:bg-gray-50 transition-colors">
-      <td className="px-4 py-3 font-semibold text-gray-900">{row.donationId}</td>
-      <td className="px-4 py-3 text-gray-700">{row.bagNo || "—"}</td>
-      <td className="px-4 py-3 text-gray-700">{row.lotNo || "—"}</td>
+      <td className="px-4 py-3 font-semibold text-gray-900">{row.bagNo || "—"}</td>
       <td className="px-4 py-3 text-gray-700">
         {row.provisionalBloodGroup?.aboGroup
           ? `${row.provisionalBloodGroup.aboGroup}${row.provisionalBloodGroup.rhFactor === "POSITIVE" ? "+" : "-"}`
           : "—"}
       </td>
-      <td className="px-4 py-3 text-gray-700">{row.collectedAt ? formatDate(row.collectedAt) : "—"}</td>
-      <td className="px-4 py-3 text-gray-700">{row.donorName || <span className="text-gray-400">Not linked yet</span>}</td>
-      <td className="px-4 py-3">
-        <span className={`px-2 py-0.5 text-xs font-bold rounded-full border ${STATUS_COLOR[row.completionStatus] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
-          {STATUS_LABEL[row.completionStatus] || row.completionStatus}
-        </span>
-      </td>
-      <td className="px-4 py-3 text-gray-500 text-xs">{ageSince(row.createdAt)}</td>
+      <td className="px-4 py-3 text-gray-700">{row.collectedAt ? formatDateTime(row.collectedAt) : "—"}</td>
       <td className="px-4 py-3 text-right">
         <button
-          onClick={() => navigate(`/master-register/donation-inward?resumeId=${row.id}`)}
+          onClick={() =>
+            navigate(
+              `/master-register/donation-inward?resumeId=${row.id}${row.campId ? `&campId=${row.campId}` : ""}`,
+            )
+          }
           className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-800 text-white rounded-lg text-xs font-semibold hover:bg-orange-900 transition-colors"
         >
           Continue <ArrowRight className="w-3 h-3" />
@@ -88,14 +62,9 @@ function DonationRow({ row, navigate }) {
 const TABLE_HEAD = (
   <thead>
     <tr className="border-b border-gray-200 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-      <th className="px-4 py-3">Donation ID</th>
       <th className="px-4 py-3">Bag No</th>
-      <th className="px-4 py-3">Batch No</th>
       <th className="px-4 py-3">Blood Group</th>
-      <th className="px-4 py-3">Collected</th>
-      <th className="px-4 py-3">Donor</th>
-      <th className="px-4 py-3">Status</th>
-      <th className="px-4 py-3">Created</th>
+      <th className="px-4 py-3">Collection Date &amp; Time</th>
       <th className="px-4 py-3 text-right">Action</th>
     </tr>
   </thead>
@@ -103,9 +72,12 @@ const TABLE_HEAD = (
 
 // Every incomplete inward (bag-first) donation — split into an Inhouse
 // Inward tab and a Camp Inward tab (grouped per camp, expandable). Each row
-// shows bag no, batch, blood group, collection date/time, completionStatus
-// as a status pill, age since creation, and a Continue action that
-// deep-links back into the wizard at the right step.
+// shows bag no, blood group, collection date/time, and a Continue action
+// that deep-links back into the wizard at the right step. Search matches
+// bag no only. Once a donor is linked (the last step before finalize —
+// see DonorCreation.jsx handleInwardNext) a donation drops off this list
+// server-side (donation.repository.ts listIncomplete), so every row here
+// is always still awaiting a donor link.
 export default function InwardDonationsList() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -227,7 +199,7 @@ export default function InwardDonationsList() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by bag no, donation ID, or batch no..."
+            placeholder="Search by bag no..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm placeholder:text-gray-400 focus:ring-2 focus:ring-orange-800/20 focus:border-orange-800 outline-none"
@@ -241,11 +213,11 @@ export default function InwardDonationsList() {
                 {TABLE_HEAD}
                 <tbody className="divide-y divide-gray-100">
                   {isLoading ? (
-                    <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400 text-sm">Loading…</td></tr>
+                    <tr><td colSpan={4} className="px-4 py-10 text-center text-gray-400 text-sm">Loading…</td></tr>
                   ) : isError ? (
-                    <tr><td colSpan={9} className="px-4 py-10 text-center text-red-500 text-sm">Failed to load incomplete donations.</td></tr>
+                    <tr><td colSpan={4} className="px-4 py-10 text-center text-red-500 text-sm">Failed to load incomplete donations.</td></tr>
                   ) : inhouseItems.length === 0 ? (
-                    <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400 text-sm">No incomplete inhouse inward donations found.</td></tr>
+                    <tr><td colSpan={4} className="px-4 py-10 text-center text-gray-400 text-sm">No incomplete inhouse inward donations found.</td></tr>
                   ) : (
                     inhouseItems.map((row) => <DonationRow key={row.id} row={row} navigate={navigate} />)
                   )}

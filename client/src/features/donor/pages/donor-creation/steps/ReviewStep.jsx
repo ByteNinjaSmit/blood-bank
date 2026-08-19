@@ -1,7 +1,12 @@
 import { QUESTIONS } from "@/features/donor/donor-constants";
 
+const LAST_DONATION_PLACE_LABEL = {
+  SANJIVANI_BLOOD_BANK: "Sanjivani Blood Bank",
+  OTHER: "Other",
+};
+
 export default function ReviewStep({ form }) {
-  const { formData, answeredCount } = form;
+  const { formData, answeredCount, repeatedDonation } = form;
 
   return (
     <div className="p-6 sm:p-8 space-y-5 animate-fadeIn">
@@ -11,9 +16,24 @@ export default function ReviewStep({ form }) {
         {/* Donor Information Card */}
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <h4 className="font-semibold text-blue-900 mb-2">Donor Information</h4>
-          <p className="text-sm text-blue-800">
-            <strong>Name:</strong> {[formData.firstName, formData.middleName, formData.lastName].filter(Boolean).join(" ")}
-          </p>
+          <div className="grid grid-cols-2 gap-2 text-sm text-blue-800">
+            <p><strong>Name:</strong> {[formData.firstName, formData.middleName, formData.lastName].filter(Boolean).join(" ") || "N/A"}</p>
+            <p><strong>City:</strong> {formData.city || "N/A"}</p>
+            <p><strong>Mobile No:</strong> {formData.phone || "N/A"}</p>
+            <p><strong>Repeated Donor:</strong> {repeatedDonation === "Yes" ? "Yes" : "No (New Donor)"}</p>
+            {formData.lastDonationDate && (
+              <>
+                <p>
+                  <strong>Last Donation:</strong>{" "}
+                  {new Date(formData.lastDonationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </p>
+                <p>
+                  <strong>Last Donation At:</strong>{" "}
+                  {LAST_DONATION_PLACE_LABEL[formData.lastDonationPlace] || formData.lastDonationPlace}
+                </p>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Bag Information Card */}

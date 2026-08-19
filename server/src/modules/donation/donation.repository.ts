@@ -696,6 +696,16 @@ export function createDonationRepo(): DonationRepo {
         updatedBy: actor,
       });
 
+      const buildTtiDoc = (donationId: string) => ({
+        donationId,
+        aboGroupConfirmed: provisionalBloodGroup.aboGroup,
+        rhFactorConfirmed: provisionalBloodGroup.rhFactor,
+        tests: [],
+        releaseDecision: 'pending' as const,
+        createdBy: actor,
+        updatedBy: actor,
+      });
+
       const buildUnitDocs = (donationId: string) =>
         units.map((u) => ({
           unitId: u.unitId,
@@ -757,6 +767,13 @@ export function createDonationRepo(): DonationRepo {
             const unitDocs = await BloodUnitModel.insertMany(buildUnitDocs(donationPublicId), {
               session,
             });
+            // Without this, the donation's units never surface on the
+            // Serology TTI Testing worklist (listQuarantined() matches
+            // against TtiResultModel docs, not BloodUnit status alone) even
+            // after component separation completes — see createAtomic()
+            // above, which creates this at the same point for the standard
+            // (non-inward) flow.
+            await TtiResultModel.create([buildTtiDoc(donationPublicId)], { session });
             result = toResult(donation as unknown as { _id: Types.ObjectId; createdAt: Date; updatedAt: Date }, unitDocs);
           });
           return result;
@@ -768,6 +785,7 @@ export function createDonationRepo(): DonationRepo {
         const [donation] = await TargetDonationModel.create([buildDonationDoc()]);
         if (!donation) throw new Error('Failed to create inward donation');
         const unitDocs = await BloodUnitModel.insertMany(buildUnitDocs(donationPublicId));
+        await TtiResultModel.create([buildTtiDoc(donationPublicId)]);
         return toResult(donation as unknown as { _id: Types.ObjectId; createdAt: Date; updatedAt: Date }, unitDocs);
       }
     },
@@ -828,18 +846,16 @@ export function createDonationRepo(): DonationRepo {
     },
 
     async listIncomplete({ q, campId, page, pageSize }) {
-      const filter: Record<string, unknown> = { completionStatus: { $ne: 'COMPLETE' } };
+      // Once a donor is linked, the donation is one click from COMPLETE
+      // (donor-link and finalize fire back-to-back from the Exam & Fitness
+      // step — see DonorCreation.jsx handleInwardNext) — the Incomplete
+      // Inward Donations list is meant for bags still awaiting that click,
+      // not ones already past it.
+      const filter: Record<string, unknown> = { completionStatus: { $ne: 'COMPLETE' }, donor: null };
 
       if (q && q.trim()) {
         const term = q.trim();
-        const regex = { $regex: term, $options: 'i' };
-        const donorIds = await DonorModel.find({ phone: regex }).distinct('_id');
-        filter.$or = [
-          { donationId: regex },
-          { bagNo: regex },
-          { lotNo: regex },
-          ...(donorIds.length ? [{ donor: { $in: donorIds } }] : []),
-        ];
+        filter.bagNo = { $regex: term, $options: 'i' };
       }
 
       // A campId filter only ever matches camp donation records (the

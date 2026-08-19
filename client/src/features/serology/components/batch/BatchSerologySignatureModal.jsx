@@ -80,13 +80,23 @@ export default function BatchSerologySignatureModal({
             ))}
           </div>
 
-          <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="font-medium mb-1">⚠️ Please verify all exceptions carefully before saving.</p>
-            <p>
-              Negative bags release to stock immediately, Reactive bags are discarded and the donor is
-              permanently deferred, and Shadeness bags are quarantined pending retest.
-            </p>
-          </div>
+          {bags.length === 0 ? (
+            <div className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="font-medium">
+                This batch is now empty — every queued bag dropped off the worklist (already processed
+                elsewhere, or moved to a held status) while this review step was open. Close this and
+                re-select bags to try again.
+              </p>
+            </div>
+          ) : (
+            <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="font-medium mb-1">⚠️ Please verify all exceptions carefully before saving.</p>
+              <p>
+                Negative bags release to stock immediately, Reactive bags are discarded and the donor is
+                permanently deferred, and Shadeness bags are quarantined pending retest.
+              </p>
+            </div>
+          )}
 
           <div className="text-sm text-gray-600 bg-gray-50 border border-gray-100 rounded-lg p-3">
             To verify and authorize this batch, please type your full signature/name below:
@@ -113,7 +123,7 @@ export default function BatchSerologySignatureModal({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Back
           </Button>
-          <Button onClick={onConfirm} disabled={isSubmitting || !signatureText.trim()}>
+          <Button onClick={onConfirm} disabled={isSubmitting || !signatureText.trim() || bags.length === 0}>
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
             Confirm & Save Batch
           </Button>

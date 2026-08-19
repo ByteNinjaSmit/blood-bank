@@ -130,8 +130,11 @@ export default function DonorCreation({ modeOverride }) {
       return;
     }
     if (currentStepKey === "profile") {
-      const ok = await inward.submitDonorLink();
-      if (ok) setCurrentStep((prev) => Math.min(prev + 1, stepOrder.length));
+      // Donor is created/linked from Review & Save now (see below) —
+      // weight, required by donor registration's eligibility check, isn't
+      // captured until Exam & Fitness. This step just validates and
+      // advances.
+      setCurrentStep((prev) => Math.min(prev + 1, stepOrder.length));
       return;
     }
     if (currentStepKey === "medical") {
@@ -146,6 +149,20 @@ export default function DonorCreation({ modeOverride }) {
       return;
     }
     if (currentStepKey === "exam") {
+      // Just validate and advance — donor link + finalize now happen from
+      // Review & Save, once the operator has seen the full summary.
+      setCurrentStep((prev) => Math.min(prev + 1, stepOrder.length));
+      return;
+    }
+    if (currentStepKey === "review") {
+      // Weight (captured on Exam & Fitness) is the last piece donor
+      // registration needs, so the donor is only created/linked here — just
+      // before finalize. Only link one that isn't already linked; resuming
+      // a donation that reached this step previously already has one.
+      if (!inward.inwardDonation?.donorLinked) {
+        const linked = await inward.submitDonorLink();
+        if (!linked) return;
+      }
       // Finalize handles both the fit and unfit (deferral) paths server-side
       // — no separate "Complete (Defer)" branch needed here.
       await inward.submitFinalize();
@@ -189,7 +206,7 @@ export default function DonorCreation({ modeOverride }) {
   const StepComponent = STEP_DEFS[currentStepKey].Component;
   const stepExtraProps =
     currentStepKey === "profile"
-      ? { submit, hideSaveButton: isInward, showEmergencyField: isInward, hideBloodGroupFields: isInward }
+      ? { submit, showEmergencyField: isInward, hideBloodGroupFields: isInward }
       : currentStepKey === "bag"
         ? { showProvisionalBloodGroup: isInward }
         : {};
@@ -374,7 +391,7 @@ export default function DonorCreation({ modeOverride }) {
                 className={`px-6 py-2 rounded-full text-sm font-semibold text-white transition-all shadow flex items-center gap-1.5 select-none ${
                   !form.isStepComplete(currentStepKey, true) || busy
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
-                    : currentStepKey === "exam"
+                    : currentStepKey === "review"
                     ? "bg-green-700 hover:bg-green-800 active:bg-green-900"
                     : "bg-red-800 hover:bg-red-900 active:bg-red-950"
                 }`}
@@ -384,7 +401,7 @@ export default function DonorCreation({ modeOverride }) {
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Saving...
                   </>
-                ) : currentStepKey === "exam" ? (
+                ) : currentStepKey === "review" ? (
                   <>
                     Finish & Save
                     <Save className="w-4 h-4" />

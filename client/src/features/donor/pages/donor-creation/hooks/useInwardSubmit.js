@@ -97,7 +97,7 @@ export function useInwardSubmit({ form, campId }) {
               campId: campId || undefined,
             };
       const result = await linkDonorMut.mutateAsync({ id: inwardDonation.id, data: body });
-      setInwardDonation((prev) => ({ ...prev, completionStatus: "DONOR_PENDING" }));
+      setInwardDonation((prev) => ({ ...prev, completionStatus: "DONOR_PENDING", donorLinked: true }));
       toast.success("Donor linked to this donation.");
       return result;
     } catch (err) {

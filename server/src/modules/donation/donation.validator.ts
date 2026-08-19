@@ -129,10 +129,10 @@ export const CreateInwardDonationBody = z
   });
 export type CreateInwardDonationInput = z.infer<typeof CreateInwardDonationBody>;
 
-export const LinkDonorBody = z.union([
-  z.object({ existingDonorId: z.string().regex(OBJECT_ID, 'Invalid donor id') }),
-  CreateDonorBody,
-]);
+const ExistingDonorLinkBody = z.object({
+  existingDonorId: z.string().regex(OBJECT_ID, 'Invalid donor id'),
+});
+export const LinkDonorBody = z.union([ExistingDonorLinkBody, CreateDonorBody]);
 export type LinkDonorInput = z.infer<typeof LinkDonorBody>;
 
 export const MedicalHistoryBody = z.object({
@@ -177,7 +177,18 @@ export const ValidateDonation = {
   updateBody: (req: Request) => parseOrThrow(UpdateDonationBody, req.body ?? {}, 'request body'),
   createInwardBody: (req: Request) =>
     parseOrThrow(CreateInwardDonationBody, req.body, 'request body'),
-  linkDonorBody: (req: Request) => parseOrThrow(LinkDonorBody, req.body, 'request body'),
+  // A plain z.union() on an existingDonorId-vs-full-CreateDonorBody choice
+  // only ever surfaces zod's generic "(root): Invalid input" — neither
+  // branch matching gives no hint which one was intended. Picking the
+  // schema by payload shape first means a malformed new-donor body reports
+  // its actual failing field (e.g. weightKg) instead.
+  linkDonorBody: (req: Request): LinkDonorInput => {
+    const schema: z.ZodType<LinkDonorInput> =
+      req.body && typeof req.body === 'object' && 'existingDonorId' in req.body
+        ? ExistingDonorLinkBody
+        : CreateDonorBody;
+    return parseOrThrow(schema, req.body, 'request body');
+  },
   medicalHistoryBody: (req: Request) =>
     parseOrThrow(MedicalHistoryBody, req.body ?? {}, 'request body'),
   finalizeInwardBody: (req: Request) =>

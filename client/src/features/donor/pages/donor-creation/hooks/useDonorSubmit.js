@@ -87,131 +87,6 @@ export function useDonorSubmit({ form, campId, draftId }) {
     }
   };
 
-  const handleSaveDonorOnly = async () => {
-    if (!form.isStep1Complete()) {
-      toast.error("Please fill in all required donor profile fields correctly.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const generatedId = `DON-${Date.now()}`;
-      const donorPayload = {
-        name: {
-          firstName: formData.firstName,
-          middleName: formData.middleName,
-          lastName: formData.lastName,
-        },
-        dob: new Date(formData.dob).toISOString(),
-        sex: formData.sex,
-        phone: formData.phone,
-        email: formData.email || undefined,
-        weightKg: Number(formData.weightKg),
-        bloodGroup: formData.bloodGroup,
-        rh: formData.rh,
-        address: {
-          line1: formData.addressLine1 || "",
-          line2: formData.addressLine2 || "",
-          city: formData.city,
-          district: formData.district,
-          state: formData.state,
-          pincode: formData.pincode || "",
-        },
-        eligibilityStatus: (repeatedDonation === "Yes" && selectedDonor) ? (selectedDonor.eligibilityStatus || "eligible") : "eligible",
-        occupation: formData.occupation || undefined,
-        lastDonationDate: formData.lastDonationDate ? new Date(formData.lastDonationDate).toISOString() : undefined,
-        lastDonationPlace: formData.lastDonationDate ? formData.lastDonationPlace : undefined,
-        emergencyDonationWillingness: formData.emergencyDonationWillingness || undefined,
-        campId: campId || undefined,
-      };
-
-      if (repeatedDonation === "Yes" && selectedDonor) {
-        const getISODateOnly = (val) => {
-          if (!val) return "";
-          try {
-            return new Date(val).toISOString().split("T")[0];
-          } catch (e) {
-            return "";
-          }
-        };
-
-        const cleanStr = (val) => (val === null || val === undefined ? "" : String(val).trim());
-
-        const name = selectedDonor.name || {};
-        const address = selectedDonor.address || {};
-
-        const diffs = {
-          firstName: cleanStr(formData.firstName) !== cleanStr(name.firstName || selectedDonor.firstName),
-          middleName: cleanStr(formData.middleName) !== cleanStr(name.middleName || selectedDonor.middleName),
-          lastName: cleanStr(formData.lastName) !== cleanStr(name.lastName || selectedDonor.lastName),
-          dob: getISODateOnly(formData.dob) !== getISODateOnly(selectedDonor.dob),
-          sex: cleanStr(formData.sex) !== cleanStr(selectedDonor.sex),
-          phone: cleanStr(formData.phone) !== cleanStr(selectedDonor.phone),
-          email: cleanStr(formData.email) !== cleanStr(selectedDonor.email),
-          weightKg: Number(formData.weightKg || 0) !== Number(selectedDonor.weightKg || 0),
-          bloodGroup: cleanStr(formData.bloodGroup) !== cleanStr(selectedDonor.bloodGroup),
-          rh: cleanStr(formData.rh) !== cleanStr(selectedDonor.rh === "POSITIVE" ? "Positive" : selectedDonor.rh === "NEGATIVE" ? "Negative" : selectedDonor.rh),
-          addressLine1: cleanStr(formData.addressLine1) !== cleanStr(address.line1),
-          addressLine2: cleanStr(formData.addressLine2) !== cleanStr(address.line2),
-          city: cleanStr(formData.city) !== cleanStr(address.city),
-          district: cleanStr(formData.district) !== cleanStr(address.district),
-          state: cleanStr(formData.state) !== cleanStr(address.state),
-          pincode: cleanStr(formData.pincode) !== cleanStr(address.pincode),
-          occupation: cleanStr(formData.occupation) !== cleanStr(selectedDonor.occupation),
-          lastDonationDate: getISODateOnly(formData.lastDonationDate) !== getISODateOnly(selectedDonor.lastDonationDate),
-          lastDonationPlace: cleanStr(formData.lastDonationPlace) !== cleanStr(selectedDonor.lastDonationPlace || "SANJIVANI_BLOOD_BANK"),
-          emergencyDonationWillingness: cleanStr(formData.emergencyDonationWillingness) !== cleanStr(selectedDonor.emergencyDonationWillingness),
-        };
-
-        const hasChanged = Object.values(diffs).some((hasChanged) => hasChanged);
-
-        if (hasChanged) {
-          await axios.put(`${API}/api/v2/donor/${selectedDonor._id}`, donorPayload, {
-            headers: { Authorization: authorizationToken },
-            withCredentials: true,
-          });
-          toast.success("Donor profile updated successfully!");
-        } else {
-          toast.info("No changes detected. Donor profile was not modified.");
-        }
-      } else {
-        const fullPayload = {
-          ...donorPayload,
-          donorId: generatedId,
-        };
-        await axios.post(`${API}/api/v2/donor`, fullPayload, {
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
-        });
-        toast.success("Donor registered successfully!");
-      }
-
-      // If draftId is present, delete it
-      if (draftId) {
-        const rawDrafts = localStorage.getItem("blood_bank_donor_creation_drafts");
-        try {
-          let drafts = rawDrafts ? JSON.parse(rawDrafts) : [];
-          drafts = drafts.filter((d) => d.id !== draftId);
-          localStorage.setItem("blood_bank_donor_creation_drafts", JSON.stringify(drafts));
-        } catch (e) {
-          // ignore
-        }
-      }
-
-      navigate(campId ? `/camp-details?id=${campId}` : "/master-register/donors");
-    } catch (err) {
-      const details = err.response?.data?.details;
-      if (Array.isArray(details)) {
-        const errorMsg = details.map((d) => `${d.path?.join(".")}: ${d.message}`).join(" | ");
-        toast.error(`Validation Error: ${errorMsg}`);
-      } else {
-        toast.error(err.response?.data?.message || err.message || "An error occurred");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
@@ -432,7 +307,6 @@ export function useDonorSubmit({ form, campId, draftId }) {
     searchLoading,
     searchError,
     handleSelectDonor,
-    handleSaveDonorOnly,
     handleSubmit,
   };
 }

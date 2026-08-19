@@ -211,12 +211,12 @@ export function useDonorCreationForm() {
     }
   };
 
-  const isStep1Complete = (skipBloodGroupCheck = false) => {
+  const isStep1Complete = (isInward = false) => {
     if (repeatedDonation === "Yes" && !selectedDonor) return false;
 
     // In inward mode, blood group is captured on the (earlier) Bag Info
-    // step; skipBloodGroupCheck is set there so a resumed donation that
-    // hasn't re-populated it client-side doesn't get wrongly blocked here.
+    // step; isInward skips that check here so a resumed donation that
+    // hasn't re-populated it client-side doesn't get wrongly blocked.
     const isBaseComplete =
       formData.firstName.trim() &&
       formData.middleName.trim() &&
@@ -227,7 +227,7 @@ export function useDonorCreationForm() {
       formData.city.trim() &&
       formData.district.trim() &&
       formData.state &&
-      (skipBloodGroupCheck || (formData.bloodGroup && formData.rh));
+      (isInward || (formData.bloodGroup && formData.rh));
 
     if (!isBaseComplete) return false;
 

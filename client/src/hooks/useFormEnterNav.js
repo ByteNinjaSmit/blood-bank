@@ -10,13 +10,17 @@
 // - ArrowLeft/ArrowRight on a <select> never change its value (left bare,
 //   native selects otherwise treat all four arrows as "cycle options");
 //   they move to the previous/next field instead, same as Enter would.
-// - ArrowLeft on a text/number input moves to the previous field once the
-//   caret is already at position 0 (no selection); ArrowRight moves to the
-//   next field once the caret is at the end of the value. Inside the text
-//   the arrows still just move the caret, same as any input.
+// - ArrowLeft on a text input moves to the previous field once the caret is
+//   already at position 0 (no selection); ArrowRight moves to the next
+//   field once the caret is at the end of the value. Inside the text the
+//   arrows still just move the caret, same as any input.
+// - ArrowLeft/ArrowRight on a number input always move to the previous/next
+//   field (no caret-boundary gating) — selectionStart/End is null or throws
+//   on type="number" in most browsers, so there's nothing reliable to gate
+//   on.
 // - ArrowUp/ArrowDown are left to native handling — they're what
-//   highlights/changes the option, both inside an open picker and on a
-//   closed select.
+//   highlights/changes the option on a select, and increments/decrements
+//   the value on a number input.
 // - Radio button groups (Yes/No questions, etc.) count as a single field:
 //   Enter on any radio in the group moves to the next field, focusing
 //   whichever option is already checked (or the first option if none is).
@@ -36,7 +40,14 @@ const FOCUSABLE_SELECTOR =
 // Input types whose selectionStart/selectionEnd are readable and whose
 // left/right arrows move a text caret (as opposed to date/time/color pickers
 // where the arrows drive segment/value changes instead).
-const CURSOR_NAV_INPUT_TYPES = new Set(["text", "search", "tel", "url", "email", "password", "number"]);
+const CURSOR_NAV_INPUT_TYPES = new Set(["text", "search", "tel", "url", "email", "password"]);
+
+// type="number" reports selectionStart/selectionEnd as null (or throws, in
+// Chromium) — there's no reliable "caret is at the edge" signal to gate on,
+// so ArrowLeft/ArrowRight always move to the previous/next field instead of
+// falling through to native (mostly no-op) handling. ArrowUp/ArrowDown are
+// still left alone for the native increment/decrement spinner.
+const ALWAYS_ARROW_NAV_INPUT_TYPES = new Set(["number"]);
 
 function isRadio(el) {
   return el.tagName === "INPUT" && el.type === "radio";
@@ -104,6 +115,17 @@ export function createFormEnterNavHandlers({ validateField, onComplete } = {}) {
     if (isSelect && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
       e.preventDefault();
       delete target.dataset.enterNavPending;
+      stepFocus(e.currentTarget, target, e.key === "ArrowRight" ? 1 : -1);
+      return;
+    }
+
+    if (
+      !isSelect &&
+      (e.key === "ArrowLeft" || e.key === "ArrowRight") &&
+      target.tagName === "INPUT" &&
+      ALWAYS_ARROW_NAV_INPUT_TYPES.has(target.type)
+    ) {
+      e.preventDefault();
       stepFocus(e.currentTarget, target, e.key === "ArrowRight" ? 1 : -1);
       return;
     }

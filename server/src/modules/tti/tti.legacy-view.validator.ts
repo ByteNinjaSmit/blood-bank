@@ -58,7 +58,15 @@ const BatchDraftBody = z.object({
 
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T {
   const r = schema.safeParse(value);
-  if (!r.success) throw new ValidationError(`Invalid ${where}`, r.error.issues);
+  if (!r.success) {
+    // Surface exactly which field failed and why — a bare "Invalid request
+    // body" (e.g. on an empty items:[] batch) gives no hint what actually
+    // went wrong without reproducing it. See donation.validator.ts's
+    // parseOrThrow for the same pattern.
+    const first = r.error.issues[0];
+    const detail = first ? ` — ${first.path.join('.') || '(root)'}: ${first.message}` : '';
+    throw new ValidationError(`Invalid ${where}${detail}`, r.error.issues);
+  }
   return r.data;
 }
 

@@ -1,9 +1,9 @@
-import { User, CheckCircle, AlertTriangle, Search, Save, Loader2, Lock, Unlock, X } from "lucide-react";
+import { User, CheckCircle, AlertTriangle, Search, Lock, Unlock, X } from "lucide-react";
 import { states } from "@/constants/states";
 import { INITIAL_FORM_DATA } from "@/features/donor/donor-constants";
 import { validateDate, validateMonthYear, getDaysDifference } from "../donor-creation-utils";
 
-export default function DonorProfileStep({ form, submit, hideSaveButton = false, showEmergencyField = false, hideBloodGroupFields = false }) {
+export default function DonorProfileStep({ form, submit, showEmergencyField = false, hideBloodGroupFields = false }) {
   const {
     formData,
     handleFormFieldChange,
@@ -12,12 +12,11 @@ export default function DonorProfileStep({ form, submit, hideSaveButton = false,
     selectedDonor,
     handleDobDisplayChange,
     handleLastDonationDateDisplayChange,
-    isStep1Complete,
   } = form;
   const {
     searchQuery, setSearchQuery,
     searchResults, searchLoading, searchError,
-    handleSelectDonor, handleSaveDonorOnly, isSubmitting,
+    handleSelectDonor,
   } = submit;
 
   return (
@@ -41,7 +40,26 @@ export default function DonorProfileStep({ form, submit, hideSaveButton = false,
             setRepeatedDonation(val);
             if (val === "No") {
               setSelectedDonor(null);
-              setFormData({ ...INITIAL_FORM_DATA });
+              // Clear whatever an existing-donor search had loaded, but
+              // don't blow away Bag Info's fields — in inward mode those
+              // were entered on an earlier step and never re-asked here,
+              // so a blind full reset silently empties bagNo/bloodGroup/rh
+              // right before they're needed for donor registration (see
+              // useInwardResume.js), producing a bloodGroup validation
+              // error at the very end of the wizard with no obvious cause.
+              setFormData((prev) => ({
+                ...INITIAL_FORM_DATA,
+                bagNo: prev.bagNo,
+                segmentNo: prev.segmentNo,
+                lotNo: prev.lotNo,
+                typeOfBag: prev.typeOfBag,
+                collectionDate: prev.collectionDate,
+                collectionTime: prev.collectionTime,
+                donationType: prev.donationType,
+                totalDonationCount: prev.totalDonationCount,
+                bloodGroup: prev.bloodGroup,
+                rh: prev.rh,
+              }));
             }
           }}
           className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800 bg-white text-sm outline-none"
@@ -456,35 +474,13 @@ export default function DonorProfileStep({ form, submit, hideSaveButton = false,
           </div>
         </div>
       </div>
-      {/* Save Donor Button (Step 1 Only, standard mode) — inward mode links
-          the donor to the in-progress inward donation from the wizard's
-          Continue button instead, so this standalone save is hidden. */}
-      {!hideSaveButton && (
-        <div className="flex justify-center pt-6 pb-2">
-          <button
-            type="button"
-            onClick={handleSaveDonorOnly}
-            disabled={!isStep1Complete() || isSubmitting}
-            className={`px-8 py-3 rounded-xl text-sm font-semibold text-white transition-all shadow flex items-center gap-1.5 select-none ${
-              !isStep1Complete() || isSubmitting
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
-                : "bg-red-800 hover:bg-red-900 active:bg-red-950"
-            }`}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Saving Donor...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Save Donor
-              </>
-            )}
-          </button>
-        </div>
-      )}
+      {/* No standalone "Save Donor" shortcut on this step: donor
+          registration requires weightKg (donor.service.ts
+          assertEligibilityBasics — a hard >=45kg eligibility gate, not just
+          a schema check), and weight is only ever collected on the Exam &
+          Fitness step. A save button here could never actually succeed, in
+          either mode — see useDonorSubmit.js's handleSubmit for where donor
+          registration actually happens, once weight is known. */}
     </div>
   );
 }
