@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Phone, Mail, Users, Calendar, Droplets, Plus, Activity, Clock, ArrowLeft, Trash2, FolderOpen, FileSpreadsheet, ChevronDown, Loader2, RefreshCw } from 'lucide-react';
+import { MapPin, Phone, Mail, Users, Calendar, Droplets, Plus, Activity, Clock, ArrowLeft, Trash2, FolderOpen, FileSpreadsheet, ChevronDown, Loader2, RefreshCw, PackagePlus, ListChecks } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '@/components/shared/Button';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { toast } from 'sonner';
 import { donorApi } from '@/features/donor/api';
 import { donationApi } from '@/features/donation/api';
+import { useIncompleteDonations } from '@/features/donation/queries';
 import { useAuth } from '@/store/auth';
 import { exportCampDonorRegister } from '@/features/donor/donorRegisterExport';
 import { exportCampDonationRegister } from '@/features/donation/donationRegisterExport';
@@ -18,6 +19,8 @@ const CampDetails = () => {
   const [searchParams] = useSearchParams();
   const campId = searchParams.get('id');
   const { data: camp, isLoading: loading, isFetching, error: queryError, refetch } = useCampDetail(campId);
+  const { data: incompleteData } = useIncompleteDonations({ campId, pageSize: 1 });
+  const incompleteCount = incompleteData?.total || 0;
   const { user } = useAuth();
   const [drafts, setDrafts] = React.useState([]);
   const [showDraftsModal, setShowDraftsModal] = React.useState(false);
@@ -106,8 +109,14 @@ const CampDetails = () => {
       case 'create-donation':
         navigate(`/master-register/donor-creation?campId=${campId}`);
         break;
+      case 'inward-donation':
+        navigate(`/master-register/donation-inward?campId=${campId}`);
+        break;
       case 'view-donations':
         navigate(`/camp-donation?id=${campId}`);
+        break;
+      case 'complete-inward':
+        navigate(`/master-register/inward-donations?tab=camp&campId=${campId}`);
         break;
       case 'draft-forms':
         setShowDraftsModal(true);
@@ -195,12 +204,27 @@ const CampDetails = () => {
       color: "bg-orange-800",
     },
     {
+      id: "inward-donation",
+      title: "Inward Donation",
+      description: "Register a bag first, then complete donor and medical details as they become available",
+      icon: PackagePlus,
+      color: "bg-orange-800",
+    },
+    {
       id: "view-donations",
       title: "View Donations",
       description: "Manage donation records, track status, and view test results",
       icon: Activity,
       color: "bg-orange-800",
       stats: `${camp?.donationCount || 0} Total Donations`,
+    },
+    {
+      id: "complete-inward",
+      title: "Complete Inward Donations",
+      description: "Finish this camp's bag-first donations still awaiting donor, medical history, or exam & fitness",
+      icon: ListChecks,
+      color: "bg-orange-800",
+      stats: `${incompleteCount} Remaining`,
     },
     {
       id: "draft-forms",

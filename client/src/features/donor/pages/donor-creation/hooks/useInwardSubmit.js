@@ -172,7 +172,14 @@ export function useInwardSubmit({ form, campId }) {
           ? "Inward donation completed and sent for TTI testing."
           : "Donor deferred; inward donation record closed.",
       );
-      navigate(campId ? `/camp-details?id=${campId}` : "/master-register/donations");
+      // Land back on the Incomplete Inward Donations list — on the Camp
+      // Inward tab with this camp's section expanded when applicable — so
+      // the operator can pick up the next remaining bag for the same camp.
+      navigate(
+        campId
+          ? `/master-register/inward-donations?tab=camp&campId=${campId}`
+          : "/master-register/inward-donations",
+      );
       return result;
     } catch (err) {
       toast.error(err?.message || "Failed to finalize inward donation");

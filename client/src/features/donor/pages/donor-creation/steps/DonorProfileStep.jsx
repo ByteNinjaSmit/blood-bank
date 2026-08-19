@@ -3,7 +3,7 @@ import { states } from "@/constants/states";
 import { INITIAL_FORM_DATA } from "@/features/donor/donor-constants";
 import { validateDate, validateMonthYear, getDaysDifference } from "../donor-creation-utils";
 
-export default function DonorProfileStep({ form, submit, hideSaveButton = false, showWeightField = false }) {
+export default function DonorProfileStep({ form, submit, hideSaveButton = false, showEmergencyField = false, hideBloodGroupFields = false }) {
   const {
     formData,
     handleFormFieldChange,
@@ -357,53 +357,56 @@ export default function DonorProfileStep({ form, submit, hideSaveButton = false,
       <div className="bg-white rounded-lg border border-orange-200 p-6 space-y-4 shadow-sm">
         <h3 className="text-md font-semibold text-gray-900 border-b pb-1">Medical Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Inward mode only: weight is normally captured on the (later)
-              Exam & Fitness step, but a new donor record needs it at
-              creation time here, since Donor Profile submits the donor
-              before Exam & Fitness runs in this reordered flow. */}
-          {showWeightField && (
+          {/* Inward mode: blood group / Rh are captured earlier, on the Bag
+              Info step (provisional blood group), and kept as final here —
+              not re-asked. */}
+          {!hideBloodGroupFields && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Blood Group <span className="text-red-500">*</span></label>
+                <select
+                  value={formData.bloodGroup}
+                  onChange={(e) => handleFormFieldChange("bloodGroup", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
+                  required
+                >
+                  <option value="">Select</option>
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="AB">AB</option>
+                  <option value="O">O</option>
+                  <option value="BBG">BBG (Bombay Blood Group)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Rh Factor <span className="text-red-500">*</span></label>
+                <select
+                  value={formData.rh}
+                  onChange={(e) => handleFormFieldChange("rh", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
+                  required
+                >
+                  <option value="">Select</option>
+                  <option value="Positive">Positive (+)</option>
+                  <option value="Negative">Negative (-)</option>
+                </select>
+              </div>
+            </>
+          )}
+          {showEmergencyField && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg) <span className="text-red-500">*</span></label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                value={formData.weightKg}
-                onChange={(e) => handleFormFieldChange("weightKg", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
-                required
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Will you donate if we call in emergency?</label>
+              <select
+                value={formData.emergencyDonationWillingness}
+                onChange={(e) => handleFormFieldChange("emergencyDonationWillingness", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
+              >
+                <option value="">Select Option</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
             </div>
           )}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Blood Group <span className="text-red-500">*</span></label>
-            <select
-              value={formData.bloodGroup}
-              onChange={(e) => handleFormFieldChange("bloodGroup", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
-              required
-            >
-              <option value="">Select</option>
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="AB">AB</option>
-              <option value="O">O</option>
-              <option value="BBG">BBG (Bombay Blood Group)</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Rh Factor <span className="text-red-500">*</span></label>
-            <select
-              value={formData.rh}
-              onChange={(e) => handleFormFieldChange("rh", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
-              required
-            >
-              <option value="">Select</option>
-              <option value="Positive">Positive (+)</option>
-              <option value="Negative">Negative (-)</option>
-            </select>
-          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Last Donation Date (Month/Year)</label>
             <input

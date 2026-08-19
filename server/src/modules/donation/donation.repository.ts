@@ -140,11 +140,13 @@ export interface IncompleteDonationRow {
   provisionalBloodGroup?: { aboGroup: string; rhFactor: string };
   donorName?: string;
   donorPhone?: string;
+  campId?: string;
   createdAt: string;
 }
 
 export interface ListIncompleteInput {
   q?: string;
+  campId?: string;
   page: number;
   pageSize: number;
 }
@@ -825,7 +827,7 @@ export function createDonationRepo(): DonationRepo {
       if (result.matchedCount === 0) throw new NotFoundError('Donation', id);
     },
 
-    async listIncomplete({ q, page, pageSize }) {
+    async listIncomplete({ q, campId, page, pageSize }) {
       const filter: Record<string, unknown> = { completionStatus: { $ne: 'COMPLETE' } };
 
       if (q && q.trim()) {
@@ -840,12 +842,17 @@ export function createDonationRepo(): DonationRepo {
         ];
       }
 
+      // A campId filter only ever matches camp donation records (the
+      // in-house collection has no campId field at all), so skip the
+      // in-house query entirely rather than filtering it down to nothing.
+      const campFilter = campId ? { ...filter, campId: new Types.ObjectId(campId) } : filter;
+
       const skip = (page - 1) * pageSize;
       const [inhouse, camp, totalInhouse, totalCamp] = await Promise.all([
-        DonationModel.find(filter).sort({ createdAt: -1 }).lean(),
-        CampDonationRecordModel.find(filter).sort({ createdAt: -1 }).lean(),
-        DonationModel.countDocuments(filter),
-        CampDonationRecordModel.countDocuments(filter),
+        campId ? Promise.resolve([]) : DonationModel.find(filter).sort({ createdAt: -1 }).lean(),
+        CampDonationRecordModel.find(campFilter).sort({ createdAt: -1 }).lean(),
+        campId ? Promise.resolve(0) : DonationModel.countDocuments(filter),
+        CampDonationRecordModel.countDocuments(campFilter),
       ]);
       const all = [...inhouse, ...camp].sort(
         (a: any, b: any) =>
@@ -877,6 +884,7 @@ export function createDonationRepo(): DonationRepo {
                 .join(' ')
             : undefined,
           donorPhone: donor?.phone,
+          campId: d.campId ? d.campId.toString() : undefined,
           createdAt: d.createdAt ? d.createdAt.toISOString() : '',
         };
       });

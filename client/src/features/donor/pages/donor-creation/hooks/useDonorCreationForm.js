@@ -211,7 +211,7 @@ export function useDonorCreationForm() {
     }
   };
 
-  const isStep1Complete = (skipBloodGroupCheck = false, requireWeight = false) => {
+  const isStep1Complete = (skipBloodGroupCheck = false) => {
     if (repeatedDonation === "Yes" && !selectedDonor) return false;
 
     // In inward mode, blood group is captured on the (earlier) Bag Info
@@ -230,14 +230,6 @@ export function useDonorCreationForm() {
       (skipBloodGroupCheck || (formData.bloodGroup && formData.rh));
 
     if (!isBaseComplete) return false;
-
-    // Inward mode, new donor only: the donor record is created right after
-    // this step (before Exam & Fitness, where weight is normally captured),
-    // so weight has to be collected here instead. An existing donor already
-    // has a weight on file, so the repeat-donor path skips this.
-    if (requireWeight && repeatedDonation !== "Yes" && !(parseFloat(formData.weightKg) > 0)) {
-      return false;
-    }
 
     if (formData.pincode && !/^\d{6}$/.test(formData.pincode)) return false;
     if (formData.lastDonationDateDisplay && !validateMonthYear(formData.lastDonationDateDisplay)) return false;
@@ -296,7 +288,7 @@ export function useDonorCreationForm() {
   // the blood-group requirement from the Donor Profile step to the (now
   // earlier) Bag Info step.
   const isStepComplete = (stepKey, isInward = false) => {
-    if (stepKey === "profile") return isStep1Complete(isInward, isInward);
+    if (stepKey === "profile") return isStep1Complete(isInward);
     if (stepKey === "medical") return isStep2Complete();
     if (stepKey === "exam") return isStep3Complete();
     if (stepKey === "bag") return isStep4Complete(isInward);

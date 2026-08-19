@@ -107,6 +107,36 @@ export default function BagInfoStep({ form, showProvisionalBloodGroup = false })
             required
           />
         </div>
+        {/* Standard mode only — in inward mode these move to the Donor
+            Profile step (times-donated is dropped entirely; see
+            BagInfoStep/DonorProfileStep split for donation-inward). */}
+        {!showProvisionalBloodGroup && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">How many times donated</label>
+              <input
+                type="number"
+                min="1"
+                value={formData.totalDonationCount}
+                onChange={(e) => handleFormFieldChange("totalDonationCount", e.target.value)}
+                placeholder="e.g. 1"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Will you donate if we call in emergency?</label>
+              <select
+                value={formData.emergencyDonationWillingness}
+                onChange={(e) => handleFormFieldChange("emergencyDonationWillingness", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
+              >
+                <option value="">Select Option</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+          </>
+        )}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Donation Type <span className="text-red-500">*</span></label>
           <select
@@ -129,29 +159,6 @@ export default function BagInfoStep({ form, showProvisionalBloodGroup = false })
               SDP donations skip component separation — the unit goes straight to TTI testing and, once released, directly into stock as one unit.
             </p>
           )}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">How many times donated</label>
-          <input
-            type="number"
-            min="1"
-            value={formData.totalDonationCount}
-            onChange={(e) => handleFormFieldChange("totalDonationCount", e.target.value)}
-            placeholder="e.g. 1"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Will you donate if we call in emergency?</label>
-          <select
-            value={formData.emergencyDonationWillingness}
-            onChange={(e) => handleFormFieldChange("emergencyDonationWillingness", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-800 focus:border-orange-800 bg-white text-sm"
-          >
-            <option value="">Select Option</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Collection Date <span className="text-red-500">*</span></label>

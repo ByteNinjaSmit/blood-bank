@@ -12,6 +12,7 @@ import { useInwardSubmit } from "./donor-creation/hooks/useInwardSubmit";
 import { useInwardResume } from "./donor-creation/hooks/useInwardResume";
 import InwardSearchBox from "./donor-creation/components/InwardSearchBox";
 import { STEP_DEFS, getStepOrder } from "./donor-creation/donor-creation-steps";
+import { INITIAL_FORM_DATA } from "@/features/donor/donor-constants";
 
 // `modeOverride` lets a dedicated route (e.g. master-register/donation-inward)
 // bake mode="inward" in without duplicating this component — see
@@ -29,7 +30,6 @@ export default function DonorCreation({ modeOverride }) {
   const stepOrder = getStepOrder(mode);
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [bagConfirmOpen, setBagConfirmOpen] = useState(false);
   const currentStepKey = stepOrder[currentStep - 1];
 
   const form = useDonorCreationForm();
@@ -115,7 +115,18 @@ export default function DonorCreation({ modeOverride }) {
   const handleInwardNext = async () => {
     if (currentStepKey === "bag") {
       const created = await inward.submitBagInfo();
-      if (created) setBagConfirmOpen(true);
+      if (created) {
+        // Bag entry is a standalone, repeatable action: register the bag,
+        // then start a fresh empty form for the next one. The donor,
+        // medical history and exam/fitness for this donation are completed
+        // later from the Incomplete Inward Donations list (Continue).
+        inward.setInwardDonation(null);
+        form.setSelectedDonor(null);
+        form.setRepeatedDonation("No");
+        form.setFormData({ ...INITIAL_FORM_DATA });
+        setCurrentStep(1);
+        navigate(campId ? `/master-register/donation-inward?campId=${campId}` : "/master-register/donation-inward", { replace: true });
+      }
       return;
     }
     if (currentStepKey === "profile") {
@@ -178,7 +189,7 @@ export default function DonorCreation({ modeOverride }) {
   const StepComponent = STEP_DEFS[currentStepKey].Component;
   const stepExtraProps =
     currentStepKey === "profile"
-      ? { submit, hideSaveButton: isInward, showWeightField: isInward }
+      ? { submit, hideSaveButton: isInward, showEmergencyField: isInward, hideBloodGroupFields: isInward }
       : currentStepKey === "bag"
         ? { showProvisionalBloodGroup: isInward }
         : {};
@@ -425,55 +436,6 @@ export default function DonorCreation({ modeOverride }) {
           </div>
         </div>
       </div>
-
-      {/* Bag Info confirmation (inward mode only) — explicit affordance to
-          leave and come back rather than forcing the rest of the wizard. */}
-      <Dialog
-        open={bagConfirmOpen}
-        onOpenChange={(o) => { if (!o) setBagConfirmOpen(false); }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Donation Created</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 p-2 text-sm">
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
-              <CheckCircle className="w-6 h-6 text-emerald-700 mt-0.5 shrink-0" />
-              <div>
-                <h3 className="font-bold text-emerald-900 text-sm">
-                  Donation {inward.inwardDonation?.donationId} created
-                </h3>
-                <p className="text-gray-600 text-xs mt-1">
-                  The bag is registered. Continue now to link a donor, or finish this later —
-                  it stays listed under Incomplete Inward Donations until you do.
-                </p>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setBagConfirmOpen(false);
-                  navigate(campId ? `/camp-details?id=${campId}` : "/master-register/inward-donations");
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                Finish Later
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setBagConfirmOpen(false);
-                  setCurrentStep((prev) => Math.min(prev + 1, stepOrder.length));
-                }}
-                className="px-4 py-2 bg-red-800 hover:bg-red-900 active:bg-red-950 text-white text-xs font-semibold rounded-lg shadow transition-colors"
-              >
-                Continue Now
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Deferral Warning Modal */}
       <Dialog

@@ -149,6 +149,7 @@ export type FinalizeInwardInput = z.infer<typeof FinalizeInwardBody>;
 
 export const ListIncompleteQuery = z.object({
   q: blankToUndef(z.string().trim().max(200).optional()),
+  campId: blankToUndef(z.string().trim().regex(OBJECT_ID, 'Invalid camp id').optional()),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(500).default(25),
 });
