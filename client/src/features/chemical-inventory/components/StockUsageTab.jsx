@@ -71,6 +71,7 @@ export default function StockUsageTab() {
   const { data: lotsData, isLoading, isFetching, refetch } = useLotList({
     search: searchQuery || undefined,
     status: statusFilter === 'Expired' ? 'Expired' : undefined,
+    pageSize: 200,
   });
 
   const updateUsage = useUpdateUsage();
@@ -107,12 +108,20 @@ export default function StockUsageTab() {
       .catch((err) => toast.error(err.message || 'Action failed'));
   };
 
-  const filteredLots = (lotsData?.items || []).filter((lot) => {
-    // If not Expired filter, let's keep all active lots.
-    if (statusFilter === 'In Use') return lot.qtyInUse > 0;
-    if (statusFilter === 'Available') return lot.qtyAvailable > 0;
-    return true;
-  });
+  const filteredLots = (lotsData?.items || [])
+    .filter((lot) => {
+      // If not Expired filter, let's keep all active lots.
+      if (statusFilter === 'In Use') return lot.qtyInUse > 0;
+      if (statusFilter === 'Available') return lot.qtyAvailable > 0;
+      return true;
+    })
+    // Group by chemical name (A-Z), then oldest purchase entry on top within each chemical —
+    // mirrors FIFO usage order so operators work through older stock first.
+    .sort((a, b) => {
+      const nameCompare = (a.chemicalId?.name || '').localeCompare(b.chemicalId?.name || '');
+      if (nameCompare !== 0) return nameCompare;
+      return new Date(a.purchaseDate) - new Date(b.purchaseDate);
+    });
 
   const [excelLoading, setExcelLoading] = useState(false);
 
