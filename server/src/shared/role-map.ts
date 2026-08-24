@@ -60,7 +60,11 @@ const LEGACY_MODULE_PERMISSION_OVERRIDES: Partial<Record<string, ActionOverrideM
     create: 'unit:reserve',
     update: 'unit:issue',
   },
-  po: { update: 'po:approve' },
+  // purchase-order.routes.ts gates PATCH/DELETE/restore on po:create, not a
+  // separate po:approve permission (no route checks po:approve anywhere) —
+  // this must match that or Purchase Orders' "Update" checkbox 403s on
+  // every edit even though it was granted exactly as intended.
+  po: { update: 'po:create' },
   'bag-discard': { update: 'bag-discard:approve' },
   discard: { update: 'discard:restore' },
   // Chemical/reagent inventory only has read + one combined manage
@@ -107,6 +111,32 @@ const PAGE_PERMISSION_OVERRIDES: Partial<Record<string, Partial<Record<string, A
   // Update checkbox is the only control, so it must also carry donor:delete.
   'camp-donors': {
     donor: { update: ['donor:update', 'donor:delete'] },
+  },
+  // Donor Creation's single "create" checkbox also always creates a
+  // Donation record (see donor.js access-registry comment) — the blanket
+  // `donor: { create: [...] }` module override below deliberately stays
+  // donor-only because Camp Donor Management shares that same
+  // (moduleName, action) pair and must NOT get donation:create.
+  'donor-creation': {
+    donor: { create: ['donor:create', 'donor:update', 'donor:read', 'donation:create'] },
+  },
+  // Inward Donation (bag-first) walks POST /inward, PATCH /link-donor,
+  // PATCH /medical-history and PATCH /finalize, plus GET /:id when
+  // resuming a deep link — all under this page's single "create" checkbox
+  // (there's no separate update/view checkbox on this create-only form).
+  // Missing any of these makes a later wizard step 403 even though the
+  // admin granted the page.
+  'donation-inward': {
+    donor: {
+      create: [
+        'donor:create',
+        'donor:update',
+        'donor:read',
+        'donation:create',
+        'donation:update',
+        'donation:read',
+      ],
+    },
   },
   // The Reserve wizard's single "create" checkbox performs the whole
   // requisition → crossmatch → reserve flow, unlike Requisition Manage's

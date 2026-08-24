@@ -61,6 +61,30 @@ describe('projectPermissions', () => {
     expect(perms).toEqual(expect.arrayContaining(['donor:create', 'donor:update', 'donor:read']));
   });
 
+  it('donor create on the Donor Creation page also earns donation:create (the form always creates a Donation too)', () => {
+    const perms = projectPermissions(false, [
+      { moduleName: 'donor', pageId: 'donor-creation', create: true },
+    ]);
+    expect(perms).toContain('donation:create');
+  });
+
+  it('donor create on Inward Donation earns donation:create/update/read for the whole bag-first wizard (POST /inward, PATCH link-donor/medical-history/finalize, GET /:id resume)', () => {
+    const perms = projectPermissions(false, [
+      { moduleName: 'donor', pageId: 'donation-inward', create: true },
+    ]);
+    expect(perms).toEqual(
+      expect.arrayContaining(['donor:create', 'donor:update', 'donor:read', 'donation:create', 'donation:update', 'donation:read']),
+    );
+  });
+
+  it('donor create on Camp Donor Management does NOT earn donation:create (that page never creates a donation)', () => {
+    const perms = projectPermissions(false, [
+      { moduleName: 'donor', pageId: 'camp-donors', create: true },
+    ]);
+    expect(perms).toContain('donor:create');
+    expect(perms).not.toContain('donation:create');
+  });
+
   it("Recycle Bin's delete checkbox grants permanent-delete, not the base delete permission", () => {
     const perms = projectPermissions(false, [
       { moduleName: 'donor', pageId: 'mis-recycle-bin', delete: true },
@@ -68,6 +92,11 @@ describe('projectPermissions', () => {
     ]);
     expect(perms).toContain('donor:permanent-delete');
     expect(perms).toContain('donation:permanent-delete');
+  });
+
+  it('PO update grants po:create, matching what purchase-order.routes.ts actually checks on PATCH /:id (not the unused po:approve)', () => {
+    const perms = projectPermissions(false, [{ moduleName: 'po', update: true }]);
+    expect(perms).toContain('po:create');
   });
 
   it('a module-wide (non-page-scoped) donor update grant still resolves to the plain default', () => {
