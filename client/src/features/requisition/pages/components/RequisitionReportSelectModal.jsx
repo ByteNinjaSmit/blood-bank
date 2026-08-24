@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { compareBagNo } from '@/lib/natural-sort';
 
 // Shown every time "Issue Report" is clicked — lets the operator pick which
 // matched components to include in the printed report. Components that
@@ -20,7 +21,15 @@ export default function RequisitionReportSelectModal({ open, doc, onClose, onCon
     setSelected(initial);
   }, [open, doc]);
 
-  const units = doc?.matchedInventory || [];
+  const units = useMemo(() => {
+    const list = [...(doc?.matchedInventory || [])];
+    list.sort((a, b) => {
+      const invA = typeof a.inventoryId === 'object' ? a.inventoryId : null;
+      const invB = typeof b.inventoryId === 'object' ? b.inventoryId : null;
+      return compareBagNo(invA?.bagNo?.bagNo, invB?.bagNo?.bagNo);
+    });
+    return list;
+  }, [doc]);
   const selectedIds = Object.keys(selected).filter((id) => selected[id]);
 
   return (

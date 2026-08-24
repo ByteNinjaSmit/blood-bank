@@ -392,7 +392,7 @@ const SerologyResults = () => {
                       <tr key={`${bag.bagNo}-${idx}`} className={hasReactive ? "bg-yellow-100 hover:bg-yellow-200/70" : "hover:bg-gray-50"}>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
                           <div>{bag.bagNo}</div>
-                          {bag.lastEditedAt && (
+                          {bag.retestedAt && (
                             <span className="mt-1 inline-flex px-2 py-0.5 rounded-full text-2xs font-bold bg-orange-500 text-white border border-orange-600 uppercase tracking-wide">
                               Retest Done
                             </span>

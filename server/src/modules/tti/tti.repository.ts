@@ -24,6 +24,7 @@ export interface TtiResultDto {
   decidedAt?: string;
   editReason?: string;
   lastEditedAt?: string;
+  retestedAt?: string;
 }
 
 interface RawTti {
@@ -36,6 +37,7 @@ interface RawTti {
   decidedAt?: Date;
   editReason?: string;
   lastEditedAt?: Date;
+  retestedAt?: Date;
 }
 
 function toDto(raw: RawTti): TtiResultDto {
@@ -54,6 +56,7 @@ function toDto(raw: RawTti): TtiResultDto {
     decidedAt: raw.decidedAt?.toISOString(),
     editReason: raw.editReason,
     lastEditedAt: raw.lastEditedAt?.toISOString(),
+    retestedAt: raw.retestedAt?.toISOString(),
   };
 }
 
@@ -83,8 +86,18 @@ export interface TtiRepo {
     actorId: string,
     notes?: string,
   ): Promise<TtiResultDto>;
-  /** Records who corrected an already-finalized result, and why. */
-  setEditMeta(donationId: string, reason: string, actorId: string): Promise<TtiResultDto>;
+  /**
+   * Records who corrected an already-finalized result, and why.
+   * `isRetest` additionally stamps `retestedAt` — set only when this
+   * correction resolved a Shadeness (indeterminate) hold to a final
+   * decision, as opposed to a plain edit of an already-decided result.
+   */
+  setEditMeta(
+    donationId: string,
+    reason: string,
+    actorId: string,
+    isRetest?: boolean,
+  ): Promise<TtiResultDto>;
   /** Count of donations still awaiting a TTI release decision. */
   countPendingTesting(): Promise<number>;
 }
@@ -141,11 +154,17 @@ export function createTtiRepo(): TtiRepo {
       return toDto(updated);
     },
 
-    async setEditMeta(donationId, reason, actorId) {
+    async setEditMeta(donationId, reason, actorId, isRetest) {
       const actor = new Types.ObjectId(actorId);
+      const now = new Date();
       const updated = (await TtiResultModel.findOneAndUpdate(
         { donationId },
-        { editReason: reason, lastEditedAt: new Date(), lastEditedBy: actor },
+        {
+          editReason: reason,
+          lastEditedAt: now,
+          lastEditedBy: actor,
+          ...(isRetest ? { retestedAt: now } : {}),
+        },
         { new: true },
       ).lean()) as RawTti | null;
       if (!updated) throw new NotFoundError('TtiResult', donationId);

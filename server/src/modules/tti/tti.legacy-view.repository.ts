@@ -48,6 +48,8 @@ export interface TtiBagViewDto {
   canEdit: boolean;
   editReason?: string;
   lastEditedAt?: string;
+  /** Set only when a Shadeness hold was resolved by retest — drives the "Retest Done" badge. */
+  retestedAt?: string;
   /** When the panel was actually performed (technician-entered date/time, falls back to entry time). */
   testedAt?: string;
 }
@@ -181,6 +183,7 @@ async function mapTtiBags(ttis: any[]): Promise<TtiBagViewDto[]> {
         canEdit: !hasLeftBank(uList),
         editReason: t.editReason || undefined,
         lastEditedAt: t.lastEditedAt ? new Date(t.lastEditedAt).toISOString() : undefined,
+        retestedAt: t.retestedAt ? new Date(t.retestedAt).toISOString() : undefined,
         testedAt: latestPerformedAt ? new Date(latestPerformedAt).toISOString() : undefined,
       };
     })

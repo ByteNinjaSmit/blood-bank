@@ -51,6 +51,12 @@ const TtiResultSchema = new Schema(
     lastEditedAt: { type: Date },
     lastEditedBy: { type: Schema.Types.ObjectId, ref: 'User' },
 
+    // Set only when a Shadeness (indeterminate) hold is resolved by a
+    // retest that lands on a final decision — distinct from editReason/
+    // lastEditedAt, which are set on ANY correction (including a plain
+    // edit of an already-decided result). Drives the "Retest Done" badge.
+    retestedAt: { type: Date },
+
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
 

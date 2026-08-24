@@ -28,7 +28,7 @@ export default function SerologyDetailModal({
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>{`Bag ${selectedBag.bagNo} – Serology details${isEditing ? " (Editing)" : ""}`}</DialogTitle>
         {selectedBag.status && <DialogDescription>{`Status: ${selectedBag.status}`}</DialogDescription>}

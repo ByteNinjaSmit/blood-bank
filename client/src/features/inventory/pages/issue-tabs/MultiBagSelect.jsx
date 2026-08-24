@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { sortByBagNoAsc } from '@/lib/natural-sort';
 
 // Multi-select dropdown for picking available blood bags (with a running mL
 // total). Shared by the Send-to-Storage form and the Bulk "Give Loan" picker.
 const MultiBagSelect = ({ availableBags, selectedBags, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  const sortedBags = useMemo(() => sortByBagNoAsc(availableBags), [availableBags]);
 
   const toggleBag = (bagId) => {
     const isSelected = selectedBags.includes(bagId);
@@ -35,10 +38,10 @@ const MultiBagSelect = ({ availableBags, selectedBags, onChange }) => {
 
       {isOpen && (
         <div className="mt-2 w-full max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-md p-2 space-y-1 shadow-inner">
-          {availableBags.length === 0 ? (
+          {sortedBags.length === 0 ? (
             <div className="text-xs text-gray-500 p-2 text-center">No bags available in stock</div>
           ) : (
-            availableBags.map((bag) => {
+            sortedBags.map((bag) => {
               const isChecked = selectedBags.includes(bag._id);
               return (
                 <label
