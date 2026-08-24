@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { ConfirmModal } from '@/components/shared';
+import { compareBagNo } from '@/lib/natural-sort';
 import CrossmatchWorksheet from './CrossmatchWorksheet';
 import { COMPATIBILITY_RESULT_LABELS } from './grading';
 
@@ -81,7 +82,10 @@ export default function MatchedBagCard({
   }, [units]);
 
   const bagsForGroup = useMemo(
-    () => units.filter((u) => u.aboGroup === selectedGroup),
+    () =>
+      units
+        .filter((u) => u.aboGroup === selectedGroup)
+        .sort((a, b) => compareBagNo(a.bagNo, b.bagNo)),
     [units, selectedGroup],
   );
 

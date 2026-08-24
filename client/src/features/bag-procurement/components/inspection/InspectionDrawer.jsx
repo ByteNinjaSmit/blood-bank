@@ -5,6 +5,7 @@ import { useDonationList } from '@/features/donation/queries';
 import { useAuth } from '@/store/auth';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 import { BLOOD_GROUPS } from '@/lib/blood-groups';
+import { compareBagNo } from '@/lib/natural-sort';
 
 const emptyBagDetail = () => ({ bagNo: '', segmentNo: '' });
 
@@ -103,6 +104,7 @@ export default function InspectionDrawer({ onClose, grns, inspection = null, mod
       uniqueDonations.push(d);
     }
   }
+  uniqueDonations.sort((a, b) => compareBagNo(a.bagNo, b.bagNo));
 
   const isAnyFailed = [
     form.sealIntact, form.noLeakage, form.tubeIntegrity, form.needleCondition,
