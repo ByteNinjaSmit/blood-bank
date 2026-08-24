@@ -164,7 +164,7 @@ export function createTtiLegacyViewControllers(deps: {
 
         // One combined call so the whole "Save Results" action produces a
         // single audit entry (tests + decision together), not two.
-        await deps.ttiService.recordAndFinalize(
+        const outcome = await deps.ttiService.recordAndFinalize(
           tti.donationId,
           mappedTests,
           actorId,
@@ -172,7 +172,12 @@ export function createTtiLegacyViewControllers(deps: {
           isEdit ? editReason!.trim() : undefined,
         );
         if (isEdit && !wasPendingOrigin) {
-          await deps.tti.setEditMeta(tti.donationId, editReason!.trim(), actorId);
+          // "Retest Done" is only true for a Shadeness (indeterminate)
+          // hold that this save resolved to a final decision — a plain
+          // correction of an already-decided (passed/failed) result via
+          // the Results-page edit action must never show that marker.
+          const isRetest = tti.releaseDecision === 'indeterminate' && outcome.decision !== 'indeterminate';
+          await deps.tti.setEditMeta(tti.donationId, editReason!.trim(), actorId, isRetest);
         }
 
         res.json({ success: true, message: 'Serology results saved and finalized successfully' });
