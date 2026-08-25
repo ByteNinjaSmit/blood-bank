@@ -433,7 +433,7 @@ export default function PurchaseEntry() {
   const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 p-6 space-y-6 max-w-[1600px] mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

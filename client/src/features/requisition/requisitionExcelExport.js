@@ -14,6 +14,16 @@ function abbreviateComponent(componentType) {
   return componentType || '—';
 }
 
+// Compact blood group format used consistently across the report, e.g. "O+".
+// `rh` may come through as the string 'Positive'/'Negative' (as stored on
+// requestedComponents / bagNo) — anything else is left as-is rather than
+// guessed at.
+function compactBloodGroup(bloodGroup, rh) {
+  if (!bloodGroup) return '—';
+  const sign = rh === 'Positive' ? '+' : rh === 'Negative' ? '-' : '';
+  return `${bloodGroup}${sign}`;
+}
+
 function fmtDateTime(d) {
   if (!d) return '—';
   const dt = new Date(d);
@@ -117,7 +127,7 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
   const xmColumnsBase = [
     'Sr No', 'Date', 'Hospital Name', 'Doctor Name', 'Indication for Transfusion',
     "Recipient's Name", "Recipient's Address", 'Blood Group', 'Component (WB/PRBC/FFP/RDP/CRYO)',
-    'Total Bags Given', 'When Required',
+    'Bags Given (this Component)', 'When Required',
     'Crossmatching & Compatibility Test', 'Card Number', 'Issue Date & Time', 'Bag No',
   ];
 
@@ -156,7 +166,7 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
           first ? (r.patient?.indication || '—') : '',
           first ? (r.patient?.name || '—') : '',
           first ? (r.patient?.address || '—') : '',
-          rc ? `${rc.bloodGroup}${rc.rh === 'Positive' ? '+' : rc.rh === 'Negative' ? '-' : ''}` : '—',
+          rc ? compactBloodGroup(rc.bloodGroup, rc.rh) : '—',
           abbr,
           rc ? (requestedCounts.get(abbr) || 0) : 0,
           first ? (r.requiredAt ? fmtDateTime(r.requiredAt) : '—') : '',
@@ -194,7 +204,7 @@ export async function exportRequisitionsExcel(filters, generatedBy) {
         first ? (r.patient?.indication || '—') : '',
         first ? (r.patient?.name || '—') : '',
         first ? (r.patient?.address || '—') : '',
-        inv?.bagNo ? `${inv.bagNo.bloodGroup} ${inv.bagNo.rh}` : '—',
+        inv?.bagNo ? compactBloodGroup(inv.bagNo.bloodGroup, inv.bagNo.rh) : '—',
         abbr,
         componentCounts.get(abbr) || 0,
         first ? (r.requiredAt ? fmtDateTime(r.requiredAt) : '—') : '',

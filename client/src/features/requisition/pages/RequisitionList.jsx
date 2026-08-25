@@ -8,18 +8,20 @@ import RequisitionPrintModals from './components/RequisitionPrintModals';
 import RequisitionReportSelectModal from './components/RequisitionReportSelectModal';
 import { RejectRequestModal } from '@/components/shared';
 import ReasonForChangeModal from '@/components/shared/ReasonForChangeModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import TimePicker12h from '@/features/requisition/components/TimePicker12h';
 import { useRequisitionList } from './hooks/useRequisitionList';
 
 const STATUS = ['pending', 'matched', 'approved', 'issued', 'completed', 'rejected'];
 
 export default function RequisitionList() {
   const rl = useRequisitionList();
-  const { allSelectedIds,applyFilters,bulkAction,callAction,can,canEdit,canManage,clearSelection,closeEdit,closeView,componentFulfillment,confirmReportSelection,data,editModalOpen,editRequisitionId,excelLoading,exportDropdownOpen,fetchList,filters,fmt,handleConfirmReject,handleExportExcel,handleOpenReject,handlePrint,hospitals,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openEdit,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setExportDropdownOpen,setFilters,setIssueDoc,setIssueModalOpen,setIssuingRowId,setLimit,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintType,setRejectModalOpen,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,statusClass,toggle,total,totalPages,openUnreserveModal,closeUnreserveModal,confirmUnreserve,unreserveModalOpen,unreserveSubmitting,viewDoc,viewLoading,viewOpen } = rl;
+  const { allSelectedIds,applyFilters,bulkAction,bulkIssueConfirmOpen,bulkIssueTime,setBulkIssueTime,bulkIssuePendingIds,bulkIssueSubmitting,closeBulkIssueConfirm,confirmBulkIssue,callAction,can,canEdit,canManage,clearSelection,closeEdit,closeView,componentFulfillment,confirmReportSelection,data,editModalOpen,editRequisitionId,excelLoading,exportDropdownOpen,fetchList,filters,fmt,handleConfirmReject,handleExportExcel,handleOpenReject,handlePrint,hospitals,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openEdit,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setExportDropdownOpen,setFilters,setIssueDoc,setIssueModalOpen,setIssuingRowId,setLimit,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintType,setRejectModalOpen,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,statusClass,toggle,total,totalPages,openUnreserveModal,closeUnreserveModal,confirmUnreserve,unreserveModalOpen,unreserveSubmitting,viewDoc,viewLoading,viewOpen } = rl;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6 flex items-center gap-3">
+        <div className="max-w-[1600px] mx-auto px-4 py-6 flex items-center gap-3">
           <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
             <ClipboardList className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
           </div>
@@ -30,7 +32,7 @@ export default function RequisitionList() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
+      <div className="max-w-[1600px] mx-auto px-4 py-6 space-y-4">
         <div className="bg-white rounded-xl shadow border border-gray-100 p-4">
           <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
             <div className="md:col-span-2">
@@ -287,6 +289,41 @@ export default function RequisitionList() {
         setMultiLabelDoc={setMultiLabelDoc}
         printSingleLabel={printSingleLabel}
       />
+
+      <Dialog open={bulkIssueConfirmOpen} onOpenChange={(o) => { if (!o) closeBulkIssueConfirm(); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirm Issue Time</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <p className="text-gray-600">
+              Check the issue date/time below — edit it if needed — then confirm to issue {bulkIssuePendingIds.length} selected requisition{bulkIssuePendingIds.length === 1 ? '' : 's'}.
+            </p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Issue Time</span>
+              <TimePicker12h value={bulkIssueTime} onChange={setBulkIssueTime} />
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={closeBulkIssueConfirm}
+              disabled={bulkIssueSubmitting}
+              className="px-4 py-2 border border-gray-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold rounded-xl text-xs shadow-sm transition-all disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmBulkIssue}
+              disabled={bulkIssueSubmitting}
+              className="px-4 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-white font-semibold text-xs shadow-sm transition-all disabled:opacity-50"
+            >
+              {bulkIssueSubmitting ? 'Issuing…' : 'Issue'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <RequisitionEditModal
         open={editModalOpen}

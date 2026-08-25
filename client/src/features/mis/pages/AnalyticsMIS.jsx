@@ -7,8 +7,7 @@ import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend, PieChart, 
 import { TrendingUp, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
-import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
+import { downloadExcelReport } from "@/utils/excelExportHelper";
 import { useAnalyticsMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -53,17 +52,20 @@ export default function AnalyticsMIS() {
   };
 
   const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
-      { Metric: "Last Month Donations", Value: number(lastMonth.donations) },
-      { Metric: "Last Month Issues", Value: number(lastMonth.issues) },
-      { Metric: "Forecast Donations", Value: number(forecast.donations) },
-      { Metric: "Forecast Demand", Value: number(forecast.demand) },
-      { Metric: "Current Stock", Value: currentStock },
-      { Metric: "Shortage Risk", Value: shortageRisk },
-    ]), "Analytics");
-    autoFitWorkbook(wb);
-    XLSX.writeFile(wb, "analytics_mis.xlsx");
+    const rows = [
+      ["Last Month Donations", number(lastMonth.donations)],
+      ["Last Month Issues", number(lastMonth.issues)],
+      ["Forecast Donations", number(forecast.donations)],
+      ["Forecast Demand", number(forecast.demand)],
+      ["Current Stock", currentStock],
+      ["Shortage Risk", shortageRisk],
+    ];
+    downloadExcelReport([{
+      name: "Analytics",
+      subtitle: "Analytics & Forecast MIS",
+      headers: ["Metric", "Value"],
+      rows,
+    }], "analytics_mis.xlsx");
   };
 
   if (isLoading) return <div className="p-6 flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;

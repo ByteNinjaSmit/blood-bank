@@ -1,10 +1,19 @@
-// Editable 12-hour AM/PM time picker. `value` and onChange communicate as a
-// Date (only the time-of-day portion is meaningful to the caller); date part
-// defaults to "now" and is left untouched by this component.
+// Editable 12-hour AM/PM date+time picker. `value` and onChange communicate
+// as a single Date (both the calendar date and the time-of-day are
+// meaningful to the caller); defaults to "now" when no valid value is given.
 import { useMemo } from 'react';
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MINUTES = Array.from({ length: 60 }, (_, i) => i);
+
+// Formats a Date as the local (not UTC) YYYY-MM-DD string <input type="date">
+// expects/emits.
+const toDateInputValue = (d) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export default function TimePicker12h({ value, onChange, className = '' }) {
   const date = useMemo(
@@ -29,8 +38,24 @@ export default function TimePicker12h({ value, onChange, className = '' }) {
     onChange(next);
   };
 
+  const emitDate = (dateInputValue) => {
+    if (!dateInputValue) return;
+    const [year, month, day] = dateInputValue.split('-').map(Number);
+    if (!year || !month || !day) return;
+    const next = new Date(date);
+    next.setFullYear(year, month - 1, day);
+    onChange(next);
+  };
+
   return (
-    <div className={`flex items-center gap-1.5 ${className}`}>
+    <div className={`flex items-center gap-1.5 flex-wrap ${className}`}>
+      <input
+        type="date"
+        aria-label="Date"
+        className="px-2 py-1.5 border rounded-lg text-sm"
+        value={toDateInputValue(date)}
+        onChange={(e) => emitDate(e.target.value)}
+      />
       <select
         aria-label="Hour"
         className="px-2 py-1.5 border rounded-lg text-sm"

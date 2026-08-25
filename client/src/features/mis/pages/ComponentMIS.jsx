@@ -8,8 +8,7 @@ import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, Cel
 import { Layers, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
-import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
+import { downloadExcelReport } from "@/utils/excelExportHelper";
 import { useComponentMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -40,11 +39,20 @@ export default function ComponentMIS() {
   };
 
   const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(production.map(p => ({ Component: p._id, Count: p.count, AvgVolume: p.avgVolume }))), "Production");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ageing.map(a => ({ AgeBucket: a._id, Count: a.count }))), "Ageing");
-    autoFitWorkbook(wb);
-    XLSX.writeFile(wb, "component_mis.xlsx");
+    downloadExcelReport([
+      {
+        name: "Production",
+        subtitle: "Component MIS - Production Summary",
+        headers: ["Component", "Count", "Avg Volume"],
+        rows: production.map(p => [p._id, p.count, p.avgVolume]),
+      },
+      {
+        name: "Ageing",
+        subtitle: "Component MIS - Ageing Analysis",
+        headers: ["Age Bucket", "Count"],
+        rows: ageing.map(a => [a._id, a.count]),
+      },
+    ], "component_mis.xlsx");
   };
 
   if (isLoading) return <div className="p-6 flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;

@@ -6,8 +6,7 @@ import { AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, C
 import { BarChart3, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
-import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
+import { downloadExcelReport } from "@/utils/excelExportHelper";
 import { useExecutiveMis } from "../queries";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 
@@ -53,20 +52,23 @@ export default function ExecutiveMIS() {
   };
 
   const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
-      { Metric: "Donations Today", Value: kpis.donationsToday },
-      { Metric: "Donations This Month", Value: kpis.donationsMonth },
-      { Metric: "New Donors This Month", Value: kpis.donorsMonth },
-      { Metric: "Issued This Month", Value: kpis.issuedMonth },
-      { Metric: "Current Stock", Value: kpis.stock },
-      { Metric: "Camps This Month", Value: kpis.campsMonth },
-      { Metric: "Discards This Month", Value: kpis.discardsMonth },
-      { Metric: "Issue per Donation", Value: ratios.issuePerDonation },
-      { Metric: "Discard Rate", Value: ratios.discardRate + "%" },
-    ]), "Executive Summary");
-    autoFitWorkbook(wb);
-    XLSX.writeFile(wb, "executive_mis.xlsx");
+    const rows = [
+      ["Donations Today", kpis.donationsToday],
+      ["Donations This Month", kpis.donationsMonth],
+      ["New Donors This Month", kpis.donorsMonth],
+      ["Issued This Month", kpis.issuedMonth],
+      ["Current Stock", kpis.stock],
+      ["Camps This Month", kpis.campsMonth],
+      ["Discards This Month", kpis.discardsMonth],
+      ["Issue per Donation", ratios.issuePerDonation],
+      ["Discard Rate", ratios.discardRate + "%"],
+    ];
+    downloadExcelReport([{
+      name: "Executive Summary",
+      subtitle: "Executive Dashboard MIS Summary",
+      headers: ["Metric", "Value"],
+      rows,
+    }], "executive_mis.xlsx");
   };
 
   if (isLoading) return <div className="p-6 flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;

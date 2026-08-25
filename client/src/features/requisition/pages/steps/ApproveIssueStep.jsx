@@ -1,5 +1,7 @@
 import React from 'react';
 import { COMPATIBILITY_RESULT_LABELS } from '../components/grading';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import TimePicker12h from '@/features/requisition/components/TimePicker12h';
 
 function CompatBadge({ type }) {
   if (type === 'exact') {
@@ -27,6 +29,23 @@ function CrossmatchStatusBadge({ status, required }) {
 }
 
 export default function ApproveIssueStep({ requestDoc, issuing, onIssue, shortages, step2Reasons = [] }) {
+  // Issue confirmation popup: opened by the per-unit Issue button below,
+  // mirrors the list page's "Confirm Issue Time" dialog. Reset to "now"
+  // every time it's opened so it never shows a stale previously-picked time.
+  const [issueConfirmTarget, setIssueConfirmTarget] = React.useState(null);
+  const [issueConfirmTime, setIssueConfirmTime] = React.useState(() => new Date());
+
+  const openIssueConfirm = (invId) => {
+    setIssueConfirmTarget(invId);
+    setIssueConfirmTime(new Date());
+  };
+  const closeIssueConfirm = () => setIssueConfirmTarget(null);
+  const confirmIssue = () => {
+    if (!issueConfirmTarget) return;
+    onIssue([issueConfirmTarget], issueConfirmTime);
+    closeIssueConfirm();
+  };
+
   const status = requestDoc?.status;
   // Approve (and, downstream, Issue) stays blocked until the recipient
   // serum/cell grouping, every proposed bag's grouping, and the crossmatch
@@ -293,7 +312,7 @@ export default function ApproveIssueStep({ requestDoc, issuing, onIssue, shortag
                                     <button
                                       type="button"
                                       disabled={issuing}
-                                      onClick={() => onIssue([invId])}
+                                      onClick={() => openIssueConfirm(invId)}
                                       className="px-3 py-1 bg-green-700 hover:bg-green-800 text-white rounded text-xs font-bold transition active:scale-95 disabled:bg-gray-305 disabled:cursor-not-allowed cursor-pointer"
                                     >
                                       {issuing ? 'Issuing…' : 'Issue'}
@@ -354,6 +373,41 @@ export default function ApproveIssueStep({ requestDoc, issuing, onIssue, shortag
           </div>
         </div>
       )}
+
+      <Dialog open={!!issueConfirmTarget} onOpenChange={(o) => { if (!o) closeIssueConfirm(); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirm Issue Time</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <p className="text-gray-600">
+              Check the issue date/time below — edit it if needed — then confirm to issue this component.
+            </p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Issue Time</span>
+              <TimePicker12h value={issueConfirmTime} onChange={setIssueConfirmTime} />
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={closeIssueConfirm}
+              disabled={issuing}
+              className="px-4 py-2 border border-gray-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold rounded-xl text-xs shadow-sm transition-all disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmIssue}
+              disabled={issuing}
+              className="px-4 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-white font-semibold text-xs shadow-sm transition-all disabled:opacity-50"
+            >
+              {issuing ? 'Issuing…' : 'Issue'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

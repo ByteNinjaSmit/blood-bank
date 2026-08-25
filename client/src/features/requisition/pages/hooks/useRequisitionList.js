@@ -310,6 +310,38 @@ export function useRequisitionList() {
   const allSelectedIds = Object.keys(selected).filter((id) => selected[id]);
   const clearSelection = () => setSelected({});
 
+  // Bulk Issue confirmation popup: mirrors the per-row "Confirm Issue Time"
+  // dialog — bulkAction('issue') stages the eligible ids here instead of
+  // issuing immediately, and the actual issue calls fire from
+  // confirmBulkIssue() once the operator confirms the date+time.
+  const [bulkIssueConfirmOpen, setBulkIssueConfirmOpen] = useState(false);
+  const [bulkIssueTime, setBulkIssueTime] = useState(() => new Date());
+  const [bulkIssuePendingIds, setBulkIssuePendingIds] = useState([]);
+  const [bulkIssueSubmitting, setBulkIssueSubmitting] = useState(false);
+
+  const closeBulkIssueConfirm = () => {
+    setBulkIssueConfirmOpen(false);
+    setBulkIssuePendingIds([]);
+  };
+
+  const runBulkAction = async (action, allowed) => {
+    try {
+      await Promise.allSettled(allowed.map(async (id) => {
+        let res;
+        if (action === 'match') res = await requisitionApi.match(id);
+        if (action === 'approve') res = await requisitionApi.approve(id);
+        if (action === 'complete') res = await requisitionApi.complete(id);
+        if (action === 'reject') res = await requisitionApi.reject(id);
+        return res;
+      }));
+      toast.success(`Bulk ${action} attempted for ${allowed.length} item(s)`);
+      clearSelection();
+      fetchList();
+    } catch (e) {
+      toast.error('Bulk action failed');
+    }
+  };
+
   const bulkAction = async (action) => {
     if (allSelectedIds.length === 0) return;
     const rows = data.filter((r) => allSelectedIds.includes(r._id));
@@ -329,21 +361,33 @@ export function useRequisitionList() {
       toast.error('No selected rows are eligible for this action');
       return;
     }
+
+    if (action === 'issue') {
+      // Open the confirm dialog fresh (reset to "now") every time — never
+      // reuse a previously-picked time.
+      setBulkIssueTime(new Date());
+      setBulkIssuePendingIds(allowed);
+      setBulkIssueConfirmOpen(true);
+      return;
+    }
+
+    await runBulkAction(action, allowed);
+  };
+
+  const confirmBulkIssue = async () => {
+    const allowed = bulkIssuePendingIds;
+    if (allowed.length === 0) return;
+    setBulkIssueSubmitting(true);
     try {
-      await Promise.allSettled(allowed.map(async (id) => {
-        let res;
-        if (action === 'match') res = await requisitionApi.match(id);
-        if (action === 'approve') res = await requisitionApi.approve(id);
-        if (action === 'issue') res = await requisitionApi.issue(id);
-        if (action === 'complete') res = await requisitionApi.complete(id);
-        if (action === 'reject') res = await requisitionApi.reject(id);
-        return res;
-      }));
-      toast.success(`Bulk ${action} attempted for ${allowed.length} item(s)`);
+      await Promise.allSettled(allowed.map((id) => requisitionApi.issue(id, [], bulkIssueTime)));
+      toast.success(`Bulk issue attempted for ${allowed.length} item(s)`);
       clearSelection();
       fetchList();
+      closeBulkIssueConfirm();
     } catch (e) {
       toast.error('Bulk action failed');
+    } finally {
+      setBulkIssueSubmitting(false);
     }
   };
 
@@ -580,5 +624,5 @@ export function useRequisitionList() {
       RequisitionPrintService.print('report');
     }, 100);
   };
-  return { allSelectedIds,applyFilters,bulkAction,callAction,can,canEdit,canManage,clearSelection,closeEdit,closeView,componentFulfillment,confirmReportSelection,data,editModalOpen,editRequisitionId,excelLoading,exportDropdownOpen,fetchList,filters,fmt,getReqLabel,handleConfirmReject,handleExportExcel,handleOpenIssueModal,handleOpenReject,handlePrint,hospitals,isApprovedForIssue,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openEdit,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocId,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setData,setEditModalOpen,setExcelLoading,setExportDropdownOpen,setFilters,setHospitals,setIssueDoc,setIssueLoading,setIssueModalOpen,setIssuingRowId,setLimit,setLoading,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintLoading,setPrintReportPage,setPrintType,setRejectingDocId,setRejectingDocReqId,setRejectModalOpen,setRejectSubmitting,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,setTotal,setViewDoc,setViewLoading,setViewOpen,statusClass,toggle,total,totalPages,openUnreserveModal,closeUnreserveModal,confirmUnreserve,unreserveModalOpen,unreserveSubmitting,viewDoc,viewLoading,viewOpen,user,authorizationToken };
+  return { allSelectedIds,applyFilters,bulkAction,bulkIssueConfirmOpen,bulkIssueTime,setBulkIssueTime,bulkIssuePendingIds,bulkIssueSubmitting,closeBulkIssueConfirm,confirmBulkIssue,callAction,can,canEdit,canManage,clearSelection,closeEdit,closeView,componentFulfillment,confirmReportSelection,data,editModalOpen,editRequisitionId,excelLoading,exportDropdownOpen,fetchList,filters,fmt,getReqLabel,handleConfirmReject,handleExportExcel,handleOpenIssueModal,handleOpenReject,handlePrint,hospitals,isApprovedForIssue,issueDoc,issueLoading,issueModalOpen,issuingRowId,limit,loading,multiLabelDoc,multiLabelModalOpen,navigate,openEdit,openView,page,printDoc,printLoading,printReport,printReportPage,printSingleLabel,printType,rejectingDocId,rejectingDocReqId,rejectModalOpen,rejectSubmitting,reportSelectDoc,reportSelectOpen,resetFilters,rowDisplayStatus,searchInput,selected,selectedPrintLabelDoc,selectedPrintReportDoc,setData,setEditModalOpen,setExcelLoading,setExportDropdownOpen,setFilters,setHospitals,setIssueDoc,setIssueLoading,setIssueModalOpen,setIssuingRowId,setLimit,setLoading,setMultiLabelDoc,setMultiLabelModalOpen,setPage,setPrintDoc,setPrintLoading,setPrintReportPage,setPrintType,setRejectingDocId,setRejectingDocReqId,setRejectModalOpen,setRejectSubmitting,setReportSelectDoc,setReportSelectOpen,setSearchInput,setSelected,setSelectedPrintLabelDoc,setSelectedPrintReportDoc,setSort,setTotal,setViewDoc,setViewLoading,setViewOpen,statusClass,toggle,total,totalPages,openUnreserveModal,closeUnreserveModal,confirmUnreserve,unreserveModalOpen,unreserveSubmitting,viewDoc,viewLoading,viewOpen,user,authorizationToken };
 }

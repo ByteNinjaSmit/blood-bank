@@ -8,8 +8,7 @@ import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, Cel
 import { Users, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
-import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
+import { downloadExcelReport } from "@/utils/excelExportHelper";
 import { useDonorMis } from "../queries";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 
@@ -58,29 +57,37 @@ export default function DonorMIS() {
   };
 
   const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    const wsSummary = XLSX.utils.json_to_sheet([
-      { Metric: "Total Donors", Value: stats.total },
-      { Metric: "New This Month", Value: stats.newThisMonth },
-      { Metric: "Active Donors (last 90d)", Value: stats.active },
-      { Metric: "Repeat Donors", Value: behavior.repeatDonors },
-      { Metric: "Repeat Rate", Value: behavior.repeatPercentage + "%" },
+    const summaryRows = [
+      ["Total Donors", stats.total],
+      ["New This Month", stats.newThisMonth],
+      ["Active Donors (last 90d)", stats.active],
+      ["Repeat Donors", behavior.repeatDonors],
+      ["Repeat Rate", behavior.repeatPercentage + "%"],
+    ];
+    const donorRows = (register.donors || []).map(d => [
+      d.donorId,
+      `${d.name?.firstName || ""} ${d.name?.lastName || ""}`.trim(),
+      d.bloodGroup,
+      d.rh,
+      d.sex,
+      d.address?.city || "",
+      d.phone,
+      d.lastDonationDate ? formatDate(d.lastDonationDate) : "",
     ]);
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
-
-    const wsDonors = XLSX.utils.json_to_sheet((register.donors || []).map(d => ({
-      ID: d.donorId,
-      Name: `${d.name?.firstName || ""} ${d.name?.lastName || ""}`.trim(),
-      BloodGroup: d.bloodGroup,
-      Rh: d.rh,
-      Sex: d.sex,
-      City: d.address?.city || "",
-      Phone: d.phone,
-      LastDonation: d.lastDonationDate ? formatDate(d.lastDonationDate) : "",
-    })));
-    XLSX.utils.book_append_sheet(wb, wsDonors, "Donors");
-    autoFitWorkbook(wb);
-    XLSX.writeFile(wb, "donor_mis.xlsx");
+    downloadExcelReport([
+      {
+        name: "Summary",
+        subtitle: "Donor MIS Summary",
+        headers: ["Metric", "Value"],
+        rows: summaryRows,
+      },
+      {
+        name: "Donors",
+        subtitle: "Donor MIS - Donor Register",
+        headers: ["ID", "Name", "Blood Group", "Rh", "Sex", "City", "Phone", "Last Donation"],
+        rows: donorRows,
+      },
+    ], "donor_mis.xlsx");
   };
 
   if (isLoading) {

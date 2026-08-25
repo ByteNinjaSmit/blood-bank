@@ -8,8 +8,7 @@ import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, Cel
 import { Trash2, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
-import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
+import { downloadExcelReport } from "@/utils/excelExportHelper";
 import { useDiscardMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -37,11 +36,20 @@ export default function DiscardMIS() {
   };
 
   const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(discards.map(d => ({ Reason: d._id, Count: d.count }))), "Reasons");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(typeWise.map(t => ({ Type: t._id, Count: t.count }))), "Types");
-    autoFitWorkbook(wb);
-    XLSX.writeFile(wb, "discard_mis.xlsx");
+    downloadExcelReport([
+      {
+        name: "Reasons",
+        subtitle: "Discard MIS - Reasons",
+        headers: ["Reason", "Count"],
+        rows: discards.map(d => [d._id, d.count]),
+      },
+      {
+        name: "Types",
+        subtitle: "Discard MIS - Component Types",
+        headers: ["Type", "Count"],
+        rows: typeWise.map(t => [t._id, t.count]),
+      },
+    ], "discard_mis.xlsx");
   };
 
   if (isLoading) return <div className="p-6 flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;

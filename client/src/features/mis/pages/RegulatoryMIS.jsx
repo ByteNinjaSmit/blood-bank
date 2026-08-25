@@ -8,8 +8,7 @@ import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, Cel
 import { Scale, RefreshCw, FileText, FileSpreadsheet, CheckCircle, AlertTriangle } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
-import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
+import { downloadExcelReport } from "@/utils/excelExportHelper";
 import { useRegulatoryMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -52,19 +51,29 @@ export default function RegulatoryMIS() {
   };
 
   const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
-      { Metric: "Total Collection", Value: number(data?.collection) },
-      { Metric: "Total Production", Value: number(data?.production) },
-      { Metric: "Units Tested", Value: number(testing.tested) },
-      { Metric: "Reactive Units", Value: number(testing.reactive) },
-      { Metric: "Reactive Rate", Value: (testing.reactiveRate || 0) + "%" },
-      { Metric: "Units Issued", Value: number(data?.issued) },
-      { Metric: "Units Discarded", Value: number(data?.discarded) },
-    ]), "Regulatory Data");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(testingByDisease.map(d => ({ Test: d.test, ReactiveCount: d.count }))), "By Disease");
-    autoFitWorkbook(wb);
-    XLSX.writeFile(wb, "regulatory_mis.xlsx");
+    const rows = [
+      ["Total Collection", number(data?.collection)],
+      ["Total Production", number(data?.production)],
+      ["Units Tested", number(testing.tested)],
+      ["Reactive Units", number(testing.reactive)],
+      ["Reactive Rate", (testing.reactiveRate || 0) + "%"],
+      ["Units Issued", number(data?.issued)],
+      ["Units Discarded", number(data?.discarded)],
+    ];
+    downloadExcelReport([
+      {
+        name: "Regulatory Data",
+        subtitle: "Regulatory MIS (NACO/FDA) Summary",
+        headers: ["Metric", "Value"],
+        rows,
+      },
+      {
+        name: "By Disease",
+        subtitle: "Regulatory MIS - Reactive Cases by Disease",
+        headers: ["Test", "Reactive Count"],
+        rows: testingByDisease.map(d => [d.test, d.count]),
+      },
+    ], "regulatory_mis.xlsx");
   };
 
   if (isLoading) return <div className="p-6 flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;

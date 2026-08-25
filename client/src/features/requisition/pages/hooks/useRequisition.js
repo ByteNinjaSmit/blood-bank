@@ -336,10 +336,10 @@ export default function useRequisition(authToken) {
     toast.success('Approved');
   };
 
-  const handleIssue = async (unitIds = []) => {
+  const handleIssue = async (unitIds = [], issuedAt) => {
     if (!requestDoc?._id) return;
     setIssuing(true);
-    const res = await requisitionApi.issue(requestDoc._id, unitIds);
+    const res = await requisitionApi.issue(requestDoc._id, unitIds, issuedAt);
     setIssuing(false);
     if (!res.success) return toast.error(res.error || 'Issuing failed');
     await refreshRequest(requestDoc._id);

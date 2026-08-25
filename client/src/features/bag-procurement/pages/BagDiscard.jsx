@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Trash2, Plus, X, CheckCircle, RefreshCw } from 'lucide-react';
+import { Trash2, Plus, CheckCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBagDiscardList, useCreateBagDiscard, useApproveBagDiscard, useRemoveBagDiscard } from '../queries';
 import { useBagStockList } from '../queries';
 import { formatBloodBagQty, calcTotalBags } from '../utils/qtyHelper';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportBagDiscardRegister } from '@/utils/excelExportHelper';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const STATUS_BADGE = {
   PENDING_APPROVAL: 'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -74,14 +75,12 @@ function DiscardDrawer({ onClose, stockItems }) {
   const fieldClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white';
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-orange-800">
-          <h2 className="text-base font-semibold text-white">Create Discard Entry</h2>
-          <button onClick={onClose} className="text-orange-200 hover:text-white"><X className="w-5 h-5" /></button>
-        </div>
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Create Discard Entry</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Stock Item *</label>
             <select required value={stockId} onChange={(e) => handleSelectStock(e.target.value)} className={fieldClass}>
@@ -145,8 +144,8 @@ function DiscardDrawer({ onClose, stockItems }) {
             </button>
           </div>
         </form>
-      </div>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -171,14 +170,12 @@ function ApproveDrawer({ discard, onClose }) {
   const fieldClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white';
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-green-800">
-          <h2 className="text-base font-semibold text-white">Approve Discard</h2>
-          <button onClick={onClose} className="text-green-200 hover:text-white"><X className="w-5 h-5" /></button>
-        </div>
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Approve Discard</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="rounded-lg border border-orange-100 bg-orange-50/50 p-3 text-sm space-y-1">
             <div className="flex justify-between text-gray-600">
               <span className="font-medium">Bag Type</span>
@@ -222,8 +219,8 @@ function ApproveDrawer({ discard, onClose }) {
             </button>
           </div>
         </form>
-      </div>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -242,14 +239,12 @@ function RemoveDrawer({ discard, onClose }) {
   };
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-red-800">
-          <h2 className="text-base font-semibold text-white">Remove Discard Entry</h2>
-          <button onClick={onClose} className="text-red-200 hover:text-white"><X className="w-5 h-5" /></button>
-        </div>
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Remove Discard Entry</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="rounded-lg border border-red-100 bg-red-50/50 p-3 text-sm space-y-1">
             <p className="text-gray-700">
               This removes the discard entry entirely and returns <strong>{formatBloodBagQty(discard.quantity)}</strong> {discard.bagType}
@@ -274,8 +269,8 @@ function RemoveDrawer({ discard, onClose }) {
             </button>
           </div>
         </form>
-      </div>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -319,7 +314,7 @@ export default function BagDiscard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
               <Trash2 className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
@@ -349,7 +344,7 @@ export default function BagDiscard() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Reason</label>

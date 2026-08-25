@@ -2,6 +2,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { User, Clock, Globe, Monitor, Hash } from 'lucide-react';
 import { formatDateTime } from '@/lib/format-date';
+import { entityRef } from '../entityLabel';
 
 // Internal/technical DTO fields that duplicate what's already shown in
 // the entry header (entity type/label, timestamps) — noise in a
@@ -218,7 +219,7 @@ export default function AuditDetailDrawer({ isOpen, onClose, entry }) {
           </div>
           <div className="flex items-center gap-1.5 text-gray-600 col-span-2">
             <Hash className="w-3.5 h-3.5" />
-            {entry.entityType} / {entry.entityLabel || entry.entityId}
+            {entry.entityType} / {entityRef(entry)}
           </div>
           <div className="col-span-2 text-gray-600">
             Request: <span className="font-mono">{entry.requestId || '—'}</span>

@@ -535,7 +535,7 @@ export function registerInventoryJobs(): void {
     'hourly-reservation-scan',
     {},
     {
-      repeat: { cron: '0 * * * *' }, // every hour, on the hour
+      repeat: { cron: '0 * * * *', tz: 'Asia/Kolkata' }, // every hour, on the hour
       removeOnComplete: true,
       removeOnFail: 50,
       jobId: 'hourly-reservation-scan',
@@ -547,7 +547,7 @@ export function registerInventoryJobs(): void {
     'daily-reserved-reminder',
     {},
     {
-      repeat: { cron: '0 9 * * *' }, // daily 09:00 IST
+      repeat: { cron: '0 9 * * *', tz: 'Asia/Kolkata' }, // daily 09:00 IST
       removeOnComplete: true,
       removeOnFail: 50,
       jobId: 'daily-reserved-reminder',
@@ -559,7 +559,7 @@ export function registerInventoryJobs(): void {
     'daily-expiry-scan',
     {},
     {
-      repeat: { cron: '0 8 * * *' }, // daily 08:00 IST
+      repeat: { cron: '0 8 * * *', tz: 'Asia/Kolkata' }, // daily 08:00 IST
       removeOnComplete: true,
       removeOnFail: 50,
       jobId: 'daily-expiry-scan',
@@ -571,7 +571,7 @@ export function registerInventoryJobs(): void {
     'daily-discard-report',
     {},
     {
-      repeat: { cron: '30 21 * * *' }, // daily 21:30 IST (end of day)
+      repeat: { cron: '30 21 * * *', tz: 'Asia/Kolkata' }, // daily 21:30 IST (end of day)
       removeOnComplete: true,
       removeOnFail: 50,
       jobId: 'daily-discard-report',
@@ -583,7 +583,7 @@ export function registerInventoryJobs(): void {
     'monthly-mis-report',
     {},
     {
-      repeat: { cron: '0 6 1 * *' }, // 1st of each month 06:00 IST
+      repeat: { cron: '0 6 1 * *', tz: 'Asia/Kolkata' }, // 1st of each month 06:00 IST
       removeOnComplete: true,
       removeOnFail: 50,
       jobId: 'monthly-mis-report',

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { X, TestTube, Loader2, Calendar, Package, AlertTriangle, User, MapPin, Droplets, CheckCircle } from "lucide-react";
+import { TestTube, Loader2, Calendar, Package, AlertTriangle, User, MapPin, Droplets, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
   const { API, authorizationToken } = useAuth();
@@ -177,36 +178,18 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
     );
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black bg-opacity-50" 
-        onClick={onClose}
-      />
-      
-      {/* Modal */}
-      <div className="relative bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <div className="flex items-center gap-2">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
             <TestTube className="w-6 h-6 text-red-600" />
-            <h2 className="text-xl font-bold text-gray-900">Component Group Details</h2>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="h-8 w-8 p-0"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
+            Component Group Details
+          </DialogTitle>
+        </DialogHeader>
 
         {/* Content */}
-        <div className="p-6">
+        <div>
           {state.isLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="inline-flex items-center gap-2 text-gray-500">
@@ -384,14 +367,13 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+        <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

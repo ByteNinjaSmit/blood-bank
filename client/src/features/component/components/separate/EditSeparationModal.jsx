@@ -25,7 +25,7 @@ export default function EditSeparationModal({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Edit Separation — RPM &amp; Components</DialogTitle>
         </DialogHeader>

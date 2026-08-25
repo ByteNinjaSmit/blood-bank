@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, X, Search, Truck, RefreshCw } from 'lucide-react';
+import { Plus, Search, Truck, RefreshCw } from 'lucide-react';
 import { useSupplierList, useCreateSupplier, useUpdateSupplier, useDeleteSupplier } from '../queries';
 import { toast } from 'sonner';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function Suppliers() {
   const [showAddDrawer, setShowAddDrawer] = useState(false);
@@ -183,15 +184,12 @@ export default function Suppliers() {
         </div>
       </div>
 
-      {showAddDrawer && (
-        <>
-          <div className="fixed inset-0 bg-black/40 z-40" onClick={handleCloseDrawer} />
-          <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-red-800 text-white">
-              <h2 className="text-base font-bold">{editingSupplierId ? 'Edit Chemical Supplier' : 'Register Chemical Supplier'}</h2>
-              <button onClick={handleCloseDrawer} className="text-red-100 hover:text-white"><X className="w-5 h-5" /></button>
-            </div>
-            <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="flex-1 overflow-y-auto p-6 space-y-4">
+      <Dialog open={showAddDrawer} onOpenChange={(open) => { if (!open) handleCloseDrawer(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingSupplierId ? 'Edit Chemical Supplier' : 'Register Chemical Supplier'}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Supplier Name *</label>
                 <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={fieldClass} placeholder="e.g. Tulip Diagnostics" />
@@ -224,10 +222,9 @@ export default function Suppliers() {
                   {editingSupplierId ? (updateSupplier.isPending ? 'Updating…' : 'Update Supplier') : (createSupplier.isPending ? 'Registering…' : 'Register Supplier')}
                 </button>
               </div>
-            </form>
-          </div>
-        </>
-      )}
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

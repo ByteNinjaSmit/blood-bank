@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, X, Search, Factory, RefreshCw } from 'lucide-react';
+import { Plus, Search, Factory, RefreshCw } from 'lucide-react';
 import { useManufacturerList, useCreateManufacturer, useDeleteManufacturer } from '../queries';
 import { toast } from 'sonner';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function Manufacturers() {
   const [showAddDrawer, setShowAddDrawer] = useState(false);
@@ -125,29 +126,25 @@ export default function Manufacturers() {
         </div>
       </div>
 
-      {showAddDrawer && (
-        <>
-          <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setShowAddDrawer(false)} />
-          <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-red-800 text-white">
-              <h2 className="text-base font-bold">Register Chemical Manufacturer</h2>
-              <button onClick={() => setShowAddDrawer(false)} className="text-red-100 hover:text-white"><X className="w-5 h-5" /></button>
+      <Dialog open={showAddDrawer} onOpenChange={(open) => { if (!open) setShowAddDrawer(false); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Register Chemical Manufacturer</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Manufacturer Name *</label>
+              <input required value={mfgName} onChange={(e) => setMfgName(e.target.value)} className={fieldClass} placeholder="e.g. Bio-Rad" />
             </div>
-            <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="flex-1 p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Manufacturer Name *</label>
-                <input required value={mfgName} onChange={(e) => setMfgName(e.target.value)} className={fieldClass} placeholder="e.g. Bio-Rad" />
-              </div>
-              <div className="pt-4 border-t flex gap-3 justify-end">
-                <button type="button" onClick={() => setShowAddDrawer(false)} className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={createManufacturer.isPending} className="px-5 py-2 text-sm font-semibold text-white bg-red-800 rounded-lg hover:bg-red-900 disabled:opacity-60">
-                  {createManufacturer.isPending ? 'Registering…' : 'Register Manufacturer'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </>
-      )}
+            <div className="pt-4 border-t flex gap-3 justify-end">
+              <button type="button" onClick={() => setShowAddDrawer(false)} className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button type="submit" disabled={createManufacturer.isPending} className="px-5 py-2 text-sm font-semibold text-white bg-red-800 rounded-lg hover:bg-red-900 disabled:opacity-60">
+                {createManufacturer.isPending ? 'Registering…' : 'Register Manufacturer'}
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

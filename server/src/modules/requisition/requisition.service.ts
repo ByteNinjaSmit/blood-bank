@@ -166,13 +166,23 @@ export interface RequisitionService {
   ): Promise<RequisitionDto>;
 }
 
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+// Returns the UTC instant corresponding to 19:00 IST (Asia/Kolkata, fixed
+// +05:30, no DST) on (now + addDays), regardless of the server process's
+// own OS/container timezone.
+function istCutoffAt19(addDays: number): Date {
+  const istNow = new Date(Date.now() + IST_OFFSET_MS);
+  istNow.setUTCDate(istNow.getUTCDate() + addDays);
+  istNow.setUTCHours(19, 0, 0, 0);
+  return new Date(istNow.getTime() - IST_OFFSET_MS);
+}
+
 // Reservation window: the requisition's required-by date when it's a valid
 // future time earlier than the day-3 cutoff, otherwise the day-3 cutoff
-// itself — end of day at 19:00 local time (the fixed auto-unreserve moment).
+// itself — end of day at 19:00 IST (the fixed auto-unreserve moment).
 export function computeReservedUntil(requiredAt?: Date | null): Date {
-  const day3Cutoff = new Date();
-  day3Cutoff.setDate(day3Cutoff.getDate() + 3);
-  day3Cutoff.setHours(19, 0, 0, 0);
+  const day3Cutoff = istCutoffAt19(3);
   if (
     requiredAt &&
     !isNaN(requiredAt.getTime()) &&
@@ -1076,6 +1086,7 @@ export function createRequisitionService(deps: {
         action: 'UPDATE',
         entityType: 'BloodUnit',
         entityId: unitId,
+        entityLabel: `Bag ${unitId}`,
         before: { status: unit.status, reservedFor: req.requisitionId },
         after: { status: 'RELEASED', unreservedBy: 'MANUAL', reason },
         reason,
