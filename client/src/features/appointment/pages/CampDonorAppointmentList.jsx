@@ -7,6 +7,7 @@ import { formatDate, formatDateTime } from '@/lib/format-date';
 import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportCampAppointments } from '@/utils/excelExportHelper';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const STATUS_BADGE = {
   PENDING: 'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -31,7 +32,6 @@ function StatusBadge({ status }) {
 const SEX_LABEL = { M: 'Male', F: 'Female', OTHER: 'Other' };
 
 function DetailsDrawer({ donation, onClose }) {
-  if (!donation) return null;
   const d = donation;
   const row = (label, value) => {
     if (value === null || value === undefined || value === '') return null;
@@ -43,44 +43,44 @@ function DetailsDrawer({ donation, onClose }) {
     );
   };
   return (
-    <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-orange-800 sticky top-0">
-          <h2 className="text-base font-semibold text-white">Appointment Details</h2>
-          <button onClick={onClose} className="text-orange-200 hover:text-white text-sm">Close</button>
-        </div>
-        <div className="p-6 space-y-4">
-          <div>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Personal</h3>
-            {row('Full Name', [d.firstName, d.middleName, d.lastName].filter(Boolean).join(' '))}
-            {row('Gender', SEX_LABEL[d.sex] || d.sex)}
-            {row('Date of Birth', d.dob ? formatDate(d.dob) : undefined)}
-            {row('Age', d.age)}
-            {row('Occupation', d.occupation)}
-            {row('Blood Group', d.bloodGroup)}
-            {row('Mobile', d.mobile)}
-            {row('Email', d.email)}
-            {row('Pincode', d.pincode)}
-            {row('Address', d.address)}
+    <Dialog open={Boolean(donation)} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Appointment Details</DialogTitle>
+        </DialogHeader>
+        {d && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Personal</h3>
+              {row('Full Name', [d.firstName, d.middleName, d.lastName].filter(Boolean).join(' '))}
+              {row('Gender', SEX_LABEL[d.sex] || d.sex)}
+              {row('Date of Birth', d.dob ? formatDate(d.dob) : undefined)}
+              {row('Age', d.age)}
+              {row('Occupation', d.occupation)}
+              {row('Blood Group', d.bloodGroup)}
+              {row('Mobile', d.mobile)}
+              {row('Email', d.email)}
+              {row('Pincode', d.pincode)}
+              {row('Address', d.address)}
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Appointment</h3>
+              {row('Camp', d.campId?.name)}
+              {row('Status', <StatusBadge status={d.status} />)}
+              {row('Submitted On', formatDateTime(d.createdAt))}
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Donation History</h3>
+              {row('First-Time Donor', d.isFirstTime ? 'Yes' : 'No')}
+              {row('Repeated Donor', d.isRepeated ? 'Yes' : 'No')}
+              {row('Last Donation', d.lastDonationDate ? formatDate(d.lastDonationDate) : undefined)}
+              {row('Total Donations', d.totalDonations)}
+              {row('Emergency Consent', d.emergencyConsent ? 'Yes' : 'No')}
+            </div>
           </div>
-          <div>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Appointment</h3>
-            {row('Camp', d.campId?.name)}
-            {row('Status', <StatusBadge status={d.status} />)}
-            {row('Submitted On', formatDateTime(d.createdAt))}
-          </div>
-          <div>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Donation History</h3>
-            {row('First-Time Donor', d.isFirstTime ? 'Yes' : 'No')}
-            {row('Repeated Donor', d.isRepeated ? 'Yes' : 'No')}
-            {row('Last Donation', d.lastDonationDate ? formatDate(d.lastDonationDate) : undefined)}
-            {row('Total Donations', d.totalDonations)}
-            {row('Emergency Consent', d.emergencyConsent ? 'Yes' : 'No')}
-          </div>
-        </div>
-      </div>
-    </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -255,7 +255,7 @@ export default function CampDonorAppointmentList() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
               <GiCampingTent className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
@@ -280,7 +280,7 @@ export default function CampDonorAppointmentList() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
         {selectedCamp ? (
           <CampAppointmentsTable camp={selectedCamp} onBack={() => setSelectedCamp(null)} />
         ) : (

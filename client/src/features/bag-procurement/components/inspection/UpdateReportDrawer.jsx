@@ -7,6 +7,7 @@ import ConfirmDeleteModal from '@/components/shared/ConfirmDeleteModal';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
 import { TESTING_TYPE_LABELS } from './inspection-constants';
 import { BLOOD_GROUPS } from '@/lib/blood-groups';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const uploadFile = bagProcurementApi.upload.file;
 const deleteFile = bagProcurementApi.upload.remove;
@@ -110,17 +111,13 @@ export default function UpdateReportDrawer({ onClose, inspection, mode }) {
   const { onKeyDown: handleFormKeyDown2, onChange: handleFormEnterNavChange2 } = createFormEnterNavHandlers();
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white z-50 shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-orange-800">
-          <div>
-            <h2 className="text-base font-semibold text-white">Update Quality Report ({TESTING_TYPE_LABELS[inspection.testingType] ?? inspection.testingType})</h2>
-            <p className="text-xs text-orange-200 mt-0.5">Batch No: {inspection.batchNumber}</p>
-          </div>
-          <button onClick={onClose} className="text-orange-200 hover:text-white"><X className="w-5 h-5" /></button>
-        </div>
-        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown2} onChange={handleFormEnterNavChange2} className="flex-1 overflow-y-auto p-6 space-y-5">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Update Quality Report ({TESTING_TYPE_LABELS[inspection.testingType] ?? inspection.testingType})</DialogTitle>
+          <p className="text-xs text-gray-500 mt-0.5">Batch No: {inspection.batchNumber}</p>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown2} onChange={handleFormEnterNavChange2} className="space-y-5">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -348,7 +345,7 @@ export default function UpdateReportDrawer({ onClose, inspection, mode }) {
             </button>
           </div>
         </form>
-      </div>
+      </DialogContent>
       <ConfirmDeleteModal
         isOpen={confirmDelete.isOpen}
         title={confirmDelete.title}
@@ -356,6 +353,6 @@ export default function UpdateReportDrawer({ onClose, inspection, mode }) {
         onConfirm={confirmDelete.onConfirm}
         onClose={() => setConfirmDelete({ isOpen: false, onConfirm: null, title: '', message: '' })}
       />
-    </>
+    </Dialog>
   );
 }

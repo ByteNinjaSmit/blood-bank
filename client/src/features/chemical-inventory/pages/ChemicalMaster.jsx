@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Search, Settings, FlaskConical, RefreshCw } from 'lucide-react';
+import { Plus, Search, Settings, FlaskConical, RefreshCw } from 'lucide-react';
 import {
   useChemicalList,
   useCategoryList,
@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportChemicalMaster } from '@/utils/excelExportHelper';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function ChemicalMaster() {
   const { user } = useAuth();
@@ -229,42 +230,35 @@ export default function ChemicalMaster() {
       </div>
 
       {/* Dynamic Add Category Drawer */}
-      {showCategoryDrawer && (
-        <>
-          <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setShowCategoryDrawer(false)} />
-          <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-red-800 text-white">
-              <h2 className="text-base font-bold">Add New Master Category</h2>
-              <button onClick={() => setShowCategoryDrawer(false)} className="text-red-100 hover:text-white"><X className="w-5 h-5" /></button>
+      <Dialog open={showCategoryDrawer} onOpenChange={(open) => { if (!open) setShowCategoryDrawer(false); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Master Category</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddCategory} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Category Name *</label>
+              <input required value={catName} onChange={(e) => setCatName(e.target.value)} className={fieldClass} placeholder="e.g. Blood Grouping Reagents" />
             </div>
-            <form onSubmit={handleAddCategory} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="flex-1 p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Category Name *</label>
-                <input required value={catName} onChange={(e) => setCatName(e.target.value)} className={fieldClass} placeholder="e.g. Blood Grouping Reagents" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Description</label>
-                <textarea rows="4" value={catDesc} onChange={(e) => setCatDesc(e.target.value)} className={fieldClass} placeholder="Enter category descriptions" />
-              </div>
-              <div className="pt-4 border-t flex gap-3 justify-end">
-                <button type="button" onClick={() => setShowCategoryDrawer(false)} className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button type="submit" className="px-5 py-2 text-sm font-semibold text-white bg-red-800 rounded-lg hover:bg-red-900">Save Category</button>
-              </div>
-            </form>
-          </div>
-        </>
-      )}
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Description</label>
+              <textarea rows="4" value={catDesc} onChange={(e) => setCatDesc(e.target.value)} className={fieldClass} placeholder="Enter category descriptions" />
+            </div>
+            <div className="pt-4 border-t flex gap-3 justify-end">
+              <button type="button" onClick={() => setShowCategoryDrawer(false)} className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button type="submit" className="px-5 py-2 text-sm font-semibold text-white bg-red-800 rounded-lg hover:bg-red-900">Save Category</button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Chemical Drawer */}
-      {showAddDrawer && (
-        <>
-          <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setShowAddDrawer(false)} />
-          <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white z-50 shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-red-800 text-white">
-              <h2 className="text-base font-bold">Register Chemical Specifications</h2>
-              <button onClick={() => setShowAddDrawer(false)} className="text-red-100 hover:text-white"><X className="w-5 h-5" /></button>
-            </div>
-            <form onSubmit={handleAddChemical} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="flex-1 overflow-y-auto p-6 space-y-4">
+      <Dialog open={showAddDrawer} onOpenChange={(open) => { if (!open) setShowAddDrawer(false); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Register Chemical Specifications</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddChemical} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Chemical / Reagent Name *</label>
                 <input required value={chemForm.name} onChange={(e) => setChemForm({ ...chemForm, name: e.target.value })} className={fieldClass} placeholder="e.g. Anti-A" />
@@ -344,10 +338,9 @@ export default function ChemicalMaster() {
                   {createChemical.isPending ? 'Registering…' : 'Register Chemical'}
                 </button>
               </div>
-            </form>
-          </div>
-        </>
-      )}
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

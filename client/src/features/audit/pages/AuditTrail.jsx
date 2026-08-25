@@ -8,6 +8,7 @@ import AuditDetailDrawer from '../components/AuditDetailDrawer';
 import Pagination from '@/features/user/pages/components/Pagination';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { downloadExcelReport } from '@/utils/excelExportHelper';
+import { entityRef } from '../entityLabel';
 
 // "indeterminate" is the internal TTI decision/result value — the lab
 // term shown to staff everywhere else in the app is "Shadeness".
@@ -276,7 +277,7 @@ export default function AuditTrail() {
                       </td>
                       <td className="px-4 py-2.5 text-gray-700 font-medium">{entry.module || '—'}</td>
                       <td className="px-4 py-2.5 text-gray-700">
-                        <span className="font-mono text-xs">{entry.entityLabel || entry.entityId}</span>
+                        <span className="font-mono text-xs">{entityRef(entry)}</span>
                         <span className="text-gray-400 text-xs ml-1">({entry.entityType})</span>
                       </td>
                       <td className="px-4 py-2.5">

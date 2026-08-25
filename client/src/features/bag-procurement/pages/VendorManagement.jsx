@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Truck, Plus, X, CheckCircle, Ban, Trash2, Users, RefreshCw } from 'lucide-react';
+import { Truck, Plus, CheckCircle, Ban, Trash2, Users, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useVendorList,
@@ -14,6 +14,7 @@ import { exportVendors } from '@/utils/excelExportHelper';
 import { useEditWithReason } from '@/hooks/useEditWithReason';
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const STATUS_BADGE = {
   APPROVED:    'bg-green-50 text-green-700 border-green-200',
@@ -71,18 +72,12 @@ function VendorDrawer({ onClose, editVendor }) {
   const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white z-50 shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-orange-800">
-          <h2 className="text-base font-semibold text-white">
-            {editVendor ? 'Edit Vendor' : 'Add New Vendor'}
-          </h2>
-          <button onClick={onClose} className="text-orange-200 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="flex-1 overflow-y-auto p-6 space-y-4">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{editVendor ? 'Edit Vendor' : 'Add New Vendor'}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Vendor Name *</label>
@@ -147,9 +142,9 @@ function VendorDrawer({ onClose, editVendor }) {
             </button>
           </div>
         </form>
-      </div>
+      </DialogContent>
       {EditReasonDialog}
-    </>
+    </Dialog>
   );
 }
 
@@ -203,7 +198,7 @@ export default function VendorManagement() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
               <Truck className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
@@ -235,7 +230,7 @@ export default function VendorManagement() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <StatCard label="Total Vendors" value={stats.total} color="text-gray-900" />

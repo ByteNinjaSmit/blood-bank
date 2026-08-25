@@ -165,7 +165,7 @@ const RequisitionManagement = () => {
       <div className="min-h-screen bg-gray-50">
         <RequisitionHeader />
 
-        <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="max-w-[1600px] mx-auto px-4 py-8">
           <Stepper
             activeStep={currentStep}
             onStepChange={(s) => setCurrentStep(s)}

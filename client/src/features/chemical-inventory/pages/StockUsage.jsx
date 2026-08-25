@@ -12,7 +12,7 @@ export default function StockUsage() {
   const [activeTab, setActiveTab] = useState('usage');
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 p-6 space-y-6 max-w-[1600px] mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">

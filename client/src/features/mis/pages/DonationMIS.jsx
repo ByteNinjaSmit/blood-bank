@@ -8,8 +8,7 @@ import { AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, BarChart, Bar } 
 import { Activity, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
-import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
+import { downloadExcelReport } from "@/utils/excelExportHelper";
 import { useDonationMis } from "../queries";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 
@@ -49,16 +48,26 @@ export default function DonationMIS() {
   };
 
   const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
     const summaryRows = [
-      { Metric: "Total Donations", Value: summary.total },
-      ...(breakdowns.bySite || []).map(s => ({ Metric: s._id, Value: s.count })),
-      ...(breakdowns.byType || []).map(s => ({ Metric: s._id, Value: s.count })),
+      ["Total Donations", summary.total],
+      ...(breakdowns.bySite || []).map(s => [s._id, s.count]),
+      ...(breakdowns.byType || []).map(s => [s._id, s.count]),
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), "Summary");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(breakdowns.byBloodGroup?.map(g => ({ BloodGroup: g._id, Count: g.count })) || []), "Blood Groups");
-    autoFitWorkbook(wb);
-    XLSX.writeFile(wb, "donation_mis.xlsx");
+    const bgRows = (breakdowns.byBloodGroup || []).map(g => [g._id, g.count]);
+    downloadExcelReport([
+      {
+        name: "Summary",
+        subtitle: "Donation MIS Summary",
+        headers: ["Metric", "Value"],
+        rows: summaryRows,
+      },
+      {
+        name: "Blood Groups",
+        subtitle: "Donation MIS - Blood Group Breakdown",
+        headers: ["Blood Group", "Count"],
+        rows: bgRows,
+      },
+    ], "donation_mis.xlsx");
   };
 
   if (isLoading) return <div className="p-6 flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;

@@ -16,6 +16,7 @@ import { exportProcurementPO } from '@/utils/excelExportHelper';
 import { useEditWithReason } from '@/hooks/useEditWithReason';
 import { useDeleteWithReason } from '@/hooks/useDeleteWithReason';
 import { createFormEnterNavHandlers } from '@/hooks/useFormEnterNav';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 
 
@@ -193,14 +194,12 @@ function PODrawer({ onClose, vendors, poToEdit }) {
   const { onKeyDown: handleFormKeyDown, onChange: handleFormEnterNavChange } = createFormEnterNavHandlers();
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full w-full max-w-3xl bg-white z-50 shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-orange-800">
-          <h2 className="text-base font-semibold text-white">{poToEdit ? "Edit Purchase Order" : "New Purchase Order"}</h2>
-          <button onClick={onClose} className="text-orange-200 hover:text-white"><X className="w-5 h-5" /></button>
-        </div>
-        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="flex-1 overflow-y-auto p-6 space-y-5">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{poToEdit ? "Edit Purchase Order" : "New Purchase Order"}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} onChange={handleFormEnterNavChange} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Vendor *</label>
@@ -318,9 +317,9 @@ function PODrawer({ onClose, vendors, poToEdit }) {
             </button>
           </div>
         </form>
-      </div>
+      </DialogContent>
       {EditReasonDialog}
-    </>
+    </Dialog>
   );
 }
 
@@ -400,7 +399,7 @@ export default function PurchaseOrders() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
               <FileText className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
@@ -430,7 +429,7 @@ export default function PurchaseOrders() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <StatCard label="Total POs" value={stats.total} color="text-gray-900" />
         </div>

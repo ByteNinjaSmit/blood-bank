@@ -8,8 +8,7 @@ import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, Cel
 import { FlaskConical, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
-import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
+import { downloadExcelReport } from "@/utils/excelExportHelper";
 import { useSerologyMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -39,12 +38,26 @@ export default function TestingMIS() {
   };
 
   const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(failures.map(f => ({ Test: f._id, PositiveCount: f.count }))), "Failures");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(overall.map(o => ({ Status: o._id, Count: o.count }))), "Overall");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(byDonationType.map(d => ({ DonationType: d._id, Count: d.count }))), "By Donation Type");
-    autoFitWorkbook(wb);
-    XLSX.writeFile(wb, "serology_mis.xlsx");
+    downloadExcelReport([
+      {
+        name: "Failures",
+        subtitle: "Serology MIS - Test Failures",
+        headers: ["Test", "Positive Count"],
+        rows: failures.map(f => [f._id, f.count]),
+      },
+      {
+        name: "Overall",
+        subtitle: "Serology MIS - Overall Testing Status",
+        headers: ["Status", "Count"],
+        rows: overall.map(o => [o._id, o.count]),
+      },
+      {
+        name: "By Donation Type",
+        subtitle: "Serology MIS - By Donation Type",
+        headers: ["Donation Type", "Count"],
+        rows: byDonationType.map(d => [d._id, d.count]),
+      },
+    ], "serology_mis.xlsx");
   };
 
   if (isLoading) return <div className="p-6 flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;

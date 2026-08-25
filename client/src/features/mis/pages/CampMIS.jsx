@@ -8,8 +8,7 @@ import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, Cel
 import { Tent, RefreshCw, FileText, FileSpreadsheet, MapPin } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
-import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
+import { downloadExcelReport } from "@/utils/excelExportHelper";
 import { useCampMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -39,14 +38,13 @@ export default function CampMIS() {
   };
 
   const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(camps.map(c => ({
-      "Camp Name": c.name, "Location": c.address, "Donors": c.donorCount,
-      "Collected Bags": c.totalBags, "Discarded Bags": c.discardedBags, "Serology Failures": c.serologyFailures,
-    })));
-    XLSX.utils.book_append_sheet(wb, ws, "Camps");
-    autoFitWorkbook(wb);
-    XLSX.writeFile(wb, "camp_mis.xlsx");
+    const rows = camps.map(c => [c.name, c.address, c.donorCount, c.totalBags, c.discardedBags, c.serologyFailures]);
+    downloadExcelReport([{
+      name: "Camps",
+      subtitle: "Camp MIS - Camp Details",
+      headers: ["Camp Name", "Location", "Donors", "Collected Bags", "Discarded Bags", "Serology Failures"],
+      rows,
+    }], "camp_mis.xlsx");
   };
 
   if (isLoading) return <div className="p-6 flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;

@@ -8,8 +8,7 @@ import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
 import { Package, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
-import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
+import { downloadExcelReport } from "@/utils/excelExportHelper";
 import { useInventoryMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -57,17 +56,26 @@ export default function InventoryMIS() {
   };
 
   const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
-      { Metric: "Total Units", Value: summary.total },
-      { Metric: "Near Expiry (<=3 days)", Value: nearExpiry },
-      ...Object.entries(summary.byType).map(([k, v]) => ({ Metric: k, Value: v })),
-    ]), "Summary");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data_.map(item => ({
-      BloodGroup: item._id.group, Rh: item._id.rh, Component: item._id.type, Count: item.count,
-    }))), "Details");
-    autoFitWorkbook(wb);
-    XLSX.writeFile(wb, "inventory_mis.xlsx");
+    const summaryRows = [
+      ["Total Units", summary.total],
+      ["Near Expiry (<=3 days)", nearExpiry],
+      ...Object.entries(summary.byType).map(([k, v]) => [k, v]),
+    ];
+    const detailRows = data_.map(item => [item._id.group, item._id.rh, item._id.type, item.count]);
+    downloadExcelReport([
+      {
+        name: "Summary",
+        subtitle: "Inventory MIS Summary",
+        headers: ["Metric", "Value"],
+        rows: summaryRows,
+      },
+      {
+        name: "Details",
+        subtitle: "Inventory MIS - Stock Details",
+        headers: ["Blood Group", "Rh", "Component", "Count"],
+        rows: detailRows,
+      },
+    ], "inventory_mis.xlsx");
   };
 
   if (isLoading) return <div className="p-6 flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;

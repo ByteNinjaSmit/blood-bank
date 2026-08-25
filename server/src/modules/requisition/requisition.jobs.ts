@@ -50,7 +50,7 @@ export function registerRequisitionJobs(): void {
     JOB_APPROVAL_REMINDER,
     {},
     {
-      repeat: { cron: '0 * * * *' }, // hourly
+      repeat: { cron: '0 * * * *', tz: 'Asia/Kolkata' }, // hourly
       removeOnComplete: true,
       removeOnFail: 50,
       jobId: JOB_APPROVAL_REMINDER,

@@ -8,8 +8,7 @@ import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, Cel
 import { Building2, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
-import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
+import { downloadExcelReport } from "@/utils/excelExportHelper";
 import { useIssueMis } from "../queries";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -37,11 +36,20 @@ export default function IssueMIS() {
   };
 
   const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(issues.map(i => ({ Status: i._id, Count: i.count }))), "Status");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hospitalWise.map(h => ({ Hospital: h._id, UnitsIssued: h.count }))), "Hospitals");
-    autoFitWorkbook(wb);
-    XLSX.writeFile(wb, "issue_mis.xlsx");
+    downloadExcelReport([
+      {
+        name: "Status",
+        subtitle: "Hospital Issue MIS - Request Status",
+        headers: ["Status", "Count"],
+        rows: issues.map(i => [i._id, i.count]),
+      },
+      {
+        name: "Hospitals",
+        subtitle: "Hospital Issue MIS - Hospital Utilization",
+        headers: ["Hospital", "Units Issued"],
+        rows: hospitalWise.map(h => [h._id, h.count]),
+      },
+    ], "issue_mis.xlsx");
   };
 
   if (isLoading) return <div className="p-6 flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;

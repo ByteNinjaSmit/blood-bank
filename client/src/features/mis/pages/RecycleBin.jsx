@@ -269,7 +269,7 @@ export default function RecycleBin() {
     <div className="min-h-screen bg-gray-50">
       {/* Page Header */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
@@ -328,7 +328,7 @@ export default function RecycleBin() {
       </div>
 
       {/* Body */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
           {isLoading ? (
             <div className="p-12 text-center text-gray-400 text-sm">Loading…</div>

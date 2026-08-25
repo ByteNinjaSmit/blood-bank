@@ -7,6 +7,7 @@ import { formatDate, formatDateTime } from '@/lib/format-date';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportAppointments } from '@/utils/excelExportHelper';
 import SearchBox from '@/components/shared/SearchBox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const STATUS_BADGE = {
   pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -34,7 +35,6 @@ function StatusBadge({ status }) {
 const YES_NO_LABEL = { yes: 'Yes', no: 'No' };
 
 function DetailsDrawer({ appointment, onClose }) {
-  if (!appointment) return null;
   const a = appointment;
   const row = (label, value) => {
     if (value === null || value === undefined || value === '') return null;
@@ -46,48 +46,48 @@ function DetailsDrawer({ appointment, onClose }) {
     );
   };
   return (
-    <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-orange-800 sticky top-0">
-          <h2 className="text-base font-semibold text-white">Appointment Details</h2>
-          <button onClick={onClose} className="text-orange-200 hover:text-white text-sm">Close</button>
-        </div>
-        <div className="p-6 space-y-4">
-          <div>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Personal</h3>
-            {row('Full Name', a.fullName)}
-            {row('Gender', a.gender)}
-            {row('Mobile No', a.mobileNo)}
-            {row('Email', a.email)}
-            {row('Blood Group', a.bloodGroup)}
-            {row('Birth Date', a.birthDate ? formatDate(a.birthDate) : undefined)}
-            {row('Age', a.age)}
-            {row('Address', a.address)}
+    <Dialog open={Boolean(appointment)} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Appointment Details</DialogTitle>
+        </DialogHeader>
+        {a && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Personal</h3>
+              {row('Full Name', a.fullName)}
+              {row('Gender', a.gender)}
+              {row('Mobile No', a.mobileNo)}
+              {row('Email', a.email)}
+              {row('Blood Group', a.bloodGroup)}
+              {row('Birth Date', a.birthDate ? formatDate(a.birthDate) : undefined)}
+              {row('Age', a.age)}
+              {row('Address', a.address)}
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Appointment</h3>
+              {row('Preferred Date', a.appointmentDate ? formatDate(a.appointmentDate) : undefined)}
+              {row('Status', <StatusBadge status={a.status} />)}
+              {row('Source', a.source)}
+              {row('Submitted On', formatDateTime(a.createdAt))}
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Medical History</h3>
+              {row('Recent Illness', YES_NO_LABEL[a.recentIllness])}
+              {row('Recent Surgery', YES_NO_LABEL[a.surgery])}
+              {row('On Medication', YES_NO_LABEL[a.medication])}
+              {row('Last Donation', a.lastDonation ? formatDate(a.lastDonation) : undefined)}
+              {row('Donation Frequency (per yr)', a.donationFrequency)}
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Reminder</h3>
+              {row('Wants Reminder', a.wantReminder ? 'Yes' : 'No')}
+              {a.wantReminder && row('Reminder Days Before', a.reminderDays)}
+            </div>
           </div>
-          <div>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Appointment</h3>
-            {row('Preferred Date', a.appointmentDate ? formatDate(a.appointmentDate) : undefined)}
-            {row('Status', <StatusBadge status={a.status} />)}
-            {row('Source', a.source)}
-            {row('Submitted On', formatDateTime(a.createdAt))}
-          </div>
-          <div>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Medical History</h3>
-            {row('Recent Illness', YES_NO_LABEL[a.recentIllness])}
-            {row('Recent Surgery', YES_NO_LABEL[a.surgery])}
-            {row('On Medication', YES_NO_LABEL[a.medication])}
-            {row('Last Donation', a.lastDonation ? formatDate(a.lastDonation) : undefined)}
-            {row('Donation Frequency (per yr)', a.donationFrequency)}
-          </div>
-          <div>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Reminder</h3>
-            {row('Wants Reminder', a.wantReminder ? 'Yes' : 'No')}
-            {a.wantReminder && row('Reminder Days Before', a.reminderDays)}
-          </div>
-        </div>
-      </div>
-    </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -133,7 +133,7 @@ export default function DonorAppointmentList() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
               <CalendarCheck className="w-6 h-6 text-white relative z-10 drop-shadow-sm" />
@@ -159,7 +159,7 @@ export default function DonorAppointmentList() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <StatCard label="Total" value={summary?.total} color="text-gray-900" />
           <StatCard label="Pending" value={summary?.pending} color="text-yellow-600" />

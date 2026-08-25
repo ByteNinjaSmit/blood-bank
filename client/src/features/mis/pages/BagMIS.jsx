@@ -8,8 +8,7 @@ import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, Cel
 import { Droplet, RefreshCw, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
-import { autoFitWorkbook } from "@/utils/xlsxStyleHelper";
+import { downloadExcelReport } from "@/utils/excelExportHelper";
 import { useBagMis } from "../queries";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 
@@ -43,14 +42,24 @@ export default function BagMIS() {
   };
 
   const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(stats.map(s => ({ Status: s._id, Count: s.count }))), "Summary");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet((register.bags || []).map(b => ({
-      BagNo: b.bagNo, DonorID: b.donor?.donorId || "-", BloodGroup: b.bloodGroup || "-",
-      Component: b.componentType, CollectionDate: formatDate(b.collectionDate), Status: b.status,
-    }))), "Bags");
-    autoFitWorkbook(wb);
-    XLSX.writeFile(wb, "blood_bag_mis.xlsx");
+    const bagRows = (register.bags || []).map(b => [
+      b.bagNo, b.donor?.donorId || "-", b.bloodGroup || "-",
+      b.componentType, formatDate(b.collectionDate), b.status,
+    ]);
+    downloadExcelReport([
+      {
+        name: "Summary",
+        subtitle: "Blood Bag MIS Summary",
+        headers: ["Status", "Count"],
+        rows: stats.map(s => [s._id, s.count]),
+      },
+      {
+        name: "Bags",
+        subtitle: "Blood Bag MIS - Bag Register",
+        headers: ["Bag No", "Donor ID", "Blood Group", "Component", "Collection Date", "Status"],
+        rows: bagRows,
+      },
+    ], "blood_bag_mis.xlsx");
   };
 
   if (isLoading) return <div className="p-6 flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
