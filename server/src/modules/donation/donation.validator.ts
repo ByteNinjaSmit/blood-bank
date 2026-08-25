@@ -77,25 +77,34 @@ export const ListDonationsQuery = z.object({
 });
 export type ListDonationsInput = z.infer<typeof ListDonationsQuery>;
 
+// Same shape as MedicalExamSchema (used by CreateDonationBody) so the edit
+// form can mirror the donation-creation "Medical Examination" step field
+// for field, but every field optional (a correction may only touch one).
 const UpdateMedicalExam = z.object({
-  weightKg: z.coerce.number().positive().optional(),
-  hbGdl: z.coerce.number().positive().optional(),
-  temperatureCelsius: z.coerce.number().optional(),
-  pulseBpm: z.coerce.number().positive().optional(),
-  bloodPressureSystolic: z.coerce.number().positive().optional(),
-  bloodPressureDiastolic: z.coerce.number().positive().optional(),
-  oxygenSaturationPercent: z.coerce.number().min(0).max(100).optional(),
+  weightKg: z.coerce.number().positive().max(300).optional(),
+  hbGdl: z.coerce.number().positive().max(25).optional(),
+  temperatureCelsius: z.coerce.number().min(30).max(45).optional(),
+  pulseBpm: z.coerce.number().int().min(30).max(220).optional(),
+  bloodPressure: z
+    .object({
+      systolic: z.coerce.number().int().min(60).max(260),
+      diastolic: z.coerce.number().int().min(30).max(180),
+    })
+    .optional(),
   hasPedalOedema: z.coerce.boolean().optional(),
+  oxygenSaturationPercent: z.coerce.number().min(50).max(100).optional(),
   hasLymphadenopathy: z.coerce.boolean().optional(),
   hasCyanosis: z.coerce.boolean().optional(),
-  systemicExamNotes: z.string().trim().max(1000).optional(),
+  systemicExamNotes: blankToUndef(z.string().trim().max(500).optional()),
   skinClearAtPhlebotomy: z.coerce.boolean().optional(),
   armsFreeOfPunctureScars: z.coerce.boolean().optional(),
-  volumeMl: z.coerce.number().positive().optional(),
+  volumeMl: z.coerce.number().positive().max(700).optional(),
 });
 
 export const UpdateDonationBody = z.object({
   collectedAt: z.coerce.date().optional(),
+  typeOfBag: z.enum(['SB', 'DB', 'TB', 'QB']).optional(),
+  donationType: z.enum(DONATION_TYPE).optional(),
   bagNo: z.string().trim().min(1).max(100).optional(),
   segmentNo: z.string().trim().min(1).max(100).optional(),
   lotNo: z.string().trim().min(1).max(100).optional(),

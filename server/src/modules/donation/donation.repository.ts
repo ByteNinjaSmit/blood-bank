@@ -774,6 +774,8 @@ export function createDonationRepo(): DonationRepo {
     async update(id, patch, actorId) {
       const $set: Record<string, unknown> = { updatedBy: new Types.ObjectId(actorId) };
       if (patch.collectedAt !== undefined) $set.collectedAt = patch.collectedAt;
+      if (patch.typeOfBag !== undefined) $set.typeOfBag = patch.typeOfBag;
+      if (patch.donationType !== undefined) $set.donationType = patch.donationType;
       if (patch.bagNo !== undefined) $set.bagNo = patch.bagNo;
       if (patch.segmentNo !== undefined) $set.segmentNo = patch.segmentNo;
       if (patch.lotNo !== undefined) $set.lotNo = patch.lotNo;
@@ -785,10 +787,10 @@ export function createDonationRepo(): DonationRepo {
         if (me.temperatureCelsius !== undefined)
           $set['medicalExam.temperatureCelsius'] = me.temperatureCelsius;
         if (me.pulseBpm !== undefined) $set['medicalExam.pulseBpm'] = me.pulseBpm;
-        if (me.bloodPressureSystolic !== undefined)
-          $set['medicalExam.bloodPressure.systolic'] = me.bloodPressureSystolic;
-        if (me.bloodPressureDiastolic !== undefined)
-          $set['medicalExam.bloodPressure.diastolic'] = me.bloodPressureDiastolic;
+        if (me.bloodPressure?.systolic !== undefined)
+          $set['medicalExam.bloodPressure.systolic'] = me.bloodPressure.systolic;
+        if (me.bloodPressure?.diastolic !== undefined)
+          $set['medicalExam.bloodPressure.diastolic'] = me.bloodPressure.diastolic;
         if (me.oxygenSaturationPercent !== undefined)
           $set['medicalExam.oxygenSaturationPercent'] = me.oxygenSaturationPercent;
         if (me.hasPedalOedema !== undefined) $set['medicalExam.hasPedalOedema'] = me.hasPedalOedema;

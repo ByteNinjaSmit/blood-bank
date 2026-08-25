@@ -337,14 +337,16 @@ export function createDonationService(deps: {
       const identifierChanged =
         (input.bagNo !== undefined && input.bagNo !== existing.bagNo) ||
         (input.lotNo !== undefined && input.lotNo !== existing.lotNo) ||
-        (input.segmentNo !== undefined && input.segmentNo !== existing.segmentNo);
+        (input.segmentNo !== undefined && input.segmentNo !== existing.segmentNo) ||
+        (input.typeOfBag !== undefined && input.typeOfBag !== existing.typeOfBag);
 
       if (identifierChanged) {
-        // Bag/segment/batch numbers are the physical identifiers used to
-        // trace this donation's units through separation. Once separation
-        // has started (any unit for this donation has moved past the raw
-        // COLLECTED state), changing them would desynchronize the paper
-        // trail from the system record — refuse.
+        // Bag/segment/batch numbers (and bag type, which the batch number
+        // is drawn against) are the physical identifiers used to trace this
+        // donation's units through separation. Once separation has started
+        // (any unit for this donation has moved past the raw COLLECTED
+        // state), changing them would desynchronize the paper trail from
+        // the system record — refuse.
         const separationStarted = await BloodUnitModel.exists({
           donationId: existing.donationId,
           status: { $ne: 'COLLECTED' },
@@ -360,6 +362,8 @@ export function createDonationService(deps: {
         id,
         {
           collectedAt: input.collectedAt,
+          typeOfBag: input.typeOfBag,
+          donationType: input.donationType,
           bagNo: input.bagNo,
           segmentNo: input.segmentNo,
           lotNo: input.lotNo,
