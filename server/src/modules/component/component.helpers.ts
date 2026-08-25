@@ -39,6 +39,23 @@ export async function resolveDonation(donationIdOrObjectId: string) {
   return donation;
 }
 
+// Component separation from a whole-blood donation only ever yields these
+// four derived products — WB is never re-selected. Mirrors
+// client/src/features/component/pages/ComponentSeparate.jsx's
+// SEPARABLE_COMPONENT_TYPES exactly; keep the two in sync.
+export const SEPARABLE_COMPONENT_TYPES = ['PRBC', 'FFP', 'RDP', 'CRYO'];
+
+/**
+ * Bag-type capacity: Single/Double bags only ever split into PRBC + FFP;
+ * Triple/Quad bags can additionally yield RDP and CRYO. SDP donations are
+ * apheresis-collected as a single, already-separated product.
+ */
+export function allowedComponentTypes(typeOfBag: string | undefined, donationType: string | undefined) {
+  if (donationType === 'SDP') return ['SDP'];
+  if (typeOfBag === 'TB' || typeOfBag === 'QB') return SEPARABLE_COMPONENT_TYPES;
+  return ['PRBC', 'FFP'];
+}
+
 export function componentSlot(units: any[], types: string[], tti: any) {
   const u = units.find((x) => types.includes(x.componentType));
   if (!u) return { status: 'unprepared' as const };

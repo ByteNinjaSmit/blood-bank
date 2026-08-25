@@ -148,9 +148,9 @@ export default function MasterDonations() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit modal — clerical fields only (bag/segment/batch no, collected date/time, notes, phlebotomist) */}
+      {/* Edit modal — clerical fields + medical exam/vitals (bag/segment/batch no, collected date/time, notes, fitness, medical exam) */}
       <Dialog open={!!reg.editDonationId} onOpenChange={(open) => { if (!open) reg.setEditDonationId(null); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Donation</DialogTitle>
           </DialogHeader>

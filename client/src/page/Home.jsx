@@ -242,14 +242,14 @@ export default function BloodBankWelcome() {
           title: "TTD Testing",
           desc: "Enter TTD testing results for collected units.",
           moduleName: "Labs",
-          link: "/labs/serology",
+          link: "/labs/ttd",
         },
         {
           icon: Eye,
           title: "TTD Testing Results",
           desc: "Review finalized TTD testing results and statuses.",
           moduleName: "Labs",
-          link: "/labs/serology-results",
+          link: "/labs/ttd-testing",
         },
         {
           icon: Shield,

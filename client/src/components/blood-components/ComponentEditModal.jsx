@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/core/api-client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDateTime } from "@/lib/format-date";
 import { COMPONENT_LABEL } from "@/constants/component-types";
 
@@ -35,6 +36,7 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
   const [rpmSecondSpin, setRpmSecondSpin] = useState("");
   const [separationTime, setSeparationTime] = useState("");
   const [editReason, setEditReason] = useState("");
+  const [addType, setAddType] = useState("");
 
   const fetchDetails = async () => {
     if (!componentId) return;
@@ -92,6 +94,35 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
 
   const usedTypes = Object.values(fields).map((f) => f.componentType);
 
+  // Bag-type capacity — a Single/Double bag only ever yields PRBC + FFP;
+  // Triple/Quad can additionally yield RDP and CRYO. SDP donations are a
+  // single, already-separated apheresis product. Mirrors the same rule
+  // enforced on the Component Separate screen and the server.
+  const allowedTypesForBag =
+    bagInfo?.donationType === "SDP"
+      ? ["SDP"]
+      : bagInfo?.typeOfBag === "TB" || bagInfo?.typeOfBag === "QB"
+      ? ["PRBC", "FFP", "RDP", "CRYO"]
+      : ["PRBC", "FFP"];
+  const addableTypes = allowedTypesForBag.filter((t) => !usedTypes.includes(t));
+
+  const handleAddComponent = () => {
+    if (!addType) return;
+    const typeDef = TYPES.find((t) => t.type === addType);
+    if (!typeDef) return;
+    setFields((prev) => ({
+      ...prev,
+      [typeDef.key]: {
+        unitId: undefined,
+        componentType: addType,
+        volumeMl: "",
+        storageLocation: "",
+        expiryDate: "",
+      },
+    }));
+    setAddType("");
+  };
+
   const handleSave = async () => {
     const entries = Object.entries(fields);
     if (entries.length === 0) {
@@ -134,7 +165,7 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => { if (!o) onClose?.(); }}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>{bagInfo ? `Edit Components – Bag ${bagInfo.bagNo}` : "Edit Components"}</DialogTitle>
       </DialogHeader>
@@ -145,10 +176,6 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
             Loading component details...
           </div>
         </div>
-      ) : Object.keys(fields).length === 0 ? (
-        <p className="text-sm text-slate-500 py-4 text-center">
-          No prepared components on this bag to edit.
-        </p>
       ) : (
         <div className="space-y-4">
           {bagInfo?.lastEditedAt && (
@@ -158,9 +185,20 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
             </p>
           )}
 
+          {Object.keys(fields).length === 0 && (
+            <p className="text-sm text-slate-500 py-2 text-center">
+              No prepared components on this bag yet — add one below.
+            </p>
+          )}
+
           {TYPES.filter(({ key }) => fields[key]).map(({ key, label }) => (
             <div key={key} className="rounded-lg border border-slate-200 p-3 space-y-2">
-              <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">{label}</div>
+              <div className="flex items-center gap-2">
+                <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">{label}</div>
+                {!fields[key].unitId && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">New</span>
+                )}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div>
                   <label className="text-[10px] font-semibold text-slate-500 uppercase">Component</label>
@@ -169,7 +207,9 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
                     value={fields[key].componentType}
                     onChange={(e) => setField(key, "componentType", e.target.value)}
                   >
-                    {COMPONENT_TYPE_OPTIONS.map((t) => (
+                    {COMPONENT_TYPE_OPTIONS.filter(
+                      (t) => allowedTypesForBag.includes(t) || t === fields[key].componentType
+                    ).map((t) => (
                       <option key={t} value={t}>{COMPONENT_LABEL[t] || t}</option>
                     ))}
                   </select>
@@ -206,6 +246,38 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
               </div>
             </div>
           ))}
+
+          {addableTypes.length > 0 ? (
+            <div className="rounded-lg border border-dashed border-slate-300 p-3 flex items-end gap-3">
+              <div className="flex-1">
+                <label className="text-[10px] font-semibold text-slate-500 uppercase">Add Component</label>
+                <Select value={addType} onValueChange={setAddType}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Select component type…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {addableTypes.map((t) => (
+                      <SelectItem key={t} value={t}>{COMPONENT_LABEL[t] || t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAddComponent}
+                disabled={!addType}
+                className="h-9 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                Add
+              </Button>
+            </div>
+          ) : (
+            <p className="text-[11px] text-slate-400 px-1">
+              This {bagInfo?.typeOfBag || "SB"} bag already has the maximum components for its type.
+            </p>
+          )}
 
           <div className="rounded-lg border border-slate-200 p-3 space-y-2">
             <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">RPM</div>

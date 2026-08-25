@@ -26,7 +26,7 @@ export async function getDetailedDonationHistory(donorId: string): Promise<any[]
       : Promise.resolve([]),
     BloodUnitModel.find({ donationId: { $in: donationIds }, deletedAt: null }).lean(),
     TtiResultModel.find({ donationId: { $in: donationIds } })
-      .select('donationId releaseDecision editReason lastEditedAt')
+      .select('donationId releaseDecision editReason lastEditedAt retestedAt')
       .lean(),
   ]);
 
@@ -128,6 +128,9 @@ export async function getDetailedDonationHistory(donorId: string): Promise<any[]
       ttiReleaseDecision: tti?.releaseDecision,
       ttiEditReason: tti?.editReason || null,
       ttiLastEditedAt: tti?.lastEditedAt ? tti.lastEditedAt.toISOString() : null,
+      ttiRetestedAt: tti?.retestedAt ? tti.retestedAt.toISOString() : null,
+      medicalExam: (donation as unknown as { medicalExam?: Record<string, unknown> }).medicalExam,
+      donorFitness: (donation as unknown as { donorFitness?: Record<string, unknown> }).donorFitness,
     };
   });
 }

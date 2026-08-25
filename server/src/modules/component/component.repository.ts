@@ -26,7 +26,7 @@ import {
 } from '@/modules/component/component.mapper';
 import { getShelfDays, PRODUCT_CODE } from '@/shared/component-type';
 import type { ComponentType } from '@/shared/enums';
-import { resolveDonation, componentSlot } from './component.helpers';
+import { resolveDonation, componentSlot, allowedComponentTypes } from './component.helpers';
 import type { ComponentListFilters, NearExpiryFilters } from './component.helpers';
 import { componentList } from './component.read';
 
@@ -77,7 +77,9 @@ export interface ComponentRepo {
     donationId: string,
     fields: {
       components: Array<{
-        unitId: string;
+        // Absent -> create a brand-new component of this type on the bag
+        // (bounded by the bag's typeOfBag capacity, same as Separate).
+        unitId?: string;
         componentType: string;
         volumeMl: number;
         storageLocation?: string;
@@ -429,6 +431,8 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
           bagNo: donationDoc.bagNo || donationDoc.donationId,
           segmentNo: donationDoc.segmentNo,
           bloodGroup: `${abo}${rh === 'POSITIVE' ? '+' : '-'}`,
+          typeOfBag: donationDoc.typeOfBag || 'SB',
+          donationType: donationDoc.donationType,
           collectionDate: donationDoc.collectedAt.toISOString(),
           status: donationDoc.donorFitness?.isFit ? 'collected' : 'rejected',
           site: donationDoc.campId ? { name: campDoc?.name || 'Camp' } : { name: 'Inhouse' },
@@ -535,26 +539,89 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
 
       const unitsById = new Map(existingUnits.map((u) => [u.unitId, u]));
 
-      // Guard against two edited slots landing on the same component type.
+      // Guard against two edited/new slots landing on the same component type.
       const mappedTypes = components.map((c) => c.componentType as ComponentType);
       if (new Set(mappedTypes).size !== mappedTypes.length) {
         throw new ValidationError('Each component type may only appear once per bag');
       }
 
+      // Bag-type capacity — a Single/Double bag only ever yields PRBC + FFP;
+      // Triple/Quad can additionally yield RDP and CRYO. Mirrors the same
+      // rule enforced on the Component Separate screen.
+      const allowed = allowedComponentTypes(
+        (donation as any).typeOfBag,
+        (donation as any).donationType,
+      );
+      const disallowedType = mappedTypes.find((t) => !allowed.includes(t));
+      if (disallowedType) {
+        throw new ValidationError(
+          `${disallowedType} is not a valid component for a ${(donation as any).typeOfBag || 'SB'} bag`,
+        );
+      }
+      if (mappedTypes.length > allowed.length) {
+        throw new ValidationError('This bag type does not support that many components');
+      }
+
       const actorObjId = new Types.ObjectId(actorId);
+
+      // Resolved lazily (only if a brand-new component is actually being
+      // added) — new units reuse the bag's existing ABO/Rh, falling back to
+      // the donor record exactly like separate() does for the first unit.
+      let aboGroup = existingUnits[0]?.aboGroup;
+      let rhFactor = existingUnits[0]?.rhFactor;
 
       for (let i = 0; i < components.length; i++) {
         const entry = components[i]!;
-        const unit = unitsById.get(entry.unitId);
-        if (!unit) throw new NotFoundError('Component', entry.unitId);
+        const newType = mappedTypes[i]!;
 
         const newVolume = Number(entry.volumeMl);
         if (!Number.isFinite(newVolume) || newVolume <= 0) {
           throw new ValidationError('Volume must be greater than zero');
         }
+
+        if (!entry.unitId) {
+          // Adding a brand-new component to this bag (e.g. upgrading the
+          // recorded separation to include an extra product).
+          if (!aboGroup) {
+            const donor = await DonorModel.findById(donation.donor).lean();
+            aboGroup = donor?.bloodGroup || 'O';
+            rhFactor = donor?.rh === 'POSITIVE' ? 'POSITIVE' : 'NEGATIVE';
+          }
+          const productCode = PRODUCT_CODE[newType] ?? newType;
+          const shelfDays = getShelfDays(newType);
+          const expiresAt = entry.expiryDate ? new Date(entry.expiryDate) : (() => {
+            const d = new Date(donation.collectedAt);
+            d.setDate(d.getDate() + shelfDays);
+            return d;
+          })();
+          const idRoot = donation.bagNo || resolvedDonationId;
+          await BloodUnitModel.create({
+            unitId: `${idRoot}-${newType}`,
+            productCode,
+            donationId: resolvedDonationId,
+            componentType: newType as any,
+            aboGroup: aboGroup as any,
+            rhFactor: rhFactor as any,
+            volumeMl: newVolume,
+            collectedAt: donation.collectedAt,
+            expiresAt,
+            status: 'COLLECTED',
+            statusHistory: [
+              { to: 'COLLECTED', event: 'SEPARATE', actor: actorObjId, at: new Date() },
+            ],
+            campId: donation.campId,
+            storageLocation: entry.storageLocation?.trim() || undefined,
+            createdBy: actorObjId,
+            updatedBy: actorObjId,
+          } as any);
+          continue;
+        }
+
+        const unit = unitsById.get(entry.unitId);
+        if (!unit) throw new NotFoundError('Component', entry.unitId);
+
         unit.volumeMl = newVolume;
 
-        const newType = mappedTypes[i]!;
         if (newType !== unit.componentType) {
           unit.componentType = newType as any;
           unit.productCode = PRODUCT_CODE[newType] ?? newType;
@@ -573,6 +640,39 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
 
         unit.updatedBy = actorObjId;
         await unit.save();
+      }
+
+      // If this bag had already gone through separation-complete before
+      // this edit (its other units are already past COLLECTED), any
+      // component just added by this edit is sitting fresh at COLLECTED —
+      // catch it up to the same pipeline stage as its siblings, otherwise
+      // it stays "under separation" forever and wrongly pulls the whole
+      // bag back into the Component Separate worklist. No new technician
+      // signature is required: this is a correction, not a fresh
+      // separation event, and editReason already carries the audit trail.
+      const separationAlreadyCompleted = existingUnits.some((u) => u.status !== 'COLLECTED');
+      if (separationAlreadyCompleted) {
+        const tti = await TtiResultModel.findOne({ donationId: resolvedDonationId }).lean();
+        const shouldRelease = tti?.releaseDecision === 'released';
+        if (shouldRelease) {
+          await deps.units.applyEventToDonation(resolvedDonationId, 'BEGIN_TESTING', actorId, [
+            'COLLECTED',
+          ]);
+          await deps.units.applyEventToDonation(resolvedDonationId, 'AWAIT_TTI', actorId, [
+            'IN_TESTING',
+          ]);
+          await deps.units.applyEventToDonation(resolvedDonationId, 'RELEASE', actorId, [
+            'QUARANTINE',
+          ]);
+        } else {
+          await deps.units.applyEventToDonation(
+            resolvedDonationId,
+            'SEPARATION_COMPLETE',
+            actorId,
+            ['COLLECTED'],
+            `Edited: ${editReason.trim()}`,
+          );
+        }
       }
 
       const separationSet: Record<string, unknown> = {

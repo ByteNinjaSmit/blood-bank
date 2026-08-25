@@ -50,7 +50,10 @@ const PatchBagBody = z.object({
   components: z
     .array(
       z.object({
-        unitId: z.string().trim().min(1),
+        // Absent for a brand-new component being added in this same edit
+        // (e.g. upgrading a Single/Double bag's separation to include an
+        // extra product) — patchBag() creates a fresh BloodUnit for those.
+        unitId: z.string().trim().min(1).optional(),
         componentType: z.string().trim().min(1),
         volumeMl: z.coerce.number().positive(),
         storageLocation: z.string().trim().max(120).optional(),

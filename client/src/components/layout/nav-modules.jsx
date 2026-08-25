@@ -166,14 +166,14 @@ export const MODULES = [
     subModules: [
       {
         name: "TTD Testing Results",
-        href: "/labs/serology-results",
+        href: "/labs/ttd-testing",
         permissions: ["read"],
         description: "View TTD testing results",
         icon: <FaEye className="w-5 h-5" />,
       },
       {
         name: "TTD Testing",
-        href: "/labs/serology",
+        href: "/labs/ttd",
         permissions: ["write", "read"],
         description: "Enter TTD testing results",
         icon: <FaMicroscope className="w-5 h-5" />,

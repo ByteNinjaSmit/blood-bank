@@ -158,7 +158,7 @@ export function useDonationRegister(activeTab, setActiveTab) {
     if (bagTypeFilter && d.typeOfBag !== bagTypeFilter) return false;
     if (bloodGroupFilter && d.bloodGroup !== bloodGroupFilter) return false;
     if (statusFilter && donationStatus(d) !== statusFilter) return false;
-    if (ttiRetestFilter && !d.ttiEditReason) return false;
+    if (ttiRetestFilter && !d.ttiRetestedAt) return false;
     if (fromDate && (!d.collectedAt || new Date(d.collectedAt) < new Date(fromDate))) return false;
     if (toDate && (!d.collectedAt || new Date(d.collectedAt) > new Date(`${toDate}T23:59:59`))) return false;
     return true;
