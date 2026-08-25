@@ -56,7 +56,7 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
       segmentNo: donation?.segmentNo || '',
       donationType: donation?.donationType || '',
       collectedAt: donation?.collectedAt || '',
-      notes: donation?.notes || '',
+      editReason: '',
       isFit: donation?.donorFitness?.isFit ?? donation?.isFit ?? true,
       rejectionReason: donation?.donorFitness?.rejectionReason || '',
       weightKg: me.weightKg ?? '',
@@ -130,7 +130,7 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
       segmentNo: data.segmentNo || undefined,
       lotNo: data.lotNo || undefined,
       collectedAt: data.collectedAt,
-      notes: data.notes || undefined,
+      editReason: data.editReason.trim(),
       isFit: data.isFit,
       rejectionReason: data.isFit ? undefined : (data.rejectionReason || undefined),
       medicalExam: {
@@ -377,9 +377,11 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea id="notes" rows={3} {...register('notes')} />
-        {errors.notes && <p className="text-xs text-red-600">{errors.notes.message}</p>}
+        <Label htmlFor="editReason">
+          Reason for Edit <span className="text-red-500">*</span>
+        </Label>
+        <Textarea id="editReason" rows={2} placeholder="Why are these details being corrected?" {...register('editReason')} />
+        {errors.editReason && <p className="text-xs text-red-600">{errors.editReason.message}</p>}
       </div>
 
       <div className="flex justify-end gap-3 pt-2 border-t">

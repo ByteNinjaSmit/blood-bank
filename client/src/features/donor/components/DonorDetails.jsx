@@ -186,56 +186,45 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
         </div>
 
         {/* Medical Information — most recent donation (updates whenever a
-            new donation is recorded for this donor) */}
-        {recentExam && (
-          <div className="rounded-lg border border-slate-100 bg-white/70 p-4">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <p className="font-semibold text-slate-700">Medical Information (Most Recent Donation)</p>
-              {mostRecentDonation?.collectedAt && (
-                <span className="text-xs text-slate-400">
-                  {new Date(mostRecentDonation.collectedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                </span>
-              )}
-            </div>
+            new donation is recorded for this donor). Renders as soon as a
+            donation record exists, even before the detail fetch resolves
+            or if a particular vital wasn't captured, so this section is
+            never silently blank. */}
+        <div className="rounded-lg border border-slate-100 bg-white/70 p-4">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="font-semibold text-slate-700">Medical Information (Most Recent Donation)</p>
+            {mostRecentDonation?.collectedAt && (
+              <span className="text-xs text-slate-400">
+                {new Date(mostRecentDonation.collectedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </span>
+            )}
+          </div>
+          {isLoading && !mostRecentDonation ? (
+            <p className="text-sm text-slate-400">Loading vitals…</p>
+          ) : !mostRecentDonation ? (
+            <p className="text-sm text-slate-400">No donations recorded for this donor yet.</p>
+          ) : !recentExam ? (
+            <p className="text-sm text-slate-400">No medical exam was recorded for the most recent donation ({mostRecentDonation.donationId}).</p>
+          ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-600">
-              {recentExam.hbGdl !== undefined && (
-                <p><span className="font-medium">Hb:</span> {recentExam.hbGdl} g/dL</p>
-              )}
-              {recentExam.weightKg !== undefined && (
-                <p><span className="font-medium">Weight:</span> {recentExam.weightKg} kg</p>
-              )}
-              {recentExam.pulseBpm !== undefined && (
-                <p><span className="font-medium">Pulse:</span> {recentExam.pulseBpm} bpm</p>
-              )}
-              {recentExam.temperatureCelsius !== undefined && (
-                <p><span className="font-medium">Temp:</span> {recentExam.temperatureCelsius} °C</p>
-              )}
-              {recentExam.bloodPressure && (
-                <p><span className="font-medium">BP:</span> {recentExam.bloodPressure.systolic}/{recentExam.bloodPressure.diastolic}</p>
-              )}
-              {recentExam.oxygenSaturationPercent !== undefined && (
-                <p><span className="font-medium">SpO2:</span> {recentExam.oxygenSaturationPercent}%</p>
-              )}
-              {recentExam.volumeMl !== undefined && (
-                <p><span className="font-medium">Volume:</span> {recentExam.volumeMl} mL</p>
-              )}
-              {mostRecentDonation?.donorFitness?.isFit !== undefined && (
-                <p>
-                  <span className="font-medium">Fitness:</span>{' '}
+              <p><span className="font-medium">Hb:</span> {recentExam.hbGdl !== undefined ? `${recentExam.hbGdl} g/dL` : '—'}</p>
+              <p><span className="font-medium">Weight:</span> {recentExam.weightKg !== undefined ? `${recentExam.weightKg} kg` : '—'}</p>
+              <p><span className="font-medium">Pulse:</span> {recentExam.pulseBpm !== undefined ? `${recentExam.pulseBpm} bpm` : '—'}</p>
+              <p><span className="font-medium">Temp:</span> {recentExam.temperatureCelsius !== undefined ? `${recentExam.temperatureCelsius} °C` : '—'}</p>
+              <p><span className="font-medium">BP:</span> {recentExam.bloodPressure ? `${recentExam.bloodPressure.systolic}/${recentExam.bloodPressure.diastolic}` : '—'}</p>
+              <p><span className="font-medium">SpO2:</span> {recentExam.oxygenSaturationPercent !== undefined ? `${recentExam.oxygenSaturationPercent}%` : '—'}</p>
+              <p><span className="font-medium">Volume:</span> {recentExam.volumeMl !== undefined ? `${recentExam.volumeMl} mL` : '—'}</p>
+              <p>
+                <span className="font-medium">Fitness:</span>{' '}
+                {mostRecentDonation?.donorFitness?.isFit !== undefined ? (
                   <span className={mostRecentDonation.donorFitness.isFit ? 'text-green-700' : 'text-red-700'}>
                     {mostRecentDonation.donorFitness.isFit ? 'Fit' : 'Unfit'}
                   </span>
-                </p>
-              )}
-              {yesNo(recentExam.hasPedalOedema) && (
-                <p><span className="font-medium">Pedal Oedema:</span> {yesNo(recentExam.hasPedalOedema)}</p>
-              )}
-              {yesNo(recentExam.hasLymphadenopathy) && (
-                <p><span className="font-medium">Lymphadenopathy:</span> {yesNo(recentExam.hasLymphadenopathy)}</p>
-              )}
-              {yesNo(recentExam.hasCyanosis) && (
-                <p><span className="font-medium">Cyanosis:</span> {yesNo(recentExam.hasCyanosis)}</p>
-              )}
+                ) : '—'}
+              </p>
+              <p><span className="font-medium">Pedal Oedema:</span> {yesNo(recentExam.hasPedalOedema) || '—'}</p>
+              <p><span className="font-medium">Lymphadenopathy:</span> {yesNo(recentExam.hasLymphadenopathy) || '—'}</p>
+              <p><span className="font-medium">Cyanosis:</span> {yesNo(recentExam.hasCyanosis) || '—'}</p>
               {recentExam.systemicExamNotes && (
                 <p className="col-span-2 md:col-span-4"><span className="font-medium">Systemic Exam Notes:</span> {recentExam.systemicExamNotes}</p>
               )}
@@ -243,8 +232,8 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
                 <p className="col-span-2 md:col-span-4"><span className="font-medium">Rejection Reason:</span> {mostRecentDonation.donorFitness.rejectionReason}</p>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Donation History */}
         {isLoading ? (

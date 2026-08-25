@@ -22,7 +22,11 @@ export function useDonorDetail(id) {
     queryKey: donorKeys.detail(id),
     queryFn: () => donorApi.detail(id),
     enabled: Boolean(id),
-    staleTime: 60_000,
+    // Always refetched on mount — donationHistory[0] (and the medical
+    // exam/vitals derived from it) must reflect whichever donation was
+    // most recently recorded, so a stale cached response from before a
+    // new donation was added must never be shown here.
+    staleTime: 0,
   });
 }
 

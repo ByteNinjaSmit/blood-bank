@@ -14,7 +14,7 @@ export const donationEditSchema = z.object({
   segmentNo: z.string().trim().optional(),
   donationType: z.string().trim().optional(),
   collectedAt: z.string().min(1, 'Collection date/time is required'),
-  notes: z.string().trim().max(1000).optional(),
+  editReason: z.string().trim().min(1, 'A reason is required to edit this donation').max(500),
 
   // Fitness
   isFit: z.preprocess((v) => (v === 'true' ? true : v === 'false' ? false : v), z.boolean().optional()),

@@ -108,10 +108,10 @@ export const UpdateDonationBody = z.object({
   bagNo: z.string().trim().min(1).max(100).optional(),
   segmentNo: z.string().trim().min(1).max(100).optional(),
   lotNo: z.string().trim().min(1).max(100).optional(),
-  notes: blankToUndef(z.string().trim().max(1000).optional()),
   medicalExam: UpdateMedicalExam.optional(),
   isFit: z.coerce.boolean().optional(),
   rejectionReason: blankToUndef(z.string().trim().max(500).optional()),
+  editReason: z.string().trim().min(1, 'A reason is required to edit this donation').max(500),
 });
 export type UpdateDonationInput = z.infer<typeof UpdateDonationBody>;
 

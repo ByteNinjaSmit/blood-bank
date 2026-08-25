@@ -642,6 +642,39 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         await unit.save();
       }
 
+      // If this bag had already gone through separation-complete before
+      // this edit (its other units are already past COLLECTED), any
+      // component just added by this edit is sitting fresh at COLLECTED —
+      // catch it up to the same pipeline stage as its siblings, otherwise
+      // it stays "under separation" forever and wrongly pulls the whole
+      // bag back into the Component Separate worklist. No new technician
+      // signature is required: this is a correction, not a fresh
+      // separation event, and editReason already carries the audit trail.
+      const separationAlreadyCompleted = existingUnits.some((u) => u.status !== 'COLLECTED');
+      if (separationAlreadyCompleted) {
+        const tti = await TtiResultModel.findOne({ donationId: resolvedDonationId }).lean();
+        const shouldRelease = tti?.releaseDecision === 'released';
+        if (shouldRelease) {
+          await deps.units.applyEventToDonation(resolvedDonationId, 'BEGIN_TESTING', actorId, [
+            'COLLECTED',
+          ]);
+          await deps.units.applyEventToDonation(resolvedDonationId, 'AWAIT_TTI', actorId, [
+            'IN_TESTING',
+          ]);
+          await deps.units.applyEventToDonation(resolvedDonationId, 'RELEASE', actorId, [
+            'QUARANTINE',
+          ]);
+        } else {
+          await deps.units.applyEventToDonation(
+            resolvedDonationId,
+            'SEPARATION_COMPLETE',
+            actorId,
+            ['COLLECTED'],
+            `Edited: ${editReason.trim()}`,
+          );
+        }
+      }
+
       const separationSet: Record<string, unknown> = {
         lastEditReason: editReason.trim(),
         lastEditedAt: new Date(),

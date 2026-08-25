@@ -165,7 +165,7 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => { if (!o) onClose?.(); }}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>{bagInfo ? `Edit Components – Bag ${bagInfo.bagNo}` : "Edit Components"}</DialogTitle>
       </DialogHeader>

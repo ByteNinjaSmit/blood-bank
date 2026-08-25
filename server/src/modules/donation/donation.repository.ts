@@ -779,7 +779,11 @@ export function createDonationRepo(): DonationRepo {
       if (patch.bagNo !== undefined) $set.bagNo = patch.bagNo;
       if (patch.segmentNo !== undefined) $set.segmentNo = patch.segmentNo;
       if (patch.lotNo !== undefined) $set.lotNo = patch.lotNo;
-      if (patch.notes !== undefined) $set.notes = patch.notes;
+      if (patch.editReason !== undefined) {
+        $set.lastEditReason = patch.editReason;
+        $set.lastEditedAt = new Date();
+        $set.lastEditedBy = new Types.ObjectId(actorId);
+      }
       const me = patch.medicalExam;
       if (me) {
         if (me.weightKg !== undefined) $set['medicalExam.weightKg'] = me.weightKg;
