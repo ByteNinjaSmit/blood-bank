@@ -106,12 +106,12 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                 </div>
 
                 {/* Center: Component Details */}
-                <div className="flex-1 px-2 flex flex-col justify-start pt-1.5 select-none text-left font-normal uppercase tracking-tight text-black text-[11.5px] leading-tight min-w-0">
-                  <h4 className="text-[13px] font-bold leading-none text-black uppercase mb-1.5">
+                <div className="flex-1 px-2 flex flex-col justify-start pt-1.5 select-none text-left font-normal uppercase tracking-tight text-black text-[12px] leading-tight min-w-0">
+                  <h4 className="text-[15px] font-bold leading-none text-black uppercase mb-1.5">
                     {COMPONENT_PRINT_LABEL[comp.componentType] || comp.componentType || 'Blood Component'}
                   </h4>
                   <div className="flex flex-col gap-y-0.5 font-medium">
-                    <span className="truncate">Donor ID{'   '}: {bag.donorPublicId || '—'}</span>
+                    {/* <span className="truncate">Donor ID{'   '}: {bag.donorPublicId || '—'}</span> */}
                     <span className="truncate">Bag No{'    '}: {bag.bagNo || '—'}</span>
                     <span className="break-words">Component No{'  '}: {inv._id || '—'}</span>
                     <span className="truncate">Volume{'    '}: {comp.volumeMl || '—'} ml</span>
@@ -147,7 +147,7 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
                   </span>
 
                   {/* Two-column grid for details */}
-                  <div className="grid grid-cols-2 gap-x-4 text-[12px] font-normal text-black uppercase leading-tight mt-1">
+                  <div className="grid grid-cols-2 gap-x-0 text-[12px] font-normal text-black uppercase leading-tight mt-1">
                     {/* Column 1 */}
                     <div className="flex flex-col gap-y-1.5">
                       <span className="truncate">Age{'   '}: {doc.patientAge || doc.patient?.age || '—'} {doc.patient?.ageUnit === 'DAYS' ? 'Days' : 'Years'}</span>

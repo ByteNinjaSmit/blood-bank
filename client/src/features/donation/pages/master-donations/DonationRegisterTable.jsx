@@ -60,10 +60,13 @@ export default function DonationRegisterTable({
                 // TTI shadeness (indeterminate) — quarantined awaiting retest, distinct
                 // from a reactive/discarded row.
                 const isShadeness = d.ttiReleaseDecision === 'indeterminate' || d.status === 'shadeness';
-                // A retest/correction has actually been recorded (independent of the
-                // above — a donation can be reactive AND have a retest history, or
-                // shadeness AND already retested once with the panel still unclear).
-                const isRetest = Boolean(d.ttiEditReason);
+                // A genuine retest has actually been recorded — distinct from any
+                // plain edit (ttiEditReason/ttiLastEditedAt are set on ANY
+                // correction). Only ttiRetestedAt marks a true retest that landed
+                // on a final decision (independent of the above — a donation can
+                // be reactive AND have a retest history, or shadeness AND already
+                // retested once with the panel still unclear).
+                const isRetest = Boolean(d.ttiRetestedAt);
                 const rowCls = isReactive
                   ? 'bg-yellow-100 hover:bg-yellow-200/70'
                   : isShadeness
@@ -85,7 +88,7 @@ export default function DonationRegisterTable({
                       )}
                       {isRetest && (
                         <span className="mt-1 ml-1 inline-flex px-2 py-0.5 rounded-full text-2xs font-bold bg-teal-600 text-white border border-teal-700 uppercase tracking-wide">
-                          TTI Retest Done
+                          TTD Retest Done
                         </span>
                       )}
                     </td>

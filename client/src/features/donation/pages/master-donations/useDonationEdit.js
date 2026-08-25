@@ -3,8 +3,9 @@ import { toast } from 'sonner';
 import { useDonationDetail, useUpdateDonation } from '@/features/donation/queries';
 
 // Owns the "Edit donation" modal state for the Master Donation Register —
-// clerical-field correction only (bag/segment/batch no, collectedAt,
-// notes, phlebotomist). See DonationEditForm / donation.service.ts update().
+// clerical-field + medical-exam correction (bag/segment/batch no,
+// collectedAt, notes, fitness, medical exam/vitals). See DonationEditForm
+// / donation.service.ts update().
 export function useDonationEdit() {
   const [editDonationId, setEditDonationId] = useState(null);
   const { data: editDetail, isLoading: editDetailLoading } = useDonationDetail(editDonationId);

@@ -3,7 +3,7 @@ import { apiClient } from "@/core/api-client";
 import { Button } from "@/components/ui/button";
 import { Loader2, Microscope, Calendar, X, Pencil, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/store/auth";
+import useAccess from "@/features/access/useAccess";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/lib/format-date";
@@ -17,11 +17,14 @@ import SerologyDetailModal from "../components/SerologyDetailModal";
 import { statusBadge, formatBlood } from "../components/serology-helpers";
 
 const SerologyResults = () => {
-  const { user } = useAuth();
-  // Mirrors the backend gate on POST /api/serology/results/:id — only
-  // these roles may save edits, and only while no component from this
-  // bag has been issued (bag.canEdit, computed server-side).
-  const canEditRole = user?.role === "system-admin" || user?.role === "lab-tech-serology";
+  const { can } = useAccess();
+  // Mirrors the backend gate on POST /api/serology/results/:id — driven by
+  // this user's actual granted permissions (tti:edit / tti:release via
+  // the labs-serology-results page), not a hardcoded role list. A user
+  // granted full/explicit access in /user-manage must see this regardless
+  // of their free-text `role` label. Still gated per-bag by bag.canEdit
+  // (computed server-side — no component from this bag has been issued).
+  const canEditRole = can("labs", "update", "labs-serology-results");
 
   const [isLoading, setIsLoading] = useState(false);
   const [bags, setBags] = useState([]);
@@ -222,7 +225,7 @@ const SerologyResults = () => {
     <>
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white border-b border-red-100 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="relative overflow-hidden p-2.5 bg-gradient-to-br from-red-600 via-red-700 to-red-950 rounded-xl shadow-[0_4px_10px_-2px_rgba(127,29,29,0.55)] ring-1 ring-white/25 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/40 before:via-white/5 before:to-transparent before:content-['']">
@@ -240,7 +243,7 @@ const SerologyResults = () => {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Compact Filters Section */}
           <Card className="mb-4 border-red-50 shadow-sm">
             <CardContent className="p-3">

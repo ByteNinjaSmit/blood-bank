@@ -40,10 +40,19 @@ const DonationDetails = ({ donation }) => {
     weightKg: donation.medicalExam.weightKg,
     pulse: donation.medicalExam.pulseBpm,
     tempC: donation.medicalExam.temperatureCelsius,
-    bp: donation.medicalExam.bloodPressure 
+    spo2: donation.medicalExam.oxygenSaturationPercent,
+    volumeMl: donation.medicalExam.volumeMl,
+    bp: donation.medicalExam.bloodPressure
       ? `${donation.medicalExam.bloodPressure.systolic}/${donation.medicalExam.bloodPressure.diastolic}`
-      : undefined
+      : undefined,
+    hasPedalOedema: donation.medicalExam.hasPedalOedema,
+    hasLymphadenopathy: donation.medicalExam.hasLymphadenopathy,
+    hasCyanosis: donation.medicalExam.hasCyanosis,
+    skinClearAtPhlebotomy: donation.medicalExam.skinClearAtPhlebotomy,
+    armsFreeOfPunctureScars: donation.medicalExam.armsFreeOfPunctureScars,
+    systemicExamNotes: donation.medicalExam.systemicExamNotes,
   } : undefined);
+  const yesNo = (v) => (v === undefined || v === null ? undefined : v ? 'Yes' : 'No');
   const components = donation.components || donation.units || [];
   // A component unit is created (status COLLECTED) as soon as its volume is
   // entered on the Component Separate screen, but separation isn't actually
@@ -161,12 +170,33 @@ const DonationDetails = ({ donation }) => {
                 <span className="font-medium">Donor ID:</span> {donation.donorPublicId}
               </p>
             )}
-            {(donation.donor || bloodGroup) && (
+            {(donation.donorDetails?.bloodGroup || bloodGroup) && (
               <p>
                 <span className="font-medium">Donor Blood Group:</span>{' '}
-                {donation.donor?.bloodGroup 
-                  ? `${donation.donor.bloodGroup} ${donation.donor.rh === 'Positive' || donation.donor.rh === 'POSITIVE' ? '+' : '-'}`
+                {donation.donorDetails?.bloodGroup
+                  ? `${donation.donorDetails.bloodGroup} ${donation.donorDetails.rh === 'Positive' || donation.donorDetails.rh === 'POSITIVE' ? '+' : '-'}`
                   : `${bloodGroup} ${rhSymbol}`}
+              </p>
+            )}
+            {donation.donorDetails?.phone && (
+              <p>
+                <span className="font-medium">Donor Phone:</span> {donation.donorDetails.phone}
+              </p>
+            )}
+            {donation.donorDetails?.sex && (
+              <p>
+                <span className="font-medium">Donor Sex:</span> {donation.donorDetails.sex}
+              </p>
+            )}
+            {donation.donorDetails?.dob && (
+              <p>
+                <span className="font-medium">Donor DOB:</span> {formatDate(donation.donorDetails.dob)}
+              </p>
+            )}
+            {!isFit && (donation.donorFitness?.rejectionReason || donation.rejectionReason) && (
+              <p>
+                <span className="font-medium">Rejection Reason:</span>{' '}
+                {donation.donorFitness?.rejectionReason || donation.rejectionReason}
               </p>
             )}
             {donation.camp && (
@@ -206,8 +236,48 @@ const DonationDetails = ({ donation }) => {
               </p>
             )}
             {vitals.bp && (
-              <p className="md:col-span-2">
+              <p>
                 <span className="font-medium">BP:</span> {vitals.bp}
+              </p>
+            )}
+            {vitals.spo2 !== undefined && (
+              <p>
+                <span className="font-medium">SpO2:</span> {vitals.spo2}%
+              </p>
+            )}
+            {vitals.volumeMl !== undefined && (
+              <p>
+                <span className="font-medium">Volume:</span> {vitals.volumeMl} mL
+              </p>
+            )}
+            {yesNo(vitals.hasPedalOedema) && (
+              <p>
+                <span className="font-medium">Pedal Oedema:</span> {yesNo(vitals.hasPedalOedema)}
+              </p>
+            )}
+            {yesNo(vitals.hasLymphadenopathy) && (
+              <p>
+                <span className="font-medium">Lymphadenopathy:</span> {yesNo(vitals.hasLymphadenopathy)}
+              </p>
+            )}
+            {yesNo(vitals.hasCyanosis) && (
+              <p>
+                <span className="font-medium">Cyanosis:</span> {yesNo(vitals.hasCyanosis)}
+              </p>
+            )}
+            {yesNo(vitals.skinClearAtPhlebotomy) && (
+              <p>
+                <span className="font-medium">Skin Clear at Phlebotomy:</span> {yesNo(vitals.skinClearAtPhlebotomy)}
+              </p>
+            )}
+            {yesNo(vitals.armsFreeOfPunctureScars) && (
+              <p>
+                <span className="font-medium">Arms Free of Puncture Scars:</span> {yesNo(vitals.armsFreeOfPunctureScars)}
+              </p>
+            )}
+            {vitals.systemicExamNotes && (
+              <p className="col-span-2 md:col-span-4">
+                <span className="font-medium">Systemic Exam Notes:</span> {vitals.systemicExamNotes}
               </p>
             )}
           </div>

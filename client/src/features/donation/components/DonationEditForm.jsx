@@ -5,7 +5,6 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { useUserList } from '@/features/user/queries';
 import { donationEditSchema } from '../schemas';
 
 // Splits an ISO collectedAt into the `date`/`time` pair a native
@@ -24,19 +23,13 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
   const initialSplit = splitCollectedAt(donation?.collectedAt);
   const [collectedDate, setCollectedDate] = useState(initialSplit.date);
   const [collectedTime, setCollectedTime] = useState(initialSplit.time);
-
-  // Phlebotomist picker — no dedicated staff-select component exists yet
-  // (checked components/shared and other feature components/ dirs), and
-  // the donation-creation flow doesn't surface a phlebotomist chooser
-  // either (it defaults server-side to the logged-in actor). Reuse the
-  // same staff list the User Management screen already loads.
-  const { data: userData } = useUserList({ pageSize: 500 });
-  const staff = userData?.items ?? userData?.users ?? (Array.isArray(userData) ? userData : []);
+  const me = donation?.medicalExam || {};
 
   const {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(donationEditSchema),
@@ -46,9 +39,26 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
       lotNo: donation?.lotNo || '',
       collectedAt: donation?.collectedAt || '',
       notes: donation?.notes || '',
-      phlebotomistId: donation?.phlebotomistId || '',
+      isFit: donation?.donorFitness?.isFit ?? donation?.isFit ?? true,
+      rejectionReason: donation?.donorFitness?.rejectionReason || '',
+      weightKg: me.weightKg ?? '',
+      hbGdl: me.hbGdl ?? '',
+      temperatureCelsius: me.temperatureCelsius ?? '',
+      pulseBpm: me.pulseBpm ?? '',
+      bloodPressureSystolic: me.bloodPressure?.systolic ?? '',
+      bloodPressureDiastolic: me.bloodPressure?.diastolic ?? '',
+      oxygenSaturationPercent: me.oxygenSaturationPercent ?? '',
+      volumeMl: me.volumeMl ?? '',
+      hasPedalOedema: me.hasPedalOedema ?? false,
+      hasLymphadenopathy: me.hasLymphadenopathy ?? false,
+      hasCyanosis: me.hasCyanosis ?? false,
+      skinClearAtPhlebotomy: me.skinClearAtPhlebotomy ?? true,
+      armsFreeOfPunctureScars: me.armsFreeOfPunctureScars ?? true,
+      systemicExamNotes: me.systemicExamNotes || '',
     },
   });
+
+  const isFit = watch('isFit');
 
   useEffect(() => {
     if (collectedDate && collectedTime) {
@@ -58,6 +68,8 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
     }
   }, [collectedDate, collectedTime, setValue]);
 
+  const numOrUndef = (v) => (v === '' || v === undefined || v === null ? undefined : Number(v));
+
   const submit = (data) => {
     onSubmit({
       bagNo: data.bagNo,
@@ -65,12 +77,29 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
       lotNo: data.lotNo || undefined,
       collectedAt: data.collectedAt,
       notes: data.notes || undefined,
-      phlebotomistId: data.phlebotomistId || undefined,
+      isFit: data.isFit,
+      rejectionReason: data.isFit ? undefined : (data.rejectionReason || undefined),
+      medicalExam: {
+        weightKg: numOrUndef(data.weightKg),
+        hbGdl: numOrUndef(data.hbGdl),
+        temperatureCelsius: numOrUndef(data.temperatureCelsius),
+        pulseBpm: numOrUndef(data.pulseBpm),
+        bloodPressureSystolic: numOrUndef(data.bloodPressureSystolic),
+        bloodPressureDiastolic: numOrUndef(data.bloodPressureDiastolic),
+        oxygenSaturationPercent: numOrUndef(data.oxygenSaturationPercent),
+        volumeMl: numOrUndef(data.volumeMl),
+        hasPedalOedema: data.hasPedalOedema,
+        hasLymphadenopathy: data.hasLymphadenopathy,
+        hasCyanosis: data.hasCyanosis,
+        skinClearAtPhlebotomy: data.skinClearAtPhlebotomy,
+        armsFreeOfPunctureScars: data.armsFreeOfPunctureScars,
+        systemicExamNotes: data.systemicExamNotes || undefined,
+      },
     });
   };
 
   return (
-    <form onSubmit={handleSubmit(submit)} className="space-y-4">
+    <form onSubmit={handleSubmit(submit)} className="space-y-5">
       <input type="hidden" {...register('collectedAt')} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -93,24 +122,6 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
           {errors.lotNo && <p className="text-xs text-red-600">{errors.lotNo.message}</p>}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="phlebotomistId">Phlebotomist</Label>
-          <select
-            id="phlebotomistId"
-            {...register('phlebotomistId')}
-            className="border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-          >
-            <option value="">Unassigned</option>
-            {staff.map((s) => (
-              <option key={s.id || s._id} value={s.id || s._id}>
-                {s.name ? [s.name.first, s.name.last].filter(Boolean).join(' ') : s.username || s.email}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-1.5">
           <Label htmlFor="collectedDate">Collection Date</Label>
           <Input
             id="collectedDate"
@@ -119,6 +130,9 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
             onChange={(e) => setCollectedDate(e.target.value)}
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="collectedTime">Collection Time</Label>
           <Input
@@ -128,8 +142,93 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
             onChange={(e) => setCollectedTime(e.target.value)}
           />
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="isFit">Donor Fitness</Label>
+          <select
+            id="isFit"
+            {...register('isFit')}
+            className="border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+          >
+            <option value="true">Fit</option>
+            <option value="false">Unfit</option>
+          </select>
+        </div>
       </div>
       {errors.collectedAt && <p className="text-xs text-red-600">{errors.collectedAt.message}</p>}
+
+      {isFit === false || isFit === 'false' ? (
+        <div className="space-y-1.5">
+          <Label htmlFor="rejectionReason">Rejection Reason</Label>
+          <Input id="rejectionReason" {...register('rejectionReason')} />
+        </div>
+      ) : null}
+
+      <div className="border-t pt-4 space-y-4">
+        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Medical Exam / Vitals</p>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="hbGdl">Hb (g/dL)</Label>
+            <Input id="hbGdl" type="number" step="0.1" {...register('hbGdl')} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="weightKg">Weight (kg)</Label>
+            <Input id="weightKg" type="number" step="0.1" {...register('weightKg')} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pulseBpm">Pulse (bpm)</Label>
+            <Input id="pulseBpm" type="number" {...register('pulseBpm')} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="temperatureCelsius">Temp (°C)</Label>
+            <Input id="temperatureCelsius" type="number" step="0.1" {...register('temperatureCelsius')} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bloodPressureSystolic">BP Systolic</Label>
+            <Input id="bloodPressureSystolic" type="number" {...register('bloodPressureSystolic')} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bloodPressureDiastolic">BP Diastolic</Label>
+            <Input id="bloodPressureDiastolic" type="number" {...register('bloodPressureDiastolic')} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="oxygenSaturationPercent">SpO2 (%)</Label>
+            <Input id="oxygenSaturationPercent" type="number" {...register('oxygenSaturationPercent')} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="volumeMl">Volume (mL)</Label>
+            <Input id="volumeMl" type="number" {...register('volumeMl')} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" {...register('hasPedalOedema')} />
+            Pedal Oedema
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" {...register('hasLymphadenopathy')} />
+            Lymphadenopathy
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" {...register('hasCyanosis')} />
+            Cyanosis
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" {...register('skinClearAtPhlebotomy')} />
+            Skin Clear at Phlebotomy
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" {...register('armsFreeOfPunctureScars')} />
+            Arms Free of Puncture Scars
+          </label>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="systemicExamNotes">Systemic Exam Notes</Label>
+          <Textarea id="systemicExamNotes" rows={2} {...register('systemicExamNotes')} />
+        </div>
+      </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Notes</Label>

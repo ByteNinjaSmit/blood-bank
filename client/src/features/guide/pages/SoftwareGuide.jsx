@@ -406,14 +406,14 @@ const SECTIONS = [
     icon: TestTube,
     title: "TTD Testing (Serology)",
     links: [
-      { to: "/labs/serology", label: "TTD Testing" },
-      { to: "/labs/serology-results", label: "TTD Testing Results" },
+      { to: "/labs/ttd", label: "TTD Testing" },
+      { to: "/labs/ttd-testing", label: "TTD Testing Results" },
     ],
     body: (
       <div>
         <p className="text-sm text-gray-600 mb-4">
           Open{" "}
-          <Link to="/labs/serology" className="text-red-800 font-medium hover:underline">Labs → TTD Testing</Link>
+          <Link to="/labs/ttd" className="text-red-800 font-medium hover:underline">Labs → TTD Testing</Link>
           . Every collected bag is tested for HIV, HBsAg, HCV, VDRL and Malaria (MP) before its units can
           leave quarantine — a unit cannot reach Released status without a released TTD result.
         </p>
@@ -448,7 +448,7 @@ const SECTIONS = [
         <Note>
           The worklist has its own filter bar: search by Bag No, a From/To date range, and a sort
           dropdown, plus a Refresh button. Finalised results can be reviewed separately on{" "}
-          <Link to="/labs/serology-results" className="text-red-800 font-medium hover:underline">TTD Testing Results</Link>.
+          <Link to="/labs/ttd-testing" className="text-red-800 font-medium hover:underline">TTD Testing Results</Link>.
         </Note>
       </div>
     ),

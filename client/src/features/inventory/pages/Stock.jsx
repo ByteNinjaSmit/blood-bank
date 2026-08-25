@@ -311,7 +311,7 @@ const Stock = () => {
 
               {/* TTI Retest */}
               <div className="w-40 space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">TTI Retest</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">TTD Retest</label>
                 <label className="flex items-center gap-2 h-9 px-3 border border-gray-200 rounded-lg bg-gray-50/50 text-xs font-medium text-gray-700 cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -414,7 +414,7 @@ const Stock = () => {
                         {r.ttiRetest && (
                           <div className="mt-1">
                             <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-orange-500 text-white border border-orange-600">
-                              TTI Retest Was Done
+                              TTD Retest Was Done
                             </span>
                           </div>
                         )}

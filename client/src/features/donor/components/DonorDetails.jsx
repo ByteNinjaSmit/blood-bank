@@ -51,6 +51,13 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
   const rhSymbol = donor.rh === 'Positive' || donor.rh === 'POSITIVE' ? '+' : donor.rh === 'Negative' || donor.rh === 'NEGATIVE' ? '-' : '';
   const age = donor.dob ? calculateAge(donor.dob) : null;
 
+  // donationHistory is sorted newest-first (donor.history.ts) — [0] is
+  // always the most recent donation, so this section reflects the latest
+  // recorded exam automatically whenever a new donation is added.
+  const mostRecentDonation = donor.donationHistory?.[0];
+  const recentExam = mostRecentDonation?.medicalExam;
+  const yesNo = (v) => (v === undefined || v === null ? undefined : v ? 'Yes' : 'No');
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-b from-orange-50 to-white">
@@ -178,6 +185,67 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
           </div>
         </div>
 
+        {/* Medical Information — most recent donation (updates whenever a
+            new donation is recorded for this donor) */}
+        {recentExam && (
+          <div className="rounded-lg border border-slate-100 bg-white/70 p-4">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <p className="font-semibold text-slate-700">Medical Information (Most Recent Donation)</p>
+              {mostRecentDonation?.collectedAt && (
+                <span className="text-xs text-slate-400">
+                  {new Date(mostRecentDonation.collectedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-600">
+              {recentExam.hbGdl !== undefined && (
+                <p><span className="font-medium">Hb:</span> {recentExam.hbGdl} g/dL</p>
+              )}
+              {recentExam.weightKg !== undefined && (
+                <p><span className="font-medium">Weight:</span> {recentExam.weightKg} kg</p>
+              )}
+              {recentExam.pulseBpm !== undefined && (
+                <p><span className="font-medium">Pulse:</span> {recentExam.pulseBpm} bpm</p>
+              )}
+              {recentExam.temperatureCelsius !== undefined && (
+                <p><span className="font-medium">Temp:</span> {recentExam.temperatureCelsius} °C</p>
+              )}
+              {recentExam.bloodPressure && (
+                <p><span className="font-medium">BP:</span> {recentExam.bloodPressure.systolic}/{recentExam.bloodPressure.diastolic}</p>
+              )}
+              {recentExam.oxygenSaturationPercent !== undefined && (
+                <p><span className="font-medium">SpO2:</span> {recentExam.oxygenSaturationPercent}%</p>
+              )}
+              {recentExam.volumeMl !== undefined && (
+                <p><span className="font-medium">Volume:</span> {recentExam.volumeMl} mL</p>
+              )}
+              {mostRecentDonation?.donorFitness?.isFit !== undefined && (
+                <p>
+                  <span className="font-medium">Fitness:</span>{' '}
+                  <span className={mostRecentDonation.donorFitness.isFit ? 'text-green-700' : 'text-red-700'}>
+                    {mostRecentDonation.donorFitness.isFit ? 'Fit' : 'Unfit'}
+                  </span>
+                </p>
+              )}
+              {yesNo(recentExam.hasPedalOedema) && (
+                <p><span className="font-medium">Pedal Oedema:</span> {yesNo(recentExam.hasPedalOedema)}</p>
+              )}
+              {yesNo(recentExam.hasLymphadenopathy) && (
+                <p><span className="font-medium">Lymphadenopathy:</span> {yesNo(recentExam.hasLymphadenopathy)}</p>
+              )}
+              {yesNo(recentExam.hasCyanosis) && (
+                <p><span className="font-medium">Cyanosis:</span> {yesNo(recentExam.hasCyanosis)}</p>
+              )}
+              {recentExam.systemicExamNotes && (
+                <p className="col-span-2 md:col-span-4"><span className="font-medium">Systemic Exam Notes:</span> {recentExam.systemicExamNotes}</p>
+              )}
+              {!mostRecentDonation?.donorFitness?.isFit && mostRecentDonation?.donorFitness?.rejectionReason && (
+                <p className="col-span-2 md:col-span-4"><span className="font-medium">Rejection Reason:</span> {mostRecentDonation.donorFitness.rejectionReason}</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Donation History */}
         {isLoading ? (
           <div className="py-6 text-center text-gray-500 text-sm">Loading donation history...</div>
@@ -196,12 +264,12 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
                       <span className="text-sm font-semibold text-gray-900 font-mono">
                         Donation ID: {donation.donationId}
                       </span>
-                      {donation.ttiEditReason && (
+                      {donation.ttiRetestedAt && (
                         <span
                           className="ml-2 inline-flex px-2 py-0.5 rounded-full text-2xs font-bold bg-orange-500 text-white border border-orange-600 uppercase tracking-wide align-middle"
-                          title={`Retested in Serology${donation.ttiLastEditedAt ? ` on ${new Date(donation.ttiLastEditedAt).toLocaleString('en-IN')}` : ''}: ${donation.ttiEditReason}`}
+                          title={`Retested in TTD Testing on ${new Date(donation.ttiRetestedAt).toLocaleString('en-IN')}${donation.ttiEditReason ? `: ${donation.ttiEditReason}` : ''}`}
                         >
-                          TTI Retest Done
+                          TTD Retest Done
                         </span>
                       )}
                     </div>
@@ -223,11 +291,11 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
 
                   {/* Donation Components */}
                   <div className="p-4 space-y-4">
-                    {donation.ttiEditReason && (
+                    {donation.ttiRetestedAt && (
                       <p className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-md px-3 py-2">
-                        <span className="font-semibold">TTI Retest was done</span>
-                        {donation.ttiLastEditedAt && ` on ${new Date(donation.ttiLastEditedAt).toLocaleString('en-IN')}`}
-                        {`: ${donation.ttiEditReason}`}
+                        <span className="font-semibold">TTD Retest was done</span>
+                        {` on ${new Date(donation.ttiRetestedAt).toLocaleString('en-IN')}`}
+                        {donation.ttiEditReason ? `: ${donation.ttiEditReason}` : ''}
                       </p>
                     )}
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Derived Components</p>

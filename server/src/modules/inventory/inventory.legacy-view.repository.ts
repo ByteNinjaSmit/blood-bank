@@ -149,7 +149,7 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
 
       if (ttiRetest) {
         const retestDonationIds = await TtiResultModel.distinct('donationId', {
-          editReason: { $exists: true, $nin: [null, ''] },
+          retestedAt: { $exists: true, $ne: null },
         });
         unitFilter.donationId = { $in: retestDonationIds };
       }
@@ -242,14 +242,16 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
       );
 
       // TTI retest flag per donation — whether this bag's TTI result was
-      // ever edited/retested (e.g. a shadeness hold later cleared).
+      // ever genuinely retested (e.g. a shadeness hold later cleared).
+      // `retestedAt` is only stamped on an actual retest, unlike
+      // `editReason`/`lastEditedAt` which are set on ANY correction.
       const ttiResults = await TtiResultModel.find({ donationId: { $in: donationIds } })
-        .select('donationId editReason lastEditedAt')
+        .select('donationId retestedAt')
         .lean();
       const ttiRetestMap = new Map(
         ttiResults
-          .filter((t) => t.editReason)
-          .map((t) => [t.donationId, t.lastEditedAt ? t.lastEditedAt.toISOString() : null]),
+          .filter((t) => t.retestedAt)
+          .map((t) => [t.donationId, t.retestedAt ? t.retestedAt.toISOString() : null]),
       );
 
       const donorIds = donations.map((d: any) => d.donor).filter(Boolean);
@@ -396,7 +398,7 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
           donationId: u.donationId || undefined,
           isLoan: !!loanedFrom,
           ttiRetest: ttiRetestMap.has(u.donationId),
-          ttiLastEditedAt: ttiRetestMap.get(u.donationId) || undefined,
+          ttiRetestedAt: ttiRetestMap.get(u.donationId) || undefined,
           bag: {
             bagNo: displayBagNo,
             bloodGroup: u.aboGroup,

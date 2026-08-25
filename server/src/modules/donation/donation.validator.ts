@@ -77,13 +77,32 @@ export const ListDonationsQuery = z.object({
 });
 export type ListDonationsInput = z.infer<typeof ListDonationsQuery>;
 
+const UpdateMedicalExam = z.object({
+  weightKg: z.coerce.number().positive().optional(),
+  hbGdl: z.coerce.number().positive().optional(),
+  temperatureCelsius: z.coerce.number().optional(),
+  pulseBpm: z.coerce.number().positive().optional(),
+  bloodPressureSystolic: z.coerce.number().positive().optional(),
+  bloodPressureDiastolic: z.coerce.number().positive().optional(),
+  oxygenSaturationPercent: z.coerce.number().min(0).max(100).optional(),
+  hasPedalOedema: z.coerce.boolean().optional(),
+  hasLymphadenopathy: z.coerce.boolean().optional(),
+  hasCyanosis: z.coerce.boolean().optional(),
+  systemicExamNotes: z.string().trim().max(1000).optional(),
+  skinClearAtPhlebotomy: z.coerce.boolean().optional(),
+  armsFreeOfPunctureScars: z.coerce.boolean().optional(),
+  volumeMl: z.coerce.number().positive().optional(),
+});
+
 export const UpdateDonationBody = z.object({
   collectedAt: z.coerce.date().optional(),
   bagNo: z.string().trim().min(1).max(100).optional(),
   segmentNo: z.string().trim().min(1).max(100).optional(),
   lotNo: z.string().trim().min(1).max(100).optional(),
   notes: blankToUndef(z.string().trim().max(1000).optional()),
-  phlebotomistId: blankToUndef(z.string().regex(OBJECT_ID, 'Invalid phlebotomist id').optional()),
+  medicalExam: UpdateMedicalExam.optional(),
+  isFit: z.coerce.boolean().optional(),
+  rejectionReason: blankToUndef(z.string().trim().max(500).optional()),
 });
 export type UpdateDonationInput = z.infer<typeof UpdateDonationBody>;
 

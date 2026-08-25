@@ -38,7 +38,7 @@ export interface ComponentService {
   patchBag(
     donationId: string,
     fields: {
-      components: Array<{ unitId: string; componentType: string; volumeMl: number }>;
+      components: Array<{ unitId?: string; componentType: string; volumeMl: number }>;
       rpmFirstSpin?: string;
       rpmSecondSpin?: string;
       separationTime?: Date;

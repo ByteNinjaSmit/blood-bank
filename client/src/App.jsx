@@ -174,9 +174,12 @@ const App = () => {
           <Route path="reports/monthly" element={<PageGuard module="monthly-report" page="monthly-report"><MonthlyReport /></PageGuard>} />
           <Route path="reports/yearly" element={<PageGuard module="yearly-report" page="yearly-report"><YearlyReport /></PageGuard>} />
 
-          {/* Serology */}
-          <Route path="labs/serology" element={<PageGuard module="labs" page="labs-serology"><Serology /></PageGuard>} />
-          <Route path="labs/serology-results" element={<PageGuard module="labs" page="labs-serology-results"><SerologyResults /></PageGuard>} />
+          {/* TTD (Transfusion-Transmitted Disease) Testing — formerly "Serology" */}
+          <Route path="labs/ttd" element={<PageGuard module="labs" page="labs-serology"><Serology /></PageGuard>} />
+          <Route path="labs/ttd-testing" element={<PageGuard module="labs" page="labs-serology-results"><SerologyResults /></PageGuard>} />
+          {/* Legacy URLs kept as redirects so old bookmarks/links keep working */}
+          <Route path="labs/serology" element={<Navigate to="/labs/ttd" replace />} />
+          <Route path="labs/serology-results" element={<Navigate to="/labs/ttd-testing" replace />} />
 
           {/* Donation + Donor */}
           <Route path="master-register/donors" element={<PageGuard module="donor" page="donor-list"><MasterDonors /></PageGuard>} />

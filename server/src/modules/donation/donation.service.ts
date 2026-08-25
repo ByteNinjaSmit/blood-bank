@@ -364,7 +364,9 @@ export function createDonationService(deps: {
           segmentNo: input.segmentNo,
           lotNo: input.lotNo,
           notes: input.notes,
-          phlebotomistId: input.phlebotomistId,
+          medicalExam: input.medicalExam,
+          isFit: input.isFit,
+          rejectionReason: input.rejectionReason,
         },
         actorId,
       );
@@ -385,6 +387,8 @@ export function createDonationService(deps: {
           lotNo: existing.lotNo,
           collectedAt: existing.collectedAt,
           notes: (existing as unknown as { notes?: string }).notes,
+          medicalExam: existing.medicalExam,
+          isFit: existing.isFit,
         },
         input,
       );

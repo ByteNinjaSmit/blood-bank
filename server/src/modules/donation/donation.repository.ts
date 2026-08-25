@@ -63,6 +63,7 @@ export interface DonationDto {
   ttiReason?: string | null;
   ttiEditReason?: string | null;
   ttiLastEditedAt?: string | null;
+  ttiRetestedAt?: string | null;
 }
 
 export interface DonationWithUnitsDto extends DonationDto {
@@ -90,6 +91,14 @@ export interface DonationWithUnitsDto extends DonationDto {
   /** Latest TTD test performedAt across the panel. */
   ttiTestedAt?: string | null;
   requisitions?: any[];
+  donorDetails?: {
+    phone?: string;
+    dob?: string;
+    sex?: string;
+    bloodGroup?: string;
+    rh?: string;
+    address?: Record<string, unknown>;
+  };
 }
 
 interface CreateInput {
@@ -109,7 +118,7 @@ export interface DonationRepo {
   findLatestByDonor(donorId: string): Promise<{ collectedAt: Date; donationType: string } | null>;
   softDelete(id: string, actorId: string): Promise<void>;
   restore(id: string, actorId: string): Promise<void>;
-  /** Clerical-field patch (bag/segment/batch no, collectedAt, notes, phlebotomist). */
+  /** Clerical + medical-exam patch (bag/segment/batch no, collectedAt, notes, medicalExam, fitness). */
   update(id: string, patch: Partial<UpdateDonationInput>, actorId: string): Promise<void>;
   delete(id: string): Promise<void>;
   /** Batch/segment lookup by bag number, for the discard-entry form. */
@@ -133,8 +142,14 @@ async function loadDonationWithUnits(
         _id: Types.ObjectId;
         name?: { firstName?: string; middleName?: string; lastName?: string };
         donorId?: string;
+        phone?: string;
+        dob?: Date;
+        sex?: string;
+        bloodGroup?: string;
+        rh?: string;
+        address?: Record<string, unknown>;
       };
-    }>('donor', 'name donorId')
+    }>('donor', 'name donorId phone dob sex bloodGroup rh address')
     .populate<{
       campId?: { _id: Types.ObjectId; name?: string; address?: string };
     }>('campId', 'name address')
@@ -144,6 +159,12 @@ async function loadDonationWithUnits(
     _id: Types.ObjectId;
     name?: { firstName?: string; middleName?: string; lastName?: string };
     donorId?: string;
+    phone?: string;
+    dob?: Date;
+    sex?: string;
+    bloodGroup?: string;
+    rh?: string;
+    address?: Record<string, unknown>;
   };
   const campDoc = doc.campId as unknown as
     | { _id: Types.ObjectId; name?: string; address?: string }
@@ -158,7 +179,7 @@ async function loadDonationWithUnits(
       .lean(),
     TtiResultModel.findOne({ donationId: doc.donationId })
       .select(
-        '_id releaseDecision aboGroupConfirmed rhFactorConfirmed decisionNotes editReason lastEditedAt tests',
+        '_id releaseDecision aboGroupConfirmed rhFactorConfirmed decisionNotes editReason lastEditedAt retestedAt tests',
       )
       .lean(),
   ]);
@@ -231,6 +252,16 @@ async function loadDonationWithUnits(
           .join(' ')
       : undefined,
     donorPublicId: donorDoc?.donorId,
+    donorDetails: donorDoc
+      ? {
+          phone: donorDoc.phone,
+          dob: donorDoc.dob ? new Date(donorDoc.dob).toISOString() : undefined,
+          sex: donorDoc.sex,
+          bloodGroup: donorDoc.bloodGroup,
+          rh: donorDoc.rh,
+          address: donorDoc.address,
+        }
+      : undefined,
     donationType: doc.donationType,
     typeOfBag: doc.typeOfBag,
     bagNo: doc.bagNo,
@@ -266,6 +297,7 @@ async function loadDonationWithUnits(
     ttiReason: tti?.decisionNotes || null,
     ttiEditReason: tti?.editReason || null,
     ttiLastEditedAt: tti?.lastEditedAt ? new Date(tti.lastEditedAt).toISOString() : null,
+    ttiRetestedAt: tti?.retestedAt ? new Date(tti.retestedAt).toISOString() : null,
     ttiTestedAt: ttiTestedAt ? ttiTestedAt.toISOString() : null,
     requisitions: requisitionsInfo,
   };
@@ -351,6 +383,7 @@ function docToDto(
     ttiReason: tti?.decisionNotes || null,
     ttiEditReason: tti?.editReason || null,
     ttiLastEditedAt: tti?.lastEditedAt ? new Date(tti.lastEditedAt).toISOString() : null,
+    ttiRetestedAt: tti?.retestedAt ? new Date(tti.retestedAt).toISOString() : null,
   };
 }
 
@@ -665,7 +698,7 @@ export function createDonationRepo(): DonationRepo {
           donationId: { $in: docs.map((d: any) => d.donationId) },
         })
           .select(
-            'donationId aboGroupConfirmed rhFactorConfirmed releaseDecision tests decisionNotes editReason lastEditedAt',
+            'donationId aboGroupConfirmed rhFactorConfirmed releaseDecision tests decisionNotes editReason lastEditedAt retestedAt',
           )
           .lean(),
       ]);
@@ -745,9 +778,34 @@ export function createDonationRepo(): DonationRepo {
       if (patch.segmentNo !== undefined) $set.segmentNo = patch.segmentNo;
       if (patch.lotNo !== undefined) $set.lotNo = patch.lotNo;
       if (patch.notes !== undefined) $set.notes = patch.notes;
-      if (patch.phlebotomistId !== undefined) {
-        $set.phlebotomistId = new Types.ObjectId(patch.phlebotomistId);
+      const me = patch.medicalExam;
+      if (me) {
+        if (me.weightKg !== undefined) $set['medicalExam.weightKg'] = me.weightKg;
+        if (me.hbGdl !== undefined) $set['medicalExam.hbGdl'] = me.hbGdl;
+        if (me.temperatureCelsius !== undefined)
+          $set['medicalExam.temperatureCelsius'] = me.temperatureCelsius;
+        if (me.pulseBpm !== undefined) $set['medicalExam.pulseBpm'] = me.pulseBpm;
+        if (me.bloodPressureSystolic !== undefined)
+          $set['medicalExam.bloodPressure.systolic'] = me.bloodPressureSystolic;
+        if (me.bloodPressureDiastolic !== undefined)
+          $set['medicalExam.bloodPressure.diastolic'] = me.bloodPressureDiastolic;
+        if (me.oxygenSaturationPercent !== undefined)
+          $set['medicalExam.oxygenSaturationPercent'] = me.oxygenSaturationPercent;
+        if (me.hasPedalOedema !== undefined) $set['medicalExam.hasPedalOedema'] = me.hasPedalOedema;
+        if (me.hasLymphadenopathy !== undefined)
+          $set['medicalExam.hasLymphadenopathy'] = me.hasLymphadenopathy;
+        if (me.hasCyanosis !== undefined) $set['medicalExam.hasCyanosis'] = me.hasCyanosis;
+        if (me.systemicExamNotes !== undefined)
+          $set['medicalExam.systemicExamNotes'] = me.systemicExamNotes;
+        if (me.skinClearAtPhlebotomy !== undefined)
+          $set['medicalExam.skinClearAtPhlebotomy'] = me.skinClearAtPhlebotomy;
+        if (me.armsFreeOfPunctureScars !== undefined)
+          $set['medicalExam.armsFreeOfPunctureScars'] = me.armsFreeOfPunctureScars;
+        if (me.volumeMl !== undefined) $set['medicalExam.volumeMl'] = me.volumeMl;
       }
+      if (patch.isFit !== undefined) $set['donorFitness.isFit'] = patch.isFit;
+      if (patch.rejectionReason !== undefined)
+        $set['donorFitness.rejectionReason'] = patch.rejectionReason;
       const model = (await findOwningModel(id)) ?? DonationModel;
       const result = await model.updateOne({ _id: id }, { $set });
       if (result.matchedCount === 0) throw new NotFoundError('Donation', id);

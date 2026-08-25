@@ -73,7 +73,7 @@ export default function DonationFilterBar({
               checked={ttiRetestFilter}
               onChange={(e) => onFilterChange(setTtiRetestFilter, e.target.checked)}
             />
-            TTI Retest Only
+            TTD Retest Only
           </label>
         </div>
       </div>
