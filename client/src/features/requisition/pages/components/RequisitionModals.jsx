@@ -286,9 +286,6 @@ export default function RequisitionModals({
                           <tr key={i} className="border-t">
                             <td className="p-2">
                               {mi?.inventoryId?.componentId?.componentType || '—'}
-                              {mi?.inventoryId?._id && (
-                                <div className="text-[10px] text-gray-400 font-mono">{mi.inventoryId._id}</div>
-                              )}
                             </td>
                             <td className="p-2">{mi?.inventoryId?.bagNo?.bagNo || '—'}</td>
                             <td className="p-2">{mi?.inventoryId?.bagNo?.segmentNo || '—'}</td>
