@@ -15,7 +15,6 @@ import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { DonorCardModel } from '@/modules/donor-card/donor-card.model';
 import { IssueModel } from '@/modules/issue/issue.model';
-import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 import type { ChemicalInventoryRepo } from '@/modules/chemical-inventory/chemical-inventory.repository';
 import type {
   BagStockRepo,
@@ -116,7 +115,6 @@ export function createDashboardRepo(deps: {
         discarded,
         transfusions,
         matrixAgg,
-        loanTransfers,
       ] = await Promise.all([
         DonorModel.countDocuments({
           deletedAt: null,
@@ -160,13 +158,12 @@ export function createDashboardRepo(deps: {
             },
           },
         ]),
-        BulkTransferModel.find({
-          transferType: 'TAKE_LOAN',
-          deletedAt: null,
-          ...buildDateQuery('transferDate', fromDate, toDate),
-        }).lean(),
       ]);
 
+      // Loan-taken bags (BulkTransfer TAKE_LOAN) are real RELEASED
+      // BloodUnit stock from the moment they're logged (see
+      // bulk-transfer.repository.ts's createUnitsForTakeLoan), so `inStock`
+      // and `matrixAgg` above already include them — no separate fold-in.
       const stockMatrix = matrixAgg.map((r: any) => ({
         componentType: r._id.componentType,
         bloodGroup: r._id.bloodGroup,
@@ -174,28 +171,11 @@ export function createDashboardRepo(deps: {
         count: r.count,
       }));
 
-      // Bags taken on loan from other blood banks — no BloodUnit record,
-      // so fold them into the matrix/in-stock totals separately.
-      let loanTotal = 0;
-      loanTransfers.forEach((t: any) => {
-        (t.items || []).forEach((it: any) => {
-          loanTotal += 1;
-          const rh = it.bloodGroup?.endsWith('-') ? 'Negative' : 'Positive';
-          const bloodGroup = (it.bloodGroup || '').replace(/[+-]/, '');
-          const existing = stockMatrix.find(
-            (m) =>
-              m.componentType === it.componentType && m.bloodGroup === bloodGroup && m.rh === rh,
-          );
-          if (existing) existing.count += 1;
-          else stockMatrix.push({ componentType: it.componentType, bloodGroup, rh, count: 1 });
-        });
-      });
-
       return {
         totals: {
           donors,
           donations,
-          inStock: inStock + loanTotal,
+          inStock,
           reserved,
           issued,
           discarded,

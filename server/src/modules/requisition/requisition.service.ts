@@ -298,11 +298,20 @@ export function createRequisitionService(deps: {
       // touched; units still RESERVED/CROSSMATCHED for an unchanged
       // component are left alone; only the delta (shortfall to reserve
       // more, or excess to release) is adjusted per component.
+      // Grouped by componentType only, not per requestedComponent — a
+      // requisition with two requestedComponents of the same componentType
+      // (e.g. edited to add another bag request of a type already present)
+      // shares one `kept` list between them. Deduping here also self-heals
+      // matchedUnits that already picked up duplicate entries from a past
+      // buggy match (see alreadyMatchedIds below).
       const existingByComponent = new Map<
         string,
         Array<MatchedUnitDto & { locked: boolean }>
       >();
+      const seenUnitIds = new Set<string>();
       for (const m of req.matchedUnits ?? []) {
+        if (seenUnitIds.has(m.unitId)) continue;
+        seenUnitIds.add(m.unitId);
         const unit = await deps.units.findByUnitId(m.unitId).catch(() => null);
         const locked = !unit || !['RELEASED', 'RESERVED', 'CROSSMATCHED'].includes(unit.status);
         const list = existingByComponent.get(m.componentType) ?? [];
@@ -311,6 +320,12 @@ export function createRequisitionService(deps: {
       }
 
       const matched: MatchedUnitDto[] = [];
+      // Every kept unit is only ever appended to `matched` once, even though
+      // `existingByComponent` is shared across multiple requestedComponents
+      // of the same componentType and the loop below revisits it once per
+      // such component — without this, each extra same-type requestedComponent
+      // re-adds the whole kept list, duplicating already-matched bags.
+      const flushedUnitIds = new Set<string>();
       const shortages: Record<string, number> = {};
       // Per-component availability outcome, applied as component status after
       // setMatched. Rejected components are skipped entirely (no bags proposed).
@@ -339,10 +354,12 @@ export function createRequisitionService(deps: {
           continue;
         }
 
-        const lockedUnits = kept.filter((k) => k.locked);
-        const nonLocked = kept.filter((k) => !k.locked);
+        const lockedUnits = kept.filter((k) => k.locked && !flushedUnitIds.has(k.unitId));
+        const nonLocked = kept.filter((k) => !k.locked && !flushedUnitIds.has(k.unitId));
         matched.push(...lockedUnits.map(({ locked, ...rest }) => rest));
         matched.push(...nonLocked.map(({ locked, ...rest }) => rest));
+        lockedUnits.forEach((u) => flushedUnitIds.add(u.unitId));
+        nonLocked.forEach((u) => flushedUnitIds.add(u.unitId));
 
         const need = rc.units - kept.length;
         if (need <= 0) {

@@ -14,7 +14,6 @@ import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { DonorCardModel } from '@/modules/donor-card/donor-card.model';
 import { IssueModel } from '@/modules/issue/issue.model';
-import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 import { buildDateQuery } from './dashboard.types';
 import type { OngoingCampDto } from './dashboard.types';
 
@@ -65,7 +64,6 @@ export async function legacyOverview(fromDate?: Date, toDate?: Date) {
     bagsPending,
     bagsQuarantined,
     donorDonationCounts,
-    loanTransfers,
   ] = await Promise.all([
     DonorModel.countDocuments({
       deletedAt: null,
@@ -266,29 +264,13 @@ export async function legacyOverview(fromDate?: Date, toDate?: Date) {
       { $match: { deletedAt: null, ...buildDateQuery('collectedAt', fromDate, toDate) } },
       { $group: { _id: '$donor', count: { $sum: 1 } } },
     ]),
-    BulkTransferModel.find({
-      transferType: 'TAKE_LOAN',
-      deletedAt: null,
-      ...buildDateQuery('transferDate', fromDate, toDate),
-    }).lean(),
   ]);
 
-  // Bags taken on loan from other blood banks — never a BloodUnit
-  // record here, so they're folded into the "in stock" totals
-  // separately rather than via the BloodUnit aggregates above.
-  let loanTotal = 0;
-  const loanByGroup: Record<string, number> = {};
-  const loanByComponent: Record<string, number> = {};
-  loanTransfers.forEach((t: any) => {
-    (t.items || []).forEach((it: any) => {
-      loanTotal += 1;
-      const rh = it.bloodGroup?.endsWith('-') ? 'Negative' : 'Positive';
-      const group = (it.bloodGroup || '').replace(/[+-]/, '');
-      loanByGroup[`${group}|${rh}`] = (loanByGroup[`${group}|${rh}`] || 0) + 1;
-      loanByComponent[it.componentType] = (loanByComponent[it.componentType] || 0) + 1;
-    });
-  });
-
+  // Loan-taken bags (BulkTransfer TAKE_LOAN) are real RELEASED BloodUnit
+  // stock from the moment they're logged (see bulk-transfer.repository.ts's
+  // createUnitsForTakeLoan), so the BloodUnit aggregates above (inStockTotal,
+  // stockByGroupAgg, stockByComponentAgg) already include them — no separate
+  // fold-in needed.
   let firstTimeDonors = 0;
   let repeatDonors = 0;
   donorDonationCounts.forEach((d: any) => {
@@ -311,16 +293,12 @@ export async function legacyOverview(fromDate?: Date, toDate?: Date) {
     const rh = x._id?.rhFactor === 'NEGATIVE' ? 'Negative' : 'Positive';
     stockByGroupMap[`${bg}|${rh}`] = x.count || 0;
   });
-  const stockFor = (group: string, rh: string) =>
-    (stockByGroupMap[`${group}|${rh}`] || 0) + (loanByGroup[`${group}|${rh}`] || 0);
+  const stockFor = (group: string, rh: string) => stockByGroupMap[`${group}|${rh}`] || 0;
 
   const componentStockMap = stockByComponentAgg.reduce((acc: any, x: any) => {
     acc[x._id] = x.count || 0;
     return acc;
   }, {});
-  Object.entries(loanByComponent).forEach(([componentType, count]) => {
-    componentStockMap[componentType] = (componentStockMap[componentType] || 0) + count;
-  });
 
   const nearExpiryByComponent = nearExpiryAgg.map((x: any) => ({
     componentType: x._id,
@@ -439,7 +417,7 @@ export async function legacyOverview(fromDate?: Date, toDate?: Date) {
       sdpProduced: componentProducedMap.SDP || 0,
     },
     inventory: {
-      inStock: inStockTotal + loanTotal,
+      inStock: inStockTotal,
       reserved: reservedTotal,
       issued: issuedTotal,
       discarded: discardedTotal,
