@@ -35,6 +35,7 @@ const ViewDiscarded = () => {
     const [filters, setFilters] = useState({
       search: "",
       itemType: "all",
+      discardType: "all",
       fromDate: "",
       toDate: ""
     });
@@ -75,6 +76,7 @@ const ViewDiscarded = () => {
                         limit: 5000,
                         search: filters.search || undefined,
                         itemType: filters.itemType === "all" ? undefined : filters.itemType,
+                        discardType: filters.discardType === "all" ? undefined : filters.discardType,
                         fromDate: filters.fromDate || undefined,
                         toDate: filters.toDate || undefined,
                         sortBy,
@@ -95,9 +97,11 @@ const ViewDiscarded = () => {
             const mappedData = rawData.map(r => ({
                 bagNo: r.bagNo,
                 segmentNo: r.segmentNo,
+                batchNo: r.batchNo,
                 componentId: r.componentId || r.componentNo,
                 itemType: r.itemType,
                 itemName: r.itemName || r.componentType || "—",
+                discardType: r.discardType,
                 reason: r.reason,
                 discardedAt: r.discardedAt || r.createdAt
             }));
@@ -178,7 +182,7 @@ const ViewDiscarded = () => {
     };
 
     const clearFilters = () => {
-      setFilters({ search: "", itemType: "all", fromDate: "", toDate: "" });
+      setFilters({ search: "", itemType: "all", discardType: "all", fromDate: "", toDate: "" });
       setSearchInput("");
       setCurrentPage(1);
     };
@@ -308,6 +312,22 @@ const ViewDiscarded = () => {
                                                 <SelectItem value="all">All Types</SelectItem>
                                                 <SelectItem value="Bag">Bags</SelectItem>
                                                 <SelectItem value="Component">Components</SelectItem>
+                                                <SelectItem value="Empty Bag">Empty Bags</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Discard Type */}
+                                    <div className="w-36 space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Discard Type</label>
+                                        <Select value={filters.discardType} onValueChange={(val) => handleFilterChange("discardType", val)}>
+                                            <SelectTrigger className="h-9 text-xs font-medium border-gray-200 bg-gray-50/50 shadow-none">
+                                                <SelectValue placeholder="All" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">All</SelectItem>
+                                                <SelectItem value="manual">Manual</SelectItem>
+                                                <SelectItem value="system">System</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -342,7 +362,7 @@ const ViewDiscarded = () => {
 
                                     {/* Actions */}
                                     <div className="flex items-center gap-2 border-l border-gray-200 pl-3 pt-4">
-                                        {(filters.search || filters.itemType !== "all" || filters.fromDate || filters.toDate) && (
+                                        {(filters.search || filters.itemType !== "all" || filters.discardType !== "all" || filters.fromDate || filters.toDate) && (
                                             <button
                                                 onClick={clearFilters}
                                                 className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-100"
@@ -498,7 +518,7 @@ const ViewDiscarded = () => {
                                             >
                                                 View
                                             </button>
-                                            {item.reason === "CASCADE_DELETED" && (
+                                            {item.restorable && (
                                                 <button
                                                     onClick={() => handleRestore(item)}
                                                     disabled={restoringId === item.itemId}

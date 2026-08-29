@@ -136,7 +136,7 @@ export const campService = {
     if (!camp.deletedAt) {
       // First delete click: soft-delete only. Row stays visible (greyed
       // out) in the camp list so donation history tied to it isn't lost.
-      await campRepo.softDelete(id, actorId);
+      await campRepo.softDelete(id, actorId, reason);
       await auditService.record({
         actorId,
         module: 'camp',

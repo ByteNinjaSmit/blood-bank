@@ -22,7 +22,9 @@ import { IssueModel } from '@/modules/issue/issue.model';
 import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { invalidate } from '@/core/cache';
+import { env } from '@/core/config/env';
 import { ValidationError, NotFoundError } from '@/shared/errors';
+import { compareBagNo } from '@/shared/utils/bag-no-sort';
 import type { UnitRepo } from '@/modules/unit/unit.repository';
 
 export interface StockListFilters {
@@ -314,6 +316,13 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         });
       }
 
+      const nowMs = Date.now();
+      // Marker window for the Stock list — a bit wider than the email
+      // alert threshold (env.NEAR_EXPIRY_DAYS) so staff get a visual
+      // heads-up before the daily alert fires.
+      const nearExpiryDays = Math.max(env.NEAR_EXPIRY_DAYS, 7);
+      const nearExpiryCutoffMs = nowMs + nearExpiryDays * 86_400_000;
+
       const data = units.map((u) => {
         let legacyStatus = 'in-stock';
         if (u.status === 'RELEASED') legacyStatus = 'in-stock';
@@ -397,6 +406,11 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
           issuedAt: u.issuedAt ? u.issuedAt.toISOString() : undefined,
           donationId: u.donationId || undefined,
           isLoan: !!loanedFrom,
+          nearExpiry: !!(
+            u.expiresAt &&
+            u.expiresAt.getTime() > nowMs &&
+            u.expiresAt.getTime() <= nearExpiryCutoffMs
+          ),
           ttiRetest: ttiRetestMap.has(u.donationId),
           ttiRetestedAt: ttiRetestMap.get(u.donationId) || undefined,
           bag: {
@@ -440,26 +454,14 @@ export function createInventoryLegacyViewRepo(deps: { units: UnitRepo }): Invent
         };
       });
 
-      // Sort purely by the trailing digit run (e.g. `SBCK26-D-0002` -> 2),
-      // not a left-to-right natural compare — the D/T segment-type letter
-      // must never affect ordering (a plain numeric localeCompare would
-      // hit that letter before the digits and wrongly group all D's ahead
-      // of all T's regardless of sequence number).
-      const lastDigitRun = (s: string): number | null => {
-        const m = s.match(/(\d+)(?!.*\d)/);
-        return m ? Number(m[1]) : null;
-      };
-      const bagNoCompare = (a: any, b: any) => {
-        const aStr = String(a.bag?.bagNo ?? a.bagNo ?? '');
-        const bStr = String(b.bag?.bagNo ?? b.bagNo ?? '');
-        const aNum = lastDigitRun(aStr);
-        const bNum = lastDigitRun(bStr);
-        const cmp =
-          aNum !== null && bNum !== null && aNum !== bNum
-            ? aNum - bNum
-            : aStr.localeCompare(bStr, undefined, { numeric: true, sensitivity: 'base' });
-        return cmp * (sortDir === 1 ? 1 : -1);
-      };
+      // Sort by bag number via the shared comparator (trailing digit run
+      // only — the D/T segment-type letter must never affect ordering).
+      const bagNoCompare = (a: any, b: any) =>
+        compareBagNo(
+          String(a.bag?.bagNo ?? a.bagNo ?? ''),
+          String(b.bag?.bagNo ?? b.bagNo ?? ''),
+          sortDir === 1 ? 1 : -1,
+        );
 
       let combined: any[];
       const combinedTotal = total;

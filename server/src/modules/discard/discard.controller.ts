@@ -7,6 +7,7 @@ import { withAudit } from '@/shared/utils/with-audit';
 export interface DiscardControllers {
   list: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   create: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+  bagComponents: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   restore: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }
 
@@ -37,7 +38,11 @@ export function createDiscardControllers(service: DiscardService): DiscardContro
       try {
         const body = ValidateDiscard.createBody(req);
         const actorId = actor(req);
-        const { unitsDiscarded, bagNo } = await service.create({ ...body, actorId });
+        const { unitsDiscarded, bagNo } = await service.create({
+          ...body,
+          components: body.components as string[] | undefined,
+          actorId,
+        });
         void withAudit(
           { actorId, requestId: req.id },
           {
@@ -55,6 +60,16 @@ export function createDiscardControllers(service: DiscardService): DiscardContro
           success: true,
           message: `Successfully discarded ${unitsDiscarded} blood unit(s) associated with bag number ${bagNo}.`,
         });
+      } catch (e) {
+        next(e);
+      }
+    },
+
+    async bagComponents(req, res, next) {
+      try {
+        const { bagNo } = ValidateDiscard.bagComponentsQuery(req);
+        const data = await service.getBagComponents(bagNo);
+        res.json({ success: true, data });
       } catch (e) {
         next(e);
       }

@@ -8,11 +8,16 @@ import { createDiscardRepo } from '@/modules/discard/discard.repository';
 import { createDiscardService } from '@/modules/discard/discard.service';
 import { createDiscardControllers } from '@/modules/discard/discard.controller';
 import { createUnitRepo } from '@/modules/unit/unit.repository';
+import { createBagStockRepo } from '@/modules/bag-stock/bag-stock.repository';
 import { ttiService } from '@/modules/tti/tti.instance';
 import type { Role } from '@/shared/enums';
 
 const service = createDiscardService({
-  repo: createDiscardRepo({ units: createUnitRepo(), ttiService }),
+  repo: createDiscardRepo({
+    units: createUnitRepo(),
+    ttiService,
+    bagStock: createBagStockRepo(),
+  }),
 });
 const controllers = createDiscardControllers(service);
 
@@ -30,6 +35,12 @@ const READ_ROLES: Role[] = [
 const WRITE_ROLES: Role[] = ['system-admin', 'bbo', 'lab-tech-component', 'qa-manager'];
 
 router.get('/get-list', authenticate, requirePermission('discard:read'), controllers.list);
+router.get(
+  '/bag-components',
+  authenticate,
+  requirePermission('discard:read'),
+  controllers.bagComponents,
+);
 router.post('/create', authenticate, requirePermission('discard:create'), controllers.create);
 router.post(
   '/:unitId/restore',

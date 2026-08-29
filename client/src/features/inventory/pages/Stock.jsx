@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "@/core/api-client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Boxes, ChevronLeft, ChevronRight, X, RefreshCw, Eye } from "lucide-react";
+import { Loader2, Boxes, ChevronLeft, ChevronRight, X, RefreshCw, Eye, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -406,6 +406,12 @@ const Stock = () => {
                     >
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">
                         <div className="flex items-center gap-1.5">
+                          {r.nearExpiry && (
+                            <AlertTriangle
+                              className="w-3.5 h-3.5 text-amber-500 shrink-0"
+                              title={`Near expiry — expires ${formatDate(r?.component?.expiryDate)}`}
+                            />
+                          )}
                           {r?.bag?.bagNo || r.bagNo}
                           {r.source === 'LOAN' && (
                             <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">Loan</span>

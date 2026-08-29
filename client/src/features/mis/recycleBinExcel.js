@@ -30,7 +30,7 @@ function buildRecycleBinSheets({
     table({
       name: "Deleted Donors",
       subtitle: "Donor Recycle Bin",
-      headers: ["Donor ID", "Full Name", "Source", "DOB", "Sex", "Phone", "Blood Group", "Last Donation", "Status", "Deleted On"],
+      headers: ["Donor ID", "Full Name", "Source", "DOB", "Sex", "Phone", "Blood Group", "Last Donation", "Reason for Deletion", "Deleted On"],
       rows: donorItems.map((d) => [
         d.donorId || "N/A",
         [d.name?.firstName, d.name?.middleName, d.name?.lastName].filter(Boolean).join(" "),
@@ -40,14 +40,14 @@ function buildRecycleBinSheets({
         d.phone || "",
         formatBloodGroup(d.bloodGroup, d.rh),
         formatDate(d.lastDonationDate),
-        d.eligibilityStatus || "N/A",
+        d.deleteReason || "—",
         formatDate(d.deletedAt),
       ]),
     }),
     table({
       name: "Deleted Donations",
       subtitle: "Donation Recycle Bin",
-      headers: ["Bag No", "Donor", "Source", "Type", "Blood", "Units", "Fitness", "Collected", "Deleted On"],
+      headers: ["Bag No", "Donor", "Source", "Type", "Blood", "Units", "Fitness", "Collected", "Reason for Deletion", "Deleted On"],
       rows: donationItems.map((d) => [
         d.bagNo || d.donationId,
         d.donorName || "—",
@@ -57,40 +57,44 @@ function buildRecycleBinSheets({
         d.unitCount ?? 0,
         d.isFit === true ? "Fit" : d.isFit === false ? "Unfit" : "—",
         formatDate(d.collectedAt),
+        d.deletedWithDonor
+          ? `${d.deleteReason || "—"} (deleted with donor${d.donorName ? ` ${d.donorName}` : ""})`
+          : d.deleteReason || "—",
         formatDate(d.deletedAt),
       ]),
     }),
     table({
       name: "Deleted Stock Transfers",
       subtitle: "Bulk / Storage Transfer Recycle Bin",
-      headers: ["Source", "Transfer ID", "Bags", "Deleted On"],
+      headers: ["Source", "Transfer ID", "Bags", "Reason for Deletion", "Deleted On"],
       rows: stockTransferItems.map((r) => [
         r.__module === "bulk-transfer" ? "Bulk Transfer" : "Storage",
         r.transferId || "—",
         `${r.items?.length || 0} bag${(r.items?.length || 0) !== 1 ? "s" : ""}`,
+        r.deleteReason || "—",
         formatDate(r.updatedAt),
       ]),
     }),
     table({
       name: "Deleted Hospitals",
       subtitle: "Hospital Recycle Bin",
-      headers: ["Hospital ID", "Name", "Contact Person", "Phone", "Deleted On"],
+      headers: ["Hospital ID", "Name", "Contact Person", "Phone", "Reason for Deletion", "Deleted On"],
       rows: hospitalItems.map((h) => [
-        h.hospitalId || "—", h.name || "—", h.contactPerson || "—", h.phone || "—", formatDate(h.deletedAt),
+        h.hospitalId || "—", h.name || "—", h.contactPerson || "—", h.phone || "—", h.deleteReason || "—", formatDate(h.deletedAt),
       ]),
     }),
     table({
       name: "Deleted Camps",
       subtitle: "Camp Recycle Bin",
-      headers: ["Camp ID", "Name", "Address", "Donations", "Deleted On"],
+      headers: ["Camp ID", "Name", "Address", "Donations", "Reason for Deletion", "Deleted On"],
       rows: campItems.map((c) => [
-        c.campId || "—", c.name || "—", c.address || "—", c.donationCount ?? 0, formatDate(c.deletedAt),
+        c.campId || "—", c.name || "—", c.address || "—", c.donationCount ?? 0, c.deleteReason || "—", formatDate(c.deletedAt),
       ]),
     }),
     table({
       name: "Affected Records",
       subtitle: "Records Preserved as Affected (not deleted)",
-      headers: ["Record Type", "Record", "Affected By (Parent)", "Current Status", "Why Affected", "Since", "Auto-Recoverable"],
+      headers: ["Record Type", "Record", "Affected By (Parent)", "Current Status", "Why Affected", "Since"],
       rows: affectedItems.map((r) => [
         r.entityType || "—",
         r.entityLabel || "—",
@@ -98,7 +102,6 @@ function buildRecycleBinSheets({
         r.currentStatus || "—",
         r.affectedReason || "—",
         formatDate(r.affectedDate),
-        r.canAutoRecover ? "Yes" : "No — manual review",
       ]),
     }),
   ];

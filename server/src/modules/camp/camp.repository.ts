@@ -27,10 +27,10 @@ export const campRepo = {
     return CampModel.findById(id);
   },
 
-  async softDelete(id: string, actorId: string) {
+  async softDelete(id: string, actorId: string, reason?: string) {
     const result = await CampModel.updateOne(
       { _id: id },
-      { deletedAt: new Date(), lastUpdatedBy: actorId },
+      { deletedAt: new Date(), lastUpdatedBy: actorId, deleteReason: reason ?? null },
     );
     if (result.matchedCount === 0) throw new NotFoundError('Camp', id);
   },
@@ -68,7 +68,7 @@ export const campRepo = {
       deletedOnly ? { deletedAt: { $ne: null } } : { deletedAt: null },
     )
       .select(
-        'campId name description address contactInfo dateFrom dateTo createdAt createdBy staff volunteers deletedAt donorData unitData',
+        'campId name description address contactInfo dateFrom dateTo createdAt createdBy staff volunteers deletedAt deleteReason donorData unitData',
       )
       .populate('createdBy', 'name')
       .populate('staff', 'name')

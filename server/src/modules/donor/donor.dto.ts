@@ -33,6 +33,7 @@ export interface DonorDto {
   deferralUntil?: string | null;
   source?: 'inhouse' | 'camp';
   deletedAt?: string | null;
+  deleteReason?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -126,6 +127,7 @@ export function toDto(raw: any): any {
         ? raw.deletedAt.toISOString()
         : new Date(raw.deletedAt).toISOString()
       : null,
+    deleteReason: raw.deleteReason || null,
     createdAt: raw.createdAt
       ? raw.createdAt instanceof Date
         ? raw.createdAt.toISOString()

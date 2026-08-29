@@ -32,6 +32,7 @@ const CampSchema = new Schema(
     // Blood units collected at this camp (refs BloodUnit, not legacy BloodBag).
     unitData: [{ type: Schema.Types.ObjectId, ref: 'BloodUnit' }],
     deletedAt: { type: Date, default: null, index: true },
+    deleteReason: { type: String, default: null, trim: true },
   },
   { timestamps: true },
 );

@@ -347,7 +347,7 @@ export default function RecycleBin() {
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Phone</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Blood Group</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Last Donation</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Reason for Deletion</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Deleted On</th>
                       <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 tracking-wide">Actions</th>
                     </tr>
@@ -380,7 +380,7 @@ export default function RecycleBin() {
                             {donor.bloodGroup} {donor.rh === 'Positive' || donor.rh === 'POSITIVE' ? '+' : donor.rh === 'Negative' || donor.rh === 'NEGATIVE' ? '-' : ''}
                           </td>
                           <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(donor.lastDonationDate)}</td>
-                          <td className="px-4 py-3 text-xs text-gray-600">{donor.eligibilityStatus || 'N/A'}</td>
+                          <td className="px-4 py-3 text-xs text-gray-700 max-w-[220px]">{donor.deleteReason || <span className="text-gray-400">—</span>}</td>
                           <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(donor.deletedAt)}</td>
                           <td className="px-4 py-3 text-right whitespace-nowrap">
                             <RestoreButton onClick={() => openRestoreModal(donor)} />
@@ -415,7 +415,8 @@ export default function RecycleBin() {
                     ) : donationItems.map((d) => {
                       const isCamp = !!d.campId;
                       return (
-                        <tr key={d.id} className="bg-gray-50/50 hover:bg-gray-100 transition-colors">
+                      <React.Fragment key={d.id}>
+                        <tr className="bg-gray-50/50 hover:bg-gray-100 transition-colors">
                           <td className="px-4 py-3 font-mono text-xs text-gray-700 font-medium">{d.bagNo || d.donationId}</td>
                           <td className="px-4 py-3 text-gray-800 font-medium">
                             {d.donorName || <span className="text-gray-400 text-xs">—</span>}
@@ -453,6 +454,22 @@ export default function RecycleBin() {
                             <PermanentDeleteButton item={d} module="donation" />
                           </td>
                         </tr>
+                        {(d.deleteReason || d.deletedWithDonor) && (
+                          <tr>
+                            <td colSpan={10} className="px-4 pb-3 pt-0 bg-gray-50/50">
+                              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                                <span className="font-semibold">Reason for deletion:</span>{' '}
+                                {d.deleteReason || '—'}
+                                {d.deletedWithDonor && (
+                                  <span className="ml-2 text-red-600">
+                                    · Deleted together with donor{d.donorName ? ` (${d.donorName})` : ''}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                       );
                     })}
                   </tbody>
@@ -466,6 +483,7 @@ export default function RecycleBin() {
                 { key: 'module', label: 'Source', render: (r) => (r.__module === 'bulk-transfer' ? 'Bulk Transfer' : 'Storage') },
                 { key: 'transferId', label: 'Transfer ID' },
                 { key: 'bags', label: 'Bags', render: (r) => `${r.items?.length || 0} bag${(r.items?.length || 0) !== 1 ? 's' : ''}` },
+                { key: 'deleteReason', label: 'Reason for Deletion', render: (r) => r.deleteReason || '—' },
                 { key: 'updatedAt', label: 'Deleted On', render: (r) => formatDate(r.updatedAt) },
               ]}
               rows={stockTransferItems}
@@ -492,6 +510,7 @@ export default function RecycleBin() {
                 { key: 'name', label: 'Name' },
                 { key: 'contactPerson', label: 'Contact Person' },
                 { key: 'phone', label: 'Phone' },
+                { key: 'deleteReason', label: 'Reason for Deletion', render: (h) => h.deleteReason || '—' },
                 { key: 'deletedAt', label: 'Deleted On', render: (h) => formatDate(h.deletedAt) },
               ]}
               rows={hospitalItems}
@@ -511,6 +530,7 @@ export default function RecycleBin() {
                 { key: 'name', label: 'Name' },
                 { key: 'address', label: 'Address' },
                 { key: 'donationCount', label: 'Donations' },
+                { key: 'deleteReason', label: 'Reason for Deletion', render: (c) => c.deleteReason || '—' },
                 { key: 'deletedAt', label: 'Deleted On', render: (c) => formatDate(c.deletedAt) },
               ]}
               rows={campItems}
@@ -528,11 +548,12 @@ export default function RecycleBin() {
               columns={[
                 { key: 'entityType', label: 'Record Type' },
                 { key: 'entityLabel', label: 'Record' },
-                { key: 'affectedByModule', label: 'Affected By (Parent)' },
+                { key: 'affectedByModule', label: 'Affected By (Parent)', render: (r) => (
+                  <span className="capitalize">{r.affectedByModule || '—'}</span>
+                ) },
                 { key: 'currentStatus', label: 'Current Status' },
                 { key: 'affectedReason', label: 'Why Affected' },
                 { key: 'affectedDate', label: 'Since', render: (r) => formatDate(r.affectedDate) },
-                { key: 'canAutoRecover', label: 'Auto-Recoverable', render: (r) => (r.canAutoRecover ? 'Yes' : 'No — manual review') },
               ]}
               rows={affectedItems}
             />

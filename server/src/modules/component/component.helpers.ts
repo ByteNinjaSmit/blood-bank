@@ -21,8 +21,12 @@ export interface NearExpiryFilters {
   limit?: number;
   days?: number;
   componentType?: string;
+  bloodGroup?: string;
   status?: string;
   search?: string;
+  /** 'nearest' = soonest expiry first (default); 'bagNo' = by bag number. */
+  sort?: 'nearest' | 'bagNo';
+  order?: 'asc' | 'desc';
 }
 
 export async function resolveDonation(donationIdOrObjectId: string) {

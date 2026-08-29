@@ -350,7 +350,7 @@ const ComponentsList = () => {
                 Separate
               </Button>
               <Button
-                onClick={() => navigate("/component/near-expiry")}
+                onClick={() => navigate("/inventory/near-expiry")}
                 variant="outline"
                 size="sm"
                 className="h-9 border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800"

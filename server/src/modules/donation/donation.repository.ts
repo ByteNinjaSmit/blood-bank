@@ -50,6 +50,9 @@ export interface DonationDto {
   isFit?: boolean;
   status?: string;
   deletedAt?: string | null;
+  deleteReason?: string | null;
+  /** True when this donation was soft-deleted as part of its donor's cascade delete. */
+  deletedWithDonor?: boolean;
   createdAt: string;
   updatedAt: string;
   components?: Array<{ componentType: string; volumeMl: number; status: string }>;
@@ -316,6 +319,8 @@ function docToDto(
     rh?: string;
     donorId?: string;
     phone?: string;
+    deletedAt?: Date | null;
+    deleteBatchId?: string | null;
   };
   const tti = ttiMap.get(d.donationId);
   const units = unitMap.get(d.donationId) || [];
@@ -366,6 +371,12 @@ function docToDto(
     isFit: d.donorFitness?.isFit,
     status,
     deletedAt: d.deletedAt ? new Date(d.deletedAt as unknown as Date).toISOString() : null,
+    deleteReason: d.deleteReason || null,
+    deletedWithDonor: Boolean(
+      donorDoc?.deletedAt &&
+        d.deleteBatchId &&
+        donorDoc.deleteBatchId === d.deleteBatchId,
+    ),
     createdAt: (d as unknown as { createdAt: Date }).createdAt.toISOString(),
     updatedAt: (d as unknown as { updatedAt: Date }).updatedAt.toISOString(),
     components: units.map((u) => ({
@@ -654,7 +665,7 @@ export function createDonationRepo(): DonationRepo {
 
       const donorPopulate = {
         path: 'donor',
-        select: 'name bloodGroup rh donorId phone',
+        select: 'name bloodGroup rh donorId phone deletedAt deleteBatchId',
       } as const;
 
       const skip = (q.page - 1) * q.pageSize;

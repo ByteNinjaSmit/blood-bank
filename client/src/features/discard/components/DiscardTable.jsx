@@ -1,6 +1,6 @@
 import { Eye, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatDateTime } from "@/lib/format-date";
+import { formatDate, formatDateTime } from "@/lib/format-date";
 
 const DiscardTable = ({ items = [], isLoading, onView, onRestore, restoringId }) => {
   return (
@@ -13,6 +13,7 @@ const DiscardTable = ({ items = [], isLoading, onView, onRestore, restoringId })
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Component No</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discard Type</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discarded</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -21,7 +22,7 @@ const DiscardTable = ({ items = [], isLoading, onView, onRestore, restoringId })
         <tbody className="bg-white divide-y divide-gray-100">
           {isLoading ? (
             <tr>
-              <td colSpan="8" className="px-4 py-8 text-center">
+              <td colSpan="9" className="px-4 py-8 text-center">
                 <div className="inline-flex items-center gap-2 text-gray-500">
                   <Loader2 className="w-5 h-5 animate-spin" /> Loading records...
                 </div>
@@ -36,7 +37,9 @@ const DiscardTable = ({ items = [], isLoading, onView, onRestore, restoringId })
                 <td className="px-4 py-3 text-sm">
                   <span
                     className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                        item.itemType === "Donation" || item.itemType === "Bag"
+                        item.itemType === "Empty Bag"
+                        ? "bg-slate-50 text-slate-600 border-slate-200"
+                        : item.itemType === "Donation" || item.itemType === "Bag"
                         ? "bg-blue-50 text-blue-700 border-blue-100"
                         : "bg-emerald-50 text-emerald-700 border-emerald-100"
                     }`}
@@ -45,6 +48,17 @@ const DiscardTable = ({ items = [], isLoading, onView, onRestore, restoringId })
                   </span>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-700">{item?.itemName || item?.componentType || "-"}</td>
+                <td className="px-4 py-3 text-sm">
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                      item.discardType === "SYSTEM"
+                        ? "bg-amber-50 text-amber-700 border-amber-100"
+                        : "bg-gray-50 text-gray-600 border-gray-200"
+                    }`}
+                  >
+                    {item.discardType === "SYSTEM" ? "System" : "Manual"}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={item.reason}>
                   {item.reason}
                 </td>
@@ -62,22 +76,29 @@ const DiscardTable = ({ items = [], isLoading, onView, onRestore, restoringId })
                     >
                       <Eye className="w-4 h-4 text-gray-500" />
                     </Button>
-                    {item.reason === "CASCADE_DELETED" && (
-                      <Button
-                        onClick={() => onRestore?.(item)}
-                        disabled={restoringId === item.itemId}
-                        variant="outline"
-                        size="sm"
-                        className="h-8 px-2 gap-1.5 border-green-200 text-green-700 hover:bg-green-50"
-                        title="Restore — reinstates the deleted donation/donor and returns this unit to normal status"
-                      >
-                        {restoringId === item.itemId ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <RotateCcw className="w-3.5 h-3.5" />
+                    {item.restorable && (
+                      <div className="flex flex-col items-start gap-0.5">
+                        <Button
+                          onClick={() => onRestore?.(item)}
+                          disabled={restoringId === item.itemId}
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2 gap-1.5 border-green-200 text-green-700 hover:bg-green-50"
+                          title="Restore — reinstates the deleted donation/donor and returns this unit to normal status"
+                        >
+                          {restoringId === item.itemId ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          )}
+                          Restore
+                        </Button>
+                        {item.restoreDeadline && (
+                          <span className="text-[10px] text-gray-400">
+                            restore before {formatDate(item.restoreDeadline)}
+                          </span>
                         )}
-                        Restore
-                      </Button>
+                      </div>
                     )}
                   </div>
                 </td>
@@ -85,7 +106,7 @@ const DiscardTable = ({ items = [], isLoading, onView, onRestore, restoringId })
             ))
           ) : (
             <tr>
-              <td className="px-4 py-12 text-center text-gray-500" colSpan={8}>
+              <td className="px-4 py-12 text-center text-gray-500" colSpan={9}>
                 No discarded items found matching the selection.
               </td>
             </tr>

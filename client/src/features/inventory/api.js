@@ -10,6 +10,12 @@ export const inventoryApi = {
   selectFefo: (params) => apiClient.get(`${BASE}/select`, { params }).then(unwrap),
   nearExpiry: (params) => apiClient.get(`${BASE}/near-expiry`, { params }).then(unwrap),
 
+  // Unified system-wide near-expiry list (all components + whole blood).
+  // Backed by the shared component near-expiry endpoint; returns
+  // { components: [...], pagination: { total, totalPages } }.
+  nearExpiryUnified: (params) =>
+    apiClient.get(`/api/v2/component/near-expiry`, { params }).then((r) => r.data),
+
   // Legacy /api/inventory stock register — storage bag edit/return actions.
   updateStorage: (id, data) => apiClient.patch(`${LEGACY_BASE}/${id}/storage`, data).then(unwrap),
   returnFromStorage: (id, reason) => apiClient.post(`${LEGACY_BASE}/return-from-storage`, { id, reason }).then(unwrap),

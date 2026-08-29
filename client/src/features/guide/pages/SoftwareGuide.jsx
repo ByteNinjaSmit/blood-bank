@@ -362,7 +362,7 @@ const SECTIONS = [
     links: [
       { to: "/component/separate", label: "Separate Components" },
       { to: "/component/list", label: "Components List" },
-      { to: "/component/near-expiry", label: "Component Near-Expiry" },
+      { to: "/inventory/near-expiry", label: "Near-Expiry" },
     ],
     body: (
       <div>
