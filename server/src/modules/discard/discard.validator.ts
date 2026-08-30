@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { Request } from 'express';
 import { ValidationError } from '@/shared/errors';
-import { DISCARD_REASON } from '@/shared/enums';
+import { DISCARD_REASON, BAG_DISCARD_REASON } from '@/shared/enums';
 
 const ListQuery = z.object({
   page: z.coerce.number().int().min(1).optional(),
@@ -37,13 +37,16 @@ const CreateBody = z
         path: ['bagNo'],
       });
     }
-    // The empty-bag path uses the procurement bag-discard reasons; the
-    // bag path uses the clinical reasons. Only guard the clinical enum
-    // when a bag number is present (the TTI panel uses TTI_POSITIVE).
-    if (v.bagNo && !DISCARD_REASON.includes(v.reason as never)) {
+    // A bag/segment that held blood uses the clinical DISCARD_REASON
+    // vocabulary; an empty (unfilled) bag uses the procurement
+    // BAG_DISCARD_REASON vocabulary. Either way the reason must be a known
+    // enum value — never free text — so the discard register and the
+    // biomedical-waste manifest stay analysable.
+    const allowed = v.bagNo ? DISCARD_REASON : BAG_DISCARD_REASON;
+    if (!allowed.includes(v.reason as never)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `Unknown discard reason "${v.reason}".`,
+        message: `Unknown discard reason "${v.reason}" for a ${v.bagNo ? 'filled' : 'empty'} bag.`,
         path: ['reason'],
       });
     }

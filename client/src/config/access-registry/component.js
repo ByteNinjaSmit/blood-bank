@@ -9,7 +9,7 @@ export default {
   id: 'component',
   label: 'Component',
   pages: [
-    { id: 'component-list', label: 'Components List', route: '/component/list', actions: { view: ['unit:read'], update: ['unit:read'] } },
+    { id: 'component-list', label: 'Components List', route: '/component/list', actions: { view: ['unit:read'], update: ['component:separate'] } },
     { id: 'component-separate', label: 'Component Separation', route: '/component/separate', actions: { view: ['unit:read'], create: ['component:separate'] } },
   ],
 };

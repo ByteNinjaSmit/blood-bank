@@ -40,8 +40,6 @@ export default function RequisitionLabelTemplate({ doc, isPreview = false }) {
   // We print one sticker label for each matched/reserved inventory unit
   const matchedUnits = doc.matchedInventory || [];
 
-  const moSignatureName = 'Approved MO';
-
   return (
     <div className="space-y-4 print:space-y-0">
       {matchedUnits.length === 0 ? (

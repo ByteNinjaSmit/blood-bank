@@ -123,6 +123,7 @@ const ViewDiscarded = () => {
                 limit: rowsPerPage,
                 search: filters.search || undefined,
                 itemType: filters.itemType === "all" ? undefined : filters.itemType,
+                discardType: filters.discardType === "all" ? undefined : filters.discardType,
                 fromDate: filters.fromDate || undefined,
                 toDate: filters.toDate || undefined,
                 sortBy,

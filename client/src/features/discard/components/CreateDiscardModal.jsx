@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { COMPONENT_LABEL } from "@/constants/component-types";
-import { DISCARD_REASONS } from "./discard-constants";
+import { DISCARD_REASONS, BAG_DISCARD_REASONS } from "./discard-constants";
 import { createDiscardSchema } from "../schemas";
 import { discardApi } from "../api";
 import DiscardSerologyPanel from "./DiscardSerologyPanel";
@@ -75,10 +75,18 @@ export default function CreateDiscardModal({ isOpen, onClose, onSuccess }) {
   const showComponentPicker = (available?.length ?? 0) > 1;
   const emptyBagMode = !((bagNo || "").trim());
 
+  // Empty (unfilled) bag: it never held blood, so it's discarded with the
+  // procurement bag-discard vocabulary, not the clinical one.
   const reasonOptions = useMemo(
-    () => DISCARD_REASONS.filter((r) => (emptyBagMode ? r !== "TTI_POSITIVE" : true)),
+    () => (emptyBagMode ? BAG_DISCARD_REASONS : DISCARD_REASONS),
     [emptyBagMode],
   );
+
+  // Clear a now-invalid reason when the user toggles between bag / empty-bag
+  // mode (the two vocabularies barely overlap).
+  useEffect(() => {
+    if (reason && !reasonOptions.includes(reason)) setValue("reason", "");
+  }, [reasonOptions, reason, setValue]);
 
   const onSubmit = async (form) => {
     if (!emptyBagMode && Array.isArray(available) && available.length === 0) {

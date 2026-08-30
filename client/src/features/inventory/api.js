@@ -16,6 +16,10 @@ export const inventoryApi = {
   nearExpiryUnified: (params) =>
     apiClient.get(`/api/v2/component/near-expiry`, { params }).then((r) => r.data),
 
+  // Cancel one or more reservations and return the bags to general stock.
+  unreserve: (inventoryIds, reason) =>
+    apiClient.post(`${LEGACY_BASE}/unreserve`, { inventoryIds, reason }).then(unwrap),
+
   // Legacy /api/inventory stock register — storage bag edit/return actions.
   updateStorage: (id, data) => apiClient.patch(`${LEGACY_BASE}/${id}/storage`, data).then(unwrap),
   returnFromStorage: (id, reason) => apiClient.post(`${LEGACY_BASE}/return-from-storage`, { id, reason }).then(unwrap),

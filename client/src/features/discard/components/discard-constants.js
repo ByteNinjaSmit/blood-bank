@@ -1,5 +1,7 @@
 import { COMPONENT_LABEL } from "@/constants/component-types";
 
+// Clinical discard reasons — for a bag/segment that held (or holds) blood.
+// Mirrors server DISCARD_REASON (minus the system-only CASCADE_DELETED).
 export const DISCARD_REASONS = [
   'EXPIRED',
   'TTI_POSITIVE',
@@ -14,6 +16,20 @@ export const DISCARD_REASONS = [
   'UNUSED_AFTER_THAW',
   'DONOR_RECALL',
   'LABEL_ERROR',
+];
+
+// Empty / unfilled bag discard reasons — the bag never held blood, so the
+// clinical vocabulary above doesn't apply. Mirrors server BAG_DISCARD_REASON.
+export const BAG_DISCARD_REASONS = [
+  'EXPIRED',
+  'LEAKAGE',
+  'STERILITY_FAILURE',
+  'DAMAGED_NEEDLE',
+  'BROKEN_SEAL',
+  'MANUFACTURING_DEFECT',
+  'PHYSICAL_DAMAGE',
+  'TEMPERATURE_EXCURSION',
+  'QC_FAILURE',
 ];
 
 // bag-inspection testingType includes two bag-state values (EMPTY/OTHER)

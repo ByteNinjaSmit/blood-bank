@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiClient } from "@/core/api-client";
-import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Loader2, Hand, X, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -11,6 +10,8 @@ import ExportExcelDropdown from "@/components/shared/ExportExcelDropdown";
 import SearchBox from "@/components/shared/SearchBox";
 import { exportReserve } from "@/utils/excelExportHelper";
 import ReserveDetailModal from "../components/ReserveDetailModal";
+import { inventoryApi } from "../api";
+import useAccess from "@/features/access/useAccess";
 
 const formatDateDMY = (dateStr) => {
   if (!dateStr) return '—';
@@ -38,7 +39,8 @@ const formatDateTimeDMY = (dateStr) => {
 };
 
 const Reserve = () => {
-  const { user } = useAuth();
+  const { can } = useAccess();
+  const canUnreserve = can("inventory", "update", "inventory-reserve");
   const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -172,20 +174,12 @@ const Reserve = () => {
     if (!targetUnreserveId) return;
     setIsLoading(true);
     try {
-      const res = await apiClient.post(`/api/inventory/unreserve`, {
-        inventoryIds: [targetUnreserveId],
-        reason,
-        userId: user?._id,
-      });
-      if (res.data?.success) {
-        toast.success("Blood bag successfully unreserved and returned to stock.");
-        fetchRows(pagination.page);
-        setUnreserveModalOpen(false);
-      } else {
-        toast.error(res.data?.message || "Failed to unreserve blood bag.");
-      }
+      await inventoryApi.unreserve([targetUnreserveId], reason);
+      toast.success("Blood bag successfully unreserved and returned to stock.");
+      fetchRows(pagination.page);
+      setUnreserveModalOpen(false);
     } catch (e) {
-      toast.error(e?.response?.data?.message || "Error unreserving blood bag.");
+      toast.error(e?.response?.data?.message || e?.message || "Error unreserving blood bag.");
     } finally {
       setIsLoading(false);
       setTargetUnreserveId(null);
@@ -376,13 +370,15 @@ const Reserve = () => {
                                           >
                                             View
                                           </button>
-                                          <button
-                                            onClick={() => triggerUnreserveConfirm(r._id)}
-                                            disabled={isLoading}
-                                            className="px-2.5 py-1 text-xs font-semibold text-red-700 hover:text-white border border-red-200 hover:bg-red-600 rounded transition-all duration-150 disabled:opacity-50"
-                                          >
-                                            Unreserve
-                                          </button>
+                                          {canUnreserve && (
+                                            <button
+                                              onClick={() => triggerUnreserveConfirm(r._id)}
+                                              disabled={isLoading}
+                                              className="px-2.5 py-1 text-xs font-semibold text-red-700 hover:text-white border border-red-200 hover:bg-red-600 rounded transition-all duration-150 disabled:opacity-50"
+                                            >
+                                              Unreserve
+                                            </button>
+                                          )}
                                         </td>
                                       </tr>
                                     ))}

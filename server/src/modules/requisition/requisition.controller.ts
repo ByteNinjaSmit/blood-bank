@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 import { ValidateRequisition } from '@/modules/requisition/requisition.validator';
 import { ValidateCrossmatch } from '@/modules/crossmatch/crossmatch.validator';
 import { ValidateIssue } from '@/modules/issue/issue.validator';
-import { ConflictError, UnauthorizedError } from '@/shared/errors';
+import { ConflictError, UnauthorizedError, ForbiddenError } from '@/shared/errors';
 import type { RequisitionService } from '@/modules/requisition/requisition.service';
 import type { CrossmatchService } from '@/modules/crossmatch/crossmatch.service';
 import type { IssueService } from '@/modules/issue/issue.service';
@@ -247,6 +247,17 @@ export function createRequisitionControllers(deps: {
     async issue(req, res, next) {
       try {
         const body = ValidateIssue.issueBody(req);
+        // Medical-officer override of the crossmatch gate (issuing an
+        // incompatible / uncrossmatched RBC unit) is a distinct authorised
+        // action — it needs `crossmatch:override`, not just `unit:issue`.
+        // The reason + authorisedBy are still recorded by issue.service.
+        if (body.override && req.user && !req.user.isFullAccess) {
+          if (!req.user.permissions.includes('crossmatch:override')) {
+            throw new ForbiddenError(
+              'Issuing with a crossmatch override requires the crossmatch:override permission (medical-officer authorisation).',
+            );
+          }
+        }
         const data = await deps.issue.issue(body, actor(req));
         res.status(201).json({ success: true, data, requestId: req.id });
       } catch (e) {

@@ -46,13 +46,14 @@ type ActionOverrideMap = Partial<Record<'view' | 'create' | 'update' | 'delete',
 // of changing this table (which would silently over/under-grant every
 // other page using the same pair).
 const LEGACY_MODULE_PERMISSION_OVERRIDES: Partial<Record<string, ActionOverrideMap>> = {
-  // Component Separation: no component:read/create/update exist — its
-  // pages actually gate on unit:read (list/near-expiry) and
-  // component:separate (the separation action itself).
+  // Component Separation: no component:read exists — the list/near-expiry
+  // pages gate on unit:read; both the separation action and any correction
+  // of prepared-component data (volume / expiry / storage / component
+  // type) gate on component:separate.
   component: {
     view: 'unit:read',
     create: 'component:separate',
-    update: 'unit:read',
+    update: 'component:separate',
   },
   // BloodUnit: "create" on the Reserve page really means unit:reserve;
   // "update" on the Issue page really means unit:issue.
@@ -88,8 +89,16 @@ const LEGACY_MODULE_PERMISSION_OVERRIDES: Partial<Record<string, ActionOverrideM
   donor: { create: ['donor:create', 'donor:update', 'donor:read'] },
   // crossmatch:perform has no dedicated create/update route split — both
   // the Reserve wizard's "create" checkbox and Requisition's "update"
-  // checkbox gate the same crossmatch action.
-  crossmatch: { create: 'crossmatch:perform', update: 'crossmatch:perform' },
+  // checkbox gate the same crossmatch action. crossmatch:override (the
+  // medical-officer emergency override of the compatibility gate at issue
+  // time) is bundled here so existing crossmatch operators keep working
+  // once the override route enforces it; a bank wanting strict NBTC
+  // separation should grant crossmatch to counter staff via a role that
+  // omits override and reserve override for a dedicated MO account.
+  crossmatch: {
+    create: ['crossmatch:perform', 'crossmatch:override'],
+    update: ['crossmatch:perform', 'crossmatch:override'],
+  },
 };
 
 // Page-scoped overrides win over LEGACY_MODULE_PERMISSION_OVERRIDES above,
@@ -120,8 +129,11 @@ const PAGE_PERMISSION_OVERRIDES: Partial<Record<string, Partial<Record<string, A
   'inventory-issue': {
     'bulk-transfer': { update: 'bulk-transfer:create' },
   },
-  // Component List's "update" checkbox is really a read-only detail
-  // view (unit:read), distinct from the Issue page's unit:update.
+  // Legacy fallback: grids saved before Component List's "update" action
+  // moved to component:separate stored a {moduleName:'unit'} row — keep
+  // resolving it to unit:read (a harmless read grant) so it isn't
+  // re-interpreted as the Issue page's unit:issue. New grids use the
+  // module-level component:{update:'component:separate'} mapping above.
   'component-list': {
     unit: { update: 'unit:read' },
   },
