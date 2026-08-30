@@ -536,6 +536,29 @@ export const MODULES = [
     permissions: ["read"],
     description: "Deleted donors and donations — restore or view",
   },
+  {
+    id: "reports",
+    name: "Statutory Reports",
+    icon: <FaChartPie className="w-5 h-5" />,
+    permissions: ["read"],
+    subModules: [
+      {
+        name: "Monthly Report",
+        href: "/reports/monthly",
+        icon: <Calendar className="w-5 h-5" />,
+        permissions: ["read"],
+        description: "Monthly statutory blood bank report",
+      },
+      {
+        name: "Yearly Report",
+        href: "/reports/yearly",
+        icon: <BarChart3 className="w-5 h-5" />,
+        permissions: ["read"],
+        description: "Yearly statutory blood bank report",
+      },
+    ],
+    description: "Mandatory monthly and yearly regulatory reports",
+  },
   // {
   //   id: "report",
   //   name: "Report",

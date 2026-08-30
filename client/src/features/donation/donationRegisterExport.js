@@ -1,13 +1,6 @@
 import { buildStyledSheet, XLSX } from '@/utils/xlsxStyleHelper';
+import { formatDateTime as fmtDateTime } from '@/utils/excel/core';
 import { donationApi } from '@/features/donation/api';
-
-function fmtDateTime(d) {
-  if (!d) return '—';
-  const dt = new Date(d);
-  if (Number.isNaN(dt.getTime())) return '—';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
-}
 
 // rhFactor arrives as 'POSITIVE'/'NEGATIVE' (current schema) or legacy
 // 'Positive'/'Negative' — normalize case so the Rh Typing column doesn't

@@ -9,7 +9,6 @@ import { createUnitRepo } from '@/modules/unit/unit.repository';
 import { createInventoryLegacyViewRepo } from '@/modules/inventory/inventory.legacy-view.repository';
 import { createInventoryLegacyViewService } from '@/modules/inventory/inventory.legacy-view.service';
 import { createInventoryLegacyViewControllers } from '@/modules/inventory/inventory.legacy-view.controller';
-import type { Role } from '@/shared/enums';
 
 const repo = createInventoryLegacyViewRepo({ units: createUnitRepo() });
 const service = createInventoryLegacyViewService({ repo });
@@ -17,49 +16,34 @@ const controllers = createInventoryLegacyViewControllers(service);
 
 const router = Router();
 
-const READ_ROLES: Role[] = [
-  'system-admin',
-  'bbo',
-  'medical-officer',
-  'lab-tech-component',
-  'lab-tech-serology',
-  'store-keeper',
-  'issue-counter',
-  'qa-manager',
-  'auditor',
-  'hospital-user',
-];
-const WRITE_ROLES: Role[] = [
-  'system-admin',
-  'bbo',
-  'medical-officer',
-  'lab-tech-serology',
-  'store-keeper',
-  'issue-counter',
-];
-
-// These are unit/stock-domain operations; the finer write restriction is
-// carried by requireRole(WRITE_ROLES) — requirePermission('unit:read') is the
-// shared gate held by every role in both lists (no single unit:* write
-// permission is common to all WRITE_ROLES).
 router.get('/', authenticate, requirePermission('unit:read'), controllers.listStock);
+// Cancelling a reservation and returning the bag to stock — reachable
+// only from the read-only Reservations List page, which grants just
+// `unit:read`. Left on `unit:read` deliberately: tightening it to
+// `unit:reserve` would lock every current Reservations-List operator out
+// of the unreserve action until an admin re-grants it. Revisit alongside
+// a permissions-grid migration.
 router.post('/unreserve', authenticate, requirePermission('unit:read'), controllers.unreserve);
+// Bag storage-dispatch writes: superseded by the /api/v2/storage-transfer
+// module and no longer called by the client, but still mounted. Gate on
+// `unit:issue` (the storage-dispatch write permission) so a read-only
+// token can't drive them.
 router.post(
   '/send-to-storage',
   authenticate,
-  requirePermission('unit:read'),
+  requirePermission('unit:issue'),
   controllers.sendToStorage,
 );
 router.patch(
   '/:id/storage',
   authenticate,
-  requirePermission('unit:read'),
+  requirePermission('unit:issue'),
   controllers.updateStorage,
 );
 router.post(
   '/return-from-storage',
   authenticate,
-  requirePermission('unit:read'),
+  requirePermission('unit:issue'),
   controllers.returnFromStorage,
 );
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { apiClient } from "@/core/api-client";
+import { componentApi } from "./api";
 
 // Bag types eligible for a batch separation run — SB/SDP bags only ever
 // yield one or two components and are handled fine by the single-bag flow.
@@ -50,12 +50,10 @@ function saveDraft(draft) {
 // donation timeline/details screens, never the actual separation itself,
 // so a failure here shouldn't interrupt the batch workflow.
 function markDraft(donationIds) {
-  if (donationIds.length === 0) return;
-  apiClient.post('/api/v2/component/batch-draft', { donationIds }).catch(() => {});
+  componentApi.markBatchDraft(donationIds);
 }
 function clearDraft(donationIds) {
-  if (donationIds.length === 0) return;
-  apiClient.post('/api/v2/component/batch-draft/clear', { donationIds }).catch(() => {});
+  componentApi.clearBatchDraft(donationIds);
 }
 
 // Batch (multiple) separation state for the Component Separate page.
@@ -266,7 +264,7 @@ export function useBatchSeparation({ bagKey }) {
 
         for (const item of items) {
           try {
-            await apiClient.post(`/api/v2/component/separate`, {
+            await componentApi.separate({
               donationId,
               componentType: item.componentType,
               volumeMl: item.volumeMl,
@@ -295,7 +293,7 @@ export function useBatchSeparation({ bagKey }) {
         }
 
         try {
-          await apiClient.post(`/api/v2/component/separation-completed`, { donationId, signature });
+          await componentApi.separationCompleted(donationId, signature);
           succeededKeys.push(key);
         } catch (err) {
           const msg =

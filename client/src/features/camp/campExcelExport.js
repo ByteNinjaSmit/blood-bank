@@ -1,12 +1,5 @@
 import { buildStyledSheet, XLSX } from '@/utils/xlsxStyleHelper';
-
-function fmtDateTime(d) {
-  if (!d) return '—';
-  const dt = new Date(d);
-  if (Number.isNaN(dt.getTime())) return '—';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
-}
+import { formatDateTime as fmtDateTime } from '@/utils/excel/core';
 
 function staffNames(staff) {
   if (!Array.isArray(staff) || staff.length === 0) return '—';

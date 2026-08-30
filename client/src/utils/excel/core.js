@@ -1,32 +1,48 @@
 import { toast } from 'sonner';
 import { buildStyledSheet, buildMultiTableSheet, buildDashboardMultiTableSheet, XLSX } from '@/utils/xlsxStyleHelper';
 
+// Every date in an Excel export is rendered in the blood bank's local
+// civil time (Asia/Kolkata), never the machine running the browser — a
+// report opened on a laptop set to another timezone must still show IST.
+// UTC instants are stored server-side; these formatters do the conversion.
+const IST_TZ = 'Asia/Kolkata';
+
+const istDateParts = (date) => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: IST_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const get = (t) => parts.find((p) => p.type === t)?.value ?? '';
+  // en-GB hour can come back as "24" at midnight — normalise to "00".
+  const hour = get('hour') === '24' ? '00' : get('hour');
+  return { day: get('day'), month: get('month'), year: get('year'), hour, minute: get('minute') };
+};
+
 /**
- * Formats a date string/object to DD/MM/YYYY
+ * Formats a date string/object to DD/MM/YYYY in Asia/Kolkata.
  */
 export const formatDate = (d) => {
   if (!d) return '—';
   const date = new Date(d);
   if (isNaN(date.getTime())) return String(d);
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
+  const { day, month, year } = istDateParts(date);
   return `${day}/${month}/${year}`;
 };
 
 /**
- * Formats a date string/object to DD/MM/YYYY HH:mm
+ * Formats a date string/object to DD/MM/YYYY HH:mm in Asia/Kolkata.
  */
 export const formatDateTime = (d) => {
   if (!d) return '—';
   const date = new Date(d);
   if (isNaN(date.getTime())) return String(d);
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
+  const { day, month, year, hour, minute } = istDateParts(date);
+  return `${day}/${month}/${year} ${hour}:${minute}`;
 };
 
 /**

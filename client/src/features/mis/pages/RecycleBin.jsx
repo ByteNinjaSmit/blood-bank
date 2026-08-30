@@ -4,6 +4,7 @@ import DeletedStockTransferModal from '@/features/mis/components/DeletedStockTra
 import { toast } from 'sonner';
 import { downloadExcelReport, buildExportMeta } from '@/utils/excelExportHelper';
 import { buildRecycleBinSheet } from '@/features/mis/recycleBinExcel';
+import { formatDate as formatDateKolkata } from '@/lib/format-date';
 import { useDonorList, useRestoreDonor, usePermanentDeleteDonor } from '@/features/donor/queries';
 import { useDonationList, useRestoreDonation, usePermanentDeleteDonation } from '@/features/donation/queries';
 import { useHospitalList, useRestoreHospital, usePermanentDeleteHospital } from '@/features/hospital/queries';
@@ -24,10 +25,8 @@ const TABS = [
   { key: 'affected', label: 'Affected Records', icon: AlertTriangle },
 ];
 
-const formatDate = (value) =>
-  value
-    ? new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-    : 'N/A';
+// Asia/Kolkata civil date via the shared formatter (returns '—' for empty).
+const formatDate = (value) => (value ? formatDateKolkata(value) : 'N/A');
 
 const formatBloodGroup = (bloodGroup, rhFactor) => {
   if (!bloodGroup) return '';

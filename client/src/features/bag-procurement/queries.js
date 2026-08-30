@@ -156,11 +156,20 @@ export function useGRNDetail(id) {
   });
 }
 
+// Creating/updating a GRN immediately upserts BagStock rows for each
+// batch line (goods-receipt.service.ts upsertFromGRN) — refresh the bag
+// stock list + summary too, not just the GRN list.
+function invalidateGrnAndStock(qc) {
+  qc.invalidateQueries({ queryKey: ['goods-receipt', 'list'] });
+  qc.invalidateQueries({ queryKey: ['bag-stock', 'list'] });
+  qc.invalidateQueries({ queryKey: ['bag-stock', 'summary'] });
+}
+
 export function useCreateGRN() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data) => bagProcurementApi.goodsReceipt.create(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['goods-receipt', 'list'] }),
+    onSuccess: () => invalidateGrnAndStock(qc),
   });
 }
 
@@ -168,7 +177,7 @@ export function useUpdateGRN() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }) => bagProcurementApi.goodsReceipt.update(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['goods-receipt', 'list'] }),
+    onSuccess: () => invalidateGrnAndStock(qc),
   });
 }
 
@@ -329,7 +338,13 @@ export function useCreateBagDiscard() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data) => bagProcurementApi.bagDiscard.create(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bag-discard', 'list'] }),
+    onSuccess: () => {
+      // Recording a discard increments the batch's discardedQty
+      // (bag-discard.service incrementDiscarded) — refresh stock too.
+      qc.invalidateQueries({ queryKey: ['bag-discard', 'list'] });
+      qc.invalidateQueries({ queryKey: ['bag-stock', 'list'] });
+      qc.invalidateQueries({ queryKey: ['bag-stock', 'summary'] });
+    },
   });
 }
 
@@ -348,6 +363,7 @@ export function useRemoveBagDiscard() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['bag-discard', 'list'] });
       qc.invalidateQueries({ queryKey: ['bag-stock', 'list'] });
+      qc.invalidateQueries({ queryKey: ['bag-stock', 'summary'] });
     },
   });
 }

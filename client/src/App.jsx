@@ -52,7 +52,6 @@ import GoodsReceipt from './features/bag-procurement/pages/GoodsReceipt';
 import BagInventory from './features/bag-procurement/pages/BagInventory';
 import BagInspection from './features/bag-procurement/pages/BagInspection';
 import BagIssuance from './features/bag-procurement/pages/BagIssuance';
-import BagDiscard from './features/bag-procurement/pages/BagDiscard';
 
 // Chemical Reagents Inventory
 import ChemicalDashboard from './features/chemical-inventory/pages/ChemicalDashboard';

@@ -1,22 +1,7 @@
 import { buildStyledSheet, XLSX } from '@/utils/xlsxStyleHelper';
 import { apiClient } from '@/core/api-client';
 import { deferralApi } from '@/features/deferral/api';
-
-function fmtDate(d) {
-  if (!d) return '—';
-  const dt = new Date(d);
-  if (Number.isNaN(dt.getTime())) return '—';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}/${dt.getFullYear()}`;
-}
-
-function fmtDateTime(d) {
-  if (!d) return '—';
-  const dt = new Date(d);
-  if (Number.isNaN(dt.getTime())) return '—';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
-}
+import { formatDate as fmtDate, formatDateTime as fmtDateTime } from '@/utils/excel/core';
 
 const COMPONENT_STATUS_LABELS = {
   'in-stock': 'In Stock',

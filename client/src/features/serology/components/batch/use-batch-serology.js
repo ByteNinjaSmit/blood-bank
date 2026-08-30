@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { serologyApi } from "@/features/serology/api";
 
@@ -75,6 +76,7 @@ function nowDateTimeParts() {
 // Donation.ttiBatchActive server-side so other screens can show "Under
 // Testing" while bags sit queued here.
 export function useBatchSerology() {
+  const queryClient = useQueryClient();
   const [draft] = useState(loadDraft);
   const [batchMode, setBatchModeState] = useState(() => draft?.batchMode ?? false);
   const [selectedIds, setSelectedIds] = useState(() => new Set((draft?.selected ?? []).map(([id]) => id)));
@@ -339,6 +341,15 @@ export function useBatchSerology() {
           );
         }
 
+        if (results.length > 0) {
+          // Recording + finalizing TTI results moves units through the
+          // quarantine gate (release / discard) and touches donation
+          // timelines — refresh every cached view that reads that state.
+          ["inventory", "component", "donation", "discard"].forEach((key) =>
+            queryClient.invalidateQueries({ queryKey: [key] }),
+          );
+        }
+
         if (onSuccess) await onSuccess();
       } catch (err) {
         toast.error(err?.response?.data?.message || err?.message || "Failed to save batch results");
@@ -346,7 +357,7 @@ export function useBatchSerology() {
         setIsSubmitting(false);
       }
     },
-    [matrix, signatureText, batchTestDate, batchTestTime],
+    [matrix, signatureText, batchTestDate, batchTestTime, queryClient],
   );
 
   return {

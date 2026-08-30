@@ -10,9 +10,8 @@ import ReasonForChangeModal from "@/components/shared/ReasonForChangeModal";
 import { useEditWithReason } from "@/hooks/useEditWithReason";
 import useAccess from "@/features/access/useAccess";
 import { statusChipClass } from "./utils/ui";
-import axios from "axios";
 import { toast } from "sonner";
-import { useAuth } from "@/store/auth";
+import { userApi } from "../api";
 import { emptyDraft, draftFromGrid, gridFromDraft } from "../components/permissions-editor/grid-conversion";
 import ManageRolesModal from "@/features/role/components/ManageRolesModal";
 
@@ -31,7 +30,6 @@ const initialForm = {
 };
 
 export default function UserManage() {
-  const { API, authorizationToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -57,11 +55,8 @@ export default function UserManage() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/api/v2/user?limit=1000`, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
-      });
-      setUsers((res.data.data || []).map(u => ({ ...u, _id: u.id || u._id })));
+      const list = await userApi.list({ limit: 1000 });
+      setUsers((list || []).map(u => ({ ...u, _id: u.id || u._id })));
       setSelectedIds(new Set());
     } catch (e) {
       toast.error("Failed to load users");
@@ -79,10 +74,7 @@ export default function UserManage() {
     };
     const mappedStatus = actionMap[action] || action;
     try {
-      await axios.put(`${API}/api/v2/user/${id}`, { status: mappedStatus }, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
-      });
+      await userApi.update(id, { status: mappedStatus });
       toast.success(`User status updated to ${mappedStatus}`);
       loadUsers();
     } catch (e) {
@@ -92,8 +84,7 @@ export default function UserManage() {
 
   // using imported statusChipClass from utils/ui
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadUsers(); }, [API, authorizationToken]);
+  useEffect(() => { loadUsers(); }, []);
 
   // Derived filtered & paginated data
   const filteredUsers = useMemo(() => {
@@ -183,16 +174,10 @@ export default function UserManage() {
     try {
       setLoading(true);
       if (editingId) {
-        await axios.put(`${API}/api/v2/user/${editingId}`, { ...payload, _editReason: editReason }, {
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
-        });
+        await userApi.update(editingId, { ...payload, _editReason: editReason });
         toast.success("User updated");
       } else {
-        await axios.post(`${API}/api/v2/user`, { ...payload, password: payload.password || "default123" }, {
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
-        });
+        await userApi.create({ ...payload, password: payload.password || "default123" });
         toast.success("User created");
       }
       setShowModal(false);
@@ -234,11 +219,7 @@ export default function UserManage() {
 
   const onDelete = async (id, reason) => {
     try {
-      await axios.delete(`${API}/api/v2/user/${id}`, {
-        data: { reason },
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
-      });
+      await userApi.deactivate(id, reason);
       toast.success("User deactivated");
       loadUsers();
     } catch (e) {
@@ -270,10 +251,7 @@ export default function UserManage() {
     let ok = 0, fail = 0;
     for (const id of ids) {
       try {
-        await axios.put(`${API}/api/v2/user/${id}`, { status: mappedStatus }, {
-          headers: { Authorization: authorizationToken },
-          withCredentials: true,
-        });
+        await userApi.update(id, { status: mappedStatus });
         ok++;
       } catch (_) {
         fail++;

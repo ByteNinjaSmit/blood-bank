@@ -29,6 +29,7 @@ const NAV_ID_TO_REGISTRY_MODULE = {
   admin: 'admin',
   mis: 'mis',
   'recycle-bin': 'mis',
+  reports: ['monthly-report', 'yearly-report'],
 };
 
 const Sidebar = ({
@@ -45,7 +46,9 @@ const Sidebar = ({
   const canViewModule = useCallback(
     (_user, moduleId) => {
       const registryId = NAV_ID_TO_REGISTRY_MODULE[moduleId];
-      return registryId ? canViewRegistryModule(registryId) : false;
+      if (!registryId) return false;
+      const ids = Array.isArray(registryId) ? registryId : [registryId];
+      return ids.some((id) => canViewRegistryModule(id));
     },
     [canViewRegistryModule],
   );

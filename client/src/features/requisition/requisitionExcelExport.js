@@ -1,4 +1,5 @@
 import { buildStyledSheet, XLSX } from '@/utils/xlsxStyleHelper';
+import { formatDateTime as fmtDateTime } from '@/utils/excel/core';
 import requisitionApi from '@/services/requisitionApi';
 import { BLOOD_GROUPS } from '@/lib/blood-groups';
 
@@ -22,14 +23,6 @@ function compactBloodGroup(bloodGroup, rh) {
   if (!bloodGroup) return '—';
   const sign = rh === 'Positive' ? '+' : rh === 'Negative' ? '-' : '';
   return `${bloodGroup}${sign}`;
-}
-
-function fmtDateTime(d) {
-  if (!d) return '—';
-  const dt = new Date(d);
-  if (Number.isNaN(dt.getTime())) return '—';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
 }
 
 // Fetches every requisition matching the filters by paging through the

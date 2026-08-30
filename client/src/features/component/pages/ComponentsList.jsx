@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { TestTube, Package, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { apiClient } from "@/core/api-client";
+import { componentApi } from "../api";
 import { useAuth } from "@/store/auth";
 import { formatDate as formatDateKolkata } from "@/lib/format-date";
 import { useNavigate } from "react-router-dom";
@@ -83,9 +83,9 @@ const ComponentsList = () => {
           ...(state.filters.campId && { campId: state.filters.campId }),
           order: state.filters.order,
         };
-        const response = await apiClient.get(`/api/v2/component/list`, { params });
-        if (response.data?.components) {
-          dataToExport = flattenComponents(response.data.components);
+        const response = await componentApi.list(params);
+        if (response?.components) {
+          dataToExport = flattenComponents(response.components);
         }
       } else {
         dataToExport = flattenComponents(state.components);
@@ -165,19 +165,19 @@ const ComponentsList = () => {
         order: state.filters.order === "bagAsc" ? "asc" : state.filters.order,
       };
 
-      const response = await apiClient.get(`/api/v2/component/list`, { params });
+      const response = await componentApi.list(params);
 
-      if (response.data?.components) {
+      if (response?.components) {
         const components = state.filters.order === "bagAsc"
-          ? sortByBagNoAsc(response.data.components)
-          : response.data.components;
+          ? sortByBagNoAsc(response.components)
+          : response.components;
         setState(prev => ({
           ...prev,
           components,
           pagination: {
             ...prev.pagination,
-            total: response.data.pagination?.total || 0,
-            totalPages: response.data.pagination?.totalPages || 0,
+            total: response.pagination?.total || 0,
+            totalPages: response.pagination?.totalPages || 0,
           },
         }));
       } else {

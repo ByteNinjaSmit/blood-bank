@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { TestTube, Loader2, Calendar, Package, AlertTriangle, User, MapPin, Droplets, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
-import { useAuth } from "@/store/auth";
+import { componentApi } from "@/features/component/api";
+import { formatDate as fmtDate, formatDateTime as fmtDateTime } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
-  const { API, authorizationToken } = useAuth();
-  
   const [state, setState] = useState({
     isLoading: true,
     component: null,
@@ -20,19 +18,16 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
   // Fetch component details
   const fetchComponentDetails = async () => {
     if (!componentId) return;
-    
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
-    
-    try {
-      const response = await axios.get(`${API}/api/v2/component/${componentId}`, {
-        headers: { Authorization: authorizationToken },
-        withCredentials: true,
-      });
 
-      if (response.data?.component) {
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      const response = await componentApi.detail(componentId);
+
+      if (response?.component) {
         setState(prev => ({
           ...prev,
-          component: response.data.component,
+          component: response.component,
           isLoading: false,
         }));
       } else {
@@ -71,16 +66,9 @@ const ComponentDetailsModal = ({ isOpen, onClose, componentId }) => {
     }
   }, [isOpen]);
 
-  // Helper functions
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const formatDateTime = (dateString) => {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleString();
-  };
+  // Helper functions — dates rendered in Asia/Kolkata via the shared formatter.
+  const formatDate = (dateString) => (dateString ? fmtDate(dateString) : "-");
+  const formatDateTime = (dateString) => (dateString ? fmtDateTime(dateString) : "-");
 
   const isExpired = (expiryDate) => {
     if (!expiryDate) return false;

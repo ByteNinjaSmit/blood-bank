@@ -8,6 +8,7 @@ import AuditDetailDrawer from '../components/AuditDetailDrawer';
 import Pagination from '@/features/user/pages/components/Pagination';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { downloadExcelReport } from '@/utils/excelExportHelper';
+import { formatDateTime } from '@/lib/format-date';
 import { entityRef } from '../entityLabel';
 
 // "indeterminate" is the internal TTI decision/result value — the lab
@@ -167,7 +168,7 @@ export default function AuditTrail() {
             : 'All Records',
           headers: ['Timestamp', 'Module', 'Entity Type', 'Entity', 'Action', 'Actor Role', 'Reason', 'Changed Fields'],
           rows: items.map((e) => [
-            e.at ? new Date(e.at).toLocaleString('en-IN') : '',
+            e.at ? formatDateTime(e.at) : '',
             e.module || '',
             e.entityType || '',
             e.entityLabel || e.entityId || '',
@@ -273,7 +274,7 @@ export default function AuditTrail() {
                     >
                       <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">
                         <span className={`inline-block w-1.5 h-1.5 rounded-full mr-2 align-middle ${group.color.bar}`} />
-                        {entry.at ? new Date(entry.at).toLocaleString('en-IN') : '—'}
+                        {entry.at ? formatDateTime(entry.at) : '—'}
                       </td>
                       <td className="px-4 py-2.5 text-gray-700 font-medium">{entry.module || '—'}</td>
                       <td className="px-4 py-2.5 text-gray-700">

@@ -133,7 +133,14 @@ export function createStorageTransferRepo(): StorageTransferRepo {
       // Claim the bags before creating the record — a rejected claim must
       // never leave an orphaned transfer whose bags were never actually
       // moved into storage.
-      await claimUnitsForStorage(unitIds, location, input.sentDate, actorId, 'SEND_TO_STORAGE');
+      await claimUnitsForStorage(
+        unitIds,
+        location,
+        input.sentDate,
+        actorId,
+        'SEND_TO_STORAGE',
+        input.transferId,
+      );
 
       const doc = await StorageTransferModel.create({
         ...input,
@@ -167,8 +174,14 @@ export function createStorageTransferRepo(): StorageTransferRepo {
           input.sentDate ?? raw.sentDate,
           actorId,
           'SEND_TO_STORAGE',
+          raw.transferId,
         );
-        await releaseUnitsFromStorage(removedUnitIds, actorId, 'STORAGE_TRANSFER_UPDATED');
+        await releaseUnitsFromStorage(
+          removedUnitIds,
+          actorId,
+          'STORAGE_TRANSFER_UPDATED',
+          raw.transferId,
+        );
 
         // Bags that stayed in the batch: re-point their storageLocation if
         // the location changed.
@@ -204,7 +217,12 @@ export function createStorageTransferRepo(): StorageTransferRepo {
       if (!raw) throw new NotFoundError('StorageTransfer', id);
 
       const unitIds = (raw.items || []).map((it: any) => it.unitId.toString());
-      await releaseUnitsFromStorage(unitIds, actorId, 'STORAGE_TRANSFER_DELETED');
+      await releaseUnitsFromStorage(
+        unitIds,
+        actorId,
+        'STORAGE_TRANSFER_DELETED',
+        raw.transferId,
+      );
 
       raw.deletedAt = new Date();
       (raw as any).deleteReason = reason ?? null;
@@ -229,6 +247,7 @@ export function createStorageTransferRepo(): StorageTransferRepo {
         raw.sentDate,
         actorId,
         'STORAGE_TRANSFER_RESTORED',
+        raw.transferId,
       );
 
       (raw as any).deletedAt = null;

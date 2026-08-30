@@ -26,6 +26,7 @@ import {
 } from '@/modules/component/component.mapper';
 import { getShelfDays, PRODUCT_CODE } from '@/shared/component-type';
 import { compareBagNo } from '@/shared/utils/bag-no-sort';
+import { withAudit } from '@/shared/utils/with-audit';
 import type { ComponentType } from '@/shared/enums';
 import { resolveDonation, componentSlot, allowedComponentTypes } from './component.helpers';
 import type { ComponentListFilters, NearExpiryFilters } from './component.helpers';
@@ -209,10 +210,26 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       const expiresAt = new Date(donation.collectedAt);
       expiresAt.setDate(expiresAt.getDate() + shelfDays);
 
-      await BloodUnitModel.updateOne(
+      const wbParent = await BloodUnitModel.findOneAndUpdate(
         { donationId: resolvedDonationId, componentType: 'WB', deletedAt: null },
         { deletedAt: new Date(), deletedBy: new Types.ObjectId(actorId) },
-      );
+      ).lean();
+      if (wbParent) {
+        void withAudit(
+          { actorId },
+          {
+            module: 'component',
+            action: 'DELETE',
+            entityType: 'BloodUnit',
+            entityId: wbParent.unitId,
+            entityLabel: wbParent.unitId,
+            severity: 'warning',
+            reason: `Whole-blood bag retired on separation into ${mappedType}`,
+          },
+          { deletedAt: null, componentType: 'WB' },
+          { deletedAt: 'set', event: 'SEPARATE' },
+        );
+      }
 
       // Centrifuge spin log — one physical separation event per bag, so
       // each separate() call for this donation overwrites with the latest

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Save, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { apiClient } from "@/core/api-client";
+import { componentApi } from "@/features/component/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ const toLocalDateTimeInput = (iso) => {
 };
 
 const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [bagInfo, setBagInfo] = useState(null);
@@ -42,8 +44,8 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
     if (!componentId) return;
     setIsLoading(true);
     try {
-      const res = await apiClient.get(`/api/v2/component/${componentId}`);
-      const component = res.data?.component;
+      const res = await componentApi.detail(componentId);
+      const component = res?.component;
       if (!component) throw new Error("Component not found");
       setBagInfo(component.bloodBag);
       setRpmFirstSpin(component.bloodBag?.rpmFirstSpin || "");
@@ -140,7 +142,7 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
 
     setIsSaving(true);
     try {
-      await apiClient.patch(`/api/v2/component/bag/${componentId}`, {
+      await componentApi.patchBag(componentId, {
         components: entries.map(([, f]) => ({
           unitId: f.unitId,
           componentType: f.componentType,
@@ -154,6 +156,9 @@ const ComponentEditModal = ({ isOpen, onClose, componentId, onSaved }) => {
         editReason: editReason.trim(),
       });
       toast.success("Component details updated");
+      ["component", "inventory", "donation"].forEach((key) =>
+        queryClient.invalidateQueries({ queryKey: [key] }),
+      );
       onSaved?.();
       onClose?.();
     } catch (err) {

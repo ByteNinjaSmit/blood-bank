@@ -3,6 +3,11 @@ import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { ConflictError, NotFoundError, ValidationError } from '@/shared/errors';
 import { invalidate } from '@/core/cache';
+import {
+  auditUnitStatusMovement,
+  auditUnitCreated,
+  auditUnitSoftDelete,
+} from '@/shared/utils/audit-unit-movement';
 import type {
   ListBulkTransferInput,
   UpdateBulkTransferInput,
@@ -98,10 +103,16 @@ export interface BulkTransferRepo {
 // findOneAndUpdate calls guarded on the expected current status, so a bag
 // that was concurrently reserved/issued/sent-to-storage elsewhere can never
 // be silently clobbered or resurrected into stock.
-async function markUnitsIssuedForLoan(unitIds: string[], actorId: string): Promise<void> {
+async function markUnitsIssuedForLoan(
+  unitIds: string[],
+  actorId: string,
+  transferId?: string,
+): Promise<void> {
   if (!unitIds.length) return;
   const actor = new Types.ObjectId(actorId);
   const now = new Date();
+  const suffix = transferId ? ` (transfer ${transferId})` : '';
+  const reason = `Given on loan via bulk transfer${suffix}`;
 
   // Verify every bag is currently real available stock before mutating any
   // of them — a partial loan (some bags removed, some silently left behind)
@@ -130,7 +141,7 @@ async function markUnitsIssuedForLoan(unitIds: string[], actorId: string): Promi
             event: 'BULK_TRANSFER_LOAN_GIVEN',
             actor,
             at: now,
-            reason: 'Given on loan via bulk transfer',
+            reason,
           },
         },
       },
@@ -140,19 +151,34 @@ async function markUnitsIssuedForLoan(unitIds: string[], actorId: string): Promi
         'One or more selected bags are no longer in stock (already reserved, issued, or on loan). Refresh and try again.',
       );
     }
+    auditUnitStatusMovement({
+      actorId,
+      module: 'bulk-transfer',
+      unitId: unit.unitId,
+      event: 'BULK_TRANSFER_LOAN_GIVEN',
+      from: 'RELEASED',
+      to: 'ISSUED',
+      reason,
+    });
   }
   await invalidate('inventory:*');
 }
 
-async function restoreUnitsFromLoan(unitIds: string[], actorId: string): Promise<void> {
+async function restoreUnitsFromLoan(
+  unitIds: string[],
+  actorId: string,
+  transferId?: string,
+): Promise<void> {
   if (!unitIds.length) return;
   const actor = new Types.ObjectId(actorId);
   const now = new Date();
+  const suffix = transferId ? ` (transfer ${transferId})` : '';
+  const reason = `Bulk transfer (loan) reversed — bag returned to stock${suffix}`;
   for (const id of unitIds) {
     // Only restore bags that are still in the ISSUED-for-loan state this
     // module put them in — never force a bag that has since moved on
     // (discarded, expired, re-issued) back into available stock.
-    await BloodUnitModel.findOneAndUpdate(
+    const unit = await BloodUnitModel.findOneAndUpdate(
       { _id: id, status: 'ISSUED' },
       {
         status: 'RELEASED',
@@ -165,11 +191,22 @@ async function restoreUnitsFromLoan(unitIds: string[], actorId: string): Promise
             event: 'BULK_TRANSFER_LOAN_DELETED',
             actor,
             at: now,
-            reason: 'Bulk transfer (loan) deleted — bag returned to stock',
+            reason,
           },
         },
       },
     );
+    if (unit) {
+      auditUnitStatusMovement({
+        actorId,
+        module: 'bulk-transfer',
+        unitId: unit.unitId,
+        event: 'BULK_TRANSFER_LOAN_DELETED',
+        from: 'ISSUED',
+        to: 'RELEASED',
+        reason,
+      });
+    }
   }
   await invalidate('inventory:*');
 }
@@ -233,6 +270,14 @@ export async function createUnitsForTakeLoan(
       updatedBy: actor,
     } as any);
     item.unitId = (unit._id as Types.ObjectId).toString();
+    auditUnitCreated({
+      actorId: ctx.actorId,
+      module: 'bulk-transfer',
+      unitId: unit.unitId,
+      event: 'BULK_TRANSFER_LOAN_TAKEN',
+      status: 'RELEASED',
+      reason: `Taken on loan from ${ctx.bloodBankName} (transfer ${ctx.transferId})`,
+    });
   }
   await invalidate('inventory:*');
 }
@@ -242,10 +287,16 @@ export async function createUnitsForTakeLoan(
 // untouched (RELEASED, never matched/issued/sent to storage), exactly
 // mirroring markUnitsIssuedForLoan/restoreUnitsFromLoan's guarantees below
 // for GIVE_LOAN, just soft-deleting the unit instead of flipping status.
-async function retireUnitsFromTakeLoan(unitIds: string[], actorId: string): Promise<void> {
+async function retireUnitsFromTakeLoan(
+  unitIds: string[],
+  actorId: string,
+  transferId?: string,
+): Promise<void> {
   if (!unitIds.length) return;
   const actor = new Types.ObjectId(actorId);
   const now = new Date();
+  const suffix = transferId ? ` (transfer ${transferId})` : '';
+  const reason = `Bulk transfer (loan taken) deleted — bag removed from stock${suffix}`;
 
   const releasedCount = await BloodUnitModel.countDocuments({
     _id: { $in: unitIds },
@@ -272,7 +323,7 @@ async function retireUnitsFromTakeLoan(unitIds: string[], actorId: string): Prom
             event: 'BULK_TRANSFER_LOAN_TAKEN_DELETED',
             actor,
             at: now,
-            reason: 'Bulk transfer (loan taken) deleted — bag removed from stock',
+            reason,
           },
         },
       },
@@ -282,18 +333,33 @@ async function retireUnitsFromTakeLoan(unitIds: string[], actorId: string): Prom
         'One or more taken-in bags have already been reserved, issued, or sent to storage. Refresh and try again.',
       );
     }
+    auditUnitSoftDelete({
+      actorId,
+      module: 'bulk-transfer',
+      unitId: unit.unitId,
+      event: 'BULK_TRANSFER_LOAN_TAKEN_DELETED',
+      action: 'DELETE',
+      deleted: true,
+      reason,
+    });
   }
   await invalidate('inventory:*');
 }
 
-async function reinstateUnitsFromTakeLoan(unitIds: string[], actorId: string): Promise<void> {
+async function reinstateUnitsFromTakeLoan(
+  unitIds: string[],
+  actorId: string,
+  transferId?: string,
+): Promise<void> {
   if (!unitIds.length) return;
   const actor = new Types.ObjectId(actorId);
   const now = new Date();
+  const suffix = transferId ? ` (transfer ${transferId})` : '';
+  const reason = `Bulk transfer (loan taken) restored — bag returned to stock${suffix}`;
   for (const id of unitIds) {
     // Only reinstate bags still soft-deleted from this module's own retire()
     // call — never resurrect one that moved on some other way since.
-    await BloodUnitModel.findOneAndUpdate(
+    const unit = await BloodUnitModel.findOneAndUpdate(
       { _id: id, status: 'RELEASED', deletedAt: { $ne: null } },
       {
         deletedAt: null,
@@ -306,11 +372,22 @@ async function reinstateUnitsFromTakeLoan(unitIds: string[], actorId: string): P
             event: 'BULK_TRANSFER_LOAN_TAKEN_RESTORED',
             actor,
             at: now,
-            reason: 'Bulk transfer (loan taken) restored — bag returned to stock',
+            reason,
           },
         },
       },
     );
+    if (unit) {
+      auditUnitSoftDelete({
+        actorId,
+        module: 'bulk-transfer',
+        unitId: unit.unitId,
+        event: 'BULK_TRANSFER_LOAN_TAKEN_RESTORED',
+        action: 'UPDATE',
+        deleted: false,
+        reason,
+      });
+    }
   }
   await invalidate('inventory:*');
 }
@@ -360,7 +437,7 @@ export function createBulkTransferRepo(): BulkTransferRepo {
       // never actually removed from stock.
       if (input.transferType === 'GIVE_LOAN') {
         const unitIds = input.items.map((it) => it.unitId).filter(Boolean) as string[];
-        await markUnitsIssuedForLoan(unitIds, actorId);
+        await markUnitsIssuedForLoan(unitIds, actorId, input.transferId);
       } else {
         await createUnitsForTakeLoan(input.items, {
           transferId: input.transferId,
@@ -400,8 +477,8 @@ export function createBulkTransferRepo(): BulkTransferRepo {
 
         // Claim newly-added bags first (fails fast, nothing committed yet)
         // before restoring removed bags, mirroring create()'s claim-before-write order.
-        await markUnitsIssuedForLoan(addedUnitIds, actorId);
-        await restoreUnitsFromLoan(removedUnitIds, actorId);
+        await markUnitsIssuedForLoan(addedUnitIds, actorId, raw.transferId);
+        await restoreUnitsFromLoan(removedUnitIds, actorId, raw.transferId);
       }
 
       // TAKE_LOAN items each own a real BloodUnit created on intake (see
@@ -458,7 +535,7 @@ export function createBulkTransferRepo(): BulkTransferRepo {
           transferDate: input.transferDate ?? raw.transferDate,
           actorId,
         });
-        await retireUnitsFromTakeLoan(removedUnitIds, actorId);
+        await retireUnitsFromTakeLoan(removedUnitIds, actorId, raw.transferId);
       }
 
       if (input.bloodBankName !== undefined) raw.bloodBankName = input.bloodBankName;
@@ -480,9 +557,9 @@ export function createBulkTransferRepo(): BulkTransferRepo {
         .filter(Boolean)
         .map((u: any) => u.toString());
       if (raw.transferType === 'GIVE_LOAN') {
-        await restoreUnitsFromLoan(unitIds, actorId);
+        await restoreUnitsFromLoan(unitIds, actorId, raw.transferId);
       } else {
-        await retireUnitsFromTakeLoan(unitIds, actorId);
+        await retireUnitsFromTakeLoan(unitIds, actorId, raw.transferId);
       }
 
       raw.deletedAt = new Date();
@@ -506,9 +583,9 @@ export function createBulkTransferRepo(): BulkTransferRepo {
         .filter(Boolean)
         .map((u: any) => u.toString());
       if (raw.transferType === 'GIVE_LOAN') {
-        await markUnitsIssuedForLoan(unitIds, actorId);
+        await markUnitsIssuedForLoan(unitIds, actorId, raw.transferId);
       } else {
-        await reinstateUnitsFromTakeLoan(unitIds, actorId);
+        await reinstateUnitsFromTakeLoan(unitIds, actorId, raw.transferId);
       }
 
       (raw as any).deletedAt = null;

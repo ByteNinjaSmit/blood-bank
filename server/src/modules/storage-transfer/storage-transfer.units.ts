@@ -6,6 +6,7 @@ import { childLogger } from '@/core/logger';
 import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { ConflictError } from '@/shared/errors';
 import { invalidate } from '@/core/cache';
+import { auditUnitStatusMovement } from '@/shared/utils/audit-unit-movement';
 
 const log = childLogger({ module: 'storage-transfer-units' });
 
@@ -44,11 +45,14 @@ export async function claimUnitsForStorage(
   sentDate: Date,
   actorId: string,
   event: 'SEND_TO_STORAGE' | 'STORAGE_TRANSFER_RESTORED',
+  transferId?: string,
 ): Promise<void> {
   if (!unitIds.length) return;
   await assertUnitsAvailable(unitIds);
 
   const actor = new Types.ObjectId(actorId);
+  const suffix = transferId ? ` (transfer ${transferId})` : '';
+  const reason = `Sent to storage at ${location}${suffix}`;
   for (const id of unitIds) {
     const unit = await BloodUnitModel.findOneAndUpdate(
       { _id: id, status: 'RELEASED' },
@@ -65,12 +69,21 @@ export async function claimUnitsForStorage(
             event,
             actor,
             at: new Date(),
-            reason: `Sent to storage at ${location}`,
+            reason,
           },
         },
       },
     );
     if (!unit) throw new ConflictError(UNAVAILABLE_MESSAGE);
+    auditUnitStatusMovement({
+      actorId,
+      module: 'storage-transfer',
+      unitId: unit.unitId,
+      event,
+      from: 'RELEASED',
+      to: 'ISSUED',
+      reason,
+    });
   }
   await invalidateInventoryCache();
 }
@@ -86,10 +99,16 @@ export async function releaseUnitsFromStorage(
   unitIds: string[],
   actorId: string,
   event: 'STORAGE_TRANSFER_DELETED' | 'STORAGE_TRANSFER_UPDATED',
+  transferId?: string,
 ): Promise<void> {
   if (!unitIds.length) return;
   const actor = new Types.ObjectId(actorId);
   const now = new Date();
+  const suffix = transferId ? ` (transfer ${transferId})` : '';
+  const reason =
+    event === 'STORAGE_TRANSFER_DELETED'
+      ? `Storage transfer deleted — bag returned to stock${suffix}`
+      : `Removed from storage transfer — bag returned to stock${suffix}`;
   for (const id of unitIds) {
     const unit = await BloodUnitModel.findOneAndUpdate(
       { _id: id, status: 'ISSUED' },
@@ -105,12 +124,21 @@ export async function releaseUnitsFromStorage(
             event,
             actor,
             at: now,
-            reason: 'Storage transfer batch deleted — bag returned to stock',
+            reason,
           },
         },
       },
     );
     if (!unit) throw new ConflictError(RETURN_FAILED_MESSAGE);
+    auditUnitStatusMovement({
+      actorId,
+      module: 'storage-transfer',
+      unitId: unit.unitId,
+      event,
+      from: 'ISSUED',
+      to: 'RELEASED',
+      reason,
+    });
   }
   await invalidateInventoryCache();
 }

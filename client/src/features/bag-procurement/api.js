@@ -50,9 +50,9 @@ export const bagProcurementApi = {
     list:        (params)   => apiClient.get(`${V}/bag-issue`, { params }).then(unwrap),
     get:         (id)       => apiClient.get(`${V}/bag-issue/${id}`).then(unwrap),
     create:      (data)     => apiClient.post(`${V}/bag-issue`, data).then(unwrap),
-    markUsed:    (id, data) => apiClient.patch(`${V}/bag-issue/${id}/used`, data).then(unwrap),
+    markUsed:    (id, data) => apiClient.patch(`${V}/bag-issue/${id}/mark-used`, data).then(unwrap),
     returnBag:   (id)       => apiClient.patch(`${V}/bag-issue/${id}/return`).then(unwrap),
-    markDamaged: (id, data) => apiClient.patch(`${V}/bag-issue/${id}/damaged`, data).then(unwrap),
+    markDamaged: (id, data) => apiClient.patch(`${V}/bag-issue/${id}/mark-damaged`, data).then(unwrap),
   },
 
   bagDiscard: {

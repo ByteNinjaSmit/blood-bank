@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { TestTube, Loader2, Scissors, CheckCircle, RefreshCw, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { apiClient } from "@/core/api-client";
+import { componentApi } from "../api";
 import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -23,6 +24,14 @@ const SEPARABLE_COMPONENT_TYPES = ["PRBC", "FFP", "RDP", "CRYO"];
 
 const ComponentSeparate = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Separations/completions create + release BloodUnits — refresh every
+  // cached view that reads unit / stock / donation state.
+  const invalidateStockViews = () =>
+    ["component", "inventory", "donation", "discard"].forEach((key) =>
+      queryClient.invalidateQueries({ queryKey: [key] }),
+    );
 
   const [isLoading, setIsLoading] = useState(false);
   const [bags, setBags] = useState([]);
@@ -93,9 +102,9 @@ const ComponentSeparate = () => {
   const fetchBags = async () => {
     setIsLoading(true);
     try {
-      const bagsRes = await apiClient.get(`/api/v2/component/bags-to-separate`);
+      const bagsRes = await componentApi.bagsToSeparate();
 
-      const bagsData = Array.isArray(bagsRes.data?.bags) ? bagsRes.data.bags : [];
+      const bagsData = Array.isArray(bagsRes?.bags) ? bagsRes.bags : [];
       setBags(bagsData);
       batch.pruneStaleKeys(bagsData);
     } catch (error) {
@@ -183,7 +192,7 @@ const ComponentSeparate = () => {
     let succeededCount = 0;
     for (const item of pendingComponents) {
       try {
-        await apiClient.post(`/api/v2/component/separate`, {
+        await componentApi.separate({
           donationId,
           componentType: item.componentType,
           volumeMl: item.volumeMl,
@@ -206,6 +215,7 @@ const ComponentSeparate = () => {
           ? "Component separated successfully"
           : `${succeededCount} components separated successfully`,
       );
+      invalidateStockViews();
       await fetchBags();
     }
 
@@ -276,7 +286,7 @@ const ComponentSeparate = () => {
     }
     setIsActionLoading(true);
     try {
-      await apiClient.patch(`/api/v2/component/bag/${donationId}`, {
+      await componentApi.patchBag(donationId, {
         components: editComponents.map((c) => ({
           unitId: c.unitId,
           componentType: c.componentType,
@@ -292,6 +302,7 @@ const ComponentSeparate = () => {
       toast.success("Bag updated successfully");
       setShowEditModal(false);
       setEditBag(null);
+      invalidateStockViews();
       await fetchBags();
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to update bag");
@@ -308,8 +319,9 @@ const ComponentSeparate = () => {
     }
     try {
       setIsActionLoading(true);
-      await apiClient.post(`/api/v2/component/separation-completed`, { donationId, signature });
+      await componentApi.separationCompleted(donationId, signature);
       toast.success("Marked separation as completed");
+      invalidateStockViews();
       await fetchBags();
     } catch (err) {
       const msg = err?.response?.data?.message || "Failed to mark as completed";
@@ -605,7 +617,7 @@ const ComponentSeparate = () => {
           batch.finalizeBatch(
             batchQueuedBags,
             batch.signatureText,
-            { onSuccess: fetchBags },
+            { onSuccess: () => { invalidateStockViews(); return fetchBags(); } },
           )
         }
       />
