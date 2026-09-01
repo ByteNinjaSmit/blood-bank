@@ -24,7 +24,7 @@ import CampDonationManagement from './features/camp/pages/CampDonationManagement
 import CampReports from './features/camp/pages/CampReports';
 
 // Component
-import { ComponentsList, ComponentSeparate, NearExpiry } from './features/component/pages';
+import { ComponentsList, ComponentSeparate } from './features/component/pages';
 import ViewDiscarded from './features/discard/components/View-Discarded';
 
 // Inventory
@@ -136,7 +136,7 @@ const App = () => {
           {/* Component */}
           <Route path="component/list" element={<PageGuard module="component" page="component-list"><ComponentsList /></PageGuard>} />
           <Route path="component/separate" element={<PageGuard module="component" page="component-separate"><ComponentSeparate /></PageGuard>} />
-          <Route path="component/near-expiry" element={<PageGuard module="component" page="component-near-expiry"><NearExpiry /></PageGuard>} />
+          <Route path="component/near-expiry" element={<Navigate to="/inventory/near-expiry" replace />} />
           <Route path="discard" element={<PageGuard module="discard" page="discard-list"><ViewDiscarded /></PageGuard>} />
 
           {/* Inventory */}

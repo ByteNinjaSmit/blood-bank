@@ -21,8 +21,11 @@ const NearExpiryQuery = z.object({
   limit: z.coerce.number().int().min(1).max(5000).optional(),
   days: z.coerce.number().int().min(1).optional(),
   componentType: z.string().trim().optional(),
+  bloodGroup: z.string().trim().optional(),
   status: z.string().trim().optional(),
   search: z.string().trim().max(120).optional(),
+  sort: z.enum(['nearest', 'bagNo']).optional(),
+  order: z.enum(['asc', 'desc']).optional(),
 });
 
 const SeparateBody = z.object({

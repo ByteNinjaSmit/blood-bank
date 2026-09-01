@@ -219,23 +219,25 @@ export async function exportProcurementInventory(items, meta = {}) {
 
 // 15. Procurement Discard — Blood Unit Discard (clinical BloodUnit register)
 export async function exportProcurementDiscard(items, meta = {}) {
-  const headers = ['Sr No', 'Bag No', 'Segment No', 'Component No', 'Type', 'Item', 'Reason', 'Discarded Date'];
-  const alignments = ['center', 'center', 'center', 'center', 'center', 'left', 'left', 'center'];
+  const headers = ['Sr No', 'Bag No', 'Segment No', 'Batch No', 'Component No', 'Type', 'Item', 'Discard Type', 'Reason', 'Discarded Date'];
+  const alignments = ['center', 'center', 'center', 'center', 'center', 'center', 'left', 'center', 'left', 'center'];
 
   const rows = items.map((r, i) => [
     i + 1,
     r.bagNo || '—',
     r.segmentNo || '—',
+    r.batchNo || '—',
     r.componentNo || r.componentId || '—',
     r.itemType || '—',
     r.itemName || r.componentType || '—',
+    r.discardType === 'SYSTEM' ? 'System' : 'Manual',
     r.reason || '—',
     formatDateTime(r.discardedAt || r.createdAt),
   ]);
 
   const stats = [
     { label: 'Total Discards', value: items.length },
-    { label: 'Bags Discarded', value: items.filter(r => r.itemType === 'Donation' || r.itemType === 'Bag').length },
+    { label: 'System (auto) Discards', value: items.filter(r => r.discardType === 'SYSTEM').length },
     { label: 'Components Discarded', value: items.filter(r => r.itemType === 'Component').length },
   ];
 

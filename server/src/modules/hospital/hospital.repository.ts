@@ -11,6 +11,8 @@ export interface HospitalDto {
   email?: string;
   licenseNo?: string;
   isActive?: boolean;
+  deletedAt?: string | null;
+  deleteReason?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -25,6 +27,8 @@ interface RawHospital {
   email?: string;
   licenseNo?: string;
   isActive?: boolean;
+  deletedAt?: Date | null;
+  deleteReason?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -40,6 +44,8 @@ function toDto(r: RawHospital): HospitalDto {
     email: r.email,
     licenseNo: r.licenseNo,
     isActive: r.isActive,
+    deletedAt: r.deletedAt ? new Date(r.deletedAt).toISOString() : null,
+    deleteReason: r.deleteReason || null,
     createdAt: r.createdAt?.toISOString(),
     updatedAt: r.updatedAt?.toISOString(),
   };

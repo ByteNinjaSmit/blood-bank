@@ -1,5 +1,5 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
-import { BAG_TYPE, BAG_DISCARD_REASON } from '@/shared/enums';
+import { BAG_TYPE } from '@/shared/enums';
 
 const BagDiscardSchema = new Schema(
   {
@@ -9,8 +9,19 @@ const BagDiscardSchema = new Schema(
     bagType: { type: String, enum: BAG_TYPE, required: true },
     batchNumber: { type: String, required: true, trim: true },
     quantity: { type: Number, required: true, min: 1 },
-    reason: { type: String, enum: BAG_DISCARD_REASON, required: true, index: true },
+    // Not enum-constrained at the schema level: the PROCUREMENT path
+    // validates against BAG_DISCARD_REASON and the CLINICAL empty-bag
+    // path (from the /discard screen) against the clinical DISCARD_REASON
+    // enum — both enforced by their respective zod validators.
+    reason: { type: String, required: true, index: true, trim: true },
     reasonDetail: { type: String, trim: true },
+    // Where the discard originated. PROCUREMENT = Bag Discard screen;
+    // CLINICAL = an empty/unfilled bag discarded from the clinical
+    // /discard screen by segment + batch. Only CLINICAL rows are merged
+    // into /api/discard/get-list.
+    source: { type: String, enum: ['PROCUREMENT', 'CLINICAL'], default: 'PROCUREMENT', index: true },
+    // Segment (empty-bag identity) — only set for CLINICAL rows.
+    segmentNo: { type: String, trim: true },
     approvedById: { type: Schema.Types.ObjectId, ref: 'User' },
     approvedAt: { type: Date },
     disposalMethod: { type: String, trim: true },

@@ -81,6 +81,7 @@ export interface BagStockRepo {
   list(q: ListBagStockInput): Promise<{ items: BagStockDto[]; total: number }>;
   findById(id: string): Promise<BagStockDto | null>;
   findByBatchAndType(batchNumber: string, bagType: string): Promise<BagStockDto | null>;
+  findByBatch(batchNumber: string): Promise<BagStockDto[]>;
   summary(): Promise<BagStockSummaryItem[]>;
   lowBoxStock(threshold?: number): Promise<LowBoxBatchDto[]>;
   upsertFromGRN(doc: {
@@ -180,6 +181,19 @@ export function createBagStockRepo(): BagStockRepo {
           createdAt?: Date;
           updatedAt?: Date;
         },
+      );
+    },
+
+    async findByBatch(batchNumber) {
+      const docs = await BagStockModel.find({ batchNumber, deletedAt: null }).lean();
+      return docs.map((d) =>
+        toDto(
+          d as unknown as Record<string, unknown> & {
+            _id: Types.ObjectId;
+            createdAt?: Date;
+            updatedAt?: Date;
+          },
+        ),
       );
     },
 

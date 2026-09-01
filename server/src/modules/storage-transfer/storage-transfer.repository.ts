@@ -31,6 +31,7 @@ export interface StorageTransferDto {
   sentDate: string;
   items: StorageTransferItemDto[];
   deletedAt?: string;
+  deleteReason?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -53,6 +54,7 @@ function toDto(raw: any): StorageTransferDto {
       expiresAt: it.expiresAt ? new Date(it.expiresAt).toISOString() : undefined,
     })),
     deletedAt: raw.deletedAt ? new Date(raw.deletedAt).toISOString() : undefined,
+    deleteReason: raw.deleteReason || null,
     createdAt: raw.createdAt ? new Date(raw.createdAt).toISOString() : '',
     updatedAt: raw.updatedAt ? new Date(raw.updatedAt).toISOString() : '',
   };
@@ -86,7 +88,7 @@ export interface StorageTransferRepo {
     input: UpdateStorageTransferInput,
     actorId: string,
   ): Promise<StorageTransferDto>;
-  remove(id: string, actorId: string): Promise<StorageTransferDto>;
+  remove(id: string, actorId: string, reason?: string): Promise<StorageTransferDto>;
   restore(id: string, actorId: string): Promise<StorageTransferDto>;
 }
 
@@ -197,7 +199,7 @@ export function createStorageTransferRepo(): StorageTransferRepo {
       return toDto(raw.toObject());
     },
 
-    async remove(id, actorId) {
+    async remove(id, actorId, reason) {
       const raw = await StorageTransferModel.findOne({ _id: id, deletedAt: null });
       if (!raw) throw new NotFoundError('StorageTransfer', id);
 
@@ -205,6 +207,7 @@ export function createStorageTransferRepo(): StorageTransferRepo {
       await releaseUnitsFromStorage(unitIds, actorId, 'STORAGE_TRANSFER_DELETED');
 
       raw.deletedAt = new Date();
+      (raw as any).deleteReason = reason ?? null;
       raw.updatedBy = new Types.ObjectId(actorId);
       await raw.save();
       return toDto(raw.toObject());

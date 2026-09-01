@@ -18,6 +18,11 @@ export default function HospitalDoctorDetailsCard({
   dateOnly = false,
   readOnly = false,
   onAddHospital,
+  // Optional "Requested At" date+time field (requisition flow only).
+  showRequestedAt = false,
+  requestedAtLabel = 'Requested At (Date & Time)',
+  requestedAtValue,
+  onRequestedAtChange,
 }) {
   const inputClass = `w-full px-3 py-2 border rounded-lg ${readOnly ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`;
 
@@ -47,6 +52,19 @@ export default function HospitalDoctorDetailsCard({
             disabled={readOnly}
           />
         </div>
+
+        {showRequestedAt && (
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">{requestedAtLabel}</label>
+            <input
+              type="datetime-local"
+              className={inputClass}
+              value={requestedAtValue || ''}
+              onChange={(e) => !readOnly && onRequestedAtChange?.(e.target.value)}
+              disabled={readOnly}
+            />
+          </div>
+        )}
 
         <div>
           <label className="block text-sm text-gray-700 mb-1">{dateFieldLabel}</label>

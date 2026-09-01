@@ -93,12 +93,26 @@ const DiscardDetailsModal = ({ selectedItem, showBagDetails, onClose, onToggleBa
                 <label className="text-sm font-medium text-slate-600">Item ID</label>
                 <div className="mt-1 text-slate-800">{selectedItem.itemId}</div>
               </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600">Discard Type</label>
+                <div className="mt-1">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${selectedItem.discardType === "SYSTEM" ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-700"}`}>
+                    {selectedItem.discardType === "SYSTEM" ? "System (auto)" : "Manual"}
+                  </span>
+                </div>
+              </div>
             </div>
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-slate-600">Site ID</label>
                 <div className="mt-1 text-slate-800">{selectedItem.siteId}</div>
               </div>
+              {selectedItem.batchNo && (
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Batch No</label>
+                  <div className="mt-1 text-slate-800">{selectedItem.batchNo}</div>
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium text-slate-600">Discarded Date</label>
                 <div className="mt-1 text-slate-800 flex items-center gap-2">
@@ -169,7 +183,7 @@ const DiscardDetailsModal = ({ selectedItem, showBagDetails, onClose, onToggleBa
                     <div><span className="font-medium text-slate-600">RH Factor:</span><div className="text-slate-800">{selectedItem.rh}</div></div>
                   </div>
 
-                  {selectedItem.componentType && (
+                  {selectedItem.componentType && selectedItem.componentType !== "-" && (
                     <>
                       <h4 className="font-semibold text-slate-800 border-b border-slate-300 pb-2 mt-4">Component Information</h4>
                       <div className="text-sm text-slate-800">

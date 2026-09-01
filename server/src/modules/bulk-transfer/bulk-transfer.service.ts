@@ -103,7 +103,7 @@ export function createBulkTransferService(deps: {
     },
 
     async remove(id, actorId, reason) {
-      const removed = await deps.bulkTransfers.remove(id, actorId);
+      const removed = await deps.bulkTransfers.remove(id, actorId, reason);
       log.info(
         { transferId: removed.transferId, transferType: removed.transferType, actorId },
         'bulk transfer deleted',

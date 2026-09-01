@@ -10,6 +10,8 @@ import { TransfusionModel } from '@/modules/transfusion/transfusion.model';
 import { BagStockModel } from '@/modules/bag-stock/bag-stock.model';
 import { BagInspectionModel } from '@/modules/bag-inspection/bag-inspection.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
+import { DonorModel } from '@/modules/donor/donor.model';
+import { findAcrossDonations } from '@/modules/donation/donation-collections.util';
 
 export interface AffectedRecordDto {
   id: string;
@@ -49,17 +51,46 @@ async function affectedCascadeDiscardedUnits(): Promise<AffectedRecordDto[]> {
     status: 'DISCARDED',
     affected: { $ne: true },
   }).lean();
-  return docs.map((d) => ({
-    id: String(d._id),
-    entityType: 'BloodUnit',
-    entityLabel: d.unitId,
-    currentStatus: d.status,
-    affectedReason: 'Discarded automatically because its donation/donor record was deleted',
-    affectedByModule: 'donor/donation',
-    affectedByRecord: d.deleteBatchId,
-    affectedDate: (d as any).updatedAt ? new Date((d as any).updatedAt).toISOString() : undefined,
-    canAutoRecover: true,
-  }));
+  if (docs.length === 0) return [];
+
+  // Resolve whether the actual delete root was the donor or just the
+  // donation (same test discard.repository.ts restoreCascadeDiscarded uses)
+  // so "Affected By" names the specific parent rather than "donor/donation".
+  const donationIds = [...new Set(docs.map((d) => d.donationId).filter(Boolean))];
+  const donations = await findAcrossDonations<any>(
+    { donationId: { $in: donationIds } },
+    { donationId: 1, donor: 1 },
+  );
+  const donationToDonor = new Map(donations.map((d) => [d.donationId, d.donor?.toString()]));
+  const donorIds = [...new Set([...donationToDonor.values()].filter(Boolean))];
+  const donorDocs = donorIds.length
+    ? await DonorModel.find({ _id: { $in: donorIds } })
+        .select('deletedAt deleteBatchId')
+        .lean()
+    : [];
+  const donorById = new Map(donorDocs.map((d) => [d._id.toString(), d]));
+
+  return docs.map((d) => {
+    const donorId = donationToDonor.get(d.donationId);
+    const donor = donorId ? donorById.get(donorId) : undefined;
+    const rootWasDonor = Boolean(
+      donor && donor.deletedAt && donor.deleteBatchId === d.deleteBatchId,
+    );
+    const parent = rootWasDonor ? 'donor' : 'donation';
+    return {
+      id: String(d._id),
+      entityType: 'BloodUnit',
+      entityLabel: d.unitId,
+      currentStatus: d.status,
+      affectedReason: `Discarded automatically because its ${parent} record was deleted`,
+      affectedByModule: parent,
+      affectedByRecord: d.deleteBatchId,
+      affectedDate: (d as any).updatedAt
+        ? new Date((d as any).updatedAt).toISOString()
+        : undefined,
+      canAutoRecover: true,
+    };
+  });
 }
 
 async function affectedCrossmatches(): Promise<AffectedRecordDto[]> {

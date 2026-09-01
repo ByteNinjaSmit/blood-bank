@@ -73,6 +73,7 @@ export default function RequestCreationStep({
         hospitalId: requestDoc.hospitalId?._id || requestDoc.hospitalId || '',
         doctorName: requestDoc.doctorName || '',
         requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 10) : '',
+        requestedAt: form.requestedAt,
         patient: {
           name: requestDoc.patient?.name || '',
           address: requestDoc.patient?.address || '',
@@ -176,6 +177,9 @@ export default function RequestCreationStep({
           dateValue={displayForm.requiredAt}
           onDateChange={(v) => setForm((p) => ({ ...p, requiredAt: v }))}
           dateOnly
+          showRequestedAt
+          requestedAtValue={displayForm.requestedAt}
+          onRequestedAtChange={(v) => setForm((p) => ({ ...p, requestedAt: v }))}
           readOnly={readOnly}
           onAddHospital={readOnly ? undefined : () => setAddHospitalOpen(true)}
         />

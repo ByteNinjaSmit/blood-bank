@@ -182,15 +182,8 @@ export default function BloodBankWelcome() {
         },
         {
           icon: AlertTriangle,
-          title: "Near-Expiry Components",
-          desc: "Identify components nearing expiry for priority usage.",
-          moduleName: "Component",
-          link: "/component/near-expiry",
-        },
-        {
-          icon: AlertTriangle,
-          title: "Near-Expiry Inventory",
-          desc: "Monitor near-expiry stock to minimize wastage.",
+          title: "Near-Expiry",
+          desc: "Monitor near-expiry stock (all components + whole blood) to minimize wastage.",
           moduleName: "Inventory",
           link: "/inventory/near-expiry",
         },

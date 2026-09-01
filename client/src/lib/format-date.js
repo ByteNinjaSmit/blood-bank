@@ -30,6 +30,19 @@ export function formatDate(value, opts = {}) {
   return d.toLocaleDateString('en-IN', { timeZone: TIME_ZONE, day: '2-digit', month: 'short', year: 'numeric', ...opts });
 }
 
+export function formatTime(value, opts = {}) {
+  if (!value) return '—';
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString('en-IN', {
+    timeZone: TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    ...opts,
+  });
+}
+
 export function formatDateTime(value, opts = {}) {
   if (!value) return '—';
   const d = value instanceof Date ? value : new Date(value);

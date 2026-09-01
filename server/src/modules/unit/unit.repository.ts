@@ -100,6 +100,7 @@ export interface ApplyEventInput {
   set?: Partial<{
     quarantineReason: string;
     discardReason: DiscardReason;
+    discardNotes: string;
     reservedFor: string;
     reservedAt: Date;
     reservedUntil: Date;

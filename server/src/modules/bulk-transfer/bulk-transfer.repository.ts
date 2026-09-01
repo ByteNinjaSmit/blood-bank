@@ -28,6 +28,8 @@ export interface BulkTransferDto {
   transferDate: string;
   items: BulkTransferItemDto[];
   notes?: string;
+  deletedAt?: string | null;
+  deleteReason?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,6 +42,8 @@ function toDto(raw: any): BulkTransferDto {
     bloodBankName: raw.bloodBankName,
     bloodBankAddress: raw.bloodBankAddress,
     transferDate: raw.transferDate ? new Date(raw.transferDate).toISOString() : '',
+    deletedAt: raw.deletedAt ? new Date(raw.deletedAt).toISOString() : null,
+    deleteReason: raw.deleteReason || null,
     items: (raw.items || []).map((it: any) => ({
       componentType: it.componentType,
       bloodGroup: it.bloodGroup,
@@ -82,7 +86,7 @@ export interface BulkTransferRepo {
   findById(id: string): Promise<BulkTransferDto>;
   create(input: CreateBulkTransferInput, actorId: string): Promise<BulkTransferDto>;
   update(id: string, input: UpdateBulkTransferInput, actorId: string): Promise<BulkTransferDto>;
-  remove(id: string, actorId: string): Promise<BulkTransferDto>;
+  remove(id: string, actorId: string, reason?: string): Promise<BulkTransferDto>;
   restore(id: string, actorId: string): Promise<BulkTransferDto>;
 }
 
@@ -467,7 +471,7 @@ export function createBulkTransferRepo(): BulkTransferRepo {
       return toDto(raw.toObject());
     },
 
-    async remove(id, actorId) {
+    async remove(id, actorId, reason) {
       const raw = await BulkTransferModel.findOne({ _id: id, deletedAt: null });
       if (!raw) throw new NotFoundError('BulkTransfer', id);
 
@@ -482,6 +486,7 @@ export function createBulkTransferRepo(): BulkTransferRepo {
       }
 
       raw.deletedAt = new Date();
+      (raw as any).deleteReason = reason ?? null;
       raw.updatedBy = new Types.ObjectId(actorId);
       await raw.save();
       return toDto(raw.toObject());

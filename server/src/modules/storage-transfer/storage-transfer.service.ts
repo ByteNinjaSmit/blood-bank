@@ -97,7 +97,7 @@ export function createStorageTransferService(deps: {
     },
 
     async remove(id, actorId, reason) {
-      const removed = await deps.storageTransfers.remove(id, actorId);
+      const removed = await deps.storageTransfers.remove(id, actorId, reason);
       log.info({ transferId: removed.transferId, actorId }, 'storage transfer deleted');
       void withAudit(
         { actorId },

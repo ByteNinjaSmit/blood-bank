@@ -25,6 +25,7 @@ import {
   hasLeftBank,
 } from '@/modules/component/component.mapper';
 import { getShelfDays, PRODUCT_CODE } from '@/shared/component-type';
+import { compareBagNo } from '@/shared/utils/bag-no-sort';
 import type { ComponentType } from '@/shared/enums';
 import { resolveDonation, componentSlot, allowedComponentTypes } from './component.helpers';
 import type { ComponentListFilters, NearExpiryFilters } from './component.helpers';
@@ -305,13 +306,15 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
     },
 
     async nearExpiry(filters) {
-      const { page, limit, days, componentType, status, search } = filters;
+      const { page, limit, days, componentType, bloodGroup, status, search, sort, order } =
+        filters;
 
       const daysNum = Number(days) || 7;
       const cutoff = new Date(Date.now() + daysNum * 86_400_000);
       const unitFilter: any = { deletedAt: null, expiresAt: { $gt: new Date(), $lte: cutoff } };
 
       if (componentType) unitFilter.componentType = componentType;
+      if (bloodGroup) unitFilter.aboGroup = bloodGroup;
       if (status) {
         if (status === 'in-stock') unitFilter.status = 'RELEASED';
         else if (status === 'reserved') unitFilter.status = 'RESERVED';
@@ -332,18 +335,24 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       const pageNum = Number(page) || 1;
       const limitNum = Number(limit) || 50;
       const skipNum = (pageNum - 1) * limitNum;
+      const dir: 1 | -1 = order === 'desc' ? -1 : 1;
+      const byBagNo = sort === 'bagNo';
 
       const total = await BloodUnitModel.countDocuments(unitFilter);
+
+      // bagNo lives on the joined donation record, not on BloodUnit, so it
+      // can't be sorted at the query level — fetch wide, sort in memory,
+      // then slice (same pattern as inventory.legacy-view.repository).
       const units = await BloodUnitModel.find(unitFilter)
-        .sort({ expiresAt: 1 })
-        .skip(skipNum)
-        .limit(limitNum)
+        .sort({ expiresAt: dir })
+        .skip(byBagNo ? 0 : skipNum)
+        .limit(byBagNo ? 5000 : limitNum)
         .lean();
 
       const donationIds = units.map((u) => u.donationId).filter(Boolean);
       const donations = await findAcrossDonations(
         { donationId: { $in: donationIds }, deletedAt: null },
-        { donationId: 1, bagNo: 1 },
+        { donationId: 1, bagNo: 1, segmentNo: 1 },
       );
       const donationMap = new Map(donations.map((d: any) => [d.donationId, d]));
       const ttiResults = await TtiResultModel.find({ donationId: { $in: donationIds } })
@@ -351,7 +360,7 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
         .lean();
       const ttiMap = new Map(ttiResults.map((t) => [t.donationId, t]));
 
-      const components = units.map((u) => {
+      let rows = units.map((u) => {
         const d = donationMap.get(u.donationId);
         const tti = ttiMap.get(u.donationId);
 
@@ -363,19 +372,28 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
           status: toLegacyUnitStatus(u.status, tti?.releaseDecision),
           expiryDate: u.expiresAt.toISOString(),
           bagNo: d?.bagNo || u.donationId,
+          segmentNo: d?.segmentNo || u.unitDin || '',
           bloodGroup: `${u.aboGroup}${u.rhFactor === 'POSITIVE' ? '+' : '-'}`,
+          rh: u.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative',
         };
       });
 
-      return { components, total, totalPages: Math.ceil(total / limitNum) };
+      if (byBagNo) {
+        rows = rows
+          .sort((a, b) => compareBagNo(a.bagNo, b.bagNo, dir))
+          .slice(skipNum, skipNum + limitNum);
+      }
+
+      return { components: rows, total, totalPages: Math.ceil(total / limitNum) };
     },
 
     async getGroupDetail(id) {
       let donationDoc: any = null;
+      let unitDoc: any = null;
       if (id && Types.ObjectId.isValid(id)) {
         donationDoc = await findByIdAcrossDonations(id);
         if (!donationDoc) {
-          const unitDoc = await BloodUnitModel.findById(id).lean();
+          unitDoc = await BloodUnitModel.findById(id).lean();
           if (unitDoc) {
             donationDoc = await findOneAcrossDonations({
               donationId: unitDoc.donationId,
@@ -389,6 +407,29 @@ export function createComponentRepo(deps: { units: UnitRepo }): ComponentRepo {
       // string, not a Mongo _id.
       if (!donationDoc) {
         donationDoc = await findOneAcrossDonations({ donationId: id, deletedAt: null });
+      }
+      // Loaned-in bags (and any other unit without a real Donation record)
+      // have no donation to join — synthesize a minimal one from the unit
+      // itself so the details view still opens (e.g. from Near-Expiry).
+      if (!donationDoc && !unitDoc && id) {
+        unitDoc = await BloodUnitModel.findOne(
+          Types.ObjectId.isValid(id) ? { _id: id } : { unitId: id },
+        ).lean();
+      }
+      if (!donationDoc && unitDoc) {
+        const lf = (unitDoc as any).loanedFrom;
+        donationDoc = {
+          donationId: unitDoc.donationId,
+          bagNo: lf?.bagNo || unitDoc.donationId,
+          segmentNo: lf?.segmentNo || unitDoc.unitDin || '',
+          typeOfBag: 'SB',
+          donationType: lf ? 'LOAN' : 'VOLUNTARY',
+          collectedAt: unitDoc.collectedAt || unitDoc.createdAt || new Date(),
+          donorFitness: { isFit: true },
+          campId: unitDoc.campId || null,
+          donor: null,
+          separation: null,
+        };
       }
       if (!donationDoc) throw new NotFoundError('Component group', id);
       const campDoc = donationDoc.campId

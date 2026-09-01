@@ -75,6 +75,9 @@ export const CreateRequisitionBody = z.object({
   clinicianName: z.string().trim().max(200).optional(),
   doctorName: z.string().trim().max(200).optional(),
   requiredAt: z.coerce.date().optional(),
+  // Operator-entered "Requested At" date/time from the requisition form
+  // (defaults to the current instant on the client when left untouched).
+  requestedAt: z.coerce.date().optional(),
   // Set once at creation, never editable via UpdateRequisitionBody — a
   // reservation must not silently become a requisition (or vice versa).
   purpose: z.enum(['REQUISITION', 'RESERVATION']).default('REQUISITION'),
@@ -94,6 +97,7 @@ export const UpdateRequisitionBody = z.object({
   clinicianName: z.string().trim().optional(),
   doctorName: z.string().trim().max(200).optional(),
   requiredAt: z.coerce.date().optional(),
+  requestedAt: z.coerce.date().optional(),
   patient: UpdateRequisitionPatient.optional(),
   requestedComponents: z.array(RequestedComponent).min(1),
   editReason: z.string().trim().max(500).optional(),

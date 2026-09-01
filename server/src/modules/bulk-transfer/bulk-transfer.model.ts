@@ -38,6 +38,7 @@ const BulkTransferSchema = new Schema(
     notes: { type: String, trim: true },
 
     deletedAt: { type: Date, default: null, index: true },
+    deleteReason: { type: String, default: null, trim: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

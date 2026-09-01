@@ -37,7 +37,6 @@ import { SiPytest } from "react-icons/si";
 import { GiCardDiscard, GiDrop, GiChemicalDrop, GiCampingTent } from "react-icons/gi";
 import { IoIosSend } from "react-icons/io";
 import { PiTestTubeFill } from "react-icons/pi";
-import { MdDelete } from "react-icons/md";
 import { FaUsersCog } from "react-icons/fa";
 
 export const MODULES = [
@@ -146,13 +145,6 @@ export const MODULES = [
         icon: <PiTestTubeFill className="w-5 h-5" />,
         permissions: ["write"],
         description: "Separate blood components",
-      },
-      {
-        name: "Near-Expiry",
-        href: "/component/near-expiry",
-        icon: <MdDelete className="w-5 h-5" />,
-        permissions: ["read"],
-        description: "View near-expiry components",
       },
     ],
     description: "Blood component processing",

@@ -31,6 +31,7 @@ const StorageTransferSchema = new Schema(
     items: { type: [StorageTransferItem], default: [] },
 
     deletedAt: { type: Date, default: null, index: true },
+    deleteReason: { type: String, default: null, trim: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
