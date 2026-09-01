@@ -223,6 +223,7 @@ export interface CreateRequisitionInput {
   purpose?: 'REQUISITION' | 'RESERVATION';
   patient?: RequisitionPatientDto;
   requiredAt?: Date;
+  requestedAt?: Date;
   requestedComponents: RequestedComponentDto[];
 }
 
@@ -251,6 +252,7 @@ export interface UpdateRequisitionInput {
   clinicianName: string;
   doctorName?: string;
   requiredAt?: Date;
+  requestedAt?: Date;
   patient?: RequisitionPatientDto;
   requestedComponents: RequestedComponentDto[];
 }
@@ -391,7 +393,7 @@ export function createRequisitionRepo(): RequisitionRepo {
         ...input,
         hospitalId: new Types.ObjectId(input.hospitalId),
         patientId: new Types.ObjectId(input.patientId),
-        requestedAt: new Date(),
+        requestedAt: input.requestedAt ?? new Date(),
         status: 'PENDING',
         matchedUnits: [],
         createdBy: actor,
@@ -412,6 +414,7 @@ export function createRequisitionRepo(): RequisitionRepo {
           clinicianName: input.clinicianName,
           doctorName: input.doctorName,
           requiredAt: input.requiredAt,
+          ...(input.requestedAt ? { requestedAt: input.requestedAt } : {}),
           ...(input.patient ? { patient: input.patient } : {}),
           requestedComponents: input.requestedComponents,
           updatedBy: new Types.ObjectId(actorId),

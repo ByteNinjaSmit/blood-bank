@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import hospitalApi from '@/services/hospitalApi';
 import requisitionApi from '@/services/requisitionApi';
 import { donorCardApi } from '@/features/donor-card/api';
+import { toISTDatetimeLocal, fromISTDatetimeLocal } from '@/lib/format-date';
 import { defaultDonorCard, defaultPatient, defaultRequestedComponent, buildPatientPayload } from './requisition-defaults';
 import { checkHasChanges } from './dirty-tracking';
 export { defaultDonorCard, defaultPatient, defaultRequestedComponent } from './requisition-defaults';
@@ -24,6 +25,8 @@ export default function useRequisition(authToken) {
     hospitalId: '',
     doctorName: '',
     requiredAt: '',
+    // "Requested At" — operator-editable, defaults to the current IST instant.
+    requestedAt: toISTDatetimeLocal(new Date()),
     patient: { ...defaultPatient },
     requestedComponents: [ { ...defaultRequestedComponent } ],
     donorCard: { ...defaultDonorCard },
@@ -77,6 +80,7 @@ export default function useRequisition(authToken) {
         hospitalId: requestDoc.hospitalId?._id || requestDoc.hospitalId || '',
         doctorName: requestDoc.doctorName || requestDoc.clinicianName || '',
         requiredAt: requestDoc.requiredAt ? new Date(requestDoc.requiredAt).toISOString().slice(0, 10) : '',
+        requestedAt: requestDoc.requestedAt ? toISTDatetimeLocal(requestDoc.requestedAt) : prev.requestedAt,
         patient: {
           name: requestDoc.patient?.name || '',
           address: requestDoc.patient?.address || '',
@@ -218,6 +222,7 @@ export default function useRequisition(authToken) {
         hospitalId: form.hospitalId,
         doctorName: form.doctorName || undefined,
         requiredAt: form.requiredAt || undefined,
+        requestedAt: form.requestedAt ? fromISTDatetimeLocal(form.requestedAt) : undefined,
         patient: buildPatientPayload(form.patient),
         requestedComponents: form.requestedComponents.map((r) => ({
           componentType: r.componentType,
@@ -390,6 +395,7 @@ export default function useRequisition(authToken) {
         hospitalId: form.hospitalId,
         doctorName: form.doctorName || undefined,
         requiredAt: form.requiredAt || undefined,
+        requestedAt: form.requestedAt ? fromISTDatetimeLocal(form.requestedAt) : undefined,
         patient: buildPatientPayload(form.patient),
         requestedComponents: form.requestedComponents.map((r) => ({
           componentType: r.componentType,

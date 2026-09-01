@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import requisitionApi from '@/services/requisitionApi';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { formatDate } from '@/lib/format-date';
+import { formatDate, formatTime } from '@/lib/format-date';
 import TimePicker12h from '@/features/requisition/components/TimePicker12h';
 import ReasonForChangeModal from '@/components/shared/ReasonForChangeModal';
 const COMPATIBILITY_RESULT_LABELS = {
@@ -295,7 +295,14 @@ export default function RequisitionModals({
                             <td className="p-2">{mi?.reservedAt ? fmt(mi.reservedAt) : '—'}</td>
                             <td className="p-2">{COMPATIBILITY_RESULT_LABELS[mi?.compatibilityResult] || '—'}</td>
                             <td className="p-2 font-mono text-xs font-semibold">{mi?.issueId || '—'}</td>
-                            <td className="p-2">{mi?.inventoryId?.issuedAt ? fmt(mi.inventoryId.issuedAt) : '—'}</td>
+                            <td className="p-2">
+                              {mi?.inventoryId?.issuedAt ? (
+                                <div className="flex flex-col leading-tight">
+                                  <span>{formatDate(mi.inventoryId.issuedAt, { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                                  <span className="text-xs text-gray-500">{formatTime(mi.inventoryId.issuedAt)}</span>
+                                </div>
+                              ) : '—'}
+                            </td>
                             <td className="p-2">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${badgeColor}`}>
                                 {label}

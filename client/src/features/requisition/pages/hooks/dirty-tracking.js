@@ -10,6 +10,12 @@ export function checkHasChanges(doc, payload) {
   const payRequiredAt = payload.requiredAt ? new Date(payload.requiredAt).getTime() : 0;
   if (docRequiredAt !== payRequiredAt) return true;
 
+  // Compared at minute granularity — the form's datetime-local value only
+  // carries minutes, so the stored instant's seconds/ms must not count as a
+  // change (otherwise every post-create edit looks dirty).
+  const toMinute = (v) => (v ? Math.floor(new Date(v).getTime() / 60000) : 0);
+  if (toMinute(doc.requestedAt) !== toMinute(payload.requestedAt)) return true;
+
   // Patient details
   if ((doc.patient?.name || '') !== (payload.patient.name || '')) return true;
   if (Number(doc.patient?.age || 0) !== Number(payload.patient.age || 0)) return true;
