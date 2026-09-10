@@ -79,6 +79,7 @@ export function createYearlyReportService(deps: YearlyReportDeps) {
         campWise,
         bulkTransferStats,
         savedInputs,
+        storageTransferStats,
         chemicalStockByMonth,
       ] = await Promise.all([
         deps.repo.getCampsCount(from, to),
@@ -97,6 +98,7 @@ export function createYearlyReportService(deps: YearlyReportDeps) {
         deps.repo.getCampWiseStats(from, to),
         deps.repo.getBulkTransferStats(from, to),
         deps.inputs.findAllByYear(year),
+        deps.repo.getStorageTransferStats(from, to),
         Promise.all(
           Array.from({ length: 12 }, (_, i) => deps.repo.getChemicalStock(i + 1, year)),
         ),
@@ -198,7 +200,7 @@ export function createYearlyReportService(deps: YearlyReportDeps) {
             ? { available: true, count: donorCounsellingTotal }
             : { available: false, note: NOT_TRACKED },
         bulkTransfer: { available: true, ...bulkTransferStats },
-        bagsToStorageCentres: { centres: componentsIssued.storageCentres },
+        bagsToStorageCentres: { centres: storageTransferStats.centres },
         rejectedDonors,
         donorTesting,
         ttiTesting,

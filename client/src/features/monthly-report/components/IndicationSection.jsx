@@ -33,13 +33,56 @@ export default function IndicationSection({ issueByIndication, bagsToStorageCent
   return (
     <>
       <Section title="14. Blood Bags Given to Blood Storage Centres">
-        <EntityBreakdown
-          entities={bagsToStorageCentres.centres}
-          emptyLabel='No hospital record with "storage" in its name (e.g. "SJS Storage") received units this period.'
-        />
-        <p className="text-[11px] text-slate-400">
-          Storage centres are identified by hospital records whose name contains "storage" — there is no dedicated
-          storage-centre entity in the system.
+        {(!bagsToStorageCentres.centres || bagsToStorageCentres.centres.length === 0) ? (
+          <div className="text-xs text-slate-400 italic px-1">
+            No blood bags issued to any hospital via requisitions in this period.
+          </div>
+        ) : (
+          <>
+            {/* Grand total */}
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-sm font-semibold text-slate-700">
+                Total Bags Sent:&nbsp;
+                <span className="text-red-700">
+                  {bagsToStorageCentres.centres.reduce((sum, c) => sum + c.total, 0)}
+                </span>
+              </span>
+            </div>
+
+            {/* Summary table — who received how many */}
+            <div className="mb-4">
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Summary by Centre</div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm border border-slate-200">
+                  <thead className="bg-slate-100">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide border-b border-slate-200">Hospital / Storage Centre</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600 uppercase tracking-wide border-b border-slate-200">Total Bags</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {bagsToStorageCentres.centres.map((c) => (
+                      <tr key={c.name} className="hover:bg-slate-50">
+                        <td className="px-3 py-1.5 font-medium text-slate-800">{c.name}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums text-slate-700 font-semibold">{c.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Per-centre component × blood-group breakdown */}
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Component & Blood Group Breakdown</div>
+            <EntityBreakdown
+              entities={bagsToStorageCentres.centres}
+              emptyLabel="No units issued to any hospital for this period."
+            />
+          </>
+        )}
+        <p className="text-[11px] text-slate-400 mt-2">
+          Shows all hospitals that received blood components via requisitions in this period. Units are
+          grouped by component type and blood group for each recipient.
         </p>
       </Section>
 
