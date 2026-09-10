@@ -53,6 +53,7 @@ export function createMonthlyReportService(deps: MonthlyReportDeps) {
         bagStock,
         campWise,
         bulkTransferStats,
+        storageTransferStats,
         savedInput,
       ] = await Promise.all([
         deps.repo.getCampsCount(from, to),
@@ -71,6 +72,7 @@ export function createMonthlyReportService(deps: MonthlyReportDeps) {
         deps.repo.getBagStock(),
         deps.repo.getCampWiseStats(from, to),
         deps.repo.getBulkTransferStats(from, to),
+        deps.repo.getStorageTransferStats(from, to),
         deps.inputs.findByPeriod(month, year),
       ]);
 
@@ -132,7 +134,7 @@ export function createMonthlyReportService(deps: MonthlyReportDeps) {
           ? { available: true, count: savedInput.donorCounsellingCount }
           : { available: false, note: NOT_TRACKED },
         bulkTransfer: { available: true, ...bulkTransferStats },
-        bagsToStorageCentres: { centres: componentsIssued.storageCentres },
+        bagsToStorageCentres: { centres: storageTransferStats.centres },
         rejectedDonors,
         donorTesting,
         ttiTesting,

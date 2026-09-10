@@ -154,7 +154,11 @@ export default function RequisitionModals({
               </div>
               <div>
                 <div className="text-gray-600">Patient Blood Group</div>
-                <div className="font-medium">{viewDoc.patient?.aboGroup ? `${viewDoc.patient.aboGroup} ${viewDoc.patient?.rhFactor || viewDoc.patient?.rh || ''}` : '—'}</div>
+                <div className="font-medium">
+                  {viewDoc.requestedComponents?.[0]?.bloodGroup
+                    ? `${viewDoc.requestedComponents[0].bloodGroup} ${viewDoc.requestedComponents[0].rh || ''}`
+                    : '—'}
+                </div>
               </div>
               <div>
                 <div className="text-gray-600">Indication for Transfusion</div>

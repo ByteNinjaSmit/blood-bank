@@ -21,6 +21,7 @@ import {
 } from '@/modules/chemical-inventory/chemical-inventory.model';
 import { createChemicalInventoryRepo } from '@/modules/chemical-inventory/chemical-inventory.repository';
 import { BulkTransferModel } from '@/modules/bulk-transfer/bulk-transfer.model';
+import { StorageTransferModel } from '@/modules/storage-transfer/storage-transfer.model';
 import {
   PRODUCTS,
   DISCARD_LABEL,
@@ -70,6 +71,7 @@ export interface MonthlyReportRepo {
   getBagStock(): Promise<any>;
   getCampWiseStats(from: Date, to: Date): Promise<any>;
   getBulkTransferStats(from: Date, to: Date): Promise<any>;
+  getStorageTransferStats(from: Date, to: Date): Promise<any>;
 }
 
 export function createMonthlyReportRepo(): MonthlyReportRepo {
@@ -165,6 +167,7 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
       return {
         hospitals: buildEntityBreakdown(hospitalEntries),
         storageCentres: buildEntityBreakdown(storageEntries),
+        allHospitals: buildEntityBreakdown([...hospitalEntries, ...storageEntries]),
       };
     },
 
@@ -236,7 +239,15 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
         { donor: 1, collectedAt: 1 },
       );
 
-      const donorIds = [...new Set(donations.map((d: any) => String(d.donor)))];
+      const donorIds = [
+        ...new Set(
+          (donations as any[])
+            .map((d) => d.donor)
+            .filter((id) => id && id !== 'null' && id !== null)
+            .map(String),
+        ),
+      ];
+
       if (donorIds.length === 0) return { male: 0, female: 0, total: 0 };
 
       const priorDonorIds = new Set(
@@ -485,6 +496,15 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
         const category = categoryByReq.get(String(issue.requisitionId)) ?? 'Not Specified';
         categoryGrid[category] ??= {};
         categoryGrid[category][product] = (categoryGrid[category][product] ?? 0) + 1;
+
+        // Also count requisition-based Thalassemia / Sickle Cell into the structured
+        // disease counts so "Thalassemia = N" reflects both the direct clinical-indication
+        // patient flow AND units issued via a normal requisition with indicationCategory set.
+        if (category === INDICATION_CATEGORY_LABEL_MAP['THALASSEMIA']) {
+          structuredDiseaseCounts.thalassemia.count += 1;
+        } else if (category === INDICATION_CATEGORY_LABEL_MAP['SICKLE_CELL_ANAEMIA']) {
+          structuredDiseaseCounts.sickleCellAnaemia.count += 1;
+        }
       }
 
       const rows = Object.entries(grid).map(([indication, byProduct]) => ({
@@ -533,6 +553,64 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
       });
 
       return { totalCount, breakdown };
+    },
+
+
+    async getStorageTransferStats(from, to) {
+      // Sourced from the "Send to Storage" flow (inventory/issue → StorageTransfer),
+      // NOT from requisitions. Each StorageTransfer has a location (storage centre
+      // name) and an items array (one entry per blood unit sent).
+      const transfers = await StorageTransferModel.find({
+        sentDate: { $gte: from, $lt: to },
+        deletedAt: null,
+      })
+        .select('location otherLocationName sentDate items')
+        .lean();
+
+      if (transfers.length === 0) return { centres: [] };
+
+      // Build per-centre, per-product, per-blood-group tally
+      const byLocation: Record<string, Record<string, Record<string, number>>> = {};
+
+      for (const t of transfers as any[]) {
+        // Use otherLocationName when location is "OTHER", otherwise use location value
+        const locationName =
+          t.location === 'OTHER' && t.otherLocationName
+            ? t.otherLocationName
+            : t.location;
+
+        byLocation[locationName] ??= {};
+
+        for (const item of t.items || []) {
+          const product = toProductLabel(item.componentType);
+          const rh = item.rhFactor === 'NEGATIVE' ? '-' : '+';
+          const group = item.bloodGroup ? `${item.bloodGroup}${rh}` : 'Unknown';
+
+          byLocation[locationName][product] ??= emptyGroupTally();
+          const tally = byLocation[locationName][product]!;
+          if (group in tally) {
+            tally[group] = (tally[group] ?? 0) + 1;
+          } else {
+            // non-standard group key — store directly
+            tally[group] = (tally[group] ?? 0) + 1;
+          }
+        }
+      }
+
+      // Shape into the same EntityBreakdown format the frontend expects
+      const centres = Object.entries(byLocation)
+        .map(([name, products]) => {
+          const rows = PRODUCTS.filter((p) => products[p]).map((product) => {
+            const byGroup = products[product]!;
+            const total = Object.values(byGroup).reduce((a, b) => a + b, 0);
+            return { product, byGroup, total };
+          });
+          const total = rows.reduce((a, r) => a + r.total, 0);
+          return { name, rows, total };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      return { centres };
     },
 
     ...createMonthlyReportMethods2({ chemicalRepo }),
