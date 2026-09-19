@@ -282,10 +282,9 @@ export default function InspectionDrawer({ onClose, grns, inspection = null, mod
                 return (
                   <div key={idx} className="grid grid-cols-2 gap-3 items-end bg-gray-50/50 border border-gray-100 rounded-lg p-3">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bag No *</label>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bag No</label>
                       {effectiveTestingType === 'EMPTY' ? (
                         <input
-                          required
                           value={row.bagNo}
                           onChange={(e) => updateBagDetail(idx, { bagNo: e.target.value.toUpperCase() })}
                           className={fieldClass}
@@ -293,7 +292,6 @@ export default function InspectionDrawer({ onClose, grns, inspection = null, mod
                         />
                       ) : (
                         <select
-                          required
                           value={row.bagNo}
                           onChange={(e) => {
                             const val = e.target.value;

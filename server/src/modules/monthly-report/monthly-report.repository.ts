@@ -555,62 +555,73 @@ export function createMonthlyReportRepo(): MonthlyReportRepo {
       return { totalCount, breakdown };
     },
 
-
     async getStorageTransferStats(from, to) {
       // Sourced from the "Send to Storage" flow (inventory/issue → StorageTransfer),
       // NOT from requisitions. Each StorageTransfer has a location (storage centre
       // name) and an items array (one entry per blood unit sent).
-      const transfers = await StorageTransferModel.find({
-        sentDate: { $gte: from, $lt: to },
-        deletedAt: null,
-      })
-        .select('location otherLocationName sentDate items')
-        .lean();
+      try {
+        const transfers = await StorageTransferModel.find({
+          sentDate: { $gte: from, $lt: to },
+          deletedAt: null,
+        })
+          .select('location otherLocationName sentDate items')
+          .lean();
 
-      if (transfers.length === 0) return { centres: [] };
+        if (transfers.length === 0) return { centres: [] };
 
-      // Build per-centre, per-product, per-blood-group tally
-      const byLocation: Record<string, Record<string, Record<string, number>>> = {};
+        // Build per-centre, per-product, per-blood-group tally
+        const byLocation: Record<string, Record<string, Record<string, number>>> = {};
 
-      for (const t of transfers as any[]) {
-        // Use otherLocationName when location is "OTHER", otherwise use location value
-        const locationName =
-          t.location === 'OTHER' && t.otherLocationName
-            ? t.otherLocationName
-            : t.location;
+        for (const t of transfers as any[]) {
+          // Use otherLocationName when location is "OTHER", otherwise use location value
+          const locationName =
+            t.location === 'OTHER' && t.otherLocationName
+              ? t.otherLocationName
+              : t.location;
 
-        byLocation[locationName] ??= {};
+          byLocation[locationName] ??= {};
 
-        for (const item of t.items || []) {
-          const product = toProductLabel(item.componentType);
-          const rh = item.rhFactor === 'NEGATIVE' ? '-' : '+';
-          const group = item.bloodGroup ? `${item.bloodGroup}${rh}` : 'Unknown';
+          for (const item of t.items || []) {
+            const product = toProductLabel(item.componentType);
+            // item.bloodGroup is already the full group string (e.g. "O+", "B-")
+            // as stored by the client — do NOT append rhFactor again or it doubles
+            // to "O++" / "B--". Fall back to constructing from parts only if the
+            // field looks like a bare ABO group (no +/-).
+            let group: string;
+            if (item.bloodGroup && /[+-]$/.test(item.bloodGroup)) {
+              group = item.bloodGroup;
+            } else if (item.bloodGroup) {
+              const rh = item.rhFactor === 'NEGATIVE' ? '-' : '+';
+              group = `${item.bloodGroup}${rh}`;
+            } else {
+              group = 'Unknown';
+            }
 
-          byLocation[locationName][product] ??= emptyGroupTally();
-          const tally = byLocation[locationName][product]!;
-          if (group in tally) {
-            tally[group] = (tally[group] ?? 0) + 1;
-          } else {
-            // non-standard group key — store directly
+            byLocation[locationName][product] ??= emptyGroupTally();
+            const tally = byLocation[locationName][product]!;
             tally[group] = (tally[group] ?? 0) + 1;
           }
         }
+
+        // Shape into the same EntityBreakdown format the frontend expects
+        const centres = Object.entries(byLocation)
+          .map(([name, products]) => {
+            const rows = PRODUCTS.filter((p) => products[p]).map((product) => {
+              const byGroup = products[product]!;
+              const total = Object.values(byGroup).reduce((a, b) => a + b, 0);
+              return { product, byGroup, total };
+            });
+            const total = rows.reduce((a, r) => a + r.total, 0);
+            return { name, rows, total };
+          })
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        return { centres };
+      } catch (err) {
+        // Guard against a missing collection on a fresh deployment — the
+        // StorageTransfer feature may not exist yet on some environments.
+        return { centres: [] };
       }
-
-      // Shape into the same EntityBreakdown format the frontend expects
-      const centres = Object.entries(byLocation)
-        .map(([name, products]) => {
-          const rows = PRODUCTS.filter((p) => products[p]).map((product) => {
-            const byGroup = products[product]!;
-            const total = Object.values(byGroup).reduce((a, b) => a + b, 0);
-            return { product, byGroup, total };
-          });
-          const total = rows.reduce((a, r) => a + r.total, 0);
-          return { name, rows, total };
-        })
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-      return { centres };
     },
 
     ...createMonthlyReportMethods2({ chemicalRepo }),
