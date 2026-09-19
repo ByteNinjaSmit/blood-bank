@@ -165,8 +165,9 @@ export default function InspectionDrawer({ onClose, grns, inspection = null, mod
         testingType,
         sentDate,
         testingLab: labName,
-        bagNo: row.bagNo,
-        segmentNo: row.segmentNo,
+        // Send undefined (not "") so the server's min(1) check is not triggered
+        bagNo: row.bagNo || undefined,
+        segmentNo: row.segmentNo || undefined,
         bloodGroup: testingType !== 'EMPTY' ? bloodGroup : undefined,
         rejectionReason: isAnyFailed ? form.rejectionReason : undefined,
       });
