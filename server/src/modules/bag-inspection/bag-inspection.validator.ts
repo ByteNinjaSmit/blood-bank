@@ -11,6 +11,14 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, where: string): T
   return result.data;
 }
 
+// Converts empty / whitespace-only strings to undefined so .optional() fields
+// that also have .min(1) don't reject a blank form submission.
+const blankToUndef = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((v) => {
+    const t = typeof v === 'string' ? v.trim() : v;
+    return t === '' || t === null ? undefined : t;
+  }, schema);
+
 const PhysicalChecksSchema = z
   .object({
     sealIntact: z.boolean().optional(),
@@ -40,16 +48,16 @@ export const CreateBagInspectionBody = z.object({
   testingStatus: z.enum(['SENT', 'REPORT_RECEIVED']).optional(),
   sentDate: z.coerce.date().optional(),
   testingLab: z.string().trim().max(200).optional(),
-  bagNo: z.string().trim().min(1).max(100).optional(),
-  segmentNo: z.string().trim().min(1).max(100).optional(),
-  bloodGroup: z.string().trim().max(20).optional(),
+  bagNo: blankToUndef(z.string().trim().min(1).max(100).optional()),
+  segmentNo: blankToUndef(z.string().trim().min(1).max(100).optional()),
+  bloodGroup: blankToUndef(z.string().trim().max(20).optional()),
 });
 
 export const UpdateBagInspectionReportBody = z.object({
   reportDate: z.coerce.date().optional(),
-  bagNo: z.string().trim().max(100).optional(),
-  segmentNo: z.string().trim().max(100).optional(),
-  bloodGroup: z.string().trim().max(20).optional(),
+  bagNo: blankToUndef(z.string().trim().max(100).optional()),
+  segmentNo: blankToUndef(z.string().trim().max(100).optional()),
+  bloodGroup: blankToUndef(z.string().trim().max(20).optional()),
   testResult: z.string().trim().max(1000).optional(),
   factorVIII: z.number().optional(),
   fibrinogen: z.number().optional(),

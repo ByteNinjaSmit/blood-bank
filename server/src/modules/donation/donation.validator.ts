@@ -112,6 +112,9 @@ export const UpdateDonationBody = z.object({
   isFit: z.coerce.boolean().optional(),
   rejectionReason: blankToUndef(z.string().trim().max(500).optional()),
   editReason: z.string().trim().min(1, 'A reason is required to edit this donation').max(500),
+  // Blood group correction — cascades to TtiResult, BloodUnits, and Donor
+  bloodGroup: z.enum(ABO_GROUP).optional(),
+  rhFactor: z.enum(RH_FACTOR).optional(),
 });
 export type UpdateDonationInput = z.infer<typeof UpdateDonationBody>;
 

@@ -139,12 +139,12 @@ export default function UpdateReportDrawer({ onClose, inspection, mode }) {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bag No {mode !== 'edit' && '*'}</label>
-                <input required={mode !== 'edit'} value={bagNo} onChange={(e) => setBagNo(e.target.value.toUpperCase())} className={fieldClass} placeholder="e.g. BAG-001" />
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bag No</label>
+                <input value={bagNo} onChange={(e) => setBagNo(e.target.value.toUpperCase())} className={fieldClass} placeholder="e.g. BAG-001" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Segment No {mode !== 'edit' && '*'}</label>
-                <input required={mode !== 'edit'} value={segmentNo} onChange={(e) => setSegmentNo(e.target.value.toUpperCase())} className={fieldClass} placeholder="e.g. SEG-99" />
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Segment No</label>
+                <input value={segmentNo} onChange={(e) => setSegmentNo(e.target.value.toUpperCase())} className={fieldClass} placeholder="e.g. SEG-99" />
               </div>
             </div>
 
@@ -243,8 +243,8 @@ export default function UpdateReportDrawer({ onClose, inspection, mode }) {
             {inspection.testingType !== 'EMPTY' && (
               <>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Blood Group {mode !== 'edit' && '*'}</label>
-                  <select required={mode !== 'edit'} value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)} className={`${fieldClass} bg-white`}>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Blood Group</label>
+                  <select value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)} className={`${fieldClass} bg-white`}>
                     {BLOOD_GROUPS.map(bg => <option key={bg} value={bg}>{bg}</option>)}
                   </select>
                 </div>

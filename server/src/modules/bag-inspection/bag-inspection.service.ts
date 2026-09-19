@@ -95,6 +95,43 @@ export function createBagInspectionService(deps: {
         undefined,
         { inspectionId, grnId: input.grnId, decision: input.decision },
       );
+
+      // Deduct the sampled bags from batch stock — they are physically sent
+      // to the lab and consumed, so they must not remain in usable inventory.
+      // We use incrementDamaged (same counter used for torn/broken bags) since
+      // "sample consumed by testing" reduces closingStock identically.
+      // We look up the batch by batchNumber; if multiple bag-type rows exist
+      // for the same batch (rare), we decrement only the first matching row
+      // to avoid over-deducting.
+      try {
+        const stockRows = await deps.bagStock.findByBatch(input.batchNumber);
+        if (stockRows.length > 0) {
+          const stockRow = stockRows[0]!;
+          await deps.bagStock.incrementDamaged(stockRow.id, input.sampleSize, actorId);
+          log.info(
+            {
+              batchNumber: input.batchNumber,
+              sampleSize: input.sampleSize,
+              stockId: stockRow.stockId,
+            },
+            'bag inspection: sample bags deducted from batch stock (damagedQty)',
+          );
+        } else {
+          // Batch not yet in stock (inspection filed before batch was accepted) — no-op
+          log.warn(
+            { batchNumber: input.batchNumber },
+            'bag inspection: no BagStock row found for batch — stock not decremented',
+          );
+        }
+      } catch (err) {
+        // Stock deduction is best-effort — a failure must not roll back the
+        // inspection record that was already committed.
+        log.error(
+          { err: (err as Error).message, batchNumber: input.batchNumber },
+          'bag inspection: failed to decrement batch stock for sample',
+        );
+      }
+
       return created;
     },
 
@@ -197,8 +234,12 @@ export function createBagInspectionService(deps: {
         const grn = await deps.grns.findById(updated.grnId);
         const line = grn?.batchLines.find((l) => l.batchNumber === updated.batchNumber);
         if (line) {
+          const stockRows = await deps.bagStock.findByBatch(updated.batchNumber);
+          const stockRow = stockRows.find((s) => s.bagType === line.bagType) || stockRows[0];
+          const damaged = stockRow?.damagedQty ?? 0;
           const quantityReceived = nowAccepted ? line.quantityReceived : 0;
-          const unopenedBoxes = nowAccepted ? Math.floor(line.quantityReceived / 45) : 0;
+          const netQty = Math.max(0, quantityReceived - damaged);
+          const unopenedBoxes = nowAccepted ? Math.floor(netQty / 45) : 0;
           await deps.bagStock.setReceivedQtyAndBoxes(
             updated.batchNumber,
             line.bagType,

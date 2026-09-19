@@ -88,10 +88,21 @@ export default function InspectionDrawer({ onClose, grns, inspection = null, mod
     setBagDetails((rows) => rows.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
   };
 
-  const addBagDetailRow = () => setBagDetails((rows) => [...rows, emptyBagDetail()]);
+  const addBagDetailRow = () => {
+    setBagDetails((rows) => {
+      const next = [...rows, emptyBagDetail()];
+      setForm((f) => ({ ...f, sampleSize: next.length }));
+      return next;
+    });
+  };
 
-  const removeBagDetailRow = (idx) =>
-    setBagDetails((rows) => (rows.length > 1 ? rows.filter((_, i) => i !== idx) : rows));
+  const removeBagDetailRow = (idx) => {
+    setBagDetails((rows) => {
+      const next = rows.length > 1 ? rows.filter((_, i) => i !== idx) : rows;
+      setForm((f) => ({ ...f, sampleSize: next.length }));
+      return next;
+    });
+  };
 
   const donationsList = donationData?.items ?? donationData?.donations ?? (Array.isArray(donationData) ? donationData : []);
   const filteredDonations = donationsList.filter(
@@ -151,11 +162,12 @@ export default function InspectionDrawer({ onClose, grns, inspection = null, mod
       return;
     }
 
+    const rowSampleSize = bagDetails.length > 1 ? 1 : Math.max(1, Number(sampleSize) || 1);
     for (const row of bagDetails) {
       await createInspection.mutateAsync({
         grnId,
         batchNumber,
-        sampleSize: Number(sampleSize),
+        sampleSize: rowSampleSize,
         inspectionDate: new Date(),
         inspectedById: user?.id ?? user?._id ?? '000000000000000000000000',
         decision,
@@ -165,8 +177,9 @@ export default function InspectionDrawer({ onClose, grns, inspection = null, mod
         testingType,
         sentDate,
         testingLab: labName,
-        bagNo: row.bagNo,
-        segmentNo: row.segmentNo,
+        // Send undefined (not "") so the server's min(1) check is not triggered
+        bagNo: row.bagNo || undefined,
+        segmentNo: row.segmentNo || undefined,
         bloodGroup: testingType !== 'EMPTY' ? bloodGroup : undefined,
         rejectionReason: isAnyFailed ? form.rejectionReason : undefined,
       });
@@ -282,10 +295,9 @@ export default function InspectionDrawer({ onClose, grns, inspection = null, mod
                 return (
                   <div key={idx} className="grid grid-cols-2 gap-3 items-end bg-gray-50/50 border border-gray-100 rounded-lg p-3">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bag No *</label>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Bag No</label>
                       {effectiveTestingType === 'EMPTY' ? (
                         <input
-                          required
                           value={row.bagNo}
                           onChange={(e) => updateBagDetail(idx, { bagNo: e.target.value.toUpperCase() })}
                           className={fieldClass}
@@ -293,7 +305,6 @@ export default function InspectionDrawer({ onClose, grns, inspection = null, mod
                         />
                       ) : (
                         <select
-                          required
                           value={row.bagNo}
                           onChange={(e) => {
                             const val = e.target.value;

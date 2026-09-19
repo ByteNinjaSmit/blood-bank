@@ -16,6 +16,10 @@ export const donationEditSchema = z.object({
   collectedAt: z.string().min(1, 'Collection date/time is required'),
   editReason: z.string().trim().min(1, 'A reason is required to edit this donation').max(500),
 
+  // Blood group correction
+  bloodGroup: z.string().trim().optional(),
+  rhFactor: z.string().trim().optional(),
+
   // Fitness
   isFit: z.preprocess((v) => (v === 'true' ? true : v === 'false' ? false : v), z.boolean().optional()),
   rejectionReason: z.string().trim().max(500).optional(),

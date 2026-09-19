@@ -371,6 +371,8 @@ export function createDonationService(deps: {
           isFit: input.isFit,
           rejectionReason: input.rejectionReason,
           editReason: input.editReason,
+          bloodGroup: input.bloodGroup,
+          rhFactor: input.rhFactor,
         },
         actorId,
       );

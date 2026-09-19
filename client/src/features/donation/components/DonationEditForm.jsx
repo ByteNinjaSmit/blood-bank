@@ -9,6 +9,18 @@ import { Button } from '@/components/ui/button';
 import { useBagStockList } from '@/features/bag-procurement/queries';
 import { donationEditSchema } from '../schemas';
 
+const ABO_GROUPS = ['A', 'B', 'AB', 'O', 'BBG'];
+
+// Parse a combined blood group string like "O+" into { abo: "O", rh: "POSITIVE" }
+function parseBloodGroup(combined) {
+  if (!combined) return { abo: '', rh: '' };
+  const rhPositive = combined.endsWith('+');
+  const rhNegative = combined.endsWith('-');
+  const abo = (rhPositive || rhNegative) ? combined.slice(0, -1) : combined;
+  const rh = rhPositive ? 'POSITIVE' : rhNegative ? 'NEGATIVE' : '';
+  return { abo, rh };
+}
+
 // Splits an ISO collectedAt into the `date`/`time` pair a native
 // <input type="date"> / <input type="time"> pair expects.
 function splitCollectedAt(iso) {
@@ -38,6 +50,11 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
   const me = donation?.medicalExam || {};
   const bp = me.bloodPressure ? `${me.bloodPressure.systolic}/${me.bloodPressure.diastolic}` : '';
 
+  // Parse current blood group from donation (combined string like "O+")
+  const parsedBg = parseBloodGroup(donation?.bloodGroup);
+  const [selectedAbo, setSelectedAbo] = useState(parsedBg.abo);
+  const [selectedRh, setSelectedRh] = useState(parsedBg.rh);
+
   const { data: stockData } = useBagStockList({});
   const stocks = stockData?.items ?? stockData?.bagStocks ?? (Array.isArray(stockData) ? stockData : []);
 
@@ -57,6 +74,8 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
       donationType: donation?.donationType || '',
       collectedAt: donation?.collectedAt || '',
       editReason: '',
+      bloodGroup: parsedBg.abo || '',
+      rhFactor: parsedBg.rh || '',
       isFit: donation?.donorFitness?.isFit ?? donation?.isFit ?? true,
       rejectionReason: donation?.donorFitness?.rejectionReason || '',
       weightKg: me.weightKg ?? '',
@@ -123,6 +142,11 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
   const numOrUndef = (v) => (v === '' || v === undefined || v === null ? undefined : Number(v));
 
   const submit = (data) => {
+    // Only send blood group if it actually changed from the original
+    const origParsed = parseBloodGroup(donation?.bloodGroup);
+    const bgChanged = data.bloodGroup && data.bloodGroup !== origParsed.abo;
+    const rhChanged = data.rhFactor && data.rhFactor !== origParsed.rh;
+
     onSubmit({
       typeOfBag: data.typeOfBag || undefined,
       donationType: data.donationType || undefined,
@@ -131,6 +155,8 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
       lotNo: data.lotNo || undefined,
       collectedAt: data.collectedAt,
       editReason: data.editReason.trim(),
+      bloodGroup: bgChanged ? data.bloodGroup : undefined,
+      rhFactor: rhChanged ? data.rhFactor : undefined,
       isFit: data.isFit,
       rejectionReason: data.isFit ? undefined : (data.rejectionReason || undefined),
       medicalExam: {
@@ -231,6 +257,42 @@ export default function DonationEditForm({ donation, onSubmit, onCancel }) {
               value={collectedTime}
               onChange={(e) => setCollectedTime(e.target.value)}
             />
+          </div>
+
+          {/* Blood Group Correction — cascades to blood units and donor record */}
+          <div>
+            <Label className="mb-1 block">Blood Group (ABO)</Label>
+            <select
+              {...register('bloodGroup')}
+              value={selectedAbo}
+              onChange={(e) => {
+                setSelectedAbo(e.target.value);
+                setValue('bloodGroup', e.target.value);
+              }}
+              className={selectCls}
+            >
+              <option value="">— unchanged —</option>
+              {ABO_GROUPS.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+            <p className="text-xs text-orange-700 mt-1">⚠ Changing this updates the donor, donation, and all blood bag components.</p>
+          </div>
+          <div>
+            <Label className="mb-1 block">Rh Factor</Label>
+            <select
+              {...register('rhFactor')}
+              value={selectedRh}
+              onChange={(e) => {
+                setSelectedRh(e.target.value);
+                setValue('rhFactor', e.target.value);
+              }}
+              className={selectCls}
+            >
+              <option value="">— unchanged —</option>
+              <option value="POSITIVE">Positive (+)</option>
+              <option value="NEGATIVE">Negative (−)</option>
+            </select>
           </div>
         </div>
         {errors.collectedAt && <p className="text-xs text-red-600 mt-1">{errors.collectedAt.message}</p>}

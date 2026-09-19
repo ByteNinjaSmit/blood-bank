@@ -21,6 +21,7 @@ import { BloodUnitModel } from '@/modules/unit/unit.model';
 import { TtiResultModel } from '@/modules/tti/tti.model';
 import { RequisitionModel } from '@/modules/requisition/requisition.model';
 import { IssueModel } from '@/modules/issue/issue.model';
+import { DonorModel } from '@/modules/donor/donor.model';
 import type {
   CreateDonationInput,
   ListDonationsInput,
@@ -826,7 +827,42 @@ export function createDonationRepo(): DonationRepo {
       const model = (await findOwningModel(id)) ?? DonationModel;
       const result = await model.updateOne({ _id: id }, { $set });
       if (result.matchedCount === 0) throw new NotFoundError('Donation', id);
+
+      // Blood group correction: cascade to TtiResult, BloodUnits, and Donor
+      if (patch.bloodGroup !== undefined || patch.rhFactor !== undefined) {
+        // Load the donation to get its public donationId and donor reference
+        const donationDoc = await model.findById(id).select('donationId donor').lean();
+        if (donationDoc) {
+          const { donationId, donor } = donationDoc as any;
+
+          // 1. Update TtiResult — this is the primary source for bloodGroup on the
+          //    donation read-side (aboGroupConfirmed / rhFactorConfirmed)
+          const ttiSet: Record<string, unknown> = { updatedBy: new Types.ObjectId(actorId) };
+          if (patch.bloodGroup !== undefined) ttiSet.aboGroupConfirmed = patch.bloodGroup;
+          if (patch.rhFactor !== undefined) ttiSet.rhFactorConfirmed = patch.rhFactor;
+          await TtiResultModel.updateOne({ donationId }, { $set: ttiSet });
+
+          // 2. Update all BloodUnits derived from this donation
+          const unitSet: Record<string, unknown> = { updatedBy: new Types.ObjectId(actorId) };
+          if (patch.bloodGroup !== undefined) unitSet.aboGroup = patch.bloodGroup;
+          if (patch.rhFactor !== undefined) unitSet.rhFactor = patch.rhFactor;
+          await BloodUnitModel.updateMany({ donationId, deletedAt: null }, { $set: unitSet });
+
+          // 3. Update the Donor record so the donors list page also reflects
+          //    the corrected blood group
+          if (donor) {
+            const donorSet: Record<string, unknown> = { updatedBy: new Types.ObjectId(actorId) };
+            if (patch.bloodGroup !== undefined) donorSet.bloodGroup = patch.bloodGroup;
+            if (patch.rhFactor !== undefined) {
+              // Donor.rh uses legacy "Positive"/"Negative" enum
+              donorSet.rh = patch.rhFactor === 'POSITIVE' ? 'Positive' : 'Negative';
+            }
+            await DonorModel.updateOne({ _id: donor }, { $set: donorSet });
+          }
+        }
+      }
     },
+
 
     // Permanent, irreversible removal — only reached once a donation has
     // already been soft-deleted (see donation.service.ts remove()).
