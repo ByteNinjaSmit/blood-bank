@@ -88,10 +88,21 @@ export default function InspectionDrawer({ onClose, grns, inspection = null, mod
     setBagDetails((rows) => rows.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
   };
 
-  const addBagDetailRow = () => setBagDetails((rows) => [...rows, emptyBagDetail()]);
+  const addBagDetailRow = () => {
+    setBagDetails((rows) => {
+      const next = [...rows, emptyBagDetail()];
+      setForm((f) => ({ ...f, sampleSize: next.length }));
+      return next;
+    });
+  };
 
-  const removeBagDetailRow = (idx) =>
-    setBagDetails((rows) => (rows.length > 1 ? rows.filter((_, i) => i !== idx) : rows));
+  const removeBagDetailRow = (idx) => {
+    setBagDetails((rows) => {
+      const next = rows.length > 1 ? rows.filter((_, i) => i !== idx) : rows;
+      setForm((f) => ({ ...f, sampleSize: next.length }));
+      return next;
+    });
+  };
 
   const donationsList = donationData?.items ?? donationData?.donations ?? (Array.isArray(donationData) ? donationData : []);
   const filteredDonations = donationsList.filter(
@@ -151,11 +162,12 @@ export default function InspectionDrawer({ onClose, grns, inspection = null, mod
       return;
     }
 
+    const rowSampleSize = bagDetails.length > 1 ? 1 : Math.max(1, Number(sampleSize) || 1);
     for (const row of bagDetails) {
       await createInspection.mutateAsync({
         grnId,
         batchNumber,
-        sampleSize: Number(sampleSize),
+        sampleSize: rowSampleSize,
         inspectionDate: new Date(),
         inspectedById: user?.id ?? user?._id ?? '000000000000000000000000',
         decision,

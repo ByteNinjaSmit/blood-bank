@@ -234,8 +234,12 @@ export function createBagInspectionService(deps: {
         const grn = await deps.grns.findById(updated.grnId);
         const line = grn?.batchLines.find((l) => l.batchNumber === updated.batchNumber);
         if (line) {
+          const stockRows = await deps.bagStock.findByBatch(updated.batchNumber);
+          const stockRow = stockRows.find((s) => s.bagType === line.bagType) || stockRows[0];
+          const damaged = stockRow?.damagedQty ?? 0;
           const quantityReceived = nowAccepted ? line.quantityReceived : 0;
-          const unopenedBoxes = nowAccepted ? Math.floor(line.quantityReceived / 45) : 0;
+          const netQty = Math.max(0, quantityReceived - damaged);
+          const unopenedBoxes = nowAccepted ? Math.floor(netQty / 45) : 0;
           await deps.bagStock.setReceivedQtyAndBoxes(
             updated.batchNumber,
             line.bagType,

@@ -59,7 +59,7 @@ function toDto(
     issuedQty: issued,
     damagedQty: damaged,
     discardedQty: discarded,
-    closingStock: opening + received - issued - damaged - discarded,
+    closingStock: Math.max(0, opening + received - issued - damaged - discarded),
     unopenedBoxes: (doc.unopenedBoxes as number) ?? 0,
     status: doc.status as string,
     lastUpdatedAt: doc.lastUpdatedAt ? (doc.lastUpdatedAt as Date).toISOString() : undefined,

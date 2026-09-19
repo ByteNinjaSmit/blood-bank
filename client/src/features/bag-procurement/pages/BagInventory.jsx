@@ -61,8 +61,11 @@ export default function BagInventory() {
 
   const mapInventoryForExport = (items) => {
     return items.map(s => {
-      const closing = (s.openingStock ?? 0) + (s.receivedQty ?? 0)
-        - (s.issuedQty ?? 0) - (s.damagedQty ?? 0) - (s.discardedQty ?? 0);
+      const closing = Math.max(
+        0,
+        (s.openingStock ?? 0) + (s.receivedQty ?? 0)
+        - (s.issuedQty ?? 0) - (s.damagedQty ?? 0) - (s.discardedQty ?? 0)
+      );
       const zeroStock  = closing === 0;
       const statusVal = zeroStock ? 'OUT_OF_STOCK' : (s.unopenedBoxes === 0 ? 'LOW_STOCK' : 'AVAILABLE');
       const totalBoxes = Math.floor((s.receivedQty ?? 0) / 45);
@@ -106,10 +109,26 @@ export default function BagInventory() {
   const doubleStocks = stocks.filter((s) => s.bagType === 'DOUBLE');
   const tripleStocks = stocks.filter((s) => s.bagType === 'TRIPLE');
 
-  const doubleRemaining = doubleStocks.reduce((sum, s) => sum + (s.openingStock + s.receivedQty - s.issuedQty - s.damagedQty - s.discardedQty), 0);
+  const doubleRemaining = doubleStocks.reduce(
+    (sum, s) =>
+      sum +
+      Math.max(
+        0,
+        (s.openingStock ?? 0) + (s.receivedQty ?? 0) - (s.issuedQty ?? 0) - (s.damagedQty ?? 0) - (s.discardedQty ?? 0),
+      ),
+    0,
+  );
   const doubleUsed = doubleStocks.reduce((sum, s) => sum + s.issuedQty, 0);
 
-  const tripleRemaining = tripleStocks.reduce((sum, s) => sum + (s.openingStock + s.receivedQty - s.issuedQty - s.damagedQty - s.discardedQty), 0);
+  const tripleRemaining = tripleStocks.reduce(
+    (sum, s) =>
+      sum +
+      Math.max(
+        0,
+        (s.openingStock ?? 0) + (s.receivedQty ?? 0) - (s.issuedQty ?? 0) - (s.damagedQty ?? 0) - (s.discardedQty ?? 0),
+      ),
+    0,
+  );
   const tripleUsed = tripleStocks.reduce((sum, s) => sum + s.issuedQty, 0);
 
   const fmtDate = (d) => d
@@ -225,8 +244,11 @@ export default function BagInventory() {
                 ) : stocks.length === 0 ? (
                   <tr><td colSpan={9} className="py-12 text-center text-sm text-gray-500">No records found.</td></tr>
                 ) : stocks.map((s) => {
-                  const closing = (s.openingStock ?? 0) + (s.receivedQty ?? 0)
-                    - (s.issuedQty ?? 0) - (s.damagedQty ?? 0) - (s.discardedQty ?? 0);
+                  const closing = Math.max(
+                    0,
+                    (s.openingStock ?? 0) + (s.receivedQty ?? 0)
+                    - (s.issuedQty ?? 0) - (s.damagedQty ?? 0) - (s.discardedQty ?? 0)
+                  );
                   const nearExpiry = isNearExpiry(s.expiryDate);
                   const zeroStock  = closing === 0;
 
