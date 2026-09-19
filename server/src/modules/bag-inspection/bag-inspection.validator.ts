@@ -55,9 +55,9 @@ export const CreateBagInspectionBody = z.object({
 
 export const UpdateBagInspectionReportBody = z.object({
   reportDate: z.coerce.date().optional(),
-  bagNo: z.string().trim().max(100).optional(),
-  segmentNo: z.string().trim().max(100).optional(),
-  bloodGroup: z.string().trim().max(20).optional(),
+  bagNo: blankToUndef(z.string().trim().max(100).optional()),
+  segmentNo: blankToUndef(z.string().trim().max(100).optional()),
+  bloodGroup: blankToUndef(z.string().trim().max(20).optional()),
   testResult: z.string().trim().max(1000).optional(),
   factorVIII: z.number().optional(),
   fibrinogen: z.number().optional(),
