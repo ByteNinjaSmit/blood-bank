@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import ExportExcelDropdown from '@/components/shared/ExportExcelDropdown';
 import { exportCampDonors } from '@/utils/excelExportHelper';
 import ReasonForChangeModal from '@/components/shared/ReasonForChangeModal';
+import { getEffectiveEligibility } from '@/features/donor/donor-eligibility';
 
 const CampDonorManagement = () => {
   const navigate = useNavigate();
@@ -154,7 +155,8 @@ const CampDonorManagement = () => {
       donor.donorId?.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesBloodGroup = !bloodGroupFilter || donor.bloodGroup === bloodGroupFilter;
-    const matchesEligibility = !eligibilityFilter || donor.eligibilityStatus === eligibilityFilter;
+    const effectiveStatus = getEffectiveEligibility(donor);
+    const matchesEligibility = !eligibilityFilter || effectiveStatus === eligibilityFilter;
     const matchesFrom = !fromDate || (donor.lastDonationDate && new Date(donor.lastDonationDate) >= new Date(fromDate));
     const matchesTo = !toDate || (donor.lastDonationDate && new Date(donor.lastDonationDate) <= new Date(`${toDate}T23:59:59`));
 
@@ -177,6 +179,8 @@ const CampDonorManagement = () => {
     switch (status) {
       case "eligible":
         return "bg-green-50 text-green-700 border-green-200";
+      case "recently-donated":
+        return "bg-orange-50 text-orange-700 border-orange-200";
       case "deferred":
         return "bg-red-50 text-red-700 border-red-200";
       case "temp-deferred":
@@ -190,12 +194,14 @@ const CampDonorManagement = () => {
     switch (status) {
       case "eligible":
         return "Eligible";
+      case "recently-donated":
+        return "Recently Donated";
       case "deferred":
         return "Deferred";
       case "temp-deferred":
         return "Temp Deferred";
       default:
-        return status;
+        return status || 'N/A';
     }
   };
 
@@ -318,6 +324,7 @@ const CampDonorManagement = () => {
               >
                 <option value="">All Status</option>
                 <option value="eligible">Eligible</option>
+                <option value="recently-donated">Recently Donated</option>
                 <option value="deferred">Deferred</option>
                 <option value="temp-deferred">Temp Deferred</option>
               </select>
@@ -397,7 +404,8 @@ const CampDonorManagement = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white text-gray-700 font-medium">
                   {filteredDonors.map((donor, idx) => {
-                    const isDeferred = donor.eligibilityStatus === 'deferred' || donor.eligibilityStatus === 'temp-deferred';
+                    const effectiveStatus = getEffectiveEligibility(donor);
+                    const isDeferred = effectiveStatus === 'deferred' || effectiveStatus === 'temp-deferred';
                     return (
                       <tr key={donor._id || donor.id || idx} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-6 py-4 font-semibold text-gray-900">
@@ -429,8 +437,8 @@ const CampDonorManagement = () => {
                           }
                         </td>
                         <td className="px-6 py-4 text-center whitespace-nowrap">
-                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(donor.eligibilityStatus)}`}>
-                            {getStatusText(donor.eligibilityStatus)}
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(effectiveStatus)}`}>
+                            {getStatusText(effectiveStatus)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
