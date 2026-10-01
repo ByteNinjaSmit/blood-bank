@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { useDonationList, useDonationDetail, useDeleteDonation } from '@/features/donation/queries';
+import { useDonationListAll, useDonationDetail, useDeleteDonation } from '@/features/donation/queries';
 import { donationApi } from '@/features/donation/api';
 import { useAuth } from '@/store/auth';
 import useAccess from '@/features/access/useAccess';
@@ -72,10 +72,10 @@ export function useDonationRegister(activeTab, setActiveTab) {
   const sourceParam = activeTab === 'all' ? undefined : activeTab;
 
   // Fetch server-side for inhouse/camp tabs (paginated); fetch all for 'all' tab (client-side filtered)
-  const { data, isLoading, isError, refetch, isFetching } = useDonationList(
+  const { data, isLoading, isError, refetch, isFetching } = useDonationListAll(
     activeTab === 'all'
-      ? { page: 1, pageSize: 200 }
-      : { source: sourceParam, page: 1, pageSize: 200 }
+      ? { page: 1 }
+      : { source: sourceParam, page: 1 }
   );
 
   const { data: detail, isLoading: detailLoading } = useDonationDetail(trackId);

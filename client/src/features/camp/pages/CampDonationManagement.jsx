@@ -67,8 +67,6 @@ const CampDonationManagement = () => {
     setCampId(id);
     fetchDonations({
       campId: id,
-      page: 1,
-      pageSize: 200,
       fromDate: fromDate || undefined,
       toDate: toDate || undefined,
     });
@@ -78,8 +76,6 @@ const CampDonationManagement = () => {
   const handleRefresh = () => {
     fetchDonations({
       campId,
-      page: 1,
-      pageSize: 200,
       fromDate: fromDate || undefined,
       toDate: toDate || undefined,
     });
