@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   donationKeys,
-  useDonationList,
+  useDonationListAll,
   useDonationDetail,
   useCreateDonation,
 } from '@/features/donation/queries';
 
 export {
   donationKeys,
-  useDonationList,
+  useDonationListAll as useDonationList,
   useDonationDetail,
   useCreateDonation,
 };
@@ -17,7 +17,7 @@ export {
 // Backward-compatible hook for pages that use the imperative { donations, fetchDonations, ... } API.
 export function useDonation() {
   const [filters, setFilters] = useState({});
-  const listQuery = useDonationList(filters);
+  const listQuery = useDonationListAll(filters);
   const createMutation = useCreateDonation();
 
   const loading = listQuery.isLoading || createMutation.isPending;

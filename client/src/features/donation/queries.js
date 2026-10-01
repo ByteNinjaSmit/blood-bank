@@ -15,6 +15,15 @@ export function useDonationList(filters) {
   });
 }
 
+// Like useDonationList but fetches ALL pages automatically — no record cap.
+export function useDonationListAll(filters) {
+  return useQuery({
+    queryKey: [...donationKeys.list(filters), 'all'],
+    queryFn: () => donationApi.listAll(filters),
+    staleTime: 30_000,
+  });
+}
+
 export function useDonationDetail(id) {
   return useQuery({
     queryKey: donationKeys.detail(id),
