@@ -358,6 +358,48 @@ export function createDonationService(deps: {
         }
       }
 
+      // Capture the old bag identifiers BEFORE persisting so we can
+      // reconcile BagStock and BagIssue ledgers afterward.
+      const oldLotNo = existing.lotNo ?? undefined;
+      const oldTypeOfBag = existing.typeOfBag ?? undefined;
+      const oldBagNo = existing.bagNo ?? undefined;
+
+      // Resolve the effective new values — fall back to the current value
+      // when the field was not included in this edit request.
+      const newLotNo = input.lotNo !== undefined ? (input.lotNo ?? undefined) : oldLotNo;
+      const newTypeOfBag =
+        input.typeOfBag !== undefined ? (input.typeOfBag ?? undefined) : oldTypeOfBag;
+      const newBagNo = input.bagNo !== undefined ? (input.bagNo ?? undefined) : oldBagNo;
+
+      const batchOrTypeChanged = newLotNo !== oldLotNo || newTypeOfBag !== oldTypeOfBag;
+      const serialChanged = newBagNo !== oldBagNo;
+
+      // ── Pre-flight: check new batch has available stock ──────────────────
+      // Do this BEFORE persisting the donation update so that if the batch
+      // is exhausted the donation record is left completely unchanged.
+      //
+      // Distinction:
+      //   • Batch EXISTS in BagStock with closingStock = 0
+      //     → Hard error — user must free up a bag from that batch first.
+      //   • Batch does NOT exist in BagStock (null)
+      //     → Silent pass — the bag was received outside the system
+      //        (e.g. opening-stock entry), so we don't track its ledger here.
+      if (batchOrTypeChanged && deps.bagStock && newLotNo && newTypeOfBag) {
+        const newMappedPreflight = mapBagType(newTypeOfBag);
+        if (newMappedPreflight) {
+          const newStockPreflight = await deps.bagStock.findByBatchAndType(
+            newLotNo,
+            newMappedPreflight,
+          );
+          if (newStockPreflight && newStockPreflight.closingStock <= 0) {
+            throw new ConflictError(
+              `Batch “${newLotNo}” (${newTypeOfBag}) has no available bags (closing stock is 0). ` +
+                `Please edit another donation that uses this batch to free up a bag, then try again.`,
+            );
+          }
+        }
+      }
+
       await deps.donations.update(
         id,
         {
@@ -376,6 +418,128 @@ export function createDonationService(deps: {
         },
         actorId,
       );
+
+      // ── BagStock reconciliation ───────────────────────────────────────────
+      // findByBatchAndType() has NO closing-stock filter, so it finds an
+      // exhausted batch (closingStock = 0) and correctly decrements issuedQty,
+      // restoring that bag to available inventory. If the batch was
+      // hard-deleted (deletedAt set) the query returns null and we skip with
+      // a warning — the donation edit itself is never blocked.
+      if (batchOrTypeChanged && deps.bagStock) {
+        // 1. Return the bag to the OLD batch/type.
+        if (oldLotNo && oldTypeOfBag) {
+          const oldMapped = mapBagType(oldTypeOfBag);
+          if (oldMapped) {
+            try {
+              const oldStock = await deps.bagStock.findByBatchAndType(oldLotNo, oldMapped);
+              if (oldStock) {
+                await deps.bagStock.decrementIssued(oldStock.id, 1, actorId);
+                log.info(
+                  { donationId: id, batchNumber: oldLotNo, bagType: oldMapped },
+                  'BagStock issuedQty decremented for old batch on donation edit',
+                );
+              } else {
+                log.warn(
+                  { donationId: id, batchNumber: oldLotNo, bagType: oldMapped },
+                  'Old BagStock record not found during donation edit — skipping decrement',
+                );
+              }
+            } catch (err) {
+              log.error(
+                { err: (err as Error).message },
+                'Failed to decrement old BagStock issuedQty on donation edit',
+              );
+            }
+          }
+        }
+
+        // 2. Consume a bag from the NEW batch/type.
+        if (newLotNo && newTypeOfBag) {
+          const newMapped = mapBagType(newTypeOfBag);
+          if (newMapped) {
+            try {
+              const newStock = await deps.bagStock.findByBatchAndType(newLotNo, newMapped);
+              if (newStock) {
+                await deps.bagStock.incrementIssued(newStock.id, 1, actorId);
+                log.info(
+                  { donationId: id, batchNumber: newLotNo, bagType: newMapped },
+                  'BagStock issuedQty incremented for new batch on donation edit',
+                );
+              } else {
+                // Batch exists but stock ran out between the pre-flight check
+                // and now (extremely rare race), or batch was never in inventory.
+                // Log a warning — the donation update has already been persisted
+                // so we must not throw here; the stock discrepancy will surface
+                // in the next audit.
+                log.warn(
+                  { donationId: id, batchNumber: newLotNo, bagType: newMapped },
+                  'New BagStock record not found during post-persist reconciliation — skipping increment',
+                );
+              }
+            } catch (err) {
+              log.error(
+                { err: (err as Error).message },
+                'Failed to increment new BagStock issuedQty on donation edit',
+              );
+            }
+          }
+        }
+      }
+
+      // ── BagIssue reconciliation ───────────────────────────────────────────
+      // Only needed when the physical bag serial number changed.
+      if (serialChanged && deps.bagIssues) {
+        // 1. Revert the OLD serial back to ISSUED (bag unlinked from donation).
+        if (oldBagNo) {
+          try {
+            const oldBagIssue = await deps.bagIssues.findBySerialNumber(oldBagNo);
+            if (oldBagIssue) {
+              await deps.bagIssues.updateStatus(
+                oldBagIssue.id,
+                { status: 'ISSUED' },
+                actorId,
+              );
+              log.info(
+                { donationId: id, bagSerialNumber: oldBagNo },
+                'BagIssue reverted to ISSUED for old serial on donation edit',
+              );
+            }
+          } catch (err) {
+            log.error(
+              { err: (err as Error).message },
+              'Failed to revert old BagIssue status on donation edit',
+            );
+          }
+        }
+
+        // 2. Mark the NEW serial as USED.
+        if (newBagNo) {
+          try {
+            const newBagIssue = await deps.bagIssues.findBySerialNumber(newBagNo);
+            if (newBagIssue) {
+              await deps.bagIssues.updateStatus(
+                newBagIssue.id,
+                {
+                  status: 'USED',
+                  donorId: existing.donor,
+                  donationId: id,
+                  usedAt: new Date(),
+                },
+                actorId,
+              );
+              log.info(
+                { donationId: id, bagSerialNumber: newBagNo },
+                'BagIssue marked as USED for new serial on donation edit',
+              );
+            }
+          } catch (err) {
+            log.error(
+              { err: (err as Error).message },
+              'Failed to mark new BagIssue as USED on donation edit',
+            );
+          }
+        }
+      }
 
       log.info({ donationId: id, actorId, fields: Object.keys(input) }, 'donation updated');
       void withAudit(
@@ -448,6 +612,16 @@ export function createDonationService(deps: {
       );
     },
   };
+}
+
+// Maps the stored typeOfBag code ('SB'|'DB'|'TB'|'QB') to the BagStock
+// bagType enum value used in the bag-stock collection.
+function mapBagType(raw: string): string | null {
+  if (raw === 'SB') return 'SINGLE';
+  if (raw === 'DB') return 'DOUBLE';
+  if (raw === 'TB') return 'TRIPLE';
+  if (raw === 'QB') return 'QUADRUPLE';
+  return null;
 }
 
 function generateDonationId(collectedAt: Date): string {

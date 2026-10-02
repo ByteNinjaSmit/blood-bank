@@ -2,14 +2,10 @@
 
 import connectToDatabase from "@/lib/db";
 import Camp from "@/models/camp-model";
-import Donation from "@/models/donation-model";
+import CampDonationRecord from "@/models/camp-donation-record-model";
 
 const COMPLETED_CAMP_WINDOW_DAYS = 30;
 
-interface DonationTotal {
-  _id: unknown;
-  count: number;
-}
 
 // Only these fields are safe to send to the public, unauthenticated site.
 // Internal references — staff, createdBy, lastUpdatedBy, donorData,
@@ -20,23 +16,42 @@ const PUBLIC_CAMP_PROJECTION = "campId name description address contactInfo date
 
 // Attaches donorCount / donationCount to each camp, then strips the raw
 // donorData id array — only the derived count is public-safe.
+//
+// donorCount = union of:
+//   • camp.donorData  (Donor ObjectIds pushed when a donor registers at camp)
+//   • distinct donor refs on campdonationrecords (finalized phlebotomy events)
+// This mirrors the server's campList logic exactly.
 async function withCounts<T extends { _id: unknown; donorData?: unknown[] }>(camps: T[]) {
   if (camps.length === 0) return [];
 
   const campIds = camps.map((c) => c._id);
-  const donationTotals: DonationTotal[] = await Donation.aggregate([
-    { $match: { campId: { $in: campIds }, deletedAt: null } },
-    { $group: { _id: "$campId", count: { $sum: 1 } } },
+
+  const [donationTotals, donatedDonorTotals] = await Promise.all([
+    CampDonationRecord.aggregate<{ _id: unknown; count: number }>([
+      { $match: { campId: { $in: campIds }, deletedAt: null } },
+      { $group: { _id: "$campId", count: { $sum: 1 } } },
+    ]),
+    CampDonationRecord.aggregate<{ _id: unknown; donors: unknown[] }>([
+      { $match: { campId: { $in: campIds }, deletedAt: null } },
+      { $group: { _id: "$campId", donors: { $addToSet: "$donor" } } },
+    ]),
   ]);
+
   const donationCountByCamp = new Map<string, number>(
     donationTotals.map((d) => [String(d._id), d.count])
+  );
+  const donatedDonorsByCamp = new Map<string, unknown[]>(
+    donatedDonorTotals.map((d) => [String(d._id), d.donors ?? []])
   );
 
   return camps.map((camp) => {
     const { donorData, ...rest } = camp;
+    const registeredIds = Array.isArray(donorData) ? donorData.map(String) : [];
+    const donatedIds = (donatedDonorsByCamp.get(String(camp._id)) ?? []).map(String);
+    const donorCount = new Set([...registeredIds, ...donatedIds]).size;
     return {
       ...rest,
-      donorCount: Array.isArray(donorData) ? donorData.length : 0,
+      donorCount,
       donationCount: donationCountByCamp.get(String(camp._id)) ?? 0,
     };
   });

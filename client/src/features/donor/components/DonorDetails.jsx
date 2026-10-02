@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useDonorDetail } from '@/hooks/useDonor';
+import { getEffectiveEligibility } from '@/features/donor/donor-eligibility';
 
 const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
   const { data: donorDetail, isLoading } = useDonorDetail(initialDonor?._id || initialDonor?.id);
@@ -12,6 +13,8 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
     switch (status) {
       case "eligible":
         return "bg-green-100 text-green-800";
+      case "recently-donated":
+        return "bg-orange-100 text-orange-800";
       case "deferred":
         return "bg-red-100 text-red-800";
       case "temp-deferred":
@@ -25,12 +28,14 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
     switch (status) {
       case "eligible":
         return "Eligible";
+      case "recently-donated":
+        return "Recently Donated";
       case "deferred":
         return "Deferred";
       case "temp-deferred":
         return "Temporarily Deferred";
       default:
-        return status;
+        return status || 'N/A';
     }
   };
 
@@ -50,6 +55,7 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
   const fullName = [donor.name?.firstName, donor.name?.middleName, donor.name?.lastName].filter(Boolean).join(' ');
   const rhSymbol = donor.rh === 'Positive' || donor.rh === 'POSITIVE' ? '+' : donor.rh === 'Negative' || donor.rh === 'NEGATIVE' ? '-' : '';
   const age = donor.dob ? calculateAge(donor.dob) : null;
+  const effectiveStatus = getEffectiveEligibility(donor);
 
   // donationHistory is sorted newest-first (donor.history.ts) — [0] is
   // always the most recent donation, so this section reflects the latest
@@ -93,8 +99,8 @@ const DonorDetails = ({ donor: initialDonor, isOpen, onClose }) => {
               <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-800 font-medium">
                 {donor.bloodGroup} {rhSymbol}
               </span>
-              <span className={`px-2 py-1 rounded-full font-medium ${getStatusColor(donor.eligibilityStatus)}`}>
-                {getStatusText(donor.eligibilityStatus)}
+              <span className={`px-2 py-1 rounded-full font-medium ${getStatusColor(effectiveStatus)}`}>
+                {getStatusText(effectiveStatus)}
               </span>
             </div>
           </div>
