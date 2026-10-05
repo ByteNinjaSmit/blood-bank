@@ -200,6 +200,9 @@ export function createDonationService(deps: {
         }
       }
 
+      const bagLabel = input.bagNo
+        ? `${input.bagNo} (${donationPublicId})`
+        : donationPublicId;
       void withAudit(
         { actorId },
         {
@@ -207,11 +210,14 @@ export function createDonationService(deps: {
           action: 'CREATE',
           entityType: 'Donation',
           entityId: created.id,
-          entityLabel: donationPublicId,
+          entityLabel: bagLabel,
         },
         undefined,
         {
           donationId: donationPublicId,
+          bagNo: input.bagNo,
+          segmentNo: input.segmentNo,
+          lotNo: input.lotNo,
           // Show the human-readable donor id (DNR-…) in the audit snapshot,
           // not the raw Mongo ObjectId.
           donor: donor.donorId ?? input.donor,
@@ -286,6 +292,7 @@ export function createDonationService(deps: {
         return { permanentlyDeleted: false };
       }
 
+      const existing = await deps.donations.findById(id);
       const deleteBatchId = newDeleteBatchId();
       const owningModel = await findOwningModel(id);
       const node = owningModel === CampDonationRecordModel ? campDonationNode : donationNode;
@@ -293,6 +300,9 @@ export function createDonationService(deps: {
         cascadeSoftDelete(node, id, actorId, reason, deleteBatchId, session),
       );
       log.warn({ donationId: id, actorId, deleteBatchId }, 'donation cascade soft-deleted');
+      const bagLabel = existing?.bagNo
+        ? `${existing.bagNo} (${existing.donationId})`
+        : existing?.donationId || id;
       void withAudit(
         { actorId },
         {
@@ -300,11 +310,12 @@ export function createDonationService(deps: {
           action: 'DELETE',
           entityType: 'Donation',
           entityId: id,
+          entityLabel: bagLabel,
           severity: 'warning',
           reason,
         },
-        { deletedAt: null },
-        { deletedAt: new Date(), deleteBatchId },
+        { deletedAt: null, donationId: existing?.donationId, bagNo: existing?.bagNo },
+        { deletedAt: new Date(), deleteBatchId, donationId: existing?.donationId, bagNo: existing?.bagNo },
       );
       return { permanentlyDeleted: false };
     },
@@ -315,17 +326,27 @@ export function createDonationService(deps: {
       if (!status.deletedAt) {
         return { restored: false };
       }
+      const existing = await deps.donations.findById(id);
       const owningModel = await findOwningModel(id);
       const node = owningModel === CampDonationRecordModel ? campDonationNode : donationNode;
       await runInCascadeTransaction((session) =>
         cascadeRestore(node, id, actorId, session),
       );
       log.warn({ donationId: id, actorId }, 'donation cascade restored');
+      const bagLabel = existing?.bagNo
+        ? `${existing.bagNo} (${existing.donationId})`
+        : existing?.donationId || id;
       void withAudit(
         { actorId },
-        { module: 'donation', action: 'UPDATE', entityType: 'Donation', entityId: id },
-        { deletedAt: status.deletedAt },
-        { deletedAt: null },
+        {
+          module: 'donation',
+          action: 'UPDATE',
+          entityType: 'Donation',
+          entityId: id,
+          entityLabel: bagLabel,
+        },
+        { deletedAt: status.deletedAt, donationId: existing?.donationId, bagNo: existing?.bagNo },
+        { deletedAt: null, donationId: existing?.donationId, bagNo: existing?.bagNo },
       );
       return { restored: true };
     },
@@ -542,6 +563,9 @@ export function createDonationService(deps: {
       }
 
       log.info({ donationId: id, actorId, fields: Object.keys(input) }, 'donation updated');
+      const updateBagLabel = existing.bagNo
+        ? `${existing.bagNo} (${existing.donationId})`
+        : existing.donationId;
       void withAudit(
         { actorId },
         {
@@ -549,7 +573,7 @@ export function createDonationService(deps: {
           action: 'UPDATE',
           entityType: 'Donation',
           entityId: id,
-          entityLabel: existing.donationId,
+          entityLabel: updateBagLabel,
           reason: input.editReason,
         },
         {
@@ -597,6 +621,11 @@ export function createDonationService(deps: {
       }
       await deps.donations.delete(id);
       log.warn({ donationId: id, actorId }, 'donation permanently deleted');
+      const permDeleteBagLabel = donation
+        ? donation.bagNo
+          ? `${donation.bagNo} (${donation.donationId})`
+          : donation.donationId
+        : id;
       void withAudit(
         { actorId },
         {
@@ -604,6 +633,7 @@ export function createDonationService(deps: {
           action: 'DELETE',
           entityType: 'Donation',
           entityId: id,
+          entityLabel: permDeleteBagLabel,
           severity: 'critical',
           reason,
         },

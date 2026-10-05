@@ -170,7 +170,7 @@ export default function AuditTrail() {
             e.at ? new Date(e.at).toLocaleString('en-IN') : '',
             e.module || '',
             e.entityType || '',
-            e.entityLabel || e.entityId || '',
+            entityRef(e),
             e.action || '',
             e.role || '',
             humanize(e.reason) || '',

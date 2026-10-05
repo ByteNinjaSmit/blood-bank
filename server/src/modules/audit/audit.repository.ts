@@ -1,5 +1,5 @@
 import { Types, type FilterQuery } from 'mongoose';
-import { AuditLogModel, type AuditLog } from './audit.model';
+import { AuditLogModel, UNAUTHENTICATED_ACTOR_ID, type AuditLog } from './audit.model';
 import type { AuditEntry, AuditSearchFilters } from '@/shared/interfaces';
 
 function buildFilter(filters: AuditSearchFilters): FilterQuery<AuditLog> {
@@ -18,16 +18,34 @@ function buildFilter(filters: AuditSearchFilters): FilterQuery<AuditLog> {
     if (filters.dateTo) (q.at as Record<string, Date>).$lte = filters.dateTo;
   }
   if (filters.q) {
-    const rx = new RegExp(`^${filters.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
-    q.$or = [{ entityId: rx }, { entityLabel: rx }];
+    const escaped = filters.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx = new RegExp(escaped, 'i');
+    q.$or = [
+      { entityId: rx },
+      { entityLabel: rx },
+      { 'after.donationId': rx },
+      { 'before.donationId': rx },
+      { 'after.bagNo': rx },
+      { 'before.bagNo': rx },
+      { 'after.donor': rx },
+      { 'before.donor': rx },
+      { 'after.donorId': rx },
+      { 'before.donorId': rx },
+      { reason: rx },
+    ];
   }
   return q;
 }
 
 export const auditRepository = {
   async create(entry: AuditEntry & { changedFields?: string[] }): Promise<void> {
+    const actor =
+      entry.actorId && Types.ObjectId.isValid(entry.actorId)
+        ? new Types.ObjectId(entry.actorId)
+        : new Types.ObjectId(UNAUTHENTICATED_ACTOR_ID);
+
     await AuditLogModel.create({
-      actor: new Types.ObjectId(entry.actorId),
+      actor,
       action: entry.action,
       module: entry.module,
       entityType: entry.entityType,
