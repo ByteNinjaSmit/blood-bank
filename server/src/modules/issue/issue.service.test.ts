@@ -8,6 +8,16 @@ import type { PatientRepo, PatientDto } from '@/modules/patient/patient.reposito
 import type { CrossmatchRepo, CrossmatchDto } from '@/modules/crossmatch/crossmatch.repository';
 import type { TtiRepo, TtiResultDto } from '@/modules/tti/tti.repository';
 
+// Fire-and-forget collaborators the service reaches for when no `audit` dep
+// is injected. Unmocked, they hit Mongoose with no connection and buffer
+// past the 5s test timeout.
+vi.mock('@/modules/audit/audit.service', () => ({
+  auditService: { record: vi.fn().mockResolvedValue(undefined) },
+}));
+vi.mock('@/modules/notification/notification-center.service', () => ({
+  notificationCenterService: { notify: vi.fn().mockResolvedValue(undefined) },
+}));
+
 const REQ_ID = '507f1f77bcf86cd799439011';
 
 function reqDto(): RequisitionDto {
@@ -83,9 +93,11 @@ function deps(opts: {
   const units: UnitRepo = {
     findByUnitId: vi.fn().mockResolvedValue(opts.unit ?? unitDto()),
     findReleasableByDonation: vi.fn(),
-    applyEvent: vi.fn().mockImplementation(async ({ event }) =>
-      unitDto({ status: event === 'CROSSMATCH_PASS' ? 'CROSSMATCHED' : 'ISSUED' }),
-    ),
+    applyEvent: vi
+      .fn()
+      .mockImplementation(async ({ event }) =>
+        unitDto({ status: event === 'CROSSMATCH_PASS' ? 'CROSSMATCHED' : 'ISSUED' }),
+      ),
     applyEventToDonation: vi.fn(),
     selectable: vi.fn(),
     inStockSummary: vi.fn(),

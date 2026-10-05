@@ -8,6 +8,16 @@ import type { CrossmatchService } from '@/modules/crossmatch/crossmatch.service'
 import type { IssueService } from '@/modules/issue/issue.service';
 import type { IssueRepo } from '@/modules/issue/issue.repository';
 
+// Fire-and-forget collaborators the service reaches for when no `audit` dep
+// is injected. Unmocked, they hit Mongoose with no connection and buffer
+// past the 5s test timeout.
+vi.mock('@/modules/audit/audit.service', () => ({
+  auditService: { record: vi.fn().mockResolvedValue(undefined) },
+}));
+vi.mock('@/modules/notification/notification-center.service', () => ({
+  notificationCenterService: { notify: vi.fn().mockResolvedValue(undefined) },
+}));
+
 vi.mock('@/modules/issue/issue.model', () => ({
   IssueModel: {
     create: vi.fn().mockResolvedValue({}),
@@ -187,9 +197,7 @@ describe('requisition-service.match', () => {
     ];
     const d = deps({ req: reqDto({ status: 'MATCHED', matchedUnits }) });
     const svc = createRequisitionService(d);
-    await expect(svc.approve(REQ_ID, 'actor')).rejects.toThrow(
-      /complete the crossmatch/i,
-    );
+    await expect(svc.approve(REQ_ID, 'actor')).rejects.toThrow(/complete the crossmatch/i);
     // Nothing reserved — the gate short-circuits before touching inventory.
     expect(d.units.applyEvent).not.toHaveBeenCalled();
   });
@@ -382,7 +390,9 @@ describe('requisition-service.unissueUnits', () => {
     d.requisitions.markReserved = vi
       .fn()
       .mockResolvedValue(reqDto({ status: 'COMPLETED', matchedUnits }));
-    d.requisitions.setStatus = vi.fn().mockResolvedValue(reqDto({ status: 'APPROVED', matchedUnits }));
+    d.requisitions.setStatus = vi
+      .fn()
+      .mockResolvedValue(reqDto({ status: 'APPROVED', matchedUnits }));
     const svc = createRequisitionService(d);
 
     const updated = await svc.unissueUnits(REQ_ID, ['U1'], 'Issued by mistake', 'actor');
