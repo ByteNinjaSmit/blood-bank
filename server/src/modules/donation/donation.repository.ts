@@ -454,6 +454,12 @@ export function createDonationRepo(): DonationRepo {
             // donor.repository's populateLastDonationId ->
             // recentDonationDate) so the two never collide in the UI.
 
+            const unitIds = units.map((u) => u.unitId);
+            await BloodUnitModel.deleteMany(
+              { unitId: { $in: unitIds }, status: { $in: ['DISCARDED', 'EXPIRED'] } },
+              { session },
+            );
+
             const unitDocs = await BloodUnitModel.insertMany(
               units.map((u) => ({
                 unitId: u.unitId,
@@ -553,6 +559,12 @@ export function createDonationRepo(): DonationRepo {
 
         // Donor.lastDonationDate is intentionally left untouched here too —
         // see the matching comment in the transactional path above.
+
+        const unitIds = units.map((u) => u.unitId);
+        await BloodUnitModel.deleteMany({
+          unitId: { $in: unitIds },
+          status: { $in: ['DISCARDED', 'EXPIRED'] },
+        });
 
         const unitDocs = await BloodUnitModel.insertMany(
           units.map((u) => ({
@@ -868,8 +880,15 @@ export function createDonationRepo(): DonationRepo {
     // already been soft-deleted (see donation.service.ts remove()).
     async delete(id) {
       const model = (await findOwningModel(id)) ?? DonationModel;
+      const doc = await model.findById(id).select('donationId').lean();
       const result = await model.deleteOne({ _id: id });
       if (result.deletedCount === 0) throw new NotFoundError('Donation', id);
+      if (doc?.donationId) {
+        await Promise.all([
+          BloodUnitModel.deleteMany({ donationId: doc.donationId }),
+          TtiResultModel.deleteMany({ donationId: doc.donationId }),
+        ]);
+      }
     },
 
     async lookupByBagNo(bagNo) {
